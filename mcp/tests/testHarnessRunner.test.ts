@@ -91,6 +91,83 @@ test("contract bootstrap exports the observed project id for later GitHub Action
   assert.equal(readFileSync(environmentPath, "utf8"), "MEDPLUM_PROJECT_ID=practice-project\n");
 });
 
+test("project bootstrap runs first and passes its exported project id to the remaining files", () => {
+  const directory = mkdtempSync(resolve(tmpdir(), "odos-runner-bootstrap-"));
+  const environmentPath = resolve(directory, "github-env");
+  tempDirectories.push(directory);
+
+  const result = runFixture({
+    GITHUB_ENV: environmentPath,
+    MEDPLUM_ADMIN_EMAIL: "admin@example.test",
+    MEDPLUM_ADMIN_PASSWORD: "not-a-real-password",
+    MEDPLUM_PROJECT_ID: "",
+    ODOS_RUNNER_BOOTSTRAP_FIXTURE: "1",
+  }, ["--bootstrap-project", FIXTURE]);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal([...result.stdout.matchAll(/# tests 3\n/g)].length, 2, result.stdout);
+  assert.equal(readFileSync(environmentPath, "utf8"), "MEDPLUM_PROJECT_ID=runner-project\n");
+});
+
+test("live authorization clients keep the privileged seeder distinct from the constrained caller", async () => {
+  const helpers = await import("./integration-helpers.js");
+  const createClients = (helpers as unknown as Record<string, unknown>)
+    .createLiveAuthorizationClients as undefined | ((
+      input: { baseUrl: string; email: string; password: string },
+      dependencies: {
+        loadSeeder(): Promise<{ fhir: object; accessToken: string }>;
+        loadCaller(): Promise<{ fhir: object; accessToken: string }>;
+      },
+    ) => Promise<{
+      seederFhir: object;
+      seederAccessToken: string;
+      callerFhir: object;
+      callerAccessToken: string;
+    }>);
+  const seederFhir = { identity: "seeder" };
+  const callerFhir = { identity: "caller" };
+
+  assert.ok(typeof createClients === "function");
+  const clients = await createClients(
+    { baseUrl: "http://medplum.test", email: "caller@example.test", password: "caller-password" },
+    {
+      loadSeeder: async () => ({ fhir: seederFhir, accessToken: "seeder-token" }),
+      loadCaller: async () => ({ fhir: callerFhir, accessToken: "caller-token" }),
+    },
+  );
+
+  assert.deepEqual(clients, {
+    seederFhir,
+    seederAccessToken: "seeder-token",
+    callerFhir,
+    callerAccessToken: "caller-token",
+  });
+});
+
+test("live authorization clients reject a seeder and caller token collision", async () => {
+  const helpers = await import("./integration-helpers.js");
+  const createClients = (helpers as unknown as Record<string, unknown>)
+    .createLiveAuthorizationClients as undefined | ((
+      input: { baseUrl: string; email: string; password: string },
+      dependencies: {
+        loadSeeder(): Promise<{ fhir: object; accessToken: string }>;
+        loadCaller(): Promise<{ fhir: object; accessToken: string }>;
+      },
+    ) => Promise<unknown>);
+
+  assert.ok(typeof createClients === "function");
+  await assert.rejects(
+    createClients(
+      { baseUrl: "http://medplum.test", email: "caller@example.test", password: "caller-password" },
+      {
+        loadSeeder: async () => ({ fhir: {}, accessToken: "shared-token" }),
+        loadCaller: async () => ({ fhir: {}, accessToken: "shared-token" }),
+      },
+    ),
+    /seeder and caller must be distinct identities/i,
+  );
+});
+
 function runFixture(
   env: Record<string, string>,
   runnerArguments: string[] = [],
@@ -102,6 +179,7 @@ function runFixture(
       MEDPLUM_ADMIN_EMAIL: "",
       MEDPLUM_ADMIN_PASSWORD: "",
       ODOS_ALLOW_UNGATED_MCP: "",
+      ODOS_RUNNER_BOOTSTRAP_FIXTURE: "",
       ...env,
     },
     encoding: "utf8",

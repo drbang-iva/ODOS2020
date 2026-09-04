@@ -75,6 +75,36 @@ async function installMigrationTrace(probe: Client): Promise<void> {
   `);
 }
 
+test("schema migration ledger bootstrap serializes concurrent first use", async (t) => {
+  const adminUrl = process.env.ODOS_POSTGRES_URL;
+  if (!adminUrl) {
+    t.skip("ODOS_POSTGRES_URL is required for the schema migration ledger fixture.");
+    return;
+  }
+
+  await withPostgresTestDatabase(
+    { adminUrl, namePrefix: "odos_schema_ledger_race" },
+    async (database) => {
+      const ledgerDdlPath = fileURLToPath(
+        new URL("../../data/migrations/2026-07-17-odos-schema-migrations.sql", import.meta.url),
+      );
+      const ddl = await readFile(ledgerDdlPath, "utf8");
+      const clients = await Promise.all(
+        Array.from({ length: 8 }, (_, index) =>
+          database.connectClient({}, `schema ledger concurrency probe ${index + 1}`),
+        ),
+      );
+
+      await Promise.all(clients.map((client) => client.query(ddl)));
+
+      const result = await clients[0].query<{ count: string }>(
+        "SELECT count(*)::text AS count FROM pg_class WHERE relname = 'odos_schema_migrations'",
+      );
+      assert.equal(result.rows[0]?.count, "1");
+    },
+  );
+});
+
 test("live audit boot schema matches every supported audit event type", async (t) => {
   const adminUrl = process.env.ODOS_POSTGRES_URL;
   if (!adminUrl) {

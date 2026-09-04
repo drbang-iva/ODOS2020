@@ -879,16 +879,36 @@ test("CI cancels superseded pull requests but never pushes to main", () => {
   );
 });
 
-test("CI blocks on the focused real-Medplum preliminary Observation authorization proof", () => {
+test("CI blocks on the complete live authorization lane after policy sync", () => {
   const workflow = workflowSource(".github/workflows/ci.yml");
-  const focusedStep = workflow.match(
-    /- name: enforce preliminary Observation authorization on real Medplum\n(?<body>[\s\S]*?)\n\s+- name:/,
+  const integrationStep = workflow.match(
+    /- name: run credentialed live integration lane\n(?<body>[\s\S]*?)\n\s+- name:/,
   )?.groups?.body;
-  assert.ok(focusedStep, "CI needs a focused preliminary Observation authorization step");
-  assert.doesNotMatch(focusedStep, /continue-on-error:/);
-  assert.match(focusedStep, /ODOS_PRELIMINARY_OBSERVATION_AUTHZ_ONLY: "1"/);
-  assert.match(focusedStep, /tests\/clinicalWriteAuthzLive\.test\.ts/);
+  assert.ok(integrationStep, "CI needs the blocking live integration lane");
+  assert.match(
+    integrationStep,
+    /ODOS_POSTGRES_URL: postgresql:\/\/medplum:medplum@127\.0\.0\.1:15432\/medplum/,
+  );
 
+  const authorizationStep = workflow.match(
+    /- name: run credentialed live authorization lane\n(?<body>[\s\S]*?)\n\s+- name:/,
+  )?.groups?.body;
+  assert.ok(authorizationStep, "CI needs the blocking live authorization lane");
+  assert.doesNotMatch(authorizationStep, /continue-on-error:/);
+  assert.match(authorizationStep, /source \.\.\/\.odos\/operator\.env/);
+  assert.match(authorizationStep, /npm run test:live-authz/);
+  assert.ok(
+    workflow.indexOf("- name: sync canonical practice-role policies for live authorization lane")
+      < workflow.indexOf("- name: run credentialed live authorization lane"),
+    "CI must sync practice-role policy before running authorization assertions",
+  );
+
+  const packageJson = JSON.parse(workflowSource("mcp/package.json")) as {
+    scripts: Record<string, string>;
+  };
+  assert.match(packageJson.scripts["test:live-authz"], /tests\/clinicalWriteAuthzLive\.test\.ts/);
+  assert.match(packageJson.scripts["test:live-authz"], /tests\/encounterUndoLedgerAuthzLive\.test\.ts/);
+  assert.match(packageJson.scripts["test:live-authz"], /tests\/v05a-authz\.test\.ts/);
   const liveTest = workflowSource("mcp/tests/clinicalWriteAuthzLive.test.ts");
   assert.match(
     liveTest,

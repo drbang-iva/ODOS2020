@@ -27,7 +27,7 @@ import {
 import { buildEyeBodyStructure } from "../src/fhir/ophthalmology/bodyStructure.js";
 import { buildProvenance } from "../src/fhir/ophthalmology/provenance.js";
 import { searchAll } from "../src/fhir-search.js";
-import { createAuthenticatedFhirClient, requireMedplumAdmin } from "./integration-helpers.js";
+import { createLiveAuthorizationClients, requireMedplumAdmin } from "./integration-helpers.js";
 import { cleanupReferences, createRoleClient, fhirRequest } from "./liveRoleClient.js";
 
 const baseUrl = process.env.MEDPLUM_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8103";
@@ -37,13 +37,18 @@ test("synced practice policies enforce all repaired clinical writes on running M
     return;
   }
   const { email, password } = credentials;
-  const { fhir: adminFhir, accessToken: adminToken } = await createAuthenticatedFhirClient({
+  const {
+    seederFhir,
+    seederAccessToken,
+    callerFhir,
+    callerAccessToken,
+  } = await createLiveAuthorizationClients({
     baseUrl,
     email,
     password,
   });
   const meResponse = await fetch(`${baseUrl}/auth/me`, {
-    headers: { Authorization: `Bearer ${adminToken}` },
+    headers: { Authorization: `Bearer ${callerAccessToken}` },
   });
   if (!meResponse.ok) {
     throw new Error(`GET /auth/me failed: ${meResponse.status}`);
@@ -65,7 +70,7 @@ test("synced practice policies enforce all repaired clinical writes on running M
   };
 
   try {
-    const policies = await searchAll<AccessPolicy>(adminFhir, "AccessPolicy", {
+    const policies = await searchAll<AccessPolicy>(callerFhir, "AccessPolicy", {
       _project: projectId,
       _count: "1000",
     });
@@ -79,10 +84,10 @@ test("synced practice policies enforce all repaired clinical writes on running M
       rolePolicies.set(roleId, matches[0]!);
     }
 
-    assert.equal(me.profile?.resourceType, "Practitioner", "Live authorization seeder profile must be a Practitioner.");
-    assert.ok(me.profile.id, "Live authorization seeder Practitioner requires an id.");
+    assert.equal(me.profile?.resourceType, "Practitioner", "Live authorization caller profile must be a Practitioner.");
+    assert.ok(me.profile.id, "Live authorization caller Practitioner requires an id.");
     const practitioner = me.profile as Practitioner;
-    const patients = await searchAll<Patient>(adminFhir, "Patient", { _count: "1000" });
+    const patients = await searchAll<Patient>(callerFhir, "Patient", { _count: "1000" });
     const patient = patients
       .filter((candidate) => candidate.name?.some((name) => name.family?.startsWith("ContractSearch")))
       .sort((left, right) => (left.meta?.lastUpdated ?? "").localeCompare(right.meta?.lastUpdated ?? ""))
@@ -102,7 +107,7 @@ test("synced practice policies enforce all repaired clinical writes on running M
         practitionerReference,
         projectId,
         runId,
-        adminToken,
+        adminToken: callerAccessToken,
         track,
       });
       tokens.set(roleId, roleClient.token);
@@ -324,7 +329,7 @@ test("synced practice policies enforce all repaired clinical writes on running M
         patientReference,
         practitionerReference,
         providerToken: tokens.get("provider")!,
-        adminFhir,
+        seederFhir,
         track,
       });
     });
@@ -345,7 +350,7 @@ test("synced practice policies enforce all repaired clinical writes on running M
         patientReference,
         practitionerReference,
         providerToken: tokens.get("provider")!,
-        adminFhir,
+        seederFhir,
         track,
       });
     });
@@ -364,7 +369,7 @@ test("synced practice policies enforce all repaired clinical writes on running M
     });
   } finally {
     if (process.env.MEDPLUM_CONTRACT_BOOTSTRAP !== "1") {
-      await cleanupReferences(baseUrl, adminToken, cleanup);
+      await cleanupReferences(baseUrl, seederAccessToken, cleanup);
     }
   }
 });
@@ -406,7 +411,7 @@ async function assertCreateOnlyAdverseEventAndProvenance(input: {
   patientReference: string;
   practitionerReference: string;
   providerToken: string;
-  adminFhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"];
+  seederFhir: Awaited<ReturnType<typeof createLiveAuthorizationClients>>["seederFhir"];
   track: <T extends Resource>(resource: T) => T;
 }): Promise<void> {
   assert.ok(input.adverseEvent.id, "Create-only AdverseEvent response body must include its id.");
@@ -417,7 +422,7 @@ async function assertCreateOnlyAdverseEventAndProvenance(input: {
     `AdverseEvent/${input.adverseEvent.id}`,
   );
   assert.equal(providerRead.status, 403, "AdverseEvent remains write-only for Provider.");
-  const persisted = await input.adminFhir.read<AdverseEvent>("AdverseEvent", input.adverseEvent.id);
+  const persisted = await input.seederFhir.read<AdverseEvent>("AdverseEvent", input.adverseEvent.id);
   assert.equal(persisted.id, input.adverseEvent.id);
   const provenance = buildProvenance({
     targetReferences: [`AdverseEvent/${input.adverseEvent.id}`],
@@ -429,7 +434,7 @@ async function assertCreateOnlyAdverseEventAndProvenance(input: {
   const response = await fhirRequest<Provenance>(baseUrl, input.providerToken, "POST", "Provenance", provenance);
   assert.equal(response.status, 201, `Provider create Provenance: ${response.summary}`);
   const created = input.track(response.body as Provenance);
-  const persistedProvenance = await input.adminFhir.read<Provenance>("Provenance", created.id!);
+  const persistedProvenance = await input.seederFhir.read<Provenance>("Provenance", created.id!);
   assert.equal(
     persistedProvenance.target.some((target) => target.reference === `AdverseEvent/${input.adverseEvent.id}`),
     true,
@@ -439,4 +444,3 @@ async function assertCreateOnlyAdverseEventAndProvenance(input: {
     true,
   );
 }
-

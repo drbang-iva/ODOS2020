@@ -204,6 +204,38 @@ export async function createAuthenticatedFhirClient(input: {
   };
 }
 
+type LiveAuthorizationIdentity = Awaited<ReturnType<typeof createAuthenticatedFhirClient>>;
+
+export async function createLiveAuthorizationClients(
+  input: { baseUrl: string; email: string; password: string },
+  dependencies?: {
+    loadSeeder(): Promise<LiveAuthorizationIdentity>;
+    loadCaller(): Promise<LiveAuthorizationIdentity>;
+  },
+): Promise<{
+  seederFhir: LiveAuthorizationIdentity["fhir"];
+  seederAccessToken: string;
+  callerFhir: LiveAuthorizationIdentity["fhir"];
+  callerAccessToken: string;
+}> {
+  const caller = await (dependencies?.loadCaller() ?? createAuthenticatedFhirClient(input));
+  const seeder = await (dependencies?.loadSeeder() ?? createOperatorSeeder(
+    input.baseUrl,
+    await caller.fhir.getActiveProjectId(),
+  ));
+  assert.notEqual(
+    seeder.accessToken,
+    caller.accessToken,
+    "Live authorization seeder and caller must be distinct identities.",
+  );
+  return {
+    seederFhir: seeder.fhir,
+    seederAccessToken: seeder.accessToken,
+    callerFhir: caller.fhir,
+    callerAccessToken: caller.accessToken,
+  };
+}
+
 export async function connectMcpServer(input: {
   baseUrl: string;
   email: string;
@@ -247,7 +279,7 @@ export async function connectMcpServer(input: {
 }
 
 export function parseToolOutput<T>(result: Awaited<ReturnType<Client["callTool"]>>): T {
-  assert.equal(result.isError, undefined);
+  assert.equal(result.isError, undefined, toolText(result));
   return JSON.parse(toolText(result)) as T;
 }
 
@@ -297,6 +329,54 @@ async function loginForAccessToken(input: {
 
   const { access_token: accessToken } = (await tokenRes.json()) as { access_token: string };
   return accessToken;
+}
+
+async function createOperatorSeeder(
+  baseUrl: string,
+  callerProjectId: string,
+): Promise<LiveAuthorizationIdentity> {
+  const projectId = requiredEnv("ODOS_OPERATOR_PROJECT_ID");
+  const clientId = requiredEnv("ODOS_OPERATOR_CLIENT_ID");
+  const clientSecret = requiredEnv("ODOS_OPERATOR_CLIENT_SECRET");
+  assert.equal(
+    projectId,
+    callerProjectId,
+    "Live authorization seeder and caller must belong to the same Medplum project.",
+  );
+  const response = await fetch(`${baseUrl.replace(/\/$/, "")}/oauth2/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: clientId,
+      client_secret: clientSecret,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Live authorization seeder token exchange failed: ${response.status} ${await response.text()}`);
+  }
+  const { access_token: accessToken } = (await response.json()) as { access_token?: string };
+  assert.ok(accessToken, "Live authorization seeder token exchange returned no access token.");
+  const fhir = createMedplumClient({
+    baseUrl,
+    accessToken,
+    audit: TEST_FHIR_AUDIT_RECORDER,
+    auditContext: TEST_FHIR_AUDIT_CONTEXT,
+  });
+  assert.equal(
+    await fhir.getActiveProjectId(),
+    projectId,
+    "Live authorization seeder credential resolved to a different Medplum project.",
+  );
+  return { fhir, accessToken };
+}
+
+function requiredEnv(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`${name} is required for the privileged live authorization fixture seeder.`);
+  }
+  return value;
 }
 
 async function fetchWithThrottleRetry(

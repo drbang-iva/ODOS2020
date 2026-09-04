@@ -19,7 +19,7 @@ const defaultFiles = [
   "../tests/mandate-8/**/*.test.ts",
 ];
 
-const { files, uiRoot } = parseArguments(process.argv.slice(2));
+const { bootstrapProject, files, uiRoot } = parseArguments(process.argv.slice(2));
 if (!uiDependenciesInstalled(uiRoot)) {
   process.stderr.write("MCP TEST HARNESS ERROR — ui deps not installed; run npm install in ui/\n");
   process.exit(1);
@@ -29,7 +29,10 @@ const recordDirectory = mkdtempSync(join(tmpdir(), "odos-mcp-live-skips-"));
 const recordPath = join(recordDirectory, "skips.jsonl");
 
 try {
-  const childExitCode = await runTests(files.length > 0 ? files : defaultFiles, recordPath);
+  const selectedFiles = files.length > 0 ? files : defaultFiles;
+  const childExitCode = bootstrapProject
+    ? await runProjectBootstrapSequence(selectedFiles, recordPath, recordDirectory)
+    : await runTests(selectedFiles, recordPath);
   const skips = readSkipRecords(recordPath);
   if (skips.length > 0) {
     const surfaces = [...new Set(skips.map((skip) => skip.surface))];
@@ -51,15 +54,18 @@ try {
 function parseArguments(args) {
   const files = [];
   let uiRoot = resolve(mcpRoot, "../ui");
+  let bootstrapProject = false;
   for (let index = 0; index < args.length; index += 1) {
     if (args[index] === "--ui-root") {
       uiRoot = resolve(args[index + 1]);
       index += 1;
+    } else if (args[index] === "--bootstrap-project") {
+      bootstrapProject = true;
     } else {
       files.push(args[index]);
     }
   }
-  return { files, uiRoot };
+  return { bootstrapProject, files, uiRoot };
 }
 
 function uiDependenciesInstalled(uiRoot) {
@@ -70,9 +76,28 @@ function uiDependenciesInstalled(uiRoot) {
   return result.status === 0;
 }
 
-function runTests(files, recordPath) {
+async function runProjectBootstrapSequence(files, recordPath, recordDirectory) {
+  const [bootstrapFile, ...remainingFiles] = files;
+  if (!bootstrapFile || remainingFiles.length === 0) {
+    throw new Error("--bootstrap-project requires one bootstrap test file followed by integration test files.");
+  }
+  const githubEnvironmentPath = process.env.GITHUB_ENV || join(recordDirectory, "github-env");
+  const bootstrapExitCode = await runTests([bootstrapFile], recordPath, {
+    GITHUB_ENV: githubEnvironmentPath,
+  });
+  if (bootstrapExitCode !== 0) {
+    return bootstrapExitCode;
+  }
+  const projectId = readGitHubEnvironmentValue(githubEnvironmentPath, "MEDPLUM_PROJECT_ID");
+  if (!projectId) {
+    return 1;
+  }
+  return runTests(remainingFiles, recordPath, { MEDPLUM_PROJECT_ID: projectId });
+}
+
+function runTests(files, recordPath, env = {}) {
   return new Promise((resolveExitCode, reject) => {
-    const childEnv = { ...process.env, ODOS_MCP_LIVE_SKIP_RECORD: recordPath };
+    const childEnv = { ...process.env, ...env, ODOS_MCP_LIVE_SKIP_RECORD: recordPath };
     delete childEnv.NODE_TEST_CONTEXT;
     const child = spawn(process.execPath, [
       "--import",
@@ -88,6 +113,22 @@ function runTests(files, recordPath) {
     child.once("error", reject);
     child.once("exit", (code) => resolveExitCode(code ?? 1));
   });
+}
+
+function readGitHubEnvironmentValue(path, name) {
+  try {
+    const prefix = `${name}=`;
+    return readFileSync(path, "utf8")
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith(prefix))
+      .at(-1)
+      ?.slice(prefix.length);
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return undefined;
+    }
+    throw error;
+  }
 }
 
 function readSkipRecords(recordPath) {
