@@ -711,6 +711,56 @@ test("a carried-forward single-select displays its catalog choice in the prior-e
   }
 });
 
+test("a carried-forward text section displays its recorded value in the prior-encounter strip", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/hpi/definition")) return json({
+      templates: [],
+      catalogs: {},
+      subjectSections: [{
+        key: "social-history",
+        label: "Social History",
+        subjectScope: "patient",
+        completionAnchor: "tobacco",
+        sections: [{ id: "occupation", type: "text", label: "Occupation" }],
+      }],
+      definition: {},
+    });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) return json({ complaints: [] });
+    if (url.endsWith("/clinical-graph/encounters/e1/hpi")) return json({
+      answers: [],
+      carriedForwardAnswers: [{
+        answer: {
+          id: "prior-occupation",
+          subjectScope: "patient",
+          templateKey: "social-history",
+          sectionId: "occupation",
+          observationReference: "Observation/prior-occupation",
+          value: { kind: "text", text: "Accountant" },
+        },
+        encounterReference: "Encounter/prior",
+        recordedAt: "2026-08-01T12:00:00.000Z",
+      }],
+      reviewAttestations: [],
+      templateNarratives: [],
+    });
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<EncounterEditContext.Provider value={{}}><HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></EncounterEditContext.Provider>);
+      await delay(0);
+    });
+    const chartStrip = renderer.root.findByProps({ "aria-label": "Social History on this chart" });
+    assert.match(chartStrip.findByType("li").children.join(""), /^Accountant/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("History completeness uses Not started, Started, and Charted rather than Examined", () => {
   const html = renderToStaticMarkup(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
   assert.match(html, /Not started/);

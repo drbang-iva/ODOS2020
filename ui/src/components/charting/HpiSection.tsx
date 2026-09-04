@@ -830,7 +830,8 @@ function CarriedForwardStrip({ declaration, catalogs, rows, attestation, canRevi
       const option = section?.catalog ? catalogs[section.catalog]?.find((candidate) => candidate.code === optionCode) : undefined;
       const state = row.answer.value.kind === "tri-state" ? row.answer.value.status : undefined;
       const note = row.answer.value.kind === "tri-state" ? row.answer.value.note : undefined;
-      const label = `${state === "negative" ? "No " : ""}${option?.display ?? optionCode ?? section?.label ?? "History value"}${row.answer.eye ? ` ${row.answer.eye}` : ""}`;
+      const text = row.answer.value.kind === "text" ? row.answer.value.text : undefined;
+      const label = `${state === "negative" ? "No " : ""}${option?.display ?? optionCode ?? text ?? section?.label ?? "History value"}${row.answer.eye ? ` ${row.answer.eye}` : ""}`;
       return <li key={row.answer.observationReference ?? row.answer.id}>{label}{note ? ` · ${note}` : ""} <span className="odos-hpi-faint">· {row.recordedAt.slice(0, 10)}</span></li>;
     })}</ul>
     <div className="mt-3 flex flex-wrap items-center gap-3">
