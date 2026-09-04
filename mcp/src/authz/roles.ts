@@ -966,7 +966,6 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       ...PROTOCOL_MODULE_RESOURCE_RULES,
       ...PROCEDURE_CHARGE_RULE_BASIC_RESOURCE_RULES,
       APPEARANCE_CONFIG_READ_RULE,
-      { resourceType: "AuditEvent", interactions: CREATE_ONLY_INTERACTIONS, scope: { kind: "audit-only" } },
     ],
   },
   staff: {
