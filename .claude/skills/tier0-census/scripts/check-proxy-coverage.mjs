@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 // Tier 0 dead-control census — proxy-coverage check.
 //
-// Closes the actual root cause behind three real bugs shipped in one day: mcp/src/index.ts's
+// Closes the actual root cause behind four real bugs shipped in one day: mcp/src/index.ts's
 // register*Routes calls and ui/vite.config.ts's proxy table are two hand-maintained lists, and
-// nothing enforced they stay in sync. /watchers and /communications both shipped with a real
+// nothing reported when they drifted. /watchers and /communications both shipped with a real
 // backend registration and no proxy entry, silently returning 200 text/html instead of reaching
-// the server; /comms shipped the same gap and was only caught by an evaluator's independent
-// re-check, not by anything in this repo. See performance-od's
+// the server; /inventory and /comms shipped the same gap and were caught only by manual or
+// evaluator runs, not CI. See performance-od's
 // decisions/2026-09-02-odos-watchers-route-missing-from-proxy-table.md.
 //
-// Advisory only, same discipline as check-manifest.mjs — always exits 0.
+// CI-reporting only, same advisory-first discipline as check-manifest.mjs — findings become
+// GitHub Actions annotations but always exit 0 pending burn-in and a separate blocking decision.
 //
 // Usage: node check-proxy-coverage.mjs
 
@@ -80,6 +81,12 @@ export function computeProxyCoverageReport(backendFamilies, proxyKeys) {
   return { uncovered };
 }
 
+function emitActionsWarning(file, title, message) {
+  if (process.env.GITHUB_ACTIONS === "true") {
+    console.log(`::warning file=${file},title=${title}::${message}`);
+  }
+}
+
 function main() {
   const warnings = [];
   const { families: backendFamilies, byRegistration, warnings: discoveryWarnings } = discoverBackendRouteFamilies();
@@ -91,32 +98,52 @@ function main() {
 
   if (warnings.length > 0) {
     console.log(`${warnings.length} warning(s):`);
-    for (const warning of warnings) console.log(`  ! ${warning}`);
+    for (const warning of warnings) {
+      console.log(`  ! ${warning}`);
+      emitActionsWarning(
+        ".claude/skills/tier0-census/scripts/check-proxy-coverage.mjs",
+        "Proxy coverage diagnostic",
+        warning,
+      );
+    }
     console.log("");
   }
 
   if (uncovered.length > 0) {
-    console.log(`${uncovered.length} backend route famil${uncovered.length === 1 ? "y has" : "ies have"} NO proxy table entry — this is the exact shape of the /watchers, /communications, and /comms bugs:`);
+    console.log(`${uncovered.length} backend route famil${uncovered.length === 1 ? "y has" : "ies have"} NO proxy table entry — this is the exact shape of the /watchers, /communications, /inventory, and /comms bugs:`);
     for (const family of uncovered) {
       // A family can have more than one registration (/comms has three) — list all of them, not
       // just the first, or a fix targeting the wrong owner ships against incomplete information.
       const owners = byRegistration.filter((r) => r.families.includes(family));
       const ownerText = owners.map((o) => `${o.functionName}, ${o.importPath}`).join("; ");
       console.log(`  ! ${family}${ownerText ? ` (registered by ${ownerText})` : ""}`);
+      emitActionsWarning(
+        "ui/vite.config.ts",
+        "Proxy coverage gap",
+        `Backend route family ${family} has no matching Vite proxy entry.`,
+      );
     }
     console.log("");
-  } else {
+  } else if (warnings.length === 0) {
     console.log("Every backend route family has a proxy table entry.\n");
+  } else {
+    console.log("Coverage result incomplete — resolve the diagnostic warning(s) above before treating this run as clean.\n");
   }
 
-  console.log("Advisory only — this check never fails the build.");
+  console.log("Reporting only — CI annotates findings, but this check never fails the build.");
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   try {
     main();
   } catch (err) {
-    console.log(`Proxy-coverage census hit an unexpected internal error and could not complete: ${err.message}`);
-    console.log("Advisory only — this check never fails the build. Reporting the error above instead.");
+    const message = `Proxy-coverage census hit an unexpected internal error and could not complete: ${err instanceof Error ? err.message : String(err)}`;
+    console.log(message);
+    emitActionsWarning(
+      ".claude/skills/tier0-census/scripts/check-proxy-coverage.mjs",
+      "Proxy coverage internal error",
+      message,
+    );
+    console.log("Reporting only — this check never fails the build. Reporting the error above instead.");
   }
 }

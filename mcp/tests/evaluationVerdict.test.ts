@@ -95,6 +95,7 @@ async function runEvaluationWorkflowScript(
   github: unknown,
   context: unknown,
   core: unknown,
+  requireModule: (id: string) => unknown = require,
 ): Promise<void> {
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
   const execute = AsyncFunction(
@@ -110,8 +111,92 @@ async function runEvaluationWorkflowScript(
     context,
     core,
     { env: { ...process.env, GITHUB_WORKSPACE: fileURLToPath(repoRoot) } },
-    require,
+    requireModule,
   );
+}
+
+type PublisherFault =
+  | "pulls.get"
+  | "checks.create"
+  | "paginate"
+  | "parser"
+  | "checks.update"
+  | "require";
+
+function publisherHarness({
+  fault,
+  prNumber = 518,
+}: {
+  fault?: PublisherFault;
+  prNumber?: number | null;
+} = {}) {
+  const faultError = new Error(`${fault ?? "publisher"} fault`);
+  const checkUpdates: Array<Record<string, unknown>> = [];
+  const warnings: string[] = [];
+  const failures: string[] = [];
+  const events: string[] = [];
+  const github = {
+    rest: {
+      pulls: {
+        get: async () => {
+          if (fault === "pulls.get") throw faultError;
+          return { data: { head: { sha: CURRENT_HEAD } } };
+        },
+      },
+      checks: {
+        create: async () => {
+          if (fault === "checks.create") throw faultError;
+          return { data: { id: 123 } };
+        },
+        update: async (input: Record<string, unknown>) => {
+          if (fault === "checks.update") throw faultError;
+          checkUpdates.push(input);
+          events.push(`check:${String(input.conclusion)}`);
+        },
+      },
+      issues: {
+        listLabelsOnIssue: async () => ({ data: [] }),
+        listComments: async () => ({ data: [] }),
+      },
+    },
+    paginate: async () => {
+      if (fault === "paginate") throw faultError;
+      return [];
+    },
+  };
+  const context = {
+    payload: prNumber === null ? {} : { pull_request: { number: prNumber } },
+    repo: { owner: "drbang-iva", repo: "ODOS2020" },
+    runId: 33804575896,
+  };
+  const core = {
+    info: () => undefined,
+    warning: (message: string) => {
+      warnings.push(message);
+      events.push("warning");
+    },
+    setFailed: (message: string) => {
+      failures.push(message);
+      events.push("setFailed");
+    },
+  };
+  const requireModule = fault === "require"
+    ? () => { throw faultError; }
+    : fault === "parser"
+      ? () => ({ evaluateEvaluationGate: () => { throw faultError; } })
+      : require;
+
+  return {
+    github,
+    context,
+    core,
+    requireModule,
+    faultError,
+    checkUpdates,
+    warnings,
+    failures,
+    events,
+  };
 }
 
 test("a trusted Fable PASS bound to the current head passes", () => {
@@ -709,48 +794,69 @@ test("evaluation-gate keeps every trigger and filters current or previous marker
   assert.deepEqual(workflowPrefixes, [parserPrefix, parserPrefix]);
 });
 
-test("an expected gate rejection does not fail the status publisher job", async () => {
-  const checkUpdates: Array<Record<string, unknown>> = [];
-  const warnings: string[] = [];
-  const failures: string[] = [];
-  const github = {
-    rest: {
-      pulls: {
-        get: async () => ({ data: { head: { sha: CURRENT_HEAD } } }),
-      },
-      checks: {
-        create: async () => ({ data: { id: 123 } }),
-        update: async (input: Record<string, unknown>) => {
-          checkUpdates.push(input);
-        },
-      },
-      issues: {
-        listLabelsOnIssue: async () => ({ data: [] }),
-        listComments: async () => ({ data: [] }),
-      },
-    },
-    paginate: async () => [],
-  };
-  const context = {
-    payload: { pull_request: { number: 518 } },
-    repo: { owner: "drbang-iva", repo: "ODOS2020" },
-    runId: 33804575896,
-  };
-  const core = {
-    info: () => undefined,
-    warning: (message: string) => warnings.push(message),
-    setFailed: (message: string) => failures.push(message),
-  };
+test("an expected gate rejection completes the red check before warning without failing the publisher", async () => {
+  const harness = publisherHarness();
 
-  await runEvaluationWorkflowScript(github, context, core);
+  await runEvaluationWorkflowScript(
+    harness.github,
+    harness.context,
+    harness.core,
+    harness.requireModule,
+  );
 
-  assert.equal(failures.length, 0);
-  assert.equal(warnings.length, 1);
-  assert.match(warnings[0], /NOT EVALUATED/);
-  assert.equal(checkUpdates.length, 1);
-  assert.equal(checkUpdates[0].status, "completed");
-  assert.equal(checkUpdates[0].conclusion, "failure");
+  assert.deepEqual(harness.failures, []);
+  assert.equal(harness.warnings.length, 1);
+  assert.match(harness.warnings[0], /NOT EVALUATED/);
+  assert.equal(harness.checkUpdates.length, 1);
+  assert.equal(harness.checkUpdates[0].status, "completed");
+  assert.equal(harness.checkUpdates[0].conclusion, "failure");
+  assert.deepEqual(harness.events, ["check:failure", "warning"]);
 });
+
+test("publisher fails loudly when the PR number is unresolvable", async () => {
+  const harness = publisherHarness({ prNumber: null });
+
+  await runEvaluationWorkflowScript(
+    harness.github,
+    harness.context,
+    harness.core,
+    harness.requireModule,
+  );
+
+  assert.equal(harness.failures.length, 1);
+  assert.match(harness.failures[0], /could not resolve a PR number/);
+  assert.deepEqual(harness.events, ["setFailed"]);
+});
+
+for (const fault of [
+  "pulls.get",
+  "checks.create",
+  "paginate",
+  "parser",
+  "checks.update",
+  "require",
+] as const) {
+  test(`publisher fails loudly when ${fault} throws`, async () => {
+    const harness = publisherHarness({ fault });
+
+    await assert.rejects(
+      () => runEvaluationWorkflowScript(
+        harness.github,
+        harness.context,
+        harness.core,
+        harness.requireModule,
+      ),
+      (error) => error === harness.faultError,
+    );
+
+    assert.deepEqual(harness.failures, []);
+    assert.deepEqual(harness.warnings, []);
+    if (fault === "paginate" || fault === "parser") {
+      assert.equal(harness.checkUpdates.length, 1);
+      assert.equal(harness.checkUpdates[0].conclusion, "failure");
+    }
+  });
+}
 
 test("PR-Agent runs only for the four automatic pull-request actions", () => {
   const workflow = workflowSource(".github/workflows/pr-agent.yml");
