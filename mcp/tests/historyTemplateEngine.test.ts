@@ -14,7 +14,7 @@ import {
   type HistoryTemplateAnswer,
 } from "../src/clinical-graph/history-template-engine.js";
 
-test("history templates expose the fixed section vocabulary and only the Slice 1a declarations", () => {
+test("history templates expose the fixed section vocabulary and the Slice 1a complaint declarations", () => {
   assert.deepEqual(HISTORY_SECTION_TYPES, [
     "presentation",
     "symptoms",
@@ -28,6 +28,7 @@ test("history templates expose the fixed section vocabulary and only the Slice 1
     "interval",
     "laterality",
     "text",
+    "single_select",
   ]);
   assert.deepEqual(HISTORY_TEMPLATES.map((template) => template.complaint), ["glaucoma", "routine"]);
 });
@@ -48,6 +49,39 @@ test("Ocular History is a patient-scoped declaration with conditions and surgeri
     note_on_positive: true,
   });
   assert.equal(HISTORY_OPTION_CATALOGS.ocular_history_conditions.find((option) => option.code === "strabismus")?.per_eye, false);
+});
+
+test("Medical and Social History are patient-scoped declarations using the declared section vocabulary", () => {
+  const medical = HISTORY_SUBJECT_SECTIONS.find((section) => section.key === "medical-history");
+  assert.ok(medical);
+  assert.equal(medical.subjectScope, "patient");
+  assert.equal(medical.completionAnchor, "conditions");
+  assert.deepEqual(medical.sections.map((section) => [section.id, section.type, section.catalog, section.per_eye, section.required]), [
+    ["conditions", "risk_factors", "medical_history_conditions", undefined, true],
+    ["ophthalmic-medications", "treatment", "medical_history_ophthalmic_medications", true, true],
+    ["systemic-medications", "treatment", "medical_history_systemic_medications", false, true],
+    ["allergies", "risk_factors", "medical_history_allergies", undefined, true],
+  ]);
+
+  const social = HISTORY_SUBJECT_SECTIONS.find((section) => section.key === "social-history");
+  assert.ok(social);
+  assert.equal(social.subjectScope, "patient");
+  assert.equal(social.completionAnchor, "tobacco");
+  assert.deepEqual(social.sections.map((section) => [section.id, section.type, section.catalog, section.required]), [
+    ["tobacco", "single_select", "tobacco_status", true],
+    ["driving", "risk_factors", "social_history_driving", true],
+    ["alcohol-drugs", "risk_factors", "social_history_alcohol_drugs", true],
+    ["occupation", "text", undefined, undefined],
+    ["home-safety", "risk_factors", "social_history_home_safety", true],
+  ]);
+  assert.deepEqual(HISTORY_OPTION_CATALOGS.tobacco_status, [
+    { code: "never", display: "Never" },
+    { code: "former-smoker", display: "Former smoker" },
+    { code: "current", display: "Current" },
+  ]);
+  assert.deepEqual(HISTORY_OPTION_CATALOGS.medical_history_allergies, [
+    { code: "no-known-drug-allergies", display: "No known drug allergies" },
+  ]);
 });
 
 test("patient-section completeness distinguishes not started, started, and charted", () => {

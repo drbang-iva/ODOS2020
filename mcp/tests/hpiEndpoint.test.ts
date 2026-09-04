@@ -523,10 +523,14 @@ test("HPI definition retires the eight-textarea fields and retains extensible Re
   assert.equal(definition.terminologyStatus.status, "MANDATE-14-DEFERRED");
 });
 
-test("HPI definition publishes the patient-scoped Ocular History declaration", async () => {
+test("HPI definition publishes the patient-scoped Ocular, Medical, and Social History declarations", async () => {
   const result = await handleHpiDefinitionRequest(fixture().deps, { authHeader: AUTH });
   const body = result.body as { subjectSections: Array<{ key: string; subjectScope: string }> };
-  assert.deepEqual(body.subjectSections.map((section) => [section.key, section.subjectScope]), [["ocular-history", "patient"]]);
+  assert.deepEqual(body.subjectSections.map((section) => [section.key, section.subjectScope]), [
+    ["ocular-history", "patient"],
+    ["medical-history", "patient"],
+    ["social-history", "patient"],
+  ]);
 });
 
 test("record read keeps prior patient-scoped Ocular History separate from answers entered today", async () => {
@@ -608,6 +612,192 @@ test("patient-scoped Ocular History saves without a synthetic complaint id", asy
   assert.equal("complaintId" in answer, false);
 });
 
+test("patient-scoped tobacco persists as one catalog-validated selection rather than a tri-state", async () => {
+  const selected = {
+    id: "social-e1-tobacco",
+    subjectScope: "patient" as const,
+    templateKey: "social-history",
+    sectionId: "tobacco",
+    value: { kind: "selection" as const, code: "current" },
+  };
+  const setup = fixture("provider", false);
+  const result = await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", templateAnswers: [selected] },
+  });
+
+  assert.equal(result.status, 200);
+  const persisted = setup.observations.find((observation) => observation.code.coding?.some((coding) => coding.code === "history-template-answer"));
+  assert.ok(persisted);
+  assert.deepEqual(parseHistoryAnswerObservation(persisted), {
+    ...selected,
+    observationReference: `Observation/${persisted.id}`,
+  });
+
+  const rejected = await handleHpiCaptureRequest(fixture("provider", false).deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      templateAnswers: [{ ...selected, value: { kind: "tri-state", status: "positive" } }],
+    },
+  });
+  assert.equal(rejected.status, 400);
+  assert.match((rejected.body as { error: string }).error, /wrong value type for single_select/);
+});
+
+test("changing a single-select updates one answer with If-Match instead of voiding and recreating it", async () => {
+  const setup = fixture("provider", false);
+  const answer = {
+    id: "history-e1-social-history-tobacco-value",
+    subjectScope: "patient" as const,
+    templateKey: "social-history",
+    sectionId: "tobacco",
+    value: { kind: "selection" as const, code: "current" },
+  };
+  assert.equal((await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", templateAnswers: [answer] },
+  })).status, 200);
+  const persisted = setup.observations.find((observation) =>
+    observation.code.coding?.some((coding) => coding.code === "history-template-answer")
+  );
+  assert.ok(persisted);
+  persisted.meta = { versionId: "7" };
+
+  assert.equal((await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      templateAnswers: [{ ...answer, value: { kind: "selection", code: "former-smoker" } }],
+    },
+  })).status, 200);
+
+  const replacement = setup.transactions.at(-1)?.bundle.entry?.find((entry) =>
+    entry.resource?.resourceType === "Observation" && entry.resource.id === persisted.id
+  );
+  assert.deepEqual(replacement?.request, {
+    method: "PUT",
+    url: `Observation/${persisted.id}`,
+    ifMatch: 'W/"7"',
+  });
+  const liveAnswers = setup.observations.filter((observation) =>
+    observation.status !== "entered-in-error" &&
+    observation.code.coding?.some((coding) => coding.code === "history-template-answer")
+  );
+  assert.equal(liveAnswers.length, 1);
+  assert.deepEqual(parseHistoryAnswerObservation(liveAnswers[0]!).value, {
+    kind: "selection",
+    code: "former-smoker",
+  });
+});
+
+test("Medical History keeps prior answers separate from answers entered today", async () => {
+  const setup = fixture("provider", false);
+  const medicalAnswer = (
+    id: string,
+    encounterReference: string,
+    sectionId: "conditions" | "systemic-medications",
+    optionCode: "diabetes-mellitus" | "ibuprofen-800-mg",
+  ) => ({
+    ...buildHistoryAnswerObservation({
+      id,
+      subjectScope: "patient" as const,
+      templateKey: "medical-history",
+      sectionId,
+      optionCode,
+      value: { kind: "tri-state" as const, status: "positive" as const },
+    }, {
+      patientReference: "Patient/p1",
+      encounterReference,
+      recordedAt: encounterReference === "Encounter/e1" ? "2026-09-03T12:00:00.000Z" : "2026-08-01T12:00:00.000Z",
+    }),
+    id: `observation-${id}`,
+  });
+  setup.observations.push(
+    medicalAnswer("prior-diabetes", "Encounter/prior", "conditions", "diabetes-mellitus"),
+    medicalAnswer("today-ibuprofen", "Encounter/e1", "systemic-medications", "ibuprofen-800-mg"),
+  );
+
+  const result = await handleHpiRecordRequest(setup.deps, { authHeader: AUTH, params: { encounterId: "e1" } });
+  assert.equal(result.status, 200);
+  const body = result.body as {
+    answers: Array<{ id: string }>;
+    carriedForwardAnswers: Array<{ answer: { id: string } }>;
+  };
+  assert.deepEqual(body.answers.map((answer) => answer.id), ["today-ibuprofen"]);
+  assert.deepEqual(body.carriedForwardAnswers.map((row) => row.answer.id), ["prior-diabetes"]);
+});
+
+test("Medical History keeps ophthalmic and systemic medication laterality in separate declared sections", async () => {
+  const ophthalmic = {
+    id: "medical-e1-ophthalmic-medications-miebo-pf-OD",
+    subjectScope: "patient" as const,
+    templateKey: "medical-history",
+    sectionId: "ophthalmic-medications",
+    optionCode: "miebo-pf",
+    eye: "OD" as const,
+    value: { kind: "tri-state" as const, status: "positive" as const },
+  };
+  const systemic = {
+    id: "medical-e1-systemic-medications-ibuprofen-800-mg",
+    subjectScope: "patient" as const,
+    templateKey: "medical-history",
+    sectionId: "systemic-medications",
+    optionCode: "ibuprofen-800-mg",
+    value: { kind: "tri-state" as const, status: "positive" as const },
+  };
+  const setup = fixture("provider", false);
+  const result = await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", templateAnswers: [ophthalmic, systemic] },
+  });
+  assert.equal(result.status, 200);
+  assert.deepEqual(setup.observations.filter((observation) =>
+    observation.code.coding?.some((coding) => coding.code === "history-template-answer")
+  ).map(parseHistoryAnswerObservation).map((answer) => [answer.sectionId, answer.eye]), [
+    ["ophthalmic-medications", "OD"],
+    ["systemic-medications", undefined],
+  ]);
+
+  const missingEye = await handleHpiCaptureRequest(fixture("provider", false).deps, {
+    authHeader: AUTH,
+    body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", templateAnswers: [{ ...ophthalmic, eye: undefined }] },
+  });
+  assert.equal(missingEye.status, 400);
+  assert.match((missingEye.body as { error: string }).error, /requires an eye/);
+
+  const systemicEye = await handleHpiCaptureRequest(fixture("provider", false).deps, {
+    authHeader: AUTH,
+    body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", templateAnswers: [{ ...systemic, eye: "OS" }] },
+  });
+  assert.equal(systemicEye.status, 400);
+  assert.match((systemicEye.body as { error: string }).error, /cannot name an eye/);
+});
+
+test("patient-scoped text sections use the same history answer persistence path", async () => {
+  const occupation = {
+    id: "social-e1-occupation",
+    subjectScope: "patient" as const,
+    templateKey: "social-history",
+    sectionId: "occupation",
+    value: { kind: "text" as const, text: "Accountant" },
+  };
+  const setup = fixture("provider", false);
+  const result = await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", templateAnswers: [occupation] },
+  });
+  assert.equal(result.status, 200);
+  const persisted = setup.observations.find((observation) => observation.code.coding?.some((coding) => coding.code === "history-template-answer"));
+  assert.ok(persisted);
+  assert.deepEqual(parseHistoryAnswerObservation(persisted), {
+    ...occupation,
+    observationReference: `Observation/${persisted.id}`,
+  });
+});
+
 test("Ocular History can be recorded before a chief complaint without creating an empty HPI", async () => {
   const setup = fixture("provider", false);
   const result = await handleHpiCaptureRequest(setup.deps, {
@@ -678,6 +868,53 @@ test("reviewed today records a separate attestation that references prior answer
     attestationReference: "Observation/observation-2",
     priorAnswerReferences: ["Observation/prior-glaucoma-observation"],
   }]);
+});
+
+test("Social History uses the shared no-change attestation path and names itself in refusals", async () => {
+  const socialAnswer = (id: string, encounterReference: string) => ({
+    ...buildHistoryAnswerObservation({
+      id,
+      subjectScope: "patient" as const,
+      templateKey: "social-history",
+      sectionId: "tobacco",
+      value: { kind: "selection" as const, code: "former-smoker" },
+    }, {
+      patientReference: "Patient/p1",
+      encounterReference,
+      recordedAt: encounterReference === "Encounter/e1" ? "2026-09-03T12:00:00.000Z" : "2026-08-01T12:00:00.000Z",
+    }),
+    id: `${id}-observation`,
+  });
+  const reviewSetup = fixture();
+  reviewSetup.observations.push(socialAnswer("prior-tobacco", "Encounter/prior"));
+  const reviewed = await handleHistoryReviewRequest(reviewSetup.deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      sectionKey: "social-history",
+    },
+  });
+  assert.equal(reviewed.status, 200);
+  assert.equal((reviewSetup.transactions.at(-1)?.bundle.entry?.[0]?.resource as Observation).derivedFrom?.[0]?.reference,
+    "Observation/prior-tobacco-observation");
+
+  const editedSetup = fixture();
+  editedSetup.observations.push(
+    socialAnswer("prior-tobacco", "Encounter/prior"),
+    socialAnswer("today-tobacco", "Encounter/e1"),
+  );
+  const refused = await handleHistoryReviewRequest(editedSetup.deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      sectionKey: "social-history",
+    },
+  });
+  assert.equal(refused.status, 409);
+  assert.equal((refused.body as { error: string }).error,
+    "Social History was edited on this encounter; a no-change review cannot also be recorded.");
 });
 
 test("reviewed today refuses to attest no change after this encounter has an Ocular History edit", async () => {

@@ -422,6 +422,127 @@ test("Ocular History renders from its declaration, including catalog-owned later
   assert.match(html, /Diagnosed 2022/);
 });
 
+test("a declared single-select replaces one answer and then clears that same answer", () => {
+  const declaration: HistorySubjectSection = {
+    key: "social-history",
+    label: "Social History",
+    subjectScope: "patient",
+    completionAnchor: "tobacco",
+    sections: [{ id: "tobacco", type: "single_select", label: "Tobacco", catalog: "tobacco_status", required: true }],
+  };
+  const catalogs: HistoryCatalogs = {
+    tobacco_status: [
+      { code: "never", display: "Never" },
+      { code: "former-smoker", display: "Former smoker" },
+      { code: "current", display: "Current" },
+    ],
+  };
+  const changes: Array<{ next: HistoryTemplateAnswer | undefined; prior: HistoryTemplateAnswer | undefined }> = [];
+  let answers: HistoryTemplateAnswer[] = [];
+  const props = () => ({
+    encounterId: "e1",
+    declaration,
+    catalogs,
+    answers,
+    editMode: false,
+    onChange: (next: HistoryTemplateAnswer | undefined, prior: HistoryTemplateAnswer | undefined) => changes.push({ next, prior }),
+    onRemoveTyped: () => undefined,
+  });
+  const renderer = create(<HistorySubjectSectionEditor {...props()} />);
+
+  act(() => renderer.root.findByProps({ "aria-label": "Current: unselected" }).props.onClick());
+  const current = changes.at(-1)?.next;
+  assert.deepEqual(current, {
+    id: "history-e1-social-history-tobacco-value",
+    subjectScope: "patient",
+    templateKey: "social-history",
+    sectionId: "tobacco",
+    value: { kind: "selection", code: "current" },
+  });
+
+  answers = [current!];
+  act(() => renderer.update(<HistorySubjectSectionEditor {...props()} />));
+  act(() => renderer.root.findByProps({ "aria-label": "Former smoker: unselected" }).props.onClick());
+  const former = changes.at(-1);
+  assert.equal(former?.prior?.id, current?.id);
+  assert.equal(former?.next?.id, current?.id);
+  assert.deepEqual(former?.next?.value, { kind: "selection", code: "former-smoker" });
+
+  answers = [former!.next!];
+  act(() => renderer.update(<HistorySubjectSectionEditor {...props()} />));
+  act(() => renderer.root.findByProps({ "aria-label": "Former smoker: selected" }).props.onClick());
+  assert.equal(changes.at(-1)?.next, undefined);
+  assert.equal(changes.at(-1)?.prior?.id, current?.id);
+  renderer.unmount();
+});
+
+test("clearing a selected tobacco chip voids its one Observation before saving the empty section", async () => {
+  const originalFetch = globalThis.fetch;
+  const voidBodies: unknown[] = [];
+  const submittedAnswers: HistoryTemplateAnswer[][] = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/hpi/definition")) return json({
+      templates: [],
+      catalogs: { tobacco_status: [{ code: "current", display: "Current" }] },
+      subjectSections: [{
+        key: "social-history",
+        label: "Social History",
+        subjectScope: "patient",
+        completionAnchor: "tobacco",
+        sections: [{ id: "tobacco", type: "single_select", label: "Tobacco", catalog: "tobacco_status", required: true }],
+      }],
+      definition: {},
+    });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) return json({ complaints: [] });
+    if (url.endsWith("/clinical-graph/encounters/e1/hpi")) return json({
+      answers: [{
+        id: "history-e1-social-history-tobacco-value",
+        subjectScope: "patient",
+        templateKey: "social-history",
+        sectionId: "tobacco",
+        observationReference: "Observation/today-tobacco",
+        value: { kind: "selection", code: "current" },
+      }],
+      carriedForwardAnswers: [],
+      reviewAttestations: [],
+      templateNarratives: [],
+    });
+    if (url.endsWith("/clinical-graph/encounters/e1/void") && init?.method === "POST") {
+      voidBodies.push(JSON.parse(String(init.body)));
+      return json({ voided: ["Observation/today-tobacco"], count: 1, sections: [], entries: [], preview: false });
+    }
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      const submitted = JSON.parse(String(init.body)) as { templateAnswers: HistoryTemplateAnswer[] };
+      submittedAnswers.push(submitted.templateAnswers);
+      return json({ answers: submitted.templateAnswers, templateNarratives: [] });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<EncounterEditContext.Provider value={{}}><HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></EncounterEditContext.Provider>);
+      await delay(0);
+    });
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Current: selected" }).props.onClick();
+      await delay(0);
+      await delay(0);
+    });
+    assert.deepEqual(voidBodies, [{
+      scope: "observation",
+      observationReference: "Observation/today-tobacco",
+      sectionKey: "social-history",
+      label: "current",
+    }]);
+    assert.deepEqual(submittedAnswers.at(-1), []);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("Ocular History keeps prior-chart answers distinct and review attestation does not save an edit", async () => {
   const originalFetch = globalThis.fetch;
   let historyPosts = 0;
@@ -534,6 +655,56 @@ test("Ocular History keeps prior-chart answers distinct and review attestation d
     });
     assert.equal(historyPosts, 1);
     assert.equal(renderer.root.findAllByType("p").some((node) => node.children.join("").includes("Reviewed by")), false);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a carried-forward single-select displays its catalog choice in the prior-encounter strip", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/hpi/definition")) return json({
+      templates: [],
+      catalogs: { tobacco_status: [{ code: "former-smoker", display: "Former smoker" }] },
+      subjectSections: [{
+        key: "social-history",
+        label: "Social History",
+        subjectScope: "patient",
+        completionAnchor: "tobacco",
+        sections: [{ id: "tobacco", type: "single_select", label: "Tobacco", catalog: "tobacco_status", required: true }],
+      }],
+      definition: {},
+    });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) return json({ complaints: [] });
+    if (url.endsWith("/clinical-graph/encounters/e1/hpi")) return json({
+      answers: [],
+      carriedForwardAnswers: [{
+        answer: {
+          id: "prior-tobacco",
+          subjectScope: "patient",
+          templateKey: "social-history",
+          sectionId: "tobacco",
+          observationReference: "Observation/prior-tobacco",
+          value: { kind: "selection", code: "former-smoker" },
+        },
+        encounterReference: "Encounter/prior",
+        recordedAt: "2026-08-01T12:00:00.000Z",
+      }],
+      reviewAttestations: [],
+      templateNarratives: [],
+    });
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<EncounterEditContext.Provider value={{}}><HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></EncounterEditContext.Provider>);
+      await delay(0);
+    });
+    const chartStrip = renderer.root.findByProps({ "aria-label": "Social History on this chart" });
+    assert.match(chartStrip.findByType("li").children.join(""), /^Former smoker/);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

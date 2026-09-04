@@ -85,6 +85,8 @@ const OTHER_SECTION_KEY = "other";
 const SECTION_LABELS: Record<string, string> = {
   [HISTORY_SECTION_KEY]: "History",
   "ocular-history": "Ocular History",
+  "medical-history": "Medical History",
+  "social-history": "Social History",
   [COMPLAINTS_SECTION_KEY]: "Complaints",
   [ASSESSMENT_SECTION_KEY]: "Assessment",
   tonometry: "IOP",
