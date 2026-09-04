@@ -21,6 +21,7 @@ import {
   handleHistoryReviewRequest,
   type HpiEndpointDeps,
 } from "../src/clinical-graph/hpi-endpoint.js";
+import { HISTORY_OPTION_CATALOGS } from "../src/clinical-graph/history-template-engine.js";
 import { buildExamOverviewProjection } from "../src/clinical-graph/exam-overview-projection.js";
 
 const AUTH = "Bearer good";
@@ -756,6 +757,47 @@ test("a later Ocular History edit retires the earlier no-change attestation in t
     entry.resource?.resourceType === "Provenance" && entry.resource.activity?.coding?.some((coding) => coding.code === "VOID")
   )?.resource as Provenance | undefined;
   assert.equal(retirementProvenance?.agent[0]?.who.reference, "Practitioner/doc1");
+});
+
+test("patient-scoped notes require a positive answer and catalog permission", async () => {
+  const answer = {
+    id: "ocular-e1-conditions-glaucoma-OD",
+    subjectScope: "patient" as const,
+    templateKey: "ocular-history",
+    sectionId: "conditions",
+    optionCode: "glaucoma",
+    eye: "OD" as const,
+    value: { kind: "tri-state" as const, status: "negative" as const, note: "Not allowed" },
+  };
+  const negativeSetup = fixture("provider", false);
+  const negativeResult = await handleHpiCaptureRequest(negativeSetup.deps, {
+    authHeader: AUTH,
+    body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", templateAnswers: [answer] },
+  });
+  assert.equal(negativeResult.status, 400);
+  assert.match((negativeResult.body as { error: string }).error, /value is invalid/);
+  assert.equal(negativeSetup.transactions.length, 0);
+
+  const glaucoma = HISTORY_OPTION_CATALOGS.ocular_history_conditions?.find((option) => option.code === "glaucoma");
+  assert.ok(glaucoma);
+  const originalPermission = glaucoma.note_on_positive;
+  glaucoma.note_on_positive = false;
+  try {
+    const permissionSetup = fixture("provider", false);
+    const permissionResult = await handleHpiCaptureRequest(permissionSetup.deps, {
+      authHeader: AUTH,
+      body: {
+        patientReference: "Patient/p1",
+        encounterReference: "Encounter/e1",
+        templateAnswers: [{ ...answer, value: { ...answer.value, status: "positive" as const } }],
+      },
+    });
+    assert.equal(permissionResult.status, 400);
+    assert.match((permissionResult.body as { error: string }).error, /does not allow notes/);
+    assert.equal(permissionSetup.transactions.length, 0);
+  } finally {
+    glaucoma.note_on_positive = originalPermission;
+  }
 });
 
 test("history capture enforces authority, option validation, encounter scope, and an active complaint", async () => {

@@ -917,6 +917,9 @@ function validateTemplateAnswers(answers: HistoryTemplateAnswer[], complaints: E
       const option = HISTORY_OPTION_CATALOGS[section.catalog]?.find((candidate) => candidate.code === answer.optionCode);
       if (!option) return `History answer ${answer.id} names an unknown catalog option.`;
       if (answer.value.kind !== "tri-state") return `History answer ${answer.id} has the wrong value type for ${section.type}.`;
+      if (answer.value.note !== undefined && option.note_on_positive !== true) {
+        return `History answer ${answer.id} names an option that does not allow notes.`;
+      }
       const perEye = option.per_eye === true;
       if (perEye && !answer.eye) return `History answer ${answer.id} requires an eye for this option.`;
       if (!perEye && answer.eye) return `History answer ${answer.id} cannot name an eye for this option.`;
