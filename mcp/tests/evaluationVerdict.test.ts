@@ -881,6 +881,15 @@ test("CI cancels superseded pull requests but never pushes to main", () => {
 
 test("CI blocks on the complete live authorization lane after policy sync", () => {
   const workflow = workflowSource(".github/workflows/ci.yml");
+  const integrationStep = workflow.match(
+    /- name: run credentialed live integration lane\n(?<body>[\s\S]*?)\n\s+- name:/,
+  )?.groups?.body;
+  assert.ok(integrationStep, "CI needs the blocking live integration lane");
+  assert.match(
+    integrationStep,
+    /ODOS_POSTGRES_URL: postgresql:\/\/medplum:medplum@127\.0\.0\.1:15432\/medplum/,
+  );
+
   const authorizationStep = workflow.match(
     /- name: run credentialed live authorization lane\n(?<body>[\s\S]*?)\n\s+- name:/,
   )?.groups?.body;

@@ -139,6 +139,7 @@ jobs:
           MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
           MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
           MEDPLUM_CONTRACT_BOOTSTRAP: "1"
+          ODOS_POSTGRES_URL: postgresql://medplum:medplum@127.0.0.1:15432/medplum
         run: npm run test:live-integration
       # CI-ONLY PRIVILEGED SEEDER: the operator ClientApplication stays outside practice-role
       # policies so authorization fixtures can be created without granting those rights to a role.
