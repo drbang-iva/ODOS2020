@@ -34,6 +34,7 @@ export default defineConfig(({ mode }) => {
         "/communications": { target: mcpTarget, changeOrigin: true },
         "/watchers": { target: mcpTarget, changeOrigin: true },
         "/inventory": { target: mcpTarget, changeOrigin: true },
+        "/comms": { target: mcpTarget, changeOrigin: true },
         "/audit": {
           target: mcpTarget,
           changeOrigin: true,
