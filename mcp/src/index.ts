@@ -5216,7 +5216,7 @@ function buildUpdatePatientPatchOperations(input: UpdatePatientInput): JsonPatch
   }
 
   if (input.gender !== undefined) {
-    operations.push({ op: "replace", path: "/gender", value: "unknown" });
+    operations.push({ op: "replace", path: "/gender", value: input.gender });
   }
 
   if (input.birth_date !== undefined) {
