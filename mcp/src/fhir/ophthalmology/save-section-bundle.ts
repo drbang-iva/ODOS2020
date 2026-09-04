@@ -109,7 +109,8 @@ export function buildSectionSaveBundle(input: BuildSectionSaveBundleInput): Bund
       resource: bodyStructure,
       request: {
         method: "POST",
-        url: "BodyStructure",
+        url: `BodyStructure?${ifNoneExist}&_count=1`,
+        ifNoneExist,
       },
     });
 
