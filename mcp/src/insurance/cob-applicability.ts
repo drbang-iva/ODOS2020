@@ -19,5 +19,5 @@ export function coverageCobApplicability(coverage: Coverage): CobApplicability {
   )?.valueCode;
   return COB_APPLICABILITY_VALUES.includes(value as CobApplicability)
     ? value as CobApplicability
-    : "unknown";
+    : "supported";
 }
