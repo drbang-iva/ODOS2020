@@ -522,6 +522,7 @@ export async function handleHpiCaptureRequest(
       patientReference: parsed.data.patientReference,
       encounterReference: parsed.data.encounterReference,
       recordedAt,
+      actorReference: staff.staffReference,
     });
     const answerTargets = answerUpsert.entries.map((entry) => reference(
       entry.resource?.id ? `Observation/${entry.resource.id}` : entry.fullUrl ?? "urn:uuid:history-answer"
@@ -538,7 +539,11 @@ export async function handleHpiCaptureRequest(
       type: "transaction",
       entry: [
         ...answerUpsert.entries,
+        ...answerUpsert.reviewRetirements,
         { fullUrl: "urn:uuid:history-answer-provenance", resource: provenance, request: { method: "POST", url: "Provenance" } },
+        ...(answerUpsert.reviewRetirementProvenance
+          ? [{ fullUrl: "urn:uuid:history-review-retirement-provenance", resource: answerUpsert.reviewRetirementProvenance, request: { method: "POST" as const, url: "Provenance" } }]
+          : []),
       ],
     };
     const transaction = await staff.fhir.executeTransaction(transactionRequest, {
@@ -552,7 +557,8 @@ export async function handleHpiCaptureRequest(
         encounterReference: parsed.data.encounterReference,
         templateNarratives: [],
         answers: savedHistoryAnswers(templateAnswers, answerUpsert.existingAnswers, transaction, 0),
-        provenanceReference: transactionResourceReference(transaction, answerUpsert.entries.length, "Provenance"),
+        retiredReviewSections: answerUpsert.retiredReviewSections,
+        provenanceReference: transactionResourceReference(transaction, answerUpsert.entries.length + answerUpsert.reviewRetirements.length, "Provenance"),
       },
     };
   }
@@ -639,6 +645,7 @@ export async function handleHpiCaptureRequest(
     patientReference: parsed.data.patientReference,
     encounterReference: parsed.data.encounterReference,
     recordedAt,
+    actorReference: staff.staffReference,
   });
   const transactionRequest: Bundle = {
     resourceType: "Bundle",
@@ -664,6 +671,10 @@ export async function handleHpiCaptureRequest(
       { fullUrl: "urn:uuid:hpi-provenance", resource: provenanceResource, request: { method: "POST", url: "Provenance" } },
       ...duplicateEntries,
       ...answerUpsert.entries,
+      ...answerUpsert.reviewRetirements,
+      ...(answerUpsert.reviewRetirementProvenance
+        ? [{ fullUrl: "urn:uuid:history-review-retirement-provenance", resource: answerUpsert.reviewRetirementProvenance, request: { method: "POST" as const, url: "Provenance" } }]
+        : []),
     ],
   };
   const transaction = await staff.fhir.executeTransaction(transactionRequest, {
@@ -688,6 +699,7 @@ export async function handleHpiCaptureRequest(
       )),
       templateNarratives: templateNarratives(complaints, templateAnswers),
       answers: savedAnswers,
+      retiredReviewSections: answerUpsert.retiredReviewSections,
       ...(provenanceReference ? { provenanceReference } : {}),
     },
   };
@@ -696,18 +708,34 @@ export async function handleHpiCaptureRequest(
 async function prepareHistoryAnswerUpsert(
   fhir: HpiFhirClient,
   answers: HistoryTemplateAnswer[],
-  context: { patientReference: string; encounterReference: string; recordedAt: string },
+  context: { patientReference: string; encounterReference: string; recordedAt: string; actorReference: string },
 ): Promise<{
   existingAnswers: Map<string, Observation>;
   entries: NonNullable<Bundle["entry"]>;
+  reviewRetirements: NonNullable<Bundle["entry"]>;
+  retiredReviewSections: string[];
+  reviewRetirementProvenance: Provenance | undefined;
 }> {
-  const answerBundle = await fhir.search<Observation>("Observation", {
-    encounter: context.encounterReference,
-    code: `${HISTORY_ANSWER_CODE_SYSTEM}|${HISTORY_ANSWER_CODE}`,
-    _count: "500",
-  });
+  const editedPatientSections = new Set(answers.flatMap((answer) => answer.subjectScope === "patient" ? [answer.templateKey] : []));
+  const [answerBundle, reviewBundle] = await Promise.all([
+    fhir.search<Observation>("Observation", {
+      encounter: context.encounterReference,
+      code: `${HISTORY_ANSWER_CODE_SYSTEM}|${HISTORY_ANSWER_CODE}`,
+      _count: "500",
+    }),
+    editedPatientSections.size > 0
+      ? fhir.search<Observation>("Observation", {
+          encounter: context.encounterReference,
+          code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${HISTORY_REVIEW_ATTESTATION_CODE}`,
+          _count: "20",
+        })
+      : Promise.resolve(undefined),
+  ]);
   if (answerBundle.link?.some((link) => link.relation === "next")) {
     throw new Error("History answer upsert found more Observations than it can safely reconcile.");
+  }
+  if (reviewBundle?.link?.some((link) => link.relation === "next")) {
+    throw new Error("History answer upsert found more review attestations than it can safely reconcile.");
   }
   const existingAnswers = new Map((answerBundle.entry ?? []).flatMap((entry) => {
     const candidate = entry.resource;
@@ -721,7 +749,32 @@ async function prepareHistoryAnswerUpsert(
       ? { resource, request: { method: "PUT" as const, url: `Observation/${existing.id}`, ...(existing.meta?.versionId ? { ifMatch: `W/\"${existing.meta.versionId}\"` } : {}) } }
       : { fullUrl: `urn:uuid:hpi-answer-${index}`, resource, request: { method: "PUT" as const, url: `Observation?identifier=${resource.identifier?.[0]?.system}|${answer.id}` } };
   });
-  return { existingAnswers, entries };
+  const reviews = (reviewBundle?.entry ?? []).flatMap((entry) => {
+    const observation = entry.resource;
+    const sectionKey = observation?.extension?.find((extension) => extension.url === HISTORY_REVIEW_SECTION_EXTENSION_URL)?.valueCode;
+    if (!observation?.id || !sectionKey || !editedPatientSections.has(sectionKey) ||
+      observation.subject?.reference !== context.patientReference || observation.encounter?.reference !== context.encounterReference ||
+      observation.status === "entered-in-error" || observation.status === "cancelled" ||
+      !observation.code.coding?.some((coding) => coding.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && coding.code === HISTORY_REVIEW_ATTESTATION_CODE)) return [];
+    return [{ observation, sectionKey }];
+  }).sort((left, right) => (left.observation.id ?? "").localeCompare(right.observation.id ?? ""));
+  const reviewRetirements = reviews.map(({ observation }) => ({
+    resource: { ...observation, status: "entered-in-error" as const },
+    request: {
+      method: "PUT" as const,
+      url: `Observation/${observation.id}`,
+      ...(observation.meta?.versionId ? { ifMatch: `W/\"${observation.meta.versionId}\"` } : {}),
+    },
+  }));
+  const retiredReviewSections = [...new Set(reviews.map((review) => review.sectionKey))];
+  const reviewRetirementProvenance: Provenance | undefined = reviews.length > 0 ? {
+    resourceType: "Provenance",
+    target: reviews.map(({ observation }) => reference(`Observation/${observation.id}`)),
+    recorded: context.recordedAt,
+    activity: odosConcept("VOID", "Retire superseded history review attestation"),
+    agent: [{ type: odosConcept("author", "Author"), who: reference(context.actorReference) }],
+  } : undefined;
+  return { existingAnswers, entries, reviewRetirements, retiredReviewSections, reviewRetirementProvenance };
 }
 
 function savedHistoryAnswers(

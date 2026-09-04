@@ -8,6 +8,7 @@ import { buildHpiFindingDefinition } from "../src/clinical-graph/hpi-definition.
 import {
   HISTORY_REVIEW_ATTESTATION_CODE,
   buildHistoryAnswerObservation,
+  buildHistoryReviewAttestation,
   parseHistoryAnswerObservation,
 } from "../src/clinical-graph/history-answer-observation.js";
 import {
@@ -711,6 +712,50 @@ test("reviewed today refuses to attest no change after this encounter has an Ocu
   assert.equal(result.status, 409);
   assert.match((result.body as { error: string }).error, /edited on this encounter/);
   assert.equal(setup.transactions.length, 0);
+});
+
+test("a later Ocular History edit retires the earlier no-change attestation in the same transaction", async () => {
+  const setup = fixture("provider", false);
+  setup.observations.push({
+    ...buildHistoryReviewAttestation({
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      sectionKey: "ocular-history",
+      actorReference: "Practitioner/doc1",
+      recordedAt: "2026-09-03T11:00:00.000Z",
+      priorAnswerReferences: ["Observation/prior-glaucoma"],
+    }),
+    id: "review-before-edit",
+    meta: { versionId: "3" },
+  });
+
+  const result = await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      templateAnswers: [{
+        id: "ocular-e1-conditions-glaucoma-OD",
+        subjectScope: "patient",
+        templateKey: "ocular-history",
+        sectionId: "conditions",
+        optionCode: "glaucoma",
+        eye: "OD",
+        value: { kind: "tri-state", status: "positive" },
+      }],
+    },
+  });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual((result.body as { retiredReviewSections: string[] }).retiredReviewSections, ["ocular-history"]);
+  assert.equal(setup.observations.find((observation) => observation.id === "review-before-edit")?.status, "entered-in-error");
+  const retirement = setup.transactions[0]?.bundle.entry?.find((entry) => entry.resource?.resourceType === "Observation" && entry.resource.id === "review-before-edit");
+  assert.equal(retirement?.request?.method, "PUT");
+  assert.equal(retirement?.request?.ifMatch, 'W/"3"');
+  const retirementProvenance = setup.transactions[0]?.bundle.entry?.find((entry) =>
+    entry.resource?.resourceType === "Provenance" && entry.resource.activity?.coding?.some((coding) => coding.code === "VOID")
+  )?.resource as Provenance | undefined;
+  assert.equal(retirementProvenance?.agent[0]?.who.reference, "Practitioner/doc1");
 });
 
 test("history capture enforces authority, option validation, encounter scope, and an active complaint", async () => {

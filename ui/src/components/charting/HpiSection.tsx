@@ -362,6 +362,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       const result = await postJson<{
         answers?: HistoryTemplateAnswer[];
         templateNarratives?: Array<{ complaintId: string; narrative: string }>;
+        retiredReviewSections?: string[];
         error?: string;
       }>(`${clinicalGraphApiBase()}/clinical-graph/hpi`, {
         patientReference,
@@ -374,6 +375,10 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       }
       latestAnswers.current = mergeSavedReferences(latestAnswers.current, savedAnswers);
       setAnswers((current) => mergeSavedReferences(current, savedAnswers));
+      if (result.retiredReviewSections?.length) {
+        const retired = new Set(result.retiredReviewSections);
+        setReviewAttestations((current) => current.filter((attestation) => !retired.has(attestation.sectionKey)));
+      }
       const nextNarratives = {
         ...narratives,
         ...Object.fromEntries((result.templateNarratives ?? []).map((row) => [row.complaintId, row.narrative])),

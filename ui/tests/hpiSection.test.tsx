@@ -488,7 +488,7 @@ test("Ocular History keeps prior-chart answers distinct and review attestation d
     }
     if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
       historyPosts += 1;
-      return json({ answers: [], templateNarratives: [] });
+      return json({ answers: [], templateNarratives: [], retiredReviewSections: ["ocular-history"] });
     }
     throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
   };
@@ -527,6 +527,13 @@ test("Ocular History keeps prior-chart answers distinct and review attestation d
     }]);
     const reviewed = renderer.root.findAllByType("p").find((node) => node.children.join("").includes("Reviewed by"));
     assert.equal(reviewed?.children.join(""), "Reviewed by Practitioner/doc1 · 2026-09-03");
+
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Glaucoma OD: unasked" }).props.onClick();
+      await delay(850);
+    });
+    assert.equal(historyPosts, 1);
+    assert.equal(renderer.root.findAllByType("p").some((node) => node.children.join("").includes("Reviewed by")), false);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;
