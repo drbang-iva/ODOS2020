@@ -79,6 +79,41 @@ function triggerBlock(source: string): string {
   return source.match(/^on:\n([\s\S]*?)(?=^[a-z][a-z-]*:)/m)?.[1] ?? "";
 }
 
+function evaluationWorkflowScript(): string {
+  const source = workflowSource(".github/workflows/evaluation-gate.yml");
+  const marker = "          script: |\n";
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, "evaluation workflow needs an embedded script");
+  return source
+    .slice(start + marker.length)
+    .split("\n")
+    .map((line) => line.startsWith("            ") ? line.slice(12) : line)
+    .join("\n");
+}
+
+async function runEvaluationWorkflowScript(
+  github: unknown,
+  context: unknown,
+  core: unknown,
+): Promise<void> {
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
+  const execute = AsyncFunction(
+    "github",
+    "context",
+    "core",
+    "process",
+    "require",
+    evaluationWorkflowScript(),
+  ) as (...args: unknown[]) => Promise<void>;
+  await execute(
+    github,
+    context,
+    core,
+    { env: { ...process.env, GITHUB_WORKSPACE: fileURLToPath(repoRoot) } },
+    require,
+  );
+}
+
 test("a trusted Fable PASS bound to the current head passes", () => {
   const decision = evaluate({
     comments: [comment(marker("Fable 5", "PASS"))],
@@ -672,6 +707,49 @@ test("evaluation-gate keeps every trigger and filters current or previous marker
   ].map((match) => match[1]);
   assert.equal(parserPrefix, "Evaluated-by:");
   assert.deepEqual(workflowPrefixes, [parserPrefix, parserPrefix]);
+});
+
+test("an expected gate rejection does not fail the status publisher job", async () => {
+  const checkUpdates: Array<Record<string, unknown>> = [];
+  const warnings: string[] = [];
+  const failures: string[] = [];
+  const github = {
+    rest: {
+      pulls: {
+        get: async () => ({ data: { head: { sha: CURRENT_HEAD } } }),
+      },
+      checks: {
+        create: async () => ({ data: { id: 123 } }),
+        update: async (input: Record<string, unknown>) => {
+          checkUpdates.push(input);
+        },
+      },
+      issues: {
+        listLabelsOnIssue: async () => ({ data: [] }),
+        listComments: async () => ({ data: [] }),
+      },
+    },
+    paginate: async () => [],
+  };
+  const context = {
+    payload: { pull_request: { number: 518 } },
+    repo: { owner: "drbang-iva", repo: "ODOS2020" },
+    runId: 33804575896,
+  };
+  const core = {
+    info: () => undefined,
+    warning: (message: string) => warnings.push(message),
+    setFailed: (message: string) => failures.push(message),
+  };
+
+  await runEvaluationWorkflowScript(github, context, core);
+
+  assert.equal(failures.length, 0);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /NOT EVALUATED/);
+  assert.equal(checkUpdates.length, 1);
+  assert.equal(checkUpdates[0].status, "completed");
+  assert.equal(checkUpdates[0].conclusion, "failure");
 });
 
 test("PR-Agent runs only for the four automatic pull-request actions", () => {
