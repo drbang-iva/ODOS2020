@@ -22,10 +22,12 @@ concurrency:
 # with globstar is the least-invasive fix for now.
 
 jobs:
-  mcp:
-    name: mcp — install + typecheck + tests
+  dependencies:
+    name: dependencies — restore or install
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      cache_key: ${{ steps.dependency_cache_key.outputs.key }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,8 +38,52 @@ jobs:
             package-lock.json
             mcp/package-lock.json
             ui/package-lock.json
-      - name: install root deps
-        run: npm ci
+      - name: derive dependency cache key
+        id: dependency_cache_key
+        run: >-
+          echo "key=node-modules-${{ runner.os }}-${{ runner.arch }}-node-22-${{
+          hashFiles('package-lock.json', 'mcp/package-lock.json', 'ui/package-lock.json') }}"
+          >> "$GITHUB_OUTPUT"
+      - name: restore dependency trees
+        id: dependency_cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            mcp/node_modules
+            ui/node_modules
+          key: ${{ steps.dependency_cache_key.outputs.key }}
+      - name: install dependency trees on cache miss
+        if: steps.dependency_cache.outputs.cache-hit != 'true'
+        run: |
+          npm ci
+          npm --prefix mcp ci
+          npm --prefix ui ci
+      - name: verify dependency trees
+        run: |
+          npm ls --all --json >/dev/null
+          npm --prefix mcp ls --all --json >/dev/null
+          npm --prefix ui ls --all --json >/dev/null
+
+  mcp:
+    name: mcp — install + typecheck + tests
+    runs-on: ubuntu-latest
+    needs: dependencies
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: restore dependency trees
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            mcp/node_modules
+            ui/node_modules
+          key: ${{ needs.dependencies.outputs.cache_key }}
+          fail-on-cache-miss: true
       - name: generate ephemeral Medplum signing keys
         run: npm run generate-medplum-signing-keys
       - name: start Medplum contract backend
@@ -55,20 +101,11 @@ jobs:
           done
           docker compose -p odos-contract-ci -f docker-compose.dr-drill.yml logs medplum-server
           exit 1
-      - name: install mcp deps
-        working-directory: mcp
-        run: npm ci
       - name: install pinned WeasyPrint for real PDF/A contract test
         run: |
           python3 -m venv /tmp/odos-weasyprint
           /tmp/odos-weasyprint/bin/pip install --disable-pip-version-check WeasyPrint==69.0
           echo "/tmp/odos-weasyprint/bin" >> "$GITHUB_PATH"
-      # mcp/tests cross-import ui/src modules (mirror-parity + ui-logic idiom); as of
-      # scheduler Phase 2 those ui modules have runtime deps (zustand), so the mcp job
-      # needs ui/node_modules too.
-      - name: install ui deps
-        working-directory: ui
-        run: npm ci
       - name: typecheck scripts
         run: npm run typecheck:scripts
       - name: typecheck mcp
@@ -105,9 +142,6 @@ jobs:
         run: |
           node --import tsx --test --test-concurrency=1 tests/searchParamMedplumSmoke.test.ts
           node --import tsx --test --test-concurrency=1 tests/profile-validation.test.ts
-      # The bootstrap uses the same local admin identity; reset Medplum's one-minute login throttle before repair.
-      - name: wait for ephemeral Medplum login throttle reset
-        run: sleep 61
       # CI-ONLY PRIVILEGED REPAIR: this targets the fresh ephemeral localhost:18103
       # container project. Never point this invocation at a real practice project.
       - name: create canonical practice-role policies for live authorization lane
@@ -117,10 +151,25 @@ jobs:
           MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
           MEDPLUM_CONTRACT_BOOTSTRAP: "1"
           ODOS_POSTGRES_URL: postgresql://medplum:medplum@127.0.0.1:15432/medplum
-        run: >-
-          npm run repair-practice-roles --
-          --email "$MEDPLUM_ADMIN_EMAIL"
-          --project "$MEDPLUM_PROJECT_ID"
+        run: |
+          for attempt in {1..15}; do
+            if output=$(npm run repair-practice-roles -- \
+              --email "$MEDPLUM_ADMIN_EMAIL" \
+              --project "$MEDPLUM_PROJECT_ID" 2>&1); then
+              printf '%s\n' "$output"
+              exit 0
+            fi
+            if ! grep -q "Medplum login failed: 429" <<< "$output"; then
+              printf '%s\n' "$output" >&2
+              exit 1
+            fi
+            if (( attempt == 15 )); then
+              printf '%s\n' "$output" >&2
+              exit 1
+            fi
+            echo "Medplum login throttled; retrying role repair in 5 seconds."
+            sleep 5
+          done
       # CI-ONLY BREAK-GLASS: --apply is safe only against this fresh ephemeral localhost:18103
       # container project. Never copy this invocation to a real practice project.
       - name: sync canonical practice-role policies for live authorization lane
@@ -157,9 +206,9 @@ jobs:
       - name: run credentialed live authorization lane
         # NON-BLOCKING: the fourth root cause traced on 2026-09-01 is now fixed at source: a denied
         # AuditEvent projection no longer spends a login retry as an unconfirmed distinct principal.
-        # The lane's completion (no startup timeout) is currently provided by the throttle-reset
-        # wait step from #495, which remains load-bearing — do not remove it on the assumption this
-        # fix alone accounts for the lane completing. Independently verified 2026-09-03: this lane
+        # The lane's completion (no startup timeout) still depends on the bounded role-repair retry
+        # above clearing the login throttle — do not remove it on the assumption this fix alone
+        # accounts for the lane completing. Independently verified 2026-09-03: this lane
         # already completed with identical pass/fail counts on three main runs before this fix, and
         # the new refusal path never executes inside it, so it supplies no evidence either way here.
         # The preserved seeder/caller identity split must land before its constrained fixture writes
@@ -167,6 +216,7 @@ jobs:
         # After that, require 10 consecutive green main runs before removing continue-on-error.
         # Keep the bootstrap -> repair -> sync order when burn-in begins.
         continue-on-error: true
+        timeout-minutes: 5
         working-directory: mcp
         env:
           MEDPLUM_BASE_URL: http://localhost:18103/
@@ -183,24 +233,22 @@ jobs:
   ui:
     name: ui — install + typecheck + build
     runs-on: ubuntu-latest
+    needs: dependencies
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: |
-            mcp/package-lock.json
-            ui/package-lock.json
-      - name: install ui deps
-        working-directory: ui
-        run: npm ci
-      # ui/tests cross-import the real MCP history handler for the ocular-health
-      # remount contract, so this job needs mcp/node_modules too.
-      - name: install mcp deps
-        working-directory: mcp
-        run: npm ci
+      - name: restore dependency trees
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            mcp/node_modules
+            ui/node_modules
+          key: ${{ needs.dependencies.outputs.cache_key }}
+          fail-on-cache-miss: true
       - name: typecheck ui
         working-directory: ui
         run: npx tsc --noEmit
@@ -227,23 +275,25 @@ jobs:
   preflight:
     name: preflight — Pass 4 custom lint rules
     runs-on: ubuntu-latest
+    needs: dependencies
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: |
-            package-lock.json
-            mcp/package-lock.json
+      - name: restore dependency trees
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            mcp/node_modules
+            ui/node_modules
+          key: ${{ needs.dependencies.outputs.cache_key }}
+          fail-on-cache-miss: true
       - name: proxy-coverage census self-test
         run: node .claude/skills/tier0-census/scripts/self-test.mjs
       - name: proxy-coverage census (reporting)
         run: node .claude/skills/tier0-census/scripts/check-proxy-coverage.mjs
-      - name: install deps
-        run: |
-          npm ci
-          cd mcp && npm ci
       - name: run preflight
         run: npm run preflight
