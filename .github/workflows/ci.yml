@@ -237,6 +237,8 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             mcp/package-lock.json
+      - name: proxy-coverage census (reporting)
+        run: node .claude/skills/tier0-census/scripts/check-proxy-coverage.mjs
       - name: install deps
         run: |
           npm ci
