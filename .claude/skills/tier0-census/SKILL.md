@@ -67,8 +67,10 @@ tool saying so.
   `node .claude/skills/tier0-census/scripts/check-manifest.mjs`.
 - **`scripts/self-test.mjs`** — unit tests and subprocess checks using the real scripts copied
   into disposable directories (never touches the real `App.tsx` or `manifest.json`). Checks
-  findings and process exit codes, including invalid JSON and unexpected discovery read errors;
-  removes its temporary directories afterward. Run after touching either script:
+  findings, Actions annotations, incomplete-discovery diagnostics, and process exit codes,
+  including invalid JSON and unexpected discovery read errors; removes its temporary directories
+  afterward. The `preflight` CI job runs this guard before the live proxy census. Run after
+  touching either script:
   `node .claude/skills/tier0-census/scripts/self-test.mjs`.
 
 ## How to use it
@@ -108,8 +110,9 @@ were caught only by manual or evaluator runs, not CI. Full root-cause writeup:
   the first (`/comms` has three). A proxy entry with no matching backend family is NOT reported as
   a problem (`/fhir`, `/auth`, `/oauth2` intentionally target Medplum directly, not the ODOS mcp
   server — correctly outside this census's scope). The `preflight` CI job runs it on every push to
-  `main` and every PR into `main`; uncovered families emit GitHub Actions warnings so they appear
-  in the Checks and Files views. It remains deliberately reporting-only and always exits 0. Run:
+  `main` and every PR into `main`; uncovered families and incomplete scanner diagnostics emit
+  GitHub Actions warnings so they appear in the Checks and Files views. Diagnostic runs never
+  print the clean-coverage sentence. It remains deliberately reporting-only and always exits 0. Run:
   `node .claude/skills/tier0-census/scripts/check-proxy-coverage.mjs`.
 
   Promotion to blocking is a separate decision. The proposed threshold is 10 consecutive clean

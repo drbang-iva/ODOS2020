@@ -387,7 +387,7 @@ test("computeProxyCoverageReport reports nothing when every backend family is co
   assert.deepEqual(uncovered, []);
 });
 
-function runProxyChecker({ githubActions }) {
+function runProxyChecker({ githubActions, missingIndex = false }) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "tier0-proxy-census-self-test-")));
   try {
     const scripts = join(root, ".claude/skills/tier0-census/scripts");
@@ -396,7 +396,9 @@ function runProxyChecker({ githubActions }) {
       copyFileSync(new URL(filename, import.meta.url), join(scripts, filename));
     }
     mkdirSync(join(root, "mcp/src"), { recursive: true });
-    writeFileSync(join(root, "mcp/src/index.ts"), 'app.get("/watchers/run", handler);\n');
+    if (!missingIndex) {
+      writeFileSync(join(root, "mcp/src/index.ts"), 'app.get("/watchers/run", handler);\n');
+    }
     mkdirSync(join(root, "ui"), { recursive: true });
     writeFileSync(join(root, "ui/vite.config.ts"), 'export default { server: { proxy: {} } };\n');
 
@@ -427,6 +429,12 @@ test("proxy CLI keeps local output free of GitHub Actions annotations and exits 
   const output = runProxyChecker({ githubActions: false });
   assert.doesNotMatch(output, /^::warning /m);
   assert.match(output, /^  ! \/watchers(?: .*)?$/m);
+});
+
+test("proxy CLI annotates incomplete discovery and does not claim clean coverage", () => {
+  const output = runProxyChecker({ githubActions: true, missingIndex: true });
+  assert.match(output, /^::warning file=\.claude\/skills\/tier0-census\/scripts\/check-proxy-coverage\.mjs,title=Proxy coverage diagnostic::.*mcp\/src\/index\.ts does not exist/m);
+  assert.doesNotMatch(output, /Every backend route family has a proxy table entry/);
 });
 
 // --- Report ---
