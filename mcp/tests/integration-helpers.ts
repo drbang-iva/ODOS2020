@@ -279,7 +279,7 @@ export async function connectMcpServer(input: {
 }
 
 export function parseToolOutput<T>(result: Awaited<ReturnType<Client["callTool"]>>): T {
-  assert.equal(result.isError, undefined);
+  assert.equal(result.isError, undefined, toolText(result));
   return JSON.parse(toolText(result)) as T;
 }
 
