@@ -131,17 +131,41 @@ jobs:
             ../tests/agentops/**/*.test.ts \
             ../tests/bulk-data/**/*.test.ts \
             ../tests/mandate-8/**/*.test.ts
-      # The contract bootstrap creates the project and exports MEDPLUM_PROJECT_ID for the repair step.
-      - name: run Medplum search contract smoke lane
+      # The first integration file bootstraps the project and exports MEDPLUM_PROJECT_ID.
+      - name: run credentialed live integration lane
         working-directory: mcp
         env:
           MEDPLUM_BASE_URL: http://localhost:18103/
           MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
           MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
           MEDPLUM_CONTRACT_BOOTSTRAP: "1"
+        run: npm run test:live-integration
+      # CI-ONLY PRIVILEGED SEEDER: the operator ClientApplication stays outside practice-role
+      # policies so authorization fixtures can be created without granting those rights to a role.
+      - name: create privileged fixture seeder for live authorization lane
+        env:
+          MEDPLUM_BASE_URL: http://localhost:18103/
+          MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
+          MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
+          ODOS_POSTGRES_URL: postgresql://medplum:medplum@127.0.0.1:15432/medplum
         run: |
-          node --import tsx --test --test-concurrency=1 tests/searchParamMedplumSmoke.test.ts
-          node --import tsx --test --test-concurrency=1 tests/profile-validation.test.ts
+          for attempt in {1..15}; do
+            if output=$(npm run operator-identity -- \
+              --project "$MEDPLUM_PROJECT_ID" 2>&1); then
+              printf '%s\n' "$output"
+              exit 0
+            fi
+            if ! grep -q "Medplum login failed: 429" <<< "$output"; then
+              printf '%s\n' "$output" >&2
+              exit 1
+            fi
+            if (( attempt == 15 )); then
+              printf '%s\n' "$output" >&2
+              exit 1
+            fi
+            echo "Medplum login throttled; retrying seeder creation in 5 seconds."
+            sleep 5
+          done
       # CI-ONLY PRIVILEGED REPAIR: this targets the fresh ephemeral localhost:18103
       # container project. Never point this invocation at a real practice project.
       - name: create canonical practice-role policies for live authorization lane
@@ -182,48 +206,22 @@ jobs:
           --project "$MEDPLUM_PROJECT_ID"
           --apply
           --bootstrap-service-identity
-      - name: enforce preliminary Observation authorization on real Medplum
-        working-directory: mcp
-        env:
-          MEDPLUM_BASE_URL: http://localhost:18103/
-          MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
-          MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
-          MEDPLUM_CONTRACT_BOOTSTRAP: "1"
-          ODOS_PRELIMINARY_OBSERVATION_AUTHZ_ONLY: "1"
-        run: node --import tsx --test --test-concurrency=1 tests/clinicalWriteAuthzLive.test.ts
-      # BLOCKING: the encounter Undo ledger is a `Basic` no practice-role policy granted until
-      # 2026-09-02, so every clear's ledger write was refused 403 and undo never persisted a slot.
-      # No in-memory fake can see that; this lane performs a real clear as Provider and as Staff
-      # against the synced policies and asserts the ledger row exists and reads back.
-      - name: enforce encounter undo ledger authorization on real Medplum
-        working-directory: mcp
-        env:
-          MEDPLUM_BASE_URL: http://localhost:18103/
-          MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
-          MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
-          MEDPLUM_CONTRACT_BOOTSTRAP: "1"
-        run: node --import tsx --test --test-concurrency=1 tests/encounterUndoLedgerAuthzLive.test.ts
       - name: run credentialed live authorization lane
-        # NON-BLOCKING: the fourth root cause traced on 2026-09-01 is now fixed at source: a denied
-        # AuditEvent projection no longer spends a login retry as an unconfirmed distinct principal.
-        # The lane's completion (no startup timeout) still depends on the bounded role-repair retry
-        # above clearing the login throttle — do not remove it on the assumption this fix alone
-        # accounts for the lane completing. Independently verified 2026-09-03: this lane
-        # already completed with identical pass/fail counts on three main runs before this fix, and
-        # the new refusal path never executes inside it, so it supplies no evidence either way here.
-        # The preserved seeder/caller identity split must land before its constrained fixture writes
-        # can pass.
-        # After that, require 10 consecutive green main runs before removing continue-on-error.
-        # Keep the bootstrap -> repair -> sync order when burn-in begins.
-        continue-on-error: true
+        # BLOCKING: fixtures use the separate operator seeder created above; every authorization
+        # assertion still executes after policy sync through a constrained role or boundary client.
         timeout-minutes: 5
         working-directory: mcp
+        shell: bash
         env:
           MEDPLUM_BASE_URL: http://localhost:18103/
           MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
           MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
           MEDPLUM_CONTRACT_BOOTSTRAP: "1"
-        run: npm run test:live-authz
+        run: |
+          set -a
+          source ../.odos/operator.env
+          set +a
+          npm run test:live-authz
       - name: stop Medplum contract backend
         if: always()
         run: >-
