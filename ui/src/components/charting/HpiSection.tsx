@@ -1,3 +1,4 @@
+import { HistoryRosSection } from "./HistoryRosSection";
 import { useEffect, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { removeValueConfirmSpec, voidEncounterEntries } from "../../lib/encounter-void";
@@ -45,6 +46,7 @@ export interface HistoryTemplateSection {
   on?: "follow-up";
   prefill?: "last_plan";
   required?: boolean;
+  group_by?: "system";
 }
 
 export interface HistoryTemplate {
@@ -68,6 +70,7 @@ export type HistoryCatalogs = Record<string, Array<{
   display: string;
   per_eye?: boolean;
   note_on_positive?: boolean;
+  system?: string;
 }>>;
 
 interface CarriedForwardHistoryAnswer {
@@ -109,6 +112,9 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   const encounterId = encounterReference.slice("Encounter/".length);
   const [templates, setTemplates] = useState<HistoryTemplate[]>([]);
   const [subjectSections, setSubjectSections] = useState<HistorySubjectSection[]>([]);
+  const [itemizedSubjectSections, setItemizedSubjectSections] = useState<HistorySubjectSection[]>([]);
+  const [itemizedHasRecorded, setItemizedHasRecorded] = useState(false);
+  const [historyVersion, setHistoryVersion] = useState(0);
   const [catalogs, setCatalogs] = useState<HistoryCatalogs>({});
   const [complaints, setComplaints] = useState<EncounterComplaint[]>([]);
   const [answers, setAnswers] = useState<HistoryTemplateAnswer[]>([]);
@@ -132,14 +138,16 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
 
   useEffect(() => {
     let cancelled = false;
+    setItemizedHasRecorded(false);
     void Promise.all([
-      readJson<{ templates?: HistoryTemplate[]; subjectSections?: HistorySubjectSection[]; catalogs?: HistoryCatalogs; error?: string }>(`${clinicalGraphApiBase()}/clinical-graph/hpi/definition`),
+      readJson<{ templates?: HistoryTemplate[]; subjectSections?: HistorySubjectSection[]; itemizedSubjectSections?: HistorySubjectSection[]; catalogs?: HistoryCatalogs; error?: string }>(`${clinicalGraphApiBase()}/clinical-graph/hpi/definition`),
       readJson<{ complaints?: EncounterComplaint[]; error?: string }>(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/complaints`),
       readJson<{ answers?: HistoryTemplateAnswer[]; carriedForwardAnswers?: CarriedForwardHistoryAnswer[]; reviewAttestations?: HistoryReviewAttestation[]; followUpPrefills?: HistoryTemplateAnswer[]; templateNarratives?: Array<{ complaintId: string; narrative: string }>; requiresAggregateRefresh?: boolean; error?: string }>(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/hpi`),
     ]).then(([definition, complaintRecord, history]) => {
       if (cancelled) return;
       setTemplates(definition.templates ?? []);
       setSubjectSections(definition.subjectSections ?? []);
+      setItemizedSubjectSections(definition.itemizedSubjectSections ?? []);
       setCatalogs(definition.catalogs ?? {});
       setComplaints(complaintRecord.complaints ?? []);
       const loadedAnswers = history.answers ?? [];
@@ -273,6 +281,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       persistedAnswerReferences.current.delete(answer.id);
       persistedAnswers.current.delete(answer.id);
       await queueSave();
+      setHistoryVersion(value => value + 1);
       onCleared?.({ scope: "observation", result });
     } catch (caught) {
       const restored = observationReference ? { ...answer, observationReference } : answer;
@@ -364,32 +373,38 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
     );
     setSaveState({ status: "saving" });
     try {
-      const result = await postJson<{
-        answers?: HistoryTemplateAnswer[];
-        templateNarratives?: Array<{ complaintId: string; narrative: string }>;
-        retiredReviewSections?: string[];
-        error?: string;
-      }>(`${clinicalGraphApiBase()}/clinical-graph/hpi`, {
-        patientReference,
-        encounterReference,
-        templateAnswers: delta.map(stripObservationReference),
-      });
-      const savedAnswers = result.answers ?? delta;
-      for (const answer of delta) persistedAnswers.current.set(answer.id, answer);
-      for (const answer of savedAnswers) {
-        if (answer.observationReference) persistedAnswerReferences.current.set(answer.id, answer.observationReference);
+      // Each answer is independently valid; one answer plus aggregate/provenance stays below the conditional guard.
+      const units = delta.length ? delta.map(answer => [answer]) : [[]];
+      let nextNarratives = narratives;
+      for (const unit of units) {
+        const result = await postJson<{
+          answers?: HistoryTemplateAnswer[];
+          templateNarratives?: Array<{ complaintId: string; narrative: string }>;
+          retiredReviewSections?: string[];
+          error?: string;
+        }>(`${clinicalGraphApiBase()}/clinical-graph/hpi`, {
+          patientReference,
+          encounterReference,
+          templateAnswers: unit.map(stripObservationReference),
+        });
+        const savedAnswers = result.answers ?? unit;
+        for (const answer of unit) persistedAnswers.current.set(answer.id, answer);
+        for (const answer of savedAnswers) {
+          if (answer.observationReference) persistedAnswerReferences.current.set(answer.id, answer.observationReference);
+        }
+        latestAnswers.current = mergeSavedReferences(latestAnswers.current, savedAnswers);
+        setAnswers((current) => mergeSavedReferences(current, savedAnswers));
+        if (result.retiredReviewSections?.length) {
+          const retired = new Set(result.retiredReviewSections);
+          setReviewAttestations((current) => current.filter((attestation) => !retired.has(attestation.sectionKey)));
+        }
+        nextNarratives = {
+          ...nextNarratives,
+          ...Object.fromEntries((result.templateNarratives ?? []).map((row) => [row.complaintId, row.narrative])),
+        };
+        setNarratives(nextNarratives);
       }
-      latestAnswers.current = mergeSavedReferences(latestAnswers.current, savedAnswers);
-      setAnswers((current) => mergeSavedReferences(current, savedAnswers));
-      if (result.retiredReviewSections?.length) {
-        const retired = new Set(result.retiredReviewSections);
-        setReviewAttestations((current) => current.filter((attestation) => !retired.has(attestation.sectionKey)));
-      }
-      const nextNarratives = {
-        ...narratives,
-        ...Object.fromEntries((result.templateNarratives ?? []).map((row) => [row.complaintId, row.narrative])),
-      };
-      setNarratives(nextNarratives);
+      setHistoryVersion(value => value + 1);
       const at = Date.now();
       setClock(at);
       setSaveState({ status: "saved", at });
@@ -426,9 +441,9 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
               <button type="button" className="sidebar-button" onClick={() => setEditMode((value) => !value)}>{editMode ? "Done" : "Edit"}</button>
               <ClearSectionButton
                 encounterReference={encounterReference}
-                sectionKey={["hpi", ...subjectSections.map((section) => section.key)]}
+                sectionKey={["hpi", ...[...subjectSections, ...itemizedSubjectSections].map((section) => section.key)]}
                 label="History"
-                hasRecorded={complaints.length > 0 || answers.length > 0 || reviewAttestations.length > 0}
+                hasRecorded={complaints.length > 0 || answers.length > 0 || reviewAttestations.length > 0 || itemizedHasRecorded}
                 onBeforeClear={async () => {
                   for (const timer of debounceTimers.current.values()) clearTimeout(timer);
                   debounceTimers.current.clear();
@@ -441,6 +456,8 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
                   persistedAnswerReferences.current.clear();
                   persistedAnswers.current.clear();
                   setReviewAttestations([]);
+                  setItemizedHasRecorded(false);
+                  setHistoryVersion(value => value + 1);
                   setNarratives({});
                   setSaveState({ status: "idle" });
                   onSaved({ completed: false, summary: "Not started" }, true);
@@ -539,6 +556,19 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
               />
             </article>;
           })}
+
+          {itemizedSubjectSections.map(declaration => <HistoryRosSection
+            key={`${encounterId}-${declaration.key}`}
+            declaration={declaration} catalogs={catalogs} patientReference={patientReference}
+            encounterReference={encounterReference} answers={answers.filter(answer => answer.templateKey === declaration.key)}
+            followUp={activeComplaints.some(complaint => answers.some(answer => answer.complaintId === complaint.id &&
+              answer.sectionId === "presentation" && answer.value.kind === "selection" && answer.value.code === "follow-up"))}
+            historyVersion={historyVersion} onChange={changeAnswer}
+            makeAnswerId={(sectionId, optionCode) => subjectHistoryAnswerId(encounterId, declaration.key, sectionId, optionCode)}
+            onChanged={() => onSaved({ completed: complete, summary }, true)}
+            onRecordedChange={setItemizedHasRecorded}
+            saveIndicator={<SaveIndicator state={saveState} clock={clock} onRetry={() => { void queueSave().catch(() => undefined); }} />}
+          />)}
 
           <div className="odos-hpi-border rounded border border-dashed bg-bg-panel/40 p-4">
             <p className="odos-hpi-muted text-sm font-semibold">Add complaint</p>

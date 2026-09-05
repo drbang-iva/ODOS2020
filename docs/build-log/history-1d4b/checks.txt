@@ -1,0 +1,73 @@
+npm --prefix ui test
+  duration_ms: 17.257792
+  type: 'test'
+  ...
+1..1233
+# tests 1238
+# suites 0
+# pass 1238
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 81915.319167
+
+ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test
+  duration_ms: 1.090667
+  type: 'test'
+  ...
+1..3707
+# tests 4242
+# suites 0
+# pass 4185
+# fail 0
+# cancelled 0
+# skipped 57
+# todo 0
+# duration_ms 68076.215708
+⚠️  LIVE STACK NOT CONFIGURED — 41 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.
+
+npm --prefix ui run build
+> tsc --noEmit --skipLibCheck && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 312 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/version.json                   0.17 kB │ gzip:   0.15 kB
+dist/index.html                     0.95 kB │ gzip:   0.57 kB
+dist/assets/index-BjIyQLvA.css    224.72 kB │ gzip:  37.95 kB
+dist/assets/index-F77Z7NKS.js   1,827.86 kB │ gzip: 491.60 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.43s
+
+npm --prefix mcp run build
+
+> odos-mcp@0.1.0 build
+> tsc
+
+
+npm run preflight
+- Marked helper propagation is function-name based across scanned roots; an imported helper alias escapes unless its local name matches, and same-named non-FHIR helpers require the explicit call-site allowlist.
+- Type-level comparison does not prove criteria scope; criteria-dependent operations without an exact fhir-scope-contract are counted as NOT SCOPE-VERIFIED.
+ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md
+
+node --import tsx --test tests/preflight/fhir-read-grant-check.test.ts
+  ---
+  duration_ms: 0.451917
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7397.20525

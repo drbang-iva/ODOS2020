@@ -26,6 +26,7 @@ import {
   deriveHistoryLastReviewed,
   historyReviewTargetSchema,
   historyReviewTargetKey,
+  historyRetractedTargets,
   type HistoryItemReview,
   HISTORY_ANSWER_SCOPE_SYSTEM,
   HISTORY_ANSWER_CODE,
@@ -322,6 +323,46 @@ function readHistoryReviewAttestations(
   return [...latest.values()];
 }
 
+export async function handleHistoryItemReviewRequest(deps: HpiEndpointDeps, input: { authHeader: string | undefined; body: unknown }) {
+  const parsed = itemHistoryReviewRequestSchema.extend({ method: z.literal("individual"), targets: z.array(historyReviewTargetSchema).length(1) }).safeParse(input.body);
+  if (!parsed.success) return { status: 400, body: { error: "An individual review requires exactly one valid target." } };
+  return handleHistoryReviewRequest(deps, input);
+}
+
+export async function handleHistoryItemRetractionRequest(deps: HpiEndpointDeps, input: { authHeader: string | undefined; body: unknown }) {
+  const parsed = itemHistoryRetractionRequestSchema.safeParse(input.body);
+  if (!parsed.success) return { status: 400, body: { error: "A retraction requires one valid target and original review." } };
+  return handleHistoryReviewRequest(deps, input);
+}
+
+export async function handleHistoryItemActsRequest(deps: HpiEndpointDeps, input: { authHeader: string | undefined; params: unknown }) {
+  return historySearchResult(async () => {
+    const staff = await deps.authenticate(input.authHeader);
+    if (!staff) return { status: 401, body: { error: "Authentication required to read history." } };
+    if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+    const encounterId = readId(input.params, "encounterId");
+    if (!encounterId) return { status: 400, body: { error: "A valid encounter id is required." } };
+    const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
+    const patientReference = encounter.subject?.reference;
+    if (!patientReference) return { status: 400, body: { error: "Encounter has no patient." } };
+    const groups = await Promise.all([HISTORY_ITEM_REVIEW_CODE, HISTORY_ITEM_RETRACTION_CODE].map(code =>
+      searchAll<Observation>(staff.fhir, "Observation", { encounter: `Encounter/${encounterId}`,
+        code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${code}`, _count: "200" })));
+    const live = groups.flat().filter(row => row.id && row.subject?.reference === patientReference &&
+      row.encounter?.reference === `Encounter/${encounterId}` && row.status !== "entered-in-error" && row.status !== "cancelled");
+    const retracted = historyRetractedTargets(live, patientReference);
+    return { status: 200, body: {
+      reviews: live.filter(row => row.code.coding?.some(c => c.code === HISTORY_ITEM_REVIEW_CODE)).map(row => {
+        const act = parseHistoryItemReview(row), attestationReference = `Observation/${row.id}`;
+        return { ...act, attestationReference, recordedAt: row.effectiveDateTime,
+          activeTargets: act.targets.filter(target => !retracted.get(attestationReference)?.has(historyReviewTargetKey(target))) };
+      }),
+      retractions: live.filter(row => row.code.coding?.some(c => c.code === HISTORY_ITEM_RETRACTION_CODE)).map(row =>
+        ({ ...parseHistoryItemRetraction(row), attestationReference: `Observation/${row.id}`, recordedAt: row.effectiveDateTime })),
+    } };
+  });
+}
+
 export async function handleHistoryReviewRequest(
   deps: HpiEndpointDeps,
   input: { authHeader: string | undefined; body: unknown },
@@ -351,7 +392,10 @@ async function handleHistoryReview(
 
   if ("action" in parsed.data) {
     const seen = new Set<string>();
-    for (const target of parsed.data.targets) {
+    for (const rawTarget of parsed.data.targets) {
+      const validatedTarget = historyReviewTargetSchema.safeParse(rawTarget);
+      if (!validatedTarget.success) return { status: 400, body: { error: "Invalid history review target." } };
+      const target = validatedTarget.data;
       const section = declaration.sections.find(candidate => candidate.id === target.sectionId);
       if (target.sectionKey !== declaration.key || !section) return { status: 400, body: { error: "History review target is not in this section." } };
       const option = section.catalog ? HISTORY_OPTION_CATALOGS[section.catalog]?.find(candidate => candidate.code === target.optionCode) : undefined;
@@ -463,7 +507,7 @@ async function handleHistoryReview(
   };
 }
 
-async function recordHistoryItemReview(fhir: HpiFhirClient, input: HistoryItemReview): Promise<{ status: number; body: unknown }> {
+export async function recordHistoryItemReview(fhir: HpiFhirClient, input: HistoryItemReview): Promise<{ status: number; body: unknown }> {
   return persistHistoryItemAct(fhir, input, buildHistoryItemReview(input), existing => {
     const saved = parseHistoryItemReview(existing);
     if (saved.method !== input.method || !isDeepStrictEqual(saved.targets.map(historyReviewTargetKey).sort(), input.targets.map(historyReviewTargetKey).sort())) return undefined;
@@ -471,7 +515,7 @@ async function recordHistoryItemReview(fhir: HpiFhirClient, input: HistoryItemRe
   });
 }
 
-async function recordHistoryItemRetraction(fhir: HpiFhirClient, input: HistoryItemRetraction): Promise<{ status: number; body: unknown }> {
+export async function recordHistoryItemRetraction(fhir: HpiFhirClient, input: HistoryItemRetraction): Promise<{ status: number; body: unknown }> {
   return persistHistoryItemAct(fhir, input, buildHistoryItemRetraction(input), existing => {
     const saved = parseHistoryItemRetraction(existing);
     if (saved.retracts !== input.retracts || historyReviewTargetKey(saved.targets[0]) !== historyReviewTargetKey(input.targets[0])) return undefined;
