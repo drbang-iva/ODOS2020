@@ -114,3 +114,21 @@ Companion decision/INDEX update: PerformanceOD branch `drbang-iva/history-1d4a-s
 is specified in the design but has no current ROS consumer to verify. 1d-4b must consume the new
 field and prove that behavior in the browser. No ROS UI, bulk gesture, Social reminder, or merge
 is included here. CI and bot status are reported on the PR at its final head.
+
+## Installer correction before final handoff
+
+The first CI run at `c87a600e` passed its main 4,241-test command (4,197 pass, 44 skipped) but
+failed one credentialed integration test: the profile installer reads **every JSON file** in
+`data/terminology` as a FHIR resource. The new registry metadata had been placed there and was
+correctly refused. This was an author packaging error, not an infrastructure flake.
+
+The unchanged `v035-terminology-install.test.ts` reproduced that exact error locally: **0 pass,
+1 fail** (`installer-red.txt`). Moving only the registry to `data/code-bindings/` preserves the
+installer's strict resource contract. The two CodeSystem files remain in `data/terminology` and
+are installed normally. The unchanged installer test then passed **4/4** (`installer-green.txt`),
+including canonical retrieval. New ROS/registry tests remain **27/27**; all seven mutations were
+rerun and restored after the move. No runtime code or previous-slice tests changed in this fixback.
+
+Final registry: `data/code-bindings/history-review-registry.json`. The second CI run is the final
+head confirmation. Both automatic reviews must be refreshed at that head; independent evaluation
+remains pending.

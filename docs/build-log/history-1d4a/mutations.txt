@@ -8,7 +8,7 @@ TAP version 13
 # Subtest: targeted retraction preserves B and original bytes; shipped void restores A
 not ok 1 - targeted retraction preserves B and original bytes; shipped void restores A
   ---
-  duration_ms: 6.173584
+  duration_ms: 5.950416
   type: 'test'
   location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4a/mcp/tests/historyRos.test.ts:1:7173'
   failureType: 'testCodeFailure'
@@ -52,7 +52,7 @@ not ok 1 - targeted retraction preserves B and original bytes; shipped void rest
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 139.005333
+# duration_ms 111.162666
 
 RESTORE SHA-256 22e111dc02d7e1e9eff28660671e4d61719e73c6ec2f88b7eded8bcd390dc5bf
 GREEN exit 0
@@ -60,7 +60,7 @@ TAP version 13
 # Subtest: targeted retraction preserves B and original bytes; shipped void restores A
 ok 1 - targeted retraction preserves B and original bytes; shipped void restores A
   ---
-  duration_ms: 6.115042
+  duration_ms: 5.575292
   type: 'test'
   ...
 1..1
@@ -71,7 +71,7 @@ ok 1 - targeted retraction preserves B and original bytes; shipped void restores
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 114.50875
+# duration_ms 107.216584
 
 
 === original-immutable ===
@@ -83,7 +83,7 @@ TAP version 13
 # Subtest: targeted retraction preserves B and original bytes; shipped void restores A
 not ok 1 - targeted retraction preserves B and original bytes; shipped void restores A
   ---
-  duration_ms: 4.975292
+  duration_ms: 4.280042
   type: 'test'
   location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4a/mcp/tests/historyRos.test.ts:1:7173'
   failureType: 'testCodeFailure'
@@ -91,13 +91,13 @@ not ok 1 - targeted retraction preserves B and original bytes; shipped void rest
     Expected values to be strictly equal:
     + actual - expected
     
-    + '{"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-review-attestation","value":"current:review-of-systems:816aa975-d433-4b2e-85ce-99f209348726"}],"status":"entered-in-error","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review","code":"history-item-review","display":"History item review"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/current"},"effectiveDateTime":"2026-09-05T12:00:00Z","issued":"2026-09-05T12:00:00Z","performer":[{"reference":"Practitioner/test"}],"valueCodeableConcept":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review-action","code":"items-reviewed","display":"Items reviewed"}]},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-section","valueCode":"review-of-systems"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-method","valueCode":"bulk"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"poor-vision\\"}"}],"id":"e9314436-c238-4833-98fa-226f697e72cf","meta":{"versionId":"d7ace6e7-306d-498a-9ffa-b4131b98ca9b"}}'
-    - '{"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-review-attestation","value":"current:review-of-systems:816aa975-d433-4b2e-85ce-99f209348726"}],"status":"preliminary","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review","code":"history-item-review","display":"History item review"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/current"},"effectiveDateTime":"2026-09-05T12:00:00Z","issued":"2026-09-05T12:00:00Z","performer":[{"reference":"Practitioner/test"}],"valueCodeableConcept":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review-action","code":"items-reviewed","display":"Items reviewed"}]},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-section","valueCode":"review-of-systems"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-method","valueCode":"bulk"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"poor-vision\\"}"}],"id":"e9314436-c238-4833-98fa-226f697e72cf","meta":{"versionId":"cb0eac42-1086-4501-8465-59bc3a22c56d"}}'
+    + '{"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-review-attestation","value":"current:review-of-systems:302fe482-0e2e-4c25-b56b-56533aa0e384"}],"status":"entered-in-error","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review","code":"history-item-review","display":"History item review"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/current"},"effectiveDateTime":"2026-09-05T12:00:00Z","issued":"2026-09-05T12:00:00Z","performer":[{"reference":"Practitioner/test"}],"valueCodeableConcept":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review-action","code":"items-reviewed","display":"Items reviewed"}]},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-section","valueCode":"review-of-systems"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-method","valueCode":"bulk"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"poor-vision\\"}"}],"id":"79e46301-9f8e-45ad-afdd-6f47ea6cd5c8","meta":{"versionId":"f16ef1f8-85f6-47cd-b532-779765f4045e"}}'
+    - '{"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-review-attestation","value":"current:review-of-systems:302fe482-0e2e-4c25-b56b-56533aa0e384"}],"status":"preliminary","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review","code":"history-item-review","display":"History item review"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/current"},"effectiveDateTime":"2026-09-05T12:00:00Z","issued":"2026-09-05T12:00:00Z","performer":[{"reference":"Practitioner/test"}],"valueCodeableConcept":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review-action","code":"items-reviewed","display":"Items reviewed"}]},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-section","valueCode":"review-of-systems"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-method","valueCode":"bulk"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"poor-vision\\"}"}],"id":"79e46301-9f8e-45ad-afdd-6f47ea6cd5c8","meta":{"versionId":"5d741d18-e143-4faa-bbdc-532d41d9cc30"}}'
     
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
-  expected: '{"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-review-attestation","value":"current:review-of-systems:816aa975-d433-4b2e-85ce-99f209348726"}],"status":"preliminary","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review","code":"history-item-review","display":"History item review"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/current"},"effectiveDateTime":"2026-09-05T12:00:00Z","issued":"2026-09-05T12:00:00Z","performer":[{"reference":"Practitioner/test"}],"valueCodeableConcept":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review-action","code":"items-reviewed","display":"Items reviewed"}]},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-section","valueCode":"review-of-systems"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-method","valueCode":"bulk"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"poor-vision\\"}"}],"id":"e9314436-c238-4833-98fa-226f697e72cf","meta":{"versionId":"cb0eac42-1086-4501-8465-59bc3a22c56d"}}'
-  actual: '{"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-review-attestation","value":"current:review-of-systems:816aa975-d433-4b2e-85ce-99f209348726"}],"status":"entered-in-error","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review","code":"history-item-review","display":"History item review"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/current"},"effectiveDateTime":"2026-09-05T12:00:00Z","issued":"2026-09-05T12:00:00Z","performer":[{"reference":"Practitioner/test"}],"valueCodeableConcept":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review-action","code":"items-reviewed","display":"Items reviewed"}]},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-section","valueCode":"review-of-systems"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-method","valueCode":"bulk"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"poor-vision\\"}"}],"id":"e9314436-c238-4833-98fa-226f697e72cf","meta":{"versionId":"d7ace6e7-306d-498a-9ffa-b4131b98ca9b"}}'
+  expected: '{"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-review-attestation","value":"current:review-of-systems:302fe482-0e2e-4c25-b56b-56533aa0e384"}],"status":"preliminary","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review","code":"history-item-review","display":"History item review"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/current"},"effectiveDateTime":"2026-09-05T12:00:00Z","issued":"2026-09-05T12:00:00Z","performer":[{"reference":"Practitioner/test"}],"valueCodeableConcept":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review-action","code":"items-reviewed","display":"Items reviewed"}]},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-section","valueCode":"review-of-systems"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-method","valueCode":"bulk"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"poor-vision\\"}"}],"id":"79e46301-9f8e-45ad-afdd-6f47ea6cd5c8","meta":{"versionId":"5d741d18-e143-4faa-bbdc-532d41d9cc30"}}'
+  actual: '{"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-review-attestation","value":"current:review-of-systems:302fe482-0e2e-4c25-b56b-56533aa0e384"}],"status":"entered-in-error","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review","code":"history-item-review","display":"History item review"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/current"},"effectiveDateTime":"2026-09-05T12:00:00Z","issued":"2026-09-05T12:00:00Z","performer":[{"reference":"Practitioner/test"}],"valueCodeableConcept":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review-action","code":"items-reviewed","display":"Items reviewed"}]},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-section","valueCode":"review-of-systems"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-method","valueCode":"bulk"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"poor-vision\\"}"}],"id":"79e46301-9f8e-45ad-afdd-6f47ea6cd5c8","meta":{"versionId":"f16ef1f8-85f6-47cd-b532-779765f4045e"}}'
   operator: 'strictEqual'
   stack: |-
     TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4a/mcp/tests/historyRos.test.ts:100:10)
@@ -112,7 +112,7 @@ not ok 1 - targeted retraction preserves B and original bytes; shipped void rest
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 141.193292
+# duration_ms 105.864708
 
 RESTORE SHA-256 30422fb427f1c9ba130011aca11a08c3df7a359111960e5a84d233f39766927e
 GREEN exit 0
@@ -120,7 +120,7 @@ TAP version 13
 # Subtest: targeted retraction preserves B and original bytes; shipped void restores A
 ok 1 - targeted retraction preserves B and original bytes; shipped void restores A
   ---
-  duration_ms: 5.98275
+  duration_ms: 5.636125
   type: 'test'
   ...
 1..1
@@ -131,7 +131,7 @@ ok 1 - targeted retraction preserves B and original bytes; shipped void restores
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 111.99
+# duration_ms 106.837042
 
 
 === social-completeness ===
@@ -143,7 +143,7 @@ TAP version 13
 # Subtest: Social requires four answers even with a tobacco review; ROS explicitly counts bulk
 not ok 1 - Social requires four answers even with a tobacco review; ROS explicitly counts bulk
   ---
-  duration_ms: 2.317
+  duration_ms: 2.090667
   type: 'test'
   location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4a/mcp/tests/historyRos.test.ts:1:10674'
   failureType: 'testCodeFailure'
@@ -174,7 +174,7 @@ not ok 1 - Social requires four answers even with a tobacco review; ROS explicit
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 134.300916
+# duration_ms 102.881833
 
 RESTORE SHA-256 6aba94c5ff61ca4e88f465cae53f51b7d09446c96b3390efd8eb03f7092cd8bb
 GREEN exit 0
@@ -182,7 +182,7 @@ TAP version 13
 # Subtest: Social requires four answers even with a tobacco review; ROS explicitly counts bulk
 ok 1 - Social requires four answers even with a tobacco review; ROS explicitly counts bulk
   ---
-  duration_ms: 4.035875
+  duration_ms: 3.408292
   type: 'test'
   ...
 1..1
@@ -193,7 +193,7 @@ ok 1 - Social requires four answers even with a tobacco review; ROS explicitly c
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 109.705
+# duration_ms 106.062625
 
 
 === partial-coverage ===
@@ -205,7 +205,7 @@ TAP version 13
 # Subtest: coverage reports 3/8 until every item is dated this encounter; positives survive
 not ok 1 - coverage reports 3/8 until every item is dated this encounter; positives survive
   ---
-  duration_ms: 2.381917
+  duration_ms: 2.179042
   type: 'test'
   location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4a/mcp/tests/historyRos.test.ts:1:11721'
   failureType: 'testCodeFailure'
@@ -234,7 +234,7 @@ not ok 1 - coverage reports 3/8 until every item is dated this encounter; positi
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 135.697792
+# duration_ms 103.54575
 
 RESTORE SHA-256 6aba94c5ff61ca4e88f465cae53f51b7d09446c96b3390efd8eb03f7092cd8bb
 GREEN exit 0
@@ -242,7 +242,7 @@ TAP version 13
 # Subtest: coverage reports 3/8 until every item is dated this encounter; positives survive
 ok 1 - coverage reports 3/8 until every item is dated this encounter; positives survive
   ---
-  duration_ms: 1.010375
+  duration_ms: 0.996958
   type: 'test'
   ...
 1..1
@@ -253,7 +253,7 @@ ok 1 - coverage reports 3/8 until every item is dated this encounter; positives 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 111.745875
+# duration_ms 101.722541
 
 
 === unknown-token ===
@@ -265,7 +265,7 @@ TAP version 13
 # Subtest: unregistered tokens throw in complaint and subject renderers
 not ok 1 - unregistered tokens throw in complaint and subject renderers
   ---
-  duration_ms: 2.434
+  duration_ms: 2.07625
   type: 'test'
   location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4a/mcp/tests/historyRos.test.ts:1:12985'
   failureType: 'testCodeFailure'
@@ -289,7 +289,7 @@ not ok 1 - unregistered tokens throw in complaint and subject renderers
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 140.184375
+# duration_ms 111.299292
 
 RESTORE SHA-256 6aba94c5ff61ca4e88f465cae53f51b7d09446c96b3390efd8eb03f7092cd8bb
 GREEN exit 0
@@ -297,7 +297,7 @@ TAP version 13
 # Subtest: unregistered tokens throw in complaint and subject renderers
 ok 1 - unregistered tokens throw in complaint and subject renderers
   ---
-  duration_ms: 1.079292
+  duration_ms: 0.951792
   type: 'test'
   ...
 1..1
@@ -308,7 +308,7 @@ ok 1 - unregistered tokens throw in complaint and subject renderers
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 110.8285
+# duration_ms 102.183083
 
 
 === legacy-boundary ===
@@ -320,7 +320,7 @@ TAP version 13
 # Subtest: aggregate and itemized ROS never synthesize each other; overview prefers Charted itemized
 not ok 1 - aggregate and itemized ROS never synthesize each other; overview prefers Charted itemized
   ---
-  duration_ms: 6.358709
+  duration_ms: 5.845792
   type: 'test'
   location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4a/mcp/tests/historyRos.test.ts:1:13385'
   failureType: 'testCodeFailure'
@@ -370,7 +370,7 @@ not ok 1 - aggregate and itemized ROS never synthesize each other; overview pref
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 144.766583
+# duration_ms 107.407667
 
 RESTORE SHA-256 30422fb427f1c9ba130011aca11a08c3df7a359111960e5a84d233f39766927e
 GREEN exit 0
@@ -378,7 +378,7 @@ TAP version 13
 # Subtest: aggregate and itemized ROS never synthesize each other; overview prefers Charted itemized
 ok 1 - aggregate and itemized ROS never synthesize each other; overview prefers Charted itemized
   ---
-  duration_ms: 12.892083
+  duration_ms: 11.469208
   type: 'test'
   ...
 1..1
@@ -389,11 +389,11 @@ ok 1 - aggregate and itemized ROS never synthesize each other; overview prefers 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 123.413958
+# duration_ms 114.218083
 
 
 === registry-removal ===
-File: data/terminology/history-review-registry.json
+File: data/code-bindings/history-review-registry.json
 Command: node --import tsx --test mcp/tests/historyRosDefinitions.test.ts
 Mutation: delete action code-system registry entry
 RED exit 1
@@ -401,13 +401,13 @@ TAP version 13
 # Subtest: retraction code has a registered canonical application code definition
 ok 1 - retraction code has a registered canonical application code definition
   ---
-  duration_ms: 2.798459
+  duration_ms: 2.874083
   type: 'test'
   ...
 # Subtest: retraction valueCodeableConcept has a registered canonical application code definition
 not ok 2 - retraction valueCodeableConcept has a registered canonical application code definition
   ---
-  duration_ms: 1.411917
+  duration_ms: 1.241833
   type: 'test'
   location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4a/mcp/tests/historyRosDefinitions.test.ts:1:280'
   failureType: 'testCodeFailure'
@@ -434,7 +434,7 @@ not ok 2 - retraction valueCodeableConcept has a registered canonical applicatio
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 86.2365
+# duration_ms 77.136291
 
 RESTORE SHA-256 fdcc45c22c4e2869ea87562fd0f97b32e9316959f4fdeb32ff9497be8398f489
 GREEN exit 0
@@ -442,13 +442,13 @@ TAP version 13
 # Subtest: retraction code has a registered canonical application code definition
 ok 1 - retraction code has a registered canonical application code definition
   ---
-  duration_ms: 2.857916
+  duration_ms: 2.654709
   type: 'test'
   ...
 # Subtest: retraction valueCodeableConcept has a registered canonical application code definition
 ok 2 - retraction valueCodeableConcept has a registered canonical application code definition
   ---
-  duration_ms: 0.656167
+  duration_ms: 0.702667
   type: 'test'
   ...
 1..2
@@ -459,5 +459,5 @@ ok 2 - retraction valueCodeableConcept has a registered canonical application co
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 84.011792
+# duration_ms 78.246
 

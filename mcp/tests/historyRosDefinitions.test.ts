@@ -10,7 +10,7 @@ for (const field of ["code", "valueCodeableConcept"] as const) test(`retraction 
     targets: [{ sectionKey: "review-of-systems", sectionId: "systems", optionCode: "eye-pain" }], retracts: "Observation/original" });
   const coding = act[field]!.coding![0];
   const directory = resolve(import.meta.dirname, "../../data/terminology");
-  const registry = JSON.parse(await readFile(resolve(directory, "history-review-registry.json"), "utf8"));
+  const registry = JSON.parse(await readFile(resolve(directory, "../code-bindings/history-review-registry.json"), "utf8"));
   const entries = registry.codeSystems.filter((row: any) => row.url === coding.system && row.status === "active");
   assert.equal(entries.length, 1, "Emitted code system must be registered exactly once");
   const definition = JSON.parse(await readFile(resolve(directory, entries[0].file), "utf8"));

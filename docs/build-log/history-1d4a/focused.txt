@@ -1,168 +1,168 @@
 
 > odos-mcp@0.1.0 test
-> node scripts/run-tests.mjs tests/historyRos.test.ts tests/historyRosDefinitions.test.ts
+> node scripts/run-tests.mjs tests/historyRosDefinitions.test.ts tests/historyRos.test.ts
 
 TAP version 13
 # Subtest: ROS declaration exposes fourteen grouped systems and encounter scope
 ok 1 - ROS declaration exposes fourteen grouped systems and encounter scope
   ---
-  duration_ms: 1.028
+  duration_ms: 0.982958
   type: 'test'
   ...
 # Subtest: targeted retraction preserves B and original bytes; shipped void restores A
 ok 2 - targeted retraction preserves B and original bytes; shipped void restores A
   ---
-  duration_ms: 5.018709
+  duration_ms: 4.733709
   type: 'test'
   ...
 # Subtest: retraction retry is immutable and cannot reuse an item-review gesture
 ok 3 - retraction retry is immutable and cannot reuse an item-review gesture
   ---
-  duration_ms: 1.044584
+  duration_ms: 1.105667
   type: 'test'
   ...
 # Subtest: retraction affects only its referenced act; answer dates and later reviews survive
 ok 4 - retraction affects only its referenced act; answer dates and later reviews survive
   ---
-  duration_ms: 2.359875
+  duration_ms: 2.058
   type: 'test'
   ...
 # Subtest: malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","extra":true}
 ok 5 - malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","extra":true}
   ---
-  duration_ms: 0.155125
+  duration_ms: 0.18425
   type: 'test'
   ...
 # Subtest: malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","extra":true}
 ok 6 - malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","extra":true}
   ---
-  duration_ms: 0.084291
+  duration_ms: 0.080834
   type: 'test'
   ...
 # Subtest: malformed target refused at endpoint: items-reviewed {"sectionId":"systems","optionCode":"eye-pain"}
 ok 7 - malformed target refused at endpoint: items-reviewed {"sectionId":"systems","optionCode":"eye-pain"}
   ---
-  duration_ms: 0.12625
+  duration_ms: 0.10625
   type: 'test'
   ...
 # Subtest: malformed target refused at endpoint: items-review-retracted {"sectionId":"systems","optionCode":"eye-pain"}
 ok 8 - malformed target refused at endpoint: items-review-retracted {"sectionId":"systems","optionCode":"eye-pain"}
   ---
-  duration_ms: 0.075291
+  duration_ms: 0.068125
   type: 'test'
   ...
 # Subtest: malformed target refused at endpoint: items-reviewed {"sectionKey":"*","sectionId":"systems","optionCode":"eye-pain"}
 ok 9 - malformed target refused at endpoint: items-reviewed {"sectionKey":"*","sectionId":"systems","optionCode":"eye-pain"}
   ---
-  duration_ms: 0.2445
+  duration_ms: 0.299625
   type: 'test'
   ...
 # Subtest: malformed target refused at endpoint: items-review-retracted {"sectionKey":"*","sectionId":"systems","optionCode":"eye-pain"}
 ok 10 - malformed target refused at endpoint: items-review-retracted {"sectionKey":"*","sectionId":"systems","optionCode":"eye-pain"}
   ---
-  duration_ms: 0.280541
+  duration_ms: 0.248792
   type: 'test'
   ...
 # Subtest: malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"*","optionCode":"eye-pain"}
 ok 11 - malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"*","optionCode":"eye-pain"}
   ---
-  duration_ms: 0.07475
+  duration_ms: 0.106917
   type: 'test'
   ...
 # Subtest: malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"*","optionCode":"eye-pain"}
 ok 12 - malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"*","optionCode":"eye-pain"}
   ---
-  duration_ms: 0.058875
+  duration_ms: 0.064208
   type: 'test'
   ...
 # Subtest: malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"*"}
 ok 13 - malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"*"}
   ---
-  duration_ms: 0.093708
+  duration_ms: 0.085375
   type: 'test'
   ...
 # Subtest: malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"*"}
 ok 14 - malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"*"}
   ---
-  duration_ms: 0.062417
+  duration_ms: 0.055125
   type: 'test'
   ...
 # Subtest: malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","eye":"*"}
 ok 15 - malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","eye":"*"}
   ---
-  duration_ms: 0.128917
+  duration_ms: 0.062583
   type: 'test'
   ...
 # Subtest: malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","eye":"*"}
 ok 16 - malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","eye":"*"}
   ---
-  duration_ms: 0.063208
+  duration_ms: 0.048
   type: 'test'
   ...
 # Subtest: retraction refuses absent, wrong-target, foreign and prior-encounter originals
 ok 17 - retraction refuses absent, wrong-target, foreign and prior-encounter originals
   ---
-  duration_ms: 1.038625
+  duration_ms: 0.510666
   type: 'test'
   ...
 # Subtest: Social requires four answers even with a tobacco review; ROS explicitly counts bulk
 ok 18 - Social requires four answers even with a tobacco review; ROS explicitly counts bulk
   ---
-  duration_ms: 0.354208
+  duration_ms: 0.310042
   type: 'test'
   ...
 # Subtest: coverage reports 3/8 until every item is dated this encounter; positives survive
 ok 19 - coverage reports 3/8 until every item is dated this encounter; positives survive
   ---
-  duration_ms: 0.206
+  duration_ms: 0.178292
   type: 'test'
   ...
 # Subtest: catalog additions automatically change coverage denominator
 ok 20 - catalog additions automatically change coverage denominator
   ---
-  duration_ms: 0.0535
+  duration_ms: 0.055791
   type: 'test'
   ...
 # Subtest: unregistered tokens throw in complaint and subject renderers
 ok 21 - unregistered tokens throw in complaint and subject renderers
   ---
-  duration_ms: 0.361292
+  duration_ms: 0.332625
   type: 'test'
   ...
 # Subtest: aggregate and itemized ROS never synthesize each other; overview prefers Charted itemized
 ok 22 - aggregate and itemized ROS never synthesize each other; overview prefers Charted itemized
   ---
-  duration_ms: 9.353917
+  duration_ms: 9.404167
   type: 'test'
   ...
 # Subtest: overview falls back to the aggregate after the only item review is retracted
 ok 23 - overview falls back to the aggregate after the only item review is retracted
   ---
-  duration_ms: 0.991583
+  duration_ms: 1.066583
   type: 'test'
   ...
 # Subtest: prior encounter acts keep historical dates without Charting this encounter
 ok 24 - prior encounter acts keep historical dates without Charting this encounter
   ---
-  duration_ms: 0.432416
+  duration_ms: 0.414791
   type: 'test'
   ...
 # Subtest: retracting an act never erases a positive answer or its own review date
 ok 25 - retracting an act never erases a positive answer or its own review date
   ---
-  duration_ms: 0.769542
+  duration_ms: 0.727666
   type: 'test'
   ...
 # Subtest: retraction code has a registered canonical application code definition
 ok 26 - retraction code has a registered canonical application code definition
   ---
-  duration_ms: 2.719917
+  duration_ms: 2.682417
   type: 'test'
   ...
 # Subtest: retraction valueCodeableConcept has a registered canonical application code definition
 ok 27 - retraction valueCodeableConcept has a registered canonical application code definition
   ---
-  duration_ms: 0.648667
+  duration_ms: 0.61175
   type: 'test'
   ...
 1..27
@@ -173,4 +173,4 @@ ok 27 - retraction valueCodeableConcept has a registered canonical application c
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 232.168958
+# duration_ms 226.390667
