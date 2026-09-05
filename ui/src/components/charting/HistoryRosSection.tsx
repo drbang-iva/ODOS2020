@@ -2,16 +2,17 @@ import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { useHistoryItemReview, targetKey, historyItemDate } from "./useHistoryItemReview";
 import type { HistoryCatalogs, HistorySubjectSection, HistoryTemplateAnswer } from "./HpiSection";
 
-export function HistoryRosSection({ declaration, catalogs, patientReference, encounterReference, answers, followUp, historyVersion, onChange, onChanged, saveIndicator, makeAnswerId, onRecordedChange }: {
+export function HistoryRosSection({ declaration, catalogs, patientReference, encounterReference, answers, followUp, historyVersion, onChange, onBulkRecorded, onChanged, saveIndicator, makeAnswerId, onRecordedChange }: {
   declaration: HistorySubjectSection; catalogs: HistoryCatalogs; patientReference: string; encounterReference: string;
   answers: HistoryTemplateAnswer[]; followUp: boolean; historyVersion: number;
   onChange: (next: HistoryTemplateAnswer | undefined, prior: HistoryTemplateAnswer | undefined) => void;
+  onBulkRecorded: (answers: HistoryTemplateAnswer[]) => void;
   onRecordedChange: (hasRecorded: boolean) => void;
   onChanged: () => void; saveIndicator: ReactNode; makeAnswerId: (sectionId: string, optionCode?: string) => string;
 }) {
   const [open, setOpen] = useState(!followUp);
   useEffect(() => setOpen(!followUp), [followUp]);
-  const { record, acts, ready, busy, error, setError, refresh, gesture, dates, current } = useHistoryItemReview({ patientReference, encounterReference, historyVersion, onChanged, onRecordedChange });
+  const { record, acts, ready, busy, error, setError, refresh, gesture, bulkDeny, bulkProgress, dates, current } = useHistoryItemReview({ patientReference, encounterReference, historyVersion, onChanged, onRecordedChange });
   function put(sectionId: string, value: HistoryTemplateAnswer["value"], optionCode?: string) {
     const prior = answers.find(answer => answer.sectionId === sectionId && answer.optionCode === optionCode);
     onChange({ id: prior?.id ?? makeAnswerId(sectionId, optionCode),
@@ -20,6 +21,13 @@ export function HistoryRosSection({ declaration, catalogs, patientReference, enc
   }
   const projection = record.subjectSectionSummaries?.find(row => row.sectionKey === declaration.key);
   const options = declaration.sections.flatMap(section => section.group_by === "system" && section.catalog ? catalogs[section.catalog] ?? [] : []);
+  const unansweredTargets = options.filter(option => !answers.some(answer => answer.sectionId === "systems" && answer.optionCode === option.code))
+    .map(option => ({ sectionKey: declaration.key, sectionId: "systems", optionCode: option.code }));
+  const bulkTargets = bulkProgress?.targets ?? unansweredTargets;
+  async function denyUnanswered() {
+    const saved = await bulkDeny(bulkTargets);
+    if (saved) onBulkRecorded(saved.filter(answer => answer.templateKey === declaration.key) as HistoryTemplateAnswer[]);
+  }
   return <article data-testid={`history-${declaration.key}`} className="odos-hpi-border rounded border bg-bg-panel/70">
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-inherit px-5 py-4">
       <button type="button" aria-expanded={open} onClick={() => setOpen(value => !value)} className="min-w-0 flex-1 text-left">
@@ -27,6 +35,11 @@ export function HistoryRosSection({ declaration, catalogs, patientReference, enc
         {followUp && <span className="odos-hpi-muted ml-3 text-sm">Complaint-directed</span>}
         <span className="odos-hpi-muted mt-1 block line-clamp-2 text-sm" title={projection?.summary}>{projection?.summary || "Not started"}</span>
       </button>
+      {bulkTargets.length > 0 && <button type="button" aria-label={bulkProgress && !busy ? "Resume marking unanswered No" : "Mark unanswered No"}
+        disabled={!ready || busy} onClick={() => void denyUnanswered()} className="min-h-11 rounded border border-slate-400 px-3 text-sm">
+        {bulkProgress && !busy ? "Resume" : "Mark unanswered No"}
+      </button>}
+      {bulkProgress && <span data-history-bulk-progress role="status" className="odos-hpi-muted text-xs">{bulkProgress.recorded} of {bulkProgress.total} recorded</span>}
       <span className="odos-hpi-muted text-xs">{projection?.state === "charted" ? "Charted" : projection?.state === "started" ? "Started" : "Not started"}</span>
       {saveIndicator}
     </header>

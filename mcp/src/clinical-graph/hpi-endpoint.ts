@@ -28,6 +28,8 @@ import {
   historyReviewTargetKey,
   historyRetractedTargets,
   type HistoryItemReview,
+  type ReviewTarget,
+  HISTORY_ANSWER_IDENTIFIER_SYSTEM,
   HISTORY_ANSWER_SCOPE_SYSTEM,
   HISTORY_ANSWER_CODE,
   HISTORY_ANSWER_CODE_SYSTEM,
@@ -78,6 +80,27 @@ export interface HpiEndpointDeps {
 }
 
 const PATIENT_HISTORY_MAX_ROWS = 5_000;
+export const HISTORY_CONDITIONAL_BUNDLE_ENTRY_LIMIT = 8;
+
+export const HISTORY_BULK_DENIAL_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/history-bulk-denial";
+export const HISTORY_BULK_DENIAL_CODE = "history-bulk-denial-ledger";
+export const HISTORY_BULK_DENIAL_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/history-bulk-denial-gesture";
+export const HISTORY_BULK_DENIAL_STATE_URL = "https://odos2020.com/fhir/StructureDefinition/history-bulk-denial-state";
+
+const historyBulkDenialLedgerSchema = z.object({
+  gestureId: z.string().uuid(),
+  patientReference: z.string().regex(/^Patient\/[A-Za-z0-9.-]+$/),
+  encounterReference: z.string().regex(/^Encounter\/[A-Za-z0-9.-]+$/),
+  sectionKey: z.literal("review-of-systems"),
+  actorReference: z.string().regex(/^(Practitioner|PractitionerRole)\/[A-Za-z0-9.-]+$/),
+  recordedAt: z.string().datetime({ offset: true }),
+  status: z.enum(["in-progress", "complete"]),
+  intendedTargets: z.array(historyReviewTargetSchema).min(1).max(500),
+  resolvedTargets: z.array(historyReviewTargetSchema).max(500),
+  persistedTargets: z.array(historyReviewTargetSchema).max(500),
+  attestationReference: z.string().regex(/^Observation\/[A-Za-z0-9.-]+$/).optional(),
+}).strict();
+type HistoryBulkDenialLedger = z.infer<typeof historyBulkDenialLedgerSchema> & { id: string; versionId?: string };
 
 const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_hpi_ros" } as const;
 export const HPI_OBSERVATION_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/hpi-observation-encounter";
@@ -326,9 +349,296 @@ function readHistoryReviewAttestations(
 }
 
 export async function handleHistoryItemReviewRequest(deps: HpiEndpointDeps, input: { authHeader: string | undefined; body: unknown }) {
-  const parsed = itemHistoryReviewRequestSchema.extend({ method: z.literal("individual"), targets: z.array(historyReviewTargetSchema).length(1) }).safeParse(input.body);
-  if (!parsed.success) return { status: 400, body: { error: "An individual review requires exactly one valid target." } };
+  const parsed = itemHistoryReviewRequestSchema.safeParse(input.body);
+  if (!parsed.success) return { status: 400, body: { error: "A review requires a gesture id and valid targets." } };
+  if (parsed.data.method === "bulk") return handleHistoryBulkDenialRequest(deps, input, parsed.data);
+  if (parsed.data.targets.length !== 1) return { status: 400, body: { error: "An individual review requires exactly one valid target." } };
   return handleHistoryReviewRequest(deps, input);
+}
+
+async function handleHistoryBulkDenialRequest(
+  deps: HpiEndpointDeps,
+  input: { authHeader: string | undefined; body: unknown },
+  request: z.infer<typeof itemHistoryReviewRequestSchema>,
+): Promise<{ status: number; body: unknown }> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to record bulk history." } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  const declaration = HISTORY_SUBJECT_SECTIONS.find(candidate => candidate.key === request.sectionKey);
+  if (!declaration || declaration.key !== "review-of-systems") {
+    return { status: 400, body: { error: "Bulk denial is available only for Review of Systems." } };
+  }
+  const targetError = validateHistoryReviewTargets(declaration, request.targets);
+  if (targetError) return { status: 400, body: { error: targetError } };
+  const encounterId = request.encounterReference.slice("Encounter/".length);
+  const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
+  if (encounter.subject?.reference !== request.patientReference) {
+    return { status: 400, body: { error: "History patient does not match the encounter subject." } };
+  }
+  if (isClosedEncounter(encounter)) return { status: 409, body: { error: CLOSED_ENCOUNTER_EDIT_ERROR } };
+
+  const existingLedger = await loadHistoryBulkDenialLedger(staff.fhir, request.gestureId);
+  if (existingLedger) {
+    if (!historyBulkLedgerMatchesRequest(existingLedger, request)) {
+      return { status: 409, body: { error: "History bulk gesture targets and context are immutable." } };
+    }
+    if (existingLedger.status === "complete") return { status: 200, body: historyBulkDenialResponse(existingLedger) };
+  }
+
+  const recordedAt = existingLedger?.recordedAt ?? deps.now?.() ?? new Date().toISOString();
+  if (!existingLedger) {
+    for (const target of request.targets) {
+      const answer = await findHistoryAnswerById(staff.fhir, bulkHistoryAnswerId(encounterId, target));
+      if (answer && isLiveHistoryAnswer(answer, request.patientReference, request.encounterReference)) {
+        return { status: 409, body: { error: "Bulk denial accepts unanswered targets only." } };
+      }
+    }
+  }
+  let ledger = existingLedger ?? await createHistoryBulkDenialLedger(staff.fhir, {
+    gestureId: request.gestureId,
+    patientReference: request.patientReference,
+    encounterReference: request.encounterReference,
+    sectionKey: "review-of-systems",
+    actorReference: staff.staffReference,
+    recordedAt,
+    status: "in-progress",
+    intendedTargets: request.targets,
+    resolvedTargets: [],
+    persistedTargets: [],
+  });
+  if (!historyBulkLedgerMatchesRequest(ledger, request)) {
+    return { status: 409, body: { error: "History bulk gesture targets and context are immutable." } };
+  }
+  if (ledger.status === "complete") return { status: 200, body: historyBulkDenialResponse(ledger) };
+  const unresolved = ledger.intendedTargets.filter(target => !ledger.resolvedTargets.some(saved => historyReviewTargetKey(saved) === historyReviewTargetKey(target)));
+  const answersPerUnit = HISTORY_CONDITIONAL_BUNDLE_ENTRY_LIMIT - 1;
+  try {
+    for (let start = 0; start < unresolved.length; start += answersPerUnit) {
+      const targets = unresolved.slice(start, start + answersPerUnit);
+      const requestBundle = historyBulkAnswerUnit(targets, request, staff.staffReference, recordedAt);
+      const sizeError = historyBundleSizeError(requestBundle);
+      if (sizeError) return { status: 413, body: { error: sizeError, ...historyBulkDenialResponse(ledger) } };
+      const result = await staff.fhir.executeTransaction(requestBundle, {
+        "X-ODOS-Source": "mcp/history_bulk_denial",
+        Prefer: "return=representation",
+      });
+      assertSuccessfulTransaction(requestBundle, result);
+      const persisted = [...ledger.persistedTargets];
+      for (const target of targets) {
+        const observation = await findHistoryAnswerById(staff.fhir, bulkHistoryAnswerId(encounterId, target));
+        if (observation && isPersistedBulkNegative(observation, request.patientReference, request.encounterReference, target)) persisted.push(target);
+      }
+      ledger = await updateHistoryBulkDenialLedger(staff.fhir, {
+        ...ledger,
+        resolvedTargets: uniqueHistoryTargets([...ledger.resolvedTargets, ...targets]),
+        persistedTargets: uniqueHistoryTargets(persisted),
+      });
+    }
+    let attestationReference = ledger.attestationReference;
+    if (ledger.persistedTargets.length > 0) {
+      const act = await recordHistoryItemReview(staff.fhir, {
+        sectionKey: request.sectionKey,
+        gestureId: request.gestureId,
+        method: "bulk",
+        targets: ledger.persistedTargets,
+        patientReference: request.patientReference,
+        encounterReference: request.encounterReference,
+        actorReference: staff.staffReference,
+        recordedAt,
+      });
+      if (act.status !== 200) return act;
+      attestationReference = (act.body as { attestationReference?: string }).attestationReference;
+    }
+    ledger = await updateHistoryBulkDenialLedger(staff.fhir, { ...ledger, status: "complete", ...(attestationReference ? { attestationReference } : {}) });
+    return { status: 200, body: historyBulkDenialResponse(ledger) };
+  } catch (error) {
+    return { status: 503, body: { error: errorMessage(error), ...historyBulkDenialResponse(ledger) } };
+  }
+}
+
+function validateHistoryReviewTargets(declaration: HistorySubjectSection, targets: ReviewTarget[]): string | undefined {
+  const seen = new Set<string>();
+  for (const target of targets) {
+    const section = declaration.sections.find(candidate => candidate.id === target.sectionId);
+    if (target.sectionKey !== declaration.key || !section) return "History review target is not in this section.";
+    const option = section.catalog ? HISTORY_OPTION_CATALOGS[section.catalog]?.find(candidate => candidate.code === target.optionCode) : undefined;
+    const catalogItem = Boolean(section.catalog) && section.type !== "single_select";
+    const perEye = catalogItem && (option?.per_eye ?? section.per_eye ?? false);
+    if ((catalogItem ? !option : target.optionCode !== undefined) || (perEye ? !target.eye : target.eye !== undefined)) {
+      return "History review target has an invalid option or eye.";
+    }
+    const key = historyReviewTargetKey(target);
+    if (seen.has(key)) return "History review targets cannot be duplicated.";
+    seen.add(key);
+  }
+  return undefined;
+}
+
+function bulkHistoryAnswerId(encounterId: string, target: ReviewTarget): string {
+  return `history-${encounterId}-${target.sectionKey}-${target.sectionId}-${target.optionCode ?? "value"}${target.eye ? `-${target.eye}` : ""}`
+    .replace(/[^A-Za-z0-9.-]/g, "-").slice(0, 180);
+}
+
+function historyBulkAnswerUnit(
+  targets: ReviewTarget[],
+  request: z.infer<typeof itemHistoryReviewRequestSchema>,
+  actorReference: string,
+  recordedAt: string,
+): Bundle {
+  const encounterId = request.encounterReference.slice("Encounter/".length);
+  const entries: NonNullable<Bundle["entry"]> = targets.map(target => {
+    const answer: HistoryTemplateAnswer = {
+      id: bulkHistoryAnswerId(encounterId, target),
+      subjectScope: "encounter",
+      templateKey: target.sectionKey,
+      sectionId: target.sectionId,
+      ...(target.optionCode ? { optionCode: target.optionCode } : {}),
+      ...(target.eye ? { eye: target.eye } : {}),
+      value: { kind: "tri-state", status: "negative" },
+    };
+    const resource = buildHistoryAnswerObservation(answer, {
+      patientReference: request.patientReference,
+      encounterReference: request.encounterReference,
+      recordedAt,
+    });
+    return {
+      fullUrl: `urn:uuid:${randomUUID()}`,
+      resource,
+      request: {
+        method: "POST" as const,
+        url: "Observation",
+        ifNoneExist: `identifier=${HISTORY_ANSWER_IDENTIFIER_SYSTEM}|${answer.id}`,
+      },
+    };
+  });
+  const provenance: Provenance = {
+    resourceType: "Provenance",
+    target: [
+      ...entries.flatMap(entry => entry.fullUrl ? [reference(entry.fullUrl)] : []),
+      reference(request.encounterReference),
+      reference(request.patientReference),
+    ],
+    recorded: recordedAt,
+    activity: odosConcept("CREATE", "Record unanswered ROS items negative"),
+    agent: [{ type: odosConcept("author", "Author"), who: reference(actorReference) }],
+  };
+  return { resourceType: "Bundle", type: "transaction", entry: [
+    ...entries,
+    { resource: provenance, request: { method: "POST", url: "Provenance" } },
+  ] };
+}
+
+async function findHistoryAnswerById(fhir: HpiFhirClient, answerId: string): Promise<Observation | undefined> {
+  const rows = await searchAll<Observation>(fhir, "Observation", {
+    identifier: `${HISTORY_ANSWER_IDENTIFIER_SYSTEM}|${answerId}`,
+    _count: "2",
+  }, { maxRows: 2 });
+  if (rows.length > 1) throw new Error(`History answer ${answerId} is not unique.`);
+  return rows[0];
+}
+
+function isLiveHistoryAnswer(observation: Observation, patientReference: string, encounterReference: string): boolean {
+  return observation.subject?.reference === patientReference && observation.encounter?.reference === encounterReference &&
+    observation.status !== "entered-in-error" && observation.status !== "cancelled" && isHistoryAnswerObservation(observation);
+}
+
+function isPersistedBulkNegative(
+  observation: Observation,
+  patientReference: string,
+  encounterReference: string,
+  target: ReviewTarget,
+): boolean {
+  if (!isLiveHistoryAnswer(observation, patientReference, encounterReference)) return false;
+  const answer = parseHistoryAnswerObservation(observation);
+  return answer.subjectScope === "encounter" && answer.templateKey === target.sectionKey && answer.sectionId === target.sectionId &&
+    answer.optionCode === target.optionCode && answer.eye === target.eye && answer.value.kind === "tri-state" && answer.value.status === "negative";
+}
+
+function uniqueHistoryTargets(targets: ReviewTarget[]): ReviewTarget[] {
+  return [...new Map(targets.map(target => [historyReviewTargetKey(target), target])).values()];
+}
+
+function historyBulkDenialResource(state: Omit<HistoryBulkDenialLedger, "id" | "versionId">, existing?: Pick<Basic, "id" | "meta">): Basic {
+  return {
+    resourceType: "Basic",
+    ...(existing?.id ? { id: existing.id } : {}),
+    ...(existing?.meta ? { meta: existing.meta } : {}),
+    identifier: [{ system: HISTORY_BULK_DENIAL_IDENTIFIER_SYSTEM, value: state.gestureId }],
+    code: { coding: [{ system: HISTORY_BULK_DENIAL_CODE_SYSTEM, code: HISTORY_BULK_DENIAL_CODE, display: "History bulk denial progress" }] },
+    subject: reference(state.patientReference),
+    created: state.recordedAt.slice(0, 10),
+    author: reference(state.actorReference),
+    extension: [{ url: HISTORY_BULK_DENIAL_STATE_URL, valueString: JSON.stringify(state) }],
+  };
+}
+
+function parseHistoryBulkDenialLedger(resource: Basic): HistoryBulkDenialLedger {
+  const identifier = resource.identifier?.find(row => row.system === HISTORY_BULK_DENIAL_IDENTIFIER_SYSTEM)?.value;
+  const coded = resource.code.coding?.some(row => row.system === HISTORY_BULK_DENIAL_CODE_SYSTEM && row.code === HISTORY_BULK_DENIAL_CODE);
+  const raw = resource.extension?.find(extension => extension.url === HISTORY_BULK_DENIAL_STATE_URL)?.valueString;
+  if (!resource.id || !identifier || !coded || !raw) throw new Error("History bulk denial ledger is incomplete.");
+  const state = historyBulkDenialLedgerSchema.parse(JSON.parse(raw));
+  if (state.gestureId !== identifier || resource.subject?.reference !== state.patientReference || resource.author?.reference !== state.actorReference) {
+    throw new Error("History bulk denial ledger identity does not match its state.");
+  }
+  return { ...state, id: resource.id, ...(resource.meta?.versionId ? { versionId: resource.meta.versionId } : {}) };
+}
+
+async function loadHistoryBulkDenialLedger(fhir: HpiFhirClient, gestureId: string): Promise<HistoryBulkDenialLedger | undefined> {
+  const rows = await searchAll<Basic>(fhir, "Basic", {
+    code: `${HISTORY_BULK_DENIAL_CODE_SYSTEM}|${HISTORY_BULK_DENIAL_CODE}`,
+    identifier: `${HISTORY_BULK_DENIAL_IDENTIFIER_SYSTEM}|${gestureId}`,
+    _count: "2",
+  }, { maxRows: 2 });
+  if (rows.length > 1) throw new Error("History bulk gesture matches multiple ledgers.");
+  return rows[0] ? parseHistoryBulkDenialLedger(rows[0]) : undefined;
+}
+
+async function createHistoryBulkDenialLedger(
+  fhir: HpiFhirClient,
+  state: Omit<HistoryBulkDenialLedger, "id" | "versionId">,
+): Promise<HistoryBulkDenialLedger> {
+  const created = await fhir.create(historyBulkDenialResource(state), {
+    "If-None-Exist": `identifier=${HISTORY_BULK_DENIAL_IDENTIFIER_SYSTEM}|${state.gestureId}`,
+    ...WRITE_HEADERS,
+  });
+  return parseHistoryBulkDenialLedger(created);
+}
+
+async function updateHistoryBulkDenialLedger(fhir: HpiFhirClient, ledger: HistoryBulkDenialLedger): Promise<HistoryBulkDenialLedger> {
+  const { id, versionId: _versionId, ...state } = ledger;
+  const resource: Basic = historyBulkDenialResource(state, {
+    id,
+    ...(ledger.versionId ? { meta: { versionId: ledger.versionId } } : {}),
+  });
+  const updated = await fhir.update("Basic", id, resource, {
+    ...(ledger.versionId ? { "If-Match": `W/\"${ledger.versionId}\"` } : {}),
+    ...WRITE_HEADERS,
+  });
+  return parseHistoryBulkDenialLedger(updated);
+}
+
+function historyBulkDenialResponse(ledger: HistoryBulkDenialLedger) {
+  return {
+    sectionKey: ledger.sectionKey,
+    gestureId: ledger.gestureId,
+    status: ledger.status,
+    recorded: ledger.persistedTargets.length,
+    total: ledger.intendedTargets.length,
+    persistedTargets: ledger.persistedTargets,
+    ...(ledger.attestationReference ? { attestationReference: ledger.attestationReference } : {}),
+  };
+}
+
+function historyBulkLedgerMatchesRequest(
+  ledger: HistoryBulkDenialLedger,
+  request: Pick<z.infer<typeof itemHistoryReviewRequestSchema>, "patientReference" | "encounterReference" | "sectionKey" | "targets">,
+): boolean {
+  return ledger.patientReference === request.patientReference && ledger.encounterReference === request.encounterReference &&
+    ledger.sectionKey === request.sectionKey && isDeepStrictEqual(
+      ledger.intendedTargets.map(historyReviewTargetKey).sort(),
+      request.targets.map(historyReviewTargetKey).sort(),
+    );
 }
 
 export async function handleHistoryItemRetractionRequest(deps: HpiEndpointDeps, input: { authHeader: string | undefined; body: unknown }) {
@@ -347,9 +657,13 @@ export async function handleHistoryItemActsRequest(deps: HpiEndpointDeps, input:
     const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
     const patientReference = encounter.subject?.reference;
     if (!patientReference) return { status: 400, body: { error: "Encounter has no patient." } };
-    const groups = await Promise.all([HISTORY_ITEM_REVIEW_CODE, HISTORY_ITEM_RETRACTION_CODE].map(code =>
-      searchAll<Observation>(staff.fhir, "Observation", { encounter: `Encounter/${encounterId}`,
-        code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${code}`, _count: "200" })));
+    const [groups, ledgerResources] = await Promise.all([
+      Promise.all([HISTORY_ITEM_REVIEW_CODE, HISTORY_ITEM_RETRACTION_CODE].map(code =>
+        searchAll<Observation>(staff.fhir, "Observation", { encounter: `Encounter/${encounterId}`,
+          code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${code}`, _count: "200" }))),
+      searchAll<Basic>(staff.fhir, "Basic", { subject: patientReference,
+        code: `${HISTORY_BULK_DENIAL_CODE_SYSTEM}|${HISTORY_BULK_DENIAL_CODE}`, _count: "200" }),
+    ]);
     const live = groups.flat().filter(row => row.id && row.subject?.reference === patientReference &&
       row.encounter?.reference === `Encounter/${encounterId}` && row.status !== "entered-in-error" && row.status !== "cancelled");
     const retracted = historyRetractedTargets(live, patientReference);
@@ -361,6 +675,9 @@ export async function handleHistoryItemActsRequest(deps: HpiEndpointDeps, input:
       }),
       retractions: live.filter(row => row.code.coding?.some(c => c.code === HISTORY_ITEM_RETRACTION_CODE)).map(row =>
         ({ ...parseHistoryItemRetraction(row), attestationReference: `Observation/${row.id}`, recordedAt: row.effectiveDateTime })),
+      bulkDenials: ledgerResources.map(parseHistoryBulkDenialLedger)
+        .filter(ledger => ledger.encounterReference === `Encounter/${encounterId}` && ledger.status === "in-progress")
+        .map(ledger => ({ ...historyBulkDenialResponse(ledger), targets: ledger.intendedTargets })),
     } };
   });
 }
@@ -393,23 +710,8 @@ async function handleHistoryReview(
   if (isClosedEncounter(encounter)) return { status: 409, body: { error: CLOSED_ENCOUNTER_EDIT_ERROR } };
 
   if ("action" in parsed.data) {
-    const seen = new Set<string>();
-    for (const rawTarget of parsed.data.targets) {
-      const validatedTarget = historyReviewTargetSchema.safeParse(rawTarget);
-      if (!validatedTarget.success) return { status: 400, body: { error: "Invalid history review target." } };
-      const target = validatedTarget.data;
-      const section = declaration.sections.find(candidate => candidate.id === target.sectionId);
-      if (target.sectionKey !== declaration.key || !section) return { status: 400, body: { error: "History review target is not in this section." } };
-      const option = section.catalog ? HISTORY_OPTION_CATALOGS[section.catalog]?.find(candidate => candidate.code === target.optionCode) : undefined;
-      const catalogItem = Boolean(section.catalog) && section.type !== "single_select";
-      const perEye = catalogItem && (option?.per_eye ?? section.per_eye ?? false);
-      if ((catalogItem ? !option : target.optionCode !== undefined) || (perEye ? !target.eye : target.eye !== undefined)) {
-        return { status: 400, body: { error: "History review target has an invalid option or eye." } };
-      }
-      const key = historyReviewTargetKey(target);
-      if (seen.has(key)) return { status: 400, body: { error: "History review targets cannot be duplicated." } };
-      seen.add(key);
-    }
+    const targetError = validateHistoryReviewTargets(declaration, parsed.data.targets);
+    if (targetError) return { status: 400, body: { error: targetError } };
     if (parsed.data.action === HISTORY_ITEMS_RETRACTED_ACTION) {
       const retractionTarget = parsed.data.targets[0];
       const originals = await searchAll<Observation>(staff.fhir, "Observation", { _id: parsed.data.retracts.slice("Observation/".length), _count: "2" }, { maxRows: 2 });
@@ -993,7 +1295,7 @@ function samePersistedHistoryAnswer(left: HistoryTemplateAnswer, right: HistoryT
 function historyBundleSizeError(bundle: Bundle): string | undefined {
   const entries = bundle.entry ?? [];
   const conditional = entries.some((entry) => entry.request?.ifNoneExist || entry.request?.url.includes("?"));
-  if (conditional && entries.length > 8) return `History save refused: conditional bundles allow at most 8 total entries; this save needs ${entries.length}. No changes were written.`;
+  if (conditional && entries.length > HISTORY_CONDITIONAL_BUNDLE_ENTRY_LIMIT) return `History save refused: conditional bundles allow at most ${HISTORY_CONDITIONAL_BUNDLE_ENTRY_LIMIT} total entries; this save needs ${entries.length}. No changes were written.`;
   const puts = entries.filter((entry) => entry.request?.method === "PUT").length;
   if (puts > 50) return `History save refused: bundles allow at most 50 PUT entries; this save needs ${puts}. No changes were written.`;
   return undefined;

@@ -961,6 +961,12 @@
       "namespace": "history",
       "status": "active",
       "sliceConsumer": "history-1d3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/history-bulk-denial-state",
+      "namespace": "history",
+      "status": "active",
+      "sliceConsumer": "history-1d6"
     }
   ]
 }

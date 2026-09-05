@@ -10,7 +10,7 @@ import { handleEncounterVoidRequest } from "../../mcp/src/clinical-graph/encount
 import { buildHistoryItemReview, HISTORY_ITEM_REVIEW_CODE, parseHistoryItemReview } from "../../mcp/src/clinical-graph/history-answer-observation.js";
 import type { Observation } from "@medplum/fhirtypes";
 
-for (const scenario of ["comprehensive burst and explicit immutable reviews", "follow-up self-folds", "review-only History clear"]) test(`ROS browser: ${scenario}`, async () => {
+for (const scenario of ["comprehensive burst and explicit immutable reviews", "follow-up self-folds", "review-only History clear", "bulk denial is resumable and transient"]) test(`ROS browser: ${scenario}`, async () => {
   const followUp = scenario === "follow-up self-folds";
   const seed = { ...buildHistoryItemReview({ sectionKey: "review-of-systems", gestureId: "11111111-1111-4111-8111-111111111111", method: "individual", targets: [{ sectionKey: "review-of-systems", sectionId: "systems", optionCode: "scalp-tenderness" }], patientReference: "Patient/ros-test", encounterReference: "Encounter/old", actorReference: "Practitioner/test", recordedAt: "2019-02-06T12:00:00Z" }), id: "old-review" };
   const s = historyRosFixture([seed]);
@@ -54,6 +54,30 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
     await ros.getByRole("table").waitFor(); assert.equal(await ros.locator('[data-ros-system]').count(), 14);
     assert.equal(await ros.getByRole("button", { name: /Mark all/ }).count(), 0);
     if (followUp) return;
+    if (scenario === "bulk denial is resumable and transient") {
+      const positive = ros.locator('[data-ros-item="eye-pain"]');
+      await positive.getByRole("button", { name: "Yes: eye pain" }).click();
+      await page.waitForFunction(() => document.querySelector('[data-testid="history-review-of-systems"]')?.textContent?.includes("saved · just now"));
+      s.failTransactionAt(s.transactionAttempts() + 2);
+      const bulk = ros.getByRole("button", { name: "Mark unanswered No" });
+      assert.equal(await bulk.count(), 1);
+      assert.equal(await bulk.getAttribute("class").then(value => value?.includes("min-h-11")), true);
+      await bulk.click();
+      await ros.getByRole("status").filter({ hasText: "of 53 recorded" }).waitFor();
+      assert.equal(await bulk.isDisabled(), true);
+      await ros.getByRole("button", { name: "Resume marking unanswered No" }).waitFor();
+      assert.match(await ros.getByRole("alert").innerText(), /7 of 53 recorded/);
+      s.failTransactionAt(undefined);
+      await ros.getByRole("button", { name: "Resume marking unanswered No" }).click();
+      await page.waitForFunction(() => !document.querySelector('[data-history-bulk-progress]'));
+      assert.equal(await ros.getByText(/of 53 recorded/).count(), 0);
+      const saved = await api.handleHpiRecordRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });
+      assert.equal((saved.body as any).answers.length, 54);
+      assert.equal((saved.body as any).answers.find((answer: any) => answer.optionCode === "eye-pain").value.status, "positive");
+      const act = s.rows.find((row): row is Observation => row.resourceType === "Observation" && row.encounter?.reference === "Encounter/current" && row.code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE));
+      assert.ok(act); assert.equal(parseHistoryItemReview(act).targets.length, 53);
+      return;
+    }
     if (scenario === "review-only History clear") {
       const clear = page.getByRole("button", { name: "Clear History", exact: true });
       assert.equal(await clear.count(), 0);

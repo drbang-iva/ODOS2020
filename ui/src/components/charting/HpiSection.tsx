@@ -234,6 +234,18 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
     scheduleSave(nextAnswer.id);
   }
 
+  function recordBulkAnswers(savedAnswers: HistoryTemplateAnswer[]) {
+    let next = latestAnswers.current;
+    for (const answer of savedAnswers) {
+      next = replaceAnswer(next, answer);
+      persistedAnswers.current.set(answer.id, answer);
+      if (answer.observationReference) persistedAnswerReferences.current.set(answer.id, answer.observationReference);
+    }
+    latestAnswers.current = next;
+    setAnswers(next);
+    setHistoryVersion(value => value + 1);
+  }
+
   async function changePresentation(nextAnswer: HistoryTemplateAnswer, inactiveAnswers: HistoryTemplateAnswer[]) {
     for (const timer of debounceTimers.current.values()) clearTimeout(timer);
     debounceTimers.current.clear();
@@ -571,6 +583,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
             followUp={activeComplaints.some(complaint => answers.some(answer => answer.complaintId === complaint.id &&
               answer.sectionId === "presentation" && answer.value.kind === "selection" && answer.value.code === "follow-up"))}
             historyVersion={historyVersion} onChange={changeAnswer}
+            onBulkRecorded={recordBulkAnswers}
             makeAnswerId={(sectionId, optionCode) => subjectHistoryAnswerId(encounterId, declaration.key, sectionId, optionCode)}
             onChanged={() => onSaved({ completed: complete, summary }, true)}
             onRecordedChange={setItemizedHasRecorded}
