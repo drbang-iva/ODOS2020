@@ -1,0 +1,7 @@
+A then B: HTTP 200/200; 2 acts; both original dates intact
+Retry: 2 acts unchanged including meta.versionId; changed targets HTTP 409
+Answer create/edit: 0 new acts; existing acts unchanged; later answer date wins
+Patient search: 26 acts across 2 encounters, paginated at 20; HTTP 200
+Legacy derivedFrom [x]: x gets act date; y retains its answer date
+Concurrent conflicting same-ID requests: HTTP 200/409; exactly 1 additional act
+PASS: 7 live persistence scenarios (synthetic local admin; not a constrained-role AccessPolicy verdict)
