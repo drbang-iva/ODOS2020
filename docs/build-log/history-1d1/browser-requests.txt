@@ -1,0 +1,10 @@
+Base ac4dba80
+# BROWSER_REQUEST_BODIES [[{"id":"presentation","complaintId":"c1","templateKey":"glaucoma","sectionId":"presentation","value":{"kind":"selection","code":"follow-up"}},{"id":"pain","complaintId":"c1","templateKey":"glaucoma","sectionId":"symptoms","optionCode":"ocular-pain","value":{"kind":"tri-state","status":"negative"}}],[{"id":"presentation","complaintId":"c1","templateKey":"glaucoma","sectionId":"presentation","value":{"kind":"selection","code":"follow-up"}},{"id":"pain","complaintId":"c1","templateKey":"glaucoma","sectionId":"symptoms","optionCode":"ocular-pain","value":{"kind":"tri-state","status":"negative"}},{"id":"history-c1-symptoms-blur","complaintId":"c1","templateKey":"glaucoma","sectionId":"symptoms","optionCode":"blur","value":{"kind":"tri-state","status":"positive"}}]]
+# tests 1
+# pass 0
+# fail 1
+Proposed
+# BROWSER_REQUEST_BODIES [[],[{"id":"history-c1-symptoms-blur","complaintId":"c1","templateKey":"glaucoma","sectionId":"symptoms","optionCode":"blur","value":{"kind":"tri-state","status":"positive"}}]]
+# tests 1
+# pass 1
+# fail 0

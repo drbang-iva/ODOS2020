@@ -1099,3 +1099,114 @@ function componentValue(observation: Observation, code: string): string | undefi
 function componentBoolean(observation: Observation, code: string): boolean | undefined {
   return observation.component?.find((component) => component.code.coding?.[0]?.code === code)?.valueBoolean;
 }
+
+const DELTA_CONTEXT = {
+  patientReference: "Patient/p1", encounterReference: "Encounter/e1",
+  recordedAt: "2026-09-04T10:00:00.000Z", actorReference: "Practitioner/doc1",
+};
+
+function deltaAnswer(index: number) {
+  return {
+    id: `delta-${index}`, subjectScope: "patient" as const, templateKey: "social-history",
+    sectionId: "occupation", value: { kind: "text" as const, text: `History ${index}` },
+  };
+}
+
+for (const [answerCount, existing, expectedStatus, expectedEntries] of [
+  [7, false, 200, 8], [8, false, 413, 9],
+  [50, true, 200, 51], [51, true, 413, 52],
+] as const) {
+  test(`delta bundle boundary: ${expectedEntries} entries, ${existing ? answerCount + " ordinary PUTs" : "conditional PUTs"}, status ${expectedStatus}`, async () => {
+    const setup = fixture("provider", false);
+    const answers = Array.from({ length: answerCount }, (_, index) => deltaAnswer(index));
+    if (existing) setup.observations.push(...answers.map((answer, index) => ({
+      ...buildHistoryAnswerObservation({ ...answer, value: { kind: "text", text: "Before" } }, DELTA_CONTEXT),
+      id: `stored-${index}`, meta: { versionId: "1" },
+    })));
+    const before = structuredClone(setup.observations);
+    const result = await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: { ...BODY, reviewOfSystems: undefined, reviewAttestations: undefined, templateAnswers: answers } });
+    if (expectedStatus === 413) {
+      assert.deepEqual(setup.observations, before, "refusal must leave every resource unchanged");
+      assert.equal(setup.created.length, 0, "refusal creates no provenance");
+      assert.equal(setup.transactions.length, 0, "guard runs before any write attempt");
+    } else {
+      assert.equal(setup.observations.length, answerCount);
+      assert.equal(setup.transactions[0]?.bundle.entry?.length, expectedEntries);
+      assert.deepEqual(setup.observations.map(parseHistoryAnswerObservation).map((answer) => answer.value), answers.map((answer) => answer.value));
+    }
+    assert.equal(result.status, expectedStatus);
+  });
+}
+
+test("byte-identical delta resubmission writes nothing and retains all review acts and answer dates", async () => {
+  const setup = fixture("provider", false);
+  const answer = deltaAnswer(0);
+  setup.observations.push({ ...buildHistoryAnswerObservation(answer, DELTA_CONTEXT), id: "stored-0" });
+  for (const sectionKey of ["social-history", "ocular-history"]) setup.observations.push({
+    ...buildHistoryReviewAttestation({ ...DELTA_CONTEXT, sectionKey, priorAnswerReferences: ["Observation/prior"] }), id: `review-${sectionKey}`,
+  });
+  const before = structuredClone(setup.observations);
+  for (const templateAnswers of [[answer], []]) {
+    const result = await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: { patientReference: BODY.patientReference, encounterReference: BODY.encounterReference, templateAnswers } });
+    assert.equal(result.status, 200);
+    assert.deepEqual(setup.observations, before);
+    assert.equal(setup.transactions.length, 0);
+    assert.deepEqual((result.body as { retiredReviewSections: string[] }).retiredReviewSections, []);
+  }
+});
+
+test("changed delta retires only its section and maps references past skipped unchanged answers", async () => {
+  const setup = fixture("provider", false);
+  const unchanged = deltaAnswer(0);
+  setup.observations.push({ ...buildHistoryAnswerObservation(unchanged, DELTA_CONTEXT), id: "stored-0" });
+  for (const sectionKey of ["social-history", "ocular-history"]) setup.observations.push({
+    ...buildHistoryReviewAttestation({ ...DELTA_CONTEXT, sectionKey, priorAnswerReferences: ["Observation/prior"] }), id: `review-${sectionKey}`,
+  });
+  const original = structuredClone(setup.observations[0]);
+  const result = await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: { patientReference: BODY.patientReference, encounterReference: BODY.encounterReference, templateAnswers: [unchanged, deltaAnswer(1)] } });
+  assert.equal(result.status, 200);
+  assert.deepEqual(setup.observations[0], original);
+  assert.deepEqual((result.body as { retiredReviewSections: string[] }).retiredReviewSections, ["social-history"]);
+  assert.equal(setup.observations.find((row) => row.id === "review-ocular-history")?.status, "preliminary");
+  const returned = (result.body as { answers: Array<{ id: string; observationReference: string }> }).answers;
+  assert.equal(returned.find((row) => row.id === "delta-1")?.observationReference, "Observation/observation-4");
+});
+
+test("complaint delta uses persisted presentation and preserves omitted narrative answers without rewriting them", async () => {
+  const setup = fixture();
+  setup.basics.splice(0, setup.basics.length, { ...buildEncounterComplaintResource({ ...COMPLAINTS[0]!, complaintKey: "glaucoma" }), id: "basic-1" });
+  const presentation = { id: "presentation", complaintId: "c1", templateKey: "glaucoma", sectionId: "presentation", value: { kind: "selection" as const, code: "follow-up" } };
+  const pain = { id: "pain", complaintId: "c1", templateKey: "glaucoma", sectionId: "symptoms", optionCode: "ocular-pain", value: { kind: "tri-state" as const, status: "negative" as const } };
+  const body = { patientReference: BODY.patientReference, encounterReference: BODY.encounterReference, templateAnswers: [presentation, pain] };
+  assert.equal((await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body })).status, 200);
+  const beforeAnswers = structuredClone(setup.observations.filter((row) => row.code.coding?.some((coding) => coding.code === "history-template-answer")));
+  const interval = { id: "interval", complaintId: "c1", templateKey: "glaucoma", sectionId: "interval", value: { kind: "interval", code: "better" } };
+  const result = await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: { ...body, templateAnswers: [interval] } });
+  assert.equal(result.status, 200);
+  for (const before of beforeAnswers) assert.deepEqual(setup.observations.find((row) => row.id === before.id), before);
+  const aggregate = setup.observations.find((row) => row.code.coding?.some((coding) => coding.code === "hpi_ros"))!;
+  assert.match(componentValue(aggregate, "HISTORY_COMPLAINT_1") ?? "", /Denies ocular pain/);
+  const writes = setup.transactions.length;
+  assert.equal((await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: { ...body, templateAnswers: [] } })).status, 200);
+  assert.equal(setup.transactions.length, writes, "unchanged aggregate refresh must not manufacture a PUT");
+});
+
+test("conditional bundle guard includes aggregate and review retirement provenance before any write", async () => {
+  const setup = fixture();
+  setup.observations.push({ ...buildHistoryReviewAttestation({ ...DELTA_CONTEXT, sectionKey: "social-history", priorAnswerReferences: ["Observation/prior"] }), id: "review-social" });
+  const before = structuredClone(setup.observations);
+  const result = await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: { patientReference: BODY.patientReference, encounterReference: BODY.encounterReference, templateAnswers: Array.from({ length: 5 }, (_, index) => deltaAnswer(index)) } });
+  assert.equal(result.status, 413, "5 answers + aggregate + 2 provenance + review retirement = 9 entries");
+  assert.deepEqual(setup.observations, before);
+  assert.equal(setup.created.length, 0);
+  assert.equal(setup.transactions.length, 0);
+});
+
+test("delta validation does not revalidate an omitted legacy section", async () => {
+  const setup = fixture("provider", false);
+  const omitted = { ...buildHistoryAnswerObservation({ ...deltaAnswer(0), templateKey: "legacy-section" }, DELTA_CONTEXT), id: "legacy" };
+  setup.observations.push(omitted);
+  const result = await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: { patientReference: BODY.patientReference, encounterReference: BODY.encounterReference, templateAnswers: [deltaAnswer(1)] } });
+  assert.equal(result.status, 200);
+  assert.deepEqual(setup.observations[0], omitted);
+});

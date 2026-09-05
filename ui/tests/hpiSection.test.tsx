@@ -791,3 +791,69 @@ function json(body: unknown): Response {
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
+
+test("delta autosave sends only the changed chip and zero answers for an unmodified section", async () => {
+  const originalFetch = globalThis.fetch;
+  const presentation = answer("presentation", undefined, { kind: "selection", code: "pressure-check" });
+  const pain = answer("symptoms", "ocular-pain", { kind: "tri-state", status: "negative" });
+  const submitted: HistoryTemplateAnswer[][] = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/hpi/definition")) return json({ templates: [TEMPLATE], catalogs: CATALOGS });
+    if (url.endsWith("/complaints")) return json({ complaints: [complaint()] });
+    if (url.endsWith("/encounters/e1/hpi")) return json({ answers: [presentation, pain], requiresAggregateRefresh: true });
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body));
+      submitted.push(body.templateAnswers);
+      return json({ answers: body.templateAnswers.map((row: HistoryTemplateAnswer) => ({ ...row, observationReference: `Observation/${row.id}` })) });
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  };
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => { renderer = create(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />); await delay(0); });
+    assert.deepEqual(submitted, [[]], "aggregate refresh of an unmodified section sends zero answers");
+    act(() => renderer!.root.findByProps({ "aria-label": "family history of glaucoma: unasked" }).props.onClick());
+    await act(async () => { await delay(850); });
+    assert.equal(submitted[1]?.length, 1);
+    assert.equal(submitted[1]?.[0]?.optionCode, "family-history");
+    assert.equal(renderer!.root.findByProps({ "aria-label": "ocular pain: negative" }).type, "button");
+  } finally {
+    renderer?.unmount(); globalThis.fetch = originalFetch;
+  }
+});
+
+test("delta retries retain failed answers and edits made during a save remain pending", async () => {
+  const originalFetch = globalThis.fetch;
+  const submitted: HistoryTemplateAnswer[][] = [];
+  let resolveSave!: (response: Response) => void;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/hpi/definition")) return json({ templates: [TEMPLATE], catalogs: CATALOGS });
+    if (url.endsWith("/complaints")) return json({ complaints: [complaint()] });
+    if (url.endsWith("/encounters/e1/hpi")) return json({ answers: [answer("presentation", undefined, { kind: "selection", code: "pressure-check" })] });
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body));
+      submitted.push(body.templateAnswers);
+      if (submitted.length === 1) return new Response(JSON.stringify({ error: "Synthetic save failure" }), { status: 503 });
+      if (submitted.length === 2) return new Promise<Response>((resolve) => { resolveSave = resolve; });
+      return json({ answers: body.templateAnswers });
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  };
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => { renderer = create(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />); await delay(0); });
+    act(() => renderer!.root.findByProps({ "aria-label": "ocular pain: unasked" }).props.onClick());
+    await act(async () => { await delay(850); });
+    await act(async () => { renderer!.root.findAllByType("button").find((button) => button.children.join("") === "Retry")!.props.onClick(); await delay(0); });
+    assert.deepEqual(submitted[1], submitted[0], "failed delta is retried unchanged");
+    act(() => renderer!.root.findByProps({ "aria-label": "ocular pain: positive" }).props.onClick());
+    await act(async () => { await delay(850); });
+    assert.equal(submitted.length, 2, "later save waits for the in-flight save");
+    await act(async () => { resolveSave(json({ answers: submitted[1] })); await delay(0); });
+    assert.equal(submitted.length, 3);
+    assert.equal(submitted[2]?.length, 1);
+    assert.deepEqual(submitted[2]?.[0]?.value, { kind: "tri-state", status: "negative" });
+  } finally { renderer?.unmount(); globalThis.fetch = originalFetch; }
+});

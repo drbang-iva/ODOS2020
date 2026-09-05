@@ -124,6 +124,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   const [adding, setAdding] = useState(false);
   const debounceTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const latestAnswers = useRef<HistoryTemplateAnswer[]>([]);
+  const persistedAnswers = useRef(new Map<string, HistoryTemplateAnswer>());
   const persistedAnswerReferences = useRef(new Map<string, string>());
   const saveQueue = useRef(Promise.resolve());
   const confirmDestructive = useConfirmDestructive();
@@ -143,6 +144,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       setComplaints(complaintRecord.complaints ?? []);
       const loadedAnswers = history.answers ?? [];
       latestAnswers.current = loadedAnswers;
+      persistedAnswers.current = new Map(loadedAnswers.map((answer) => [answer.id, answer]));
       persistedAnswerReferences.current = new Map(loadedAnswers.flatMap((answer) =>
         answer.observationReference ? [[answer.id, answer.observationReference] as const] : []
       ));
@@ -243,7 +245,10 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       }) : undefined;
       const inactiveIds = new Set(inactiveAnswers.map((answer) => answer.id));
       latestAnswers.current = latestAnswers.current.filter((answer) => !inactiveIds.has(answer.id));
-      for (const answer of inactiveAnswers) persistedAnswerReferences.current.delete(answer.id);
+      for (const answer of inactiveAnswers) {
+        persistedAnswerReferences.current.delete(answer.id);
+        persistedAnswers.current.delete(answer.id);
+      }
       applyAnswer(nextAnswer);
       if (result) onCleared?.({ scope: "observation", result });
     } catch (caught) {
@@ -271,6 +276,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
         label: answer.value.kind === "selection" ? answer.value.code : answer.optionCode ?? "History value",
       });
       persistedAnswerReferences.current.delete(answer.id);
+      persistedAnswers.current.delete(answer.id);
       await queueSave();
       onCleared?.({ scope: "observation", result });
     } catch (caught) {
@@ -316,6 +322,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       latestAnswers.current = remainingAnswers;
       for (const answer of removedAnswers) {
         persistedAnswerReferences.current.delete(answer.id);
+        persistedAnswers.current.delete(answer.id);
       }
       if (remainingComplaints.length) await queueSave();
       onCleared?.({ scope: "finding", result });
@@ -357,6 +364,9 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   }
 
   async function saveHistory(snapshot: HistoryTemplateAnswer[]) {
+    const delta = snapshot.filter((answer) =>
+      JSON.stringify(answer.value) !== JSON.stringify(persistedAnswers.current.get(answer.id)?.value)
+    );
     setSaveState({ status: "saving" });
     try {
       const result = await postJson<{
@@ -367,9 +377,10 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       }>(`${clinicalGraphApiBase()}/clinical-graph/hpi`, {
         patientReference,
         encounterReference,
-        templateAnswers: snapshot.map(stripObservationReference),
+        templateAnswers: delta.map(stripObservationReference),
       });
-      const savedAnswers = result.answers ?? snapshot;
+      const savedAnswers = result.answers ?? delta;
+      for (const answer of delta) persistedAnswers.current.set(answer.id, answer);
       for (const answer of savedAnswers) {
         if (answer.observationReference) persistedAnswerReferences.current.set(answer.id, answer.observationReference);
       }
@@ -389,7 +400,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       setSaveState({ status: "saved", at });
       const nextComplete = complaints.length > 0 && complaints.every((complaint) => {
         const template = templates.find((candidate) => candidate.complaint === complaint.templateKey);
-        return template ? historySectionComplete(template, savedAnswers.filter((answer) => answer.complaintId === complaint.id)) : false;
+        return template ? historySectionComplete(template, snapshot.filter((answer) => answer.complaintId === complaint.id)) : false;
       });
       onSaved({
         completed: nextComplete,
@@ -433,6 +444,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
                   setAnswers([]);
                   latestAnswers.current = [];
                   persistedAnswerReferences.current.clear();
+                  persistedAnswers.current.clear();
                   setReviewAttestations([]);
                   setNarratives({});
                   setSaveState({ status: "idle" });
@@ -501,7 +513,10 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
                       const removed = latestAnswers.current.filter((answer) => answer.subjectScope === declaration.subjectScope && answer.templateKey === declaration.key);
                       latestAnswers.current = latestAnswers.current.filter((answer) => !removed.includes(answer));
                       setAnswers(latestAnswers.current);
-                      for (const answer of removed) persistedAnswerReferences.current.delete(answer.id);
+                      for (const answer of removed) {
+                        persistedAnswerReferences.current.delete(answer.id);
+                        persistedAnswers.current.delete(answer.id);
+                      }
                       setReviewAttestations((current) => current.filter((candidate) => candidate.sectionKey !== declaration.key));
                       onCleared?.({ scope: "section", result });
                     }}
