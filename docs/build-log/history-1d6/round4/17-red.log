@@ -1,0 +1,28 @@
+TAP version 13
+# Subtest: I4 initial ledger persistence converges after 412
+not ok 1 - I4 initial ledger persistence converges after 412
+  ---
+  duration_ms: 5.1885
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/mcp/tests/historyRosHttp.test.ts:1:20856'
+  failureType: 'testCodeFailure'
+  error: 'initial creation must participate in recovery'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/mcp/tests/historyRosHttp.test.ts:383:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 134.676625

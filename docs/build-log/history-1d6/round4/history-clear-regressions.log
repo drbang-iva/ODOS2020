@@ -1,0 +1,334 @@
+TAP version 13
+# Subtest: voidEncounterEntries posts the scope to the encounter void endpoint and returns the server's summary
+ok 1 - voidEncounterEntries posts the scope to the encounter void endpoint and returns the server's summary
+  ---
+  duration_ms: 7.591209
+  type: 'test'
+  ...
+# Subtest: previewEncounterVoid sends preview: true and surfaces the server error on failure
+ok 2 - previewEncounterVoid sends preview: true and surfaces the server error on failure
+  ---
+  duration_ms: 0.320542
+  type: 'test'
+  ...
+# Subtest: isClosedEncounterStatus mirrors the server's sign gate
+ok 3 - isClosedEncounterStatus mirrors the server's sign gate
+  ---
+  duration_ms: 0.044375
+  type: 'test'
+  ...
+# Subtest: confirm copy names the count and, for the visit, every section (the window.confirm fallback reads title + consequence)
+ok 4 - confirm copy names the count and, for the visit, every section (the window.confirm fallback reads title + consequence)
+  ---
+  duration_ms: 0.072584
+  type: 'test'
+  ...
+# Subtest: Clear section stays hidden while the section has nothing recorded
+ok 5 - Clear section stays hidden while the section has nothing recorded
+  ---
+  duration_ms: 9.621
+  type: 'test'
+  ...
+# Subtest: Clear section previews the count, confirms with it, voids, and reports the result
+ok 6 - Clear section previews the count, confirms with it, voids, and reports the result
+  ---
+  duration_ms: 7.027542
+  type: 'test'
+  ...
+# Subtest: Clear section does nothing when the clinician declines the confirm
+ok 7 - Clear section does nothing when the clinician declines the confirm
+  ---
+  duration_ms: 4.693792
+  type: 'test'
+  ...
+# Subtest: a failed Clear section keeps the server's error on screen AND tells the encounter to re-read the chart
+ok 8 - a failed Clear section keeps the server's error on screen AND tells the encounter to re-read the chart
+  ---
+  duration_ms: 4.735042
+  type: 'test'
+  ...
+# Subtest: a failed Clear everything keeps the server's error on screen AND tells the encounter to re-read the chart
+ok 9 - a failed Clear everything keeps the server's error on screen AND tells the encounter to re-read the chart
+  ---
+  duration_ms: 6.4385
+  type: 'test'
+  ...
+# Subtest: a failed preview reports but does not claim a clear failed — nothing was attempted
+ok 10 - a failed preview reports but does not claim a clear failed — nothing was attempted
+  ---
+  duration_ms: 4.371042
+  type: 'test'
+  ...
+# Subtest: Clear section renders present-but-disabled with the amendment tooltip once the encounter is signed
+ok 11 - Clear section renders present-but-disabled with the amendment tooltip once the encounter is signed
+  ---
+  duration_ms: 5.108167
+  type: 'test'
+  ...
+# Subtest: Remove confirms only when typed detail would be lost, and is reachable only through Edit
+ok 12 - Remove confirms only when typed detail would be lost, and is reachable only through Edit
+  ---
+  duration_ms: 4.670542
+  type: 'test'
+  ...
+# Subtest: once the encounter is signed no Remove is rendered; the Edit door is present-but-disabled with the amendment tooltip
+ok 13 - once the encounter is signed no Remove is rendered; the Edit door is present-but-disabled with the amendment tooltip
+  ---
+  duration_ms: 5.052125
+  type: 'test'
+  ...
+# Subtest: HPI, IOP, and CVF sheets expose a working Back to exam overview action
+ok 14 - HPI, IOP, and CVF sheets expose a working Back to exam overview action
+  ---
+  duration_ms: 0.711959
+  type: 'test'
+  ...
+# Subtest: the entry sheet chrome carries Clear chart left of Back to exam overview, from any section
+ok 15 - the entry sheet chrome carries Clear chart left of Back to exam overview, from any section
+  ---
+  duration_ms: 4.445084
+  type: 'test'
+  ...
+# Subtest: the visit-level control is disabled with the amendment tooltip after sign and absent from non-clinical sheets
+ok 16 - the visit-level control is disabled with the amendment tooltip after sign and absent from non-clinical sheets
+  ---
+  duration_ms: 8.863875
+  type: 'test'
+  ...
+# Subtest: an empty visit tells the clinician there is nothing to clear instead of confirming
+ok 17 - an empty visit tells the clinician there is nothing to clear instead of confirming
+  ---
+  duration_ms: 5.436
+  type: 'test'
+  ...
+# Subtest: count honesty: Dilation section preview, confirm, void result, section subtotal, and stored statuses all agree
+ok 18 - count honesty: Dilation section preview, confirm, void result, section subtotal, and stored statuses all agree
+  ---
+  duration_ms: 8.460542
+  type: 'test'
+  ...
+# Subtest: count honesty: whole-visit preview, confirm, void result, section subtotals, and stored statuses all agree
+ok 19 - count honesty: whole-visit preview, confirm, void result, section subtotals, and stored statuses all agree
+  ---
+  duration_ms: 6.657792
+  type: 'test'
+  ...
+# Subtest: guard 4: removing the only refraction block voids its saved Observations on the server
+ok 20 - guard 4: removing the only refraction block voids its saved Observations on the server
+  ---
+  duration_ms: 116.390542
+  type: 'test'
+  ...
+# Subtest: every surface in the design table renders Clear section, and HpiSection no longer carries a dead onClear stub
+ok 21 - every surface in the design table renders Clear section, and HpiSection no longer carries a dead onClear stub
+  ---
+  duration_ms: 0.914916
+  type: 'test'
+  ...
+# Subtest: Wearing Rx offers the standard persisted section clear and resets its editor to blank
+ok 22 - Wearing Rx offers the standard persisted section clear and resets its editor to blank
+  ---
+  duration_ms: 36.197375
+  type: 'test'
+  ...
+# Subtest: fixback 5: refraction block Remove is disabled with the amendment tooltip once the encounter is signed
+ok 23 - fixback 5: refraction block Remove is disabled with the amendment tooltip once the encounter is signed
+  ---
+  duration_ms: 43.736791
+  type: 'test'
+  ...
+# Subtest: Auto-refraction reopens with the current encounter's stored AR, Auto-K, PD, and remarks in the editor
+ok 24 - Auto-refraction reopens with the current encounter's stored AR, Auto-K, PD, and remarks in the editor
+  ---
+  duration_ms: 62.770167
+  type: 'test'
+  ...
+# Subtest: Auto-refraction history cannot overwrite an edit made while hydration is in flight
+ok 25 - Auto-refraction history cannot overwrite an edit made while hydration is in flight
+  ---
+  duration_ms: 55.834125
+  type: 'test'
+  ...
+# Subtest: Auto-refraction encounter changes reset fields and replace saved references before new history resolves
+ok 26 - Auto-refraction encounter changes reset fields and replace saved references before new history resolves
+  ---
+  duration_ms: 66.705292
+  type: 'test'
+  ...
+# Subtest: Auto-refraction Remove keeps preview-only references when latest-value history resolves later
+ok 27 - Auto-refraction Remove keeps preview-only references when latest-value history resolves later
+  ---
+  duration_ms: 51.072625
+  type: 'test'
+  ...
+# Subtest: Auto-refraction late persisted preview cannot restore references after Remove succeeds
+ok 28 - Auto-refraction late persisted preview cannot restore references after Remove succeeds
+  ---
+  duration_ms: 52.100459
+  type: 'test'
+  ...
+# Subtest: fixback 56ff8d36 P2\#A (restraint §5): a signed reopened chart renders Clear section AND the Edit door for VA, IOP, and Auto-refraction present-but-disabled with the amendment tooltip, and no Remove
+ok 29 - fixback 56ff8d36 P2\#A (restraint §5): a signed reopened chart renders Clear section AND the Edit door for VA, IOP, and Auto-refraction present-but-disabled with the amendment tooltip, and no Remove
+  ---
+  duration_ms: 62.096
+  type: 'test'
+  ...
+# Subtest: fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when the server holds recorded values
+ok 30 - fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when the server holds recorded values
+  ---
+  duration_ms: 173.490458
+  type: 'test'
+  ...
+# Subtest: the History surface starts open and contains no explicit Save control
+ok 31 - the History surface starts open and contains no explicit Save control
+  ---
+  duration_ms: 2.827625
+  type: 'test'
+  ...
+# Subtest: one generic renderer follows the declaration and shows interval only for follow-up
+ok 32 - one generic renderer follows the declaration and shows interval only for follow-up
+  ---
+  duration_ms: 1.64925
+  type: 'test'
+  ...
+# Subtest: per-eye treatment flags retain distinct OD and OS answers for the same catalog option
+ok 33 - per-eye treatment flags retain distinct OD and OS answers for the same catalog option
+  ---
+  duration_ms: 4.935875
+  type: 'test'
+  ...
+# Subtest: three-state chips cycle unasked to positive to negative to unasked
+ok 34 - three-state chips cycle unasked to positive to negative to unasked
+  ---
+  duration_ms: 0.049459
+  type: 'test'
+  ...
+# Subtest: a persisted negative chip's third tap requests clearing that exact Observation without a delete control
+ok 35 - a persisted negative chip's third tap requests clearing that exact Observation without a delete control
+  ---
+  duration_ms: 0.820667
+  type: 'test'
+  ...
+# Subtest: computed completeness follows required declaration sections, not a completion button
+ok 36 - computed completeness follows required declaration sections, not a completion button
+  ---
+  duration_ms: 0.08025
+  type: 'test'
+  ...
+# Subtest: field changes autosave after the 800ms debounce and report saved in the section header
+ok 37 - field changes autosave after the 800ms debounce and report saved in the section header
+  ---
+  duration_ms: 869.397375
+  type: 'test'
+  ...
+# Subtest: clearing a chip waits for an in-flight autosave and voids the Observation it created
+ok 38 - clearing a chip waits for an in-flight autosave and voids the Observation it created
+  ---
+  duration_ms: 1745.328666
+  type: 'test'
+  ...
+# Subtest: changing presentation voids follow-up-only answers before autosaving the new path
+ok 39 - changing presentation voids follow-up-only answers before autosaving the new path
+  ---
+  duration_ms: 856.443792
+  type: 'test'
+  ...
+# Subtest: typed selects expose a disabled prompt instead of an unconfirmed clear action
+ok 40 - typed selects expose a disabled prompt instead of an unconfirmed clear action
+  ---
+  duration_ms: 1.552333
+  type: 'test'
+  ...
+# Subtest: a failed autosave turns only the History header red with its reason and Retry
+ok 41 - a failed autosave turns only the History header red with its reason and Retry
+  ---
+  duration_ms: 856.286208
+  type: 'test'
+  ...
+# Subtest: the renderer contains no complaint-specific branch and no final-status write
+ok 42 - the renderer contains no complaint-specific branch and no final-status write
+  ---
+  duration_ms: 0.832583
+  type: 'test'
+  ...
+# Subtest: Ocular History renders from its declaration, including catalog-owned laterality and positive notes
+ok 43 - Ocular History renders from its declaration, including catalog-owned laterality and positive notes
+  ---
+  duration_ms: 0.892083
+  type: 'test'
+  ...
+# Subtest: a declared single-select replaces one answer and then clears that same answer
+ok 44 - a declared single-select replaces one answer and then clears that same answer
+  ---
+  duration_ms: 1.304334
+  type: 'test'
+  ...
+# Subtest: clearing a selected tobacco chip voids its one Observation before saving the empty section
+ok 45 - clearing a selected tobacco chip voids its one Observation before saving the empty section
+  ---
+  duration_ms: 5.90525
+  type: 'test'
+  ...
+# Subtest: Ocular History keeps prior-chart answers distinct and review attestation does not save an edit
+ok 46 - Ocular History keeps prior-chart answers distinct and review attestation does not save an edit
+  ---
+  duration_ms: 858.572875
+  type: 'test'
+  ...
+# Subtest: a carried-forward single-select displays its catalog choice in the prior-encounter strip
+ok 47 - a carried-forward single-select displays its catalog choice in the prior-encounter strip
+  ---
+  duration_ms: 5.008417
+  type: 'test'
+  ...
+# Subtest: a carried-forward text section displays its recorded value in the prior-encounter strip
+ok 48 - a carried-forward text section displays its recorded value in the prior-encounter strip
+  ---
+  duration_ms: 2.788042
+  type: 'test'
+  ...
+# Subtest: History completeness uses Not started, Started, and Charted rather than Examined
+ok 49 - History completeness uses Not started, Started, and Charted rather than Examined
+  ---
+  duration_ms: 0.889459
+  type: 'test'
+  ...
+# Subtest: an opened complaint with zero answers remains Not started
+ok 50 - an opened complaint with zero answers remains Not started
+  ---
+  duration_ms: 0.111459
+  type: 'test'
+  ...
+# Subtest: delta autosave sends only the changed chip and zero answers for an unmodified section
+ok 51 - delta autosave sends only the changed chip and zero answers for an unmodified section
+  ---
+  duration_ms: 857.334042
+  type: 'test'
+  ...
+# Subtest: delta retries retain failed answers and edits made during a save remain pending
+ok 52 - delta retries retain failed answers and edits made during a save remain pending
+  ---
+  duration_ms: 1723.332375
+  type: 'test'
+  ...
+# Subtest: a follow-up with seven prefills saves the presentation without a 413
+ok 53 - a follow-up with seven prefills saves the presentation without a 413
+  ---
+  duration_ms: 857.20975
+  type: 'test'
+  ...
+# Subtest: untapped follow-up suggestions stay out of requests, persisted answers, narrative, and completeness until one is tapped
+ok 54 - untapped follow-up suggestions stay out of requests, persisted answers, narrative, and completeness until one is tapped
+  ---
+  duration_ms: 1710.671375
+  type: 'test'
+  ...
+1..54
+# tests 54
+# suites 0
+# pass 54
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10581.871792

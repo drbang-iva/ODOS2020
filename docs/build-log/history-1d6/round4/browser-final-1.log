@@ -1,0 +1,35 @@
+TAP version 13
+# ROS: 10 persisted answers, 0 answer-side acts; 1 tick; immutable retraction/undo; HTTP 200; delta sizes 1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0
+# Subtest: ROS browser: comprehensive burst and explicit immutable reviews
+ok 1 - ROS browser: comprehensive burst and explicit immutable reviews
+  ---
+  duration_ms: 5650.755792
+  type: 'test'
+  ...
+# Subtest: ROS browser: follow-up self-folds
+ok 2 - ROS browser: follow-up self-folds
+  ---
+  duration_ms: 749.110334
+  type: 'test'
+  ...
+# Subtest: ROS browser: review-only History clear
+ok 3 - ROS browser: review-only History clear
+  ---
+  duration_ms: 1034.740125
+  type: 'test'
+  ...
+# Subtest: ROS browser: bulk denial is resumable and transient
+ok 4 - ROS browser: bulk denial is resumable and transient
+  ---
+  duration_ms: 22658.405542
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 30564.31025

@@ -1,4 +1,6 @@
-# History 1d-6 bulk denial
+# History 1d-6 bulk denial — historical Round 1/2 bundle
+
+The current fixback is documented in [the Round 4 author bundle](round4/SEALED-BUNDLE.md). The record below describes the earlier implementation and its standing evidence.
 
 ## Summary
 

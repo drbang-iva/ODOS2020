@@ -1,0 +1,35 @@
+TAP version 13
+# Subtest: ROS browser: bulk denial is resumable and transient
+not ok 1 - ROS browser: bulk denial is resumable and transient
+  ---
+  duration_ms: 2927.2015
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/ui/tests/historyRosBrowser.test.tsx:1:866'
+  failureType: 'testCodeFailure'
+  error: |-
+    I1 every ROS row editor must be frozen while the final unit is held
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/ui/tests/historyRosBrowser.test.tsx:100:14)
+    runNextTicks (node:internal/process/task_queues:64:5)
+    process.processImmediate (node:internal/timers:452:9)
+    process.callbackTrampoline (node:internal/async_hooks:130:17)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3950.541834

@@ -23,8 +23,9 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
   let markOrderProofStaleCaptured = () => undefined;
   const finalBulkUnitReleased = new Promise<void>(resolve => { releaseFinalBulkUnit = resolve; });
   const finalBulkUnitHeld = new Promise<void>(resolve => { markFinalBulkUnitHeld = resolve; });
-  const actHold = deferred(), historyHold = deferred(), ownerHold = deferred();
+  const actHold = deferred(), historyHold = deferred(), ownerHold = deferred(), autosaveHold = deferred();
   let holdFinalHistory = false;
+  let holdAutosave = scenario === "bulk denial is resumable and transient";
   const orderProofStaleReleased = new Promise<void>(resolve => { releaseOrderProofStale = resolve; });
   const orderProofStaleCaptured = new Promise<void>(resolve => { markOrderProofStaleCaptured = resolve; });
   const server = await createServer({ root: resolve(import.meta.dirname, ".."), logLevel: "silent", server: { host: "127.0.0.1", port: 15364, strictPort: true }, plugins: [{
@@ -60,7 +61,13 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
         else if (req.url.endsWith("/items/review")) { posted.push(body); result = await api.handleHistoryItemReviewRequest(s.deps, input); }
         else if (req.url.endsWith("/items/retract")) { posted.push(body); result = await api.handleHistoryItemRetractionRequest(s.deps, input); }
         else if (req.url.endsWith("/void")) result = await handleEncounterVoidRequest(s.deps, input);
-        else if (req.method === "POST") { posted.push(body); await new Promise(r => setTimeout(r, 150)); result = await api.handleHpiCaptureRequest(s.deps, input); }
+        else if (req.method === "POST") {
+          posted.push(body);
+          if (holdAutosave && body?.templateAnswers?.some((answer: any) => answer.optionCode === "eye-pain")) {
+            holdAutosave = false; autosaveHold.mark(); await autosaveHold.released;
+          }
+          await new Promise(r => setTimeout(r, 150)); result = await api.handleHpiCaptureRequest(s.deps, input);
+        }
         else {
           result = await api.handleHpiRecordRequest(s.deps, input);
           if (followUp) result.body.answers.push({ id: "presentation", complaintId: "c1", templateKey: "glaucoma", sectionId: "presentation", value: { kind: "selection", code: "follow-up" } });
@@ -86,12 +93,15 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
     if (scenario === "bulk denial is resumable and transient") {
       const positive = ros.locator('[data-ros-item="eye-pain"]');
       await positive.getByRole("button", { name: "Yes: eye pain" }).click();
-      await page.waitForFunction(() => document.querySelector('[data-testid="history-review-of-systems"]')?.textContent?.includes("saved · just now"));
-      s.failTransactionAt(s.transactionAttempts() + 2);
+      s.failTransactionAt(s.transactionAttempts() + 3);
       const bulk = ros.getByTestId("history-bulk-denial");
       assert.equal(await bulk.count(), 1);
       assert.equal(await bulk.getAttribute("class").then(value => value?.includes("min-h-11")), true);
       await bulk.click();
+      await autosaveHold.held;
+      assert.equal(posted.filter(body => body.method === "bulk").length, 0, "I1 bulk must wait for the pending explicit answer to finish saving");
+      assert.equal(await positive.getByRole("button", { name: "Yes: eye pain" }).isDisabled(), true, "rows freeze before draining pending autosaves");
+      autosaveHold.release();
       await ros.getByRole("status").filter({ hasText: "of 53 recorded" }).waitFor();
       await ros.getByRole("button", { name: "Resume marking unanswered No" }).waitFor();
       assert.match(await ros.getByRole("alert").innerText(), /7 of 53 recorded/);
@@ -211,7 +221,7 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
     assert.deepEqual(s.rows.find(r => r.id === original.id), original);
     if (process.env.HISTORY_ROS_CAPTURE) { await mkdir(resolve(process.env.HISTORY_ROS_CAPTURE, ".."), {recursive:true}); await ros.screenshot({ path: process.env.HISTORY_ROS_CAPTURE }); }
     console.log(`ROS: 10 persisted answers, 0 answer-side acts; 1 tick; immutable retraction/undo; HTTP ${[...new Set(statuses)]}; delta sizes ${posted.filter(p=>p.templateAnswers).map(p=>p.templateAnswers.length)}`);
-  } finally { releaseFinalBulkUnit(); releaseOrderProofStale(); actHold.release(); historyHold.release(); ownerHold.release(); await browser.close(); await server.close(); }
+  } finally { releaseFinalBulkUnit(); releaseOrderProofStale(); actHold.release(); historyHold.release(); ownerHold.release(); autosaveHold.release(); await browser.close(); await server.close(); }
 });
 
 function deferred() {

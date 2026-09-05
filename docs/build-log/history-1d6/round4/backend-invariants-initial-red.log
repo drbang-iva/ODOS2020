@@ -1,0 +1,116 @@
+TAP version 13
+# Subtest: I2 every item-review HTTP door enforces one contract
+not ok 1 - I2 every item-review HTTP door enforces one contract
+  ---
+  duration_ms: 7.468667
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/mcp/tests/historyRosHttp.test.ts:1:17435'
+  failureType: 'testCodeFailure'
+  error: |-
+    a changed method must not start a new ledger or write answers
+    + actual - expected
+    
+    + '[{"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-review-attestation","value":"current:review-of-systems:badc9884-dd10-43ce-ae6a-ad0d2fdd9041"}],"status":"preliminary","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review","code":"history-item-review","display":"History item review"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/current"},"effectiveDateTime":"2026-09-05T12:00:00Z","issued":"2026-09-05T12:00:00Z","performer":[{"reference":"Practitioner/test"}],"valueCodeableConcept":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review-action","code":"items-reviewed","display":"Items reviewed"}]},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-section","valueCode":"review-of-systems"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-method","valueCode":"individual"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}"}],"id":"485c34ff-25e6-4d24-9958-997888837890","meta":{"versionId":"a9afacc4-835a-4d5c-8c45-b9f53b334672"}},{"resourceType":"Provenance","target":[{"reference":"urn:uuid:acd298b6-72ec-4425-8d61-66da47975b74"},{"reference":"Encounter/current"},{"reference":"Patient/ros-test"}],"recorded":"2026-09-05T12:00:00Z","activity":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"CREATE","display":"Record explicit history item review"}],"text":"Record explicit history item review"},"agent":[{"type":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"author","display":"Author"}],"text":"Author"},"who":{"reference":"Practitioner/test"}}],"id":"5e421f27-76d3-4b5a-be89-d883331b7080","meta":{"versionId":"3fff07df-c73d-4dd0-a954-79a2018099de"}},{"resourceType":"Basic","id":"56dfc300-84d3-4c9d-9ff7-3020c5f808ff","meta":{"versionId":"e37c75ff-ce23-48bd-8811-39a6df7caa3c"},"identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-bulk-denial-gesture","value":"badc9884-dd10-43ce-ae6a-ad0d2fdd9041"}],"code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/history-bulk-denial","code":"history-bulk-denial-ledger","display":"History bulk denial progress"}]},"subject":{"reference":"Patient/ros-test"},"created":"2026-09-05","author":{"reference":"Practitioner/test"},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/history-bulk-denial-state","valueString":"{\\"gestureId\\":\\"badc9884-dd10-43ce-ae6a-ad0d2fdd9041\\",\\"patientReference\\":\\"Patient/ros-test\\",\\"encounterReference\\":\\"Encounter/current\\",\\"sectionKey\\":\\"review-of-systems\\",\\"actorReference\\":\\"Practitioner/test\\",\\"recordedAt\\":\\"2026-09-05T12:00:00Z\\",\\"status\\":\\"in-progress\\",\\"intendedTargets\\":[{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}],\\"resolvedTargets\\":[{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}],\\"persistedTargets\\":[{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}]}"}]},{"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-template-answer-id","value":"history-current-review-of-systems-systems-eye-pain"}],"category":[{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/history-answer-scope","code":"encounter"}]}],"status":"preliminary","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-template-answer","code":"history-template-answer","display":"History template answer"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/current"},"effectiveDateTime":"2026-09-05T12:00:00Z","issued":"2026-09-05T12:00:00Z","extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-template-answer-json","valueString":"{\\"id\\":\\"history-current-review-of-systems-systems-eye-pain\\",\\"subjectScope\\":\\"encounter\\",\\"templateKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\",\\"value\\":{\\"kind\\":\\"tri-state\\",\\"status\\":\\"negative\\"}}"}],"id":"ac191718-6557-4400-ba6f-70aba611e35d","meta":{"versionId":"e7212963-e0ff-4bbd-bc8f-c84ba31cb6dc"}},{"resourceType":"Provenance","meta":{"tag":[{"system":"https://odos2020.com/fhir/NamingSystem/history-bulk-denial-gesture/unit","code":"9141a22b00711eb9110f136ffff33440a18279d36fda82ed734dcd703a7876eb"}],"versionId":"dfd4b6ab-ae5f-49a0-97c5-7efce62bc24f"},"target":[{"reference":"urn:uuid:a05c8d79-4423-416b-9c44-470e58c351fa"},{"reference":"Encounter/current"},{"reference":"Patient/ros-test"}],"recorded":"2026-09-05T12:00:00Z","activity":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"CREATE","display":"Record unanswered ROS items negative"}],"text":"Record unanswered ROS items negative"},"agent":[{"type":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"author","display":"Author"}],"text":"Author"},"who":{"reference":"Practitioner/test"}}],"id":"c6f29f78-0738-4a6c-b96d-87ae46fbc77c"}]'
+    - '[{"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-review-attestation","value":"current:review-of-systems:badc9884-dd10-43ce-ae6a-ad0d2fdd9041"}],"status":"preliminary","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review","code":"history-item-review","display":"History item review"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/current"},"effectiveDateTime":"2026-09-05T12:00:00Z","issued":"2026-09-05T12:00:00Z","performer":[{"reference":"Practitioner/test"}],"valueCodeableConcept":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review-action","code":"items-reviewed","display":"Items reviewed"}]},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-section","valueCode":"review-of-systems"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-method","valueCode":"individual"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}"}],"id":"485c34ff-25e6-4d24-9958-997888837890","meta":{"versionId":"a9afacc4-835a-4d5c-8c45-b9f53b334672"}},{"resourceType":"Provenance","target":[{"reference":"urn:uuid:acd298b6-72ec-4425-8d61-66da47975b74"},{"reference":"Encounter/current"},{"reference":"Patient/ros-test"}],"recorded":"2026-09-05T12:00:00Z","activity":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"CREATE","display":"Record explicit history item review"}],"text":"Record explicit history item review"},"agent":[{"type":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"author","display":"Author"}],"text":"Author"},"who":{"reference":"Practitioner/test"}}],"id":"5e421f27-76d3-4b5a-be89-d883331b7080","meta":{"versionId":"3fff07df-c73d-4dd0-a954-79a2018099de"}}]'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '[{"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-review-attestation","value":"current:review-of-systems:badc9884-dd10-43ce-ae6a-ad0d2fdd9041"}],"status":"preliminary","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review","code":"history-item-review","display":"History item review"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/current"},"effectiveDateTime":"2026-09-05T12:00:00Z","issued":"2026-09-05T12:00:00Z","performer":[{"reference":"Practitioner/test"}],"valueCodeableConcept":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review-action","code":"items-reviewed","display":"Items reviewed"}]},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-section","valueCode":"review-of-systems"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-method","valueCode":"individual"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}"}],"id":"485c34ff-25e6-4d24-9958-997888837890","meta":{"versionId":"a9afacc4-835a-4d5c-8c45-b9f53b334672"}},{"resourceType":"Provenance","target":[{"reference":"urn:uuid:acd298b6-72ec-4425-8d61-66da47975b74"},{"reference":"Encounter/current"},{"reference":"Patient/ros-test"}],"recorded":"2026-09-05T12:00:00Z","activity":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"CREATE","display":"Record explicit history item review"}],"text":"Record explicit history item review"},"agent":[{"type":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"author","display":"Author"}],"text":"Author"},"who":{"reference":"Practitioner/test"}}],"id":"5e421f27-76d3-4b5a-be89-d883331b7080","meta":{"versionId":"3fff07df-c73d-4dd0-a954-79a2018099de"}}]'
+  actual: '[{"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-review-attestation","value":"current:review-of-systems:badc9884-dd10-43ce-ae6a-ad0d2fdd9041"}],"status":"preliminary","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review","code":"history-item-review","display":"History item review"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/current"},"effectiveDateTime":"2026-09-05T12:00:00Z","issued":"2026-09-05T12:00:00Z","performer":[{"reference":"Practitioner/test"}],"valueCodeableConcept":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-review-action","code":"items-reviewed","display":"Items reviewed"}]},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-section","valueCode":"review-of-systems"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-method","valueCode":"individual"},{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-review-target","valueString":"{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}"}],"id":"485c34ff-25e6-4d24-9958-997888837890","meta":{"versionId":"a9afacc4-835a-4d5c-8c45-b9f53b334672"}},{"resourceType":"Provenance","target":[{"reference":"urn:uuid:acd298b6-72ec-4425-8d61-66da47975b74"},{"reference":"Encounter/current"},{"reference":"Patient/ros-test"}],"recorded":"2026-09-05T12:00:00Z","activity":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"CREATE","display":"Record explicit history item review"}],"text":"Record explicit history item review"},"agent":[{"type":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"author","display":"Author"}],"text":"Author"},"who":{"reference":"Practitioner/test"}}],"id":"5e421f27-76d3-4b5a-be89-d883331b7080","meta":{"versionId":"3fff07df-c73d-4dd0-a954-79a2018099de"}},{"resourceType":"Basic","id":"56dfc300-84d3-4c9d-9ff7-3020c5f808ff","meta":{"versionId":"e37c75ff-ce23-48bd-8811-39a6df7caa3c"},"identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-bulk-denial-gesture","value":"badc9884-dd10-43ce-ae6a-ad0d2fdd9041"}],"code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/history-bulk-denial","code":"history-bulk-denial-ledger","display":"History bulk denial progress"}]},"subject":{"reference":"Patient/ros-test"},"created":"2026-09-05","author":{"reference":"Practitioner/test"},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/history-bulk-denial-state","valueString":"{\\"gestureId\\":\\"badc9884-dd10-43ce-ae6a-ad0d2fdd9041\\",\\"patientReference\\":\\"Patient/ros-test\\",\\"encounterReference\\":\\"Encounter/current\\",\\"sectionKey\\":\\"review-of-systems\\",\\"actorReference\\":\\"Practitioner/test\\",\\"recordedAt\\":\\"2026-09-05T12:00:00Z\\",\\"status\\":\\"in-progress\\",\\"intendedTargets\\":[{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}],\\"resolvedTargets\\":[{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}],\\"persistedTargets\\":[{\\"sectionKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\"}]}"}]},{"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-template-answer-id","value":"history-current-review-of-systems-systems-eye-pain"}],"category":[{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/history-answer-scope","code":"encounter"}]}],"status":"preliminary","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-template-answer","code":"history-template-answer","display":"History template answer"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/current"},"effectiveDateTime":"2026-09-05T12:00:00Z","issued":"2026-09-05T12:00:00Z","extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-template-answer-json","valueString":"{\\"id\\":\\"history-current-review-of-systems-systems-eye-pain\\",\\"subjectScope\\":\\"encounter\\",\\"templateKey\\":\\"review-of-systems\\",\\"sectionId\\":\\"systems\\",\\"optionCode\\":\\"eye-pain\\",\\"value\\":{\\"kind\\":\\"tri-state\\",\\"status\\":\\"negative\\"}}"}],"id":"ac191718-6557-4400-ba6f-70aba611e35d","meta":{"versionId":"e7212963-e0ff-4bbd-bc8f-c84ba31cb6dc"}},{"resourceType":"Provenance","meta":{"tag":[{"system":"https://odos2020.com/fhir/NamingSystem/history-bulk-denial-gesture/unit","code":"9141a22b00711eb9110f136ffff33440a18279d36fda82ed734dcd703a7876eb"}],"versionId":"dfd4b6ab-ae5f-49a0-97c5-7efce62bc24f"},"target":[{"reference":"urn:uuid:a05c8d79-4423-416b-9c44-470e58c351fa"},{"reference":"Encounter/current"},{"reference":"Patient/ros-test"}],"recorded":"2026-09-05T12:00:00Z","activity":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"CREATE","display":"Record unanswered ROS items negative"}],"text":"Record unanswered ROS items negative"},"agent":[{"type":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"author","display":"Author"}],"text":"Author"},"who":{"reference":"Practitioner/test"}}],"id":"c6f29f78-0738-4a6c-b96d-87ae46fbc77c"}]'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/mcp/tests/historyRosHttp.test.ts:333:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: I3 committed gestures reach complete after response loss and answer clear
+not ok 2 - I3 committed gestures reach complete after response loss and answer clear
+  ---
+  duration_ms: 2.405209
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/mcp/tests/historyRosHttp.test.ts:1:18509'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"History review gesture targets and method are immutable."}
+    
+    409 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/mcp/tests/historyRosHttp.test.ts:359:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: I3 committed gestures reach complete after response loss and section clear
+ok 3 - I3 committed gestures reach complete after response loss and section clear
+  ---
+  duration_ms: 1.525291
+  type: 'test'
+  ...
+# Subtest: I4 initial ledger persistence converges after 409
+not ok 4 - I4 initial ledger persistence converges after 409
+  ---
+  duration_ms: 0.707875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/mcp/tests/historyRosHttp.test.ts:1:20356'
+  failureType: 'testCodeFailure'
+  error: 'initial creation must participate in recovery'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/mcp/tests/historyRosHttp.test.ts:377:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: I4 initial ledger persistence converges after 412
+not ok 5 - I4 initial ledger persistence converges after 412
+  ---
+  duration_ms: 0.624291
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/mcp/tests/historyRosHttp.test.ts:1:20356'
+  failureType: 'testCodeFailure'
+  error: 'initial creation must participate in recovery'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/mcp/tests/historyRosHttp.test.ts:377:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: I4 initial ledger persistence converges after lost response
+not ok 6 - I4 initial ledger persistence converges after lost response
+  ---
+  duration_ms: 0.486333
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/mcp/tests/historyRosHttp.test.ts:1:20356'
+  failureType: 'testCodeFailure'
+  error: 'initial creation must participate in recovery'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/mcp/tests/historyRosHttp.test.ts:377:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 1
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 233.180833

@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: I3 committed gestures reach complete after response loss and answer clear
+not ok 1 - I3 committed gestures reach complete after response loss and answer clear
+  ---
+  duration_ms: 6.867917
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/mcp/tests/historyRosHttp.test.ts:1:19009'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"History review gesture targets and method are immutable."}
+    
+    409 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round4/mcp/tests/historyRosHttp.test.ts:365:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 136.210125

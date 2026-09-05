@@ -1,0 +1,82 @@
+[
+  {
+    "id": 14,
+    "name": "remove-row-freeze",
+    "file": "ui/src/components/charting/HistoryRosSection.tsx",
+    "command": "cd ui && node --import tsx --test --test-name-pattern='bulk denial is resumable' tests/historyRosBrowser.test.tsx",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 15,
+    "name": "divergent-http-door",
+    "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+    "command": "cd mcp && node --import tsx --test --test-name-pattern='I2 every' tests/historyRosHttp.test.ts",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 16,
+    "name": "committed-act-conflict-forever",
+    "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+    "command": "cd mcp && node --import tsx --test --test-name-pattern='I3 committed gestures reach complete after response loss and answer clear' tests/historyRosHttp.test.ts",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 17,
+    "name": "initial-412-escapes-recovery",
+    "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+    "command": "cd mcp && node --import tsx --test --test-name-pattern='I4 initial ledger persistence converges after 412' tests/historyRosHttp.test.ts",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  }
+]
