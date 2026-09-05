@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: ROS composed note never exposes review method for any coverage or encounter age
+ok 1 - ROS composed note never exposes review method for any coverage or encounter age
+  ---
+  duration_ms: 2.169833
+  type: 'test'
+  ...
+# Subtest: bulk and individual acts produce byte-identical composed summaries
+ok 2 - bulk and individual acts produce byte-identical composed summaries
+  ---
+  duration_ms: 2.936083
+  type: 'test'
+  ...
+# Subtest: Social declares per-item review and still requires exactly four answers
+ok 3 - Social declares per-item review and still requires exactly four answers
+  ---
+  duration_ms: 0.158916
+  type: 'test'
+  ...
+# Subtest: reminder survives a tobacco review act and clears only after answer persistence
+ok 4 - reminder survives a tobacco review act and clears only after answer persistence
+  ---
+  duration_ms: 4.282084
+  type: 'test'
+  ...
+# Subtest: reminder uses persisted patient answers across visits with inclusive calendar-year dates
+ok 5 - reminder uses persisted patient answers across visits with inclusive calendar-year dates
+  ---
+  duration_ms: 0.620166
+  type: 'test'
+  ...
+# Subtest: out-of-window, voided, cancelled, undated, foreign, and non-selection answers cannot clear reminder
+ok 6 - out-of-window, voided, cancelled, undated, foreign, and non-selection answers cannot clear reminder
+  ---
+  duration_ms: 1.097458
+  type: 'test'
+  ...
+# Subtest: row 64 records the period verification with primary URLs and access date
+ok 7 - row 64 records the period verification with primary URLs and access date
+  ---
+  duration_ms: 0.296
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 112.092125

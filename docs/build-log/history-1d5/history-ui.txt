@@ -1,0 +1,186 @@
+TAP version 13
+# ROS: 10 persisted answers, 0 answer-side acts; 1 tick; immutable retraction/undo; HTTP 200; delta sizes 1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0
+# Subtest: ROS browser: comprehensive burst and explicit immutable reviews
+ok 1 - ROS browser: comprehensive burst and explicit immutable reviews
+  ---
+  duration_ms: 6783.829375
+  type: 'test'
+  ...
+# Subtest: ROS browser: follow-up self-folds
+ok 2 - ROS browser: follow-up self-folds
+  ---
+  duration_ms: 865.570916
+  type: 'test'
+  ...
+# Subtest: ROS browser: review-only History clear
+ok 3 - ROS browser: review-only History clear
+  ---
+  duration_ms: 1115.19675
+  type: 'test'
+  ...
+# Subtest: Social browser: dated review preserves reminder until a persisted answer
+ok 4 - Social browser: dated review preserves reminder until a persisted answer
+  ---
+  duration_ms: 4583.345167
+  type: 'test'
+  ...
+# BROWSER_REQUEST_BODIES [[],[{"id":"history-c1-symptoms-blur","complaintId":"c1","templateKey":"glaucoma","sectionId":"symptoms","optionCode":"blur","value":{"kind":"tri-state","status":"positive"}}]]
+# Subtest: browser chip autosave carries one answer and an unchanged refresh carries none
+ok 5 - browser chip autosave carries one answer and an unchanged refresh carries none
+  ---
+  duration_ms: 3765.276459
+  type: 'test'
+  ...
+# Subtest: the History surface starts open and contains no explicit Save control
+ok 6 - the History surface starts open and contains no explicit Save control
+  ---
+  duration_ms: 3.7435
+  type: 'test'
+  ...
+# Subtest: one generic renderer follows the declaration and shows interval only for follow-up
+ok 7 - one generic renderer follows the declaration and shows interval only for follow-up
+  ---
+  duration_ms: 1.896083
+  type: 'test'
+  ...
+# Subtest: per-eye treatment flags retain distinct OD and OS answers for the same catalog option
+ok 8 - per-eye treatment flags retain distinct OD and OS answers for the same catalog option
+  ---
+  duration_ms: 6.32175
+  type: 'test'
+  ...
+# Subtest: three-state chips cycle unasked to positive to negative to unasked
+ok 9 - three-state chips cycle unasked to positive to negative to unasked
+  ---
+  duration_ms: 0.075166
+  type: 'test'
+  ...
+# Subtest: a persisted negative chip's third tap requests clearing that exact Observation without a delete control
+ok 10 - a persisted negative chip's third tap requests clearing that exact Observation without a delete control
+  ---
+  duration_ms: 1.138542
+  type: 'test'
+  ...
+# Subtest: computed completeness follows required declaration sections, not a completion button
+ok 11 - computed completeness follows required declaration sections, not a completion button
+  ---
+  duration_ms: 0.152375
+  type: 'test'
+  ...
+# Subtest: field changes autosave after the 800ms debounce and report saved in the section header
+ok 12 - field changes autosave after the 800ms debounce and report saved in the section header
+  ---
+  duration_ms: 895.187584
+  type: 'test'
+  ...
+# Subtest: clearing a chip waits for an in-flight autosave and voids the Observation it created
+ok 13 - clearing a chip waits for an in-flight autosave and voids the Observation it created
+  ---
+  duration_ms: 1848.500125
+  type: 'test'
+  ...
+# Subtest: changing presentation voids follow-up-only answers before autosaving the new path
+ok 14 - changing presentation voids follow-up-only answers before autosaving the new path
+  ---
+  duration_ms: 856.276625
+  type: 'test'
+  ...
+# Subtest: typed selects expose a disabled prompt instead of an unconfirmed clear action
+ok 15 - typed selects expose a disabled prompt instead of an unconfirmed clear action
+  ---
+  duration_ms: 1.680292
+  type: 'test'
+  ...
+# Subtest: a failed autosave turns only the History header red with its reason and Retry
+ok 16 - a failed autosave turns only the History header red with its reason and Retry
+  ---
+  duration_ms: 855.900916
+  type: 'test'
+  ...
+# Subtest: the renderer contains no complaint-specific branch and no final-status write
+ok 17 - the renderer contains no complaint-specific branch and no final-status write
+  ---
+  duration_ms: 0.430041
+  type: 'test'
+  ...
+# Subtest: Ocular History renders from its declaration, including catalog-owned laterality and positive notes
+ok 18 - Ocular History renders from its declaration, including catalog-owned laterality and positive notes
+  ---
+  duration_ms: 0.409875
+  type: 'test'
+  ...
+# Subtest: a declared single-select replaces one answer and then clears that same answer
+ok 19 - a declared single-select replaces one answer and then clears that same answer
+  ---
+  duration_ms: 0.4805
+  type: 'test'
+  ...
+# Subtest: clearing a selected tobacco chip voids its one Observation before saving the empty section
+ok 20 - clearing a selected tobacco chip voids its one Observation before saving the empty section
+  ---
+  duration_ms: 5.071541
+  type: 'test'
+  ...
+# Subtest: Ocular History keeps prior-chart answers distinct and review attestation does not save an edit
+ok 21 - Ocular History keeps prior-chart answers distinct and review attestation does not save an edit
+  ---
+  duration_ms: 856.908958
+  type: 'test'
+  ...
+# Subtest: a carried-forward single-select displays its catalog choice in the prior-encounter strip
+ok 22 - a carried-forward single-select displays its catalog choice in the prior-encounter strip
+  ---
+  duration_ms: 7.773209
+  type: 'test'
+  ...
+# Subtest: a carried-forward text section displays its recorded value in the prior-encounter strip
+ok 23 - a carried-forward text section displays its recorded value in the prior-encounter strip
+  ---
+  duration_ms: 3.916625
+  type: 'test'
+  ...
+# Subtest: History completeness uses Not started, Started, and Charted rather than Examined
+ok 24 - History completeness uses Not started, Started, and Charted rather than Examined
+  ---
+  duration_ms: 0.301958
+  type: 'test'
+  ...
+# Subtest: an opened complaint with zero answers remains Not started
+ok 25 - an opened complaint with zero answers remains Not started
+  ---
+  duration_ms: 0.039584
+  type: 'test'
+  ...
+# Subtest: delta autosave sends only the changed chip and zero answers for an unmodified section
+ok 26 - delta autosave sends only the changed chip and zero answers for an unmodified section
+  ---
+  duration_ms: 857.313792
+  type: 'test'
+  ...
+# Subtest: delta retries retain failed answers and edits made during a save remain pending
+ok 27 - delta retries retain failed answers and edits made during a save remain pending
+  ---
+  duration_ms: 1709.193209
+  type: 'test'
+  ...
+# Subtest: a follow-up with seven prefills saves the presentation without a 413
+ok 28 - a follow-up with seven prefills saves the presentation without a 413
+  ---
+  duration_ms: 853.046125
+  type: 'test'
+  ...
+# Subtest: untapped follow-up suggestions stay out of requests, persisted answers, narrative, and completeness until one is tapped
+ok 29 - untapped follow-up suggestions stay out of requests, persisted answers, narrative, and completeness until one is tapped
+  ---
+  duration_ms: 1706.537041
+  type: 'test'
+  ...
+1..29
+# tests 29
+# suites 0
+# pass 29
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10750.14675

@@ -1,3 +1,4 @@
+import { HistoryItemReviewControls, useHistoryItemReview } from "./useHistoryItemReview";
 import { HistoryRosSection } from "./HistoryRosSection";
 import { useEffect, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
@@ -62,6 +63,7 @@ export interface HistorySubjectSection {
   label: string;
   subjectScope: "encounter" | "patient";
   completionAnchor: string;
+  review?: "per-item";
   sections: HistoryTemplateSection[];
 }
 
@@ -115,6 +117,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   const [itemizedSubjectSections, setItemizedSubjectSections] = useState<HistorySubjectSection[]>([]);
   const [itemizedHasRecorded, setItemizedHasRecorded] = useState(false);
   const [historyVersion, setHistoryVersion] = useState(0);
+  const itemReview = useHistoryItemReview({ patientReference, encounterReference, historyVersion, enabled: subjectSections.some(section => section.review === "per-item"), onRecordedChange: setItemizedHasRecorded, onChanged: () => onSaved({ completed: complete, summary }, true) });
   const [catalogs, setCatalogs] = useState<HistoryCatalogs>({});
   const [complaints, setComplaints] = useState<EncounterComplaint[]>([]);
   const [answers, setAnswers] = useState<HistoryTemplateAnswer[]>([]);
@@ -504,7 +507,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
             const carried = carriedForwardAnswers.filter((row) => row.answer.templateKey === declaration.key);
             const attestation = reviewAttestations.find((candidate) => candidate.sectionKey === declaration.key);
             const state = historySubjectSectionState(declaration, currentAnswers);
-            return <article key={declaration.key} className="odos-hpi-border rounded border bg-bg-panel/70 p-5">
+            return <article key={declaration.key} data-testid={`history-${declaration.key}`} className="odos-hpi-border rounded border bg-bg-panel/70 p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h3 className="odos-hpi-text font-semibold">{declaration.label}</h3>
@@ -516,7 +519,9 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
                     encounterReference={encounterReference}
                     sectionKey={declaration.key}
                     label={declaration.label}
-                    hasRecorded={currentAnswers.length > 0 || Boolean(attestation)}
+                    hasRecorded={currentAnswers.length > 0 || Boolean(attestation) ||
+                      itemReview.acts.reviews.some(row => row.activeTargets.some(target => target.sectionKey === declaration.key)) ||
+                      itemReview.acts.retractions.some(row => row.targets.some(target => target.sectionKey === declaration.key))}
                     onBeforeClear={async () => {
                       for (const timer of debounceTimers.current.values()) clearTimeout(timer);
                       debounceTimers.current.clear();
@@ -531,6 +536,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
                         persistedAnswers.current.delete(answer.id);
                       }
                       setReviewAttestations((current) => current.filter((candidate) => candidate.sectionKey !== declaration.key));
+                      setHistoryVersion(value => value + 1);
                       onCleared?.({ scope: "section", result });
                     }}
                   />
@@ -546,6 +552,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
                 onReview={() => void reviewSubjectSection(declaration)}
               />}
               <HistorySubjectSectionEditor
+                itemReview={itemReview}
                 encounterId={encounterId}
                 declaration={declaration}
                 catalogs={catalogs}
@@ -670,6 +677,7 @@ export function HistoryTemplateEditor({
 }
 
 export function HistorySubjectSectionEditor({
+  itemReview,
   encounterId,
   declaration,
   catalogs,
@@ -678,6 +686,7 @@ export function HistorySubjectSectionEditor({
   onChange,
   onRemoveTyped,
 }: {
+  itemReview?: ReturnType<typeof useHistoryItemReview>;
   encounterId: string;
   declaration: HistorySubjectSection;
   catalogs: HistoryCatalogs;
@@ -712,7 +721,12 @@ export function HistorySubjectSectionEditor({
     else put(section.id, { kind: "tri-state", status: next }, optionCode, eye);
   }
 
-  return <div className="mt-5 space-y-5">{declaration.sections.map((section) => <TemplateSection
+  return <div className="mt-5 space-y-5">
+    {declaration.review === "per-item" && itemReview && <>
+      {itemReview.record.subjectSectionNudges?.filter(n => n.target.sectionKey === declaration.key).map(n => <p key={n.target.sectionId} role="status" className="text-sm text-amber-600">{n.text}</p>)}
+      {itemReview.error && <p role="alert" className="text-sm text-red-400">{itemReview.error} <button type="button" onClick={() => void itemReview.refresh().then(() => itemReview.setError("")).catch(error => itemReview.setError(String(error)))}>Refresh</button></p>}
+    </>}
+    {declaration.sections.map((section) => <div key={section.id}><TemplateSection
     key={section.id}
     section={section}
     catalogs={catalogs}
@@ -721,7 +735,9 @@ export function HistorySubjectSectionEditor({
     onTriState={(optionCode, eye) => triState(section, optionCode, eye)}
     onPut={(value, optionCode, eye) => put(section.id, value, optionCode, eye)}
     onRemoveTyped={onRemoveTyped}
-  />)}</div>;
+  />
+    {declaration.review === "per-item" && itemReview && <HistoryItemReviewControls sectionKey={declaration.key} section={section} catalogs={catalogs} review={itemReview} />}
+  </div>)}</div>;
 }
 
 function TemplateSection({ section, catalogs, answers, suggestions = [], editMode, onTriState, onPut, onRemoveTyped }: {

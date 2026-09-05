@@ -53,7 +53,7 @@ app.use("/clinical-graph", (_req, res) => res.status(404).json({ error: "Outside
 const capture = resolve(process.env.HISTORY_ROS_CAPTURE_DIR ?? resolve(import.meta.dirname, "../../docs/build-log/history-1d4b")); await mkdir(capture, {recursive:true});
 process.chdir(uiRoot);
 const server = await createServer({ configFile: false, root: uiRoot, plugins: [react(), { name: "history-live-proof", configureServer(vite: any) { vite.middlewares.use(app); } }],
-  server: { host: "127.0.0.1", port: 15134, strictPort: true, proxy: { "/fhir": { target: baseUrl, changeOrigin: true } } } });
+  server: { host: "127.0.0.1", port: Number(process.env.HISTORY_PROOF_PORT ?? 15134), strictPort: true, proxy: { "/fhir": { target: baseUrl, changeOrigin: true } } } });
 await server.listen();
 const browser = await chromium.launch({ channel: "chrome", args: process.platform === "linux" ? ["--no-sandbox"] : [] });
 try {
@@ -61,11 +61,50 @@ try {
   await context.addInitScript(({ token }: { token: string }) => { sessionStorage.setItem("odos.session.v1", JSON.stringify({ accessToken: token, expiresAt: Date.now() + 3600000 })); }, { token: accessToken });
   const page = await context.newPage();
   for (const [index, encounter] of encounters.entries()) {
-    await page.goto(`http://127.0.0.1:15134/clinic?patientId=${patient.id}&encounterId=${encounter.id}`);
+    await page.goto(`http://127.0.0.1:${process.env.HISTORY_PROOF_PORT ?? 15134}/clinic?patientId=${patient.id}&encounterId=${encounter.id}`);
     await page.getByRole("button", { name: "By structure", exact: true }).click();
     await page.locator("summary").filter({ hasText: "Chart another finding History" }).click();
     await page.getByRole("button", { name: /Chief Complaint & HPI/ }).click({ timeout: 15000 });
     const ros = page.getByTestId("history-review-of-systems"); await ros.waitFor({ timeout: 15000 });
+    if (process.env.HISTORY_SOCIAL_PROOF) {
+      if (index > 0) continue;
+      const before = process.env.HISTORY_SOCIAL_PROOF === "before";
+      const social = page.locator("article").filter({ has: page.getByRole("heading", { name: "Social History", exact: true }) });
+      const reminder = social.getByText("Tobacco status not documented this performance period.", { exact: true });
+      if (!before) {
+        await reminder.waitFor();
+        const tobacco = social.locator('[data-history-item="social-history|tobacco||"]');
+        await tobacco.getByRole("checkbox").click();
+        await page.waitForFunction(() => (document.querySelector('[data-history-item="social-history|tobacco||"] input') as HTMLInputElement)?.checked);
+        assert.equal(await reminder.count(), 1);
+        assert.match(await social.innerText(), /Not started/);
+        const acts = await handleHistoryItemActsRequest(deps, { authHeader: `Bearer ${accessToken}`, params: { encounterId: encounter.id } });
+        assert.equal(acts.status, 200);
+        assert.deepEqual((acts.body as any).reviews[0].activeTargets, [{ sectionKey: "social-history", sectionId: "tobacco" }]);
+      }
+      await social.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: resolve(capture, `social-${before ? "before" : "after"}.png`) });
+      if (!before) {
+        await social.getByRole("button", { name: "Never: unselected", exact: true }).click();
+        await reminder.waitFor({ state: "detached", timeout: 15000 });
+        const record = await handleHpiRecordRequest(deps, { authHeader: `Bearer ${accessToken}`, params: { encounterId: encounter.id } });
+        assert.equal(record.status, 200); assert.equal((record.body as any).subjectSectionNudges.length, 0);
+        assert.equal((record.body as any).answers.filter((a: any) => a.templateKey === "social-history").length, 1);
+        assert.match(await social.innerText(), /Started/);
+        await page.screenshot({ path: resolve(capture, "social-answer.png") });
+        console.log("APP ROUTE + MEDPLUM: tobacco tick updates date; reminder remains; Social Not started. Persisted selection clears reminder; Social Started; exactly one answer.");
+      }
+      const row = ros.locator('[data-ros-item="headache"]'); await row.getByRole("checkbox").click();
+      await page.waitForFunction(() => (document.querySelector('[data-ros-item="headache"] input') as HTMLInputElement)?.checked);
+      const text = await ros.innerText();
+      if (before) { assert.match(text, /Review method: individual/); assert.match(text, /of 54 items reviewed/); }
+      else { assert.doesNotMatch(text, /Review method:|of 54 items reviewed|· bulk/); assert.match(await row.innerText(), /Last asked/); }
+      await page.getByText(/^Synthetic glaucoma visit · Eyes/).waitFor({ timeout: 15000 });
+      await ros.locator("header").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: resolve(capture, `ros-${before ? "before" : "after"}.png`) });
+      console.log(`APP ROUTE + MEDPLUM: ${before ? "base shows method and counter" : "proposed removes method and counter; per-item date retained"}`);
+      continue;
+    }
     const fold = ros.getByRole("button", { name: /Review of Systems/ });
     assert.equal(await fold.getAttribute("aria-expanded"), index === 1 ? "false" : "true");
     if (index === 1) { assert.match(await ros.innerText(), /Complaint-directed/); await ros.screenshot({ path: resolve(capture, "follow-up.png") }); console.log("APP ROUTE + MEDPLUM: persisted follow-up presentation self-folds with Complaint-directed header"); continue; }

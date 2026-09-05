@@ -3,6 +3,21 @@ import { HISTORY_SUBJECT_SECTIONS, historySubjectSectionState, renderDeclaredSub
 import { deriveHistoryLastReviewed, isHistoryAnswerObservation, parseHistoryAnswerObservation, parseHistoryItemReview,
   historyRetractedTargets, historyReviewTargetKey, HISTORY_ITEM_REVIEW_CODE, HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM } from "./history-answer-observation.js";
 
+export function projectHistorySubjectNudges(observations: Observation[], patientReference: string, periodDate: string) {
+  const year = periodDate.slice(0, 4);
+  return HISTORY_SUBJECT_SECTIONS.flatMap(declaration => (declaration.nudges ?? []).filter(nudge =>
+    !observations.some(observation => {
+      if (observation.subject?.reference !== patientReference || observation.status === "entered-in-error" ||
+        observation.status === "cancelled" || !isHistoryAnswerObservation(observation)) return false;
+      const answer = parseHistoryAnswerObservation(observation);
+      const date = observation.effectiveDateTime;
+      return answer.subjectScope === declaration.subjectScope && answer.templateKey === nudge.target.sectionKey &&
+        answer.sectionId === nudge.target.sectionId && !answer.optionCode && answer.value.kind === nudge.answerKind &&
+        Boolean(date && Number.isFinite(Date.parse(date)) && date.slice(0, 4) === year);
+    })
+  ));
+}
+
 export function projectHistorySubjectSections(
   observations: Observation[], patientReference: string, encounterReference: string, encounterStart?: string,
 ) {

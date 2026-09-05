@@ -1,0 +1,67 @@
+TAP version 13
+# Subtest: ROS composed note never exposes review method for any coverage or encounter age
+ok 1 - ROS composed note never exposes review method for any coverage or encounter age
+  ---
+  duration_ms: 2.363792
+  type: 'test'
+  ...
+# Subtest: bulk and individual acts produce byte-identical composed summaries
+ok 2 - bulk and individual acts produce byte-identical composed summaries
+  ---
+  duration_ms: 2.799542
+  type: 'test'
+  ...
+# Subtest: Social declares per-item review and still requires exactly four answers
+ok 3 - Social declares per-item review and still requires exactly four answers
+  ---
+  duration_ms: 0.167709
+  type: 'test'
+  ...
+# Subtest: reminder survives a tobacco review act and clears only after answer persistence
+ok 4 - reminder survives a tobacco review act and clears only after answer persistence
+  ---
+  duration_ms: 3.720708
+  type: 'test'
+  ...
+# Subtest: reminder uses persisted patient answers across visits with inclusive calendar-year dates
+ok 5 - reminder uses persisted patient answers across visits with inclusive calendar-year dates
+  ---
+  duration_ms: 0.579792
+  type: 'test'
+  ...
+# Subtest: out-of-window, voided, cancelled, undated, foreign, and non-selection answers cannot clear reminder
+ok 6 - out-of-window, voided, cancelled, undated, foreign, and non-selection answers cannot clear reminder
+  ---
+  duration_ms: 1.027208
+  type: 'test'
+  ...
+# Subtest: row 64 records the period verification with primary URLs and access date
+not ok 7 - row 64 records the period verification with primary URLs and access date
+  ---
+  duration_ms: 1.216667
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d5/mcp/tests/historySocial.test.ts:1:6031'
+  failureType: 'testCodeFailure'
+  error: 'Mandate 14 row 64 is required'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d5/mcp/tests/historySocial.test.ts:81:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 6
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 114.600833

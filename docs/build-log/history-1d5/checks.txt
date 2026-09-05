@@ -1,0 +1,30 @@
+UI full: npm --prefix ui test
+1..1234
+# tests 1239
+# suites 0
+# pass 1239
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 87508.188458
+
+MCP non-credentialed full: ODOS_ALLOW_UNGATED_MCP=1 ODOS_POSTGRES_URL=<isolated-local-postgres> npm --prefix mcp test
+  ...
+1..3714
+# tests 4249
+# suites 0
+# pass 4203
+# fail 1
+# cancelled 0
+# skipped 45
+# todo 0
+# duration_ms 66948.7365
+Only failure: unchanged historyRos.test.ts requires /bulk/ in summary. Credentialed tests intentionally not enabled in this run; it is not an authorization gate.
+
+MCP earlier shared-stack run with admin credentials: 4249 tests; 4207 passed; 38 failed; 4 skipped. Missing installation/seeder configuration and HTTP 429 quota exhaustion; not a passing validation.
+
+Builds: npm --prefix mcp run build: exit 0; npm --prefix ui run build: exit 0 (existing >500kB chunk warning).
+Source: git diff --check: exit 0.
+UI source MIPS/Q226/QM226 search: zero matches. History UI credit search: zero matches.
+Proxy census: 24 backend route families, 27 proxy entries; all covered (advisory).
