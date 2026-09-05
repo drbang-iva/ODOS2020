@@ -1,6 +1,6 @@
 # ODOS-HISTORY-1D-5 — coder bundle
 
-Status: operator clarification applied. The retired assertion is replaced, the original coverage/positive guards remain, and the endpoint bulk-refusal guard is unchanged. Independent evaluation has not run; not ready to merge.
+Status: the independent evaluation at `2634d9b7` passed Parts A and B conditional on deleting the dead `method` replacement. That one-line finding is resolved and M4 is reconfirmed. An evaluator must bind the PASS marker to the new exact head before merge.
 
 Branch: `drbang-iva/history-slice-1d5`. Freshly fetched base: `2468ac519a0839d4f38fd17222a5473e282a804b`. Open PR scope check found only #522 (`docs/install.md`) and #507 (`ui/package-lock.json`); neither overlaps.
 
@@ -12,7 +12,7 @@ Social gains explicit item review/date controls and the tobacco documentation re
 
 ## Files touched
 
-- `mcp/src/clinical-graph/history-template-engine.ts`: ROS summary template, Social review declaration, nudge contract and declaration.
+- `mcp/src/clinical-graph/history-template-engine.ts`: ROS summary template, Social review declaration, nudge contract and declaration; final fixback removes the unreachable `method` replacement so a future `{method}` token is refused.
 - `mcp/src/clinical-graph/history-subject-projection.ts`: patient-scoped, answer-only period evaluation.
 - `mcp/src/clinical-graph/hpi-endpoint.ts`: publishes evaluated reminders with the History record.
 - `ui/src/components/charting/HistoryRosSection.tsx`: removes the counter and reuses review loading/gestures/date formatting.
@@ -28,7 +28,7 @@ Social gains explicit item review/date controls and the tobacco documentation re
 
 - `npm --prefix ui test`: **1,239 passed, 0 failed, 0 skipped**. After the final clear wiring, focused `node --import tsx --test tests/historySocialBrowser.test.tsx tests/hpiSection.test.tsx tests/hpiDeltaBrowser.test.tsx tests/historyRosBrowser.test.tsx` from `ui/`: **29/29 passed**.
 - `node --import tsx --test mcp/tests/historySocial.test.ts`: **7/7 passed**.
-- Non-credentialed full MCP lane (`ODOS_ALLOW_UNGATED_MCP=1`, isolated PostgreSQL, `npm --prefix mcp test`): **4,250 tests; 4,205 passed; 0 failed; 45 skipped**, exit 0. This rerun follows the authorized assertion repair. This run does not prove live authorization.
+- Non-credentialed full MCP lane (`ODOS_ALLOW_UNGATED_MCP=1`, isolated PostgreSQL, `npm --prefix mcp test`): **4,250 tests; 4,205 passed; 0 failed; 45 skipped**, exit 0. The final one-line dead-token deletion left every count unchanged. This run does not prove live authorization. See `fixback-full-mcp.txt`.
 - Existing regression counts: HPI endpoint **37/37**; template engine **12/12**; answer Observation **3/3**; pagination unit **15/15**; item review **23/23**; item definitions **2/2**; ROS **26/26** after the authorized repair; ROS definitions **2/2**; ROS HTTP **1/1**. Exact commands and counts are in `regression-counts.txt`.
 - Unchanged live pagination test: **1/1 passed** on the isolated stack. Observed 600, 1,001, and 5,000 answers returning 200; 25 review acts; ROS category exclusion; 5,001 answers returning 409 with the 11-page ceiling message. See `pagination-live.txt`.
 - Fresh stack bootstrap/search smoke: **12/12 passed**.
@@ -53,7 +53,9 @@ All mutations were applied locally to production code or the ledger, then restor
 
 Adding only Social's declaration initially left behavior protected by the existing ROS-only engine gate. The final mutation disabled both defenses; the new test also expressly rejects a Social `charted_when`. Full local outputs are the `*-red.txt` and `*-restored.txt` files.
 
-The new named guard in `historyRos.test.ts` uses the same partial Eyes coverage (3/8) and positive eye-pain answer for both methods. Appending ` · bulk` to the summary builder made that exact assertion fail: **1 test / 0 passed / 1 failed** (exit 1). Restoring the builder produced **1 test / 1 passed / 0 failed** (exit 0). The complete ROS + HTTP test run then passed **27/27**, including the unchanged bulk endpoint 400 refusal. See `partial-positive-parity-red.txt`, `partial-positive-parity-restored.txt`, and `ruling-focused.txt`. Production code is byte-unchanged by this follow-up.
+The new named guard in `historyRos.test.ts` uses the same partial Eyes coverage (3/8) and positive eye-pain answer for both methods. Appending ` · bulk` to the summary builder made that exact assertion fail: **1 test / 0 passed / 1 failed** (exit 1). Restoring the builder produced **1 test / 1 passed / 0 failed** (exit 0). The complete ROS + HTTP test run then passed **27/27**, including the unchanged bulk endpoint 400 refusal. See `partial-positive-parity-red.txt`, `partial-positive-parity-restored.txt`, and `ruling-focused.txt`. That parity-guard follow-up left production code unchanged.
+
+The evaluator's M4 finding was reconfirmed after deleting the dead replacement. Temporarily restoring `{method}` to the unchanged ROS template made the named guard fail **1 test / 0 passed / 1 failed** (exit 1) with `Unknown history summary token: method`. Restoring the template produced **1 test / 1 passed / 0 failed** (exit 0). See `m4-method-token-guard.txt`. No test, template, endpoint, or other replacement entry changed in the fixback.
 
 ## Live and visual proof
 
@@ -67,8 +69,8 @@ Implemented the existing accepted PerformanceOD rulings `2026-09-05-odos-ros-rev
 
 Cross-slice follow-up: 1d-6 must not reintroduce a bulk marker. Bulk gestures, Family History, and Quality Measures screens remain outside this slice.
 
-**Clarification resolved:** refreshed companion main is `818ee8763b7960a54561fba654db23f50ca38358`, containing “Clarification — DoD 9 vs Part A.” The operator authorized removal of exactly the retired `/bulk/` assertion and required byte-identical summaries. That repair is applied; no further operator decision is needed. The separately invoked evaluator must review the final head before merge.
+**Clarification resolved:** refreshed companion main is `818ee8763b7960a54561fba654db23f50ca38358`, containing “Clarification — DoD 9 vs Part A.” The operator authorized removal of exactly the retired `/bulk/` assertion and required byte-identical summaries. That repair is applied. The independent evaluation at `2634d9b7` returned PASS on Parts A and B conditional only on removing the dead `method` replacement; that exact one-line condition is now satisfied. The separately invoked evaluator must bind its verdict to the new final head before merge.
 
 CI run count and PR review state are reported in the PR description; this local bundle does not claim a CI or independent verdict.
 
-⚠️ NOT EVALUATED — hand to Fable/Opus in Claude for the independent eval before merge. I wrote it; I can't be the judge.
+⚠️ FINAL-HEAD MARKER PENDING — the author cannot post the evaluator's exact-head marker. The conditional PASS must be rebound to the final commit before merge.

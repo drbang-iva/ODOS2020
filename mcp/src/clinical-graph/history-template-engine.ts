@@ -449,7 +449,6 @@ export function renderDeclaredSubjectSummary(
   const replacements = new Map([
     ["reviewed_systems", coverage.join("; ")],
     ["positives", positives.length ? `Reports ${positives.join(", ")}` : ""],
-    ["method", context.methods?.length ? `Review method: ${[...new Set(context.methods)].join(", ")}` : ""],
   ]);
   return (declaration.summary ?? "").replace(/\{([^}]+)\}/g, (_match, token: string) => registeredToken(replacements, token))
     .replace(/\s+\./g, ".").replace(/\.{2,}/g, ".").trim();

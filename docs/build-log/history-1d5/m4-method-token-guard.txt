@@ -1,0 +1,23 @@
+# PR #535 final fixback — M4 token guard
+
+Production fix: delete the `method` entry from the history summary replacements map.
+
+RED mutation: temporarily change the ROS summary template from `{reviewed_systems}. {positives}` to `{reviewed_systems}. {positives}. {method}`.
+
+Command:
+node --import tsx --test --test-name-pattern 'ROS composed note never exposes review method' mcp/tests/historySocial.test.ts
+
+Exit: 1
+Tests: 1
+Passed: 0
+Failed: 1
+Error: Unknown history summary token: method
+
+GREEN restore: restore the ROS summary template to `{reviewed_systems}. {positives}` and run the same command.
+
+Exit: 0
+Tests: 1
+Passed: 1
+Failed: 0
+
+The mutation was fully restored. The final production diff retains only the one-line deletion from the replacements map.
