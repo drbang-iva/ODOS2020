@@ -31,6 +31,7 @@ function fixture(rows: Resource[] = []) {
       (!params.subject || row.subject?.reference === params.subject) &&
       (!params.encounter || row.encounter?.reference === params.encounter) &&
       (!params.identifier || row.identifier?.some(c => `${c.system}|${c.value}` === params.identifier)) &&
+      (!params._tag || row.meta?.tag?.some(c => `${c.system}|${c.code}` === params._tag)) &&
       (!params.code || row.code.coding?.some(c => `${c.system}|${c.code}` === params.code)) &&
       (!params["category:not"] || !row.category?.some(c => c.coding?.some(v => `${v.system}|${v.code}` === params["category:not"])))
     );
@@ -49,18 +50,31 @@ function fixture(rows: Resource[] = []) {
       beforeTransaction?.(); beforeTransaction = undefined;
       transactions.push(structuredClone(bundle));
       const entries: NonNullable<Bundle["entry"]> = [];
+      const resolvedFullUrls = new Map<string, string>();
       for (const entry of bundle.entry ?? []) {
         if (!entry.resource) {
           entries.push({ response: { status: "201", location: `Provenance/${randomUUID()}/_history/1` } }); continue;
         }
         const resource = structuredClone(entry.resource);
-        const query = new URL(entry.request!.url!, baseUrl).searchParams.get("identifier");
-        const existing = rows.find(row => query ? (row as Observation).identifier?.some(v => `${v.system}|${v.value}` === query) : Boolean(resource.id) && row.id === resource.id && row.resourceType === resource.resourceType);
+        if (resource.resourceType === "Provenance") resource.target = resource.target.map(target => ({
+          ...target,
+          ...(target.reference && resolvedFullUrls.has(target.reference) ? { reference: resolvedFullUrls.get(target.reference) } : {}),
+        }));
+        const conditional = new URLSearchParams(entry.request?.ifNoneExist ?? "");
+        const request = new URL(entry.request!.url!, baseUrl).searchParams;
+        const identifier = conditional.get("identifier") ?? request.get("identifier");
+        const tag = conditional.get("_tag") ?? request.get("_tag");
+        const existing = rows.find(row => row.resourceType === resource.resourceType && (
+          identifier ? (row as Observation).identifier?.some(v => `${v.system}|${v.value}` === identifier) :
+          tag ? row.meta?.tag?.some(v => `${v.system}|${v.code}` === tag) :
+          Boolean(resource.id) && row.id === resource.id
+        ));
         if (existing && entry.request?.ifMatch && entry.request.ifMatch !== `W/"${existing.meta?.versionId}"`) {
           if (thrownConflict) throw Object.assign(new Error("Synthetic transaction conflict"), { status: Number(conflictStatus) });
           return { resourceType: "Bundle", type: "transaction-response", entry: [{ response: { status: conflictStatus } }] };
         }
-        const saved = { ...resource, id: existing?.id ?? resource.id ?? randomUUID(), meta: { versionId: randomUUID() } };
+        const saved = { ...resource, id: existing?.id ?? resource.id ?? randomUUID(), meta: { ...resource.meta, versionId: randomUUID() } };
+        if (entry.fullUrl) resolvedFullUrls.set(entry.fullUrl, `${saved.resourceType}/${saved.id}`);
         if (existing) rows.splice(rows.indexOf(existing), 1, saved); else rows.push(saved);
         entries.push({ resource: structuredClone(saved), response: { status: existing ? "200" : "201", location: `${saved.resourceType}/${saved.id}/_history/${saved.meta.versionId}` } });
       }

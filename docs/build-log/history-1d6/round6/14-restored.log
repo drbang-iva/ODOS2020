@@ -1,0 +1,17 @@
+TAP version 13
+# ROS: 54 answers; per-click bulk acts 7/36; immutable retraction/undo; HTTP 200,503; delta sizes 1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1
+# Subtest: ROS browser: comprehensive burst and explicit immutable reviews
+ok 1 - ROS browser: comprehensive burst and explicit immutable reviews
+  ---
+  duration_ms: 7262.643041
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7775.245333

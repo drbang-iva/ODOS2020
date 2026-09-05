@@ -7,7 +7,7 @@ import { createServer } from "vite";
 import { historyRosFixture } from "../../mcp/tests/helpers/historyRosFixture.js";
 import * as api from "../../mcp/src/clinical-graph/hpi-endpoint.js";
 import { handleEncounterVoidRequest } from "../../mcp/src/clinical-graph/encounter-void-endpoint.js";
-import { buildHistoryItemReview, HISTORY_ITEM_REVIEW_CODE, parseHistoryItemReview } from "../../mcp/src/clinical-graph/history-answer-observation.js";
+import { buildHistoryItemReview, HISTORY_ITEM_REVIEW_CODE, isHistoryAnswerObservation, parseHistoryAnswerObservation, parseHistoryItemReview } from "../../mcp/src/clinical-graph/history-answer-observation.js";
 import type { Observation } from "@medplum/fhirtypes";
 
 for (const scenario of ["comprehensive burst and explicit immutable reviews", "follow-up self-folds", "review-only History clear"]) test(`ROS browser: ${scenario}`, async () => {
@@ -125,6 +125,7 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
 
     const bulk = ros.getByTestId("history-bulk-denial");
     assert.equal(await bulk.count(), 1);
+    assert.ok((await bulk.boundingBox())!.height >= 44, "the bulk gesture remains a 44px touch target");
     s.failTransactionAt(s.transactionAttempts() + 2);
     const partialResponse = page.waitForResponse(response => response.url().endsWith("/history/items/review") && response.request().method() === "POST");
     await bulk.click();
@@ -135,6 +136,8 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
     assert.equal(await ros.locator('[data-history-bulk-progress]').count(), 0, "retired progress UI must stay absent");
     assert.equal(await ros.locator('[data-ros-item="hives"]').getByRole("button", { name: "Yes: hives" }).isEnabled(), true,
       "a failed click must restore row editing");
+    assert.equal(await page.getByRole("button", { name: "Clear History", exact: true }).isEnabled(), true,
+      "a failed click must restore History clear");
 
     s.failTransactionAt(undefined);
     holdAutosave = true;
@@ -160,6 +163,7 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
     assert.ok(await rowEditors.count() > 150);
     assert.equal(await rowEditors.evaluateAll(elements => elements.every(element => element.matches(':disabled'))), true,
       "every ROS row editor stays frozen while the final answer unit is held");
+    assert.equal(await bulk.isDisabled(), true, "the header gesture stays disabled while its section is frozen");
     assert.equal(await page.getByRole("button", { name: "Clear History", exact: true }).isDisabled(), true);
     assert.equal(await page.getByRole("button", { name: "Clear chart", exact: true }).isDisabled(), true);
     assert.equal(await page.getByRole("button", { name: "Glaucoma", exact: true }).isEnabled(), true,
@@ -181,11 +185,14 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
     assert.equal(await rowEditors.evaluateAll(elements => elements.every(element => element.matches(':disabled'))), true,
       "rows stay frozen until the committed response is applied");
     const atCommit = await api.handleHpiRecordRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });
+    assert.equal((atCommit.body as any).answers.length, 54);
     assert.equal((atCommit.body as any).answers.filter((answer: any) => answer.value.status === "negative").length, 53);
     assert.equal((atCommit.body as any).answers.find((answer: any) => answer.optionCode === "hives").value.status, "positive");
     holdFinalHistory = false;
     historyHold.release();
     await page.waitForFunction(() => !document.querySelector('[data-ros-item="hives"] button')?.matches(':disabled'));
+    assert.equal(await page.getByRole("button", { name: "Clear History", exact: true }).isEnabled(), true,
+      "completed bulk work must restore History clear");
 
     const bulkRequests = posted.filter(body => body.method === "bulk");
     assert.equal(bulkRequests.length, 2);
@@ -198,6 +205,12 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
     assert.deepEqual(bulkActs.map(act => parseHistoryItemReview(act).targets.length), [7, 36],
       "each act covers only negatives persisted by its own click");
     assert.equal(await ros.getByText(/of \d+ recorded/).count(), 0);
+    const explicitResponse = page.waitForResponse(response => response.url().endsWith("/hpi") && response.request().method() === "POST");
+    await ros.locator('[data-ros-item="poor-vision"]').getByRole("button", { name: "Yes: poor vision" }).click();
+    assert.equal((await explicitResponse).status(), 200);
+    const afterExplicitEdit = await api.handleHpiRecordRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });
+    assert.equal((afterExplicitEdit.body as any).answers.length, 54);
+    assert.equal((afterExplicitEdit.body as any).answers.find((answer: any) => answer.optionCode === "poor-vision").value.status, "positive");
     if (process.env.HISTORY_BULK_CAPTURE) await page.screenshot({ path: resolve(process.env.HISTORY_BULK_CAPTURE, "bulk-complete.png") });
 
     await page.getByRole("button", { name: "Start obsolete request" }).click();
@@ -213,9 +226,105 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
   } finally { releaseFinalBulkUnit(); actHold.release(); historyHold.release(); ownerHold.release(); autosaveHold.release(); await browser.close(); await server.close(); }
 });
 
+for (const [scenarioIndex, scenario] of ["socket-disconnect", "truncated-response", "same-tab-reload", "normal-response"].entries()) {
+  test(`ROS browser: ${scenario} keeps the section frozen until the server request settles`, { timeout: 30_000 }, async () => {
+    const s = historyRosFixture();
+    const staff = await s.deps.authenticate("synthetic");
+    assert.ok(staff);
+    const execute = staff.fhir.executeTransaction.bind(staff.fhir);
+    const actHeld = deferred(), releaseAct = deferred(), requestDone = deferred();
+    const captures: any[] = [], committed: Array<{ target: string | undefined; status: string }> = [];
+    let firstOutcome: { status: number; body: any } | undefined;
+    let reviewCalls = 0;
+    staff.fhir.executeTransaction = async (bundle, ...rest) => {
+      const isAct = bundle.entry?.[0]?.resource?.code?.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE);
+      if (isAct) { actHeld.mark(); await releaseAct.released; }
+      const result = await execute(bundle, ...rest);
+      if (isAct) {
+        for (const target of parseHistoryItemReview(bundle.entry![0]!.resource as Observation).targets) {
+          const row = s.rows.find(candidate => candidate.resourceType === "Observation" && isHistoryAnswerObservation(candidate) &&
+            candidate.status !== "entered-in-error" && candidate.status !== "cancelled" && parseHistoryAnswerObservation(candidate).optionCode === target.optionCode);
+          committed.push({ target: target.optionCode, status: row ? (parseHistoryAnswerObservation(row).value as any).status : "absent" });
+        }
+      }
+      return result;
+    };
+    const server = await createServer({ root: resolve(import.meta.dirname, ".."), logLevel: "silent",
+      server: { host: "127.0.0.1", port: 15365 + scenarioIndex, strictPort: true }, plugins: [{
+        name: "ros-unknown-outcome-proof",
+        resolveId(id) { if (id === "/ros-unknown.js") return id; },
+        load(id) {
+          if (id === "/ros-unknown.js") return `import React from 'react'; import {createRoot} from 'react-dom/client'; import {HpiSection} from '/src/components/charting/HpiSection.tsx'; import '/src/styles/globals.css'; createRoot(document.getElementById('root')).render(React.createElement(HpiSection,{patientReference:'Patient/ros-test',encounterReference:'Encounter/current',onSaved:()=>{}}));`;
+        },
+        configureServer(vite) { vite.middlewares.use(async (req, res, next) => {
+          if (req.url === "/ros-unknown") { res.setHeader("Content-Type", "text/html"); res.end(await vite.transformIndexHtml(req.url, '<html><body><div id="root"></div><script type="module" src="/ros-unknown.js"></script></body></html>')); return; }
+          if (!req.url?.startsWith("/clinical-graph/")) return next();
+          try {
+            const chunks = []; for await (const chunk of req) chunks.push(chunk);
+            const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : undefined;
+            const input = { authHeader: "synthetic", body, params: { encounterId: "current" } };
+            let result: { status: number; body: any };
+            if (req.url.endsWith("/definition")) result = await api.handleHpiDefinitionRequest(s.deps, input);
+            else if (req.url.endsWith("/complaints")) result = { status: 200, body: { complaints: [] } };
+            else if (req.url.endsWith("/history/items")) result = await api.handleHistoryItemActsRequest(s.deps, input);
+            else if (req.url.endsWith("/items/review")) {
+              const call = ++reviewCalls;
+              const task = api.handleHistoryItemReviewRequest(s.deps, input).then(value => {
+                if (call === 1) { firstOutcome = value; requestDone.mark(); }
+                return value;
+              });
+              if ((scenario === "socket-disconnect" || scenario === "truncated-response") && call === 1) {
+                await actHeld.held;
+                res.writeHead(200, { "Content-Type": "application/json", "Content-Length": "100000" });
+                res.flushHeaders();
+                if (scenario === "truncated-response") res.write("{");
+                await new Promise(resolve => setTimeout(resolve, 20));
+                res.destroy(); void task; return;
+              }
+              result = await task;
+            } else if (req.url.endsWith("/void")) result = await handleEncounterVoidRequest(s.deps, input);
+            else if (req.method === "POST") { captures.push(body); result = await api.handleHpiCaptureRequest(s.deps, input); }
+            else result = await api.handleHpiRecordRequest(s.deps, input);
+            if (!res.destroyed) { res.statusCode = result.status; res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify(result.body)); }
+          } catch (error) { if (!res.destroyed) { res.statusCode = 500; res.end(JSON.stringify({ error: String(error) })); } }
+        }); },
+      }] });
+    await server.listen();
+    const address = server.httpServer!.address(); assert.ok(address && typeof address !== "string");
+    const browser = await chromium.launch({ channel: "chrome", args: process.platform === "linux" ? ["--no-sandbox"] : [] });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+      await page.goto(`http://127.0.0.1:${address.port}/ros-unknown`);
+      const ros = page.getByTestId("history-review-of-systems"); await ros.waitFor();
+      const bulk = ros.getByRole("button", { name: "Mark unanswered No", exact: true });
+      await bulk.press("Space");
+      await Promise.race([actHeld.held, rejectAfter(10_000, `${scenario}: act was not held`)]);
+      if (scenario === "same-tab-reload") { await page.reload(); await ros.waitFor(); await ros.getByRole("table").waitFor(); }
+      if (scenario === "socket-disconnect" || scenario === "truncated-response") await ros.getByRole("alert").waitFor({ timeout: 10_000 });
+      const yes = ros.getByRole("button", { name: "Yes: eye pain", exact: true });
+      assert.equal(await yes.isDisabled(), true, "unknown browser outcomes and reload must retain the section freeze");
+      await yes.evaluate((button: HTMLButtonElement) => button.click());
+      assert.equal(captures.some(body => body.templateAnswers?.some((answer: any) => answer.optionCode === "eye-pain")), false);
+      releaseAct.release();
+      await Promise.race([requestDone.held, rejectAfter(10_000, `${scenario}: server request did not settle`)]);
+      await page.waitForFunction(() => !document.querySelector('[aria-label="Yes: eye pain"]')?.matches(':disabled'), undefined, { timeout: 10_000 });
+      assert.deepEqual(committed.filter(row => row.status !== "negative"), []);
+      assert.equal(firstOutcome?.status, 200);
+    } finally {
+      releaseAct.release();
+      await browser.close();
+      await server.close();
+    }
+  });
+}
+
 function deferred() {
   let mark!: () => void, release!: () => void;
   const held = new Promise<void>(resolve => { mark = resolve; });
   const released = new Promise<void>(resolve => { release = resolve; });
   return { held, released, mark, release };
+}
+
+function rejectAfter(milliseconds: number, message: string) {
+  return new Promise<never>((_, reject) => setTimeout(() => reject(new Error(message)), milliseconds));
 }

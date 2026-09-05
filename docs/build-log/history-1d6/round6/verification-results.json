@@ -1,0 +1,21 @@
+{
+  "baseHead": "632cf914fcb7523bdafee097b6bf48b00d963d92",
+  "decisionHead": "1e5c71f4e491fc4616a0035feac502e78a85f55c",
+  "focusedMcp": { "passed": 76, "failed": 0, "skipped": 0 },
+  "partialActTransport": { "passed": 2, "failed": 0, "skipped": 0 },
+  "fullMcp": { "passed": 4221, "failed": 0, "skipped": 43, "total": 4264 },
+  "fullUi": { "passed": 1243, "failed": 0, "skipped": 0, "total": 1243 },
+  "browserRuns": [
+    { "passed": 7, "failed": 0, "skipped": 0 },
+    { "passed": 7, "failed": 0, "skipped": 0 },
+    { "passed": 7, "failed": 0, "skipped": 0 },
+    { "passed": 7, "failed": 0, "skipped": 0 },
+    { "passed": 7, "failed": 0, "skipped": 0 }
+  ],
+  "mutations": { "pairs": 16, "eachRed": { "passed": 0, "failed": 1, "skipped": 0 }, "eachRestored": { "passed": 1, "failed": 0, "skipped": 0 } },
+  "mcpTypecheck": { "exit": 0, "diagnostics": 0 },
+  "mcpBuild": { "exit": 0 },
+  "uiBuild": { "exit": 0, "modules": 313, "knownLargeChunkWarning": true },
+  "preflight": { "exit": 0, "resourceTypes": 46, "operations": 841, "warnings": 0, "hardBlocks": 0 },
+  "gitDiffCheck": { "exit": 0 }
+}

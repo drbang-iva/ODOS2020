@@ -23,6 +23,7 @@ export function historyRosFixture(rows: Resource[] = []) {
       (!params.subject || row.subject?.reference === params.subject) &&
       (!params.encounter || row.encounter?.reference === params.encounter) &&
       (!params.identifier || row.identifier?.some(c => `${c.system}|${c.value}` === params.identifier)) &&
+      (!params._tag || row.meta?.tag?.some(c => `${c.system}|${c.code}` === params._tag)) &&
       (!params["status:not"] || !params["status:not"].split(",").includes((row as Observation).status ?? "")) &&
       (!params.code || row.code.coding?.some(c => `${c.system}|${c.code}` === params.code)) &&
       (!params["category:not"] || !row.category?.some(c => c.coding?.some(v => `${v.system}|${v.code}` === params["category:not"])))
@@ -42,7 +43,7 @@ export function historyRosFixture(rows: Resource[] = []) {
       const existing = rows.find(resource => resource.resourceType === row.resourceType && identifier &&
         "identifier" in resource && resource.identifier?.some(value => `${value.system}|${value.value}` === identifier));
       if (existing) return structuredClone(existing);
-      const saved = { ...structuredClone(row), id: row.id ?? randomUUID(), meta: { versionId: randomUUID() } };
+      const saved = { ...structuredClone(row), id: row.id ?? randomUUID(), meta: { ...row.meta, versionId: randomUUID() } };
       rows.push(saved); return structuredClone(saved);
     },
     update: async (_type: Resource["resourceType"], id: string, row: Resource, headers?: Record<string, string>) => {
@@ -62,11 +63,16 @@ export function historyRosFixture(rows: Resource[] = []) {
       if (transactionAttempts === transactionFailureAt) throw new Error("Synthetic transaction failure");
       transactions.push(structuredClone(bundle));
       const entries: NonNullable<Bundle["entry"]> = [];
+      const resolvedFullUrls = new Map<string, string>();
       for (const entry of bundle.entry ?? []) {
         if (!entry.resource) {
           entries.push({ response: { status: "201", location: `Provenance/${randomUUID()}/_history/1` } }); continue;
         }
         const resource = structuredClone(entry.resource);
+        if (resource.resourceType === "Provenance") resource.target = resource.target.map(target => ({
+          ...target,
+          ...(target.reference && resolvedFullUrls.has(target.reference) ? { reference: resolvedFullUrls.get(target.reference) } : {}),
+        }));
         const conditional = entry.request?.ifNoneExist ? new URLSearchParams(entry.request.ifNoneExist) : undefined;
         const query = conditional
           ? conditional.get("identifier")
@@ -84,6 +90,7 @@ export function historyRosFixture(rows: Resource[] = []) {
         const saved = entry.request?.ifNoneExist && existing
           ? existing
           : { ...resource, id: existing?.id ?? resource.id ?? randomUUID(), meta: { ...resource.meta, versionId: randomUUID() } };
+        if (entry.fullUrl) resolvedFullUrls.set(entry.fullUrl, `${saved.resourceType}/${saved.id}`);
         if (saved !== existing) { if (existing) rows.splice(rows.indexOf(existing), 1, saved); else rows.push(saved); }
         entries.push({ resource: structuredClone(saved), response: { status: existing ? "200" : "201", location: `${saved.resourceType}/${saved.id}/_history/${saved.meta.versionId}` } });
       }

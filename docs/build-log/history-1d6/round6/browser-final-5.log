@@ -1,0 +1,53 @@
+TAP version 13
+# ROS: 54 answers; per-click bulk acts 7/36; immutable retraction/undo; HTTP 200,503; delta sizes 1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1
+# Subtest: ROS browser: comprehensive burst and explicit immutable reviews
+ok 1 - ROS browser: comprehensive burst and explicit immutable reviews
+  ---
+  duration_ms: 7300.151167
+  type: 'test'
+  ...
+# Subtest: ROS browser: follow-up self-folds
+ok 2 - ROS browser: follow-up self-folds
+  ---
+  duration_ms: 791.314125
+  type: 'test'
+  ...
+# Subtest: ROS browser: review-only History clear
+ok 3 - ROS browser: review-only History clear
+  ---
+  duration_ms: 1001.544875
+  type: 'test'
+  ...
+# Subtest: ROS browser: socket-disconnect keeps the section frozen until the server request settles
+ok 4 - ROS browser: socket-disconnect keeps the section frozen until the server request settles
+  ---
+  duration_ms: 836.631208
+  type: 'test'
+  ...
+# Subtest: ROS browser: truncated-response keeps the section frozen until the server request settles
+ok 5 - ROS browser: truncated-response keeps the section frozen until the server request settles
+  ---
+  duration_ms: 836.336041
+  type: 'test'
+  ...
+# Subtest: ROS browser: same-tab-reload keeps the section frozen until the server request settles
+ok 6 - ROS browser: same-tab-reload keeps the section frozen until the server request settles
+  ---
+  duration_ms: 878.005625
+  type: 'test'
+  ...
+# Subtest: ROS browser: normal-response keeps the section frozen until the server request settles
+ok 7 - ROS browser: normal-response keeps the section frozen until the server request settles
+  ---
+  duration_ms: 736.018125
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 22746.841291

@@ -83,6 +83,21 @@ const PATIENT_HISTORY_MAX_ROWS = 5_000;
 export const HISTORY_CONDITIONAL_BUNDLE_ENTRY_LIMIT = 8;
 
 export const HISTORY_BULK_DENIAL_GESTURE_SYSTEM = "https://odos2020.com/fhir/NamingSystem/history-bulk-denial-gesture";
+export const HISTORY_BULK_DENIAL_LOCK_CODE = "history-bulk-denial-lock";
+const HISTORY_BULK_DENIAL_LOCK_CONTEXT_SYSTEM = `${HISTORY_BULK_DENIAL_GESTURE_SYSTEM}/context`;
+const HISTORY_BULK_DENIAL_LOCK_STATE_SYSTEM = `${HISTORY_BULK_DENIAL_GESTURE_SYSTEM}/lock-state`;
+type HistoryBulkDenialLock = {
+  id: string;
+  versionId?: string;
+  gestureId: string;
+  patientReference: string;
+  encounterReference: string;
+  sectionKey: "review-of-systems";
+  actorReference: string;
+  recordedAt: string;
+  state: "in-flight" | "released";
+};
+const activeHistoryBulkRequests = new Map<string, { count: number; patientReference: string; encounterReference: string; sectionKey: string }>();
 
 const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_hpi_ros" } as const;
 export const HPI_OBSERVATION_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/hpi-observation-encounter";
@@ -365,7 +380,8 @@ async function handleHistoryBulkDenialRequest(
     recordedAt,
   });
   const actIdentifier = `${HISTORY_REVIEW_ATTESTATION_IDENTIFIER_SYSTEM}|${encounterId}:${request.sectionKey}:${request.gestureId}`;
-  if (await findHistoryItemAct(staff.fhir, actIdentifier)) {
+  const existingAct = await findHistoryItemAct(staff.fhir, actIdentifier);
+  if (existingAct) {
     return recordHistoryItemReview(staff.fhir, reviewInput(request.targets));
   }
   const declaration = HISTORY_SUBJECT_SECTIONS.find(candidate => candidate.key === request.sectionKey);
@@ -380,49 +396,67 @@ async function handleHistoryBulkDenialRequest(
       return { status: 409, body: { error: "Bulk denial accepts unanswered targets only." } };
     }
   }
+  const existingLock = await loadHistoryBulkDenialLock(staff.fhir, request.gestureId);
+  if (existingLock && !historyBulkLockMatches(existingLock, request, staff.staffReference)) {
+    return { status: 409, body: { error: "History bulk gesture context is immutable." } };
+  }
+  if (existingLock?.state === "released") return historyBulkNoActResponse(request, existingLock.actorReference, recordedAt);
 
-  const createdTargets: ReviewTarget[] = [];
-  let writeError: unknown;
-  const answersPerUnit = HISTORY_CONDITIONAL_BUNDLE_ENTRY_LIMIT - 1;
-  for (let start = 0; start < request.targets.length; start += answersPerUnit) {
-    const targets = request.targets.slice(start, start + answersPerUnit);
-    const requestBundle = historyBulkAnswerUnit(targets, request, staff.staffReference, recordedAt);
-    const sizeError = historyBundleSizeError(requestBundle);
-    if (sizeError) return { status: 413, body: { error: sizeError } };
-    try {
-      const result = await staff.fhir.executeTransaction(requestBundle, {
-        "X-ODOS-Source": "mcp/history_bulk_denial",
-        Prefer: "return=representation",
-      });
-      assertSuccessfulTransaction(requestBundle, result);
-      for (const [index, target] of targets.entries()) {
-        if (Number.parseInt(result.entry?.[index]?.response?.status ?? "", 10) === 201) createdTargets.push(target);
+  const leaveRequest = enterHistoryBulkRequest(request);
+  let lock: HistoryBulkDenialLock | undefined;
+  try {
+    lock = existingLock ?? await createHistoryBulkDenialLock(staff.fhir, {
+      gestureId: request.gestureId,
+      patientReference: request.patientReference,
+      encounterReference: request.encounterReference,
+      sectionKey: "review-of-systems",
+      actorReference: staff.staffReference,
+      recordedAt,
+      state: "in-flight",
+    });
+    if (!historyBulkLockMatches(lock, request, staff.staffReference)) {
+      return { status: 409, body: { error: "History bulk gesture context is immutable." } };
+    }
+
+    const createdTargets: ReviewTarget[] = [];
+    let writeError: unknown;
+    const answersPerUnit = HISTORY_CONDITIONAL_BUNDLE_ENTRY_LIMIT - 1;
+    for (let start = 0; start < request.targets.length; start += answersPerUnit) {
+      const targets = request.targets.slice(start, start + answersPerUnit);
+      const requestBundle = historyBulkAnswerUnit(targets, request, staff.staffReference, recordedAt);
+      const sizeError = historyBundleSizeError(requestBundle);
+      if (sizeError) return { status: 413, body: { error: sizeError } };
+      try {
+        const result = await staff.fhir.executeTransaction(requestBundle, {
+          "X-ODOS-Source": "mcp/history_bulk_denial",
+          Prefer: "return=representation",
+        });
+        assertSuccessfulTransaction(requestBundle, result);
+        for (const [index, target] of targets.entries()) {
+          if (Number.parseInt(result.entry?.[index]?.response?.status ?? "", 10) === 201) createdTargets.push(target);
+        }
+      } catch (error) {
+        writeError = error;
+        break;
       }
-    } catch (error) {
-      writeError = error;
-      break;
     }
-  }
 
-  const liveNegativeTargets: ReviewTarget[] = [];
-  for (const target of createdTargets) {
-    const observation = await findHistoryAnswerById(staff.fhir, bulkHistoryAnswerId(encounterId, target));
-    if (observation && isPersistedBulkNegative(observation, request.patientReference, request.encounterReference, target)) {
-      liveNegativeTargets.push(target);
+    const liveNegativeTargets: ReviewTarget[] = [];
+    for (const target of createdTargets) {
+      const observation = await findHistoryAnswerById(staff.fhir, bulkHistoryAnswerId(encounterId, target));
+      if (observation && isPersistedBulkNegative(observation, request.patientReference, request.encounterReference, target)) {
+        liveNegativeTargets.push(target);
+      }
+    }
+    let act: { status: number; body: unknown } | undefined;
+    if (liveNegativeTargets.length > 0) act = await recordHistoryItemReview(staff.fhir, reviewInput(liveNegativeTargets));
+    if (writeError) return { status: 503, body: { error: errorMessage(writeError) } };
+    return act ?? historyBulkNoActResponse(request, staff.staffReference, recordedAt);
+  } finally {
+    if (leaveRequest() && lock) {
+      try { await releaseHistoryBulkDenialLock(staff.fhir, lock); } catch { /* A quiescent lock is ignored by reads. */ }
     }
   }
-  let act: { status: number; body: unknown } | undefined;
-  if (liveNegativeTargets.length > 0) act = await recordHistoryItemReview(staff.fhir, reviewInput(liveNegativeTargets));
-  if (writeError) return { status: 503, body: { error: errorMessage(writeError) } };
-  return act ?? { status: 200, body: {
-    sectionKey: request.sectionKey,
-    gestureId: request.gestureId,
-    method: "bulk",
-    targets: [],
-    actorReference: staff.staffReference,
-    recordedAt,
-    message: "No negative answers were persisted by this request, so no review act was recorded.",
-  } };
 }
 
 function validateHistoryReviewTargets(declaration: HistorySubjectSection, targets: ReviewTarget[]): string | undefined {
@@ -532,6 +566,131 @@ function isPersistedBulkNegative(
     answer.optionCode === target.optionCode && answer.eye === target.eye && answer.value.kind === "tri-state" && answer.value.status === "negative";
 }
 
+function historyBulkNoActResponse(
+  request: Pick<z.infer<typeof itemHistoryReviewRequestSchema>, "sectionKey" | "gestureId">,
+  actorReference: string,
+  recordedAt: string,
+) {
+  return { status: 200, body: {
+    sectionKey: request.sectionKey,
+    gestureId: request.gestureId,
+    method: "bulk",
+    targets: [],
+    actorReference,
+    recordedAt,
+    message: "No negative answers were persisted by this request, so no review act was recorded.",
+  } };
+}
+
+function historyBulkLockResource(
+  lock: Omit<HistoryBulkDenialLock, "id" | "versionId">,
+  existing?: Pick<Basic, "id" | "meta">,
+): Basic {
+  return {
+    resourceType: "Basic",
+    ...(existing?.id ? { id: existing.id } : {}),
+    meta: {
+      ...existing?.meta,
+      tag: [
+        ...(existing?.meta?.tag ?? []).filter(tag => tag.system !== HISTORY_BULK_DENIAL_LOCK_STATE_SYSTEM),
+        { system: HISTORY_BULK_DENIAL_LOCK_STATE_SYSTEM, code: lock.state },
+      ],
+    },
+    identifier: [
+      { system: HISTORY_BULK_DENIAL_GESTURE_SYSTEM, value: lock.gestureId },
+      { system: HISTORY_BULK_DENIAL_LOCK_CONTEXT_SYSTEM, value: `${lock.encounterReference}|${lock.sectionKey}` },
+    ],
+    code: { coding: [{ system: HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM, code: HISTORY_BULK_DENIAL_LOCK_CODE, display: "History bulk denial lock" }] },
+    subject: reference(lock.patientReference),
+    created: lock.recordedAt.slice(0, 10),
+    author: reference(lock.actorReference),
+  };
+}
+
+function parseHistoryBulkDenialLock(resource: Basic): HistoryBulkDenialLock {
+  const gestureId = resource.identifier?.find(identifier => identifier.system === HISTORY_BULK_DENIAL_GESTURE_SYSTEM)?.value;
+  const context = resource.identifier?.find(identifier => identifier.system === HISTORY_BULK_DENIAL_LOCK_CONTEXT_SYSTEM)?.value;
+  const state = resource.meta?.tag?.find(tag => tag.system === HISTORY_BULK_DENIAL_LOCK_STATE_SYSTEM)?.code;
+  const coded = resource.code.coding?.some(coding => coding.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && coding.code === HISTORY_BULK_DENIAL_LOCK_CODE);
+  const separator = context?.lastIndexOf("|") ?? -1;
+  const encounterReference = separator > 0 ? context!.slice(0, separator) : undefined;
+  const sectionKey = separator > 0 ? context!.slice(separator + 1) : undefined;
+  if (!resource.id || !coded || !gestureId || !z.string().uuid().safeParse(gestureId).success ||
+    !resource.subject?.reference?.match(/^Patient\/[A-Za-z0-9.-]+$/) ||
+    !resource.author?.reference?.match(/^(Practitioner|PractitionerRole)\/[A-Za-z0-9.-]+$/) ||
+    !encounterReference?.match(/^Encounter\/[A-Za-z0-9.-]+$/) || sectionKey !== "review-of-systems" ||
+    (state !== "in-flight" && state !== "released") || !resource.created || resource.extension?.length) {
+    throw new Error("History bulk denial lock is incomplete or contains replay state.");
+  }
+  return {
+    id: resource.id,
+    ...(resource.meta?.versionId ? { versionId: resource.meta.versionId } : {}),
+    gestureId,
+    patientReference: resource.subject.reference!,
+    encounterReference,
+    sectionKey,
+    actorReference: resource.author.reference!,
+    recordedAt: resource.created,
+    state,
+  };
+}
+
+async function loadHistoryBulkDenialLock(fhir: HpiFhirClient, gestureId: string): Promise<HistoryBulkDenialLock | undefined> {
+  const rows = await searchAll<Basic>(fhir, "Basic", {
+    code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${HISTORY_BULK_DENIAL_LOCK_CODE}`,
+    identifier: `${HISTORY_BULK_DENIAL_GESTURE_SYSTEM}|${gestureId}`,
+    _count: "2",
+  }, { maxRows: 2 });
+  if (rows.length > 1) throw new Error("History bulk gesture matches multiple locks.");
+  return rows[0] ? parseHistoryBulkDenialLock(rows[0]) : undefined;
+}
+
+async function createHistoryBulkDenialLock(
+  fhir: HpiFhirClient,
+  lock: Omit<HistoryBulkDenialLock, "id" | "versionId">,
+): Promise<HistoryBulkDenialLock> {
+  return parseHistoryBulkDenialLock(await fhir.create(historyBulkLockResource(lock), {
+    "If-None-Exist": `identifier=${HISTORY_BULK_DENIAL_GESTURE_SYSTEM}|${lock.gestureId}`,
+    ...WRITE_HEADERS,
+  }));
+}
+
+async function releaseHistoryBulkDenialLock(fhir: HpiFhirClient, lock: HistoryBulkDenialLock): Promise<void> {
+  const resource = historyBulkLockResource({ ...lock, state: "released" }, {
+    id: lock.id,
+    ...(lock.versionId ? { meta: { versionId: lock.versionId } } : {}),
+  });
+  await fhir.update("Basic", lock.id, resource, {
+    ...(lock.versionId ? { "If-Match": `W/\"${lock.versionId}\"` } : {}),
+    ...WRITE_HEADERS,
+  });
+}
+
+function historyBulkLockMatches(
+  lock: HistoryBulkDenialLock,
+  request: Pick<z.infer<typeof itemHistoryReviewRequestSchema>, "gestureId" | "patientReference" | "encounterReference" | "sectionKey">,
+  actorReference: string,
+): boolean {
+  return lock.gestureId === request.gestureId && lock.patientReference === request.patientReference &&
+    lock.encounterReference === request.encounterReference && lock.sectionKey === request.sectionKey && lock.actorReference === actorReference;
+}
+
+function enterHistoryBulkRequest(request: Pick<z.infer<typeof itemHistoryReviewRequestSchema>, "gestureId" | "patientReference" | "encounterReference" | "sectionKey">) {
+  const existing = activeHistoryBulkRequests.get(request.gestureId);
+  activeHistoryBulkRequests.set(request.gestureId, {
+    count: (existing?.count ?? 0) + 1,
+    patientReference: request.patientReference,
+    encounterReference: request.encounterReference,
+    sectionKey: request.sectionKey,
+  });
+  return () => {
+    const active = activeHistoryBulkRequests.get(request.gestureId);
+    if (!active || active.count <= 1) { activeHistoryBulkRequests.delete(request.gestureId); return true; }
+    activeHistoryBulkRequests.set(request.gestureId, { ...active, count: active.count - 1 });
+    return false;
+  };
+}
+
 export async function handleHistoryItemRetractionRequest(deps: HpiEndpointDeps, input: { authHeader: string | undefined; body: unknown }) {
   const parsed = itemHistoryRetractionRequestSchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: "A retraction requires one valid target and original review." } };
@@ -548,9 +707,13 @@ export async function handleHistoryItemActsRequest(deps: HpiEndpointDeps, input:
     const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
     const patientReference = encounter.subject?.reference;
     if (!patientReference) return { status: 400, body: { error: "Encounter has no patient." } };
-    const groups = await Promise.all([HISTORY_ITEM_REVIEW_CODE, HISTORY_ITEM_RETRACTION_CODE].map(code =>
-      searchAll<Observation>(staff.fhir, "Observation", { encounter: `Encounter/${encounterId}`,
-        code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${code}`, _count: "200" })));
+    const [groups, lockResources] = await Promise.all([
+      Promise.all([HISTORY_ITEM_REVIEW_CODE, HISTORY_ITEM_RETRACTION_CODE].map(code =>
+        searchAll<Observation>(staff.fhir, "Observation", { encounter: `Encounter/${encounterId}`,
+          code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${code}`, _count: "200" }))),
+      searchAll<Basic>(staff.fhir, "Basic", { subject: patientReference,
+        code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${HISTORY_BULK_DENIAL_LOCK_CODE}`, _count: "200" }),
+    ]);
     const live = groups.flat().filter(row => row.id && row.subject?.reference === patientReference &&
       row.encounter?.reference === `Encounter/${encounterId}` && row.status !== "entered-in-error" && row.status !== "cancelled");
     const retracted = historyRetractedTargets(live, patientReference);
@@ -562,6 +725,11 @@ export async function handleHistoryItemActsRequest(deps: HpiEndpointDeps, input:
       }),
       retractions: live.filter(row => row.code.coding?.some(c => c.code === HISTORY_ITEM_RETRACTION_CODE)).map(row =>
         ({ ...parseHistoryItemRetraction(row), attestationReference: `Observation/${row.id}`, recordedAt: row.effectiveDateTime })),
+      locks: lockResources.flatMap(resource => {
+        try { return [parseHistoryBulkDenialLock(resource)]; } catch { return []; }
+      }).filter(lock => lock.patientReference === patientReference && lock.encounterReference === `Encounter/${encounterId}` &&
+        lock.state === "in-flight" && activeHistoryBulkRequests.has(lock.gestureId))
+        .map(lock => ({ sectionKey: lock.sectionKey, gestureId: lock.gestureId })),
     } };
   });
 }
@@ -728,7 +896,7 @@ async function persistHistoryItemAct(
 ): Promise<{ status: number; body: unknown }> {
   const identifier = act.identifier![0];
   const findExisting = () => findHistoryItemAct(fhir, `${identifier.system}|${identifier.value}`);
-  const responseFor = (existing: Observation): { status: number; body: unknown } => {
+  const responseFor = async (existing: Observation): Promise<{ status: number; body: unknown }> => {
     if (existing.subject?.reference !== input.patientReference || existing.encounter?.reference !== input.encounterReference ||
       existing.status === "entered-in-error" || existing.status === "cancelled" || !existing.id) {
       return { status: 409, body: { error: "History review gesture is already used by another or retired act." } };
@@ -738,6 +906,7 @@ async function persistHistoryItemAct(
     if (!saved) {
       return { status: 409, body: { error: "History review gesture targets and method are immutable." } };
     }
+    await ensureHistoryItemActProvenance(fhir, existing);
     return { status: 200, body: { sectionKey: input.sectionKey, gestureId: input.gestureId,
       ...saved, actorReference: existing.performer?.[0]?.reference, recordedAt: existing.effectiveDateTime,
       attestationReference: `Observation/${existing.id}` } };
@@ -745,15 +914,13 @@ async function persistHistoryItemAct(
   const existing = await findExisting();
   if (existing) return responseFor(existing);
   const fullUrl = `urn:uuid:${randomUUID()}`;
-  const provenance: Provenance = {
-    resourceType: "Provenance", target: [reference(fullUrl), reference(input.encounterReference), reference(input.patientReference)],
-    recorded: input.recordedAt, activity: odosConcept("CREATE", "Record explicit history item review"),
-    agent: [{ type: odosConcept("author", "Author"), who: reference(input.actorReference) }],
-  };
+  const provenance = historyItemActProvenance(act, fullUrl);
+  const provenanceTag = provenance.meta!.tag![0]!;
   const request: Bundle = { resourceType: "Bundle", type: "transaction", entry: [
     // A fresh, unobserved version cannot authorize replacement if a concurrent gesture won.
     { fullUrl, resource: act, request: { method: "PUT", url: `Observation?identifier=${identifier.system}|${identifier.value}`, ifMatch: `W/"${randomUUID()}"` } },
-    { resource: provenance, request: { method: "POST", url: "Provenance" } },
+    { resource: provenance, request: { method: "POST", url: "Provenance",
+      ifNoneExist: `_tag=${provenanceTag.system}|${provenanceTag.code}` } },
   ] };
   let result: Bundle;
   try {
@@ -773,6 +940,58 @@ async function persistHistoryItemAct(
   const saved = await findExisting();
   if (!saved) throw new Error("History item review was not found after persistence.");
   return responseFor(saved);
+}
+
+function historyItemActProvenanceTag(act: Observation) {
+  const value = act.identifier?.find(identifier => identifier.system === HISTORY_REVIEW_ATTESTATION_IDENTIFIER_SYSTEM)?.value;
+  if (!value) throw new Error("History item review has no gesture identifier.");
+  return {
+    system: `${HISTORY_REVIEW_ATTESTATION_IDENTIFIER_SYSTEM}/provenance`,
+    code: createHash("sha256").update(value).digest("hex"),
+  };
+}
+
+function historyItemActProvenance(act: Observation, targetReference: string): Provenance {
+  const patientReference = act.subject?.reference;
+  const encounterReference = act.encounter?.reference;
+  const recordedAt = act.effectiveDateTime;
+  const actorReference = act.performer?.[0]?.reference;
+  if (!patientReference || !encounterReference || !recordedAt || !actorReference) {
+    throw new Error("History item review cannot be attributed for Provenance.");
+  }
+  return {
+    resourceType: "Provenance",
+    meta: { tag: [historyItemActProvenanceTag(act)] },
+    target: [reference(targetReference), reference(encounterReference), reference(patientReference)],
+    recorded: recordedAt,
+    activity: odosConcept("CREATE", "Record explicit history item review"),
+    agent: [{ type: odosConcept("author", "Author"), who: reference(actorReference) }],
+  };
+}
+
+async function ensureHistoryItemActProvenance(fhir: HpiFhirClient, act: Observation): Promise<void> {
+  if (!act.id) throw new Error("History item review has no persisted id.");
+  const tag = historyItemActProvenanceTag(act);
+  const find = async () => searchAll<Provenance>(fhir, "Provenance", { _tag: `${tag.system}|${tag.code}`, _count: "2" }, { maxRows: 2 });
+  let rows = await find();
+  if (rows.length > 1) throw new Error("History item review matches multiple Provenance records.");
+  if (rows.length === 0) {
+    const provenance = historyItemActProvenance(act, `Observation/${act.id}`);
+    const request: Bundle = { resourceType: "Bundle", type: "transaction", entry: [
+      { resource: provenance, request: { method: "POST", url: "Provenance", ifNoneExist: `_tag=${tag.system}|${tag.code}` } },
+    ] };
+    const result = await fhir.executeTransaction(request, { "X-ODOS-Source": "mcp/review_history_items", Prefer: "return=representation" });
+    assertSuccessfulTransaction(request, result);
+    rows = await find();
+  }
+  const provenance = rows[0];
+  const expectedTargets = [`Observation/${act.id}`, act.encounter?.reference, act.subject?.reference];
+  const provenanceTargets = provenance?.target.flatMap(target => target.reference ? [target.reference] : []) ?? [];
+  if (!provenance || provenance.recorded !== act.effectiveDateTime ||
+    provenance.agent?.[0]?.who.reference !== act.performer?.[0]?.reference || provenanceTargets.length !== expectedTargets.length ||
+    expectedTargets.some(target => !target || !provenanceTargets.includes(target))) {
+    throw new Error("History item review Provenance is incomplete.");
+  }
 }
 
 export function deriveFollowUpAnswerPrefills(

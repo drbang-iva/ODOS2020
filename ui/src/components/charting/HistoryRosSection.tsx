@@ -15,7 +15,10 @@ export function HistoryRosSection({ declaration, catalogs, patientReference, enc
   const [open, setOpen] = useState(!followUp);
   const sectionBusy = useSectionWriteBusy(encounterReference, [declaration.key]);
   useEffect(() => setOpen(!followUp), [followUp]);
-  const { record, acts, ready, busy, error, setError, refresh, gesture, bulkDeny, dates, current } = useHistoryItemReview({ patientReference, encounterReference, historyVersion, onChanged, onRecordedChange });
+  const { record, acts, ready, busy, error, setError, refresh, gesture, bulkDeny, dates, current } = useHistoryItemReview({
+    patientReference, encounterReference, historyVersion, onChanged, onRecordedChange,
+    onReconciled: saved => onBulkRecorded(saved.filter(answer => answer.templateKey === declaration.key) as HistoryTemplateAnswer[]),
+  });
   function put(sectionId: string, value: HistoryTemplateAnswer["value"], optionCode?: string) {
     const prior = answers.find(answer => answer.sectionId === sectionId && answer.optionCode === optionCode);
     onChange({ id: prior?.id ?? makeAnswerId(sectionId, optionCode),

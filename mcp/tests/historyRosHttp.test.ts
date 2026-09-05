@@ -4,7 +4,7 @@ import test from "node:test";
 import express from "express";
 import { historyRosFixture } from "./helpers/historyRosFixture.js";
 import * as endpoints from "../src/clinical-graph/hpi-endpoint.js";
-import { buildHistoryAnswerObservation, HISTORY_ITEM_REVIEW_CODE, parseHistoryAnswerObservation, parseHistoryItemReview } from "../src/clinical-graph/history-answer-observation.js";
+import { buildHistoryAnswerObservation, HISTORY_ITEM_REVIEW_CODE, isHistoryAnswerObservation, parseHistoryAnswerObservation, parseHistoryItemReview } from "../src/clinical-graph/history-answer-observation.js";
 import { HISTORY_OPTION_CATALOGS } from "../src/clinical-graph/history-template-engine.js";
 import { handleEncounterVoidRequest } from "../src/clinical-graph/encounter-void-endpoint.js";
 import type { Observation } from "@medplum/fhirtypes";
@@ -116,7 +116,10 @@ test("a partial bulk run records its own act and a new gesture covers only the r
   assert.equal(acts().length, 2);
   assert.deepEqual(acts().map(act => parseHistoryItemReview(act).targets), [first.targets.slice(0, 7), second.targets]);
   assert.notEqual(acts()[0].identifier?.[0]?.value, acts()[1].identifier?.[0]?.value);
-  assert.equal(s.rows.some(row => row.resourceType === "Basic"), false);
+  const locks = s.rows.filter(row => row.resourceType === "Basic" && row.code.coding?.some(coding => coding.code === "history-bulk-denial-lock"));
+  assert.equal(locks.length, 2);
+  assert.ok(locks.every(lock => lock.extension === undefined));
+  assert.doesNotMatch(JSON.stringify(locks), /target/i);
 });
 
 test("conditional create preserves a concurrent explicit Yes and excludes it from the bulk act", async () => {
@@ -137,6 +140,42 @@ test("conditional create preserves a concurrent explicit Yes and excludes it fro
   assert.ok(act); assert.deepEqual(parseHistoryItemReview(act).targets, [body.targets[1]]);
 });
 
+test("server reread excludes a created answer changed positive before the act", async () => {
+  const s = historyRosFixture();
+  const body = bulkBody(1);
+  const staff = await s.deps.authenticate("synthetic");
+  assert.ok(staff);
+  const search = staff.fhir.search.bind(staff.fhir);
+  let changed = false;
+  staff.fhir.search = async (type, params = {}) => {
+    if (!changed && type === "Observation" && params.identifier) {
+      const index = s.rows.findIndex(row => row.resourceType === "Observation" &&
+        row.identifier?.some(identifier => `${identifier.system}|${identifier.value}` === params.identifier));
+      if (index !== -1) {
+        const current = s.rows[index] as Observation;
+        const parsed = parseHistoryAnswerObservation(current);
+        s.rows[index] = { ...buildHistoryAnswerObservation({ ...parsed, value: { kind: "tri-state", status: "positive" } }, {
+          patientReference: body.patientReference,
+          encounterReference: body.encounterReference,
+          recordedAt: "2026-09-05T12:00:01Z",
+        }), id: current.id, meta: current.meta };
+        changed = true;
+      }
+    }
+    return search(type, params);
+  };
+
+  const result = await bulk(s, body);
+
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const current = s.rows.find((row): row is Observation => row.resourceType === "Observation" && isHistoryAnswerObservation(row));
+  assert.ok(current);
+  assert.equal((parseHistoryAnswerObservation(current).value as any).status, "positive");
+  assert.deepEqual((result.body as any).targets, []);
+  assert.equal(s.rows.some(row => row.resourceType === "Observation" &&
+    row.code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE)), false);
+});
+
 test("completed gesture replay is byte-stable and changed targets remain immutable", async () => {
   const s = historyRosFixture();
   const body = bulkBody(2);
@@ -149,6 +188,92 @@ test("completed gesture replay is byte-stable and changed targets remain immutab
   const changed = await bulk(s, { ...body, targets: [body.targets[0]] });
   assert.equal(changed.status, 409);
   assert.match((changed.body as any).error, /immutable/i);
+});
+
+test("completed gesture replay restores its paired Provenance before reporting success", async () => {
+  const s = historyRosFixture();
+  const body = bulkBody(2);
+  const first = await bulk(s, body);
+  assert.equal(first.status, 200);
+  const provenanceIndex = s.rows.findIndex(row => row.resourceType === "Provenance" &&
+    !row.meta?.tag?.some(tag => tag.system?.endsWith("/unit")));
+  assert.notEqual(provenanceIndex, -1);
+  s.rows.splice(provenanceIndex, 1);
+
+  const replay = await bulk(s, body);
+
+  assert.equal(replay.status, 200, JSON.stringify(replay.body));
+  assert.deepEqual(replay, first);
+  assert.equal(s.rows.filter(row => row.resourceType === "Provenance" &&
+    !row.meta?.tag?.some(tag => tag.system?.endsWith("/unit"))).length, 1,
+  "a saved act is incomplete until its own Provenance is present");
+});
+
+test("completed gesture replay refuses a Provenance paired to another target", async () => {
+  const s = historyRosFixture();
+  const body = bulkBody(2);
+  assert.equal((await bulk(s, body)).status, 200);
+  const provenance = s.rows.find(row => row.resourceType === "Provenance" &&
+    !row.meta?.tag?.some(tag => tag.system?.endsWith("/unit")));
+  assert.ok(provenance);
+  provenance.target = [{ reference: "Observation/other-act" }];
+
+  await assert.rejects(() => bulk(s, body), /Provenance is incomplete/);
+});
+
+test("an in-flight bulk lock is durable, target-free, and released after the owning request settles", async () => {
+  const s = historyRosFixture();
+  const body = bulkBody(1);
+  const actHold = deferred();
+  s.raceAt(2, async () => { actHold.mark(); await actHold.released; });
+
+  const pending = bulk(s, body);
+  await actHold.held;
+  try {
+    const lock = s.rows.find(row => row.resourceType === "Basic" && row.code.coding?.some(coding => coding.code === "history-bulk-denial-lock"));
+    assert.ok(lock, "the server must persist section ownership before the act can commit");
+    assert.equal(JSON.stringify(lock).includes("target"), false, "the lock must never store intended or persisted targets");
+    const whileHeld = await endpoints.handleHistoryItemActsRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });
+    assert.deepEqual((whileHeld.body as any).locks, [{ sectionKey: "review-of-systems", gestureId: body.gestureId }]);
+  } finally { actHold.release(); }
+  assert.equal((await pending).status, 200);
+  const after = await endpoints.handleHistoryItemActsRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });
+  assert.deepEqual((after.body as any).locks, []);
+});
+
+test("all-positive bulk writes no negative answer and no review act", async () => {
+  const s = historyRosFixture();
+  const body = bulkBody(2);
+  s.race(() => {
+    for (const [index, candidate] of body.targets.entries()) {
+      const answerId = `history-current-${candidate.sectionKey}-${candidate.sectionId}-${candidate.optionCode}`;
+      s.rows.push({ ...buildHistoryAnswerObservation({ id: answerId, subjectScope: "encounter", templateKey: candidate.sectionKey,
+        sectionId: candidate.sectionId, optionCode: candidate.optionCode, value: { kind: "tri-state", status: "positive" } }, {
+        patientReference: body.patientReference, encounterReference: body.encounterReference, recordedAt: `2026-09-05T12:00:0${index}Z`,
+      }), id: `concurrent-positive-${index}`, meta: { versionId: String(index + 1) } });
+    }
+  });
+
+  const result = await bulk(s, body);
+
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.deepEqual((result.body as any).targets, []);
+  assert.equal(s.rows.filter(row => row.resourceType === "Observation" &&
+    row.code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE)).length, 0,
+  "zero persisted negatives must produce zero review acts");
+});
+
+test("concurrent same-gesture requests keep one answer-unit Provenance and one act Provenance", async () => {
+  const s = historyRosFixture();
+  const body = bulkBody(1);
+
+  const results = await Promise.all([bulk(s, body), bulk(s, body)]);
+
+  assert.deepEqual(results.map(result => result.status), [200, 200]);
+  const provenance = s.rows.filter(row => row.resourceType === "Provenance");
+  assert.equal(provenance.length, 2,
+    `one answer-unit Provenance plus one act Provenance: ${JSON.stringify(provenance.map(row => ({ tag: row.meta?.tag, activity: row.activity?.coding?.[0]?.code })))}`);
+  assert.equal(new Set(provenance.map(row => JSON.stringify(row.meta?.tag))).size, 2);
 });
 
 test("bulk refuses missing identity and pre-answered targets before writing", async () => {
@@ -208,3 +333,10 @@ test("I2 every item-review HTTP door enforces one contract", async () => {
     assert.equal(JSON.stringify(partial.rows), interrupted, "the partial run's act reserves the gesture");
   }
 });
+
+function deferred() {
+  let mark!: () => void, release!: () => void;
+  const held = new Promise<void>(resolve => { mark = resolve; });
+  const released = new Promise<void>(resolve => { release = resolve; });
+  return { held, released, mark, release };
+}

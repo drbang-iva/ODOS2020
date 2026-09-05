@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: ROS browser: truncated-response keeps the section frozen until the server request settles
+not ok 1 - ROS browser: truncated-response keeps the section frozen until the server request settles
+  ---
+  duration_ms: 1603.74675
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round6/ui/tests/historyRosBrowser.test.tsx:1:17685'
+  failureType: 'testCodeFailure'
+  error: |-
+    unknown browser outcomes and reload must retain the section freeze
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round6/ui/tests/historyRosBrowser.test.tsx:305:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11863.912084

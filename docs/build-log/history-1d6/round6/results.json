@@ -1,0 +1,322 @@
+[
+  {
+    "id": 1,
+    "name": "oversize-answer-unit",
+    "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+    "command": "cd mcp && node --import tsx --test --test-name-pattern='bulk units derive seven' tests/historyRosHttp.test.ts",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 3,
+    "name": "intended-act-targets",
+    "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+    "command": "cd mcp && node --import tsx --test --test-name-pattern='conditional create preserves' tests/historyRosHttp.test.ts",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 4,
+    "name": "remove-answer-conditional-create",
+    "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+    "command": "cd mcp && node --import tsx --test --test-name-pattern='conditional create preserves' tests/historyRosHttp.test.ts",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 5,
+    "name": "remove-completed-act-short-circuit",
+    "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+    "command": "cd mcp && node --import tsx --test --test-name-pattern='completed gesture replay is byte-stable' tests/historyRosHttp.test.ts",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 6,
+    "name": "restore-retired-summary-token",
+    "file": "mcp/src/clinical-graph/history-template-engine.ts",
+    "command": "cd mcp && node --import tsx --test --test-name-pattern='prior encounter acts' tests/historyRos.test.ts",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 11,
+    "name": "remove-legacy-bulk-refusal",
+    "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+    "command": "cd mcp && node --import tsx --test --test-name-pattern='I2 every' tests/historyRosHttp.test.ts",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 14,
+    "name": "remove-row-freeze",
+    "file": "ui/src/components/charting/HistoryRosSection.tsx",
+    "command": "cd ui && node --import tsx --test --test-name-pattern='comprehensive burst' tests/historyRosBrowser.test.tsx",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 15,
+    "name": "divergent-http-door",
+    "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+    "command": "cd mcp && node --import tsx --test --test-name-pattern='I2 every' tests/historyRosHttp.test.ts",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 18,
+    "name": "restore-stale-target-fallback",
+    "file": "ui/src/components/charting/useHistoryItemReview.tsx",
+    "command": "cd ui && node --import tsx --test --test-name-pattern='comprehensive burst' tests/historyRosBrowser.test.tsx",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 19,
+    "name": "unconditional-lease-release",
+    "file": "ui/src/components/charting/useHistoryItemReview.tsx",
+    "command": "cd ui && node --import tsx --test --test-name-pattern='comprehensive burst' tests/historyRosBrowser.test.tsx",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 20,
+    "name": "client-derived-act-targets",
+    "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+    "command": "cd mcp && node --import tsx --test --test-name-pattern='conditional create preserves' tests/historyRosHttp.test.ts",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 21,
+    "name": "bypass-server-negative-revalidation",
+    "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+    "command": "cd mcp && node --import tsx --test --test-name-pattern='server reread excludes' tests/historyRosHttp.test.ts",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 22,
+    "name": "release-after-unknown-client-outcome",
+    "file": "ui/src/components/charting/useHistoryItemReview.tsx",
+    "command": "cd ui && node --import tsx --test --test-name-pattern='truncated-response' tests/historyRosBrowser.test.tsx",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 23,
+    "name": "hide-durable-lock-after-reload",
+    "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+    "command": "cd ui && node --import tsx --test --test-name-pattern='same-tab-reload' tests/historyRosBrowser.test.tsx",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 24,
+    "name": "skip-completed-act-provenance-repair",
+    "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+    "command": "cd mcp && node --import tsx --test --test-name-pattern='completed gesture replay restores' tests/historyRosHttp.test.ts",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "id": 25,
+    "name": "remove-header-disabled-guard",
+    "file": "ui/src/components/charting/HistoryRosSection.tsx",
+    "command": "cd ui && node --import tsx --test --test-name-pattern='comprehensive burst' tests/historyRosBrowser.test.tsx",
+    "red": {
+      "exit": 1,
+      "signal": null,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "signal": null,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  }
+]

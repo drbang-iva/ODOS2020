@@ -1,0 +1,12 @@
+TAP version 13
+# PARTIAL_ACT_TRANSPORT {"mode":"visible-partial-response","responses":[500,409,409],"deletes":1,"acts":0,"provenance":1}
+# Subtest: real FHIR transport repairs or compensates visible-partial-response
+ok 1 - real FHIR transport repairs or compensates visible-partial-response
+# PARTIAL_ACT_TRANSPORT {"mode":"lost-partial-response","responses":[500,200,200],"deletes":0,"acts":1,"provenance":2}
+# Subtest: real FHIR transport repairs or compensates lost-partial-response
+ok 2 - real FHIR transport repairs or compensates lost-partial-response
+1..2
+# tests 2
+# pass 2
+# fail 0
+# skipped 0
