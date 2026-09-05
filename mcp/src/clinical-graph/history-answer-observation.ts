@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { Observation } from "@medplum/fhirtypes";
 import type { HistoryTemplateAnswer } from "./history-template-engine.js";
 
@@ -12,6 +13,104 @@ export const HISTORY_REVIEW_ATTESTATION_CODE = "history-review-attestation";
 export const HISTORY_REVIEW_ATTESTATION_IDENTIFIER_SYSTEM = `${BASE}/NamingSystem/history-review-attestation`;
 export const HISTORY_REVIEW_SECTION_EXTENSION_URL = `${BASE}/StructureDefinition/odos-history-review-section`;
 const HISTORY_REVIEW_ACTION_SYSTEM = `${BASE}/CodeSystem/odos-history-review-action`;
+
+export const HISTORY_ITEM_REVIEW_CODE = "history-item-review";
+export const HISTORY_ITEMS_REVIEWED_ACTION = "items-reviewed";
+export const HISTORY_REVIEW_METHOD_EXTENSION_URL = `${BASE}/StructureDefinition/odos-history-review-method`;
+export const HISTORY_REVIEW_TARGET_EXTENSION_URL = `${BASE}/StructureDefinition/odos-history-review-target`;
+export const historyReviewTargetSchema = z.object({
+  sectionKey: z.string().regex(/^[a-z][a-z0-9-]{0,119}$/),
+  sectionId: z.string().regex(/^[a-z][a-z0-9-]{0,119}$/),
+  optionCode: z.string().regex(/^[a-z0-9][a-z0-9-]{0,119}$/).optional(),
+  eye: z.enum(["OD", "OS", "OU"]).optional(),
+}).strict();
+export type ReviewTarget = z.infer<typeof historyReviewTargetSchema>;
+export interface HistoryItemReview {
+  sectionKey: string;
+  gestureId: string;
+  method: "individual" | "bulk";
+  targets: ReviewTarget[];
+  patientReference: string;
+  encounterReference: string;
+  actorReference: string;
+  recordedAt: string;
+}
+
+export function historyReviewTargetKey(target: ReviewTarget): string {
+  return [target.sectionKey, target.sectionId, target.optionCode ?? "", target.eye ?? ""].join("|");
+}
+
+export function buildHistoryItemReview(input: HistoryItemReview): Observation {
+  return {
+    resourceType: "Observation",
+    identifier: [{ system: HISTORY_REVIEW_ATTESTATION_IDENTIFIER_SYSTEM,
+      value: `${input.encounterReference.slice("Encounter/".length)}:${input.sectionKey}:${input.gestureId}` }],
+    status: "preliminary",
+    code: { coding: [{ system: HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM, code: HISTORY_ITEM_REVIEW_CODE, display: "History item review" }] },
+    subject: { reference: input.patientReference },
+    encounter: { reference: input.encounterReference },
+    effectiveDateTime: input.recordedAt,
+    issued: input.recordedAt,
+    performer: [{ reference: input.actorReference }],
+    valueCodeableConcept: { coding: [{ system: HISTORY_REVIEW_ACTION_SYSTEM, code: HISTORY_ITEMS_REVIEWED_ACTION, display: "Items reviewed" }] },
+    extension: [
+      { url: HISTORY_REVIEW_SECTION_EXTENSION_URL, valueCode: input.sectionKey },
+      { url: HISTORY_REVIEW_METHOD_EXTENSION_URL, valueCode: input.method },
+      ...input.targets.map(target => ({ url: HISTORY_REVIEW_TARGET_EXTENSION_URL, valueString: JSON.stringify(target) })),
+    ],
+  };
+}
+
+export function parseHistoryItemReview(observation: Observation): Pick<HistoryItemReview, "method" | "targets"> {
+  if (!observation.code.coding?.some(c => c.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && c.code === HISTORY_ITEM_REVIEW_CODE) ||
+    !observation.valueCodeableConcept?.coding?.some(c => c.system === HISTORY_REVIEW_ACTION_SYSTEM && c.code === HISTORY_ITEMS_REVIEWED_ACTION)) {
+    throw new Error("Observation is not an ODOS history item review.");
+  }
+  const methods = observation.extension?.filter(e => e.url === HISTORY_REVIEW_METHOD_EXTENSION_URL) ?? [];
+  const method = methods[0]?.valueCode;
+  if (methods.length !== 1 || (method !== "individual" && method !== "bulk")) throw new Error("History item review method is invalid.");
+  const targets = (observation.extension ?? []).filter(e => e.url === HISTORY_REVIEW_TARGET_EXTENSION_URL)
+    .map(e => historyReviewTargetSchema.parse(JSON.parse(e.valueString ?? "null")));
+  if (!targets.length) throw new Error("History item review has no targets.");
+  return { method, targets };
+}
+
+export function deriveHistoryLastReviewed(
+  answers: Observation[],
+  acts: Observation[],
+  patientReference: string,
+): Array<{ target: ReviewTarget; lastReviewed: string }> {
+  const latest = new Map<string, { target: ReviewTarget; lastReviewed: string }>();
+  const answerTargets = new Map<string, ReviewTarget>();
+  const live = (row: Observation) => row.subject?.reference === patientReference && row.status !== "entered-in-error" && row.status !== "cancelled";
+  const record = (target: ReviewTarget, date: string | undefined) => {
+    if (!date || !Number.isFinite(Date.parse(date))) return;
+    const key = historyReviewTargetKey(target), existing = latest.get(key);
+    if (!existing || Date.parse(date) > Date.parse(existing.lastReviewed)) latest.set(key, { target, lastReviewed: date });
+  };
+  for (const observation of answers) {
+    if (!live(observation) || !isHistoryAnswerObservation(observation)) continue;
+    const answer = parseHistoryAnswerObservation(observation);
+    if (!answer.subjectScope) continue;
+    const target: ReviewTarget = { sectionKey: answer.templateKey, sectionId: answer.sectionId,
+      ...(answer.optionCode ? { optionCode: answer.optionCode } : {}), ...(answer.eye ? { eye: answer.eye } : {}) };
+    if (observation.id) answerTargets.set(`Observation/${observation.id}`, target);
+    record(target, observation.effectiveDateTime);
+  }
+  for (const observation of acts) {
+    if (!live(observation)) continue;
+    if (observation.code.coding?.some(c => c.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && c.code === HISTORY_ITEM_REVIEW_CODE)) {
+      for (const target of parseHistoryItemReview(observation).targets) record(target, observation.effectiveDateTime);
+    } else if (observation.code.coding?.some(c => c.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && c.code === HISTORY_REVIEW_ATTESTATION_CODE) &&
+      observation.valueCodeableConcept?.coding?.some(c => c.system === HISTORY_REVIEW_ACTION_SYSTEM && c.code === "reviewed-no-change")) {
+      for (const reference of observation.derivedFrom ?? []) {
+        const target = answerTargets.get(reference.reference ?? "");
+        if (target) record(target, observation.effectiveDateTime);
+      }
+    }
+  }
+  return [...latest.values()];
+}
 
 export function buildHistoryAnswerObservation(
   answer: HistoryTemplateAnswer,

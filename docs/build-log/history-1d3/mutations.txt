@@ -1,0 +1,506 @@
+=== two-acts: RED exit 1 ===
+--- mcp/src/clinical-graph/history-answer-observation.ts
++++ mutant
+@@ -44,7 +44,7 @@
+   return {
+     resourceType: "Observation",
+     identifier: [{ system: HISTORY_REVIEW_ATTESTATION_IDENTIFIER_SYSTEM,
+-      value: `${input.encounterReference.slice("Encounter/".length)}:${input.sectionKey}:${input.gestureId}` }],
++      value: `${input.encounterReference.slice("Encounter/".length)}:${input.sectionKey}` }],
+     status: "preliminary",
+     code: { coding: [{ system: HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM, code: HISTORY_ITEM_REVIEW_CODE, display: "History item review" }] },
+     subject: { reference: input.patientReference },
+TAP version 13
+# Subtest: separate A then B gestures preserve two acts and both dates
+not ok 1 - separate A then B gestures preserve two acts and both dates
+  ---
+  duration_ms: 4.322916
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d3/mcp/tests/historyItemReview.test.ts:1:5227'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    409 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d3/mcp/tests/historyItemReview.test.ts:80:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 122.868084
+
+=== two-acts: RESTORE exit 0 ===
+TAP version 13
+# Subtest: separate A then B gestures preserve two acts and both dates
+ok 1 - separate A then B gestures preserve two acts and both dates
+  ---
+  duration_ms: 4.141375
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 97.04775
+
+=== idempotency: RED exit 1 ===
+--- mcp/src/clinical-graph/history-answer-observation.ts
++++ mutant
+@@ -44,7 +44,7 @@
+   return {
+     resourceType: "Observation",
+     identifier: [{ system: HISTORY_REVIEW_ATTESTATION_IDENTIFIER_SYSTEM,
+-      value: `${input.encounterReference.slice("Encounter/".length)}:${input.sectionKey}:${input.gestureId}` }],
++      value: `${input.encounterReference.slice("Encounter/".length)}:${input.sectionKey}:${input.gestureId}:${crypto.randomUUID()}` }],
+     status: "preliminary",
+     code: { coding: [{ system: HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM, code: HISTORY_ITEM_REVIEW_CODE, display: "History item review" }] },
+     subject: { reference: input.patientReference },
+TAP version 13
+# Subtest: retrying the same gesture produces one unchanged act and original response
+not ok 1 - retrying the same gesture produces one unchanged act and original response
+  ---
+  duration_ms: 4.82125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d3/mcp/tests/historyItemReview.test.ts:1:5692'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+        body: {
+          actorReference: 'Practitioner/test',
+    +     attestationReference: 'Observation/7a2272cc-0f93-4479-804d-2ce9e308d84a',
+    -     attestationReference: 'Observation/82e1d7c4-9eed-4349-ab43-01a6c6d9aa92',
+          gestureId: 'a67cf32a-e75a-40ab-b3e4-2fb4bc7a109d',
+          method: 'individual',
+    +     recordedAt: '2026-09-04T12:00:00Z',
+    -     recordedAt: '2026-09-01T12:00:00Z',
+          sectionKey: 'social-history',
+          targets: [
+            {
+              sectionId: 'tobacco',
+              sectionKey: 'social-history'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    status: 200
+    body:
+      sectionKey: 'social-history'
+      gestureId: 'a67cf32a-e75a-40ab-b3e4-2fb4bc7a109d'
+      method: 'individual'
+      targets:
+        0:
+          sectionKey: 'social-history'
+          sectionId: 'tobacco'
+      actorReference: 'Practitioner/test'
+      recordedAt: '2026-09-01T12:00:00Z'
+      attestationReference: 'Observation/82e1d7c4-9eed-4349-ab43-01a6c6d9aa92'
+  actual:
+    status: 200
+    body:
+      sectionKey: 'social-history'
+      gestureId: 'a67cf32a-e75a-40ab-b3e4-2fb4bc7a109d'
+      method: 'individual'
+      targets:
+        0:
+          sectionKey: 'social-history'
+          sectionId: 'tobacco'
+      actorReference: 'Practitioner/test'
+      recordedAt: '2026-09-04T12:00:00Z'
+      attestationReference: 'Observation/7a2272cc-0f93-4479-804d-2ce9e308d84a'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d3/mcp/tests/historyItemReview.test.ts:90:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 124.307791
+
+=== idempotency: RESTORE exit 0 ===
+TAP version 13
+# Subtest: retrying the same gesture produces one unchanged act and original response
+ok 1 - retrying the same gesture produces one unchanged act and original response
+  ---
+  duration_ms: 3.228666
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 96.697917
+
+=== legacy-coverage: RED exit 1 ===
+--- mcp/src/clinical-graph/history-answer-observation.ts
++++ mutant
+@@ -103,9 +103,8 @@
+       for (const target of parseHistoryItemReview(observation).targets) record(target, observation.effectiveDateTime);
+     } else if (observation.code.coding?.some(c => c.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && c.code === HISTORY_REVIEW_ATTESTATION_CODE) &&
+       observation.valueCodeableConcept?.coding?.some(c => c.system === HISTORY_REVIEW_ACTION_SYSTEM && c.code === "reviewed-no-change")) {
+-      for (const reference of observation.derivedFrom ?? []) {
+-        const target = answerTargets.get(reference.reference ?? "");
+-        if (target) record(target, observation.effectiveDateTime);
++      for (const target of answerTargets.values()) {
++        if (target.sectionKey === observation.extension?.find(e => e.url === HISTORY_REVIEW_SECTION_EXTENSION_URL)?.valueCode) record(target, observation.effectiveDateTime);
+       }
+     }
+   }
+TAP version 13
+# Subtest: legacy derivedFrom gives a review date only to the referenced answer
+not ok 1 - legacy derivedFrom gives a review date only to the referenced answer
+  ---
+  duration_ms: 9.094875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d3/mcp/tests/historyItemReview.test.ts:1:6981'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      [
+        {
+          lastReviewed: '2026-09-04T12:00:00Z',
+          target: {
+            sectionId: 'tobacco',
+    ...
+        {
+    +     lastReviewed: '2026-09-04T12:00:00Z',
+    -     lastReviewed: '2026-09-01T12:00:00Z',
+          target: {
+            sectionId: 'occupation',
+            sectionKey: 'social-history'
+          }
+        }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      target:
+        sectionKey: 'social-history'
+        sectionId: 'tobacco'
+      lastReviewed: '2026-09-04T12:00:00Z'
+    1:
+      target:
+        sectionKey: 'social-history'
+        sectionId: 'occupation'
+      lastReviewed: '2026-09-01T12:00:00Z'
+  actual:
+    0:
+      target:
+        sectionKey: 'social-history'
+        sectionId: 'tobacco'
+      lastReviewed: '2026-09-04T12:00:00Z'
+    1:
+      target:
+        sectionKey: 'social-history'
+        sectionId: 'occupation'
+      lastReviewed: '2026-09-04T12:00:00Z'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d3/mcp/tests/historyItemReview.test.ts:112:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 128.300292
+
+=== legacy-coverage: RESTORE exit 0 ===
+TAP version 13
+# Subtest: legacy derivedFrom gives a review date only to the referenced answer
+ok 1 - legacy derivedFrom gives a review date only to the referenced answer
+  ---
+  duration_ms: 7.249625
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 101.13475
+
+=== answers-write-no-acts: RED exit 1 ===
+--- mcp/src/clinical-graph/hpi-endpoint.ts
++++ mutant
+@@ -852,6 +852,10 @@
+       ? { resource, request: { method: "PUT" as const, url: `Observation/${existing.id}`, ...(existing.meta?.versionId ? { ifMatch: `W/\"${existing.meta.versionId}\"` } : {}) } }
+       : { fullUrl: `urn:uuid:hpi-answer-${index}`, resource, request: { method: "PUT" as const, url: `Observation?identifier=${resource.identifier?.[0]?.system}|${answer.id}` } };
+   });
++  if (changedAnswers.length) {
++    const emitted = buildHistoryItemReview({ ...context, sectionKey: "social-history", gestureId: randomUUID(), method: "individual", targets: [{sectionKey: "social-history", sectionId: "tobacco"}] });
++    entries.push({ resource: emitted, fullUrl: "urn:uuid:mutant", request: { method: "PUT", url: `Observation?identifier=${emitted.identifier?.[0]?.system}|${emitted.identifier?.[0]?.value}` } });
++  }
+   const reviews = (reviewObservations ?? []).flatMap((observation) => {
+     const sectionKey = observation?.extension?.find((extension) => extension.url === HISTORY_REVIEW_SECTION_EXTENSION_URL)?.valueCode;
+     if (!observation?.id || !sectionKey || !editedPatientSections.has(sectionKey) ||
+TAP version 13
+# Subtest: recording and changing an answer writes zero item-review acts
+not ok 1 - recording and changing an answer writes zero item-review acts
+  ---
+  duration_ms: 3.958958
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d3/mcp/tests/historyItemReview.test.ts:1:7557'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d3/mcp/tests/historyItemReview.test.ts:118:46)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 127.726833
+
+=== answers-write-no-acts: RESTORE exit 0 ===
+TAP version 13
+# Subtest: recording and changing an answer writes zero item-review acts
+ok 1 - recording and changing an answer writes zero item-review acts
+  ---
+  duration_ms: 3.177791
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 96.436291
+
+=== immutable-on-answer-edit: RED exit 1 ===
+--- mcp/src/clinical-graph/hpi-endpoint.ts
++++ mutant
+@@ -842,7 +842,6 @@
+   }));
+   const reviewObservations = editedPatientSections.size > 0 ? await searchAll<Observation>(fhir, "Observation", {
+     encounter: context.encounterReference,
+-    code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${HISTORY_REVIEW_ATTESTATION_CODE}`,
+     _count: "20",
+   }) : undefined;
+   const entries = changedAnswers.map((answer, index) => {
+@@ -857,7 +856,7 @@
+     if (!observation?.id || !sectionKey || !editedPatientSections.has(sectionKey) ||
+       observation.subject?.reference !== context.patientReference || observation.encounter?.reference !== context.encounterReference ||
+       observation.status === "entered-in-error" || observation.status === "cancelled" ||
+-      !observation.code.coding?.some((coding) => coding.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && coding.code === HISTORY_REVIEW_ATTESTATION_CODE)) return [];
++      !observation.code.coding?.some((coding) => coding.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && (coding.code === HISTORY_REVIEW_ATTESTATION_CODE || coding.code === HISTORY_ITEM_REVIEW_CODE))) return [];
+     return [{ observation, sectionKey }];
+   }).sort((left, right) => (left.observation.id ?? "").localeCompare(right.observation.id ?? ""));
+   const reviewRetirements = reviews.map(({ observation }) => ({
+TAP version 13
+# Subtest: editing an answer leaves existing item acts alive and unmodified
+not ok 1 - editing an answer leaves existing item acts alive and unmodified
+  ---
+  duration_ms: 6.149917
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d3/mcp/tests/historyItemReview.test.ts:1:8018'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      [
+        {
+          code: {
+            coding: [
+              {
+    ...
+          meta: {
+    +       versionId: '5276551c-d260-4d17-87e8-c464c72e1c73'
+    -       versionId: '97bfc1e7-4a91-41ef-9a85-659070598685'
+          },
+          performer: [
+            {
+              reference: 'Practitioner/test'
+            }
+          ],
+          resourceType: 'Observation',
+    +     status: 'entered-in-error',
+    -     status: 'preliminary',
+          subject: {
+            reference: 'Patient/item-review-patient'
+          },
+          valueCodeableConcept: {
+            coding: [
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      resourceType: 'Observation'
+      identifier:
+        0:
+          system: 'https://odos2020.com/fhir/NamingSystem/history-review-attestation'
+          value: 'current:social-history:8b2f966a-9b0d-4763-aa23-560c0bbe5bb4'
+      status: 'preliminary'
+      code:
+        coding:
+          0:
+            system: 'https://odos2020.com/fhir/CodeSystem/odos-history-review'
+            code: 'history-item-review'
+            display: 'History item review'
+      subject:
+        reference: 'Patient/item-review-patient'
+      encounter:
+        reference: 'Encounter/current'
+      effectiveDateTime: '2026-09-01T12:00:00Z'
+      issued: '2026-09-01T12:00:00Z'
+      performer:
+        0:
+          reference: 'Practitioner/test'
+      valueCodeableConcept:
+        coding:
+          0:
+            system: 'https://odos2020.com/fhir/CodeSystem/odos-history-review-action'
+            code: 'items-reviewed'
+            display: 'Items reviewed'
+      extension:
+        0:
+          url: 'https://odos2020.com/fhir/StructureDefinition/odos-history-review-section'
+          valueCode: 'social-history'
+        1:
+          url: 'https://odos2020.com/fhir/StructureDefinition/odos-history-review-method'
+          valueCode: 'individual'
+        2:
+          url: 'https://odos2020.com/fhir/StructureDefinition/odos-history-review-target'
+          valueString: '{"sectionKey":"social-history","sectionId":"tobacco"}'
+      id: '0e9d9ae2-6ec7-4c47-bab5-15287bfac2d7'
+      meta:
+        versionId: '97bfc1e7-4a91-41ef-9a85-659070598685'
+  actual:
+    0:
+      resourceType: 'Observation'
+      identifier:
+        0:
+          system: 'https://odos2020.com/fhir/NamingSystem/history-review-attestation'
+          value: 'current:social-history:8b2f966a-9b0d-4763-aa23-560c0bbe5bb4'
+      status: 'entered-in-error'
+      code:
+        coding:
+          0:
+            system: 'https://odos2020.com/fhir/CodeSystem/odos-history-review'
+            code: 'history-item-review'
+            display: 'History item review'
+      subject:
+        reference: 'Patient/item-review-patient'
+      encounter:
+        reference: 'Encounter/current'
+      effectiveDateTime: '2026-09-01T12:00:00Z'
+      issued: '2026-09-01T12:00:00Z'
+      performer:
+        0:
+          reference: 'Practitioner/test'
+      valueCodeableConcept:
+        coding:
+          0:
+            system: 'https://odos2020.com/fhir/CodeSystem/odos-history-review-action'
+            code: 'items-reviewed'
+            display: 'Items reviewed'
+      extension:
+        0:
+          url: 'https://odos2020.com/fhir/StructureDefinition/odos-history-review-section'
+          valueCode: 'social-history'
+        1:
+          url: 'https://odos2020.com/fhir/StructureDefinition/odos-history-review-method'
+          valueCode: 'individual'
+        2:
+          url: 'https://odos2020.com/fhir/StructureDefinition/odos-history-review-target'
+          valueString: '{"sectionKey":"social-history","sectionId":"tobacco"}'
+      id: '0e9d9ae2-6ec7-4c47-bab5-15287bfac2d7'
+      meta:
+        versionId: '5276551c-d260-4d17-87e8-c464c72e1c73'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d3/mcp/tests/historyItemReview.test.ts:126:44)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 127.967584
+
+=== immutable-on-answer-edit: RESTORE exit 0 ===
+TAP version 13
+# Subtest: editing an answer leaves existing item acts alive and unmodified
+ok 1 - editing an answer leaves existing item acts alive and unmodified
+  ---
+  duration_ms: 4.559083
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 97.589375

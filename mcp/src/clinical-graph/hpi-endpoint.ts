@@ -13,6 +13,14 @@ import { FhirEncounterComplaintStore } from "./encounter-complaint-store.js";
 import { CLOSED_ENCOUNTER_EDIT_ERROR, isClosedEncounter } from "./encounter-sign-gate.js";
 import { buildHpiFindingDefinition, HPI_STABLE_KEY } from "./hpi-definition.js";
 import {
+  HISTORY_ITEM_REVIEW_CODE,
+  HISTORY_ITEMS_REVIEWED_ACTION,
+  buildHistoryItemReview,
+  parseHistoryItemReview,
+  deriveHistoryLastReviewed,
+  historyReviewTargetSchema,
+  historyReviewTargetKey,
+  type HistoryItemReview,
   HISTORY_ANSWER_SCOPE_SYSTEM,
   HISTORY_ANSWER_CODE,
   HISTORY_ANSWER_CODE_SYSTEM,
@@ -98,11 +106,19 @@ const hpiRequestSchema = z.object({
     }
   }
 });
-const historyReviewRequestSchema = z.object({
+const legacyHistoryReviewRequestSchema = z.object({
   patientReference: z.string().regex(/^Patient\/[A-Za-z0-9.-]+$/),
   encounterReference: z.string().regex(/^Encounter\/[A-Za-z0-9.-]+$/),
   sectionKey: z.string().regex(/^[a-z][a-z0-9-]{0,119}$/),
 }).strict();
+const itemHistoryReviewRequestSchema = legacyHistoryReviewRequestSchema.extend({
+  action: z.literal(HISTORY_ITEMS_REVIEWED_ACTION),
+  gestureId: z.string().uuid(),
+  method: z.enum(["individual", "bulk"]),
+  targets: z.array(historyReviewTargetSchema).min(1).max(500),
+}).strict();
+const historyReviewRequestSchema = z.union([legacyHistoryReviewRequestSchema, itemHistoryReviewRequestSchema]);
+
 
 export async function handleHpiDefinitionRequest(
   deps: Pick<HpiEndpointDeps, "authenticate" | "findingDefinitions">,
@@ -168,7 +184,7 @@ async function handleHpiRecord(
     const complaint = complaints.find((candidate) => candidate.id === row.complaintId);
     return !complaint || aggregateComponent(aggregate, `HISTORY_COMPLAINT_${complaint.ordinal}`) !== row.narrative;
   });
-  const [plans, priorAnswers, reviewObservations] = patientReference
+  const [plans, priorAnswers, reviewObservations, itemReviewObservations] = patientReference
     ? await Promise.all([
         searchAll<ServiceRequest>(staff.fhir, "ServiceRequest", { subject: patientReference, _count: "500" }, { maxRows: PATIENT_HISTORY_MAX_ROWS }),
         searchAll<Observation>(staff.fhir, "Observation", {
@@ -178,12 +194,17 @@ async function handleHpiRecord(
           _count: "500",
         }, { maxRows: PATIENT_HISTORY_MAX_ROWS }),
         searchAll<Observation>(staff.fhir, "Observation", {
-          encounter: encounterReference,
+          subject: patientReference,
           code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${HISTORY_REVIEW_ATTESTATION_CODE}`,
           _count: "20",
-        }),
+        }, { maxRows: PATIENT_HISTORY_MAX_ROWS }),
+        searchAll<Observation>(staff.fhir, "Observation", {
+          subject: patientReference,
+          code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${HISTORY_ITEM_REVIEW_CODE}`,
+          _count: "20",
+        }, { maxRows: PATIENT_HISTORY_MAX_ROWS }),
       ])
-    : [[], [], []];
+    : [[], [], [], []];
   const prefills = [
     ...deriveFollowUpAnswerPrefills(
       complaints,
@@ -210,7 +231,9 @@ async function handleHpiRecord(
   );
   return {
     status: 200,
-    body: { answers, carriedForwardAnswers, reviewAttestations, followUpPrefills: prefills, templateNarratives: narratives, requiresAggregateRefresh },
+    body: { answers, carriedForwardAnswers, reviewAttestations,
+      lastReviewed: patientReference ? deriveHistoryLastReviewed([...priorAnswers, ...observations], [...reviewObservations, ...itemReviewObservations], patientReference) : [],
+      followUpPrefills: prefills, templateNarratives: narratives, requiresAggregateRefresh },
   };
 }
 
@@ -292,7 +315,7 @@ async function handleHistoryReview(
   const parsed = historyReviewRequestSchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid history review request." } };
   const declaration = HISTORY_SUBJECT_SECTIONS.find((candidate) => candidate.key === parsed.data.sectionKey);
-  if (!declaration || declaration.subjectScope !== "patient") {
+  if (!declaration || (!("action" in parsed.data) && declaration.subjectScope !== "patient")) {
     return { status: 400, body: { error: "History review section is not patient-scoped." } };
   }
   const encounterId = parsed.data.encounterReference.slice("Encounter/".length);
@@ -301,6 +324,26 @@ async function handleHistoryReview(
     return { status: 400, body: { error: "History patient does not match the encounter subject." } };
   }
   if (isClosedEncounter(encounter)) return { status: 409, body: { error: CLOSED_ENCOUNTER_EDIT_ERROR } };
+
+  if ("action" in parsed.data) {
+    const seen = new Set<string>();
+    for (const target of parsed.data.targets) {
+      const section = declaration.sections.find(candidate => candidate.id === target.sectionId);
+      if (target.sectionKey !== declaration.key || !section) return { status: 400, body: { error: "History review target is not in this section." } };
+      const option = section.catalog ? HISTORY_OPTION_CATALOGS[section.catalog]?.find(candidate => candidate.code === target.optionCode) : undefined;
+      const catalogItem = Boolean(section.catalog) && section.type !== "single_select";
+      const perEye = catalogItem && (option?.per_eye ?? section.per_eye ?? false);
+      if ((catalogItem ? !option : target.optionCode !== undefined) || (perEye ? !target.eye : target.eye !== undefined)) {
+        return { status: 400, body: { error: "History review target has an invalid option or eye." } };
+      }
+      const key = historyReviewTargetKey(target);
+      if (seen.has(key)) return { status: 400, body: { error: "History review targets cannot be duplicated." } };
+      seen.add(key);
+    }
+    return recordHistoryItemReview(staff.fhir, {
+      ...parsed.data, actorReference: staff.staffReference, recordedAt: deps.now?.() ?? new Date().toISOString(),
+    });
+  }
 
   const historyAnswers = await searchAll<Observation>(staff.fhir, "Observation", {
     subject: parsed.data.patientReference,
@@ -381,6 +424,63 @@ async function handleHistoryReview(
       priorAnswerReferences: carried.flatMap((row) => row.answer.observationReference ? [row.answer.observationReference] : []),
     },
   };
+}
+
+async function recordHistoryItemReview(fhir: HpiFhirClient, input: HistoryItemReview): Promise<{ status: number; body: unknown }> {
+  const act = buildHistoryItemReview(input);
+  const identifier = act.identifier![0];
+  const findExisting = async () => {
+    const rows = await searchAll<Observation>(fhir, "Observation", {
+      identifier: `${identifier.system}|${identifier.value}`,
+      _count: "2",
+    }, { maxRows: 2 });
+    if (rows.length > 1) throw new Error("History review gesture matches multiple acts.");
+    return rows[0];
+  };
+  const responseFor = (existing: Observation): { status: number; body: unknown } => {
+    if (existing.subject?.reference !== input.patientReference || existing.encounter?.reference !== input.encounterReference ||
+      existing.status === "entered-in-error" || existing.status === "cancelled" || !existing.id) {
+      return { status: 409, body: { error: "History review gesture is already used by another or retired act." } };
+    }
+    const saved = parseHistoryItemReview(existing);
+    if (saved.method !== input.method || !isDeepStrictEqual(saved.targets.map(historyReviewTargetKey).sort(), input.targets.map(historyReviewTargetKey).sort())) {
+      return { status: 409, body: { error: "History review gesture targets and method are immutable." } };
+    }
+    return { status: 200, body: { sectionKey: input.sectionKey, gestureId: input.gestureId,
+      ...saved, actorReference: existing.performer?.[0]?.reference, recordedAt: existing.effectiveDateTime,
+      attestationReference: `Observation/${existing.id}` } };
+  };
+  const existing = await findExisting();
+  if (existing) return responseFor(existing);
+  const fullUrl = `urn:uuid:${randomUUID()}`;
+  const provenance: Provenance = {
+    resourceType: "Provenance", target: [reference(fullUrl), reference(input.encounterReference), reference(input.patientReference)],
+    recorded: input.recordedAt, activity: odosConcept("CREATE", "Record explicit history item review"),
+    agent: [{ type: odosConcept("author", "Author"), who: reference(input.actorReference) }],
+  };
+  const request: Bundle = { resourceType: "Bundle", type: "transaction", entry: [
+    // A fresh, unobserved version cannot authorize replacement if a concurrent gesture won.
+    { fullUrl, resource: act, request: { method: "PUT", url: `Observation?identifier=${identifier.system}|${identifier.value}`, ifMatch: `W/"${randomUUID()}"` } },
+    { resource: provenance, request: { method: "POST", url: "Provenance" } },
+  ] };
+  let result: Bundle;
+  try {
+    result = await fhir.executeTransaction(request, { "X-ODOS-Source": "mcp/review_history_items", Prefer: "return=representation" });
+  } catch (error) {
+    if ([400, 412].includes(Number(asRecord(error).status))) {
+      const winner = await findExisting();
+      if (winner) return responseFor(winner);
+    }
+    throw error;
+  }
+  if (/^(400|412)(?:\s|$)/.test(result.entry?.[0]?.response?.status ?? "")) {
+    const winner = await findExisting();
+    if (winner) return responseFor(winner);
+  }
+  assertSuccessfulTransaction(request, result);
+  const saved = await findExisting();
+  if (!saved) throw new Error("History item review was not found after persistence.");
+  return responseFor(saved);
 }
 
 export function deriveFollowUpAnswerPrefills(
