@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { registerHistoryItemRoutes } from "./clinical-graph/history-item-routes.js";
 /**
  * ODOS MCP Server
  *
@@ -6662,6 +6663,11 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
           console.error("odos-mcp: /clinical-graph/hpi failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "HPI capture route failed" });
         }
+      });
+
+      registerHistoryItemRoutes(app, async (authHeader, action) => {
+        await authenticateWithMedplum();
+        return clinicalGraphRouteDeps(authHeader, action);
       });
 
       app.post("/clinical-graph/history/review", async (req, res) => {

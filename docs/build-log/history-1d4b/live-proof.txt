@@ -1,0 +1,4 @@
+6:11:48 AM [vite] (client) Re-optimizing dependencies because vite config has changed
+APP ROUTE + MEDPLUM: comprehensive open, 14 systems, burst 10/10, zero answer-side acts; one review; immutable Unmark/Undo; overview Eyes reviewed; no 413
+APP ROUTE + MEDPLUM: persisted follow-up presentation self-folds with Complaint-directed header
+PASS. Actual App /clinic route and real local synthetic Medplum. Harness supplies provider identity and limited ancillary catalog reads; this is not a constrained-role AccessPolicy verdict.

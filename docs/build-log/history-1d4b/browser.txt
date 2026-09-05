@@ -1,0 +1,23 @@
+TAP version 13
+# ROS: 10 persisted answers, 0 answer-side acts; 1 tick; immutable retraction/undo; HTTP 200; delta sizes 1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0
+# Subtest: ROS browser: comprehensive burst and explicit immutable reviews
+ok 1 - ROS browser: comprehensive burst and explicit immutable reviews
+  ---
+  duration_ms: 5775.354208
+  type: 'test'
+  ...
+# Subtest: ROS browser: follow-up self-folds
+ok 2 - ROS browser: follow-up self-folds
+  ---
+  duration_ms: 852.704583
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7176.031417

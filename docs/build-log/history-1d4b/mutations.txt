@@ -1,0 +1,289 @@
+mutation-burst
+TAP version 13
+# Subtest: ROS browser: comprehensive burst and explicit immutable reviews
+not ok 1 - ROS browser: comprehensive burst and explicit immutable reviews
+  ---
+  duration_ms: 4532.667042
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4b/ui/tests/historyRosBrowser.test.tsx:1:732'
+  failureType: 'testCodeFailure'
+  error: |-
+    Burst returned HTTP 413: 200,200,200,200,200,413,413,413,413,413,413,413,413,413,413
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4b/ui/tests/historyRosBrowser.test.tsx:60:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: ROS browser: follow-up self-folds
+ok 2 - ROS browser: follow-up self-folds
+  ---
+  duration_ms: 860.910333
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6029.098
+
+
+mutation-answer-act
+TAP version 13
+# Subtest: ROS browser: comprehensive burst and explicit immutable reviews
+not ok 1 - ROS browser: comprehensive burst and explicit immutable reviews
+  ---
+  duration_ms: 5526.037208
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4b/ui/tests/historyRosBrowser.test.tsx:1:732'
+  failureType: 'testCodeFailure'
+  error: |-
+    answering must write zero review acts
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4b/ui/tests/historyRosBrowser.test.tsx:64:12)
+    runNextTicks (node:internal/process/task_queues:64:5)
+    process.processImmediate (node:internal/timers:452:9)
+    process.callbackTrampoline (node:internal/async_hooks:130:17)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: ROS browser: follow-up self-folds
+ok 2 - ROS browser: follow-up self-folds
+  ---
+  duration_ms: 863.39475
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6950.167084
+
+
+mutation-original
+TAP version 13
+# Subtest: ROS browser: comprehensive burst and explicit immutable reviews
+not ok 1 - ROS browser: comprehensive burst and explicit immutable reviews
+  ---
+  duration_ms: 5809.523666
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4b/ui/tests/historyRosBrowser.test.tsx:1:732'
+  failureType: 'testCodeFailure'
+  error: |-
+    unmark must never edit the original act
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        code: {
+          coding: [
+            {
+              code: 'history-item-review',
+    ...
+        meta: {
+    +     versionId: '6f690133-36df-471f-821c-b42f3f261f3b'
+    -     versionId: '4440b36a-94a3-49c5-a526-73215898a52d'
+        },
+        performer: [
+          {
+            reference: 'Practitioner/test'
+          }
+        ],
+        resourceType: 'Observation',
+    +   status: 'entered-in-error',
+    -   status: 'preliminary',
+        subject: {
+          reference: 'Patient/ros-test'
+        },
+        valueCodeableConcept: {
+          coding: [
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    resourceType: 'Observation'
+    identifier:
+      0:
+        system: 'https://odos2020.com/fhir/NamingSystem/history-review-attestation'
+        value: 'current:review-of-systems:e7f04146-2c55-4e41-b3d5-8e983aadae1f'
+    status: 'preliminary'
+    code:
+      coding:
+        0:
+          system: 'https://odos2020.com/fhir/CodeSystem/odos-history-review'
+          code: 'history-item-review'
+          display: 'History item review'
+    subject:
+      reference: 'Patient/ros-test'
+    encounter:
+      reference: 'Encounter/current'
+    effectiveDateTime: '2026-09-05T12:00:00Z'
+    issued: '2026-09-05T12:00:00Z'
+    performer:
+      0:
+        reference: 'Practitioner/test'
+    valueCodeableConcept:
+      coding:
+        0:
+          system: 'https://odos2020.com/fhir/CodeSystem/odos-history-review-action'
+          code: 'items-reviewed'
+          display: 'Items reviewed'
+    extension:
+      0:
+        url: 'https://odos2020.com/fhir/StructureDefinition/odos-history-review-section'
+        valueCode: 'review-of-systems'
+      1:
+        url: 'https://odos2020.com/fhir/StructureDefinition/odos-history-review-method'
+        valueCode: 'individual'
+      2:
+        url: 'https://odos2020.com/fhir/StructureDefinition/odos-history-review-target'
+        valueString: '{"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"headache"}'
+    id: '6e22cee7-3fc8-4e31-8dc6-3db06b931926'
+    meta:
+      versionId: '4440b36a-94a3-49c5-a526-73215898a52d'
+  actual:
+    resourceType: 'Observation'
+    identifier:
+      0:
+        system: 'https://odos2020.com/fhir/NamingSystem/history-review-attestation'
+        value: 'current:review-of-systems:e7f04146-2c55-4e41-b3d5-8e983aadae1f'
+    status: 'entered-in-error'
+    code:
+      coding:
+        0:
+          system: 'https://odos2020.com/fhir/CodeSystem/odos-history-review'
+          code: 'history-item-review'
+          display: 'History item review'
+    subject:
+      reference: 'Patient/ros-test'
+    encounter:
+      reference: 'Encounter/current'
+    effectiveDateTime: '2026-09-05T12:00:00Z'
+    issued: '2026-09-05T12:00:00Z'
+    performer:
+      0:
+        reference: 'Practitioner/test'
+    valueCodeableConcept:
+      coding:
+        0:
+          system: 'https://odos2020.com/fhir/CodeSystem/odos-history-review-action'
+          code: 'items-reviewed'
+          display: 'Items reviewed'
+    extension:
+      0:
+        url: 'https://odos2020.com/fhir/StructureDefinition/odos-history-review-section'
+        valueCode: 'review-of-systems'
+      1:
+        url: 'https://odos2020.com/fhir/StructureDefinition/odos-history-review-method'
+        valueCode: 'individual'
+      2:
+        url: 'https://odos2020.com/fhir/StructureDefinition/odos-history-review-target'
+        valueString: '{"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"headache"}'
+    id: '6e22cee7-3fc8-4e31-8dc6-3db06b931926'
+    meta:
+      versionId: '6f690133-36df-471f-821c-b42f3f261f3b'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4b/ui/tests/historyRosBrowser.test.tsx:73:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: ROS browser: follow-up self-folds
+ok 2 - ROS browser: follow-up self-folds
+  ---
+  duration_ms: 822.220041
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7193.873416
+
+
+mutation-fold
+TAP version 13
+# ROS: 10 persisted answers, 0 answer-side acts; 1 tick; immutable retraction/undo; HTTP 200; delta sizes 1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0
+# Subtest: ROS browser: comprehensive burst and explicit immutable reviews
+ok 1 - ROS browser: comprehensive burst and explicit immutable reviews
+  ---
+  duration_ms: 6373.776375
+  type: 'test'
+  ...
+# Subtest: ROS browser: follow-up self-folds
+not ok 2 - ROS browser: follow-up self-folds
+  ---
+  duration_ms: 766.956167
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4b/ui/tests/historyRosBrowser.test.tsx:1:732'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    'true' !== 'false'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'false'
+  actual: 'true'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4b/ui/tests/historyRosBrowser.test.tsx:51:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7780.126083
+
+
+mutation-schema-bypass
+TAP version 13
+# Subtest: individual HTTP boundary refuses bulk, malformed targets and routes immutable review/retraction/read
+ok 1 - individual HTTP boundary refuses bulk, malformed targets and routes immutable review/retraction/read
+  ---
+  duration_ms: 47.5285
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 232.142584

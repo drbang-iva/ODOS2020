@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: Vite proxies relative clinical-graph requests to the MCP server
+ok 1 - Vite proxies relative clinical-graph requests to the MCP server
+  ---
+  duration_ms: 0.586042
+  type: 'test'
+  ...
+# Subtest: clinical-graph requests share the literal Vite route and Medplum authorization helpers
+ok 2 - clinical-graph requests share the literal Vite route and Medplum authorization helpers
+  ---
+  duration_ms: 8.844791
+  type: 'test'
+  ...
+# Subtest: clinical-graph concurrent-edit responses use the shared reload-and-reapply message
+ok 3 - clinical-graph concurrent-edit responses use the shared reload-and-reapply message
+  ---
+  duration_ms: 0.091792
+  type: 'test'
+  ...
+# Subtest: authHeaders returns the live Medplum client authorization
+ok 4 - authHeaders returns the live Medplum client authorization
+  ---
+  duration_ms: 0.332375
+  type: 'test'
+  ...
+# Subtest: soft and specialty contact lens definition and save requests use shared authorization
+ok 5 - soft and specialty contact lens definition and save requests use shared authorization
+  ---
+  duration_ms: 0.259958
+  type: 'test'
+  ...
+# Subtest: Auto-Refraction renders centered binocular PD spinners and saves them at request top level
+ok 6 - Auto-Refraction renders centered binocular PD spinners and saves them at request top level
+  ---
+  duration_ms: 20.983125
+  type: 'test'
+  ...
+# Subtest: no UI source references the obsolete odos_access_token key
+ok 7 - no UI source references the obsolete odos_access_token key
+  ---
+  duration_ms: 11.479125
+  type: 'test'
+  ...
+# Subtest: WENO searches use the authenticated shared client boundary
+ok 8 - WENO searches use the authenticated shared client boundary
+  ---
+  duration_ms: 10.55
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 202.9835
