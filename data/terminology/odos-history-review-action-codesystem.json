@@ -1,0 +1,31 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "odos-history-review-action",
+  "url": "https://odos2020.com/fhir/CodeSystem/odos-history-review-action",
+  "name": "ODOSHistoryReviewAction",
+  "title": "ODOS History Review Action",
+  "status": "active",
+  "experimental": false,
+  "date": "2026-09-05",
+  "publisher": "ODOS",
+  "description": "ODOS-local application metadata for History review acts. These are not external medical terminology codes.",
+  "caseSensitive": true,
+  "content": "complete",
+  "concept": [
+    {
+      "code": "reviewed-no-change",
+      "display": "Reviewed today, no change",
+      "definition": "The referenced carried answers were explicitly reviewed without changes."
+    },
+    {
+      "code": "items-reviewed",
+      "display": "Items reviewed",
+      "definition": "An explicit individual or bulk review gesture covering enumerated targets."
+    },
+    {
+      "code": "items-review-retracted",
+      "display": "Items review retracted",
+      "definition": "Unmark one target of the referenced item-review act without altering the act or any answer."
+    }
+  ]
+}

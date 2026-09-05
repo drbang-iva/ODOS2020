@@ -1,0 +1,621 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/historyTemplateEngine.test.ts tests/historyAnswerObservation.test.ts tests/hpiEndpoint.test.ts tests/hpiPagination.test.ts tests/fhirSearch.test.ts tests/historyItemReview.test.ts tests/historyItemReviewDefinitions.test.ts
+
+TAP version 13
+# Subtest: MCP searchAll follows every next link and defaults the page size to 100
+ok 1 - MCP searchAll follows every next link and defaults the page size to 100
+  ---
+  duration_ms: 0.700042
+  type: 'test'
+  ...
+# Subtest: MCP searchAll collects more than 100 Provenance rows through a validated next path
+ok 2 - MCP searchAll collects more than 100 Provenance rows through a validated next path
+  ---
+  duration_ms: 0.226541
+  type: 'test'
+  ...
+# Subtest: MCP searchAll rejects a malformed Medplum next link without surfacing TypeError
+ok 3 - MCP searchAll rejects a malformed Medplum next link without surfacing TypeError
+  ---
+  duration_ms: 0.207417
+  type: 'test'
+  ...
+# Subtest: MCP searchAll rejects a next link from a different origin
+ok 4 - MCP searchAll rejects a next link from a different origin
+  ---
+  duration_ms: 0.08225
+  type: 'test'
+  ...
+# Subtest: MCP searchAll honors a per-call row cap without returning a partial result
+ok 5 - MCP searchAll honors a per-call row cap without returning a partial result
+  ---
+  duration_ms: 0.150833
+  type: 'test'
+  ...
+# Subtest: MCP searchAll fails when a returned next link cannot be followed
+ok 6 - MCP searchAll fails when a returned next link cannot be followed
+  ---
+  duration_ms: 0.115125
+  type: 'test'
+  ...
+# Subtest: MCP bounded search enforces explicit page and row caps without partial results
+ok 7 - MCP bounded search enforces explicit page and row caps without partial results
+  ---
+  duration_ms: 1.147709
+  type: 'test'
+  ...
+# Subtest: MCP Medplum client follows same-endpoint next links and rejects cross-origin links
+ok 8 - MCP Medplum client follows same-endpoint next links and rejects cross-origin links
+  ---
+  duration_ms: 16.883625
+  type: 'test'
+  ...
+# Subtest: MCP searchAll bounds empty-page streams with a counted page failure
+ok 9 - MCP searchAll bounds empty-page streams with a counted page failure
+  ---
+  duration_ms: 0.36375
+  type: 'test'
+  ...
+# Subtest: a denied template answer persists as a preliminary Observation and round-trips distinctly
+ok 10 - a denied template answer persists as a preliminary Observation and round-trips distinctly
+  ---
+  duration_ms: 0.657375
+  type: 'test'
+  ...
+# Subtest: an unasked catalog value has no persisted answer Observation
+ok 11 - an unasked catalog value has no persisted answer Observation
+  ---
+  duration_ms: 0.069167
+  type: 'test'
+  ...
+# Subtest: a patient-scoped answer persists its scope distinctly from complaint answers
+ok 12 - a patient-scoped answer persists its scope distinctly from complaint answers
+  ---
+  duration_ms: 0.2835
+  type: 'test'
+  ...
+# Subtest: separate A then B gestures preserve two acts and both dates
+ok 13 - separate A then B gestures preserve two acts and both dates
+  ---
+  duration_ms: 4.599292
+  type: 'test'
+  ...
+# Subtest: retrying the same gesture produces one unchanged act and original response
+ok 14 - retrying the same gesture produces one unchanged act and original response
+  ---
+  duration_ms: 0.44375
+  type: 'test'
+  ...
+# Subtest: a reused gesture cannot replace its immutable targets or method
+ok 15 - a reused gesture cannot replace its immutable targets or method
+  ---
+  duration_ms: 0.484625
+  type: 'test'
+  ...
+# Subtest: a concurrent winner cannot have its targets overwritten (400, throws=false)
+ok 16 - a concurrent winner cannot have its targets overwritten (400, throws=false)
+  ---
+  duration_ms: 0.485
+  type: 'test'
+  ...
+# Subtest: a concurrent winner cannot have its targets overwritten (412, throws=false)
+ok 17 - a concurrent winner cannot have its targets overwritten (412, throws=false)
+  ---
+  duration_ms: 0.338083
+  type: 'test'
+  ...
+# Subtest: a concurrent winner cannot have its targets overwritten (400, throws=true)
+ok 18 - a concurrent winner cannot have its targets overwritten (400, throws=true)
+  ---
+  duration_ms: 0.251333
+  type: 'test'
+  ...
+# Subtest: a concurrent winner cannot have its targets overwritten (412, throws=true)
+ok 19 - a concurrent winner cannot have its targets overwritten (412, throws=true)
+  ---
+  duration_ms: 0.374333
+  type: 'test'
+  ...
+# Subtest: legacy derivedFrom gives a review date only to the referenced answer
+ok 20 - legacy derivedFrom gives a review date only to the referenced answer
+  ---
+  duration_ms: 5.684209
+  type: 'test'
+  ...
+# Subtest: recording and changing an answer writes zero item-review acts
+ok 21 - recording and changing an answer writes zero item-review acts
+  ---
+  duration_ms: 1.458791
+  type: 'test'
+  ...
+# Subtest: editing an answer leaves existing item acts alive and unmodified
+ok 22 - editing an answer leaves existing item acts alive and unmodified
+  ---
+  duration_ms: 0.555334
+  type: 'test'
+  ...
+# Subtest: lastReviewed uses the later of answer and act (2026-09-01T12:00:00Z)
+ok 23 - lastReviewed uses the later of answer and act (2026-09-01T12:00:00Z)
+  ---
+  duration_ms: 0.444958
+  type: 'test'
+  ...
+# Subtest: lastReviewed uses the later of answer and act (2026-09-05T12:00:00Z)
+ok 24 - lastReviewed uses the later of answer and act (2026-09-05T12:00:00Z)
+  ---
+  duration_ms: 0.989334
+  type: 'test'
+  ...
+# Subtest: patient item-act search spans two encounters and uses the 5000-row ceiling
+ok 25 - patient item-act search spans two encounters and uses the 5000-row ceiling
+  ---
+  duration_ms: 208.082458
+  type: 'test'
+  ...
+# Subtest: single_select, text and per-eye catalog targets round-trip exactly
+ok 26 - single_select, text and per-eye catalog targets round-trip exactly
+  ---
+  duration_ms: 0.793292
+  type: 'test'
+  ...
+# Subtest: encounter-scoped declarations support item review without carried answers; legacy still refuses
+ok 27 - encounter-scoped declarations support item review without carried answers; legacy still refuses
+  ---
+  duration_ms: 0.233667
+  type: 'test'
+  ...
+# Subtest: invalid target refused without writes: {"sectionKey":"social-history","sectionId":"tobacco","optionCode":"never"}
+ok 28 - invalid target refused without writes: {"sectionKey":"social-history","sectionId":"tobacco","optionCode":"never"}
+  ---
+  duration_ms: 0.061458
+  type: 'test'
+  ...
+# Subtest: invalid target refused without writes: {"sectionKey":"social-history","sectionId":"tobacco","eye":"OU"}
+ok 29 - invalid target refused without writes: {"sectionKey":"social-history","sectionId":"tobacco","eye":"OU"}
+  ---
+  duration_ms: 0.04575
+  type: 'test'
+  ...
+# Subtest: invalid target refused without writes: {"sectionKey":"social-history","sectionId":"*"}
+ok 30 - invalid target refused without writes: {"sectionKey":"social-history","sectionId":"*"}
+  ---
+  duration_ms: 0.155667
+  type: 'test'
+  ...
+# Subtest: invalid target refused without writes: {"sectionKey":"ocular-history","sectionId":"tobacco"}
+ok 31 - invalid target refused without writes: {"sectionKey":"ocular-history","sectionId":"tobacco"}
+  ---
+  duration_ms: 0.04275
+  type: 'test'
+  ...
+# Subtest: invalid target refused without writes: {"sectionKey":"social-history","sectionId":"occupation","optionCode":"anything"}
+ok 32 - invalid target refused without writes: {"sectionKey":"social-history","sectionId":"occupation","optionCode":"anything"}
+  ---
+  duration_ms: 0.055167
+  type: 'test'
+  ...
+# Subtest: invalid target refused without writes: {"sectionKey":"ocular-history","sectionId":"conditions","optionCode":"glaucoma"}
+ok 33 - invalid target refused without writes: {"sectionKey":"ocular-history","sectionId":"conditions","optionCode":"glaucoma"}
+  ---
+  duration_ms: 0.035833
+  type: 'test'
+  ...
+# Subtest: invalid target refused without writes: {"sectionKey":"ocular-history","sectionId":"conditions","optionCode":"dry-eye","eye":"OD"}
+ok 34 - invalid target refused without writes: {"sectionKey":"ocular-history","sectionId":"conditions","optionCode":"dry-eye","eye":"OD"}
+  ---
+  duration_ms: 0.035083
+  type: 'test'
+  ...
+# Subtest: void, cancelled and foreign acts cannot contribute dates
+ok 35 - void, cancelled and foreign acts cannot contribute dates
+  ---
+  duration_ms: 0.27075
+  type: 'test'
+  ...
+# Subtest: emitted review method resolves to a registered R4 Observation extension
+ok 36 - emitted review method resolves to a registered R4 Observation extension
+  ---
+  duration_ms: 3.2345
+  type: 'test'
+  ...
+# Subtest: emitted review target resolves to a registered R4 Observation extension
+ok 37 - emitted review target resolves to a registered R4 Observation extension
+  ---
+  duration_ms: 0.680792
+  type: 'test'
+  ...
+# Subtest: history templates expose the fixed section vocabulary and the Slice 1a complaint declarations
+ok 38 - history templates expose the fixed section vocabulary and the Slice 1a complaint declarations
+  ---
+  duration_ms: 0.549083
+  type: 'test'
+  ...
+# Subtest: Ocular History is a patient-scoped declaration with conditions and surgeries
+ok 39 - Ocular History is a patient-scoped declaration with conditions and surgeries
+  ---
+  duration_ms: 0.170416
+  type: 'test'
+  ...
+# Subtest: Medical and Social History are patient-scoped declarations using the declared section vocabulary
+ok 40 - Medical and Social History are patient-scoped declarations using the declared section vocabulary
+  ---
+  duration_ms: 0.143541
+  type: 'test'
+  ...
+# Subtest: patient-section completeness distinguishes not started, started, and charted
+ok 41 - patient-section completeness distinguishes not started, started, and charted
+  ---
+  duration_ms: 0.08825
+  type: 'test'
+  ...
+# Subtest: template declarations reference shared catalogs and preserve both glaucoma durations
+ok 42 - template declarations reference shared catalogs and preserve both glaucoma durations
+  ---
+  duration_ms: 0.131125
+  type: 'test'
+  ...
+# Subtest: the same declaration adds interval only for its follow-up presentation
+ok 43 - the same declaration adds interval only for its follow-up presentation
+  ---
+  duration_ms: 0.058916
+  type: 'test'
+  ...
+# Subtest: tri-state cycling keeps negative distinct from an unasked missing answer
+ok 44 - tri-state cycling keeps negative distinct from an unasked missing answer
+  ---
+  duration_ms: 0.081667
+  type: 'test'
+  ...
+# Subtest: pertinent negatives are derived by partitioning one positive catalog
+ok 45 - pertinent negatives are derived by partitioning one positive catalog
+  ---
+  duration_ms: 0.085
+  type: 'test'
+  ...
+# Subtest: the declaration narrative composes positive and denied findings without complaint-specific code
+ok 46 - the declaration narrative composes positive and denied findings without complaint-specific code
+  ---
+  duration_ms: 0.617583
+  type: 'test'
+  ...
+# Subtest: the declaration narrative ignores answers from sections inactive for the selected presentation
+ok 47 - the declaration narrative ignores answers from sections inactive for the selected presentation
+  ---
+  duration_ms: 0.411083
+  type: 'test'
+  ...
+# Subtest: completeness is derived from the declaration's required sections
+ok 48 - completeness is derived from the declaration's required sections
+  ---
+  duration_ms: 0.119792
+  type: 'test'
+  ...
+# Subtest: a clinician narrative override is longer than and replaces the automated declaration output
+ok 49 - a clinician narrative override is longer than and replaces the automated declaration output
+  ---
+  duration_ms: 0.083458
+  type: 'test'
+  ...
+# Subtest: history capture persists ordinal complaint narratives and explicitly reviewed ROS in one Observation
+ok 50 - history capture persists ordinal complaint narratives and explicitly reviewed ROS in one Observation
+  ---
+  duration_ms: 4.00575
+  type: 'test'
+  ...
+# Subtest: saving two complaints refreshes exactly one live hpi_ros Observation for the encounter
+ok 51 - saving two complaints refreshes exactly one live hpi_ros Observation for the encounter
+  ---
+  duration_ms: 1.088834
+  type: 'test'
+  ...
+# Subtest: template autosave preserves review-of-systems components owned outside this slice
+ok 52 - template autosave preserves review-of-systems components owned outside this slice
+  ---
+  duration_ms: 0.6945
+  type: 'test'
+  ...
+# Subtest: template answers update in place while hpi_ros stays one Observation per encounter
+ok 53 - template answers update in place while hpi_ros stays one Observation per encounter
+  ---
+  duration_ms: 1.712667
+  type: 'test'
+  ...
+# Subtest: history record read returns only live persisted template answers
+ok 54 - history record read returns only live persisted template answers
+  ---
+  duration_ms: 1.729125
+  type: 'test'
+  ...
+# Subtest: last-plan prefill derives presents-for selections from the latest prior plan without complaint-specific logic
+ok 55 - last-plan prefill derives presents-for selections from the latest prior plan without complaint-specific logic
+  ---
+  duration_ms: 4.989
+  type: 'test'
+  ...
+# Subtest: follow-up prefill carries positive and denied list answers from only the latest prior encounter
+ok 56 - follow-up prefill carries positive and denied list answers from only the latest prior encounter
+  ---
+  duration_ms: 0.201
+  type: 'test'
+  ...
+# Subtest: a capture retires pre-existing extra live History findings in the same transaction
+ok 57 - a capture retires pre-existing extra live History findings in the same transaction
+  ---
+  duration_ms: 0.901166
+  type: 'test'
+  ...
+# Subtest: a concurrent first capture cannot make a successful request lose its History content
+ok 58 - a concurrent first capture cannot make a successful request lose its History content
+  ---
+  duration_ms: 0.531125
+  type: 'test'
+  ...
+# Subtest: a complaint-backed hpi_ros capture makes the exam overview report History as charted
+ok 59 - a complaint-backed hpi_ros capture makes the exam overview report History as charted
+  ---
+  duration_ms: 0.922666
+  type: 'test'
+  ...
+# Subtest: HPI definition retires the eight-textarea fields and retains extensible Review of Systems
+ok 60 - HPI definition retires the eight-textarea fields and retains extensible Review of Systems
+  ---
+  duration_ms: 0.160833
+  type: 'test'
+  ...
+# Subtest: HPI definition publishes the patient-scoped Ocular, Medical, and Social History declarations
+ok 61 - HPI definition publishes the patient-scoped Ocular, Medical, and Social History declarations
+  ---
+  duration_ms: 0.06875
+  type: 'test'
+  ...
+# Subtest: record read keeps prior patient-scoped Ocular History separate from answers entered today
+ok 62 - record read keeps prior patient-scoped Ocular History separate from answers entered today
+  ---
+  duration_ms: 0.562334
+  type: 'test'
+  ...
+# Subtest: patient-scoped Ocular History saves without a synthetic complaint id
+ok 63 - patient-scoped Ocular History saves without a synthetic complaint id
+  ---
+  duration_ms: 0.324958
+  type: 'test'
+  ...
+# Subtest: patient-scoped tobacco persists as one catalog-validated selection rather than a tri-state
+ok 64 - patient-scoped tobacco persists as one catalog-validated selection rather than a tri-state
+  ---
+  duration_ms: 0.334958
+  type: 'test'
+  ...
+# Subtest: changing a single-select updates one answer with If-Match instead of voiding and recreating it
+ok 65 - changing a single-select updates one answer with If-Match instead of voiding and recreating it
+  ---
+  duration_ms: 0.343667
+  type: 'test'
+  ...
+# Subtest: Medical History keeps prior answers separate from answers entered today
+ok 66 - Medical History keeps prior answers separate from answers entered today
+  ---
+  duration_ms: 0.242625
+  type: 'test'
+  ...
+# Subtest: Medical History keeps ophthalmic and systemic medication laterality in separate declared sections
+ok 67 - Medical History keeps ophthalmic and systemic medication laterality in separate declared sections
+  ---
+  duration_ms: 0.336333
+  type: 'test'
+  ...
+# Subtest: patient-scoped text sections use the same history answer persistence path
+ok 68 - patient-scoped text sections use the same history answer persistence path
+  ---
+  duration_ms: 0.143917
+  type: 'test'
+  ...
+# Subtest: Ocular History can be recorded before a chief complaint without creating an empty HPI
+ok 69 - Ocular History can be recorded before a chief complaint without creating an empty HPI
+  ---
+  duration_ms: 0.161334
+  type: 'test'
+  ...
+# Subtest: reviewed today records a separate attestation that references prior answers without editing them
+ok 70 - reviewed today records a separate attestation that references prior answers without editing them
+  ---
+  duration_ms: 0.713042
+  type: 'test'
+  ...
+# Subtest: Social History uses the shared no-change attestation path and names itself in refusals
+ok 71 - Social History uses the shared no-change attestation path and names itself in refusals
+  ---
+  duration_ms: 0.224041
+  type: 'test'
+  ...
+# Subtest: reviewed today refuses to attest no change after this encounter has an Ocular History edit
+ok 72 - reviewed today refuses to attest no change after this encounter has an Ocular History edit
+  ---
+  duration_ms: 0.111125
+  type: 'test'
+  ...
+# Subtest: a later Ocular History edit retires the earlier no-change attestation in the same transaction
+ok 73 - a later Ocular History edit retires the earlier no-change attestation in the same transaction
+  ---
+  duration_ms: 0.2215
+  type: 'test'
+  ...
+# Subtest: patient-scoped notes require a positive answer and catalog permission
+ok 74 - patient-scoped notes require a positive answer and catalog permission
+  ---
+  duration_ms: 0.228
+  type: 'test'
+  ...
+# Subtest: history capture enforces authority, option validation, encounter scope, and an active complaint
+ok 75 - history capture enforces authority, option validation, encounter scope, and an active complaint
+  ---
+  duration_ms: 0.61675
+  type: 'test'
+  ...
+# Subtest: delta bundle boundary: 8 entries, conditional PUTs, status 200
+ok 76 - delta bundle boundary: 8 entries, conditional PUTs, status 200
+  ---
+  duration_ms: 0.283959
+  type: 'test'
+  ...
+# Subtest: delta bundle boundary: 9 entries, conditional PUTs, status 413
+ok 77 - delta bundle boundary: 9 entries, conditional PUTs, status 413
+  ---
+  duration_ms: 0.106416
+  type: 'test'
+  ...
+# Subtest: delta bundle boundary: 51 entries, 50 ordinary PUTs, status 200
+ok 78 - delta bundle boundary: 51 entries, 50 ordinary PUTs, status 200
+  ---
+  duration_ms: 2.203833
+  type: 'test'
+  ...
+# Subtest: delta bundle boundary: 52 entries, 51 ordinary PUTs, status 413
+ok 79 - delta bundle boundary: 52 entries, 51 ordinary PUTs, status 413
+  ---
+  duration_ms: 1.028625
+  type: 'test'
+  ...
+# Subtest: byte-identical delta resubmission writes nothing and retains all review acts and answer dates
+ok 80 - byte-identical delta resubmission writes nothing and retains all review acts and answer dates
+  ---
+  duration_ms: 0.281084
+  type: 'test'
+  ...
+# Subtest: changed delta retires only its section and maps references past skipped unchanged answers
+ok 81 - changed delta retires only its section and maps references past skipped unchanged answers
+  ---
+  duration_ms: 0.375916
+  type: 'test'
+  ...
+# Subtest: delta comparison persists changed answer coordinates when the value is unchanged
+ok 82 - delta comparison persists changed answer coordinates when the value is unchanged
+  ---
+  duration_ms: 0.5555
+  type: 'test'
+  ...
+# Subtest: moving an answer out of a reviewed patient section retires that section's attestation
+ok 83 - moving an answer out of a reviewed patient section retires that section's attestation
+  ---
+  duration_ms: 0.359958
+  type: 'test'
+  ...
+# Subtest: complaint delta uses persisted presentation and preserves omitted narrative answers without rewriting them
+ok 84 - complaint delta uses persisted presentation and preserves omitted narrative answers without rewriting them
+  ---
+  duration_ms: 0.751125
+  type: 'test'
+  ...
+# Subtest: conditional bundle guard includes aggregate and review retirement provenance before any write
+ok 85 - conditional bundle guard includes aggregate and review retirement provenance before any write
+  ---
+  duration_ms: 1.188791
+  type: 'test'
+  ...
+# Subtest: delta validation does not revalidate an omitted legacy section
+ok 86 - delta validation does not revalidate an omitted legacy section
+  ---
+  duration_ms: 0.167042
+  type: 'test'
+  ...
+# Complaint-definition Basic/unknown skipped: Basic resource is not an ODOS complaint definition.
+# Subtest: patient carry-forward reads all 600 seeded answers
+ok 87 - patient carry-forward reads all 600 seeded answers
+  ---
+  duration_ms: 14.787208
+  type: 'test'
+  ...
+# Subtest: patient carry-forward reads all 1001 seeded answers
+ok 88 - patient carry-forward reads all 1001 seeded answers
+  ---
+  duration_ms: 11.905542
+  type: 'test'
+  ...
+# Subtest: patient carry-forward reads all 5000 seeded answers
+ok 89 - patient carry-forward reads all 5000 seeded answers
+  ---
+  duration_ms: 54.805833
+  type: 'test'
+  ...
+# Subtest: patient ceiling refuses 5001 rows with observed row and page counts
+ok 90 - patient ceiling refuses 5001 rows with observed row and page counts
+  ---
+  duration_ms: 32.476
+  type: 'test'
+  ...
+# Subtest: 25 seeded review acts survive pagination and derivation
+ok 91 - 25 seeded review acts survive pagination and derivation
+  ---
+  duration_ms: 0.894792
+  type: 'test'
+  ...
+# Subtest: ROS cannot enter another encounter carry-forward search or consume its ceiling
+ok 92 - ROS cannot enter another encounter carry-forward search or consume its ceiling
+  ---
+  duration_ms: 6.160667
+  type: 'test'
+  ...
+# Subtest: scope token persists on encounter answers while old patient answers remain readable
+ok 93 - scope token persists on encounter answers while old patient answers remain readable
+  ---
+  duration_ms: 0.290042
+  type: 'test'
+  ...
+# Subtest: current-encounter answer read follows multiple pages
+ok 94 - current-encounter answer read follows multiple pages
+  ---
+  duration_ms: 7.092416
+  type: 'test'
+  ...
+# Subtest: review endpoint reads all patient answers and finds an existing act beyond page one
+ok 95 - review endpoint reads all patient answers and finds an existing act beyond page one
+  ---
+  duration_ms: 7.272
+  type: 'test'
+  ...
+# Subtest: handleHpiRecordRequest catches page limits with the page count
+ok 96 - handleHpiRecordRequest catches page limits with the page count
+  ---
+  duration_ms: 0.365125
+  type: 'test'
+  ...
+# Subtest: handleHistoryReviewRequest catches page limits with the page count
+ok 97 - handleHistoryReviewRequest catches page limits with the page count
+  ---
+  duration_ms: 0.408583
+  type: 'test'
+  ...
+# Subtest: handleHpiCaptureRequest catches page limits with the page count
+ok 98 - handleHpiCaptureRequest catches page limits with the page count
+  ---
+  duration_ms: 0.801958
+  type: 'test'
+  ...
+# Subtest: aggregate and last-plan reads follow their second pages
+ok 99 - aggregate and last-plan reads follow their second pages
+  ---
+  duration_ms: 2.100875
+  type: 'test'
+  ...
+# Subtest: capture reconciles aggregate duplicates across pages
+ok 100 - capture reconciles aggregate duplicates across pages
+  ---
+  duration_ms: 1.529333
+  type: 'test'
+  ...
+# Subtest: answer upsert finds the existing answer and retires reviews beyond page one
+ok 101 - answer upsert finds the existing answer and retires reviews beyond page one
+  ---
+  duration_ms: 0.917208
+  type: 'test'
+  ...
+1..101
+# tests 101
+# suites 0
+# pass 101
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 984.38

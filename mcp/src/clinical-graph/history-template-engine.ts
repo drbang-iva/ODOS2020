@@ -23,9 +23,26 @@ export interface HistoryCatalogOption {
   display: string;
   per_eye?: boolean;
   note_on_positive?: boolean;
+  system?: string;
 }
 
 export const HISTORY_OPTION_CATALOGS: Record<string, HistoryCatalogOption[]> = {
+  ros_items: [
+    ...optionsFromDisplays(["eye pain", "poor vision", "tearing", "redness", "loss of vision", "amaurosis fugax", "jaw pain", "scalp tenderness"]).map(option => ({ ...option, system: "Eyes" })),
+    ...optionsFromDisplays(["excessive thirst", "excessive hunger", "heat intolerance", "cold intolerance"]).map(option => ({ ...option, system: "Endocrine" })),
+    ...optionsFromDisplays(["headache", "seizure", "stroke", "paralysis"]).map(option => ({ ...option, system: "Neurological" })),
+    ...optionsFromDisplays(["fever", "chills", "weight loss", "fatigue"]).map(option => ({ ...option, system: "Constitutional" })),
+    ...optionsFromDisplays(["cough", "shortness of breath", "wheezing"]).map(option => ({ ...option, system: "Respiratory" })),
+    ...optionsFromDisplays(["hearing loss", "ear pain", "nasal congestion", "sore throat", "dry mouth"]).map(option => ({ ...option, system: "ENT and Mouth" })),
+    ...optionsFromDisplays(["chest pain", "palpitations", "leg swelling"]).map(option => ({ ...option, system: "Cardiovascular" })),
+    ...optionsFromDisplays(["abdominal pain", "nausea", "vomiting", "diarrhea", "constipation"]).map(option => ({ ...option, system: "Gastrointestinal" })),
+    ...optionsFromDisplays(["painful urination", "frequent urination", "blood in urine"]).map(option => ({ ...option, system: "Genitourinary" })),
+    ...optionsFromDisplays(["joint pain", "muscle pain", "joint stiffness"]).map(option => ({ ...option, system: "Musculoskeletal" })),
+    ...optionsFromDisplays(["rash", "changing moles", "itching"]).map(option => ({ ...option, system: "Integumentary" })),
+    ...optionsFromDisplays(["anxiety", "depression", "insomnia"]).map(option => ({ ...option, system: "Psychiatric" })),
+    ...optionsFromDisplays(["easy bruising", "prolonged bleeding", "swollen lymph nodes"]).map(option => ({ ...option, system: "Hematologic/Lymphatic" })),
+    ...optionsFromDisplays(["seasonal allergies", "recurrent infections", "hives"]).map(option => ({ ...option, system: "Allergic/Immunologic" })),
+  ],
   glaucoma_presentations: options([
     ["follow-up", "Follow Up"],
     ["pressure-check", "Pressure Check"],
@@ -159,6 +176,7 @@ export interface HistoryTemplateSection {
   on?: "follow-up";
   prefill?: "last_plan";
   required?: boolean;
+  group_by?: "system";
 }
 
 export interface HistoryTemplate {
@@ -174,10 +192,22 @@ export interface HistorySubjectSection {
   label: string;
   subjectScope: "encounter" | "patient";
   completionAnchor: string;
+  review?: "per-item";
+  charted_when?: { reviewed_items_min: number };
+  summary?: string;
   sections: HistoryTemplateSection[];
 }
 
 export const HISTORY_SUBJECT_SECTIONS: HistorySubjectSection[] = [
+  {
+    key: "review-of-systems", label: "Review of Systems", subjectScope: "encounter",
+    completionAnchor: "systems", review: "per-item", charted_when: { reviewed_items_min: 1 },
+    summary: "{reviewed_systems}. {positives}. {method}",
+    sections: [
+      section("systems", "symptoms", "Systems", { catalog: "ros_items", required: true, group_by: "system" }),
+      section("notable-for", "text", "ROS notable for"),
+    ],
+  },
   {
     key: "ocular-history",
     label: "Ocular History",
@@ -323,7 +353,7 @@ export function renderDeclaredComplaintNarrative(template: HistoryTemplate, answ
     const [token, ...arguments_] = expression.split("|");
     if (token === "symptoms") return triStateClause(sectionById.get("symptoms"), answers, arguments_[0] ?? "Reports", arguments_[1] ?? "Denies");
     if (token === "risk_factors.positive") return positiveClause(sections.find((candidate) => candidate.type === "risk_factors"), answers, arguments_[0] ?? "Risk factors:");
-    return replacements.get(token) ?? "";
+    return registeredToken(replacements, token);
   });
   narrative = narrative
     .replace(/(?:^|\s)(?:Currently on|Current treatment:|Today:)\s*\./g, "")
@@ -347,12 +377,78 @@ export type HistoryCompletenessState = "not-started" | "started" | "charted";
 export function historySubjectSectionState(
   declaration: HistorySubjectSection,
   answers: HistoryTemplateAnswer[],
+  context?: HistoryReviewContext,
 ): HistoryCompletenessState {
+  if (declaration.key === "review-of-systems" && declaration.charted_when) {
+    const count = new Set(currentReviews(declaration, context).map(row => historyReviewTargetKey(row.target))).size;
+    if (count >= declaration.charted_when.reviewed_items_min) return "charted";
+    return answers.length > 0 ? "started" : "not-started";
+  }
   if (answers.length === 0) return "not-started";
   const hasAnchor = answers.some((answer) => answer.sectionId === declaration.completionAnchor);
   const hasRequired = declaration.sections.filter((candidate) => candidate.required)
     .every((candidate) => answers.some((answer) => answer.sectionId === candidate.id));
   return hasAnchor && hasRequired ? "charted" : "started";
+}
+
+export interface HistoryReviewContext {
+  encounterStart: string;
+  lastReviewed: Array<{ target: { sectionKey: string; sectionId: string; optionCode?: string; eye?: HistoryEye }; lastReviewed: string }>;
+  methods?: Array<"individual" | "bulk">;
+}
+
+export function historyReviewTargetKey(target: HistoryReviewContext["lastReviewed"][number]["target"]): string {
+  return [target.sectionKey, target.sectionId, target.optionCode ?? "", target.eye ?? ""].join("|");
+}
+
+function currentReviews(declaration: HistorySubjectSection, context?: HistoryReviewContext) {
+  return (context?.lastReviewed ?? []).filter(row => row.target.sectionKey === declaration.key &&
+    Date.parse(row.lastReviewed) >= Date.parse(context!.encounterStart));
+}
+
+export function renderDeclaredSubjectSummary(
+  declaration: HistorySubjectSection,
+  answers: HistoryTemplateAnswer[],
+  context: HistoryReviewContext,
+): string {
+  const reviewed = new Set(currentReviews(declaration, context).map(row => historyReviewTargetKey(row.target)));
+  const coverage: string[] = [];
+  const positives: string[] = [];
+  for (const section of declaration.sections) {
+    if (section.catalog && section.group_by === "system") {
+      const groups = new Map<string, HistoryCatalogOption[]>();
+      for (const option of catalog(section.catalog)) {
+        if (!option.system) throw new Error(`History option ${option.code} has no system.`);
+        groups.set(option.system, [...(groups.get(option.system) ?? []), option]);
+      }
+      for (const [system, items] of groups) {
+        const count = items.filter(option => reviewed.has(historyReviewTargetKey({ sectionKey: declaration.key, sectionId: section.id, optionCode: option.code }))).length;
+        coverage.push(count === items.length ? `${system} reviewed` : `${system} ${count}/${items.length}`);
+      }
+      for (const answer of answers.filter(a => a.templateKey === declaration.key && a.sectionId === section.id)) {
+        if (answer.value.kind !== "tri-state" || answer.value.status !== "positive") continue;
+        const option = catalog(section.catalog).find(o => o.code === answer.optionCode);
+        if (option) positives.push(`${option.display}${answer.value.note ? ` (${answer.value.note})` : ""}`);
+      }
+    }
+    if (section.type === "text") {
+      for (const answer of answers.filter(a => a.templateKey === declaration.key && a.sectionId === section.id)) {
+        if (answer.value.kind === "text" && answer.value.text.trim()) positives.push(`${section.label}: ${answer.value.text.trim()}`);
+      }
+    }
+  }
+  const replacements = new Map([
+    ["reviewed_systems", coverage.join("; ")],
+    ["positives", positives.length ? `Reports ${positives.join(", ")}` : ""],
+    ["method", context.methods?.length ? `Review method: ${[...new Set(context.methods)].join(", ")}` : ""],
+  ]);
+  return (declaration.summary ?? "").replace(/\{([^}]+)\}/g, (_match, token: string) => registeredToken(replacements, token))
+    .replace(/\s+\./g, ".").replace(/\.{2,}/g, ".").trim();
+}
+
+function registeredToken(replacements: Map<string, string>, token: string): string {
+  if (!replacements.has(token)) throw new Error(`Unknown history summary token: ${token}`);
+  return replacements.get(token)!;
 }
 
 function section(

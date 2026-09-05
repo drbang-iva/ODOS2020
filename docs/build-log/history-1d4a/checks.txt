@@ -1,0 +1,83 @@
+
+Full backend, explicitly ungated
+$ ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test
+  ---
+  duration_ms: 1.034166
+  type: 'test'
+  ...
+1..3703
+# tests 4238
+# suites 0
+# pass 4181
+# fail 0
+# cancelled 0
+# skipped 57
+# todo 0
+# duration_ms 75064.82225
+⚠️  LIVE STACK NOT CONFIGURED — 41 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.
+
+Full UI
+$ npm --prefix ui test
+  duration_ms: 8.077125
+  type: 'test'
+  ...
+1..1230
+# tests 1235
+# suites 0
+# pass 1235
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 77631.189666
+
+Untouched UI History (run from ui/)
+$ node --import tsx --test tests/hpiSection.test.tsx tests/hpiDeltaBrowser.test.tsx
+  duration_ms: 1704.519583
+  type: 'test'
+  ...
+1..25
+# tests 25
+# suites 0
+# pass 25
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10492.318584
+
+MCP build
+$ npm --prefix mcp run build
+
+> odos-mcp@0.1.0 build
+> tsc
+
+
+UI build
+$ npm --prefix ui run build
+rendering chunks...
+computing gzip size...
+dist/version.json                   0.17 kB │ gzip:   0.15 kB
+dist/index.html                     0.95 kB │ gzip:   0.56 kB
+dist/assets/index-BfLuUdYt.css    224.04 kB │ gzip:  37.82 kB
+dist/assets/index-DNx3oKwK.js   1,819.68 kB │ gzip: 489.24 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.33s
+
+Script typecheck
+$ npm run typecheck:scripts
+
+> odos2020@0.0.1 typecheck:scripts
+> tsc -p tsconfig.scripts.json
+
+
+Preflight
+$ npm run preflight
+ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md
+
+Proxy census: 24 backend route families; 27 proxy entries; every family covered (advisory).
+git diff --check: exit 0
