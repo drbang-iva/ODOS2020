@@ -1,4 +1,5 @@
 import { searchAll, FhirSearchLimitError, FhirSearchPageLimitError } from "../fhir-search.js";
+import { isDeepStrictEqual } from "node:util";
 import { randomUUID } from "node:crypto";
 import type { Basic, Bundle, Encounter, Observation, Provenance, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import { z } from "zod";
@@ -514,20 +515,31 @@ async function handleHpiCapture(
     .filter((complaint) => complaint.status === "active")
     .sort((left, right) => left.ordinal - right.ordinal);
   const templateAnswers = parsed.data.templateAnswers.map(assertHistoryTemplateAnswer);
-  const answerError = validateTemplateAnswers(templateAnswers, complaints);
+  const recordedAt = deps.now?.() ?? new Date().toISOString();
+  const answerUpsert = await prepareHistoryAnswerUpsert(staff.fhir, templateAnswers, {
+    patientReference: parsed.data.patientReference,
+    encounterReference: parsed.data.encounterReference,
+    recordedAt,
+    actorReference: staff.staffReference,
+  });
+  const effectiveAnswers = [...new Map([
+    ...answerUpsert.persistedAnswers,
+    ...templateAnswers.map((answer) => [answer.id, answer] as const),
+  ]).values()];
+  const answerError = validateTemplateAnswers(templateAnswers, complaints, effectiveAnswers);
   if (answerError) return { status: 400, body: { error: answerError } };
 
-  const recordedAt = deps.now?.() ?? new Date().toISOString();
   if (!complaints.length) {
     const hasEncounterHistory = parsed.data.reviewOfSystems !== undefined || parsed.data.reviewAttestations !== undefined ||
       templateAnswers.some((answer) => Boolean(answer.complaintId));
     if (hasEncounterHistory) return { status: 400, body: { error: "At least one presenting complaint is required before saving history." } };
-    const answerUpsert = await prepareHistoryAnswerUpsert(staff.fhir, templateAnswers, {
-      patientReference: parsed.data.patientReference,
-      encounterReference: parsed.data.encounterReference,
-      recordedAt,
-      actorReference: staff.staffReference,
-    });
+    if (!answerUpsert.entries.length && !answerUpsert.reviewRetirements.length) {
+      return { status: 200, body: {
+        encounterReference: parsed.data.encounterReference, templateNarratives: [],
+        answers: templateAnswers.map((answer) => ({ ...answer, observationReference: answerUpsert.persistedAnswers.get(answer.id)?.observationReference })),
+        retiredReviewSections: [],
+      } };
+    }
     const answerTargets = answerUpsert.entries.map((entry) => reference(
       entry.resource?.id ? `Observation/${entry.resource.id}` : entry.fullUrl ?? "urn:uuid:history-answer"
     ));
@@ -550,6 +562,8 @@ async function handleHpiCapture(
           : []),
       ],
     };
+    const sizeError = historyBundleSizeError(transactionRequest);
+    if (sizeError) return { status: 413, body: { error: sizeError } };
     const transaction = await staff.fhir.executeTransaction(transactionRequest, {
       ...WRITE_HEADERS,
       Prefer: "return=representation",
@@ -560,7 +574,7 @@ async function handleHpiCapture(
       body: {
         encounterReference: parsed.data.encounterReference,
         templateNarratives: [],
-        answers: savedHistoryAnswers(templateAnswers, answerUpsert.existingAnswers, transaction, 0),
+        answers: savedHistoryAnswers(templateAnswers, answerUpsert.existingAnswers, answerUpsert.changedAnswers, transaction, 0),
         retiredReviewSections: answerUpsert.retiredReviewSections,
         provenanceReference: transactionResourceReference(transaction, answerUpsert.entries.length + answerUpsert.reviewRetirements.length, "Provenance"),
       },
@@ -586,7 +600,7 @@ async function handleHpiCapture(
       definitions,
       parsed.data.reviewOfSystems ?? [],
       parsed.data.reviewAttestations ?? [],
-      templateAnswers,
+      effectiveAnswers,
     ),
     sourceType: "manual",
     performerReferences: [staff.staffReference],
@@ -641,34 +655,22 @@ async function handleHpiCapture(
         ...(duplicate.meta?.versionId ? { ifMatch: `W/\"${duplicate.meta.versionId}\"` } : {}),
       },
     }));
-  const answerUpsert = await prepareHistoryAnswerUpsert(staff.fhir, templateAnswers, {
-    patientReference: parsed.data.patientReference,
-    encounterReference: parsed.data.encounterReference,
-    recordedAt,
-    actorReference: staff.staffReference,
-  });
+  const aggregateChanged = duplicateEntries.length > 0 || !canonical || !isDeepStrictEqual(observation.component, canonical.component);
+  const aggregateEntries: NonNullable<Bundle["entry"]> = aggregateChanged ? [
+    canonical?.id
+      ? { resource: observation, request: { method: "PUT", url: `Observation/${canonical.id}`, ...(canonical.meta?.versionId ? { ifMatch: `W/"${canonical.meta.versionId}"` } : {}) } }
+      : { fullUrl: observationFullUrl, resource: observation, request: { method: "PUT", url: `Observation?identifier=${HPI_OBSERVATION_IDENTIFIER_SYSTEM}|${identifierValue}` } },
+  ] : [];
+  const hasWrites = aggregateChanged || duplicateEntries.length > 0 || answerUpsert.entries.length > 0 || answerUpsert.reviewRetirements.length > 0;
+  const provenanceEntries: NonNullable<Bundle["entry"]> = hasWrites
+    ? [{ fullUrl: "urn:uuid:hpi-provenance", resource: provenanceResource, request: { method: "POST", url: "Provenance" } }]
+    : [];
   const transactionRequest: Bundle = {
     resourceType: "Bundle",
     type: "transaction",
     entry: [
-      canonical?.id
-        ? {
-            resource: observation,
-            request: {
-              method: "PUT",
-              url: `Observation/${canonical.id}`,
-              ...(canonical.meta?.versionId ? { ifMatch: `W/\"${canonical.meta.versionId}\"` } : {}),
-            },
-          }
-        : {
-            fullUrl: observationFullUrl,
-            resource: observation,
-            request: {
-              method: "PUT",
-              url: `Observation?identifier=${HPI_OBSERVATION_IDENTIFIER_SYSTEM}|${identifierValue}`,
-            },
-          },
-      { fullUrl: "urn:uuid:hpi-provenance", resource: provenanceResource, request: { method: "POST", url: "Provenance" } },
+      ...aggregateEntries,
+      ...provenanceEntries,
       ...duplicateEntries,
       ...answerUpsert.entries,
       ...answerUpsert.reviewRetirements,
@@ -677,17 +679,19 @@ async function handleHpiCapture(
         : []),
     ],
   };
-  const transaction = await staff.fhir.executeTransaction(transactionRequest, {
+  const sizeError = historyBundleSizeError(transactionRequest);
+  if (sizeError) return { status: 413, body: { error: sizeError } };
+  const transaction: Bundle = hasWrites ? await staff.fhir.executeTransaction(transactionRequest, {
     ...WRITE_HEADERS,
     Prefer: "return=representation",
-  });
+  }) : { resourceType: "Bundle", type: "transaction-response", entry: [] };
   assertSuccessfulTransaction(transactionRequest, transaction);
   const observationReference = canonical?.id
     ? `Observation/${canonical.id}`
     : transactionResourceReference(transaction, 0, "Observation");
-  const provenanceReference = transactionResourceReference(transaction, 1, "Provenance");
-  const answerStartIndex = 2 + duplicateEntries.length;
-  const savedAnswers = savedHistoryAnswers(templateAnswers, answerUpsert.existingAnswers, transaction, answerStartIndex);
+  const provenanceReference = hasWrites ? transactionResourceReference(transaction, aggregateEntries.length, "Provenance") : undefined;
+  const answerStartIndex = aggregateEntries.length + provenanceEntries.length + duplicateEntries.length;
+  const savedAnswers = savedHistoryAnswers(templateAnswers, answerUpsert.existingAnswers, answerUpsert.changedAnswers, transaction, answerStartIndex);
   return {
     status: 200,
     body: {
@@ -697,7 +701,7 @@ async function handleHpiCapture(
         complaint,
         definitions.find((candidate) => candidate.stableKey === complaint.complaintKey),
       )),
-      templateNarratives: templateNarratives(complaints, templateAnswers),
+      templateNarratives: templateNarratives(complaints, effectiveAnswers),
       answers: savedAnswers,
       retiredReviewSections: answerUpsert.retiredReviewSections,
       ...(provenanceReference ? { provenanceReference } : {}),
@@ -711,31 +715,37 @@ async function prepareHistoryAnswerUpsert(
   context: { patientReference: string; encounterReference: string; recordedAt: string; actorReference: string },
 ): Promise<{
   existingAnswers: Map<string, Observation>;
+  persistedAnswers: Map<string, HistoryTemplateAnswer>;
+  changedAnswers: HistoryTemplateAnswer[];
   entries: NonNullable<Bundle["entry"]>;
   reviewRetirements: NonNullable<Bundle["entry"]>;
   retiredReviewSections: string[];
   reviewRetirementProvenance: Provenance | undefined;
 }> {
-  const editedPatientSections = new Set(answers.flatMap((answer) => answer.subjectScope === "patient" ? [answer.templateKey] : []));
-  const [answerObservations, reviewObservations] = await Promise.all([
-    searchAll<Observation>(fhir, "Observation", {
-      encounter: context.encounterReference,
-      code: `${HISTORY_ANSWER_CODE_SYSTEM}|${HISTORY_ANSWER_CODE}`,
-      _count: "500",
-    }),
-    editedPatientSections.size > 0
-      ? searchAll<Observation>(fhir, "Observation", {
-          encounter: context.encounterReference,
-          code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${HISTORY_REVIEW_ATTESTATION_CODE}`,
-          _count: "20",
-        })
-      : Promise.resolve(undefined),
-  ]);
+  const answerObservations = await searchAll<Observation>(fhir, "Observation", {
+    encounter: context.encounterReference,
+    code: `${HISTORY_ANSWER_CODE_SYSTEM}|${HISTORY_ANSWER_CODE}`,
+    _count: "500",
+  });
   const existingAnswers = new Map(answerObservations.flatMap((candidate) => {
-    if (!candidate?.id || candidate.status === "entered-in-error" || candidate.status === "cancelled" || !isHistoryAnswerObservation(candidate)) return [];
+    if (!candidate?.id || candidate.status === "entered-in-error" || candidate.status === "cancelled" || !isHistoryAnswerObservation(candidate) ||
+      candidate.subject?.reference !== context.patientReference || candidate.encounter?.reference !== context.encounterReference) return [];
     return [[parseHistoryAnswerObservation(candidate).id, candidate] as const];
   }));
-  const entries = answers.map((answer, index) => {
+  const persistedAnswers = new Map([...existingAnswers].map(([id, observation]) => {
+    return [id, parseHistoryAnswerObservation(observation)] as const;
+  }));
+  const changedAnswers = answers.filter((answer) => !samePersistedHistoryAnswer(answer, persistedAnswers.get(answer.id)));
+  const editedPatientSections = new Set(changedAnswers.flatMap((answer) => {
+    const persisted = persistedAnswers.get(answer.id);
+    return [answer, persisted].flatMap((candidate) => candidate?.subjectScope === "patient" ? [candidate.templateKey] : []);
+  }));
+  const reviewObservations = editedPatientSections.size > 0 ? await searchAll<Observation>(fhir, "Observation", {
+    encounter: context.encounterReference,
+    code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${HISTORY_REVIEW_ATTESTATION_CODE}`,
+    _count: "20",
+  }) : undefined;
+  const entries = changedAnswers.map((answer, index) => {
     const existing = existingAnswers.get(answer.id);
     const resource = buildHistoryAnswerObservation(answer, context, existing);
     return existing?.id
@@ -766,16 +776,34 @@ async function prepareHistoryAnswerUpsert(
     activity: odosConcept("VOID", "Retire superseded history review attestation"),
     agent: [{ type: odosConcept("author", "Author"), who: reference(context.actorReference) }],
   } : undefined;
-  return { existingAnswers, entries, reviewRetirements, retiredReviewSections, reviewRetirementProvenance };
+  return { existingAnswers, persistedAnswers, changedAnswers, entries, reviewRetirements, retiredReviewSections, reviewRetirementProvenance };
+}
+
+function samePersistedHistoryAnswer(left: HistoryTemplateAnswer, right: HistoryTemplateAnswer | undefined): boolean {
+  if (!right) return false;
+  const { observationReference: _leftReference, ...leftPersisted } = left;
+  const { observationReference: _rightReference, ...rightPersisted } = right;
+  return isDeepStrictEqual(leftPersisted, rightPersisted);
+}
+
+function historyBundleSizeError(bundle: Bundle): string | undefined {
+  const entries = bundle.entry ?? [];
+  const conditional = entries.some((entry) => entry.request?.ifNoneExist || entry.request?.url.includes("?"));
+  if (conditional && entries.length > 8) return `History save refused: conditional bundles allow at most 8 total entries; this save needs ${entries.length}. No changes were written.`;
+  const puts = entries.filter((entry) => entry.request?.method === "PUT").length;
+  if (puts > 50) return `History save refused: bundles allow at most 50 PUT entries; this save needs ${puts}. No changes were written.`;
+  return undefined;
 }
 
 function savedHistoryAnswers(
   answers: HistoryTemplateAnswer[],
   existingAnswers: Map<string, Observation>,
+  changedAnswers: HistoryTemplateAnswer[],
   transaction: Bundle,
   startIndex: number,
 ): HistoryTemplateAnswer[] {
-  return answers.map((answer, index) => {
+  return answers.map((answer) => {
+    const index = changedAnswers.findIndex((changed) => changed.id === answer.id);
     const existing = existingAnswers.get(answer.id);
     const observationReference = existing?.id
       ? `Observation/${existing.id}`
@@ -896,7 +924,7 @@ function historyFindingValue(
   return { type: "components", components };
 }
 
-function validateTemplateAnswers(answers: HistoryTemplateAnswer[], complaints: EncounterComplaint[]): string | undefined {
+function validateTemplateAnswers(answers: HistoryTemplateAnswer[], complaints: EncounterComplaint[], effectiveAnswers = answers): string | undefined {
   const complaintById = new Map(complaints.map((complaint) => [complaint.id, complaint]));
   for (const answer of answers) {
     if (answer.subjectScope) {
@@ -932,7 +960,7 @@ function validateTemplateAnswers(answers: HistoryTemplateAnswer[], complaints: E
     }
     const section = template.sections.find((candidate) => candidate.id === answer.sectionId);
     if (!section) return `History answer ${answer.id} names an inactive template section.`;
-    const presentation = answers.find((candidate) => candidate.complaintId === answer.complaintId && candidate.sectionId === "presentation");
+    const presentation = effectiveAnswers.find((candidate) => candidate.complaintId === answer.complaintId && candidate.sectionId === "presentation");
     const presentationCode = presentation?.value.kind === "selection" ? presentation.value.code : undefined;
     if (section.on && section.on !== presentationCode) {
       return `History answer ${answer.id} is inactive for ${presentationCode ?? "the unselected presentation"}.`;

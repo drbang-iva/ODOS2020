@@ -1,0 +1,7 @@
+PASS 9 conditional-inclusive entries: HTTP 413; 0 answers; 0 transaction submissions; all resources and versions unchanged
+PASS 8 conditional-inclusive entries: HTTP 200; 7 answers; 1 transaction submissions; all values persisted
+PASS identical and empty deltas: zero submissions; answer dates, versions, and both reviews unchanged
+PASS one changed answer: only Social review retired; unrelated answers and Ocular review unchanged
+PASS 51 ordinary PUTs: HTTP 413; 51 answers; 0 transaction submissions; all resources and versions unchanged
+PASS 50 ordinary PUTs: HTTP 200; 50 answers; 1 transaction submissions; all values persisted
+Live History delta proof: 6 passed, 0 failed

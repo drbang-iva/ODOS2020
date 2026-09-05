@@ -193,9 +193,9 @@ test("field changes autosave after the 800ms debounce and report saved in the se
     assert.equal(historyPosts, 2);
     assert.deepEqual(submittedAnswers[1]?.map((item) => [item.sectionId, item.optionCode, item.value]), [
       ["presentation", undefined, { kind: "selection", code: "follow-up" }],
-      ["symptoms", "ocular-pain", { kind: "tri-state", status: "negative" }],
-      ["presents-for", "iop-check", { kind: "tri-state", status: "positive" }],
     ]);
+    assert.equal(renderer.root.findByProps({ "aria-label": "ocular pain: suggested from last visit" }).children.join(""), "no ocular pain");
+    assert.ok(renderer.root.findByProps({ "aria-label": "IOP check: suggested from last visit" }));
     assert.match(renderer.root.findByProps({ role: "status" }).children.join(""), /saved · just now/i);
   } finally {
     renderer?.unmount();
@@ -207,6 +207,7 @@ test("clearing a chip waits for an in-flight autosave and voids the Observation 
   const originalFetch = globalThis.fetch;
   let historyPosts = 0;
   let resolveInFlight!: (response: Response) => void;
+  let inFlightAnswers: HistoryTemplateAnswer[] = [];
   const inFlight = new Promise<Response>((resolve) => { resolveInFlight = resolve; });
   const voidBodies: Array<{ scope?: string; observationReference?: string }> = [];
   globalThis.fetch = async (input, init) => {
@@ -226,7 +227,10 @@ test("clearing a chip waits for an in-flight autosave and voids the Observation 
     if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
       historyPosts += 1;
       const submitted = JSON.parse(String(init.body)) as { templateAnswers: HistoryTemplateAnswer[] };
-      if (historyPosts === 2) return inFlight;
+      if (historyPosts === 3) {
+        inFlightAnswers = submitted.templateAnswers;
+        return inFlight;
+      }
       return json({
         answers: submitted.templateAnswers.map((item) => ({ ...item, observationReference: `Observation/${item.optionCode === "ocular-pain" ? "answer-pain" : item.id}` })),
         templateNarratives: [],
@@ -246,20 +250,19 @@ test("clearing a chip waits for an in-flight autosave and voids the Observation 
     });
     act(() => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Follow Up")!.props.onClick());
     await act(async () => { await delay(850); });
-    assert.equal(historyPosts, 2, "the answer save is in flight");
+    act(() => renderer.root.findByProps({ "aria-label": "ocular pain: suggested from last visit" }).props.onClick());
+    await act(async () => { await delay(850); });
+    assert.equal(historyPosts, 3, "the answer save is in flight");
     act(() => renderer.root.findByProps({ "aria-label": "ocular pain: negative" }).props.onClick());
     assert.deepEqual(voidBodies, [], "the clear waits for the save response to identify the Observation");
 
     await act(async () => {
       resolveInFlight(json({
-        answers: [
-          { ...answer("presentation", undefined, { kind: "selection", code: "follow-up" }), observationReference: "Observation/answer-presentation" },
-          { ...answer("symptoms", "ocular-pain", { kind: "tri-state", status: "negative" }), observationReference: "Observation/answer-pain" },
-        ],
+        answers: inFlightAnswers.map((item) => ({ ...item, observationReference: "Observation/answer-pain" })),
         templateNarratives: [],
       }));
       await delay(0);
-      await delay(0);
+      await delay(25);
     });
     assert.deepEqual(voidBodies, [{
       scope: "observation",
@@ -791,3 +794,188 @@ function json(body: unknown): Response {
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
+
+test("delta autosave sends only the changed chip and zero answers for an unmodified section", async () => {
+  const originalFetch = globalThis.fetch;
+  const presentation = answer("presentation", undefined, { kind: "selection", code: "pressure-check" });
+  const pain = answer("symptoms", "ocular-pain", { kind: "tri-state", status: "negative" });
+  const submitted: HistoryTemplateAnswer[][] = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/hpi/definition")) return json({ templates: [TEMPLATE], catalogs: CATALOGS });
+    if (url.endsWith("/complaints")) return json({ complaints: [complaint()] });
+    if (url.endsWith("/encounters/e1/hpi")) return json({ answers: [presentation, pain], requiresAggregateRefresh: true });
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body));
+      submitted.push(body.templateAnswers);
+      return json({ answers: body.templateAnswers.map((row: HistoryTemplateAnswer) => ({ ...row, observationReference: `Observation/${row.id}` })) });
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  };
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => { renderer = create(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />); await delay(0); });
+    assert.deepEqual(submitted, [[]], "aggregate refresh of an unmodified section sends zero answers");
+    act(() => renderer!.root.findByProps({ "aria-label": "family history of glaucoma: unasked" }).props.onClick());
+    await act(async () => { await delay(850); });
+    assert.equal(submitted[1]?.length, 1);
+    assert.equal(submitted[1]?.[0]?.optionCode, "family-history");
+    assert.equal(renderer!.root.findByProps({ "aria-label": "ocular pain: negative" }).type, "button");
+  } finally {
+    renderer?.unmount(); globalThis.fetch = originalFetch;
+  }
+});
+
+test("delta retries retain failed answers and edits made during a save remain pending", async () => {
+  const originalFetch = globalThis.fetch;
+  const submitted: HistoryTemplateAnswer[][] = [];
+  let resolveSave!: (response: Response) => void;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/hpi/definition")) return json({ templates: [TEMPLATE], catalogs: CATALOGS });
+    if (url.endsWith("/complaints")) return json({ complaints: [complaint()] });
+    if (url.endsWith("/encounters/e1/hpi")) return json({ answers: [answer("presentation", undefined, { kind: "selection", code: "pressure-check" })] });
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body));
+      submitted.push(body.templateAnswers);
+      if (submitted.length === 1) return new Response(JSON.stringify({ error: "Synthetic save failure" }), { status: 503 });
+      if (submitted.length === 2) return new Promise<Response>((resolve) => { resolveSave = resolve; });
+      return json({ answers: body.templateAnswers });
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  };
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => { renderer = create(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />); await delay(0); });
+    act(() => renderer!.root.findByProps({ "aria-label": "ocular pain: unasked" }).props.onClick());
+    await act(async () => { await delay(850); });
+    await act(async () => { renderer!.root.findAllByType("button").find((button) => button.children.join("") === "Retry")!.props.onClick(); await delay(0); });
+    assert.deepEqual(submitted[1], submitted[0], "failed delta is retried unchanged");
+    act(() => renderer!.root.findByProps({ "aria-label": "ocular pain: positive" }).props.onClick());
+    await act(async () => { await delay(850); });
+    assert.equal(submitted.length, 2, "later save waits for the in-flight save");
+    await act(async () => { resolveSave(json({ answers: submitted[1] })); await delay(0); });
+    assert.equal(submitted.length, 3);
+    assert.equal(submitted[2]?.length, 1);
+    assert.deepEqual(submitted[2]?.[0]?.value, { kind: "tri-state", status: "negative" });
+  } finally { renderer?.unmount(); globalThis.fetch = originalFetch; }
+});
+
+const FOLLOW_UP_WORKUP_CODES = [
+  "iop-check",
+  "visual-field",
+  "optic-nerve-imaging",
+  "gonioscopy",
+  "pachymetry",
+  "fundus-photos",
+  "ocular-exam",
+] as const;
+
+const FOLLOW_UP_TEMPLATE: HistoryTemplate = {
+  complaint: "glaucoma",
+  label: "Glaucoma",
+  presentations: "follow_up_presentations",
+  sections: [
+    { id: "presents-for", type: "presents_for", label: "Today the patient presents for", catalog: "follow_up_workup", required: true, on: "follow-up" },
+  ],
+  narrative: "declaration-owned",
+};
+
+const FOLLOW_UP_CATALOGS: HistoryCatalogs = {
+  follow_up_presentations: [{ code: "follow-up", display: "Follow Up" }],
+  follow_up_workup: FOLLOW_UP_WORKUP_CODES.map((code) => ({ code, display: code.replaceAll("-", " ") })),
+};
+
+function followUpPrefills(): HistoryTemplateAnswer[] {
+  return FOLLOW_UP_WORKUP_CODES.map((code) => ({
+    id: `answer-presents-for-${code}`,
+    complaintId: "complaint-1",
+    templateKey: "glaucoma",
+    sectionId: "presents-for",
+    optionCode: code,
+    value: { kind: "tri-state", status: "positive" },
+  }));
+}
+
+test("a follow-up with seven prefills saves the presentation without a 413", async () => {
+  const originalFetch = globalThis.fetch;
+  const submitted: HistoryTemplateAnswer[][] = [];
+  let refusedStatus: number | undefined;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/hpi/definition")) return json({ templates: [FOLLOW_UP_TEMPLATE], catalogs: FOLLOW_UP_CATALOGS });
+    if (url.endsWith("/complaints")) return json({ complaints: [complaint()] });
+    if (url.endsWith("/encounters/e1/hpi")) return json({ answers: [], followUpPrefills: followUpPrefills(), templateNarratives: [] });
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { templateAnswers: HistoryTemplateAnswer[] };
+      submitted.push(body.templateAnswers);
+      if (body.templateAnswers.length + 1 > 8) {
+        refusedStatus = 413;
+        return new Response(JSON.stringify({ error: "History save refused: conditional bundles allow at most 8 total entries" }), {
+          status: 413,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return json({ answers: body.templateAnswers, templateNarratives: [{ complaintId: "complaint-1", narrative: "Follow-up selected." }] });
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  };
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => { renderer = create(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />); await delay(0); });
+    const followUpButton = renderer!.root.findAllByType("button").find((button) => button.children.includes("Follow Up"));
+    assert.ok(followUpButton);
+    act(() => followUpButton.props.onClick());
+    await act(async () => { await delay(850); });
+    assert.equal(refusedStatus, undefined, "follow-up save must not hit the 413 bundle guard");
+    assert.deepEqual(submitted[0]?.map((answer) => answer.sectionId), ["presentation"]);
+    assert.equal(renderer!.root.findAllByProps({ role: "alert" }).length, 0);
+    assert.match(renderer!.root.findByProps({ role: "status" }).children.join(""), /saved · just now/i);
+  } finally { renderer?.unmount(); globalThis.fetch = originalFetch; }
+});
+
+test("untapped follow-up suggestions stay out of requests, persisted answers, narrative, and completeness until one is tapped", async () => {
+  const originalFetch = globalThis.fetch;
+  const submitted: HistoryTemplateAnswer[][] = [];
+  const persisted = new Map<string, HistoryTemplateAnswer>();
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/hpi/definition")) return json({ templates: [FOLLOW_UP_TEMPLATE], catalogs: FOLLOW_UP_CATALOGS });
+    if (url.endsWith("/complaints")) return json({ complaints: [complaint()] });
+    if (url.endsWith("/encounters/e1/hpi")) return json({ answers: [], followUpPrefills: followUpPrefills(), templateNarratives: [] });
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { templateAnswers: HistoryTemplateAnswer[] };
+      submitted.push(body.templateAnswers);
+      for (const answer of body.templateAnswers) persisted.set(answer.id, answer);
+      const recordedWorkup = [...persisted.values()].find((answer) => answer.sectionId === "presents-for");
+      return json({
+        answers: body.templateAnswers.map((answer) => ({ ...answer, observationReference: `Observation/${answer.id}` })),
+        templateNarratives: [{ complaintId: "complaint-1", narrative: recordedWorkup ? "Follow-up for iop check." : "Follow-up selected." }],
+      });
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  };
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => { renderer = create(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />); await delay(0); });
+    const followUpButton = renderer!.root.findAllByType("button").find((button) => button.children.includes("Follow Up"));
+    assert.ok(followUpButton);
+    act(() => followUpButton.props.onClick());
+    await act(async () => { await delay(850); });
+
+    assert.deepEqual(submitted[0]?.map((answer) => answer.sectionId), ["presentation"]);
+    assert.equal([...persisted.values()].some((answer) => answer.sectionId === "presents-for"), false);
+    assert.doesNotMatch(renderer!.toJSON() ? JSON.stringify(renderer!.toJSON()) : "", /Follow-up for iop check/);
+    assert.ok(renderer!.root.findByProps({ "aria-label": "Started" }));
+    const suggestion = renderer!.root.findByProps({ "aria-label": "iop check: suggested from last visit" });
+    assert.match(suggestion.props.className, /sky/);
+
+    act(() => suggestion.props.onClick());
+    await act(async () => { await delay(850); });
+    assert.equal(submitted[1]?.length, 1);
+    assert.equal(submitted[1]?.[0]?.optionCode, "iop-check");
+    assert.equal([...persisted.values()].some((answer) => answer.sectionId === "presents-for" && answer.optionCode === "iop-check"), true);
+    assert.match(renderer!.toJSON() ? JSON.stringify(renderer!.toJSON()) : "", /Follow-up for iop check/);
+    assert.ok(renderer!.root.findByProps({ "aria-label": "Charted" }));
+  } finally { renderer?.unmount(); globalThis.fetch = originalFetch; }
+});
