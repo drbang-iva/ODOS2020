@@ -23,14 +23,14 @@ Commands run from this worktree, except UI tests run from `ui/` so its JSX confi
 | Baseline MCP History/search regressions | 76 passed, 0 failed, 0 skipped |
 | Initial new-contract RED | 20 tests: 8 passed, 12 failed (missing new endpoint/read behaviour) |
 | `npm --prefix mcp test -- tests/historyItemReview.test.ts` | 23 passed, 0 failed, 0 skipped |
-| Final restored new + existing History/search tests | 99 passed, 0 failed, 0 skipped |
+| Final new + canonical-definition + existing History/search tests | 101 passed, 0 failed, 0 skipped |
 | Untouched `historyAnswerObservation.test.ts` | 3/3 |
 | Untouched `historyTemplateEngine.test.ts` | 12/12 |
 | Untouched `hpiEndpoint.test.ts` (includes 1a/1b/1c and 1d-1 guards) | 37/37 |
 | Untouched `hpiPagination.test.ts` | 15/15 |
 | Untouched `fhirSearch.test.ts` | 9/9 |
 | Untouched UI `hpiSection.test.tsx` + `hpiDeltaBrowser.test.tsx` | 25/25 (24 component cases + 1 browser case) |
-| `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test` | 4,212 tests: 4,155 passed, 0 failed, 57 skipped; explicitly not a live-authz verdict |
+| `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test` | 4,214 tests: 4,157 passed, 0 failed, 57 skipped; explicitly not a live-authz verdict |
 | `npm test` from `ui/` | 1,235 passed, 0 failed, 0 skipped |
 | `npm --prefix mcp run build` | exit 0, `tsc` |
 | `npm run typecheck:scripts` | exit 0 |
@@ -66,8 +66,14 @@ This proves persistence against real local Medplum using the synthetic admin ide
 ## Files and follow-ups
 
 Production: `mcp/src/clinical-graph/history-answer-observation.ts`, `mcp/src/clinical-graph/hpi-endpoint.ts`.
-Verification: new `mcp/tests/historyItemReview.test.ts`, `mcp/scripts/prove-history-item-review.ts`, this build-log directory, and Mandate 14 ledger rows 60–61 in `data/code-bindings/v0.6-verification-ledger.md`.
+Verification: new `mcp/tests/historyItemReview.test.ts` and `mcp/tests/historyItemReviewDefinitions.test.ts`, `mcp/scripts/prove-history-item-review.ts`, this build-log directory, the two governed `odos-history-review-method.json` / `odos-history-review-target.json` StructureDefinitions, their canonical registry entries and `extension-urls.md` bindings, and Mandate 14 ledger rows 60–61 in `data/code-bindings/v0.6-verification-ledger.md`.
 
-No new design decision was introduced, so the companion `decisions/INDEX.md` was not changed. The accepted 1d-3 scope remains authoritative. Ledger rows are documentary and are not enforced registries. No medical terminology codes were added.
+No new design decision was introduced, so the companion `decisions/INDEX.md` was not changed. The accepted 1d-3 scope remains authoritative. Ledger rows are documentary. The two canonical-extension registry entries are guarded by `historyItemReviewDefinitions.test.ts`; deleting each entry fails its test, and restoring it passes (`registry-mutations.txt`). No medical terminology codes were added.
 
 Status: author evidence only. A separately invoked evaluator must review the final head before merge. This session does not post an evaluation marker or apply an operator override label. CI and bot status are reported at the final PR head in the handoff, not frozen here as a completion claim.
+
+## Bot fixback: canonical extension definitions
+
+Greptile identified missing definitions for the two new emitted extension URLs. Both now have R4 Extension StructureDefinitions on Observation: one method valueCode and repeated target valueString. The existing profile installer enumerates these JSON files; no installer code changed. `extension-urls.md` publishes their binding contracts. The JSON target member validation still belongs to the endpoint, not to the string StructureDefinition.
+
+The new producer-to-definition tests failed 0/2 before the artifacts, then passed 2/2. Separate deletion of each registry entry also went RED (exit 1), then GREEN (exit 0) after restoration. Production item-review and legacy code is unchanged in this fixback. No shared-stack schema installation was performed.

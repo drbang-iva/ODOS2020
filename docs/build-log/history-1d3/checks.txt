@@ -186,3 +186,88 @@ Proxy-coverage census — 24 backend route families discovered, 27 proxy table e
 Every backend route family has a proxy table entry.
 
 Reporting only — CI annotates findings, but this check never fails the build.
+
+=== definitions-red ===
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d3/mcp/tests/historyItemReviewDefinitions.test.ts:18:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 99.249042
+
+=== definitions-green ===
+# Subtest: emitted review target resolves to a registered R4 Observation extension
+ok 25 - emitted review target resolves to a registered R4 Observation extension
+  ---
+  duration_ms: 0.788083
+  type: 'test'
+  ...
+1..25
+# tests 25
+# suites 0
+# pass 25
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 381.210959
+
+=== final-focused ===
+# Subtest: answer upsert finds the existing answer and retires reviews beyond page one
+ok 101 - answer upsert finds the existing answer and retires reviews beyond page one
+  ---
+  duration_ms: 0.901917
+  type: 'test'
+  ...
+1..101
+# tests 101
+# suites 0
+# pass 101
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1021.292459
+
+=== final-full-mcp ===
+ok 3679 - WestFax config is all-or-nothing, HTTPS-only, and never appears in client code
+  ---
+  duration_ms: 0.544459
+  type: 'test'
+  ...
+1..3679
+# tests 4214
+# suites 0
+# pass 4157
+# fail 0
+# cancelled 0
+# skipped 57
+# todo 0
+# duration_ms 53734.963875
+⚠️  LIVE STACK NOT CONFIGURED — 41 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.
+
+=== final-preflight ===
+- Patient: 5 operations; 0 scope-verified; 5 NOT SCOPE-VERIFIED
+- Procedure: 11 operations; 0 scope-verified; 11 NOT SCOPE-VERIFIED
+- Provenance: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- QuestionnaireResponse: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- RelatedPerson: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- ServiceRequest: 8 operations; 0 scope-verified; 8 NOT SCOPE-VERIFIED
+Limitations:
+- Computed read resourceTypes escape this scan.
+- Computed create resources require a generic resource type, an object-literal resourceType, or an fhir-scope-contract marker; other computed creates escape this scan.
+- Computed update, delete, and patch resourceTypes escape this scan.
+- A computed search is marker-checked only when its argument is named resourceType, resource_type, or .resourceType; other names escape because receiver-independent matching would misclassify non-FHIR search APIs.
+- Marked helper propagation follows named parameters; destructured or object-property resourceType forwarding escapes this scan.
+- Marked helper propagation is function-name based across scanned roots; an imported helper alias escapes unless its local name matches, and same-named non-FHIR helpers require the explicit call-site allowlist.
+- Type-level comparison does not prove criteria scope; criteria-dependent operations without an exact fhir-scope-contract are counted as NOT SCOPE-VERIFIED.
+ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md

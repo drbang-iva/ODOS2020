@@ -1,6 +1,6 @@
 {
   "resourceType": "ODOSCanonicalExtensionRegistry",
-  "generatedAt": "2026-09-01",
+  "generatedAt": "2026-09-04",
   "extensions": [
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/claim-touch-count",
@@ -949,6 +949,18 @@
       "namespace": "eligibility-prevent",
       "status": "active",
       "sliceConsumer": "billing-watcher-3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-history-review-method",
+      "namespace": "history",
+      "status": "active",
+      "sliceConsumer": "history-1d3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-history-review-target",
+      "namespace": "history",
+      "status": "active",
+      "sliceConsumer": "history-1d3"
     }
   ]
 }

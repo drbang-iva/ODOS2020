@@ -1,0 +1,56 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "odos-history-review-target",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-history-review-target",
+  "version": "history-1d3",
+  "name": "ODOSHistoryReviewTarget",
+  "title": "ODOS History Review Target",
+  "status": "active",
+  "date": "2026-09-04",
+  "publisher": "ODOS",
+  "description": "One enumerated immutable ReviewTarget JSON object per extension: sectionKey and sectionId are required; optionCode is present only for a catalog item; eye is OD, OS or OU only for a per-eye item. Single-select and text targets omit optionCode. Wildcard targets have no semantics and are refused. The History endpoint validates the JSON and declaration/catalog identity; this string definition does not validate JSON members.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Observation"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "History item review target",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-history-review-target"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      }
+    ]
+  }
+}

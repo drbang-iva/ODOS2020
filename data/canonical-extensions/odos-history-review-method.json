@@ -1,0 +1,56 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "odos-history-review-method",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-history-review-method",
+  "version": "history-1d3",
+  "name": "ODOSHistoryReviewMethod",
+  "title": "ODOS History Review Method",
+  "status": "active",
+  "date": "2026-09-04",
+  "publisher": "ODOS",
+  "description": "How the explicit item-review gesture was performed: individual or bulk. This is an ODOS-local act method, not a screening result.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Observation"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "History item review method",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-history-review-method"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "code"
+          }
+        ]
+      }
+    ]
+  }
+}
