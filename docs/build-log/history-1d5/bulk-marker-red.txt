@@ -8,9 +8,9 @@ not ok 1 - ROS composed note never exposes review method for any coverage or enc
   failureType: 'testCodeFailure'
   error: |-
     The input was expected to not match the regular expression /Review method:|\bbulk\b|\bindividual\b/. Input:
-    
+
     'Eyes 0/8; Endocrine 0/4; Neurological 1/4; Constitutional 0/4; Respiratory 0/3; ENT and Mouth 0/5; Cardiovascular 0/3; Gastrointestinal 0/5; Genitourinary 0/3; Musculoskeletal 0/3; Integumentary 0/3; Psychiatric 0/3; Hematologic/Lymphatic 0/3; Allergic/Immunologic 0/3. · bulk'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -33,10 +33,10 @@ not ok 2 - bulk and individual acts produce byte-identical composed summaries
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'Eyes 1/8; Endocrine 0/4; Neurological 0/4; Constitutional 0/4; Respiratory 0/3; ENT and Mouth 0/5; Cardiovascular 0/3; Gastrointestinal 0/5; Genitourinary 0/3; Musculoskeletal 0/3; Integumentary 0/3; Psychiatric 0/3; Hematologic/Lymphatic 0/3; Allergic/Immunologic 0/3.'
     - 'Eyes 1/8; Endocrine 0/4; Neurological 0/4; Constitutional 0/4; Respiratory 0/3; ENT and Mouth 0/5; Cardiovascular 0/3; Gastrointestinal 0/5; Genitourinary 0/3; Musculoskeletal 0/3; Integumentary 0/3; Psychiatric 0/3; Hematologic/Lymphatic 0/3; Allergic/Immunologic 0/3. · bulk'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'Eyes 1/8; Endocrine 0/4; Neurological 0/4; Constitutional 0/4; Respiratory 0/3; ENT and Mouth 0/5; Cardiovascular 0/3; Gastrointestinal 0/5; Genitourinary 0/3; Musculoskeletal 0/3; Integumentary 0/3; Psychiatric 0/3; Hematologic/Lymphatic 0/3; Allergic/Immunologic 0/3. · bulk'

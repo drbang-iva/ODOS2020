@@ -26,9 +26,9 @@ not ok 4 - reminder survives a tobacco review act and clears only after answer p
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1

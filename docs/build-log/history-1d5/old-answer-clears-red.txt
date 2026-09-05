@@ -47,9 +47,9 @@ not ok 6 - out-of-window, voided, cancelled, undated, foreign, and non-selection
   failureType: 'testCodeFailure'
   error: |-
     {"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-template-answer-id","value":"tobacco"}],"category":[{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/history-answer-scope","code":"patient"}]}],"status":"preliminary","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-template-answer","code":"history-template-answer","display":"History template answer"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/prior"},"effectiveDateTime":"2025-12-31T23:59:59Z","issued":"2025-12-31T23:59:59Z","extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-template-answer-json","valueString":"{\"id\":\"tobacco\",\"subjectScope\":\"patient\",\"templateKey\":\"social-history\",\"sectionId\":\"tobacco\",\"value\":{\"kind\":\"selection\",\"code\":\"never\"}}"}],"id":"543d57c3-35aa-449e-84ed-97181bbdc918"}
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1

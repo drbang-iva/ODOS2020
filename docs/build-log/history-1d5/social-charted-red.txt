@@ -21,12 +21,12 @@ not ok 3 - Social declares per-item review and still requires exactly four answe
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + {
     +   reviewed_items_min: 1
     + }
     - undefined
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   actual:
@@ -50,7 +50,7 @@ not ok 4 - reminder survives a tobacco review act and clears only after answer p
   failureType: 'testCodeFailure'
   error: |-
     Expected "actual" to be strictly unequal to:
-    
+
     'charted'
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
