@@ -207,9 +207,9 @@ not ok 1 - patient carry-forward reads all 1001 seeded answers
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -261,9 +261,9 @@ not ok 1 - ROS cannot enter another encounter carry-forward search or consume it
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -315,9 +315,9 @@ not ok 1 - patient ceiling refuses 5001 rows with observed row and page counts
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /5001 rows.*11 pages/. Input:
-    
+
     'History route failed'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -337,9 +337,9 @@ not ok 2 - handleHpiRecordRequest catches page limits with the page count
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /17 pages/. Input:
-    
+
     'History route failed'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -359,9 +359,9 @@ not ok 3 - handleHistoryReviewRequest catches page limits with the page count
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /17 pages/. Input:
-    
+
     'History route failed'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -381,9 +381,9 @@ not ok 4 - handleHpiCaptureRequest catches page limits with the page count
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /17 pages/. Input:
-    
+
     'History route failed'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -453,9 +453,9 @@ not ok 1 - MCP searchAll bounds empty-page streams with a counted page failure
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     3 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -494,4 +494,3 @@ ok 1 - MCP searchAll bounds empty-page streams with a counted page failure
 # skipped 0
 # todo 0
 # duration_ms 74.588209
-
