@@ -1,0 +1,10 @@
+Command: ODOS_ALLOW_UNGATED_MCP=1 ODOS_POSTGRES_URL=<isolated-local-postgres> npm --prefix mcp test
+Exit: 0
+# tests 4250
+# pass 4205
+# fail 0
+# cancelled 0
+# skipped 45
+# todo 0
+# duration_ms 66868.093625
+45 skips retained; no live-authorization verdict.

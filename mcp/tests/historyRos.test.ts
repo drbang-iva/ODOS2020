@@ -155,9 +155,20 @@ test("coverage reports 3/8 until every item is dated this encounter; positives s
   const dates = items.map((o, i) => ({ target: { ...a, optionCode: o.code }, lastReviewed: i < 3 ? earlier : "2026-09-04T12:00:00Z" }));
   const context = { encounterStart: earlier, lastReviewed: dates, methods: ["bulk" as const] };
   const summary = engine.renderDeclaredSubjectSummary(d, [answer("eye-pain")], context);
-  assert.match(summary, /Eyes 3\/8/); assert.doesNotMatch(summary, /Eyes reviewed/); assert.match(summary, /eye pain/i); assert.match(summary, /bulk/);
+  assert.match(summary, /Eyes 3\/8/); assert.doesNotMatch(summary, /Eyes reviewed/); assert.match(summary, /eye pain/i);
   const complete = engine.renderDeclaredSubjectSummary(d, [answer("eye-pain")], { ...context, lastReviewed: dates.map(r => ({ ...r, lastReviewed: earlier })) });
   assert.match(complete, /Eyes reviewed/); assert.match(complete, /eye pain/i);
+});
+test("bulk and individual summaries are byte-identical with the same partial coverage and positives", () => {
+  const d = declaration();
+  const lastReviewed = engine.HISTORY_OPTION_CATALOGS.ros_items.filter(o => o.system === "Eyes").slice(0, 3)
+    .map(o => ({ target: { ...a, optionCode: o.code }, lastReviewed: earlier }));
+  const answers = [answer("eye-pain")];
+  const context = { encounterStart: earlier, lastReviewed };
+  assert.equal(
+    engine.renderDeclaredSubjectSummary(d, answers, { ...context, methods: ["bulk"] }),
+    engine.renderDeclaredSubjectSummary(d, answers, { ...context, methods: ["individual"] }),
+  );
 });
 test("catalog additions automatically change coverage denominator", () => {
   const d = declaration(); engine.HISTORY_OPTION_CATALOGS.ros_items.push({ code: "synthetic-new", display: "Synthetic new", system: "Eyes" });

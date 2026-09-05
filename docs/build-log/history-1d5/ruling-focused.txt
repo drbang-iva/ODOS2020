@@ -1,0 +1,172 @@
+TAP version 13
+# Subtest: ROS declaration exposes fourteen grouped systems and encounter scope
+ok 1 - ROS declaration exposes fourteen grouped systems and encounter scope
+  ---
+  duration_ms: 1.018166
+  type: 'test'
+  ...
+# Subtest: targeted retraction preserves B and original bytes; shipped void restores A
+ok 2 - targeted retraction preserves B and original bytes; shipped void restores A
+  ---
+  duration_ms: 5.448708
+  type: 'test'
+  ...
+# Subtest: retraction retry is immutable and cannot reuse an item-review gesture
+ok 3 - retraction retry is immutable and cannot reuse an item-review gesture
+  ---
+  duration_ms: 1.24775
+  type: 'test'
+  ...
+# Subtest: retraction affects only its referenced act; answer dates and later reviews survive
+ok 4 - retraction affects only its referenced act; answer dates and later reviews survive
+  ---
+  duration_ms: 2.62225
+  type: 'test'
+  ...
+# Subtest: malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","extra":true}
+ok 5 - malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","extra":true}
+  ---
+  duration_ms: 0.238791
+  type: 'test'
+  ...
+# Subtest: malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","extra":true}
+ok 6 - malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","extra":true}
+  ---
+  duration_ms: 0.095709
+  type: 'test'
+  ...
+# Subtest: malformed target refused at endpoint: items-reviewed {"sectionId":"systems","optionCode":"eye-pain"}
+ok 7 - malformed target refused at endpoint: items-reviewed {"sectionId":"systems","optionCode":"eye-pain"}
+  ---
+  duration_ms: 0.140333
+  type: 'test'
+  ...
+# Subtest: malformed target refused at endpoint: items-review-retracted {"sectionId":"systems","optionCode":"eye-pain"}
+ok 8 - malformed target refused at endpoint: items-review-retracted {"sectionId":"systems","optionCode":"eye-pain"}
+  ---
+  duration_ms: 0.0825
+  type: 'test'
+  ...
+# Subtest: malformed target refused at endpoint: items-reviewed {"sectionKey":"*","sectionId":"systems","optionCode":"eye-pain"}
+ok 9 - malformed target refused at endpoint: items-reviewed {"sectionKey":"*","sectionId":"systems","optionCode":"eye-pain"}
+  ---
+  duration_ms: 0.358333
+  type: 'test'
+  ...
+# Subtest: malformed target refused at endpoint: items-review-retracted {"sectionKey":"*","sectionId":"systems","optionCode":"eye-pain"}
+ok 10 - malformed target refused at endpoint: items-review-retracted {"sectionKey":"*","sectionId":"systems","optionCode":"eye-pain"}
+  ---
+  duration_ms: 0.31275
+  type: 'test'
+  ...
+# Subtest: malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"*","optionCode":"eye-pain"}
+ok 11 - malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"*","optionCode":"eye-pain"}
+  ---
+  duration_ms: 0.119542
+  type: 'test'
+  ...
+# Subtest: malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"*","optionCode":"eye-pain"}
+ok 12 - malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"*","optionCode":"eye-pain"}
+  ---
+  duration_ms: 0.177417
+  type: 'test'
+  ...
+# Subtest: malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"*"}
+ok 13 - malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"*"}
+  ---
+  duration_ms: 0.142791
+  type: 'test'
+  ...
+# Subtest: malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"*"}
+ok 14 - malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"*"}
+  ---
+  duration_ms: 0.078459
+  type: 'test'
+  ...
+# Subtest: malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","eye":"*"}
+ok 15 - malformed target refused at endpoint: items-reviewed {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","eye":"*"}
+  ---
+  duration_ms: 0.081708
+  type: 'test'
+  ...
+# Subtest: malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","eye":"*"}
+ok 16 - malformed target refused at endpoint: items-review-retracted {"sectionKey":"review-of-systems","sectionId":"systems","optionCode":"eye-pain","eye":"*"}
+  ---
+  duration_ms: 0.832334
+  type: 'test'
+  ...
+# Subtest: retraction refuses absent, wrong-target, foreign and prior-encounter originals
+ok 17 - retraction refuses absent, wrong-target, foreign and prior-encounter originals
+  ---
+  duration_ms: 0.895125
+  type: 'test'
+  ...
+# Subtest: Social requires four answers even with a tobacco review; ROS explicitly counts bulk
+ok 18 - Social requires four answers even with a tobacco review; ROS explicitly counts bulk
+  ---
+  duration_ms: 0.490166
+  type: 'test'
+  ...
+# Subtest: coverage reports 3/8 until every item is dated this encounter; positives survive
+ok 19 - coverage reports 3/8 until every item is dated this encounter; positives survive
+  ---
+  duration_ms: 0.248833
+  type: 'test'
+  ...
+# Subtest: bulk and individual summaries are byte-identical with the same partial coverage and positives
+ok 20 - bulk and individual summaries are byte-identical with the same partial coverage and positives
+  ---
+  duration_ms: 0.114042
+  type: 'test'
+  ...
+# Subtest: catalog additions automatically change coverage denominator
+ok 21 - catalog additions automatically change coverage denominator
+  ---
+  duration_ms: 0.071875
+  type: 'test'
+  ...
+# Subtest: unregistered tokens throw in complaint and subject renderers
+ok 22 - unregistered tokens throw in complaint and subject renderers
+  ---
+  duration_ms: 0.492125
+  type: 'test'
+  ...
+# Subtest: aggregate and itemized ROS never synthesize each other; overview prefers Charted itemized
+ok 23 - aggregate and itemized ROS never synthesize each other; overview prefers Charted itemized
+  ---
+  duration_ms: 9.860916
+  type: 'test'
+  ...
+# Subtest: overview falls back to the aggregate after the only item review is retracted
+ok 24 - overview falls back to the aggregate after the only item review is retracted
+  ---
+  duration_ms: 1.019541
+  type: 'test'
+  ...
+# Subtest: prior encounter acts keep historical dates without Charting this encounter
+ok 25 - prior encounter acts keep historical dates without Charting this encounter
+  ---
+  duration_ms: 0.730458
+  type: 'test'
+  ...
+# Subtest: retracting an act never erases a positive answer or its own review date
+ok 26 - retracting an act never erases a positive answer or its own review date
+  ---
+  duration_ms: 0.957084
+  type: 'test'
+  ...
+# Subtest: individual HTTP boundary refuses bulk, malformed targets and routes immutable review/retraction/read
+ok 27 - individual HTTP boundary refuses bulk, malformed targets and routes immutable review/retraction/read
+  ---
+  duration_ms: 49.096125
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 242.321542
