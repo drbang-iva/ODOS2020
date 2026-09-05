@@ -126,7 +126,6 @@ test("front-desk Basic grants stay criteria-scoped to approved records and the p
     "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-dx-pick-tally|odos-dx-pick-tally&identifier=https://odos2020.com/fhir/NamingSystem/dx-pick-tally-practitioner|%profile",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-encounter-complaint|odos-encounter-complaint",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-section-group|odos-encounter-section-override",
-    "Basic?code=https://odos2020.com/fhir/CodeSystem/history-bulk-denial|history-bulk-denial-ledger",
     // The per-encounter Undo ledger: staff may clear, so staff writes the slot (2026-09-02).
     // This pin catches silent widening; the grant itself is proven on real Medplum by
     // encounterUndoLedgerAuthzLive.test.ts.

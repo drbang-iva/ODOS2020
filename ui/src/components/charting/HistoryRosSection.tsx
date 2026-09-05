@@ -15,7 +15,7 @@ export function HistoryRosSection({ declaration, catalogs, patientReference, enc
   const [open, setOpen] = useState(!followUp);
   const sectionBusy = useSectionWriteBusy(encounterReference, [declaration.key]);
   useEffect(() => setOpen(!followUp), [followUp]);
-  const { record, acts, ready, busy, error, setError, refresh, gesture, bulkDeny, bulkProgress, dates, current } = useHistoryItemReview({ patientReference, encounterReference, historyVersion, onChanged, onRecordedChange });
+  const { record, acts, ready, busy, error, setError, refresh, gesture, bulkDeny, dates, current } = useHistoryItemReview({ patientReference, encounterReference, historyVersion, onChanged, onRecordedChange });
   function put(sectionId: string, value: HistoryTemplateAnswer["value"], optionCode?: string) {
     const prior = answers.find(answer => answer.sectionId === sectionId && answer.optionCode === optionCode);
     onChange({ id: prior?.id ?? makeAnswerId(sectionId, optionCode),
@@ -26,9 +26,8 @@ export function HistoryRosSection({ declaration, catalogs, patientReference, enc
   const options = declaration.sections.flatMap(section => section.group_by === "system" && section.catalog ? catalogs[section.catalog] ?? [] : []);
   const unansweredTargets = options.filter(option => !answers.some(answer => answer.sectionId === "systems" && answer.optionCode === option.code))
     .map(option => ({ sectionKey: declaration.key, sectionId: "systems", optionCode: option.code }));
-  const bulkTargets = bulkProgress?.targets ?? unansweredTargets;
   async function denyUnanswered() {
-    await bulkDeny(bulkTargets, {
+    await bulkDeny(unansweredTargets, {
       beforeRecord: onBeforeBulk,
       onRecorded: saved => onBulkRecorded(saved.filter(answer => answer.templateKey === declaration.key) as HistoryTemplateAnswer[]),
     });
@@ -40,11 +39,10 @@ export function HistoryRosSection({ declaration, catalogs, patientReference, enc
         {followUp && <span className="odos-hpi-muted ml-3 text-sm">Complaint-directed</span>}
         <span className="odos-hpi-muted mt-1 block line-clamp-2 text-sm" title={projection?.summary}>{projection?.summary || "Not started"}</span>
       </button>
-      {bulkTargets.length > 0 && <button type="button" data-testid="history-bulk-denial" aria-label={bulkProgress && !busy ? "Resume marking unanswered No" : "Mark unanswered No"}
+      {unansweredTargets.length > 0 && <button type="button" data-testid="history-bulk-denial" aria-label="Mark unanswered No"
         disabled={!ready || busy || sectionBusy} onClick={() => void denyUnanswered()} className="min-h-11 rounded border border-slate-400 px-3 text-sm">
-        {bulkProgress && !busy ? "Resume" : "Mark unanswered No"}
+        Mark unanswered No
       </button>}
-      {bulkProgress && <span data-history-bulk-progress role="status" className="odos-hpi-muted text-xs">{bulkProgress.recorded} of {bulkProgress.total} recorded</span>}
       <span className="odos-hpi-muted text-xs">{projection?.state === "charted" ? "Charted" : projection?.state === "started" ? "Started" : "Not started"}</span>
       {saveIndicator}
     </header>

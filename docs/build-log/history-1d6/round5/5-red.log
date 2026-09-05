@@ -1,0 +1,77 @@
+TAP version 13
+# Subtest: completed gesture replay is byte-stable and changed targets remain immutable
+not ok 1 - completed gesture replay is byte-stable and changed targets remain immutable
+  ---
+  duration_ms: 4.74725
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/tests/historyRosHttp.test.ts:1:8231'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+        body: {
+    +     error: 'Bulk denial accepts unanswered targets only.'
+    -     actorReference: 'Practitioner/test',
+    -     attestationReference: 'Observation/2d615742-e381-4184-909c-af3851d192af',
+    -     gestureId: 'b765de33-487b-4081-a049-31376e74cd96',
+    -     method: 'bulk',
+    -     recordedAt: '2026-09-05T12:00:00Z',
+    -     sectionKey: 'review-of-systems',
+    -     targets: [
+    -       {
+    -         optionCode: 'eye-pain',
+    -         sectionId: 'systems',
+    -         sectionKey: 'review-of-systems'
+    -       },
+    -       {
+    -         optionCode: 'poor-vision',
+    -         sectionId: 'systems',
+    -         sectionKey: 'review-of-systems'
+    -       }
+    -     ]
+        },
+    +   status: 409
+    -   status: 200
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    status: 200
+    body:
+      sectionKey: 'review-of-systems'
+      gestureId: 'b765de33-487b-4081-a049-31376e74cd96'
+      method: 'bulk'
+      targets:
+        0:
+          sectionKey: 'review-of-systems'
+          sectionId: 'systems'
+          optionCode: 'eye-pain'
+        1:
+          sectionKey: 'review-of-systems'
+          sectionId: 'systems'
+          optionCode: 'poor-vision'
+      actorReference: 'Practitioner/test'
+      recordedAt: '2026-09-05T12:00:00Z'
+      attestationReference: 'Observation/2d615742-e381-4184-909c-af3851d192af'
+  actual:
+    status: 409
+    body:
+      error: 'Bulk denial accepts unanswered targets only.'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/tests/historyRosHttp.test.ts:145:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 145.600542

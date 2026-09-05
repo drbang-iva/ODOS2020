@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: bulk units derive seven answers from the shared eight-entry limit and write the act last
+not ok 1 - bulk units derive seven answers from the shared eight-entry limit and write the act last
+  ---
+  duration_ms: 3.536334
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/tests/historyRosHttp.test.ts:1:4806'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"History save refused: conditional bundles allow at most 8 total entries; this save needs 9. No changes were written."}
+    
+    413 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 413
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/tests/historyRosHttp.test.ts:85:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 147.62575

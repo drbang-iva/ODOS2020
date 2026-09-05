@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Basic, Bundle, Resource, Observation } from "@medplum/fhirtypes";
+import type { Bundle, Resource, Observation } from "@medplum/fhirtypes";
 import type { HpiEndpointDeps } from "../../src/clinical-graph/hpi-endpoint.js";
 import { buildHpiFindingDefinition } from "../../src/clinical-graph/hpi-definition.js";
 const patientReference = "Patient/ros-test";
@@ -36,15 +36,16 @@ export function historyRosFixture(rows: Resource[] = []) {
     read: async <T extends Resource>(type: T["resourceType"], id: string) => (type === "Encounter" ? { resourceType: "Encounter", id, status: "in-progress", period: { start: earlier }, subject: { reference: patientReference } } : structuredClone(rows.find(row => row.resourceType === type && row.id === id))) as T,
     search: async <T extends Resource>(type: T["resourceType"], params: Record<string, string> = {}) => page<T>(type, params),
     searchUrl: async <T extends Resource>(url: string, type: T["resourceType"]) => page<T>(type, Object.fromEntries(new URL(url, baseUrl).searchParams)),
-    create: async (row: Basic, headers?: Record<string, string>) => {
+    create: async (row: Resource, headers?: Record<string, string>) => {
       events.push(`create:${row.resourceType}`);
       const identifier = new URLSearchParams(headers?.["If-None-Exist"] ?? "").get("identifier");
-      const existing = rows.find(resource => resource.resourceType === "Basic" && identifier && resource.identifier?.some(value => `${value.system}|${value.value}` === identifier));
-      if (existing) return structuredClone(existing) as Basic;
+      const existing = rows.find(resource => resource.resourceType === row.resourceType && identifier &&
+        "identifier" in resource && resource.identifier?.some(value => `${value.system}|${value.value}` === identifier));
+      if (existing) return structuredClone(existing);
       const saved = { ...structuredClone(row), id: row.id ?? randomUUID(), meta: { versionId: randomUUID() } };
       rows.push(saved); return structuredClone(saved);
     },
-    update: async (_type: "Basic" | "Encounter", id: string, row: Basic, headers?: Record<string, string>) => {
+    update: async (_type: Resource["resourceType"], id: string, row: Resource, headers?: Record<string, string>) => {
       events.push(`update:${row.resourceType}`);
       const existing = rows.find(resource => resource.resourceType === row.resourceType && resource.id === id);
       if (existing && headers?.["If-Match"] && headers["If-Match"] !== `W/"${existing.meta?.versionId}"`) {

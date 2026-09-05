@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: I2 every item-review HTTP door enforces one contract
+ok 1 - I2 every item-review HTTP door enforces one contract
+  ---
+  duration_ms: 6.934292
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 142.139666

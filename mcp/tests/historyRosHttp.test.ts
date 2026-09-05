@@ -1,7 +1,5 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
 import test from "node:test";
 import express from "express";
 import { historyRosFixture } from "./helpers/historyRosFixture.js";
@@ -9,8 +7,7 @@ import * as endpoints from "../src/clinical-graph/hpi-endpoint.js";
 import { buildHistoryAnswerObservation, HISTORY_ITEM_REVIEW_CODE, parseHistoryAnswerObservation, parseHistoryItemReview } from "../src/clinical-graph/history-answer-observation.js";
 import { HISTORY_OPTION_CATALOGS } from "../src/clinical-graph/history-template-engine.js";
 import { handleEncounterVoidRequest } from "../src/clinical-graph/encounter-void-endpoint.js";
-import { getRoleDeclaration } from "../src/authz/roles.js";
-import type { Basic, Observation } from "@medplum/fhirtypes";
+import type { Observation } from "@medplum/fhirtypes";
 
 const target = { sectionKey: "review-of-systems", sectionId: "systems", optionCode: "eye-pain" };
 const targets = (count: number) => HISTORY_OPTION_CATALOGS.ros_items.slice(0, count).map(option => ({ ...target, optionCode: option.code }));
@@ -77,81 +74,49 @@ test("bulk HTTP boundary admits an identified unanswered-only denial", async () 
     });
     assert.equal(response.status, 200);
     const result = await response.json();
-    assert.equal(result.status, "complete");
-    assert.equal(result.recorded, 2);
-    assert.equal(result.total, 2);
+    assert.equal(result.method, "bulk");
+    assert.deepEqual(result.targets, targets);
   } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
 });
 
-test("bulk progress uses its registered Basic extension and provider/staff coded ledger grants", async () => {
-  const s = historyRosFixture();
-  assert.equal((await bulk(s, bulkBody(1))).status, 200);
-  const ledger = s.rows.find((row): row is Basic => row.resourceType === "Basic");
-  assert.ok(ledger);
-  const extension = ledger.extension?.[0];
-  const url = "https://odos2020.com/fhir/StructureDefinition/history-bulk-denial-state";
-  assert.equal(extension?.url, url);
-  assert.equal(typeof extension.valueString, "string");
-  const directory = resolve(import.meta.dirname, "../../data/canonical-extensions");
-  const registry = JSON.parse(await readFile(resolve(directory, "registry.json"), "utf8"));
-  assert.equal(registry.extensions.filter((entry: any) => entry.url === url && entry.status === "active").length, 1);
-  const definition = JSON.parse(await readFile(resolve(directory, "history-bulk-denial-state.json"), "utf8"));
-  assert.equal(definition.url, url);
-  assert.deepEqual(definition.context, [{ type: "element", expression: "Basic" }]);
-  assert.deepEqual(definition.differential.element.find((entry: any) => entry.id === "Extension.value[x]").type, [{ code: "string" }]);
-
-  const criteria = "Basic?code=https://odos2020.com/fhir/CodeSystem/history-bulk-denial|history-bulk-denial-ledger";
-  for (const role of ["provider", "staff"] as const) {
-    const rules = getRoleDeclaration(role).resourceRules.filter(rule => rule.resourceType === "Basic" && rule.scope.kind === "practice-search" && rule.scope.criteria === criteria);
-    assert.ok(rules.some(rule => rule.interactions.includes("read")));
-    assert.ok(rules.some(rule => rule.interactions.includes("create") && rule.interactions.includes("update")));
-  }
-});
-
-test("bulk units derive seven answers from the shared eight-entry limit and finish ledger then act in order", async () => {
+test("bulk units derive seven answers from the shared eight-entry limit and write the act last", async () => {
   const s = historyRosFixture();
   const result = await bulk(s, bulkBody(15));
   assert.equal(result.status, 200, JSON.stringify(result.body));
-  assert.equal((result.body as any).status, "complete");
-  assert.equal((result.body as any).recorded, 15);
-  assert.equal((result.body as any).total, 15);
   const answerUnits = s.transactions.filter(bundle => bundle.entry?.[0]?.request?.ifNoneExist);
   assert.deepEqual(answerUnits.map(bundle => bundle.entry?.length), [8, 8, 2]);
   assert.ok(answerUnits.every(bundle => (bundle.entry?.length ?? 0) <= endpoints.HISTORY_CONDITIONAL_BUNDLE_ENTRY_LIMIT));
   assert.ok(answerUnits.flatMap(bundle => bundle.entry ?? []).filter(entry => entry.resource?.resourceType === "Observation")
     .every(entry => entry.request?.method === "POST" && entry.request.ifNoneExist?.startsWith("identifier=")));
-  assert.equal(s.events[0], "create:Basic");
-  assert.equal(s.events.at(-1), "update:Basic");
   const actIndex = s.transactions.findIndex(bundle => bundle.entry?.[0]?.resource?.resourceType === "Observation" &&
     (bundle.entry[0].resource as Observation).code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE));
   assert.equal(actIndex, 3, "the immutable act follows every answer unit");
+  const act = s.transactions[actIndex].entry?.[0]?.resource as Observation;
+  assert.deepEqual(parseHistoryItemReview(act).targets, targets(15));
 });
 
-test("a failed later unit leaves durable progress and retry resumes before writing the act", async () => {
+test("a partial bulk run records its own act and a new gesture covers only the remaining targets", async () => {
   const s = historyRosFixture();
-  const body = bulkBody(8);
+  const first = bulkBody(8);
   s.failTransactionAt(2);
-  const partial = await bulk(s, body);
+
+  const partial = await bulk(s, first);
+
   assert.equal(partial.status, 503);
-  assert.equal((partial.body as any).status, "in-progress");
-  assert.equal((partial.body as any).recorded, 7);
-  assert.equal((partial.body as any).total, 8);
-  const ledger = s.rows.find((row): row is Basic => row.resourceType === "Basic");
-  assert.ok(ledger, "the progress ledger must survive the failed unit");
-  assert.equal(JSON.parse(ledger.extension?.[0]?.valueString ?? "null").persistedTargets.length, 7);
-  assert.equal(s.rows.some((row): row is Observation => row.resourceType === "Observation" && row.code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE)), false);
-  const read = await endpoints.handleHistoryItemActsRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });
-  assert.equal(read.status, 200);
-  const { error: _error, ...progress } = partial.body as any;
-  assert.deepEqual((read.body as any).bulkDenials, [{ ...progress, targets: body.targets }]);
+  const acts = () => s.rows.filter((row): row is Observation => row.resourceType === "Observation" &&
+    row.code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE));
+  assert.equal(acts().length, 1, "the failed click still records an act for its persisted answers");
+  assert.deepEqual(parseHistoryItemReview(acts()[0]).targets, first.targets.slice(0, 7));
 
   s.failTransactionAt(undefined);
-  const resumed = await bulk(s, body);
-  assert.equal(resumed.status, 200, JSON.stringify(resumed.body));
-  assert.equal((resumed.body as any).status, "complete");
-  assert.equal((resumed.body as any).recorded, 8);
-  assert.equal((resumed.body as any).total, 8);
-  assert.equal(s.transactions.filter(bundle => bundle.entry?.[0]?.request?.ifNoneExist).length, 2, "the persisted seven-answer unit is not replayed");
+  const second = { ...first, gestureId: randomUUID(), targets: first.targets.slice(7) };
+  const completed = await bulk(s, second);
+
+  assert.equal(completed.status, 200, JSON.stringify(completed.body));
+  assert.equal(acts().length, 2);
+  assert.deepEqual(acts().map(act => parseHistoryItemReview(act).targets), [first.targets.slice(0, 7), second.targets]);
+  assert.notEqual(acts()[0].identifier?.[0]?.value, acts()[1].identifier?.[0]?.value);
+  assert.equal(s.rows.some(row => row.resourceType === "Basic"), false);
 });
 
 test("conditional create preserves a concurrent explicit Yes and excludes it from the bulk act", async () => {
@@ -166,7 +131,6 @@ test("conditional create preserves a concurrent explicit Yes and excludes it fro
   s.race(() => s.rows.push(positive));
   const result = await bulk(s, body);
   assert.equal(result.status, 200, JSON.stringify(result.body));
-  assert.equal((result.body as any).recorded, 1);
   const stored = s.rows.find((row): row is Observation => row.resourceType === "Observation" && row.id === positive.id);
   assert.ok(stored); assert.equal((parseHistoryAnswerObservation(stored).value as any).status, "positive");
   const act = s.rows.find((row): row is Observation => row.resourceType === "Observation" && row.code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE));
@@ -187,7 +151,7 @@ test("completed gesture replay is byte-stable and changed targets remain immutab
   assert.match((changed.body as any).error, /immutable/i);
 });
 
-test("bulk refuses missing identity and pre-answered targets without creating a ledger", async () => {
+test("bulk refuses missing identity and pre-answered targets before writing", async () => {
   const s = historyRosFixture();
   const body = bulkBody(1);
   const missing = await endpoints.handleHistoryItemReviewRequest(s.deps, { authHeader: "synthetic", body: { ...body, gestureId: undefined } });
@@ -200,27 +164,7 @@ test("bulk refuses missing identity and pre-answered targets without creating a 
   const answered = await bulk(s, body);
   assert.equal(answered.status, 409);
   assert.match((answered.body as any).error, /unanswered/i);
-  assert.equal(s.rows.some(row => row.resourceType === "Basic"), false);
   assert.equal(s.transactions.length, 0);
-});
-
-test("resumed bulk act contains only negative answers still live after History clear", async () => {
-  const s = historyRosFixture();
-  const body = bulkBody(8);
-  s.failTransactionAt(2);
-  assert.equal((await bulk(s, body)).status, 503);
-  s.failTransactionAt(undefined);
-  const cleared = await handleEncounterVoidRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" },
-    body: { scope: "section", sectionKey: ["hpi", "review-of-systems"] } });
-  assert.equal(cleared.status, 200, JSON.stringify(cleared.body));
-  assert.equal((cleared.body as any).count, 7);
-  const resumed = await bulk(s, body);
-  assert.equal(resumed.status, 200, JSON.stringify(resumed.body));
-  assert.equal((resumed.body as any).recorded, 1);
-  const act = s.rows.find((row): row is Observation => row.resourceType === "Observation" &&
-    row.code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE));
-  assert.ok(act);
-  assert.deepEqual(parseHistoryItemReview(act).targets, [body.targets[7]]);
 });
 
 test("fresh bulk after History clear records new live negatives", async () => {
@@ -232,84 +176,9 @@ test("fresh bulk after History clear records new live negatives", async () => {
   assert.equal(cleared.status, 200, JSON.stringify(cleared.body));
   const next = await bulk(s, { ...first, gestureId: randomUUID() });
   assert.equal(next.status, 200, JSON.stringify(next.body));
-  assert.equal((next.body as any).recorded, 2);
   const live = s.rows.filter((row): row is Observation => row.resourceType === "Observation" &&
     row.status !== "entered-in-error" && row.status !== "cancelled" && row.code.coding?.some(coding => coding.code === "history-template-answer"));
   assert.equal(live.length, 2);
-});
-
-test("resumed bulk with no live negatives completes without a review act", async () => {
-  const s = historyRosFixture();
-  const body = bulkBody(8);
-  s.failTransactionAt(2);
-  assert.equal((await bulk(s, body)).status, 503);
-  s.failTransactionAt(undefined);
-  assert.equal((await handleEncounterVoidRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" },
-    body: { scope: "section", sectionKey: ["hpi", "review-of-systems"] } })).status, 200);
-  const finalTarget = body.targets[7];
-  const answerId = `history-current-${finalTarget.sectionKey}-${finalTarget.sectionId}-${finalTarget.optionCode}`;
-  s.rows.push({ ...buildHistoryAnswerObservation({ id: answerId, subjectScope: "encounter", templateKey: finalTarget.sectionKey,
-    sectionId: finalTarget.sectionId, optionCode: finalTarget.optionCode, value: { kind: "tri-state", status: "positive" } }, {
-    patientReference: body.patientReference, encounterReference: body.encounterReference, recordedAt: "2026-09-05T12:00:01Z",
-  }), id: "remaining-positive", meta: { versionId: "1" } });
-  const resumed = await bulk(s, body);
-  assert.equal(resumed.status, 200, JSON.stringify(resumed.body));
-  assert.equal((resumed.body as any).recorded, 0);
-  assert.match((resumed.body as any).message, /no review act/i);
-  assert.equal(s.rows.some((row): row is Observation => row.resourceType === "Observation" &&
-    row.code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE)), false);
-});
-
-test("a resumed gesture retains its ledger author for answer and act Provenance", async () => {
-  const s = historyRosFixture();
-  const body = bulkBody(8);
-  s.failTransactionAt(2);
-  assert.equal((await bulk(s, body)).status, 503);
-  const original = await s.deps.authenticate("synthetic");
-  assert.ok(original);
-  s.deps.authenticate = async () => ({ ...original, staffReference: "Practitioner/second" });
-  s.failTransactionAt(undefined);
-  assert.equal((await bulk(s, body)).status, 200);
-  const authors = s.rows.filter(row => row.resourceType === "Provenance")
-    .map(row => (row as any).agent?.[0]?.who?.reference);
-  assert.deepEqual(authors, authors.map(() => "Practitioner/test"));
-  const act = s.rows.find((row): row is Observation => row.resourceType === "Observation" &&
-    row.code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE));
-  assert.equal(act?.performer?.[0]?.reference, "Practitioner/test");
-});
-
-test("concurrent retries converge on complete state without duplicate unit Provenance", async () => {
-  const s = historyRosFixture();
-  const body = bulkBody(1);
-  let arrivals = 0;
-  let release = () => undefined;
-  const barrier = new Promise<void>(resolve => { release = resolve; });
-  s.race(async () => { arrivals += 1; if (arrivals === 2) release(); await barrier; });
-  const original = await s.deps.authenticate("synthetic");
-  assert.ok(original);
-  const execute = original.fhir.executeTransaction.bind(original.fhir);
-  original.fhir.executeTransaction = async (bundle, headers) => {
-    if (bundle.entry?.[0]?.request?.ifNoneExist && arrivals < 2) {
-      arrivals += 1; if (arrivals === 2) release(); await barrier;
-    }
-    return execute(bundle, headers);
-  };
-  const results = await Promise.all([bulk(s, body), bulk(s, body)]);
-  assert.deepEqual(results.map(result => result.status), [200, 200]);
-  assert.ok(results.every(result => (result.body as any).status === "complete" && (result.body as any).recorded === 1));
-  assert.equal(s.rows.filter(row => row.resourceType === "Provenance").length, 2,
-    `one answer-unit Provenance plus one act Provenance: ${JSON.stringify(s.rows.filter(row => row.resourceType === "Provenance").map(row => ({ tag: row.meta?.tag, activity: (row as any).activity?.coding?.[0]?.code })))}`);
-});
-
-test("malformed bulk ledgers from another encounter do not poison current item reads", async () => {
-  const s = historyRosFixture();
-  assert.equal((await bulk(s, bulkBody(1))).status, 200);
-  const ledger = s.rows.find((row): row is Basic => row.resourceType === "Basic");
-  assert.ok(ledger?.extension?.[0]);
-  ledger.extension[0].valueString = "{";
-  const result = await endpoints.handleHistoryItemActsRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });
-  assert.equal(result.status, 200, JSON.stringify(result.body));
-  assert.deepEqual((result.body as any).bulkDenials, []);
 });
 
 test("I2 every item-review HTTP door enforces one contract", async () => {
@@ -322,84 +191,20 @@ test("I2 every item-review HTTP door enforces one contract", async () => {
       assert.equal(result.status, expected, `${handler.name}: ${JSON.stringify(change)}`);
       if (expected === 400) assert.equal(s.rows.length, 0);
       else {
-        assert.equal(s.rows.filter(row => row.resourceType === "Basic").length, 1);
-        assert.equal((result.body as any).recorded, 2);
+        assert.equal((result.body as any).method, "bulk");
+        assert.deepEqual((result.body as any).targets, bulkBody(2).targets);
       }
     }
     const s = historyRosFixture(), body = bulkBody(1);
     assert.equal((await handler(s.deps, { authHeader: "synthetic", body: { ...body, method: "individual" } })).status, 200);
     const before = JSON.stringify(s.rows);
     assert.equal((await handler(s.deps, { authHeader: "synthetic", body })).status, 409);
-    assert.equal(JSON.stringify(s.rows), before, "a changed method must not start a new ledger or write answers");
+    assert.equal(JSON.stringify(s.rows), before, "a changed method must not write answers");
     const partial = historyRosFixture(), partialBody = bulkBody(8);
     partial.failTransactionAt(2);
     assert.equal((await handler(partial.deps, { authHeader: "synthetic", body: partialBody })).status, 503);
     const interrupted = JSON.stringify(partial.rows);
     assert.equal((await handler(partial.deps, { authHeader: "synthetic", body: { ...partialBody, method: "individual", targets: [partialBody.targets[0]] } })).status, 409);
-    assert.equal(JSON.stringify(partial.rows), interrupted, "a bulk ledger reserves the gesture before the act exists");
+    assert.equal(JSON.stringify(partial.rows), interrupted, "the partial run's act reserves the gesture");
   }
-});
-
-for (const clearScope of ["answer", "section"] as const) test(`I3 committed gestures reach complete after response loss and ${clearScope} clear`, async () => {
-  const s = historyRosFixture(), body = bulkBody(2);
-  const staff = await s.deps.authenticate("synthetic"); assert.ok(staff);
-  const execute = staff.fhir.executeTransaction.bind(staff.fhir); let loseResponse = true;
-  staff.fhir.executeTransaction = async (bundle, headers) => {
-    const result = await execute(bundle, headers);
-    if (loseResponse && bundle.entry?.[0]?.resource?.resourceType === "Observation" &&
-      bundle.entry[0].resource.code.coding?.some(c => c.code === HISTORY_ITEM_REVIEW_CODE)) {
-      loseResponse = false; throw new Error("Synthetic lost response after act persistence");
-    }
-    return result;
-  };
-  const first = await bulk(s, body); assert.ok([200, 503].includes(first.status));
-  const answer = s.rows.find((row): row is Observation => row.resourceType === "Observation" && row.identifier?.some(i => i.value?.startsWith("history-current-")));
-  assert.ok(answer);
-  assert.equal((await handleEncounterVoidRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" }, body: clearScope === "answer"
-    ? { scope: "observation", observationReference: `Observation/${answer.id}`, sectionKey: "review-of-systems" }
-    : { scope: "section", sectionKey: ["hpi", "review-of-systems"] } })).status, 200);
-  const acts = () => s.rows.filter((row): row is Observation => row.resourceType === "Observation" && row.code.coding?.some(c => c.code === HISTORY_ITEM_REVIEW_CODE));
-  const originalAct = JSON.stringify(acts());
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const result = await bulk(s, body);
-    assert.equal(result.status, 200, JSON.stringify(result.body));
-    assert.equal((result.body as any).status, "complete");
-    assert.equal(JSON.stringify(acts()), originalAct, "recovery must not replace or recreate an immutable act");
-  }
-  const read = await endpoints.handleHistoryItemActsRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });
-  assert.deepEqual((read.body as any).bulkDenials, []);
-});
-
-for (const status of [409, 412, undefined]) test(`I4 initial ledger persistence converges after ${status ?? "lost response"}`, async () => {
-  const s = historyRosFixture(), body = bulkBody(1);
-  const staff = await s.deps.authenticate("synthetic"); assert.ok(staff);
-  const create = staff.fhir.create.bind(staff.fhir); let loseResponse = true;
-  staff.fhir.create = async (resource, headers) => {
-    const saved = await create(resource, headers);
-    if (loseResponse) { loseResponse = false; throw Object.assign(new Error("Synthetic initial ledger uncertainty"), { status }); }
-    return saved;
-  };
-  const outcomes = await Promise.allSettled([bulk(s, body), bulk(s, body)]);
-  assert.ok(outcomes.every(result => result.status === "fulfilled"), "initial creation must participate in recovery");
-  for (const outcome of outcomes) if (outcome.status === "fulfilled") {
-    assert.equal(outcome.value.status, 200, JSON.stringify(outcome.value.body));
-    assert.equal((outcome.value.body as any).status, "complete");
-  }
-  assert.equal(s.rows.filter(row => row.resourceType === "Basic").length, 1);
-  assert.equal(s.rows.filter(row => row.resourceType === "Provenance").length, 2);
-});
-
-test("I3 an incompatible committed act terminates the interrupted gesture explicitly", async () => {
-  const s = historyRosFixture(), body = bulkBody(8);
-  s.failTransactionAt(2); assert.equal((await bulk(s, body)).status, 503); s.failTransactionAt(undefined);
-  const staff = await s.deps.authenticate("synthetic"); assert.ok(staff);
-  assert.equal((await endpoints.recordHistoryItemReview(staff.fhir, { ...body, method: "individual", targets: [body.targets[0]],
-    actorReference: staff.staffReference, recordedAt: "2026-09-05T12:00:00Z" })).status, 200);
-  const result = await bulk(s, body);
-  assert.equal(result.status, 200);
-  assert.equal((result.body as any).status, "cancelled");
-  assert.match((result.body as any).message, /already used|cancelled/i);
-  assert.deepEqual(await bulk(s, body), result);
-  const read = await endpoints.handleHistoryItemActsRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });
-  assert.deepEqual((read.body as any).bulkDenials, []);
 });

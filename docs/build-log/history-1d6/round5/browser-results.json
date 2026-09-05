@@ -1,0 +1,42 @@
+[
+  {
+    "run": 1,
+    "exit": 0,
+    "signal": null,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "run": 2,
+    "exit": 0,
+    "signal": null,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "run": 3,
+    "exit": 0,
+    "signal": null,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "run": 4,
+    "exit": 0,
+    "signal": null,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "run": 5,
+    "exit": 0,
+    "signal": null,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0
+  }
+]

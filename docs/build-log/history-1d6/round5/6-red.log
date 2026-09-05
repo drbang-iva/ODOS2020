@@ -1,0 +1,31 @@
+TAP version 13
+# Subtest: prior encounter acts keep historical dates without Charting this encounter
+not ok 1 - prior encounter acts keep historical dates without Charting this encounter
+  ---
+  duration_ms: 3.613417
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/tests/historyRos.test.ts:1:16940'
+  failureType: 'testCodeFailure'
+  error: 'Unknown history summary token: method'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    registeredToken (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/src/clinical-graph/history-template-engine.ts:458:39)
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/src/clinical-graph/history-template-engine.ts:453:89)
+    String.replace (<anonymous>)
+    renderDeclaredSubjectSummary (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/src/clinical-graph/history-template-engine.ts:453:38)
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/src/clinical-graph/history-subject-projection.ts:41:16)
+    Array.map (<anonymous>)
+    projectHistorySubjectSections (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/src/clinical-graph/history-subject-projection.ts:30:35)
+    handleHpiRecord (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/src/clinical-graph/hpi-endpoint.ts:263:51)
+    async historySearchResult (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/src/clinical-graph/hpi-endpoint.ts:1503:12)
+    async read (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/tests/historyRos.test.ts:83:67)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 122.97375

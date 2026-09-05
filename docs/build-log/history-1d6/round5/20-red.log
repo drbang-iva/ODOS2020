@@ -1,0 +1,56 @@
+TAP version 13
+# Subtest: conditional create preserves a concurrent explicit Yes and excludes it from the bulk act
+not ok 1 - conditional create preserves a concurrent explicit Yes and excludes it from the bulk act
+  ---
+  duration_ms: 4.575959
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/tests/historyRosHttp.test.ts:1:7012'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        {
+    +     optionCode: 'eye-pain',
+    +     sectionId: 'systems',
+    +     sectionKey: 'review-of-systems'
+    +   },
+    +   {
+          optionCode: 'poor-vision',
+          sectionId: 'systems',
+          sectionKey: 'review-of-systems'
+        }
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      sectionKey: 'review-of-systems'
+      sectionId: 'systems'
+      optionCode: 'poor-vision'
+  actual:
+    0:
+      sectionKey: 'review-of-systems'
+      sectionId: 'systems'
+      optionCode: 'eye-pain'
+    1:
+      sectionKey: 'review-of-systems'
+      sectionId: 'systems'
+      optionCode: 'poor-vision'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/pr536-round5/mcp/tests/historyRosHttp.test.ts:137:26)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 138.741458

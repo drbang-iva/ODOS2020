@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: conditional create preserves a concurrent explicit Yes and excludes it from the bulk act
+ok 1 - conditional create preserves a concurrent explicit Yes and excludes it from the bulk act
+  ---
+  duration_ms: 3.026125
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 135.31975

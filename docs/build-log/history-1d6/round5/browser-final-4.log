@@ -1,0 +1,29 @@
+TAP version 13
+# ROS: 54 answers; per-click bulk acts 7/36; immutable retraction/undo; HTTP 200,503; delta sizes 1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1
+# Subtest: ROS browser: comprehensive burst and explicit immutable reviews
+ok 1 - ROS browser: comprehensive burst and explicit immutable reviews
+  ---
+  duration_ms: 6271.708709
+  type: 'test'
+  ...
+# Subtest: ROS browser: follow-up self-folds
+ok 2 - ROS browser: follow-up self-folds
+  ---
+  duration_ms: 784.06275
+  type: 'test'
+  ...
+# Subtest: ROS browser: review-only History clear
+ok 3 - ROS browser: review-only History clear
+  ---
+  duration_ms: 1068.083541
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8624.399417
