@@ -870,6 +870,12 @@ export async function recordHistoryItemRetraction(fhir: HpiFhirClient, input: Hi
   });
 }
 
+async function findHistoryItemAct(fhir: HpiFhirClient, identifier: string): Promise<Observation | undefined> {
+  const rows = await searchAll<Observation>(fhir, "Observation", { identifier, _count: "2" }, { maxRows: 2 });
+  if (rows.length > 1) throw new Error("History review gesture matches multiple acts.");
+  return rows[0];
+}
+
 async function persistHistoryItemAct(
   fhir: HpiFhirClient,
   input: Omit<HistoryItemReview, "method">,
@@ -877,14 +883,7 @@ async function persistHistoryItemAct(
   match: (existing: Observation) => object | undefined,
 ): Promise<{ status: number; body: unknown }> {
   const identifier = act.identifier![0];
-  const findExisting = async () => {
-    const rows = await searchAll<Observation>(fhir, "Observation", {
-      identifier: `${identifier.system}|${identifier.value}`,
-      _count: "2",
-    }, { maxRows: 2 });
-    if (rows.length > 1) throw new Error("History review gesture matches multiple acts.");
-    return rows[0];
-  };
+  const findExisting = () => findHistoryItemAct(fhir, `${identifier.system}|${identifier.value}`);
   const responseFor = (existing: Observation): { status: number; body: unknown } => {
     if (existing.subject?.reference !== input.patientReference || existing.encounter?.reference !== input.encounterReference ||
       existing.status === "entered-in-error" || existing.status === "cancelled" || !existing.id) {
