@@ -24,6 +24,7 @@ Code commits: `57677199` (shared act lookup, first caller verified) and `c05cb64
 ## Files changed in Round 4
 
 - `mcp/src/clinical-graph/hpi-endpoint.ts`: shared immutable-act lookup, converged HTTP dispatch, initial-create recovery, terminal reconciliation, and pre-write gesture reservation.
+- `mcp/tests/historyRos.test.ts`: the retraction-retry fixture now uses the existing bulk-review service helper with an explicit gesture ID; all assertions and the two retained HOLDS setups remain intact.
 - `mcp/tests/historyRosHttp.test.ts`: seven I2–I4 cases, including both HTTP doors, method changes before/after ledger creation, lost act response followed by answer/section clear, incompatible act cancellation, and initial 409/412/unknown response.
 - `ui/src/components/charting/encounter-edit-context.tsx`: shared page-local section write lease.
 - `ui/src/components/charting/ClearControls.tsx`: section/chart clear respects the lease and checks again after confirmation.
@@ -55,6 +56,14 @@ No clinical terminology or canonical artifact was added. No new decision was mad
 Exact-head CI completion and job links are recorded in the PR description after the push; this committed bundle records the local evidence. No full local UI rerun was used to chase unrelated mount flakes.
 
 The initial implementation probes were RED: the new backend group showed 1 passed/5 failed before recovery/convergence, and the row-freeze browser scenario showed 0 passed/1 failed. The added method-reservation case also failed with `200 !== 409` before the pre-write refusal was added.
+
+## CI-discovered fixture correction
+
+The first fixback CI at `aad819d7` passed the full UI suite (**1,240 / 0 / 0**) but failed MCP (**4,225 / 1 / 44**). The sole failure was `historyRos.test.ts:116`: the retraction-retry fixture created a two-target `individual` act through the legacy HTTP door. I2 now correctly rejects that setup with 400.
+
+That fixture now uses the existing `bulkReview` service helper, with an optional explicit gesture ID so the same identity-reuse checks remain meaningful. No assertion was removed or relaxed. Local reproduction was **0 passed / 1 failed**; corrected setup is **1 passed / 0 failed**. The final UI/source bytes are unchanged from the five consecutive browser runs.
+
+Because the fixture changed, its guard was demonstrated independently: replacing `const saved = match(existing)` with `const saved = {}` in `persistHistoryItemAct` allows a retraction retry to change its target and makes this test fail (**0 / 1**); restoring the implementation passes (**1 / 0**). Run `node docs/build-log/history-1d6/round4/retraction-fixture-guard.mjs`; the adjacent JSON and TAP files record this supplementary fixture check. It does not rerun or alter the thirteen standing mutation records.
 
 ## Mandate 17
 

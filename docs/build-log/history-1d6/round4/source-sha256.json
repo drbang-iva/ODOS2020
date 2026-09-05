@@ -5,5 +5,6 @@
   "ui/src/components/charting/useHistoryItemReview.tsx": "d98e17a00a5d3492b93ce0f39bbd839d3b83012d3c6eba4abd7311ce99421719",
   "ui/src/components/charting/ClearControls.tsx": "a9c8bb5104d863e3fe6678f44e84760dfe88e7d1db1b435bc6a54583b362cfeb",
   "ui/src/components/charting/encounter-edit-context.tsx": "ebae91eb867146ad9cab36a3d556275cb341f5a5cbb77bcd779d0a6946afd20d",
-  "mcp/src/clinical-graph/hpi-endpoint.ts": "ec7b8271e2d7a45a8b35fd63252376a63d90ed74cd66a2655d573281ba8dad3a"
+  "mcp/src/clinical-graph/hpi-endpoint.ts": "ec7b8271e2d7a45a8b35fd63252376a63d90ed74cd66a2655d573281ba8dad3a",
+  "mcp/tests/historyRos.test.ts": "c3511f4296ae40a46de4905fde75c11f41fdaa0dd8bee4c2a4181d257e56cc02"
 }

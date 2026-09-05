@@ -74,10 +74,10 @@ function fixture(rows: Resource[] = []) {
 }
 
 const review = (s: ReturnType<typeof fixture>, targets: object[], extra: object = {}) => handleHistoryReviewRequest(s.deps, { authHeader: "synthetic", body: { patientReference, encounterReference, sectionKey, action: "items-reviewed", method: "individual", targets, gestureId: randomUUID(), ...extra } });
-const bulkReview = async (s: ReturnType<typeof fixture>, targets: typeof a[]) => {
+const bulkReview = async (s: ReturnType<typeof fixture>, targets: typeof a[], gestureId = randomUUID()) => {
   const staff = await s.deps.authenticate("synthetic"); assert.ok(staff);
   return recordHistoryItemReview(staff.fhir, { patientReference, encounterReference, sectionKey, method: "bulk", targets,
-    gestureId: randomUUID(), actorReference: staff.staffReference, recordedAt: earlier });
+    gestureId, actorReference: staff.staffReference, recordedAt: earlier });
 };
 const retract = (s: ReturnType<typeof fixture>, reference: string, target: object = a, extra: object = {}) => handleHistoryReviewRequest(s.deps, { authHeader: "synthetic", body: { patientReference, encounterReference, sectionKey, targets: [target], gestureId: randomUUID(), action: "items-review-retracted", retracts: reference, ...extra } });
 const read = async (s: ReturnType<typeof fixture>) => { const r = await handleHpiRecordRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } }); assert.equal(r.status, 200); return r.body as any; };
@@ -113,7 +113,7 @@ test("targeted retraction preserves B and original bytes; shipped void restores 
   assert.equal(JSON.stringify(s.rows.find(row => `Observation/${row.id}` === ref)), original);
 });
 test("retraction retry is immutable and cannot reuse an item-review gesture", async () => {
-  const s = fixture(), gestureId = randomUUID(); const first = await review(s, [a,b], { gestureId }); assert.equal(first.status, 200);
+  const s = fixture(), gestureId = randomUUID(); const first = await bulkReview(s, [a,b], gestureId); assert.equal(first.status, 200);
   const ref = (first.body as any).attestationReference;
   assert.equal((await retract(s, ref, a, { gestureId })).status, 409);
   const id = randomUUID(); const removed = await retract(s, ref, a, { gestureId: id }); assert.equal(removed.status, 200);
