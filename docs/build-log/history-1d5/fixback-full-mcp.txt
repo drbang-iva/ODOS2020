@@ -1,0 +1,13 @@
+# PR #535 final fixback — full MCP
+
+Command:
+ODOS_ALLOW_UNGATED_MCP=1 ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:15832/medplum npm --prefix mcp test
+
+Exit: 0
+Tests: 4,250
+Passed: 4,205
+Failed: 0
+Skipped: 45
+Duration: 58,537 ms
+
+The count is unchanged from the pre-fixback run. The 45 skipped tests include 41 live tests whose credentials were not configured, so this run does not establish live authorization behavior.

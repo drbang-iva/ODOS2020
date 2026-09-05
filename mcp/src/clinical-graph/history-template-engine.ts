@@ -195,6 +195,12 @@ export interface HistorySubjectSection {
   review?: "per-item";
   charted_when?: { reviewed_items_min: number };
   summary?: string;
+  nudges?: Array<{
+    target: { sectionKey: string; sectionId: string };
+    answerKind: "selection";
+    period: "calendar-year";
+    text: string;
+  }>;
   sections: HistoryTemplateSection[];
 }
 
@@ -202,7 +208,7 @@ export const HISTORY_SUBJECT_SECTIONS: HistorySubjectSection[] = [
   {
     key: "review-of-systems", label: "Review of Systems", subjectScope: "encounter",
     completionAnchor: "systems", review: "per-item", charted_when: { reviewed_items_min: 1 },
-    summary: "{reviewed_systems}. {positives}. {method}",
+    summary: "{reviewed_systems}. {positives}",
     sections: [
       section("systems", "symptoms", "Systems", { catalog: "ros_items", required: true, group_by: "system" }),
       section("notable-for", "text", "ROS notable for"),
@@ -235,6 +241,9 @@ export const HISTORY_SUBJECT_SECTIONS: HistorySubjectSection[] = [
     label: "Social History",
     subjectScope: "patient",
     completionAnchor: "tobacco",
+    review: "per-item",
+    nudges: [{ target: { sectionKey: "social-history", sectionId: "tobacco" }, answerKind: "selection",
+      period: "calendar-year", text: "Tobacco status not documented this performance period." }],
     sections: [
       section("tobacco", "single_select", "Tobacco", { catalog: "tobacco_status", required: true }),
       section("driving", "risk_factors", "Driving", { catalog: "social_history_driving", required: true }),
@@ -440,7 +449,6 @@ export function renderDeclaredSubjectSummary(
   const replacements = new Map([
     ["reviewed_systems", coverage.join("; ")],
     ["positives", positives.length ? `Reports ${positives.join(", ")}` : ""],
-    ["method", context.methods?.length ? `Review method: ${[...new Set(context.methods)].join(", ")}` : ""],
   ]);
   return (declaration.summary ?? "").replace(/\{([^}]+)\}/g, (_match, token: string) => registeredToken(replacements, token))
     .replace(/\s+\./g, ".").replace(/\.{2,}/g, ".").trim();

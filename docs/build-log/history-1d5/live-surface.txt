@@ -1,0 +1,3 @@
+APP ROUTE + MEDPLUM: tobacco tick updates date; reminder remains; Social Not started. Persisted selection clears reminder; Social Started; exactly one answer.
+APP ROUTE + MEDPLUM: proposed removes method and counter; per-item date retained
+PASS. Actual App /clinic route and real local synthetic Medplum. Harness supplies provider identity and limited ancillary catalog reads; this is not a constrained-role AccessPolicy verdict.

@@ -1,4 +1,4 @@
-import { projectHistorySubjectSections } from "./history-subject-projection.js";
+import { projectHistorySubjectSections, projectHistorySubjectNudges } from "./history-subject-projection.js";
 import { searchAll, FhirSearchLimitError, FhirSearchPageLimitError } from "../fhir-search.js";
 import { isDeepStrictEqual } from "node:util";
 import { randomUUID } from "node:crypto";
@@ -253,6 +253,8 @@ async function handleHpiRecord(
   return {
     status: 200,
     body: { answers, carriedForwardAnswers, reviewAttestations,
+      subjectSectionNudges: patientReference ? projectHistorySubjectNudges([...priorAnswers, ...observations], patientReference,
+        encounter.period?.start ?? new Date().toISOString()) : [],
       subjectSectionSummaries: patientReference ? projectHistorySubjectSections(
         [...observations, ...reviewObservations, ...itemReviewObservations, ...retractionObservations],
         patientReference, encounterReference, encounter.period?.start,

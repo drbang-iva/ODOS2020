@@ -1,0 +1,7 @@
+method-template: RED # tests 7, # pass 5, # fail 2; RESTORED # tests 7, # pass 7, # fail 0
+bulk-marker: RED # tests 7, # pass 5, # fail 2; RESTORED # tests 7, # pass 7, # fail 0
+social-charted: RED # tests 7, # pass 5, # fail 2; RESTORED # tests 7, # pass 7, # fail 0
+act-clears-reminder: RED # tests 7, # pass 6, # fail 1; RESTORED # tests 7, # pass 7, # fail 0
+old-answer-clears: RED # tests 7, # pass 5, # fail 2; RESTORED # tests 7, # pass 7, # fail 0
+ledger-row-deleted: RED # tests 7, # pass 6, # fail 1; RESTORED # tests 7, # pass 7, # fail 0
+partial-positive-parity (authorized replacement assertion): RED exit 1, # tests 1, # pass 0, # fail 1; RESTORED exit 0, # tests 1, # pass 1, # fail 0

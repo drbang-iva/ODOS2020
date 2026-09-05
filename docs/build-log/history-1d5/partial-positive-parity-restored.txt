@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: bulk and individual summaries are byte-identical with the same partial coverage and positives
+ok 1 - bulk and individual summaries are byte-identical with the same partial coverage and positives
+  ---
+  duration_ms: 1.014167
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 121.281792

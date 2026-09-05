@@ -1,0 +1,77 @@
+TAP version 13
+# Subtest: ROS composed note never exposes review method for any coverage or encounter age
+ok 1 - ROS composed note never exposes review method for any coverage or encounter age
+  ---
+  duration_ms: 2.260584
+  type: 'test'
+  ...
+# Subtest: bulk and individual acts produce byte-identical composed summaries
+ok 2 - bulk and individual acts produce byte-identical composed summaries
+  ---
+  duration_ms: 2.883083
+  type: 'test'
+  ...
+# Subtest: Social declares per-item review and still requires exactly four answers
+ok 3 - Social declares per-item review and still requires exactly four answers
+  ---
+  duration_ms: 0.141625
+  type: 'test'
+  ...
+# Subtest: reminder survives a tobacco review act and clears only after answer persistence
+not ok 4 - reminder survives a tobacco review act and clears only after answer persistence
+  ---
+  duration_ms: 1.347667
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d5/mcp/tests/historySocial.test.ts:1:3961'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'text')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d5/mcp/tests/historySocial.test.ts:56:44)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: reminder uses persisted patient answers across visits with inclusive calendar-year dates
+ok 5 - reminder uses persisted patient answers across visits with inclusive calendar-year dates
+  ---
+  duration_ms: 0.757375
+  type: 'test'
+  ...
+# Subtest: out-of-window, voided, cancelled, undated, foreign, and non-selection answers cannot clear reminder
+not ok 6 - out-of-window, voided, cancelled, undated, foreign, and non-selection answers cannot clear reminder
+  ---
+  duration_ms: 1.070625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d5/mcp/tests/historySocial.test.ts:1:5378'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"resourceType":"Observation","identifier":[{"system":"https://odos2020.com/fhir/NamingSystem/history-template-answer-id","value":"tobacco"}],"category":[{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/history-answer-scope","code":"patient"}]}],"status":"preliminary","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/odos-history-template-answer","code":"history-template-answer","display":"History template answer"}]},"subject":{"reference":"Patient/ros-test"},"encounter":{"reference":"Encounter/prior"},"effectiveDateTime":"2025-12-31T23:59:59Z","issued":"2025-12-31T23:59:59Z","extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-history-template-answer-json","valueString":"{\"id\":\"tobacco\",\"subjectScope\":\"patient\",\"templateKey\":\"social-history\",\"sectionId\":\"tobacco\",\"value\":{\"kind\":\"selection\",\"code\":\"never\"}}"}],"id":"543d57c3-35aa-449e-84ed-97181bbdc918"}
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d5/mcp/tests/historySocial.test.ts:75:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: row 64 records the period verification with primary URLs and access date
+ok 7 - row 64 records the period verification with primary URLs and access date
+  ---
+  duration_ms: 0.249042
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 5
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 133.19275
