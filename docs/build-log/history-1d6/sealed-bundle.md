@@ -28,7 +28,7 @@ No new clinical terminology code was introduced. The ledger code and canonical U
 ## Checks
 
 - `npm run preflight`: exit 0; shipped CPT guard clean, FHIR read grant check PASS (46 resource types), operation coverage PASS (840 operations), 0 warnings, 0 hard blocks.
-- `cd mcp && ODOS_ALLOW_UNGATED_MCP=1 npx tsc --noEmit && npm test`: exit 0; 4,200 passed, 0 failed, 57 skipped. The harness recorded 41 live-stack skips and explicitly states this does not gate authorization.
+- `cd mcp && export ODOS_ALLOW_UNGATED_MCP=1 && npx tsc --noEmit && npm test`: exit 0; 4,200 passed, 0 failed, 57 skipped. The harness recorded 41 live-stack skips and explicitly states this does not gate authorization.
 - `cd ui && npx tsc --noEmit && npm run build && npm test`: exit 0; 313 modules transformed; 1,240 passed, 0 failed, 0 skipped.
 - Focused inherited and new MCP history checks: 63 passed, 0 failed.
 - Focused ROS browser checks: 4 passed, 0 failed.
