@@ -1,0 +1,38 @@
+TAP version 13
+# Subtest: ROS browser: review-only History clear
+not ok 1 - ROS browser: review-only History clear
+  ---
+  duration_ms: 32338.126709
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4b/ui/tests/historyRosBrowser.test.tsx:1:825'
+  failureType: 'testCodeFailure'
+  error: |-
+    locator.isEnabled: Timeout 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByRole('button', { name: 'Clear History', exact: true })[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4b/ui/tests/historyRosBrowser.test.tsx:59:32)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 33033.706125
+96:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3116.902208

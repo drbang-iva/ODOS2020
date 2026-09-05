@@ -113,6 +113,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   const [templates, setTemplates] = useState<HistoryTemplate[]>([]);
   const [subjectSections, setSubjectSections] = useState<HistorySubjectSection[]>([]);
   const [itemizedSubjectSections, setItemizedSubjectSections] = useState<HistorySubjectSection[]>([]);
+  const [itemizedHasRecorded, setItemizedHasRecorded] = useState(false);
   const [historyVersion, setHistoryVersion] = useState(0);
   const [catalogs, setCatalogs] = useState<HistoryCatalogs>({});
   const [complaints, setComplaints] = useState<EncounterComplaint[]>([]);
@@ -137,6 +138,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
 
   useEffect(() => {
     let cancelled = false;
+    setItemizedHasRecorded(false);
     void Promise.all([
       readJson<{ templates?: HistoryTemplate[]; subjectSections?: HistorySubjectSection[]; itemizedSubjectSections?: HistorySubjectSection[]; catalogs?: HistoryCatalogs; error?: string }>(`${clinicalGraphApiBase()}/clinical-graph/hpi/definition`),
       readJson<{ complaints?: EncounterComplaint[]; error?: string }>(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/complaints`),
@@ -441,7 +443,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
                 encounterReference={encounterReference}
                 sectionKey={["hpi", ...[...subjectSections, ...itemizedSubjectSections].map((section) => section.key)]}
                 label="History"
-                hasRecorded={complaints.length > 0 || answers.length > 0 || reviewAttestations.length > 0}
+                hasRecorded={complaints.length > 0 || answers.length > 0 || reviewAttestations.length > 0 || itemizedHasRecorded}
                 onBeforeClear={async () => {
                   for (const timer of debounceTimers.current.values()) clearTimeout(timer);
                   debounceTimers.current.clear();
@@ -454,6 +456,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
                   persistedAnswerReferences.current.clear();
                   persistedAnswers.current.clear();
                   setReviewAttestations([]);
+                  setItemizedHasRecorded(false);
                   setHistoryVersion(value => value + 1);
                   setNarratives({});
                   setSaveState({ status: "idle" });
@@ -563,6 +566,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
             historyVersion={historyVersion} onChange={changeAnswer}
             makeAnswerId={(sectionId, optionCode) => subjectHistoryAnswerId(encounterId, declaration.key, sectionId, optionCode)}
             onChanged={() => onSaved({ completed: complete, summary }, true)}
+            onRecordedChange={setItemizedHasRecorded}
             saveIndicator={<SaveIndicator state={saveState} clock={clock} onRetry={() => { void queueSave().catch(() => undefined); }} />}
           />)}
 

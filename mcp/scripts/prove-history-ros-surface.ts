@@ -6,7 +6,7 @@ import { createRequire } from "node:module";
 import express from "express";
 import type { Encounter, Observation, Patient, Practitioner } from "@medplum/fhirtypes";
 import { createAuthenticatedFhirClient } from "../tests/integration-helpers.js";
-import { handleHpiDefinitionRequest, handleHpiRecordRequest, handleHpiCaptureRequest, type HpiEndpointDeps } from "../src/clinical-graph/hpi-endpoint.js";
+import { handleHpiDefinitionRequest, handleHistoryItemActsRequest, handleHpiRecordRequest, handleHpiCaptureRequest, type HpiEndpointDeps } from "../src/clinical-graph/hpi-endpoint.js";
 import { registerHistoryItemRoutes } from "../src/clinical-graph/history-item-routes.js";
 import { handleEncounterVoidRequest } from "../src/clinical-graph/encounter-void-endpoint.js";
 import { handleExamOverviewRequest } from "../src/clinical-graph/exam-overview-endpoint.js";
@@ -27,8 +27,8 @@ const patientReference = `Patient/${patient.id}`;
 const actor = await fhir.create<Practitioner>({ resourceType: "Practitioner", name: [{ text: "Synthetic ROS Reviewer" }] });
 const staffReference = `Practitioner/${actor.id}`;
 const now = new Date().toISOString();
-const encounters = await Promise.all([0, 1].map(() => fhir.create<Encounter>({ resourceType: "Encounter", status: "in-progress", class: { display: "Synthetic local proof" }, subject: { reference: patientReference }, period: { start: now } })));
-for (const [index, encounter] of encounters.entries()) {
+const encounters = await Promise.all([0, 1, 2].map(() => fhir.create<Encounter>({ resourceType: "Encounter", status: "in-progress", class: { display: "Synthetic local proof" }, subject: { reference: patientReference }, period: { start: now } })));
+for (const [index, encounter] of encounters.slice(0, 2).entries()) {
   const complaintId = randomUUID();
   await fhir.create(buildEncounterComplaintResource({ id: complaintId, patientId: patient.id!, encounterId: encounter.id!, ordinal: 1, freeTextLabel: "Synthetic glaucoma visit", templateKey: "glaucoma", eyeLocation: "OU", conditions: [], qualities: [], treatmentsTried: [], resolvedDx: [], additionalHistory: "", narrative: { mode: "automated" }, status: "active", provenanceHistory: [], provenance: { source: "manual", recordedAt: now, actorReference: staffReference } }));
   await fhir.create(buildHistoryAnswerObservation({ id: randomUUID(), complaintId, templateKey: "glaucoma", sectionId: "presentation", value: { kind: "selection", code: index ? "follow-up" : "new" } }, { patientReference, encounterReference: `Encounter/${encounter.id}`, recordedAt: now }));
@@ -67,8 +67,28 @@ try {
     await page.getByRole("button", { name: /Chief Complaint & HPI/ }).click({ timeout: 15000 });
     const ros = page.getByTestId("history-review-of-systems"); await ros.waitFor({ timeout: 15000 });
     const fold = ros.getByRole("button", { name: /Review of Systems/ });
-    assert.equal(await fold.getAttribute("aria-expanded"), index ? "false" : "true");
-    if (index) { assert.match(await ros.innerText(), /Complaint-directed/); await ros.screenshot({ path: resolve(capture, "follow-up.png") }); console.log("APP ROUTE + MEDPLUM: persisted follow-up presentation self-folds with Complaint-directed header"); continue; }
+    assert.equal(await fold.getAttribute("aria-expanded"), index === 1 ? "false" : "true");
+    if (index === 1) { assert.match(await ros.innerText(), /Complaint-directed/); await ros.screenshot({ path: resolve(capture, "follow-up.png") }); console.log("APP ROUTE + MEDPLUM: persisted follow-up presentation self-folds with Complaint-directed header"); continue; }
+    if (index === 2) {
+      const clear = page.getByRole("button", { name: "Clear History", exact: true });
+      assert.equal(await clear.count(), 0);
+      const row = ros.locator('[data-ros-item="headache"]');
+      await row.getByRole("checkbox").click();
+      await page.waitForFunction(() => (document.querySelector('[data-ros-item="headache"] input') as HTMLInputElement)?.checked);
+      assert.equal(await clear.count(), 1);
+      await row.getByRole("checkbox").click();
+      await row.getByRole("button", { name: /Undo/ }).waitFor();
+      await clear.click();
+      await page.getByRole("alertdialog").getByRole("button", { name: "Clear History", exact: true }).click();
+      await row.getByRole("button", { name: /Undo/ }).waitFor({ state: "detached" });
+      assert.equal(await clear.count(), 0);
+      const record = await handleHistoryItemActsRequest(deps, { authHeader: `Bearer ${accessToken}`, params: { encounterId: encounter.id } });
+      assert.equal(record.status, 200); assert.deepEqual((record.body as any).reviews, []); assert.deepEqual((record.body as any).retractions, []);
+      const persisted = await searchAll<Observation>(fhir, "Observation", { encounter: `Encounter/${encounter.id}` });
+      assert.equal(persisted.filter(row => row.status === "entered-in-error").length, 2);
+      console.log("APP ROUTE + MEDPLUM: review-only History Clear becomes available; confirmed Clear voids both review and retraction, retaining both records");
+      continue;
+    }
     const statuses: number[] = []; page.on("response", response => { if (response.url().endsWith("/clinical-graph/hpi")) statuses.push(response.status()); });
     await ros.getByRole("button", { name: /^No: / }).evaluateAll(buttons => buttons.slice(0, 10).forEach(button => (button as HTMLButtonElement).click()));
     const encounterReference = `Encounter/${encounter.id}`;

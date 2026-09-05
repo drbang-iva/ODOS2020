@@ -23,7 +23,9 @@ Reviewed is an explicit gesture: exactly one individual act with one target. Unm
 retraction targeting the original act; Undo uses the existing observation-void primitive on the
 retraction. The original remains byte-identical, including its resource version. The act read
 route makes Unmark and Undo available after reopening/reloading the sheet. Retry retains the
-same gesture identifier if a write or its following refresh fails.
+same gesture identifier if a write or its following refresh fails. History Clear is available
+for review-only entries, including after reload, and the shared void classifier recognizes both
+item reviews and retractions as History. Confirmed Clear voids both while retaining the records.
 
 The fold summary is the server's `subjectSectionSummaries` text, including the registered
 coverage, positive-answer and method tokens. Bulk method attribution remains visible for
@@ -51,6 +53,8 @@ year; it is a display flag, with no measure-compliance or clinical-due-date clai
 
 - `mcp/src/clinical-graph/hpi-endpoint.ts`: explicit handlers, encounter act read, per-target
   validation behind the outer envelope, writer exports. Existing comparators unchanged.
+- `mcp/src/clinical-graph/encounter-void-endpoint.ts`: classify item reviews/retractions under
+  their declared History section for the existing Clear/Undo primitive.
 - `mcp/src/clinical-graph/history-item-routes.ts`, `mcp/src/index.ts`: real route registration
   with the existing caller dependency factory and chart.read/chart.write checks.
 - `ui/src/components/charting/HpiSection.tsx`: ratified definition consumer, bounded answer
@@ -75,9 +79,9 @@ Real output: [checks.txt](checks.txt), [regressions.txt](regressions.txt),
 - Prior UI History tests: **25/25**, untouched (24 component cases and one Chromium case).
 - New HTTP contract: **1/1**, exercising six malformed targets, individual cardinality,
   bulk refusal, idempotent retry, immutable retraction and rehydrated act reads.
-- New browser cases: **2/2**, using real production HPI handlers and their actual guard;
+- New browser cases: **3/3**, using real production HPI handlers and their actual guard;
   FHIR storage is an in-memory fixture in these repeatable tests.
-- Full UI: **1,237 passed, 0 failed, 0 skipped**.
+- Full UI: **1,238 passed, 0 failed, 0 skipped**.
 - Full MCP: **4,242 tests; 4,185 passed, 0 failed, 57 skipped**. Explicitly ungated for
   unavailable live integrations; this command received no credentials.
 - Earlier 1d-2 live pagination suite: **1/1**, unchanged, including 600/1,001/5,000 reads,
@@ -108,6 +112,18 @@ follow-up test; the ineffective probe is not counted as proof. All production mu
 restored. Removing the shared clinical graph helper import also fails the updated routing test;
 restoration passes 8/8 ([routing-mutation-red.txt](routing-mutation-red.txt),
 [routing-mutation-green.txt](routing-mutation-green.txt)).
+
+## Review fixback
+
+PR-Agent identified that review-only ROS did not enable History Clear. The new browser case
+failed first with the control absent (expected 1, actual 0), then exposed the shared void
+classifier returning a zero-item preview because item acts were classified outside History.
+The parent now receives persisted act presence on load/refresh, and the existing classifier
+recognizes the two shipped item-act codes. The restored run passes **28/28** (three new browser
+cases plus the unchanged 25 prior UI cases). Actual App + Medplum confirms that a review-only
+entry can be cleared and that both review and retraction remain stored as entered-in-error.
+Evidence: [review-clear-red.txt](review-clear-red.txt), [review-clear-classifier-red.txt](review-clear-classifier-red.txt),
+[review-clear-green.txt](review-clear-green.txt), [live-proof.txt](live-proof.txt).
 
 ## Local proof boundaries
 

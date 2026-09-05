@@ -9,10 +9,11 @@ type Retraction = { attestationReference: string; recordedAt: string; targets: T
 type HistoryRecord = { lastReviewed?: Array<{ target: Target; lastReviewed: string }>; subjectSectionSummaries?: Array<{ sectionKey: string; state: string; summary: string }> };
 const targetKey = (target: Target) => [target.sectionKey, target.sectionId, target.optionCode ?? "", target.eye ?? ""].join("|");
 
-export function HistoryRosSection({ declaration, catalogs, patientReference, encounterReference, answers, followUp, historyVersion, onChange, onChanged, saveIndicator, makeAnswerId }: {
+export function HistoryRosSection({ declaration, catalogs, patientReference, encounterReference, answers, followUp, historyVersion, onChange, onChanged, saveIndicator, makeAnswerId, onRecordedChange }: {
   declaration: HistorySubjectSection; catalogs: HistoryCatalogs; patientReference: string; encounterReference: string;
   answers: HistoryTemplateAnswer[]; followUp: boolean; historyVersion: number;
   onChange: (next: HistoryTemplateAnswer | undefined, prior: HistoryTemplateAnswer | undefined) => void;
+  onRecordedChange: (hasRecorded: boolean) => void;
   onChanged: () => void; saveIndicator: ReactNode; makeAnswerId: (sectionId: string, optionCode?: string) => string;
 }) {
   const [open, setOpen] = useState(!followUp);
@@ -28,16 +29,16 @@ export function HistoryRosSection({ declaration, catalogs, patientReference, enc
   useEffect(() => setOpen(!followUp), [followUp]);
   useEffect(() => {
     let cancelled = false;
-    void load().then(([history, items]) => { if (!cancelled) { setRecord(history); setActs(items); setReady(true); setError(""); } })
+    void load().then(([history, items]) => { if (!cancelled) { setRecord(history); setActs(items); setReady(true); onRecordedChange(items.reviews.length > 0 || items.retractions.length > 0); setError(""); } })
       .catch(caught => { if (!cancelled) { setReady(false); setError(String(caught.message ?? caught)); } });
     return () => { cancelled = true; };
-  }, [endpoint, historyVersion]);
+  }, [endpoint, historyVersion, onRecordedChange]);
 
   async function load(): Promise<[HistoryRecord, typeof acts]> {
     return Promise.all([request<HistoryRecord>(`${endpoint}/hpi`), request<typeof acts>(`${endpoint}/history/items`)]);
   }
   async function refresh() {
-    const [history, items] = await load(); setRecord(history); setActs(items); setReady(true);
+    const [history, items] = await load(); setRecord(history); setActs(items); setReady(true); onRecordedChange(items.reviews.length > 0 || items.retractions.length > 0);
   }
   async function gesture(target: Target, original?: Review, undo?: Retraction) {
     if (pending.current) return;

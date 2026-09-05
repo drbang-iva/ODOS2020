@@ -18,6 +18,8 @@ import { stampPrimaryComplaint } from "./complaint-endpoint.js";
 import type { EncounterComplaint } from "./complaint-model.js";
 import { buildComplaintDefinitionSeeds } from "./complaint-model.js";
 import {
+  HISTORY_ITEM_REVIEW_CODE,
+  HISTORY_ITEM_RETRACTION_CODE,
   HISTORY_REVIEW_ATTESTATION_CODE,
   HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM,
   HISTORY_REVIEW_SECTION_EXTENSION_URL,
@@ -516,7 +518,8 @@ function identify(
     };
   }
   if (observation.code.coding?.some((coding) =>
-    coding.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && coding.code === HISTORY_REVIEW_ATTESTATION_CODE
+    coding.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM &&
+    [HISTORY_REVIEW_ATTESTATION_CODE, HISTORY_ITEM_REVIEW_CODE, HISTORY_ITEM_RETRACTION_CODE].includes(coding.code ?? "")
   )) {
     const sectionKey = observation.extension?.find((extension) => extension.url === HISTORY_REVIEW_SECTION_EXTENSION_URL)?.valueCode ?? OTHER_SECTION_KEY;
     return { observation, findingKey: `history-review:${sectionKey}`, sectionKey, laterality };

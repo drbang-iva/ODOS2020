@@ -10,7 +10,8 @@ import { handleEncounterVoidRequest } from "../../mcp/src/clinical-graph/encount
 import { buildHistoryItemReview, HISTORY_ITEM_REVIEW_CODE, parseHistoryItemReview } from "../../mcp/src/clinical-graph/history-answer-observation.js";
 import type { Observation } from "@medplum/fhirtypes";
 
-for (const followUp of [false, true]) test(`ROS browser: ${followUp ? "follow-up self-folds" : "comprehensive burst and explicit immutable reviews"}`, async () => {
+for (const scenario of ["comprehensive burst and explicit immutable reviews", "follow-up self-folds", "review-only History clear"]) test(`ROS browser: ${scenario}`, async () => {
+  const followUp = scenario === "follow-up self-folds";
   const seed = { ...buildHistoryItemReview({ sectionKey: "review-of-systems", gestureId: "11111111-1111-4111-8111-111111111111", method: "individual", targets: [{ sectionKey: "review-of-systems", sectionId: "systems", optionCode: "scalp-tenderness" }], patientReference: "Patient/ros-test", encounterReference: "Encounter/old", actorReference: "Practitioner/test", recordedAt: "2019-02-06T12:00:00Z" }), id: "old-review" };
   const s = historyRosFixture([seed]);
   const statuses: number[] = [], posted: any[] = [];
@@ -53,6 +54,29 @@ for (const followUp of [false, true]) test(`ROS browser: ${followUp ? "follow-up
     await ros.getByRole("table").waitFor(); assert.equal(await ros.locator('[data-ros-system]').count(), 14);
     assert.equal(await ros.getByRole("button", { name: /Mark all/ }).count(), 0);
     if (followUp) return;
+    if (scenario === "review-only History clear") {
+      const clear = page.getByRole("button", { name: "Clear History", exact: true });
+      assert.equal(await clear.count(), 0);
+      const row = ros.locator('[data-ros-item="headache"]');
+      await row.getByRole("checkbox").click();
+      await page.waitForFunction(() => (document.querySelector('[data-ros-item="headache"] input') as HTMLInputElement)?.checked);
+      assert.equal(await clear.count(), 1, "a persisted review without answers must enable History clear");
+      await page.reload(); await ros.waitFor();
+      await page.waitForFunction(() => (document.querySelector('[data-ros-item="headache"] input') as HTMLInputElement)?.checked);
+      assert.equal(await clear.count(), 1, "rehydrated item acts must enable History clear");
+      await row.getByRole("checkbox").click();
+      await row.getByRole("button", { name: /Undo/ }).waitFor();
+      assert.equal(await clear.count(), 1, "retracted reviews remain recorded and clearable");
+      page.on("dialog", dialog => dialog.accept());
+      await clear.click();
+      await row.getByRole("button", { name: /Undo/ }).waitFor({ state: "detached" });
+      assert.equal(await clear.count(), 0);
+      const record = await api.handleHistoryItemActsRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });
+      assert.deepEqual((record.body as any).reviews, []);
+      assert.deepEqual((record.body as any).retractions, []);
+      assert.equal(s.rows.filter(r => r.resourceType === "Observation" && r.encounter?.reference === "Encounter/current" && r.status === "entered-in-error").length, 2);
+      return;
+    }
     assert.match(await ros.locator('[data-ros-item="scalp-tenderness"]').innerText(), /02\/06\/2019/);
     assert.equal(await ros.locator('[data-ros-item="scalp-tenderness"] [data-stale="true"]').count(), 1);
     await ros.getByRole("button", { name: /^No: / }).evaluateAll(buttons => buttons.slice(0, 10).forEach(button => (button as HTMLButtonElement).click()));
