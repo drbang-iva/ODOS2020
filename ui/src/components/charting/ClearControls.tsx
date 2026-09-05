@@ -10,7 +10,7 @@ import {
   type EncounterVoidResult,
 } from "../../lib/encounter-void";
 import { useConfirmDestructive } from "./ConfirmDestructive";
-import { useEncounterEdit, type EncounterClearFailedDetail, type EncounterEditContextValue } from "./encounter-edit-context";
+import { acquireSectionWrite, useSectionWriteBusy, useEncounterEdit, type EncounterClearFailedDetail, type EncounterEditContextValue } from "./encounter-edit-context";
 
 /**
  * Tiers 2 and 3 of the pre-finalization delete, after the 2026-09-02 restraint pass.
@@ -67,6 +67,7 @@ export function ClearSectionButton({
   const [message, setMessage] = useState<string>();
   const [probedCount, setProbedCount] = useState(0);
   const keys = Array.isArray(sectionKey) ? sectionKey : [sectionKey];
+  const sectionBusy = useSectionWriteBusy(encounterReference, keys);
   const request = { scope: "section" as const, sectionKey: keys.length === 1 ? keys[0]! : keys };
   const keyId = keys.join("|");
 
@@ -83,7 +84,8 @@ export function ClearSectionButton({
   if (!closed && !hasRecorded && probedCount === 0) return null;
 
   async function clear() {
-    if (closed || busy) return;
+    if (closed || busy || sectionBusy) return;
+    let release: (() => void) | undefined;
     setBusy(true);
     setMessage(undefined);
     try {
@@ -94,6 +96,8 @@ export function ClearSectionButton({
         return;
       }
       if (!(await confirmDestructive(clearSectionConfirmSpec(label, preview.count)))) return;
+      release = acquireSectionWrite(encounterReference, keys);
+      if (!release) { setMessage("A section save is still in progress. Try Clear again when it finishes."); return; }
       await onBeforeClear?.();
       const result = await voidOrReport(() => voidEncounterEntries(encounterReference, request, { fetchImpl }), "section", onClearFailed);
       setProbedCount(0);
@@ -101,6 +105,7 @@ export function ClearSectionButton({
     } catch (caught) {
       setMessage(caught instanceof Error ? caught.message : String(caught));
     } finally {
+      release?.();
       setBusy(false);
     }
   }
@@ -111,7 +116,7 @@ export function ClearSectionButton({
         type="button"
         aria-label={`Clear ${label}`}
         data-entry-sheet-pristine-action
-        disabled={closed || busy || undefined}
+        disabled={closed || busy || sectionBusy || undefined}
         title={closed ? SIGNED_ENCOUNTER_TOOLTIP : `Clear ${label} — everything recorded this visit`}
         onClick={clear}
         className={`${QUIET_ACTION_CLASS} ${className ?? ""}`}
@@ -140,8 +145,11 @@ export function ClearEncounterButton({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
 
+  const sectionBusy = useSectionWriteBusy(encounterReference);
+
   async function clearAll() {
-    if (closed || busy) return;
+    if (closed || busy || sectionBusy) return;
+    let release: (() => void) | undefined;
     setBusy(true);
     setMessage(undefined);
     try {
@@ -151,11 +159,14 @@ export function ClearEncounterButton({
         return;
       }
       if (!(await confirmDestructive(clearEncounterConfirmSpec(preview.sections, preview.count)))) return;
+      release = acquireSectionWrite(encounterReference);
+      if (!release) { setMessage("A section save is still in progress. Try Clear again when it finishes."); return; }
       const result = await voidOrReport(() => voidEncounterEntries(encounterReference, { scope: "encounter" }, { fetchImpl }), "encounter", onClearFailed);
       onCleared(result);
     } catch (caught) {
       setMessage(caught instanceof Error ? caught.message : String(caught));
     } finally {
+      release?.();
       setBusy(false);
     }
   }
@@ -166,7 +177,7 @@ export function ClearEncounterButton({
       <button
         type="button"
         data-entry-sheet-chrome
-        disabled={closed || busy || undefined}
+        disabled={closed || busy || sectionBusy || undefined}
         title={closed ? SIGNED_ENCOUNTER_TOOLTIP : "Clear everything charted this visit"}
         onClick={clearAll}
       >

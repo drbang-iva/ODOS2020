@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { voidEncounterEntries } from "../../lib/encounter-void";
+import { acquireSectionWrite } from "./encounter-edit-context";
 import type { HistoryCatalogs, HistoryTemplateSection } from "./HpiSection";
 export type Target = { sectionKey: string; sectionId: string; optionCode?: string; eye?: "OD" | "OS" | "OU" };
 type Review = { attestationReference: string; recordedAt: string; method: "individual" | "bulk"; activeTargets: Target[] };
@@ -23,8 +24,15 @@ export function useHistoryItemReview({ patientReference, encounterReference, his
   const pending = useRef(false);
   const retries = useRef(new Map<string, object>());
   const loadGeneration = useRef(0);
+  const owner = useRef<object>();
   const encounterId = encounterReference.slice("Encounter/".length);
   const endpoint = `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}`;
+  useEffect(() => {
+    owner.current = {};
+    pending.current = false; setBusy(false); setReady(false);
+    setActs({ reviews: [], retractions: [], bulkDenials: [] }); setBulkProgress(undefined);
+    return () => { owner.current = undefined; };
+  }, [endpoint, patientReference, enabled]);
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
@@ -38,9 +46,10 @@ export function useHistoryItemReview({ patientReference, encounterReference, his
     return Promise.all([request<HistoryRecord>(`${endpoint}/hpi`), request<typeof acts>(`${endpoint}/history/items`)]);
   }
   async function refresh() {
+    const requestOwner = owner.current;
     const generation = ++loadGeneration.current;
     const loaded = await load();
-    if (generation === loadGeneration.current) applyLoaded(...loaded);
+    if (requestOwner && requestOwner === owner.current && generation === loadGeneration.current) applyLoaded(...loaded);
     return loaded;
   }
   function applyLoaded(history: HistoryRecord, items: typeof acts) {
@@ -67,11 +76,19 @@ export function useHistoryItemReview({ patientReference, encounterReference, his
     } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
     finally { pending.current = false; setBusy(false); }
   }
-  async function bulkDeny(targets: Target[]): Promise<HistoryRecord["answers"] | undefined> {
+  async function bulkDeny(targets: Target[], callbacks?: {
+    beforeRecord?: () => Promise<void>;
+    onRecorded?: (answers: NonNullable<HistoryRecord["answers"]>) => void;
+  }): Promise<void> {
     if (pending.current) return undefined;
     const resume = acts.bulkDenials.find(row => row.sectionKey === targets[0]?.sectionKey) ?? bulkProgress;
     const intended = resume?.targets ?? targets;
     if (!intended.length) return undefined;
+    const requestOwner = owner.current;
+    const ownsRequest = () => Boolean(requestOwner && requestOwner === owner.current);
+    if (!enabled || !ownsRequest()) return;
+    const release = acquireSectionWrite(encounterReference, [intended[0].sectionKey]);
+    if (!release) return;
     pending.current = true; setBusy(true); setError("");
     const progress = resume ?? { sectionKey: intended[0].sectionKey, gestureId: crypto.randomUUID(), status: "in-progress" as const, recorded: 0, total: intended.length, persistedTargets: [], targets: intended };
     setBulkProgress(progress);
@@ -79,6 +96,8 @@ export function useHistoryItemReview({ patientReference, encounterReference, his
       void refresh().catch(() => undefined);
     }, 250);
     try {
+      await callbacks?.beforeRecord?.();
+      if (!ownsRequest()) return;
       const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/history/items/review`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
@@ -86,6 +105,7 @@ export function useHistoryItemReview({ patientReference, encounterReference, his
           action: "items-reviewed", method: "bulk", targets: intended, gestureId: progress.gestureId }),
       });
       const result = await response.json();
+      if (!ownsRequest()) return;
       if (!response.ok) {
         if (typeof result.recorded === "number" && typeof result.total === "number") {
           setBulkProgress({ ...progress, ...result, status: "in-progress", targets: intended });
@@ -94,16 +114,23 @@ export function useHistoryItemReview({ patientReference, encounterReference, his
         await refresh();
         return undefined;
       }
-      const [history] = await refresh(); setBulkProgress(undefined); setError(""); onChanged();
-      return history.answers;
+      const [history] = await refresh();
+      if (!ownsRequest()) return;
+      callbacks?.onRecorded?.(history.answers ?? []);
+      setBulkProgress(undefined); setError(result.message ?? ""); onChanged();
     } catch (caught) {
+      if (!ownsRequest()) return;
       try {
         const [, items] = await refresh();
+        if (!ownsRequest()) return;
         const latest = items.bulkDenials?.find(row => row.sectionKey === intended[0].sectionKey);
         setError(latest ? `${latest.recorded} of ${latest.total} recorded. Resume to finish.` : caught instanceof Error ? caught.message : String(caught));
-      } catch { setError(caught instanceof Error ? caught.message : String(caught)); }
+      } catch { if (ownsRequest()) setError(caught instanceof Error ? caught.message : String(caught)); }
       return undefined;
-    } finally { clearInterval(poll); pending.current = false; setBusy(false); }
+    } finally {
+      clearInterval(poll); release();
+      if (ownsRequest()) { pending.current = false; setBusy(false); }
+    }
   }
   const dates = new Map((record.lastReviewed ?? []).map(row => [targetKey(row.target), row.lastReviewed]));
   const current = new Map<string, Review>();

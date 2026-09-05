@@ -5,7 +5,7 @@ import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-clie
 import { removeValueConfirmSpec, voidEncounterEntries } from "../../lib/encounter-void";
 import { ClearSectionButton } from "./ClearControls";
 import { useConfirmDestructive } from "./ConfirmDestructive";
-import { useEncounterEdit } from "./encounter-edit-context";
+import { acquireSectionWrite, isSectionWriteBusy, useSectionWriteBusy, useEncounterEdit } from "./encounter-edit-context";
 import type { SectionSaveStatus } from "./types";
 
 export type HistorySectionType =
@@ -138,6 +138,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   const saveQueue = useRef(Promise.resolve());
   const confirmDestructive = useConfirmDestructive();
   const { onCleared, onClearFailed } = useEncounterEdit();
+  const rosBusy = useSectionWriteBusy(encounterReference, ["review-of-systems"]);
 
   useEffect(() => {
     let cancelled = false;
@@ -208,6 +209,8 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   }
 
   function changeAnswer(nextAnswer: HistoryTemplateAnswer | undefined, prior: HistoryTemplateAnswer | undefined) {
+    const answer = nextAnswer ?? prior;
+    if (answer?.templateKey === "review-of-systems" && isSectionWriteBusy(encounterReference, [answerSectionKey(answer)])) return;
     if (!nextAnswer) {
       if (prior) void clearAnswer(prior);
       return;
@@ -279,6 +282,9 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   }
 
   async function clearAnswer(answer: HistoryTemplateAnswer) {
+    const release = answer.templateKey === "review-of-systems"
+      ? acquireSectionWrite(encounterReference, [answerSectionKey(answer)]) : () => undefined;
+    if (!release) return;
     const pending = debounceTimers.current.get(answer.id);
     if (pending) clearTimeout(pending);
     debounceTimers.current.delete(answer.id);
@@ -308,6 +314,8 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       setAnswers(restoredAnswers);
       onClearFailed?.({ scope: "observation", error: caught });
       setSaveState({ status: "error", reason: errorMessage(caught) });
+    } finally {
+      release();
     }
   }
 
@@ -447,7 +455,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       <div className="mx-auto max-w-6xl">
         <header className={`odos-hpi-border rounded border bg-bg-panel/80 p-4 ${saveState.status === "error" ? "border-red-400/70" : ""}`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <button type="button" className="min-w-0 flex-1 text-left" aria-expanded={!folded} onClick={() => setFolded((value) => !value)}>
+            <button type="button" className="min-w-0 flex-1 text-left" disabled={rosBusy} aria-expanded={!folded} onClick={() => setFolded((value) => !value)}>
               <span className="odos-hpi-faint text-xs font-semibold uppercase tracking-wider">History</span>
               <h2 className="odos-hpi-text mt-1 text-lg font-semibold">Chief Complaint &amp; HPI</h2>
               {folded && <p className="odos-hpi-muted mt-2 truncate text-sm">{summary || "Not started"}</p>}
@@ -586,6 +594,11 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
             followUp={activeComplaints.some(complaint => answers.some(answer => answer.complaintId === complaint.id &&
               answer.sectionId === "presentation" && answer.value.kind === "selection" && answer.value.code === "follow-up"))}
             historyVersion={historyVersion} onChange={changeAnswer}
+            onBeforeBulk={async () => {
+              for (const timer of debounceTimers.current.values()) clearTimeout(timer);
+              debounceTimers.current.clear();
+              await queueSave();
+            }}
             onBulkRecorded={recordBulkAnswers}
             makeAnswerId={(sectionId, optionCode) => subjectHistoryAnswerId(encounterId, declaration.key, sectionId, optionCode)}
             onChanged={() => onSaved({ completed: complete, summary }, true)}

@@ -94,7 +94,8 @@ const historyBulkDenialLedgerSchema = z.object({
   sectionKey: z.literal("review-of-systems"),
   actorReference: z.string().regex(/^(Practitioner|PractitionerRole)\/[A-Za-z0-9.-]+$/),
   recordedAt: z.string().datetime({ offset: true }),
-  status: z.enum(["in-progress", "complete"]),
+  status: z.enum(["in-progress", "complete", "cancelled"]),
+  terminalReason: z.string().optional(),
   intendedTargets: z.array(historyReviewTargetSchema).min(1).max(500),
   resolvedTargets: z.array(historyReviewTargetSchema).max(500),
   persistedTargets: z.array(historyReviewTargetSchema).max(500),
@@ -353,23 +354,18 @@ export async function handleHistoryItemReviewRequest(deps: HpiEndpointDeps, inpu
   if (!parsed.success) return { status: 400, body: { error: "A review requires a gesture id and valid targets." } };
   if (parsed.data.method === "bulk") return handleHistoryBulkDenialRequest(deps, input, parsed.data);
   if (parsed.data.targets.length !== 1) return { status: 400, body: { error: "An individual review requires exactly one valid target." } };
-  return handleHistoryReviewRequest(deps, input);
+  return historySearchResult(() => handleHistoryReview(deps, input));
 }
 
 async function handleHistoryBulkDenialRequest(
   deps: HpiEndpointDeps,
   input: { authHeader: string | undefined; body: unknown },
   request: z.infer<typeof itemHistoryReviewRequestSchema>,
+  recoveryAttempt = 0,
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to record bulk history." } };
   if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
-  const declaration = HISTORY_SUBJECT_SECTIONS.find(candidate => candidate.key === request.sectionKey);
-  if (!declaration || declaration.key !== "review-of-systems") {
-    return { status: 400, body: { error: "Bulk denial is available only for Review of Systems." } };
-  }
-  const targetError = validateHistoryReviewTargets(declaration, request.targets);
-  if (targetError) return { status: 400, body: { error: targetError } };
   const encounterId = request.encounterReference.slice("Encounter/".length);
   const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
   if (encounter.subject?.reference !== request.patientReference) {
@@ -377,42 +373,58 @@ async function handleHistoryBulkDenialRequest(
   }
   if (isClosedEncounter(encounter)) return { status: 409, body: { error: CLOSED_ENCOUNTER_EDIT_ERROR } };
 
-  const existingLedger = await loadHistoryBulkDenialLedger(staff.fhir, request.gestureId);
-  if (existingLedger) {
-    if (!historyBulkLedgerMatchesRequest(existingLedger, request)) {
-      return { status: 409, body: { error: "History bulk gesture targets and context are immutable." } };
+  let ledger: HistoryBulkDenialLedger | undefined;
+  const actIdentifier = `${HISTORY_REVIEW_ATTESTATION_IDENTIFIER_SYSTEM}|${encounterId}:${request.sectionKey}:${request.gestureId}`;
+  try {
+    const existingLedger = await loadHistoryBulkDenialLedger(staff.fhir, request.gestureId);
+    if (existingLedger) {
+      if (!historyBulkLedgerMatchesRequest(existingLedger, request)) {
+        return { status: 409, body: { error: "History bulk gesture targets and context are immutable." } };
+      }
+      if (existingLedger.status !== "in-progress") return { status: 200, body: historyBulkDenialResponse(existingLedger) };
     }
-    if (existingLedger.status === "complete") return { status: 200, body: historyBulkDenialResponse(existingLedger) };
-  }
 
-  const recordedAt = existingLedger?.recordedAt ?? deps.now?.() ?? new Date().toISOString();
-  if (!existingLedger) {
-    for (const target of request.targets) {
-      const answer = await findHistoryAnswerById(staff.fhir, bulkHistoryAnswerId(encounterId, target));
-      if (answer && isLiveHistoryAnswer(answer, request.patientReference, request.encounterReference)) {
-        return { status: 409, body: { error: "Bulk denial accepts unanswered targets only." } };
+    ledger = existingLedger;
+    const existingAct = await findHistoryItemAct(staff.fhir, actIdentifier);
+    if (existingAct) {
+      if (!ledger) return { status: 409, body: { error: "History review gesture targets and method are immutable." } };
+      ledger = await updateHistoryBulkDenialLedger(staff.fhir, historyBulkTerminalState(ledger, existingAct));
+      return { status: 200, body: historyBulkDenialResponse(ledger) };
+    }
+    const declaration = HISTORY_SUBJECT_SECTIONS.find(candidate => candidate.key === request.sectionKey);
+    if (!declaration || declaration.key !== "review-of-systems") {
+      return { status: 400, body: { error: "Bulk denial is available only for Review of Systems." } };
+    }
+    const targetError = validateHistoryReviewTargets(declaration, request.targets);
+    if (targetError) return { status: 400, body: { error: targetError } };
+    const recordedAt = existingLedger?.recordedAt ?? deps.now?.() ?? new Date().toISOString();
+    if (!existingLedger) {
+      for (const target of request.targets) {
+        const answer = await findHistoryAnswerById(staff.fhir, bulkHistoryAnswerId(encounterId, target));
+        if (answer && isLiveHistoryAnswer(answer, request.patientReference, request.encounterReference)) {
+          return { status: 409, body: { error: "Bulk denial accepts unanswered targets only." } };
+        }
       }
     }
-  }
-  let ledger = existingLedger ?? await createHistoryBulkDenialLedger(staff.fhir, {
-    gestureId: request.gestureId,
-    patientReference: request.patientReference,
-    encounterReference: request.encounterReference,
-    sectionKey: "review-of-systems",
-    actorReference: staff.staffReference,
-    recordedAt,
-    status: "in-progress",
-    intendedTargets: request.targets,
-    resolvedTargets: [],
-    persistedTargets: [],
-  });
-  if (!historyBulkLedgerMatchesRequest(ledger, request)) {
-    return { status: 409, body: { error: "History bulk gesture targets and context are immutable." } };
-  }
-  if (ledger.status === "complete") return { status: 200, body: historyBulkDenialResponse(ledger) };
-  const unresolved = ledger.intendedTargets.filter(target => !ledger.resolvedTargets.some(saved => historyReviewTargetKey(saved) === historyReviewTargetKey(target)));
-  const answersPerUnit = HISTORY_CONDITIONAL_BUNDLE_ENTRY_LIMIT - 1;
-  try {
+    ledger = existingLedger ?? await createHistoryBulkDenialLedger(staff.fhir, {
+      gestureId: request.gestureId,
+      patientReference: request.patientReference,
+      encounterReference: request.encounterReference,
+      sectionKey: "review-of-systems",
+      actorReference: staff.staffReference,
+      recordedAt,
+      status: "in-progress",
+      intendedTargets: request.targets,
+      resolvedTargets: [],
+      persistedTargets: [],
+    });
+    if (!historyBulkLedgerMatchesRequest(ledger, request)) {
+      return { status: 409, body: { error: "History bulk gesture targets and context are immutable." } };
+    }
+    if (ledger.status !== "in-progress") return { status: 200, body: historyBulkDenialResponse(ledger) };
+    const resolvedKeys = new Set(ledger.resolvedTargets.map(historyReviewTargetKey));
+    const unresolved = ledger.intendedTargets.filter(target => !resolvedKeys.has(historyReviewTargetKey(target)));
+    const answersPerUnit = HISTORY_CONDITIONAL_BUNDLE_ENTRY_LIMIT - 1;
     for (let start = 0; start < unresolved.length; start += answersPerUnit) {
       const targets = unresolved.slice(start, start + answersPerUnit);
       const requestBundle = historyBulkAnswerUnit(targets, request, ledger.actorReference, recordedAt);
@@ -454,14 +466,28 @@ async function handleHistoryBulkDenialRequest(
         actorReference: ledger.actorReference,
         recordedAt,
       });
-      if (act.status !== 200) return act;
+      if (act.status !== 200) {
+        const winner = await findHistoryItemAct(staff.fhir, actIdentifier);
+        if (!winner) return act;
+        ledger = await updateHistoryBulkDenialLedger(staff.fhir, historyBulkTerminalState(ledger, winner));
+        return { status: 200, body: historyBulkDenialResponse(ledger) };
+      }
       attestationReference = (act.body as { attestationReference?: string }).attestationReference;
     }
     ledger = await updateHistoryBulkDenialLedger(staff.fhir, { ...ledger, status: "complete", ...(attestationReference ? { attestationReference } : {}) });
     return { status: 200, body: historyBulkDenialResponse(ledger) };
   } catch (error) {
-    if (isHistoryBulkConflict(error)) return handleHistoryBulkDenialRequest(deps, input, request);
-    return { status: 503, body: { error: errorMessage(error), ...historyBulkDenialResponse(ledger) } };
+    let durable: HistoryBulkDenialLedger | undefined;
+    try { durable = await loadHistoryBulkDenialLedger(staff.fhir, request.gestureId); } catch { /* Storage may still be unavailable. */ }
+    if (durable && !historyBulkLedgerMatchesRequest(durable, request)) {
+      return { status: 409, body: { error: "History bulk gesture targets and context are immutable." } };
+    }
+    if (durable && durable.status !== "in-progress") return { status: 200, body: historyBulkDenialResponse(durable) };
+    if (recoveryAttempt < 3 && (isHistoryBulkConflict(error) || (!ledger && durable))) {
+      return handleHistoryBulkDenialRequest(deps, input, request, recoveryAttempt + 1);
+    }
+    const progress = durable ?? ledger;
+    return { status: 503, body: { error: errorMessage(error), ...(progress ? historyBulkDenialResponse(progress) : {}) } };
   }
 }
 
@@ -641,6 +667,16 @@ async function updateHistoryBulkDenialLedger(fhir: HpiFhirClient, ledger: Histor
   return parseHistoryBulkDenialLedger(updated);
 }
 
+function historyBulkTerminalState(ledger: HistoryBulkDenialLedger, act: Observation): HistoryBulkDenialLedger {
+  const review = act.code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE) ? parseHistoryItemReview(act) : undefined;
+  if (!act.id || act.subject?.reference !== ledger.patientReference || act.encounter?.reference !== ledger.encounterReference ||
+    review?.method !== "bulk" || act.performer?.[0]?.reference !== ledger.actorReference ||
+    review.targets.some(target => !ledger.intendedTargets.some(intended => historyReviewTargetKey(intended) === historyReviewTargetKey(target)))) {
+    return { ...ledger, status: "cancelled", terminalReason: "Bulk gesture cancelled: its identity is already used by another review act. No new bulk act was recorded." };
+  }
+  return { ...ledger, status: "complete", persistedTargets: review.targets, attestationReference: `Observation/${act.id}` };
+}
+
 function historyBulkDenialResponse(ledger: HistoryBulkDenialLedger) {
   return {
     sectionKey: ledger.sectionKey,
@@ -649,6 +685,7 @@ function historyBulkDenialResponse(ledger: HistoryBulkDenialLedger) {
     recorded: ledger.persistedTargets.length,
     total: ledger.intendedTargets.length,
     persistedTargets: ledger.persistedTargets,
+    ...(ledger.terminalReason ? { message: ledger.terminalReason } : {}),
     ...(ledger.attestationReference ? { attestationReference: ledger.attestationReference } : {}),
     ...(ledger.status === "complete" && ledger.persistedTargets.length === 0
       ? { message: "No live negative answers remained, so no review act was recorded." }
@@ -714,20 +751,8 @@ export async function handleHistoryReviewRequest(
   deps: HpiEndpointDeps,
   input: { authHeader: string | undefined; body: unknown },
 ): Promise<{ status: number; body: unknown }> {
-  const parsed = historyReviewRequestSchema.safeParse(input.body);
-  if (parsed.success && "method" in parsed.data && parsed.data.method === "bulk") {
-    const staff = await deps.authenticate(input.authHeader);
-    if (!staff) return { status: 401, body: { error: "Authentication required to review history." } };
-    if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
-    const identifier = `${parsed.data.encounterReference.slice("Encounter/".length)}:${parsed.data.sectionKey}:${parsed.data.gestureId}`;
-    const existing = await searchAll<Observation>(staff.fhir, "Observation", {
-      identifier: `${HISTORY_REVIEW_ATTESTATION_IDENTIFIER_SYSTEM}|${identifier}`,
-      _count: "2",
-    }, { maxRows: 2 });
-    if (existing.length > 0) {
-      return { status: 409, body: { error: "History review gesture targets and method are immutable." } };
-    }
-    return { status: 400, body: { error: "History bulk denial must use the history items/review endpoint." } };
+  if (asRecord(input.body).action === HISTORY_ITEMS_REVIEWED_ACTION) {
+    return handleHistoryItemReviewRequest(deps, input);
   }
   return historySearchResult(() => handleHistoryReview(deps, input));
 }
@@ -755,6 +780,9 @@ async function handleHistoryReview(
   if ("action" in parsed.data) {
     const targetError = validateHistoryReviewTargets(declaration, parsed.data.targets);
     if (targetError) return { status: 400, body: { error: targetError } };
+    if (declaration.key === "review-of-systems" && await loadHistoryBulkDenialLedger(staff.fhir, parsed.data.gestureId)) {
+      return { status: 409, body: { error: "This gesture belongs to a bulk denial; resume it with its original method and targets." } };
+    }
     if (parsed.data.action === HISTORY_ITEMS_RETRACTED_ACTION) {
       const retractionTarget = parsed.data.targets[0];
       const originals = await searchAll<Observation>(staff.fhir, "Observation", { _id: parsed.data.retracts.slice("Observation/".length), _count: "2" }, { maxRows: 2 });

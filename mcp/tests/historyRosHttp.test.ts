@@ -312,10 +312,94 @@ test("malformed bulk ledgers from another encounter do not poison current item r
   assert.deepEqual((result.body as any).bulkDenials, []);
 });
 
-test("legacy history review endpoint refuses bulk acts without the denial ledger contract", async () => {
-  const s = historyRosFixture();
-  const result = await endpoints.handleHistoryReviewRequest(s.deps, { authHeader: "synthetic", body: bulkBody(2) });
-  assert.equal(result.status, 400);
-  assert.match((result.body as any).error, /bulk denial.*items\/review/i);
-  assert.equal(s.rows.length, 0);
+test("I2 every item-review HTTP door enforces one contract", async () => {
+  for (const handler of [endpoints.handleHistoryItemReviewRequest, endpoints.handleHistoryReviewRequest]) {
+    for (const [change, expected] of [
+      [{ method: "individual" }, 400], [{ gestureId: undefined }, 400], [{ targets: [] }, 400], [{}, 200],
+    ] as const) {
+      const s = historyRosFixture();
+      const result = await handler(s.deps, { authHeader: "synthetic", body: { ...bulkBody(2), ...change } });
+      assert.equal(result.status, expected, `${handler.name}: ${JSON.stringify(change)}`);
+      if (expected === 400) assert.equal(s.rows.length, 0);
+      else {
+        assert.equal(s.rows.filter(row => row.resourceType === "Basic").length, 1);
+        assert.equal((result.body as any).recorded, 2);
+      }
+    }
+    const s = historyRosFixture(), body = bulkBody(1);
+    assert.equal((await handler(s.deps, { authHeader: "synthetic", body: { ...body, method: "individual" } })).status, 200);
+    const before = JSON.stringify(s.rows);
+    assert.equal((await handler(s.deps, { authHeader: "synthetic", body })).status, 409);
+    assert.equal(JSON.stringify(s.rows), before, "a changed method must not start a new ledger or write answers");
+    const partial = historyRosFixture(), partialBody = bulkBody(8);
+    partial.failTransactionAt(2);
+    assert.equal((await handler(partial.deps, { authHeader: "synthetic", body: partialBody })).status, 503);
+    const interrupted = JSON.stringify(partial.rows);
+    assert.equal((await handler(partial.deps, { authHeader: "synthetic", body: { ...partialBody, method: "individual", targets: [partialBody.targets[0]] } })).status, 409);
+    assert.equal(JSON.stringify(partial.rows), interrupted, "a bulk ledger reserves the gesture before the act exists");
+  }
+});
+
+for (const clearScope of ["answer", "section"] as const) test(`I3 committed gestures reach complete after response loss and ${clearScope} clear`, async () => {
+  const s = historyRosFixture(), body = bulkBody(2);
+  const staff = await s.deps.authenticate("synthetic"); assert.ok(staff);
+  const execute = staff.fhir.executeTransaction.bind(staff.fhir); let loseResponse = true;
+  staff.fhir.executeTransaction = async (bundle, headers) => {
+    const result = await execute(bundle, headers);
+    if (loseResponse && bundle.entry?.[0]?.resource?.resourceType === "Observation" &&
+      bundle.entry[0].resource.code.coding?.some(c => c.code === HISTORY_ITEM_REVIEW_CODE)) {
+      loseResponse = false; throw new Error("Synthetic lost response after act persistence");
+    }
+    return result;
+  };
+  const first = await bulk(s, body); assert.ok([200, 503].includes(first.status));
+  const answer = s.rows.find((row): row is Observation => row.resourceType === "Observation" && row.identifier?.some(i => i.value?.startsWith("history-current-")));
+  assert.ok(answer);
+  assert.equal((await handleEncounterVoidRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" }, body: clearScope === "answer"
+    ? { scope: "observation", observationReference: `Observation/${answer.id}`, sectionKey: "review-of-systems" }
+    : { scope: "section", sectionKey: ["hpi", "review-of-systems"] } })).status, 200);
+  const acts = () => s.rows.filter((row): row is Observation => row.resourceType === "Observation" && row.code.coding?.some(c => c.code === HISTORY_ITEM_REVIEW_CODE));
+  const originalAct = JSON.stringify(acts());
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const result = await bulk(s, body);
+    assert.equal(result.status, 200, JSON.stringify(result.body));
+    assert.equal((result.body as any).status, "complete");
+    assert.equal(JSON.stringify(acts()), originalAct, "recovery must not replace or recreate an immutable act");
+  }
+  const read = await endpoints.handleHistoryItemActsRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });
+  assert.deepEqual((read.body as any).bulkDenials, []);
+});
+
+for (const status of [409, 412, undefined]) test(`I4 initial ledger persistence converges after ${status ?? "lost response"}`, async () => {
+  const s = historyRosFixture(), body = bulkBody(1);
+  const staff = await s.deps.authenticate("synthetic"); assert.ok(staff);
+  const create = staff.fhir.create.bind(staff.fhir); let loseResponse = true;
+  staff.fhir.create = async (resource, headers) => {
+    const saved = await create(resource, headers);
+    if (loseResponse) { loseResponse = false; throw Object.assign(new Error("Synthetic initial ledger uncertainty"), { status }); }
+    return saved;
+  };
+  const outcomes = await Promise.allSettled([bulk(s, body), bulk(s, body)]);
+  assert.ok(outcomes.every(result => result.status === "fulfilled"), "initial creation must participate in recovery");
+  for (const outcome of outcomes) if (outcome.status === "fulfilled") {
+    assert.equal(outcome.value.status, 200, JSON.stringify(outcome.value.body));
+    assert.equal((outcome.value.body as any).status, "complete");
+  }
+  assert.equal(s.rows.filter(row => row.resourceType === "Basic").length, 1);
+  assert.equal(s.rows.filter(row => row.resourceType === "Provenance").length, 2);
+});
+
+test("I3 an incompatible committed act terminates the interrupted gesture explicitly", async () => {
+  const s = historyRosFixture(), body = bulkBody(8);
+  s.failTransactionAt(2); assert.equal((await bulk(s, body)).status, 503); s.failTransactionAt(undefined);
+  const staff = await s.deps.authenticate("synthetic"); assert.ok(staff);
+  assert.equal((await endpoints.recordHistoryItemReview(staff.fhir, { ...body, method: "individual", targets: [body.targets[0]],
+    actorReference: staff.staffReference, recordedAt: "2026-09-05T12:00:00Z" })).status, 200);
+  const result = await bulk(s, body);
+  assert.equal(result.status, 200);
+  assert.equal((result.body as any).status, "cancelled");
+  assert.match((result.body as any).message, /already used|cancelled/i);
+  assert.deepEqual(await bulk(s, body), result);
+  const read = await endpoints.handleHistoryItemActsRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });
+  assert.deepEqual((read.body as any).bulkDenials, []);
 });

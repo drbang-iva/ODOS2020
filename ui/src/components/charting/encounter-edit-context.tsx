@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useSyncExternalStore } from "react";
 import type { Encounter } from "@medplum/fhirtypes";
 import { isClosedEncounterStatus, type EncounterVoidRequest, type EncounterVoidResult } from "../../lib/encounter-void";
 
@@ -35,4 +35,32 @@ export function useEncounterEdit(): EncounterEditContextValue {
 
 export function useEncounterClosed(): boolean {
   return isClosedEncounterStatus(useContext(EncounterEditContext).encounterStatus);
+}
+
+const sectionWrites = new Set<{ encounter: string; sections?: string[] }>();
+const writeListeners = new Set<() => void>();
+const subscribeWrites = (listener: () => void) => {
+  writeListeners.add(listener);
+  return () => { writeListeners.delete(listener); };
+};
+
+export function isSectionWriteBusy(encounter: string, sections?: string[]): boolean {
+  return [...sectionWrites].some(write => write.encounter === encounter && (!sections || !write.sections ||
+    sections.some(key => write.sections!.some(other => key === other || key.startsWith(`${other}:`) || other.startsWith(`${key}:`)))));
+}
+
+export function useSectionWriteBusy(encounter: string, sections?: string[]): boolean {
+  return useSyncExternalStore(subscribeWrites, () => isSectionWriteBusy(encounter, sections), () => false);
+}
+
+export function acquireSectionWrite(encounter: string, sections?: string[]): (() => void) | undefined {
+  if (isSectionWriteBusy(encounter, sections)) return undefined;
+  const write = { encounter, sections };
+  sectionWrites.add(write);
+  writeListeners.forEach(listener => listener());
+  // Keep the lease until the request settles, even if its component unmounts.
+  return () => {
+    sectionWrites.delete(write);
+    writeListeners.forEach(listener => listener());
+  };
 }
