@@ -106,7 +106,7 @@ test("MCP searchAll honors a per-call row cap without returning a partial result
     (error: unknown) => error instanceof FhirSearchLimitError
       && error.status === 409
       && error.maxRows === 2
-      && error.message === "FHIR Patient query exceeded 2 rows; no partial result was returned.",
+      && error.message === "FHIR Patient query exceeded 2 rows; no partial result was returned. Read 3 rows across 2 pages.",
   );
 });
 
@@ -213,3 +213,18 @@ function page<T extends Resource>(resources: Resource[], nextUrl?: string): Bund
     ...(nextUrl ? { link: [{ relation: "next", url: nextUrl }] } : {}),
   };
 }
+
+test("MCP searchAll bounds empty-page streams with a counted page failure", async () => {
+  let pages = 0;
+  const client = {
+    baseUrl: "http://localhost:8103/",
+    search: async <T extends Resource>() => page<T>([], "/fhir/R4/Patient?_page=1"),
+    searchUrl: async <T extends Resource>() => {
+      pages += 1;
+      return page<T>([], `/fhir/R4/Patient?_page=${pages + 1}`);
+    },
+  };
+  await assert.rejects(searchAll<Patient>(client, "Patient", {}, { maxRows: 5000, maxPages: 3 }),
+    (error: unknown) => error instanceof FhirSearchPageLimitError && error.maxPages === 3 && /3 pages/.test(error.message));
+  assert.equal(pages, 2);
+});

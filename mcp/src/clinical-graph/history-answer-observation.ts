@@ -2,6 +2,7 @@ import type { Observation } from "@medplum/fhirtypes";
 import type { HistoryTemplateAnswer } from "./history-template-engine.js";
 
 const BASE = "https://odos2020.com/fhir";
+export const HISTORY_ANSWER_SCOPE_SYSTEM = `${BASE}/CodeSystem/history-answer-scope`;
 export const HISTORY_ANSWER_CODE_SYSTEM = `${BASE}/CodeSystem/odos-history-template-answer`;
 export const HISTORY_ANSWER_CODE = "history-template-answer";
 export const HISTORY_ANSWER_IDENTIFIER_SYSTEM = `${BASE}/NamingSystem/history-template-answer-id`;
@@ -24,6 +25,13 @@ export function buildHistoryAnswerObservation(
     ...(existing?.id ? { id: existing.id } : {}),
     ...(existing?.meta ? { meta: existing.meta } : {}),
     identifier: [{ system: HISTORY_ANSWER_IDENTIFIER_SYSTEM, value: persistedAnswer.id }],
+    category: [
+      ...(existing?.category ?? []).flatMap((category) => {
+        const coding = category.coding?.filter((coding) => coding.system !== HISTORY_ANSWER_SCOPE_SYSTEM);
+        return category.text || coding?.length ? [{ ...category, coding }] : [];
+      }),
+      { coding: [{ system: HISTORY_ANSWER_SCOPE_SYSTEM, code: persistedAnswer.subjectScope ?? "complaint" }] },
+    ],
     status: "preliminary",
     code: { coding: [{
       system: HISTORY_ANSWER_CODE_SYSTEM,
