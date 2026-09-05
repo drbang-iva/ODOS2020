@@ -13,3 +13,12 @@ RESTORE put-50-to-51: exit 0; # tests 4; # pass 4; # fail 0; # skipped 0; origin
 guard-after-write: mutant verified in place; source hash changed
 BREAK guard-after-write: exit 1; # tests 1; # pass 0; # fail 1; # skipped 0
 RESTORE guard-after-write: exit 0; # tests 1; # pass 1; # fail 0; # skipped 0; original source hash restored
+fixback-auto-prefill: mutant reinserted automatic prefill persistence
+BREAK fixback-auto-prefill-413: exit 1; # tests 1; # pass 0; # fail 1; actual 413
+RESTORE fixback-auto-prefill-413: exit 0; # tests 1; # pass 1; # fail 0
+BREAK fixback-untapped-absence: exit 1; # tests 1; # pass 0; # fail 1; request contained presentation plus 7 presents-for answers
+RESTORE fixback-untapped-absence: exit 0; # tests 1; # pass 1; # fail 0
+BREAK fixback-conditional-8-to-9: exit 1; # tests 4; # pass 3; # fail 1
+RESTORE fixback-conditional-8-to-9: exit 0; # tests 4; # pass 4; # fail 0
+BREAK fixback-put-50-to-51: exit 1; # tests 4; # pass 3; # fail 1
+RESTORE fixback-put-50-to-51: exit 0; # tests 4; # pass 4; # fail 0

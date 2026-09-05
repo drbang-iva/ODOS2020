@@ -1,6 +1,6 @@
 # History 1d-1 author evidence
 
-Base: `ac4dba80046988339e67d15ef3ce9f35585331a7`. Branch: `drbang-iva/history-slice-1d1`.
+Original base: `ac4dba80046988339e67d15ef3ce9f35585331a7`. Fixback base after PR #531: `69e45eaa6ad8ee6c44a0c5f1dc6780c5b6ffabda`. Branch: `drbang-iva/history-slice-1d1`.
 
 History autosave submits added/changed answers since its last successful save. Failed saves retain the pending delta; queued saves compare against the last completed request. Clears still use the existing void primitive. The endpoint validates only submitted answers against persisted presentation context and renders complete complaint narratives from persisted answers plus the delta. Identical values cause no answer PUT or review retirement. Unchanged aggregate refreshes also avoid PUTs.
 
@@ -61,3 +61,40 @@ The request now carries only the delta. Unchanged answer dates and review acts s
 No new clinical terminology, FHIR artifact URL, or regulatory assertion was introduced; Mandate 14 ledger additions: zero. The accepted 1d rescope and design-review amendment remain the authority; no new decision or decisions/INDEX.md update. Read pagination and bulk progress-ledger work remain subsequent slices.
 
 Status: author evidence only; independent final-head evaluation required before merge. No deployment performed.
+
+## Follow-up prefill fixback
+
+Follow-up prefills are now unrecorded suggestions. Selecting Follow Up saves only the presentation answer. Each suggestion uses the existing sky carry-forward palette and says `suggested from last visit`; tapping one sends exactly that one answer through the ordinary autosave path. Untapped suggestions never enter `latestAnswers`, a request body, persistence, the narrative, or completeness.
+
+`fixback-after.png` is a synthetic component/network preview captured from the rebased worktree. It shows all seven routine glaucoma workup suggestions, History at Started, and a successful save whose intercepted request contained one presentation answer. This is not an application-route or AccessPolicy proof.
+
+### Fixback checks and actual results
+
+- Seven-prefill save and suggestion boundary: 2 pass / 0 fail after restore. The first request contained 1 answer; tapping one suggestion produced a second request containing exactly 1 answer.
+- Current-head focused History suites: MCP 50 pass / 0 fail; UI 24 pass / 0 fail; Chromium delta request test 1 pass / 0 fail.
+- Original 1a/1b/1c assertions selected from `ac4dba80`: MCP 41 pass / 0 fail; UI 20 pass / 0 fail.
+- Original #530 delta assertions: MCP 5 pass / 0 fail; UI 2 pass / 0 fail; Chromium 1 pass / 0 fail. The guard and no-partial-write assertions were not edited.
+- PR #531 pagination after rebase: unit 15 pass / 0 fail. Dedicated synthetic Medplum proof: 1 pass / 0 fail; 5,000 rows returned HTTP 200 and 5,001 rows refused with HTTP 409 after 11 pages.
+- Real synthetic Medplum #530 boundary proof: 6 pass / 0 fail. The 9-entry and 51-PUT cases returned HTTP 413 with zero transaction submissions and unchanged resources; the exact 8-entry and 50-PUT boundaries persisted.
+- Full UI before the final display-only refactor: 1,235 pass / 0 fail / 0 skipped. The final-head broad rerun encountered three unrelated browser timeouts: 1,232 pass / 2 fail / 1 cancelled. Each affected file then passed alone: payment focus 9/9, entry sheets 49/49, responsive chart bar 3/3. Final-head History remained 24/24 and the UI build passed.
+- Full ungated MCP unit run: 4,187 tests; 4,130 pass / 0 fail / 57 skipped. The harness reported 41 live-stack tests skipped; the focused real-Medplum proofs above were run separately.
+- MCP TypeScript build and UI TypeScript/Vite build: exit 0. `git diff --check`: exit 0.
+
+### Fixback Mandate 17
+
+| Mutation | BREAK | RESTORE |
+|---|---|---|
+| Reinsert automatic prefill persistence | 0 pass / 1 fail; actual HTTP 413 | 1 pass / 0 fail |
+| Let untapped suggestions enter the delta | 0 pass / 1 fail; request contained presentation plus 7 `presents-for` answers | 1 pass / 0 fail |
+| Conditional limit 8 → 9 | 3 pass / 1 fail | 4 pass / 0 fail |
+| PUT limit 50 → 51 | 3 pass / 1 fail | 4 pass / 0 fail |
+
+Every mutant was applied in place and restored before the full checks.
+
+### Multi-answer path sweep
+
+No other single gesture silently adds multiple History answers. `changePresentation` voids inactive persisted answers before recording its one presentation answer. Answer clear removes one answer and uses the existing void path. Complaint and subject-section clears remove an explicitly selected finding or section through the server void primitive; their follow-up save reconciles the remaining state and manufactures no new answers.
+
+### What shipped behaviour does this change?
+
+A follow-up no longer becomes Charted because prior-plan procedures were applied without review. It remains Started until the tech taps at least one required `presents-for` suggestion. This adds an explicit human confirmation step and prevents the chart from claiming that an untapped procedure was recorded today.

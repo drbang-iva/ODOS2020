@@ -217,12 +217,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   }
 
   function applyAnswer(nextAnswer: HistoryTemplateAnswer) {
-    let next = replaceAnswer(latestAnswers.current, nextAnswer);
-    if (nextAnswer.sectionId === "presentation" && nextAnswer.value.kind === "selection" && nextAnswer.value.code === "follow-up") {
-      for (const prefill of followUpPrefills.filter((candidate) => candidate.complaintId === nextAnswer.complaintId)) {
-        if (!next.some((candidate) => candidate.id === prefill.id)) next = [...next, prefill];
-      }
-    }
+    const next = replaceAnswer(latestAnswers.current, nextAnswer);
     latestAnswers.current = next;
     setAnswers(next);
     scheduleSave(nextAnswer.id);
@@ -477,6 +472,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
                   template={template}
                   catalogs={catalogs}
                   answers={complaintAnswers}
+                  suggestions={followUpPrefills.filter((answer) => answer.complaintId === complaint.id)}
                   narrative={narratives[complaint.id] ?? ""}
                   editMode={editMode}
                   onChange={changeAnswer}
@@ -561,6 +557,7 @@ export function HistoryTemplateEditor({
   template,
   catalogs,
   answers,
+  suggestions = [],
   narrative,
   editMode,
   onChange,
@@ -570,6 +567,7 @@ export function HistoryTemplateEditor({
   template: HistoryTemplate;
   catalogs: HistoryCatalogs;
   answers: HistoryTemplateAnswer[];
+  suggestions?: HistoryTemplateAnswer[];
   narrative: string;
   editMode: boolean;
   onChange: (next: HistoryTemplateAnswer | undefined, prior: HistoryTemplateAnswer | undefined) => void;
@@ -621,6 +619,7 @@ export function HistoryTemplateEditor({
         section={section}
         catalogs={catalogs}
         answers={answers}
+        suggestions={presentationCode === "follow-up" ? suggestions : []}
         editMode={editMode}
         onTriState={(optionCode, eye) => triState(section, optionCode, eye)}
         onPut={(value, optionCode, eye) => put(section.id, value, optionCode, eye)}
@@ -695,10 +694,11 @@ export function HistorySubjectSectionEditor({
   />)}</div>;
 }
 
-function TemplateSection({ section, catalogs, answers, editMode, onTriState, onPut, onRemoveTyped }: {
+function TemplateSection({ section, catalogs, answers, suggestions = [], editMode, onTriState, onPut, onRemoveTyped }: {
   section: HistoryTemplateSection;
   catalogs: HistoryCatalogs;
   answers: HistoryTemplateAnswer[];
+  suggestions?: HistoryTemplateAnswer[];
   editMode: boolean;
   onTriState: (optionCode: string, eye?: "OD" | "OS") => void;
   onPut: (value: HistoryAnswerValue | undefined, optionCode?: string, eye?: "OD" | "OS" | "OU") => void;
@@ -728,6 +728,7 @@ function TemplateSection({ section, catalogs, answers, editMode, onTriState, onP
         section={section}
         option={option}
         answers={answers}
+        suggestions={suggestions}
         onTriState={onTriState}
         onPut={onPut}
       />)}</div>
@@ -760,10 +761,11 @@ function TemplateSection({ section, catalogs, answers, editMode, onTriState, onP
   return null;
 }
 
-function CatalogOptionControl({ section, option, answers, onTriState, onPut }: {
+function CatalogOptionControl({ section, option, answers, suggestions, onTriState, onPut }: {
   section: HistoryTemplateSection;
   option: HistoryCatalogs[string][number];
   answers: HistoryTemplateAnswer[];
+  suggestions: HistoryTemplateAnswer[];
   onTriState: (optionCode: string, eye?: "OD" | "OS") => void;
   onPut: (value: HistoryAnswerValue | undefined, optionCode?: string, eye?: "OD" | "OS" | "OU") => void;
 }) {
@@ -772,8 +774,12 @@ function CatalogOptionControl({ section, option, answers, onTriState, onPut }: {
     const selected = answers.find((candidate) => candidate.sectionId === section.id && candidate.optionCode === option.code && !candidate.eye);
     const state = selected?.value.kind === "tri-state" ? selected.value.status : undefined;
     const note = selected?.value.kind === "tri-state" ? selected.value.note ?? "" : "";
+    const suggestion = !selected ? suggestions.find((candidate) => candidate.sectionId === section.id && candidate.optionCode === option.code && !candidate.eye) : undefined;
+    const suggestedState = suggestion?.value.kind === "tri-state" ? suggestion.value.status : undefined;
+    const suggested = Boolean(suggestion);
     return <div className="flex flex-wrap items-center gap-2">
-      <button type="button" aria-label={`${option.display}: ${state ?? "unasked"}`} aria-pressed={state === "positive"} className={chipClass(state)} onClick={() => onTriState(option.code)}>{state === "negative" ? `no ${option.display}` : option.display}</button>
+      <button type="button" aria-label={`${option.display}: ${suggested ? "suggested from last visit" : state ?? "unasked"}`} aria-pressed={state === "positive"} className={suggested ? suggestedChipClass() : chipClass(state)} onClick={() => suggestion ? onPut(suggestion.value, option.code) : onTriState(option.code)}>{state === "negative" || suggestedState === "negative" ? `no ${option.display}` : option.display}</button>
+      {suggested && <span className="text-xs font-semibold text-sky-300">suggested from last visit</span>}
       {option.note_on_positive && state === "positive" && <input aria-label={`${option.display} note`} className="sidebar-input min-w-56 flex-1" placeholder="Optional note" value={note} onChange={(event) => onPut({ kind: "tri-state", status: "positive", note: event.target.value }, option.code)} />}
     </div>;
   }
@@ -783,8 +789,12 @@ function CatalogOptionControl({ section, option, answers, onTriState, onPut }: {
       const selected = answers.find((candidate) => candidate.sectionId === section.id && candidate.optionCode === option.code && candidate.eye === eye);
       const state = selected?.value.kind === "tri-state" ? selected.value.status : undefined;
       const note = selected?.value.kind === "tri-state" ? selected.value.note ?? "" : "";
+      const suggestion = !selected ? suggestions.find((candidate) => candidate.sectionId === section.id && candidate.optionCode === option.code && candidate.eye === eye) : undefined;
+      const suggestedState = suggestion?.value.kind === "tri-state" ? suggestion.value.status : undefined;
+      const suggested = Boolean(suggestion);
       return <span key={eye} className="inline-flex flex-wrap items-center gap-2">
-        <button type="button" aria-label={`${option.display} ${eye}: ${state ?? "unasked"}`} aria-pressed={state === "positive"} className={chipClass(state)} onClick={() => onTriState(option.code, eye)}>{state === "negative" ? `no ${eye}` : eye}</button>
+        <button type="button" aria-label={`${option.display} ${eye}: ${suggested ? "suggested from last visit" : state ?? "unasked"}`} aria-pressed={state === "positive"} className={suggested ? suggestedChipClass() : chipClass(state)} onClick={() => suggestion ? onPut(suggestion.value, option.code, eye) : onTriState(option.code, eye)}>{state === "negative" || suggestedState === "negative" ? `no ${eye}` : eye}</button>
+        {suggested && <span className="text-xs font-semibold text-sky-300">suggested from last visit</span>}
         {option.note_on_positive && state === "positive" && <input aria-label={`${option.display} ${eye} note`} className="sidebar-input min-w-44" placeholder="Optional note" value={note} onChange={(event) => onPut({ kind: "tri-state", status: "positive", note: event.target.value }, option.code, eye)} />}
       </span>;
     })}
@@ -942,6 +952,10 @@ function chipClass(state: HistoryTriState | undefined): string {
   if (state === "positive") return "rounded border border-brand bg-brand/20 px-3 py-2 text-sm text-brand-light";
   if (state === "negative") return "odos-hpi-muted rounded border border-slate-500/60 px-3 py-2 text-sm line-through";
   return "odos-hpi-border-strong odos-hpi-muted rounded border px-3 py-2 text-sm hover:border-brand/50";
+}
+
+function suggestedChipClass(): string {
+  return "rounded border border-sky-400/70 bg-sky-400/10 px-3 py-2 text-sm text-sky-200 hover:bg-sky-400/20";
 }
 
 function relativeSavedTime(ageMilliseconds: number): string {
