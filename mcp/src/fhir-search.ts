@@ -32,8 +32,10 @@ export class FhirSearchLimitError extends Error {
   constructor(
     readonly resourceType: Resource["resourceType"],
     readonly maxRows: number,
+    readonly observedRows?: number,
+    readonly pagesRead?: number,
   ) {
-    super(`FHIR ${resourceType} query exceeded ${maxRows} rows; no partial result was returned.`);
+    super(`FHIR ${resourceType} query exceeded ${maxRows} rows; no partial result was returned.${observedRows === undefined ? "" : ` Read ${observedRows} rows across ${pagesRead} pages.`}`);
     this.name = "FhirSearchLimitError";
   }
 }
@@ -99,23 +101,28 @@ export async function searchAll<T extends Resource>(
   client: FhirSearchClient,
   resourceType: T["resourceType"],
   params: Record<string, string> = {},
-  options: { maxRows?: number } = {},
+  options: { maxRows?: number; maxPages?: number } = {},
 ): Promise<T[]> {
   const maxRows = options.maxRows ?? DEFAULT_FHIR_SEARCH_MAX_ROWS;
   // search-contract: fhir-search.all
   let bundle = await client.search<T>(resourceType, paramsWithCount(params));
   const resources: T[] = [];
+  let pages = 0;
   for (;;) {
+    pages += 1;
     const page = (bundle.entry ?? [])
       .map((entry) => entry.resource)
       .filter((resource): resource is T => Boolean(resource));
     if (resources.length + page.length > maxRows) {
-      throw new FhirSearchLimitError(resourceType, maxRows);
+      throw new FhirSearchLimitError(resourceType, maxRows, resources.length + page.length, pages);
     }
     resources.push(...page);
     const nextLink = bundle.link?.find((link) => link.relation === "next");
     if (!nextLink) {
       return resources;
+    }
+    if (pages >= (options.maxPages ?? maxRows)) {
+      throw new FhirSearchPageLimitError(resourceType, options.maxPages ?? maxRows);
     }
     if (!nextLink.url) {
       throw new Error(`FHIR search returned a next link for ${resourceType} without a URL.`);

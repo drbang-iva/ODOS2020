@@ -1,3 +1,4 @@
+import { searchAll, FhirSearchLimitError, FhirSearchPageLimitError } from "../fhir-search.js";
 import { randomUUID } from "node:crypto";
 import type { Basic, Bundle, Encounter, Observation, Provenance, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import { z } from "zod";
@@ -40,6 +41,7 @@ import {
 } from "./glaucoma-suspect.js";
 
 export interface HpiFhirClient {
+  readonly baseUrl: string;
   read<T extends Encounter>(resourceType: T["resourceType"], id: string): Promise<T>;
   search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
@@ -122,6 +124,13 @@ export async function handleHpiRecordRequest(
   deps: Pick<HpiEndpointDeps, "authenticate">,
   input: { authHeader: string | undefined; params: unknown },
 ): Promise<{ status: number; body: unknown }> {
+  return historySearchResult(() => handleHpiRecord(deps, input));
+}
+
+async function handleHpiRecord(
+  deps: Pick<HpiEndpointDeps, "authenticate">,
+  input: { authHeader: string | undefined; params: unknown },
+): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read history." } };
   if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
@@ -130,16 +139,12 @@ export async function handleHpiRecordRequest(
   const encounterReference = `Encounter/${encounterId}`;
   const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
   const patientReference = encounter.subject?.reference;
-  const bundle = await staff.fhir.search<Observation>("Observation", {
+  const observations = await searchAll<Observation>(staff.fhir, "Observation", {
     encounter: encounterReference,
     code: `${HISTORY_ANSWER_CODE_SYSTEM}|${HISTORY_ANSWER_CODE}`,
     _count: "500",
   });
-  if (bundle.link?.some((link) => link.relation === "next")) {
-    throw new Error("History answer read found more Observations than it can safely return.");
-  }
-  const answers = (bundle.entry ?? []).flatMap((entry) => {
-    const observation = entry.resource;
+  const answers = observations.flatMap((observation) => {
     if (!observation || observation.status === "entered-in-error" || observation.status === "cancelled" ||
       observation.encounter?.reference !== encounterReference || observation.subject?.reference !== patientReference ||
       !isHistoryAnswerObservation(observation)) return [];
@@ -279,6 +284,13 @@ function readHistoryReviewAttestations(
 }
 
 export async function handleHistoryReviewRequest(
+  deps: HpiEndpointDeps,
+  input: { authHeader: string | undefined; body: unknown },
+): Promise<{ status: number; body: unknown }> {
+  return historySearchResult(() => handleHistoryReview(deps, input));
+}
+
+async function handleHistoryReview(
   deps: HpiEndpointDeps,
   input: { authHeader: string | undefined; body: unknown },
 ): Promise<{ status: number; body: unknown }> {
@@ -485,6 +497,13 @@ export function deriveLastPlanPrefills(
 }
 
 export async function handleHpiCaptureRequest(
+  deps: HpiEndpointDeps,
+  input: { authHeader: string | undefined; body: unknown },
+): Promise<{ status: number; body: unknown }> {
+  return historySearchResult(() => handleHpiCapture(deps, input));
+}
+
+async function handleHpiCapture(
   deps: HpiEndpointDeps,
   input: { authHeader: string | undefined; body: unknown },
 ): Promise<{ status: number; body: unknown }> {
@@ -1085,4 +1104,15 @@ function readId(params: unknown, key: string): string | undefined {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+async function historySearchResult(run: () => Promise<{ status: number; body: unknown }>): Promise<{ status: number; body: unknown }> {
+  try {
+    return await run();
+  } catch (error) {
+    if (error instanceof FhirSearchLimitError || error instanceof FhirSearchPageLimitError) {
+      return { status: error.status, body: { error: error.message } };
+    }
+    throw error;
+  }
 }
