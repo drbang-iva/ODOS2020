@@ -1,3 +1,4 @@
+import { searchAll, FhirSearchLimitError, FhirSearchPageLimitError } from "../fhir-search.js";
 import { randomUUID } from "node:crypto";
 import type { Basic, Bundle, Encounter, Observation, Provenance, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import { z } from "zod";
@@ -11,6 +12,7 @@ import { FhirEncounterComplaintStore } from "./encounter-complaint-store.js";
 import { CLOSED_ENCOUNTER_EDIT_ERROR, isClosedEncounter } from "./encounter-sign-gate.js";
 import { buildHpiFindingDefinition, HPI_STABLE_KEY } from "./hpi-definition.js";
 import {
+  HISTORY_ANSWER_SCOPE_SYSTEM,
   HISTORY_ANSWER_CODE,
   HISTORY_ANSWER_CODE_SYSTEM,
   HISTORY_REVIEW_ATTESTATION_CODE,
@@ -40,6 +42,7 @@ import {
 } from "./glaucoma-suspect.js";
 
 export interface HpiFhirClient {
+  readonly baseUrl: string;
   read<T extends Encounter>(resourceType: T["resourceType"], id: string): Promise<T>;
   search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
@@ -57,6 +60,8 @@ export interface HpiEndpointDeps {
   findingDefinitions?: () => ClinicalFindingDefinition[];
   now?: () => string;
 }
+
+const PATIENT_HISTORY_MAX_ROWS = 5_000;
 
 const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_hpi_ros" } as const;
 export const HPI_OBSERVATION_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/hpi-observation-encounter";
@@ -122,6 +127,13 @@ export async function handleHpiRecordRequest(
   deps: Pick<HpiEndpointDeps, "authenticate">,
   input: { authHeader: string | undefined; params: unknown },
 ): Promise<{ status: number; body: unknown }> {
+  return historySearchResult(() => handleHpiRecord(deps, input));
+}
+
+async function handleHpiRecord(
+  deps: Pick<HpiEndpointDeps, "authenticate">,
+  input: { authHeader: string | undefined; params: unknown },
+): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read history." } };
   if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
@@ -130,16 +142,12 @@ export async function handleHpiRecordRequest(
   const encounterReference = `Encounter/${encounterId}`;
   const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
   const patientReference = encounter.subject?.reference;
-  const bundle = await staff.fhir.search<Observation>("Observation", {
+  const observations = await searchAll<Observation>(staff.fhir, "Observation", {
     encounter: encounterReference,
     code: `${HISTORY_ANSWER_CODE_SYSTEM}|${HISTORY_ANSWER_CODE}`,
     _count: "500",
   });
-  if (bundle.link?.some((link) => link.relation === "next")) {
-    throw new Error("History answer read found more Observations than it can safely return.");
-  }
-  const answers = (bundle.entry ?? []).flatMap((entry) => {
-    const observation = entry.resource;
+  const answers = observations.flatMap((observation) => {
     if (!observation || observation.status === "entered-in-error" || observation.status === "cancelled" ||
       observation.encounter?.reference !== encounterReference || observation.subject?.reference !== patientReference ||
       !isHistoryAnswerObservation(observation)) return [];
@@ -147,67 +155,55 @@ export async function handleHpiRecordRequest(
   });
   const complaints = await new FhirEncounterComplaintStore(staff.fhir).listByEncounter(encounterId);
   const narratives = templateNarratives(complaints, answers);
-  const aggregateBundle = await staff.fhir.search<Observation>("Observation", {
+  const aggregates = await searchAll<Observation>(staff.fhir, "Observation", {
     encounter: encounterReference,
     code: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|${HPI_STABLE_KEY}`,
     _count: "200",
   });
-  if (aggregateBundle.link?.some((link) => link.relation === "next")) {
-    throw new Error("History aggregate read found more Observations than it can safely reconcile.");
-  }
-  const aggregate = chooseCanonicalHistory((aggregateBundle.entry ?? []).flatMap((entry) => {
-    const observation = entry.resource;
+  const aggregate = chooseCanonicalHistory(aggregates.flatMap((observation) => {
     return observation && isLiveHistoryObservation(observation, encounterReference) ? [observation] : [];
   }), encounterId);
   const requiresAggregateRefresh = narratives.length > 0 && narratives.some((row) => {
     const complaint = complaints.find((candidate) => candidate.id === row.complaintId);
     return !complaint || aggregateComponent(aggregate, `HISTORY_COMPLAINT_${complaint.ordinal}`) !== row.narrative;
   });
-  const [planBundle, priorAnswerBundle, reviewBundle] = patientReference
+  const [plans, priorAnswers, reviewObservations] = patientReference
     ? await Promise.all([
-        staff.fhir.search<ServiceRequest>("ServiceRequest", { subject: patientReference, _count: "500" }),
-        staff.fhir.search<Observation>("Observation", {
+        searchAll<ServiceRequest>(staff.fhir, "ServiceRequest", { subject: patientReference, _count: "500" }, { maxRows: PATIENT_HISTORY_MAX_ROWS }),
+        searchAll<Observation>(staff.fhir, "Observation", {
           subject: patientReference,
           code: `${HISTORY_ANSWER_CODE_SYSTEM}|${HISTORY_ANSWER_CODE}`,
+          "category:not": `${HISTORY_ANSWER_SCOPE_SYSTEM}|encounter`,
           _count: "500",
-        }),
-        staff.fhir.search<Observation>("Observation", {
+        }, { maxRows: PATIENT_HISTORY_MAX_ROWS }),
+        searchAll<Observation>(staff.fhir, "Observation", {
           encounter: encounterReference,
           code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${HISTORY_REVIEW_ATTESTATION_CODE}`,
           _count: "20",
         }),
       ])
-    : [undefined, undefined, undefined];
-  if (planBundle?.link?.some((link) => link.relation === "next")) {
-    throw new Error("Last-plan prefill found more ServiceRequests than it can safely reconcile.");
-  }
-  if (priorAnswerBundle?.link?.some((link) => link.relation === "next")) {
-    throw new Error("Follow-up prefill found more history answers than it can safely reconcile.");
-  }
-  if (reviewBundle?.link?.some((link) => link.relation === "next")) {
-    throw new Error("History review read found more attestations than it can safely reconcile.");
-  }
+    : [[], [], []];
   const prefills = [
     ...deriveFollowUpAnswerPrefills(
       complaints,
-      (priorAnswerBundle?.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []),
+      priorAnswers,
       encounterReference,
       answers,
     ),
     ...deriveLastPlanPrefills(
       complaints,
-      (planBundle?.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []),
+      plans,
       encounterReference,
       answers,
     ),
   ];
   const carriedForwardAnswers = derivePatientCarryForwardAnswers(
-    (priorAnswerBundle?.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []),
+    priorAnswers,
     encounterReference,
     patientReference,
   );
   const reviewAttestations = readHistoryReviewAttestations(
-    (reviewBundle?.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []),
+    reviewObservations,
     patientReference,
     encounterReference,
   );
@@ -282,6 +278,13 @@ export async function handleHistoryReviewRequest(
   deps: HpiEndpointDeps,
   input: { authHeader: string | undefined; body: unknown },
 ): Promise<{ status: number; body: unknown }> {
+  return historySearchResult(() => handleHistoryReview(deps, input));
+}
+
+async function handleHistoryReview(
+  deps: HpiEndpointDeps,
+  input: { authHeader: string | undefined; body: unknown },
+): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to review history." } };
   if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
@@ -298,15 +301,12 @@ export async function handleHistoryReviewRequest(
   }
   if (isClosedEncounter(encounter)) return { status: 409, body: { error: CLOSED_ENCOUNTER_EDIT_ERROR } };
 
-  const priorBundle = await staff.fhir.search<Observation>("Observation", {
+  const historyAnswers = await searchAll<Observation>(staff.fhir, "Observation", {
     subject: parsed.data.patientReference,
     code: `${HISTORY_ANSWER_CODE_SYSTEM}|${HISTORY_ANSWER_CODE}`,
+    "category:not": `${HISTORY_ANSWER_SCOPE_SYSTEM}|encounter`,
     _count: "500",
-  });
-  if (priorBundle.link?.some((link) => link.relation === "next")) {
-    throw new Error("History review found more answers than it can safely attest.");
-  }
-  const historyAnswers = (priorBundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+  }, { maxRows: PATIENT_HISTORY_MAX_ROWS });
   const currentSectionAnswers = historyAnswers.filter((observation) => {
     if (observation.subject?.reference !== parsed.data.patientReference ||
       observation.encounter?.reference !== parsed.data.encounterReference ||
@@ -325,17 +325,13 @@ export async function handleHistoryReviewRequest(
   ).filter((row) => row.answer.templateKey === declaration.key);
   if (carried.length === 0) return { status: 400, body: { error: `There is no prior ${declaration.label} to review.` } };
 
-  const existingBundle = await staff.fhir.search<Observation>("Observation", {
+  const existingObservations = await searchAll<Observation>(staff.fhir, "Observation", {
     encounter: parsed.data.encounterReference,
     code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${HISTORY_REVIEW_ATTESTATION_CODE}`,
     _count: "20",
   });
-  if (existingBundle.link?.some((link) => link.relation === "next")) {
-    throw new Error("History review found more attestations than it can safely reconcile.");
-  }
   const identifierValue = `${encounterId}:${declaration.key}`;
-  const existing = (existingBundle.entry ?? []).flatMap((entry) => {
-    const observation = entry.resource;
+  const existing = existingObservations.flatMap((observation) => {
     return observation?.id && observation.status !== "entered-in-error" && observation.status !== "cancelled" &&
       observation.identifier?.some((identifier) => identifier.system === HISTORY_REVIEW_ATTESTATION_IDENTIFIER_SYSTEM && identifier.value === identifierValue)
       ? [observation]
@@ -488,6 +484,13 @@ export async function handleHpiCaptureRequest(
   deps: HpiEndpointDeps,
   input: { authHeader: string | undefined; body: unknown },
 ): Promise<{ status: number; body: unknown }> {
+  return historySearchResult(() => handleHpiCapture(deps, input));
+}
+
+async function handleHpiCapture(
+  deps: HpiEndpointDeps,
+  input: { authHeader: string | undefined; body: unknown },
+): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to save history." } };
   if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
@@ -592,16 +595,12 @@ export async function handleHpiCaptureRequest(
     findingInstanceId: findingId,
     observationId: findingId,
   });
-  const existingBundle = await staff.fhir.search<Observation>("Observation", {
+  const existingObservations = await searchAll<Observation>(staff.fhir, "Observation", {
     encounter: parsed.data.encounterReference,
     code: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|${HPI_STABLE_KEY}`,
     _count: "200",
   });
-  if (existingBundle.link?.some((link) => link.relation === "next")) {
-    throw new Error("History upsert found more matching Observations than it can safely reconcile.");
-  }
-  const liveHistory = (existingBundle.entry ?? []).flatMap((entry) => {
-    const observation = entry.resource;
+  const liveHistory = existingObservations.flatMap((observation) => {
     return observation && isLiveHistoryObservation(observation, parsed.data.encounterReference)
       ? [observation]
       : [];
@@ -718,28 +717,21 @@ async function prepareHistoryAnswerUpsert(
   reviewRetirementProvenance: Provenance | undefined;
 }> {
   const editedPatientSections = new Set(answers.flatMap((answer) => answer.subjectScope === "patient" ? [answer.templateKey] : []));
-  const [answerBundle, reviewBundle] = await Promise.all([
-    fhir.search<Observation>("Observation", {
+  const [answerObservations, reviewObservations] = await Promise.all([
+    searchAll<Observation>(fhir, "Observation", {
       encounter: context.encounterReference,
       code: `${HISTORY_ANSWER_CODE_SYSTEM}|${HISTORY_ANSWER_CODE}`,
       _count: "500",
     }),
     editedPatientSections.size > 0
-      ? fhir.search<Observation>("Observation", {
+      ? searchAll<Observation>(fhir, "Observation", {
           encounter: context.encounterReference,
           code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${HISTORY_REVIEW_ATTESTATION_CODE}`,
           _count: "20",
         })
       : Promise.resolve(undefined),
   ]);
-  if (answerBundle.link?.some((link) => link.relation === "next")) {
-    throw new Error("History answer upsert found more Observations than it can safely reconcile.");
-  }
-  if (reviewBundle?.link?.some((link) => link.relation === "next")) {
-    throw new Error("History answer upsert found more review attestations than it can safely reconcile.");
-  }
-  const existingAnswers = new Map((answerBundle.entry ?? []).flatMap((entry) => {
-    const candidate = entry.resource;
+  const existingAnswers = new Map(answerObservations.flatMap((candidate) => {
     if (!candidate?.id || candidate.status === "entered-in-error" || candidate.status === "cancelled" || !isHistoryAnswerObservation(candidate)) return [];
     return [[parseHistoryAnswerObservation(candidate).id, candidate] as const];
   }));
@@ -750,8 +742,7 @@ async function prepareHistoryAnswerUpsert(
       ? { resource, request: { method: "PUT" as const, url: `Observation/${existing.id}`, ...(existing.meta?.versionId ? { ifMatch: `W/\"${existing.meta.versionId}\"` } : {}) } }
       : { fullUrl: `urn:uuid:hpi-answer-${index}`, resource, request: { method: "PUT" as const, url: `Observation?identifier=${resource.identifier?.[0]?.system}|${answer.id}` } };
   });
-  const reviews = (reviewBundle?.entry ?? []).flatMap((entry) => {
-    const observation = entry.resource;
+  const reviews = (reviewObservations ?? []).flatMap((observation) => {
     const sectionKey = observation?.extension?.find((extension) => extension.url === HISTORY_REVIEW_SECTION_EXTENSION_URL)?.valueCode;
     if (!observation?.id || !sectionKey || !editedPatientSections.has(sectionKey) ||
       observation.subject?.reference !== context.patientReference || observation.encounter?.reference !== context.encounterReference ||
@@ -1085,4 +1076,15 @@ function readId(params: unknown, key: string): string | undefined {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+async function historySearchResult(run: () => Promise<{ status: number; body: unknown }>): Promise<{ status: number; body: unknown }> {
+  try {
+    return await run();
+  } catch (error) {
+    if (error instanceof FhirSearchLimitError || error instanceof FhirSearchPageLimitError) {
+      return { status: error.status, body: { error: error.message } };
+    }
+    throw error;
+  }
 }

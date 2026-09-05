@@ -1,0 +1,496 @@
+== red ==
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 0
+# fail 12
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 159.979959
+
+== first-regression ==
+  duration_ms: 0.516167
+  type: 'test'
+  ...
+1..41
+# tests 41
+# suites 0
+# pass 41
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 268.745625
+
+== expanded ==
+  duration_ms: 0.686334
+  type: 'test'
+  ...
+1..24
+# tests 24
+# suites 0
+# pass 24
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 338.213708
+
+== regression ==
+  duration_ms: 0.541209
+  type: 'test'
+  ...
+1..41
+# tests 41
+# suites 0
+# pass 41
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 235.257833
+
+== ui ==
+  duration_ms: 0.042458
+  type: 'test'
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4477.723875
+
+== mutations ==
+routing BREAK exit 1 ['# tests 1', '# pass 0', '# fail 1']
+routing RESTORE exit 0 ['# tests 1', '# pass 1', '# fail 0']
+ceiling BREAK exit 1 ['# tests 1', '# pass 0', '# fail 1']
+ceiling RESTORE exit 0 ['# tests 1', '# pass 1', '# fail 0']
+ros-exclusion BREAK exit 1 ['# tests 1', '# pass 0', '# fail 1']
+ros-exclusion RESTORE exit 0 ['# tests 1', '# pass 1', '# fail 0']
+counted-failure BREAK exit 1 ['# tests 4', '# pass 0', '# fail 4']
+counted-failure RESTORE exit 0 ['# tests 4', '# pass 4', '# fail 0']
+All four mutations restored; source SHA256 715105e50575e384d43d995a0df49b89a77d652b142aedba88d3677201955476
+
+== live ==
+# Subtest: Medplum 5.1.8 accepts ChargeItem occurrence range with sort search
+ok 1 - Medplum 5.1.8 accepts ChargeItem occurrence range with sort search
+# Subtest: Medplum 5.1.8 accepts Invoice subject with date sort search
+ok 2 - Medplum 5.1.8 accepts Invoice subject with date sort search
+# Subtest: Medplum 5.1.8 accepts Invoice date range search
+ok 3 - Medplum 5.1.8 accepts Invoice date range search
+# Subtest: Medplum 5.1.8 accepts PaymentReconciliation active status search
+ok 4 - Medplum 5.1.8 accepts PaymentReconciliation active status search
+# Subtest: Medplum 5.1.8 accepts PaymentReconciliation created range search
+ok 5 - Medplum 5.1.8 accepts PaymentReconciliation created range search
+# Subtest: Medplum 5.1.8 accepts Claim patient with created sort search
+ok 6 - Medplum 5.1.8 accepts Claim patient with created sort search
+# Subtest: Medplum 5.1.8 accepts ClaimResponse patient with created sort search
+ok 7 - Medplum 5.1.8 accepts ClaimResponse patient with created sort search
+# Subtest: Medplum 5.1.8 accepts Task code and business status search
+ok 8 - Medplum 5.1.8 accepts Task code and business status search
+# Subtest: Medplum 5.1.8 accepts Basic code and identifier search
+ok 9 - Medplum 5.1.8 accepts Basic code and identifier search
+# Subtest: Medplum 5.1.8 accepts Provenance target with recorded sort search
+ok 10 - Medplum 5.1.8 accepts Provenance target with recorded sort search
+# Subtest: Medplum 5.1.8 accepts AuditEvent patient and date search
+ok 11 - Medplum 5.1.8 accepts AuditEvent patient and date search
+# Subtest: real Medplum Media search rewrites Binary content for the imaging handler to a fetchable URL
+ok 12 - real Medplum Media search rewrites Binary content for the imaging handler to a fetchable URL
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9753.439792
+# Subtest: local Medplum seeds 5001 patient answers, paginates reviews, and excludes ROS in the index
+ok 1 - local Medplum seeds 5001 patient answers, paginates reviews, and excludes ROS in the index
+# 600 patient answers: HTTP 200; carriedForwardAnswers=600
+# 25 encounter review acts: HTTP 200; reviewAttestations=25
+# 600 ROS answers: category:not excludes all 600 before collection; patient rows=600
+# 1001 patient answers: HTTP 200; carriedForwardAnswers=1001
+# 5000 patient answers: HTTP 200; carriedForwardAnswers=5000
+# 5001 patient answers: HTTP 409; FHIR Observation query exceeded 5000 rows; no partial result was returned. Read 5001 rows across 11 pages.
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 15645.401334
+
+== build ==
+
+> odos-mcp@0.1.0 build
+> tsc
+
+
+== full-mcp ==
+  ...
+1..3643
+# tests 4178
+# suites 0
+# pass 4133
+# fail 0
+# cancelled 0
+# skipped 45
+# todo 0
+# duration_ms 65220.281459
+⚠️  LIVE STACK NOT CONFIGURED — 41 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.
+
+== break routing ==
+TAP version 13
+# Subtest: current-encounter answer read follows multiple pages
+not ok 1 - current-encounter answer read follows multiple pages
+  ---
+  duration_ms: 4.933709
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/hpiPagination.test.ts:1:5505'
+  failureType: 'testCodeFailure'
+  error: 'Single-page history read refused'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    handleHpiRecord (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/src/clinical-graph/hpi-endpoint.ts:146:64)
+    async historySearchResult (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/src/clinical-graph/hpi-endpoint.ts:1081:12)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/hpiPagination.test.ts:98:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 132.793625
+
+
+== restore routing ==
+TAP version 13
+# Subtest: current-encounter answer read follows multiple pages
+ok 1 - current-encounter answer read follows multiple pages
+  ---
+  duration_ms: 6.062958
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 122.095916
+
+
+== break ceiling ==
+TAP version 13
+# Subtest: patient carry-forward reads all 1001 seeded answers
+not ok 1 - patient carry-forward reads all 1001 seeded answers
+  ---
+  duration_ms: 9.536708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/hpiPagination.test.ts:1:3880'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    409 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/hpiPagination.test.ts:69:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 121.838791
+
+
+== restore ceiling ==
+TAP version 13
+# Subtest: patient carry-forward reads all 1001 seeded answers
+ok 1 - patient carry-forward reads all 1001 seeded answers
+  ---
+  duration_ms: 16.700292
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 101.207584
+
+
+== break ros-exclusion ==
+TAP version 13
+# Subtest: ROS cannot enter another encounter carry-forward search or consume its ceiling
+not ok 1 - ROS cannot enter another encounter carry-forward search or consume its ceiling
+  ---
+  duration_ms: 39.686291
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/hpiPagination.test.ts:1:4696'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    409 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/hpiPagination.test.ts:87:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 150.727083
+
+
+== restore ros-exclusion ==
+TAP version 13
+# Subtest: ROS cannot enter another encounter carry-forward search or consume its ceiling
+ok 1 - ROS cannot enter another encounter carry-forward search or consume its ceiling
+  ---
+  duration_ms: 11.795833
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 96.126042
+
+
+== break counted-failure ==
+TAP version 13
+# Subtest: patient ceiling refuses 5001 rows with observed row and page counts
+not ok 1 - patient ceiling refuses 5001 rows with observed row and page counts
+  ---
+  duration_ms: 40.502708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/hpiPagination.test.ts:1:4140'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /5001 rows.*11 pages/. Input:
+
+    'History route failed'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'History route failed'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/hpiPagination.test.ts:76:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: handleHpiRecordRequest catches page limits with the page count
+not ok 2 - handleHpiRecordRequest catches page limits with the page count
+  ---
+  duration_ms: 0.42575
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/hpiPagination.test.ts:1:6710'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /17 pages/. Input:
+
+    'History route failed'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'History route failed'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/hpiPagination.test.ts:120:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: handleHistoryReviewRequest catches page limits with the page count
+not ok 3 - handleHistoryReviewRequest catches page limits with the page count
+  ---
+  duration_ms: 0.824791
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/hpiPagination.test.ts:1:6710'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /17 pages/. Input:
+
+    'History route failed'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'History route failed'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/hpiPagination.test.ts:120:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: handleHpiCaptureRequest catches page limits with the page count
+not ok 4 - handleHpiCaptureRequest catches page limits with the page count
+  ---
+  duration_ms: 0.955875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/hpiPagination.test.ts:1:6710'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /17 pages/. Input:
+
+    'History route failed'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'History route failed'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/hpiPagination.test.ts:120:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 154.990375
+
+
+== restore counted-failure ==
+TAP version 13
+# Subtest: patient ceiling refuses 5001 rows with observed row and page counts
+ok 1 - patient ceiling refuses 5001 rows with observed row and page counts
+  ---
+  duration_ms: 41.222875
+  type: 'test'
+  ...
+# Subtest: handleHpiRecordRequest catches page limits with the page count
+ok 2 - handleHpiRecordRequest catches page limits with the page count
+  ---
+  duration_ms: 0.277417
+  type: 'test'
+  ...
+# Subtest: handleHistoryReviewRequest catches page limits with the page count
+ok 3 - handleHistoryReviewRequest catches page limits with the page count
+  ---
+  duration_ms: 0.534083
+  type: 'test'
+  ...
+# Subtest: handleHpiCaptureRequest catches page limits with the page count
+ok 4 - handleHpiCaptureRequest catches page limits with the page count
+  ---
+  duration_ms: 0.96125
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 125.842041
+
+
+== break page-cap ==
+TAP version 13
+# Subtest: MCP searchAll bounds empty-page streams with a counted page failure
+not ok 1 - MCP searchAll bounds empty-page streams with a counted page failure
+  ---
+  duration_ms: 1.65125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/fhirSearch.test.ts:1:6537'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    3 !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 3
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d2/mcp/tests/fhirSearch.test.ts:229:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 99.585208
+
+
+== restore page-cap ==
+TAP version 13
+# Subtest: MCP searchAll bounds empty-page streams with a counted page failure
+ok 1 - MCP searchAll bounds empty-page streams with a counted page failure
+  ---
+  duration_ms: 0.627709
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 74.588209
