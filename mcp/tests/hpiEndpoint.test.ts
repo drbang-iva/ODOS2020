@@ -1172,6 +1172,56 @@ test("changed delta retires only its section and maps references past skipped un
   assert.equal(returned.find((row) => row.id === "delta-1")?.observationReference, "Observation/observation-4");
 });
 
+test("delta comparison persists changed answer coordinates when the value is unchanged", async () => {
+  const setup = fixture();
+  setup.basics.splice(0, setup.basics.length, { ...buildEncounterComplaintResource({ ...COMPLAINTS[0]!, complaintKey: "glaucoma" }), id: "basic-1" });
+  const presentation = { id: "presentation", complaintId: "c1", templateKey: "glaucoma", sectionId: "presentation", value: { kind: "selection" as const, code: "follow-up" } };
+  const symptom = { id: "symptom", complaintId: "c1", templateKey: "glaucoma", sectionId: "symptoms", optionCode: "ocular-pain", value: { kind: "tri-state" as const, status: "negative" as const } };
+  setup.observations.push(
+    { ...buildHistoryAnswerObservation(presentation, DELTA_CONTEXT), id: "stored-presentation" },
+    { ...buildHistoryAnswerObservation(symptom, DELTA_CONTEXT), id: "stored-symptom" },
+  );
+
+  const movedSymptom = { ...symptom, optionCode: "headache" };
+  const result = await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: { patientReference: BODY.patientReference, encounterReference: BODY.encounterReference, templateAnswers: [movedSymptom] },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(parseHistoryAnswerObservation(setup.observations.find((row) => row.id === "stored-symptom")!).optionCode, "headache");
+  const aggregate = setup.observations.find((row) => row.code.coding?.some((coding) => coding.code === "hpi_ros"))!;
+  assert.match(componentValue(aggregate, "HISTORY_COMPLAINT_1") ?? "", /Denies headache/);
+  assert.doesNotMatch(componentValue(aggregate, "HISTORY_COMPLAINT_1") ?? "", /ocular pain/);
+});
+
+test("moving an answer out of a reviewed patient section retires that section's attestation", async () => {
+  const setup = fixture();
+  setup.basics.splice(0, setup.basics.length, { ...buildEncounterComplaintResource({ ...COMPLAINTS[0]!, complaintKey: "glaucoma" }), id: "basic-1" });
+  const prior = deltaAnswer(0);
+  setup.observations.push(
+    { ...buildHistoryAnswerObservation(prior, DELTA_CONTEXT), id: "stored-answer" },
+    { ...buildHistoryReviewAttestation({ ...DELTA_CONTEXT, sectionKey: "social-history", priorAnswerReferences: ["Observation/stored-answer"] }), id: "review-social" },
+  );
+  const moved = {
+    id: prior.id,
+    complaintId: "c1",
+    templateKey: "glaucoma",
+    sectionId: "additional-history",
+    value: prior.value,
+  };
+
+  const result = await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: { patientReference: BODY.patientReference, encounterReference: BODY.encounterReference, templateAnswers: [moved] },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(setup.observations.find((row) => row.id === "review-social")?.status, "entered-in-error");
+  assert.deepEqual((result.body as { retiredReviewSections: string[] }).retiredReviewSections, ["social-history"]);
+  assert.equal(parseHistoryAnswerObservation(setup.observations.find((row) => row.id === "stored-answer")!).complaintId, "c1");
+});
+
 test("complaint delta uses persisted presentation and preserves omitted narrative answers without rewriting them", async () => {
   const setup = fixture();
   setup.basics.splice(0, setup.basics.length, { ...buildEncounterComplaintResource({ ...COMPLAINTS[0]!, complaintKey: "glaucoma" }), id: "basic-1" });

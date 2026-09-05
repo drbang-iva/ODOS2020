@@ -2,7 +2,7 @@
 
 Original base: `ac4dba80046988339e67d15ef3ce9f35585331a7`. Fixback base after PR #531: `69e45eaa6ad8ee6c44a0c5f1dc6780c5b6ffabda`. Branch: `drbang-iva/history-slice-1d1`.
 
-History autosave submits added/changed answers since its last successful save. Failed saves retain the pending delta; queued saves compare against the last completed request. Clears still use the existing void primitive. The endpoint validates only submitted answers against persisted presentation context and renders complete complaint narratives from persisted answers plus the delta. Identical values cause no answer PUT or review retirement. Unchanged aggregate refreshes also avoid PUTs.
+History autosave submits added/changed answers since its last successful save. Failed saves retain the pending delta; queued saves compare against the last completed request. Clears still use the existing void primitive. The endpoint validates only submitted answers against persisted presentation context and renders complete complaint narratives from persisted answers plus the delta. Byte-identical answers cause no answer PUT or review retirement. Unchanged aggregate refreshes also avoid PUTs.
 
 Both capture paths check the complete bundle before submission: conditional entries permit at most 8 total entries; all bundles permit at most 50 PUTs. Excess returns HTTP 413 with no transaction submission. The count includes aggregate updates, duplicate cleanup, review retirements, and provenance. No chunking or changes to stored answer/review shapes.
 
@@ -77,7 +77,7 @@ Follow-up prefills are now unrecorded suggestions. Selecting Follow Up saves onl
 - PR #531 pagination after rebase: unit 15 pass / 0 fail. Dedicated synthetic Medplum proof: 1 pass / 0 fail; 5,000 rows returned HTTP 200 and 5,001 rows refused with HTTP 409 after 11 pages.
 - Real synthetic Medplum #530 boundary proof: 6 pass / 0 fail. The 9-entry and 51-PUT cases returned HTTP 413 with zero transaction submissions and unchanged resources; the exact 8-entry and 50-PUT boundaries persisted.
 - Full UI before the final display-only refactor: 1,235 pass / 0 fail / 0 skipped. The final-head broad rerun encountered three unrelated browser timeouts: 1,232 pass / 2 fail / 1 cancelled. Each affected file then passed alone: payment focus 9/9, entry sheets 49/49, responsive chart bar 3/3. Final-head History remained 24/24 and the UI build passed.
-- Full ungated MCP unit run: 4,187 tests; 4,130 pass / 0 fail / 57 skipped. The harness reported 41 live-stack tests skipped; the focused real-Medplum proofs above were run separately.
+- Full ungated MCP unit run at the final local head: 4,189 tests; 4,132 pass / 0 fail / 57 skipped. The harness reported 41 live-stack tests skipped; the focused real-Medplum proofs above were run separately.
 - MCP TypeScript build and UI TypeScript/Vite build: exit 0. `git diff --check`: exit 0.
 
 ### Fixback Mandate 17
@@ -98,3 +98,16 @@ No other single gesture silently adds multiple History answers. `changePresentat
 ### What shipped behaviour does this change?
 
 A follow-up no longer becomes Charted because prior-plan procedures were applied without review. It remains Started until the tech taps at least one required `presents-for` suggestion. This adds an explicit human confirmation step and prevents the chart from claiming that an untapped procedure was recorded today.
+
+## Final-head delta comparison fixback
+
+PR-Agent identified that the delta comparison considered only `value`. A submitted answer could reuse a persisted ID and value while changing a valid complaint, template, section, option, eye, or scope coordinate; the endpoint would then rewrite the aggregate from the submitted coordinates without updating the answer Observation. Delta comparison now covers the complete persisted answer representation and ignores only the server-supplied `observationReference`. When a structural move leaves a patient-scoped section, any no-change review attestation for the prior section is retired with the answer update.
+
+Focused proof: `hpiEndpoint.test.ts` 37 pass / 0 fail. The coordinate regression changes `ocular-pain` to `headache` with the same ID and negative value, then requires the stored answer and aggregate narrative to agree. The review regression moves an answer from Social History to a complaint text section and requires Social's prior no-change attestation to retire.
+
+Mandate 17 mutations:
+
+| Mutation | BREAK | RESTORE |
+|---|---|---|
+| Restore value-only delta comparison | 0 pass / 1 fail; stored option remained `ocular-pain` | 1 pass / 0 fail |
+| Ignore the persisted patient section during review retirement | 0 pass / 1 fail; Social review remained `preliminary` | 1 pass / 0 fail |

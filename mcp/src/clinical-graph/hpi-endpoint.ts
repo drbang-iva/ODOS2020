@@ -735,8 +735,11 @@ async function prepareHistoryAnswerUpsert(
   const persistedAnswers = new Map([...existingAnswers].map(([id, observation]) => {
     return [id, parseHistoryAnswerObservation(observation)] as const;
   }));
-  const changedAnswers = answers.filter((answer) => !isDeepStrictEqual(answer.value, persistedAnswers.get(answer.id)?.value));
-  const editedPatientSections = new Set(changedAnswers.flatMap((answer) => answer.subjectScope === "patient" ? [answer.templateKey] : []));
+  const changedAnswers = answers.filter((answer) => !samePersistedHistoryAnswer(answer, persistedAnswers.get(answer.id)));
+  const editedPatientSections = new Set(changedAnswers.flatMap((answer) => {
+    const persisted = persistedAnswers.get(answer.id);
+    return [answer, persisted].flatMap((candidate) => candidate?.subjectScope === "patient" ? [candidate.templateKey] : []);
+  }));
   const reviewObservations = editedPatientSections.size > 0 ? await searchAll<Observation>(fhir, "Observation", {
     encounter: context.encounterReference,
     code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${HISTORY_REVIEW_ATTESTATION_CODE}`,
@@ -774,6 +777,13 @@ async function prepareHistoryAnswerUpsert(
     agent: [{ type: odosConcept("author", "Author"), who: reference(context.actorReference) }],
   } : undefined;
   return { existingAnswers, persistedAnswers, changedAnswers, entries, reviewRetirements, retiredReviewSections, reviewRetirementProvenance };
+}
+
+function samePersistedHistoryAnswer(left: HistoryTemplateAnswer, right: HistoryTemplateAnswer | undefined): boolean {
+  if (!right) return false;
+  const { observationReference: _leftReference, ...leftPersisted } = left;
+  const { observationReference: _rightReference, ...rightPersisted } = right;
+  return isDeepStrictEqual(leftPersisted, rightPersisted);
 }
 
 function historyBundleSizeError(bundle: Bundle): string | undefined {

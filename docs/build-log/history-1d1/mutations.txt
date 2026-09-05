@@ -22,3 +22,7 @@ BREAK fixback-conditional-8-to-9: exit 1; # tests 4; # pass 3; # fail 1
 RESTORE fixback-conditional-8-to-9: exit 0; # tests 4; # pass 4; # fail 0
 BREAK fixback-put-50-to-51: exit 1; # tests 4; # pass 3; # fail 1
 RESTORE fixback-put-50-to-51: exit 0; # tests 4; # pass 4; # fail 0
+BREAK full-answer-delta: exit 1; # tests 1; # pass 0; # fail 1; stored option remained ocular-pain instead of headache
+RESTORE full-answer-delta: exit 0; # tests 1; # pass 1; # fail 0
+BREAK prior-section-retirement: exit 1; # tests 1; # pass 0; # fail 1; Social review remained preliminary
+RESTORE prior-section-retirement: exit 0; # tests 1; # pass 1; # fail 0
