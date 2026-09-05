@@ -22,12 +22,14 @@ export function useHistoryItemReview({ patientReference, encounterReference, his
   const [error, setError] = useState("");
   const pending = useRef(false);
   const retries = useRef(new Map<string, object>());
+  const loadGeneration = useRef(0);
   const encounterId = encounterReference.slice("Encounter/".length);
   const endpoint = `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}`;
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    void load().then(([history, items]) => { if (!cancelled) { applyLoaded(history, items); setError(""); } })
+    const generation = ++loadGeneration.current;
+    void load().then(([history, items]) => { if (!cancelled && generation === loadGeneration.current) { applyLoaded(history, items); setError(""); } })
       .catch(caught => { if (!cancelled) { setReady(false); setError(String(caught.message ?? caught)); } });
     return () => { cancelled = true; };
   }, [endpoint, historyVersion, onRecordedChange, enabled]);
@@ -36,7 +38,10 @@ export function useHistoryItemReview({ patientReference, encounterReference, his
     return Promise.all([request<HistoryRecord>(`${endpoint}/hpi`), request<typeof acts>(`${endpoint}/history/items`)]);
   }
   async function refresh() {
-    const [history, items] = await load(); applyLoaded(history, items); return history;
+    const generation = ++loadGeneration.current;
+    const loaded = await load();
+    if (generation === loadGeneration.current) applyLoaded(...loaded);
+    return loaded;
   }
   function applyLoaded(history: HistoryRecord, items: typeof acts) {
     const bulkDenials = items.bulkDenials ?? [];
@@ -71,7 +76,7 @@ export function useHistoryItemReview({ patientReference, encounterReference, his
     const progress = resume ?? { sectionKey: intended[0].sectionKey, gestureId: crypto.randomUUID(), status: "in-progress" as const, recorded: 0, total: intended.length, persistedTargets: [], targets: intended };
     setBulkProgress(progress);
     const poll = setInterval(() => {
-      void load().then(([history, items]) => applyLoaded(history, items)).catch(() => undefined);
+      void refresh().catch(() => undefined);
     }, 250);
     try {
       const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/history/items/review`, {
@@ -89,11 +94,11 @@ export function useHistoryItemReview({ patientReference, encounterReference, his
         await refresh();
         return undefined;
       }
-      const history = await refresh(); setBulkProgress(undefined); setError(""); onChanged();
+      const [history] = await refresh(); setBulkProgress(undefined); setError(""); onChanged();
       return history.answers;
     } catch (caught) {
       try {
-        const [history, items] = await load(); applyLoaded(history, items);
+        const [, items] = await refresh();
         const latest = items.bulkDenials?.find(row => row.sectionKey === intended[0].sectionKey);
         setError(latest ? `${latest.recorded} of ${latest.total} recorded. Resume to finish.` : caught instanceof Error ? caught.message : String(caught));
       } catch { setError(caught instanceof Error ? caught.message : String(caught)); }

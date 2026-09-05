@@ -237,7 +237,10 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   function recordBulkAnswers(savedAnswers: HistoryTemplateAnswer[]) {
     let next = latestAnswers.current;
     for (const answer of savedAnswers) {
-      next = replaceAnswer(next, answer);
+      const current = next.find(candidate => candidate.id === answer.id);
+      const baseline = persistedAnswers.current.get(answer.id);
+      const locallyChanged = current && JSON.stringify(current.value) !== JSON.stringify(baseline?.value);
+      if (!locallyChanged) next = replaceAnswer(next, answer);
       persistedAnswers.current.set(answer.id, answer);
       if (answer.observationReference) persistedAnswerReferences.current.set(answer.id, answer.observationReference);
     }

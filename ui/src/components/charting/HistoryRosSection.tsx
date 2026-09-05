@@ -35,7 +35,7 @@ export function HistoryRosSection({ declaration, catalogs, patientReference, enc
         {followUp && <span className="odos-hpi-muted ml-3 text-sm">Complaint-directed</span>}
         <span className="odos-hpi-muted mt-1 block line-clamp-2 text-sm" title={projection?.summary}>{projection?.summary || "Not started"}</span>
       </button>
-      {bulkTargets.length > 0 && <button type="button" aria-label={bulkProgress && !busy ? "Resume marking unanswered No" : "Mark unanswered No"}
+      {bulkTargets.length > 0 && <button type="button" data-testid="history-bulk-denial" aria-label={bulkProgress && !busy ? "Resume marking unanswered No" : "Mark unanswered No"}
         disabled={!ready || busy} onClick={() => void denyUnanswered()} className="min-h-11 rounded border border-slate-400 px-3 text-sm">
         {bulkProgress && !busy ? "Resume" : "Mark unanswered No"}
       </button>}

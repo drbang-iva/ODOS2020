@@ -15,10 +15,25 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
   const seed = { ...buildHistoryItemReview({ sectionKey: "review-of-systems", gestureId: "11111111-1111-4111-8111-111111111111", method: "individual", targets: [{ sectionKey: "review-of-systems", sectionId: "systems", optionCode: "scalp-tenderness" }], patientReference: "Patient/ros-test", encounterReference: "Encounter/old", actorReference: "Practitioner/test", recordedAt: "2019-02-06T12:00:00Z" }), id: "old-review" };
   const s = historyRosFixture([seed]);
   const statuses: number[] = [], posted: any[] = [];
+  let releaseFinalBulkUnit = () => undefined;
+  let markFinalBulkUnitHeld = () => undefined;
+  let orderProofEnabled = false;
+  let orderProofReads = 0;
+  let releaseOrderProofStale = () => undefined;
+  let markOrderProofStaleCaptured = () => undefined;
+  const finalBulkUnitReleased = new Promise<void>(resolve => { releaseFinalBulkUnit = resolve; });
+  const finalBulkUnitHeld = new Promise<void>(resolve => { markFinalBulkUnitHeld = resolve; });
+  const orderProofStaleReleased = new Promise<void>(resolve => { releaseOrderProofStale = resolve; });
+  const orderProofStaleCaptured = new Promise<void>(resolve => { markOrderProofStaleCaptured = resolve; });
   const server = await createServer({ root: resolve(import.meta.dirname, ".."), logLevel: "silent", server: { host: "127.0.0.1", port: 0 }, plugins: [{
     name: "ros-proof",
     resolveId(id) { if (id === "/ros-proof.js") return id; },
-    load(id) { if (id === "/ros-proof.js") return `import React from 'react'; import {createRoot} from 'react-dom/client'; import {HpiSection} from '/src/components/charting/HpiSection.tsx'; import '/src/styles/globals.css'; createRoot(document.getElementById('root')).render(React.createElement(HpiSection,{patientReference:'Patient/ros-test',encounterReference:'Encounter/current',onSaved:()=>{}}));`; },
+    load(id) {
+      if (id === "/ros-proof.js") {
+        const proof = scenario === "bulk denial is resumable and transient" ? ",React.createElement(Proof)" : "";
+        return `import React,{useState} from 'react'; import {createRoot} from 'react-dom/client'; import {HpiSection} from '/src/components/charting/HpiSection.tsx'; import {useHistoryItemReview} from '/src/components/charting/useHistoryItemReview.tsx'; import '/src/styles/globals.css'; function Proof(){const [done,setDone]=useState(0); const review=useHistoryItemReview({patientReference:'Patient/ros-test',encounterReference:'Encounter/current',historyVersion:0,onChanged:()=>{},enabled:true}); return React.createElement('aside',null,React.createElement('span',{'data-order-proof-ready':review.ready},'proof completed '+done),React.createElement('button',{onClick:()=>void review.refresh().then(()=>setDone(v=>v+1))},'Refresh order proof'),review.bulkProgress&&React.createElement('span',{'data-order-proof-progress':true},review.bulkProgress.recorded+' of '+review.bulkProgress.total+' recorded'));} createRoot(document.getElementById('root')).render(React.createElement(React.Fragment,null,React.createElement(HpiSection,{patientReference:'Patient/ros-test',encounterReference:'Encounter/current',onSaved:()=>{}})${proof}));`;
+      }
+    },
     configureServer(vite) { vite.middlewares.use(async (req, res, next) => {
       if (req.url === "/ros-proof") { res.setHeader("Content-Type", "text/html"); res.end(await vite.transformIndexHtml(req.url, '<html><body><div id="root"></div><script type="module" src="/ros-proof.js"></script></body></html>')); return; }
       if (!req.url?.startsWith("/clinical-graph/")) return next();
@@ -29,7 +44,13 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
         let result: { status: number; body: any };
         if (req.url.endsWith("/definition")) result = await api.handleHpiDefinitionRequest(s.deps, input);
         else if (req.url.endsWith("/complaints")) result = { status: 200, body: { complaints: followUp ? [{ id: "c1", ordinal: 1, templateKey: "glaucoma", renderedNarrative: "Glaucoma follow-up" }] : [] } };
-        else if (req.url.endsWith("/history/items")) result = await api.handleHistoryItemActsRequest(s.deps, input);
+        else if (req.url.endsWith("/history/items")) {
+          if (orderProofEnabled) {
+            orderProofReads += 1;
+            result = { status: 200, body: { reviews: [], retractions: [], bulkDenials: orderProofReads === 1 ? [{ sectionKey: "review-of-systems", gestureId: "stale", status: "in-progress", recorded: 7, total: 53, persistedTargets: [], targets: [{ sectionKey: "review-of-systems", sectionId: "systems", optionCode: "eye-pain" }] }] : [] } };
+            if (orderProofReads === 1) { markOrderProofStaleCaptured(); await orderProofStaleReleased; }
+          } else result = await api.handleHistoryItemActsRequest(s.deps, input);
+        }
         else if (req.url.endsWith("/items/review")) { posted.push(body); result = await api.handleHistoryItemReviewRequest(s.deps, input); }
         else if (req.url.endsWith("/items/retract")) { posted.push(body); result = await api.handleHistoryItemRetractionRequest(s.deps, input); }
         else if (req.url.endsWith("/void")) result = await handleEncounterVoidRequest(s.deps, input);
@@ -38,7 +59,8 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
           result = await api.handleHpiRecordRequest(s.deps, input);
           if (followUp) result.body.answers.push({ id: "presentation", complaintId: "c1", templateKey: "glaucoma", sectionId: "presentation", value: { kind: "selection", code: "follow-up" } });
         }
-        statuses.push(result.status); res.statusCode = result.status; res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify(result.body));
+        statuses.push(result.status); res.statusCode = result.status; res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify(result.body));
       } catch (error) { res.statusCode = 500; res.end(JSON.stringify({error: String(error)})); }
     }); },
   }] });
@@ -59,23 +81,44 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
       await positive.getByRole("button", { name: "Yes: eye pain" }).click();
       await page.waitForFunction(() => document.querySelector('[data-testid="history-review-of-systems"]')?.textContent?.includes("saved · just now"));
       s.failTransactionAt(s.transactionAttempts() + 2);
-      const bulk = ros.getByRole("button", { name: "Mark unanswered No" });
+      const bulk = ros.getByTestId("history-bulk-denial");
       assert.equal(await bulk.count(), 1);
       assert.equal(await bulk.getAttribute("class").then(value => value?.includes("min-h-11")), true);
       await bulk.click();
       await ros.getByRole("status").filter({ hasText: "of 53 recorded" }).waitFor();
-      assert.equal(await bulk.isDisabled(), true);
+      assert.equal(await bulk.count(), 1);
       await ros.getByRole("button", { name: "Resume marking unanswered No" }).waitFor();
       assert.match(await ros.getByRole("alert").innerText(), /7 of 53 recorded/);
       s.failTransactionAt(undefined);
+      s.raceAt(s.transactionAttempts() + 7, async () => { markFinalBulkUnitHeld(); await finalBulkUnitReleased; });
       await ros.getByRole("button", { name: "Resume marking unanswered No" }).click();
+      await finalBulkUnitHeld;
+      const pendingYesResponse = page.waitForResponse(response => {
+        if (response.request().method() !== "POST") return false;
+        const body = response.request().postDataJSON();
+        return body?.templateAnswers?.some((answer: any) => answer.optionCode === "poor-vision" && answer.value?.status === "positive");
+      }, { timeout: 3000 });
+      await ros.locator('[data-ros-item="poor-vision"]').getByRole("button", { name: "Yes: poor vision" }).click();
+      releaseFinalBulkUnit();
       await page.waitForFunction(() => !document.querySelector('[data-history-bulk-progress]'));
+      await pendingYesResponse;
       assert.equal(await ros.getByText(/of 53 recorded/).count(), 0);
       const saved = await api.handleHpiRecordRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });
       assert.equal((saved.body as any).answers.length, 54);
       assert.equal((saved.body as any).answers.find((answer: any) => answer.optionCode === "eye-pain").value.status, "positive");
+      assert.equal((saved.body as any).answers.find((answer: any) => answer.optionCode === "poor-vision").value.status, "positive");
       const act = s.rows.find((row): row is Observation => row.resourceType === "Observation" && row.encounter?.reference === "Encounter/current" && row.code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE));
       assert.ok(act); assert.equal(parseHistoryItemReview(act).targets.length, 53);
+      await page.locator('[data-order-proof-ready="true"]').waitFor();
+      orderProofEnabled = true;
+      await page.getByRole("button", { name: "Refresh order proof" }).click();
+      await orderProofStaleCaptured;
+      await page.getByRole("button", { name: "Refresh order proof" }).click();
+      await page.getByText("proof completed 1").waitFor();
+      releaseOrderProofStale();
+      await page.getByText("proof completed 2").waitFor();
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      assert.equal(await page.locator('[data-order-proof-progress]').count(), 0);
       return;
     }
     if (scenario === "review-only History clear") {

@@ -5,7 +5,7 @@ import { test } from "node:test";
 import type { Bundle, Observation, Resource } from "@medplum/fhirtypes";
 import * as engine from "../src/clinical-graph/history-template-engine.js";
 import { buildHistoryAnswerObservation } from "../src/clinical-graph/history-answer-observation.js";
-import { handleHpiDefinitionRequest, handleHpiRecordRequest, handleHistoryReviewRequest, handleHpiCaptureRequest, type HpiEndpointDeps } from "../src/clinical-graph/hpi-endpoint.js";
+import { handleHpiDefinitionRequest, handleHpiRecordRequest, handleHistoryReviewRequest, handleHpiCaptureRequest, recordHistoryItemReview, type HpiEndpointDeps } from "../src/clinical-graph/hpi-endpoint.js";
 import { handleEncounterVoidRequest } from "../src/clinical-graph/encounter-void-endpoint.js";
 import { handleExamOverviewRequest } from "../src/clinical-graph/exam-overview-endpoint.js";
 import { buildHpiFindingDefinition } from "../src/clinical-graph/hpi-definition.js";
@@ -74,6 +74,11 @@ function fixture(rows: Resource[] = []) {
 }
 
 const review = (s: ReturnType<typeof fixture>, targets: object[], extra: object = {}) => handleHistoryReviewRequest(s.deps, { authHeader: "synthetic", body: { patientReference, encounterReference, sectionKey, action: "items-reviewed", method: "individual", targets, gestureId: randomUUID(), ...extra } });
+const bulkReview = async (s: ReturnType<typeof fixture>, targets: typeof a[]) => {
+  const staff = await s.deps.authenticate("synthetic"); assert.ok(staff);
+  return recordHistoryItemReview(staff.fhir, { patientReference, encounterReference, sectionKey, method: "bulk", targets,
+    gestureId: randomUUID(), actorReference: staff.staffReference, recordedAt: earlier });
+};
 const retract = (s: ReturnType<typeof fixture>, reference: string, target: object = a, extra: object = {}) => handleHistoryReviewRequest(s.deps, { authHeader: "synthetic", body: { patientReference, encounterReference, sectionKey, targets: [target], gestureId: randomUUID(), action: "items-review-retracted", retracts: reference, ...extra } });
 const read = async (s: ReturnType<typeof fixture>) => { const r = await handleHpiRecordRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } }); assert.equal(r.status, 200); return r.body as any; };
 const save = async (s: ReturnType<typeof fixture>, body: object) => { const r = await handleHpiCaptureRequest(s.deps, { authHeader: "synthetic", body: { patientReference, encounterReference, ...body } }); assert.equal(r.status, 200, JSON.stringify(r.body)); return r; };
@@ -93,7 +98,7 @@ test("ROS declaration exposes fourteen grouped systems and encounter scope", asy
   for (const code of ["jaw-pain", "scalp-tenderness"]) assert.equal(items.find((o: any) => o.code === code).system, "Eyes");
 });
 test("targeted retraction preserves B and original bytes; shipped void restores A", async () => {
-  const s = fixture(); const first = await review(s, [a, b], { method: "bulk" }); assert.equal(first.status, 200);
+  const s = fixture(); const first = await bulkReview(s, [a, b]); assert.equal(first.status, 200);
   const ref = (first.body as any).attestationReference;
   const original = JSON.stringify(s.rows.find(row => `Observation/${row.id}` === ref)); s.time(later);
   const removed = await retract(s, ref); assert.equal(removed.status, 200, JSON.stringify(removed.body));
@@ -147,7 +152,7 @@ test("Social requires four answers even with a tobacco review; ROS explicitly co
   const tobacco = { id: "t", subjectScope: "patient" as const, templateKey: "social-history", sectionId: "tobacco", value: { kind: "selection" as const, code: "never" } };
   assert.equal(engine.historySubjectSectionState(social, [tobacco], context), "started");
   assert.equal(engine.historySubjectSectionState(social, [tobacco, ...["driving", "alcohol-drugs", "home-safety"].map(sectionId => ({ ...tobacco, id: sectionId, sectionId, value: { kind: "tri-state" as const, status: "negative" as const } }))], context), "charted");
-  const s = fixture(); assert.equal((await review(s, [a], { method: "bulk" })).status, 200);
+  const s = fixture(); assert.equal((await bulkReview(s, [a])).status, 200);
   assert.equal((await read(s)).subjectSectionSummaries.find((d: any) => d.sectionKey === sectionKey).state, "charted");
 });
 test("coverage reports 3/8 until every item is dated this encounter; positives survive", () => {

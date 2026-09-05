@@ -8,6 +8,7 @@ import { historyRosFixture } from "./helpers/historyRosFixture.js";
 import * as endpoints from "../src/clinical-graph/hpi-endpoint.js";
 import { buildHistoryAnswerObservation, HISTORY_ITEM_REVIEW_CODE, parseHistoryAnswerObservation, parseHistoryItemReview } from "../src/clinical-graph/history-answer-observation.js";
 import { HISTORY_OPTION_CATALOGS } from "../src/clinical-graph/history-template-engine.js";
+import { handleEncounterVoidRequest } from "../src/clinical-graph/encounter-void-endpoint.js";
 import { getRoleDeclaration } from "../src/authz/roles.js";
 import type { Basic, Observation } from "@medplum/fhirtypes";
 
@@ -201,4 +202,120 @@ test("bulk refuses missing identity and pre-answered targets without creating a 
   assert.match((answered.body as any).error, /unanswered/i);
   assert.equal(s.rows.some(row => row.resourceType === "Basic"), false);
   assert.equal(s.transactions.length, 0);
+});
+
+test("resumed bulk act contains only negative answers still live after History clear", async () => {
+  const s = historyRosFixture();
+  const body = bulkBody(8);
+  s.failTransactionAt(2);
+  assert.equal((await bulk(s, body)).status, 503);
+  s.failTransactionAt(undefined);
+  const cleared = await handleEncounterVoidRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" },
+    body: { scope: "section", sectionKey: ["hpi", "review-of-systems"] } });
+  assert.equal(cleared.status, 200, JSON.stringify(cleared.body));
+  assert.equal((cleared.body as any).count, 7);
+  const resumed = await bulk(s, body);
+  assert.equal(resumed.status, 200, JSON.stringify(resumed.body));
+  assert.equal((resumed.body as any).recorded, 1);
+  const act = s.rows.find((row): row is Observation => row.resourceType === "Observation" &&
+    row.code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE));
+  assert.ok(act);
+  assert.deepEqual(parseHistoryItemReview(act).targets, [body.targets[7]]);
+});
+
+test("fresh bulk after History clear records new live negatives", async () => {
+  const s = historyRosFixture();
+  const first = bulkBody(2);
+  assert.equal((await bulk(s, first)).status, 200);
+  const cleared = await handleEncounterVoidRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" },
+    body: { scope: "section", sectionKey: ["hpi", "review-of-systems"] } });
+  assert.equal(cleared.status, 200, JSON.stringify(cleared.body));
+  const next = await bulk(s, { ...first, gestureId: randomUUID() });
+  assert.equal(next.status, 200, JSON.stringify(next.body));
+  assert.equal((next.body as any).recorded, 2);
+  const live = s.rows.filter((row): row is Observation => row.resourceType === "Observation" &&
+    row.status !== "entered-in-error" && row.status !== "cancelled" && row.code.coding?.some(coding => coding.code === "history-template-answer"));
+  assert.equal(live.length, 2);
+});
+
+test("resumed bulk with no live negatives completes without a review act", async () => {
+  const s = historyRosFixture();
+  const body = bulkBody(8);
+  s.failTransactionAt(2);
+  assert.equal((await bulk(s, body)).status, 503);
+  s.failTransactionAt(undefined);
+  assert.equal((await handleEncounterVoidRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" },
+    body: { scope: "section", sectionKey: ["hpi", "review-of-systems"] } })).status, 200);
+  const finalTarget = body.targets[7];
+  const answerId = `history-current-${finalTarget.sectionKey}-${finalTarget.sectionId}-${finalTarget.optionCode}`;
+  s.rows.push({ ...buildHistoryAnswerObservation({ id: answerId, subjectScope: "encounter", templateKey: finalTarget.sectionKey,
+    sectionId: finalTarget.sectionId, optionCode: finalTarget.optionCode, value: { kind: "tri-state", status: "positive" } }, {
+    patientReference: body.patientReference, encounterReference: body.encounterReference, recordedAt: "2026-09-05T12:00:01Z",
+  }), id: "remaining-positive", meta: { versionId: "1" } });
+  const resumed = await bulk(s, body);
+  assert.equal(resumed.status, 200, JSON.stringify(resumed.body));
+  assert.equal((resumed.body as any).recorded, 0);
+  assert.match((resumed.body as any).message, /no review act/i);
+  assert.equal(s.rows.some((row): row is Observation => row.resourceType === "Observation" &&
+    row.code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE)), false);
+});
+
+test("a resumed gesture retains its ledger author for answer and act Provenance", async () => {
+  const s = historyRosFixture();
+  const body = bulkBody(8);
+  s.failTransactionAt(2);
+  assert.equal((await bulk(s, body)).status, 503);
+  const original = await s.deps.authenticate("synthetic");
+  assert.ok(original);
+  s.deps.authenticate = async () => ({ ...original, staffReference: "Practitioner/second" });
+  s.failTransactionAt(undefined);
+  assert.equal((await bulk(s, body)).status, 200);
+  const authors = s.rows.filter(row => row.resourceType === "Provenance")
+    .map(row => (row as any).agent?.[0]?.who?.reference);
+  assert.deepEqual(authors, authors.map(() => "Practitioner/test"));
+  const act = s.rows.find((row): row is Observation => row.resourceType === "Observation" &&
+    row.code.coding?.some(coding => coding.code === HISTORY_ITEM_REVIEW_CODE));
+  assert.equal(act?.performer?.[0]?.reference, "Practitioner/test");
+});
+
+test("concurrent retries converge on complete state without duplicate unit Provenance", async () => {
+  const s = historyRosFixture();
+  const body = bulkBody(1);
+  let arrivals = 0;
+  let release = () => undefined;
+  const barrier = new Promise<void>(resolve => { release = resolve; });
+  s.race(async () => { arrivals += 1; if (arrivals === 2) release(); await barrier; });
+  const original = await s.deps.authenticate("synthetic");
+  assert.ok(original);
+  const execute = original.fhir.executeTransaction.bind(original.fhir);
+  original.fhir.executeTransaction = async (bundle, headers) => {
+    if (bundle.entry?.[0]?.request?.ifNoneExist && arrivals < 2) {
+      arrivals += 1; if (arrivals === 2) release(); await barrier;
+    }
+    return execute(bundle, headers);
+  };
+  const results = await Promise.all([bulk(s, body), bulk(s, body)]);
+  assert.deepEqual(results.map(result => result.status), [200, 200]);
+  assert.ok(results.every(result => (result.body as any).status === "complete" && (result.body as any).recorded === 1));
+  assert.equal(s.rows.filter(row => row.resourceType === "Provenance").length, 2,
+    `one answer-unit Provenance plus one act Provenance: ${JSON.stringify(s.rows.filter(row => row.resourceType === "Provenance").map(row => ({ tag: row.meta?.tag, activity: (row as any).activity?.coding?.[0]?.code })))}`);
+});
+
+test("malformed bulk ledgers from another encounter do not poison current item reads", async () => {
+  const s = historyRosFixture();
+  assert.equal((await bulk(s, bulkBody(1))).status, 200);
+  const ledger = s.rows.find((row): row is Basic => row.resourceType === "Basic");
+  assert.ok(ledger?.extension?.[0]);
+  ledger.extension[0].valueString = "{";
+  const result = await endpoints.handleHistoryItemActsRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.deepEqual((result.body as any).bulkDenials, []);
+});
+
+test("legacy history review endpoint refuses bulk acts without the denial ledger contract", async () => {
+  const s = historyRosFixture();
+  const result = await endpoints.handleHistoryReviewRequest(s.deps, { authHeader: "synthetic", body: bulkBody(2) });
+  assert.equal(result.status, 400);
+  assert.match((result.body as any).error, /bulk denial.*items\/review/i);
+  assert.equal(s.rows.length, 0);
 });

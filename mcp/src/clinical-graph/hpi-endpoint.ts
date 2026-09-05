@@ -1,7 +1,7 @@
 import { projectHistorySubjectSections, projectHistorySubjectNudges } from "./history-subject-projection.js";
 import { searchAll, FhirSearchLimitError, FhirSearchPageLimitError } from "../fhir-search.js";
 import { isDeepStrictEqual } from "node:util";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Basic, Bundle, Encounter, Observation, Provenance, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
@@ -415,7 +415,7 @@ async function handleHistoryBulkDenialRequest(
   try {
     for (let start = 0; start < unresolved.length; start += answersPerUnit) {
       const targets = unresolved.slice(start, start + answersPerUnit);
-      const requestBundle = historyBulkAnswerUnit(targets, request, staff.staffReference, recordedAt);
+      const requestBundle = historyBulkAnswerUnit(targets, request, ledger.actorReference, recordedAt);
       const sizeError = historyBundleSizeError(requestBundle);
       if (sizeError) return { status: 413, body: { error: sizeError, ...historyBulkDenialResponse(ledger) } };
       const result = await staff.fhir.executeTransaction(requestBundle, {
@@ -434,16 +434,24 @@ async function handleHistoryBulkDenialRequest(
         persistedTargets: uniqueHistoryTargets(persisted),
       });
     }
+    const persistedTargets: ReviewTarget[] = [];
+    for (const target of ledger.intendedTargets) {
+      const observation = await findHistoryAnswerById(staff.fhir, bulkHistoryAnswerId(encounterId, target));
+      if (observation && isPersistedBulkNegative(observation, request.patientReference, request.encounterReference, target)) {
+        persistedTargets.push(target);
+      }
+    }
+    ledger = await updateHistoryBulkDenialLedger(staff.fhir, { ...ledger, persistedTargets });
     let attestationReference = ledger.attestationReference;
-    if (ledger.persistedTargets.length > 0) {
+    if (persistedTargets.length > 0) {
       const act = await recordHistoryItemReview(staff.fhir, {
         sectionKey: request.sectionKey,
         gestureId: request.gestureId,
         method: "bulk",
-        targets: ledger.persistedTargets,
+        targets: persistedTargets,
         patientReference: request.patientReference,
         encounterReference: request.encounterReference,
-        actorReference: staff.staffReference,
+        actorReference: ledger.actorReference,
         recordedAt,
       });
       if (act.status !== 200) return act;
@@ -452,6 +460,7 @@ async function handleHistoryBulkDenialRequest(
     ledger = await updateHistoryBulkDenialLedger(staff.fhir, { ...ledger, status: "complete", ...(attestationReference ? { attestationReference } : {}) });
     return { status: 200, body: historyBulkDenialResponse(ledger) };
   } catch (error) {
+    if (isHistoryBulkConflict(error)) return handleHistoryBulkDenialRequest(deps, input, request);
     return { status: 503, body: { error: errorMessage(error), ...historyBulkDenialResponse(ledger) } };
   }
 }
@@ -507,12 +516,16 @@ function historyBulkAnswerUnit(
       request: {
         method: "POST" as const,
         url: "Observation",
-        ifNoneExist: `identifier=${HISTORY_ANSWER_IDENTIFIER_SYSTEM}|${answer.id}`,
+        ifNoneExist: `identifier=${HISTORY_ANSWER_IDENTIFIER_SYSTEM}|${answer.id}&status:not=entered-in-error&status:not=cancelled`,
       },
     };
   });
   const provenance: Provenance = {
     resourceType: "Provenance",
+    meta: { tag: [{
+      system: `${HISTORY_BULK_DENIAL_IDENTIFIER_SYSTEM}/unit`,
+      code: createHash("sha256").update(`${request.gestureId}|${targets.map(historyReviewTargetKey).sort().join("|")}`).digest("hex"),
+    }] },
     target: [
       ...entries.flatMap(entry => entry.fullUrl ? [reference(entry.fullUrl)] : []),
       reference(request.encounterReference),
@@ -524,17 +537,27 @@ function historyBulkAnswerUnit(
   };
   return { resourceType: "Bundle", type: "transaction", entry: [
     ...entries,
-    { resource: provenance, request: { method: "POST", url: "Provenance" } },
+    { resource: provenance, request: {
+      method: "POST",
+      url: "Provenance",
+      ifNoneExist: `_tag=${HISTORY_BULK_DENIAL_IDENTIFIER_SYSTEM}/unit|${provenance.meta!.tag![0]!.code}`,
+    } },
   ] };
 }
 
 async function findHistoryAnswerById(fhir: HpiFhirClient, answerId: string): Promise<Observation | undefined> {
   const rows = await searchAll<Observation>(fhir, "Observation", {
     identifier: `${HISTORY_ANSWER_IDENTIFIER_SYSTEM}|${answerId}`,
-    _count: "2",
-  }, { maxRows: 2 });
-  if (rows.length > 1) throw new Error(`History answer ${answerId} is not unique.`);
-  return rows[0];
+    _count: "200",
+  }, { maxRows: 200 });
+  const live = rows.filter(row => row.status !== "entered-in-error" && row.status !== "cancelled");
+  if (live.length > 1) throw new Error(`History answer ${answerId} is not unique.`);
+  return live[0];
+}
+
+function isHistoryBulkConflict(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "status" in error &&
+    ((error as { status?: unknown }).status === 409 || (error as { status?: unknown }).status === 412);
 }
 
 function isLiveHistoryAnswer(observation: Observation, patientReference: string, encounterReference: string): boolean {
@@ -627,6 +650,9 @@ function historyBulkDenialResponse(ledger: HistoryBulkDenialLedger) {
     total: ledger.intendedTargets.length,
     persistedTargets: ledger.persistedTargets,
     ...(ledger.attestationReference ? { attestationReference: ledger.attestationReference } : {}),
+    ...(ledger.status === "complete" && ledger.persistedTargets.length === 0
+      ? { message: "No live negative answers remained, so no review act was recorded." }
+      : {}),
   };
 }
 
@@ -675,7 +701,9 @@ export async function handleHistoryItemActsRequest(deps: HpiEndpointDeps, input:
       }),
       retractions: live.filter(row => row.code.coding?.some(c => c.code === HISTORY_ITEM_RETRACTION_CODE)).map(row =>
         ({ ...parseHistoryItemRetraction(row), attestationReference: `Observation/${row.id}`, recordedAt: row.effectiveDateTime })),
-      bulkDenials: ledgerResources.map(parseHistoryBulkDenialLedger)
+      bulkDenials: ledgerResources.flatMap(resource => {
+        try { return [parseHistoryBulkDenialLedger(resource)]; } catch { return []; }
+      })
         .filter(ledger => ledger.encounterReference === `Encounter/${encounterId}` && ledger.status === "in-progress")
         .map(ledger => ({ ...historyBulkDenialResponse(ledger), targets: ledger.intendedTargets })),
     } };
@@ -686,6 +714,21 @@ export async function handleHistoryReviewRequest(
   deps: HpiEndpointDeps,
   input: { authHeader: string | undefined; body: unknown },
 ): Promise<{ status: number; body: unknown }> {
+  const parsed = historyReviewRequestSchema.safeParse(input.body);
+  if (parsed.success && "method" in parsed.data && parsed.data.method === "bulk") {
+    const staff = await deps.authenticate(input.authHeader);
+    if (!staff) return { status: 401, body: { error: "Authentication required to review history." } };
+    if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+    const identifier = `${parsed.data.encounterReference.slice("Encounter/".length)}:${parsed.data.sectionKey}:${parsed.data.gestureId}`;
+    const existing = await searchAll<Observation>(staff.fhir, "Observation", {
+      identifier: `${HISTORY_REVIEW_ATTESTATION_IDENTIFIER_SYSTEM}|${identifier}`,
+      _count: "2",
+    }, { maxRows: 2 });
+    if (existing.length > 0) {
+      return { status: 409, body: { error: "History review gesture targets and method are immutable." } };
+    }
+    return { status: 400, body: { error: "History bulk denial must use the history items/review endpoint." } };
+  }
   return historySearchResult(() => handleHistoryReview(deps, input));
 }
 

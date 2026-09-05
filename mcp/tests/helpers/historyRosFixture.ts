@@ -11,7 +11,8 @@ export function historyRosFixture(rows: Resource[] = []) {
   let now = earlier;
   let conflictStatus = "412";
   let thrownConflict = false;
-  let beforeTransaction: (() => void) | undefined;
+  let beforeTransaction: (() => void | Promise<void>) | undefined;
+  const beforeTransactionAt = new Map<number, () => void | Promise<void>>();
   let transactionAttempts = 0;
   let transactionFailureAt: number | undefined;
   const baseUrl = "http://localhost:18103/";
@@ -22,6 +23,7 @@ export function historyRosFixture(rows: Resource[] = []) {
       (!params.subject || row.subject?.reference === params.subject) &&
       (!params.encounter || row.encounter?.reference === params.encounter) &&
       (!params.identifier || row.identifier?.some(c => `${c.system}|${c.value}` === params.identifier)) &&
+      (!params["status:not"] || !params["status:not"].split(",").includes((row as Observation).status ?? "")) &&
       (!params.code || row.code.coding?.some(c => `${c.system}|${c.code}` === params.code)) &&
       (!params["category:not"] || !row.category?.some(c => c.coding?.some(v => `${v.system}|${v.code}` === params["category:not"])))
     );
@@ -42,16 +44,20 @@ export function historyRosFixture(rows: Resource[] = []) {
       const saved = { ...structuredClone(row), id: row.id ?? randomUUID(), meta: { versionId: randomUUID() } };
       rows.push(saved); return structuredClone(saved);
     },
-    update: async (_type: "Basic" | "Encounter", id: string, row: Basic) => {
+    update: async (_type: "Basic" | "Encounter", id: string, row: Basic, headers?: Record<string, string>) => {
       events.push(`update:${row.resourceType}`);
       const existing = rows.find(resource => resource.resourceType === row.resourceType && resource.id === id);
+      if (existing && headers?.["If-Match"] && headers["If-Match"] !== `W/"${existing.meta?.versionId}"`) {
+        throw Object.assign(new Error("Synthetic update conflict"), { status: 412 });
+      }
       const saved = { ...structuredClone(row), id, meta: { ...row.meta, versionId: randomUUID() } };
       if (existing) rows.splice(rows.indexOf(existing), 1, saved); else rows.push(saved);
       return structuredClone(saved);
     },
     executeTransaction: async (bundle: Bundle): Promise<Bundle> => {
       transactionAttempts += 1; events.push("transaction");
-      beforeTransaction?.(); beforeTransaction = undefined;
+      const before = beforeTransactionAt.get(transactionAttempts) ?? beforeTransaction;
+      beforeTransactionAt.delete(transactionAttempts); beforeTransaction = undefined; await before?.();
       if (transactionAttempts === transactionFailureAt) throw new Error("Synthetic transaction failure");
       transactions.push(structuredClone(bundle));
       const entries: NonNullable<Bundle["entry"]> = [];
@@ -60,17 +66,23 @@ export function historyRosFixture(rows: Resource[] = []) {
           entries.push({ response: { status: "201", location: `Provenance/${randomUUID()}/_history/1` } }); continue;
         }
         const resource = structuredClone(entry.resource);
-        const query = entry.request?.ifNoneExist
-          ? new URLSearchParams(entry.request.ifNoneExist).get("identifier")
+        const conditional = entry.request?.ifNoneExist ? new URLSearchParams(entry.request.ifNoneExist) : undefined;
+        const query = conditional
+          ? conditional.get("identifier")
           : new URL(entry.request!.url!, baseUrl).searchParams.get("identifier");
-        const existing = rows.find(row => query ? (row as Observation).identifier?.some(v => `${v.system}|${v.value}` === query) : Boolean(resource.id) && row.id === resource.id && row.resourceType === resource.resourceType);
+        const tag = conditional?.get("_tag");
+        const excludedStatuses = conditional?.getAll("status:not") ?? [];
+        const existing = rows.find(row => query
+          ? row.identifier?.some(v => `${v.system}|${v.value}` === query) && !excludedStatuses.includes((row as Observation).status ?? "")
+          : tag ? row.meta?.tag?.some(value => `${value.system}|${value.code}` === tag)
+          : Boolean(resource.id) && row.id === resource.id && row.resourceType === resource.resourceType);
         if (existing && entry.request?.ifMatch && entry.request.ifMatch !== `W/"${existing.meta?.versionId}"`) {
           if (thrownConflict) throw Object.assign(new Error("Synthetic transaction conflict"), { status: Number(conflictStatus) });
           return { resourceType: "Bundle", type: "transaction-response", entry: [{ response: { status: conflictStatus } }] };
         }
         const saved = entry.request?.ifNoneExist && existing
           ? existing
-          : { ...resource, id: existing?.id ?? resource.id ?? randomUUID(), meta: { versionId: randomUUID() } };
+          : { ...resource, id: existing?.id ?? resource.id ?? randomUUID(), meta: { ...resource.meta, versionId: randomUUID() } };
         if (saved !== existing) { if (existing) rows.splice(rows.indexOf(existing), 1, saved); else rows.push(saved); }
         entries.push({ resource: structuredClone(saved), response: { status: existing ? "200" : "201", location: `${saved.resourceType}/${saved.id}/_history/${saved.meta.versionId}` } });
       }
@@ -84,5 +96,7 @@ export function historyRosFixture(rows: Resource[] = []) {
     failTransactionAt: (attempt?: number) => { transactionFailureAt = attempt; },
     transactionAttempts: () => transactionAttempts,
     conflictStatus: (value: string, throws = false) => { conflictStatus = value; thrownConflict = throws; },
-    time: (value: string) => { now = value; }, race: (fn: () => void) => { beforeTransaction = fn; } };
+    time: (value: string) => { now = value; },
+    race: (fn: () => void | Promise<void>) => { beforeTransaction = fn; },
+    raceAt: (attempt: number, fn: () => void | Promise<void>) => { beforeTransactionAt.set(attempt, fn); } };
 }
