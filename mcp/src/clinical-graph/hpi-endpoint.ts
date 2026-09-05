@@ -1,3 +1,4 @@
+import { projectHistorySubjectSections } from "./history-subject-projection.js";
 import { searchAll, FhirSearchLimitError, FhirSearchPageLimitError } from "../fhir-search.js";
 import { isDeepStrictEqual } from "node:util";
 import { randomUUID } from "node:crypto";
@@ -14,6 +15,11 @@ import { CLOSED_ENCOUNTER_EDIT_ERROR, isClosedEncounter } from "./encounter-sign
 import { buildHpiFindingDefinition, HPI_STABLE_KEY } from "./hpi-definition.js";
 import {
   HISTORY_ITEM_REVIEW_CODE,
+  HISTORY_ITEM_RETRACTION_CODE,
+  HISTORY_ITEMS_RETRACTED_ACTION,
+  buildHistoryItemRetraction,
+  parseHistoryItemRetraction,
+  type HistoryItemRetraction,
   HISTORY_ITEMS_REVIEWED_ACTION,
   buildHistoryItemReview,
   parseHistoryItemReview,
@@ -117,7 +123,13 @@ const itemHistoryReviewRequestSchema = legacyHistoryReviewRequestSchema.extend({
   method: z.enum(["individual", "bulk"]),
   targets: z.array(historyReviewTargetSchema).min(1).max(500),
 }).strict();
-const historyReviewRequestSchema = z.union([legacyHistoryReviewRequestSchema, itemHistoryReviewRequestSchema]);
+const itemHistoryRetractionRequestSchema = legacyHistoryReviewRequestSchema.extend({
+  action: z.literal(HISTORY_ITEMS_RETRACTED_ACTION),
+  gestureId: z.string().uuid(),
+  targets: z.array(historyReviewTargetSchema).length(1),
+  retracts: z.string().regex(/^Observation\/[A-Za-z0-9.-]+$/),
+}).strict();
+const historyReviewRequestSchema = z.union([legacyHistoryReviewRequestSchema, itemHistoryReviewRequestSchema, itemHistoryRetractionRequestSchema]);
 
 
 export async function handleHpiDefinitionRequest(
@@ -136,7 +148,10 @@ export async function handleHpiDefinitionRequest(
       display: definition.display,
       fields: definition.valueSchema.fields,
       terminologyStatus: definition.valueSchema.terminologyStatus,
-    }, templates: HISTORY_TEMPLATES, subjectSections: HISTORY_SUBJECT_SECTIONS, catalogs: HISTORY_OPTION_CATALOGS },
+    }, templates: HISTORY_TEMPLATES,
+    subjectSections: HISTORY_SUBJECT_SECTIONS.filter(section => section.key !== "review-of-systems"),
+    itemizedSubjectSections: HISTORY_SUBJECT_SECTIONS.filter(section => section.key === "review-of-systems"),
+    catalogs: HISTORY_OPTION_CATALOGS },
   };
 }
 
@@ -184,7 +199,7 @@ async function handleHpiRecord(
     const complaint = complaints.find((candidate) => candidate.id === row.complaintId);
     return !complaint || aggregateComponent(aggregate, `HISTORY_COMPLAINT_${complaint.ordinal}`) !== row.narrative;
   });
-  const [plans, priorAnswers, reviewObservations, itemReviewObservations] = patientReference
+  const [plans, priorAnswers, reviewObservations, itemReviewObservations, retractionObservations] = patientReference
     ? await Promise.all([
         searchAll<ServiceRequest>(staff.fhir, "ServiceRequest", { subject: patientReference, _count: "500" }, { maxRows: PATIENT_HISTORY_MAX_ROWS }),
         searchAll<Observation>(staff.fhir, "Observation", {
@@ -203,8 +218,13 @@ async function handleHpiRecord(
           code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${HISTORY_ITEM_REVIEW_CODE}`,
           _count: "20",
         }, { maxRows: PATIENT_HISTORY_MAX_ROWS }),
+        searchAll<Observation>(staff.fhir, "Observation", {
+          subject: patientReference,
+          code: `${HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM}|${HISTORY_ITEM_RETRACTION_CODE}`,
+          _count: "20",
+        }, { maxRows: PATIENT_HISTORY_MAX_ROWS }),
       ])
-    : [[], [], [], []];
+    : [[], [], [], [], []];
   const prefills = [
     ...deriveFollowUpAnswerPrefills(
       complaints,
@@ -232,7 +252,11 @@ async function handleHpiRecord(
   return {
     status: 200,
     body: { answers, carriedForwardAnswers, reviewAttestations,
-      lastReviewed: patientReference ? deriveHistoryLastReviewed([...priorAnswers, ...observations], [...reviewObservations, ...itemReviewObservations], patientReference) : [],
+      subjectSectionSummaries: patientReference ? projectHistorySubjectSections(
+        [...observations, ...reviewObservations, ...itemReviewObservations, ...retractionObservations],
+        patientReference, encounterReference, encounter.period?.start,
+      ) : [],
+      lastReviewed: patientReference ? deriveHistoryLastReviewed([...priorAnswers, ...observations], [...reviewObservations, ...itemReviewObservations, ...retractionObservations], patientReference) : [],
       followUpPrefills: prefills, templateNarratives: narratives, requiresAggregateRefresh },
   };
 }
@@ -340,6 +364,19 @@ async function handleHistoryReview(
       if (seen.has(key)) return { status: 400, body: { error: "History review targets cannot be duplicated." } };
       seen.add(key);
     }
+    if (parsed.data.action === HISTORY_ITEMS_RETRACTED_ACTION) {
+      const retractionTarget = parsed.data.targets[0];
+      const originals = await searchAll<Observation>(staff.fhir, "Observation", { _id: parsed.data.retracts.slice("Observation/".length), _count: "2" }, { maxRows: 2 });
+      const original = originals[0];
+      if (originals.length !== 1 || `Observation/${original.id}` !== parsed.data.retracts ||
+        original.subject?.reference !== parsed.data.patientReference || original.encounter?.reference !== parsed.data.encounterReference ||
+        original.status === "entered-in-error" || original.status === "cancelled" ||
+        !original.code.coding?.some(c => c.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && c.code === HISTORY_ITEM_REVIEW_CODE) ||
+        !parseHistoryItemReview(original).targets.some(t => historyReviewTargetKey(t) === historyReviewTargetKey(retractionTarget))) {
+        return { status: 400, body: { error: "Retraction must target an item in a live review act of this patient and encounter." } };
+      }
+      return recordHistoryItemRetraction(staff.fhir, { ...parsed.data, actorReference: staff.staffReference, recordedAt: deps.now?.() ?? new Date().toISOString() });
+    }
     return recordHistoryItemReview(staff.fhir, {
       ...parsed.data, actorReference: staff.staffReference, recordedAt: deps.now?.() ?? new Date().toISOString(),
     });
@@ -427,7 +464,27 @@ async function handleHistoryReview(
 }
 
 async function recordHistoryItemReview(fhir: HpiFhirClient, input: HistoryItemReview): Promise<{ status: number; body: unknown }> {
-  const act = buildHistoryItemReview(input);
+  return persistHistoryItemAct(fhir, input, buildHistoryItemReview(input), existing => {
+    const saved = parseHistoryItemReview(existing);
+    if (saved.method !== input.method || !isDeepStrictEqual(saved.targets.map(historyReviewTargetKey).sort(), input.targets.map(historyReviewTargetKey).sort())) return undefined;
+    return saved;
+  });
+}
+
+async function recordHistoryItemRetraction(fhir: HpiFhirClient, input: HistoryItemRetraction): Promise<{ status: number; body: unknown }> {
+  return persistHistoryItemAct(fhir, input, buildHistoryItemRetraction(input), existing => {
+    const saved = parseHistoryItemRetraction(existing);
+    if (saved.retracts !== input.retracts || historyReviewTargetKey(saved.targets[0]) !== historyReviewTargetKey(input.targets[0])) return undefined;
+    return saved;
+  });
+}
+
+async function persistHistoryItemAct(
+  fhir: HpiFhirClient,
+  input: Omit<HistoryItemReview, "method">,
+  act: Observation,
+  match: (existing: Observation) => object | undefined,
+): Promise<{ status: number; body: unknown }> {
   const identifier = act.identifier![0];
   const findExisting = async () => {
     const rows = await searchAll<Observation>(fhir, "Observation", {
@@ -442,8 +499,9 @@ async function recordHistoryItemReview(fhir: HpiFhirClient, input: HistoryItemRe
       existing.status === "entered-in-error" || existing.status === "cancelled" || !existing.id) {
       return { status: 409, body: { error: "History review gesture is already used by another or retired act." } };
     }
-    const saved = parseHistoryItemReview(existing);
-    if (saved.method !== input.method || !isDeepStrictEqual(saved.targets.map(historyReviewTargetKey).sort(), input.targets.map(historyReviewTargetKey).sort())) {
+    if (!isDeepStrictEqual(existing.code, act.code)) return { status: 409, body: { error: "History review gesture kind is immutable." } };
+    const saved = match(existing);
+    if (!saved) {
       return { status: 409, body: { error: "History review gesture targets and method are immutable." } };
     }
     return { status: 200, body: { sectionKey: input.sectionKey, gestureId: input.gestureId,

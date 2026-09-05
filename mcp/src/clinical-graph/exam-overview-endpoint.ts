@@ -1,3 +1,4 @@
+import { projectHistorySubjectSections } from "./history-subject-projection.js";
 import type {
   Basic,
   Bundle,
@@ -125,19 +126,21 @@ export async function handleExamOverviewRequest(
     const historyAttested = projection.findings.some((finding) =>
       finding.findingKey === "hpi_ros" && hasStructuredRosAttestation(finding)
     );
-    const historySummary = complaintSummary
-      ? `${complaintSummary}${historyAttested ? " · ROS reviewed" : ""}`
-      : undefined;
+    const itemizedRos = projectHistorySubjectSections(current, patientReference, encounterReference, encounter.period?.start)
+      .find(section => section.sectionKey === "review-of-systems" && section.state === "charted");
+    // Complaint-directed ROS remains on the HPI aggregate; full-body itemized ROS has its own authority.
+    const rosClause = itemizedRos ? itemizedRos.summary : historyAttested ? "ROS reviewed" : undefined;
+    const historySummary = [complaintSummary, rosClause].filter(Boolean).join(" · ") || undefined;
     return {
       status: 200,
       body: {
         ...projection,
         ...(historySummary ? { historySummary } : {}),
         findings: projection.findings.map((finding) =>
-          finding.findingKey === "hpi_ros" && complaintSummary
+          finding.findingKey === "hpi_ros" && historySummary
             ? {
                 ...finding,
-                summary: `${complaintSummary}${hasStructuredRosAttestation(finding) ? " · ROS reviewed" : ""}`,
+                summary: historySummary,
               }
             : finding
         ),

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Observation } from "@medplum/fhirtypes";
-import type { HistoryTemplateAnswer } from "./history-template-engine.js";
+import { historyReviewTargetKey, type HistoryTemplateAnswer } from "./history-template-engine.js";
 
 const BASE = "https://odos2020.com/fhir";
 export const HISTORY_ANSWER_SCOPE_SYSTEM = `${BASE}/CodeSystem/history-answer-scope`;
@@ -15,6 +15,8 @@ export const HISTORY_REVIEW_SECTION_EXTENSION_URL = `${BASE}/StructureDefinition
 const HISTORY_REVIEW_ACTION_SYSTEM = `${BASE}/CodeSystem/odos-history-review-action`;
 
 export const HISTORY_ITEM_REVIEW_CODE = "history-item-review";
+export const HISTORY_ITEM_RETRACTION_CODE = "history-item-review-retraction";
+export const HISTORY_ITEMS_RETRACTED_ACTION = "items-review-retracted";
 export const HISTORY_ITEMS_REVIEWED_ACTION = "items-reviewed";
 export const HISTORY_REVIEW_METHOD_EXTENSION_URL = `${BASE}/StructureDefinition/odos-history-review-method`;
 export const HISTORY_REVIEW_TARGET_EXTENSION_URL = `${BASE}/StructureDefinition/odos-history-review-target`;
@@ -36,9 +38,7 @@ export interface HistoryItemReview {
   recordedAt: string;
 }
 
-export function historyReviewTargetKey(target: ReviewTarget): string {
-  return [target.sectionKey, target.sectionId, target.optionCode ?? "", target.eye ?? ""].join("|");
-}
+export { historyReviewTargetKey } from "./history-template-engine.js";
 
 export function buildHistoryItemReview(input: HistoryItemReview): Observation {
   return {
@@ -75,6 +75,49 @@ export function parseHistoryItemReview(observation: Observation): Pick<HistoryIt
   return { method, targets };
 }
 
+export type HistoryItemRetraction = Omit<HistoryItemReview, "method"> & { retracts: string };
+
+export function buildHistoryItemRetraction(input: HistoryItemRetraction): Observation {
+  const act = buildHistoryItemReview({ ...input, method: "individual" });
+  return {
+    ...act,
+    code: { coding: [{ system: HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM, code: HISTORY_ITEM_RETRACTION_CODE, display: "History item review retraction" }] },
+    valueCodeableConcept: { coding: [{ system: HISTORY_REVIEW_ACTION_SYSTEM, code: HISTORY_ITEMS_RETRACTED_ACTION, display: "Items review retracted" }] },
+    extension: act.extension!.filter(e => e.url !== HISTORY_REVIEW_METHOD_EXTENSION_URL),
+    derivedFrom: [{ reference: input.retracts }],
+  };
+}
+
+export function parseHistoryItemRetraction(observation: Observation): Pick<HistoryItemRetraction, "targets" | "retracts"> {
+  if (!observation.code.coding?.some(c => c.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && c.code === HISTORY_ITEM_RETRACTION_CODE) ||
+    !observation.valueCodeableConcept?.coding?.some(c => c.system === HISTORY_REVIEW_ACTION_SYSTEM && c.code === HISTORY_ITEMS_RETRACTED_ACTION)) {
+    throw new Error("Observation is not an ODOS history item review retraction.");
+  }
+  const targets = (observation.extension ?? []).filter(e => e.url === HISTORY_REVIEW_TARGET_EXTENSION_URL)
+    .map(e => historyReviewTargetSchema.parse(JSON.parse(e.valueString ?? "null")));
+  const retracts = observation.derivedFrom?.[0]?.reference;
+  if (targets.length !== 1 || observation.derivedFrom?.length !== 1 || !retracts?.match(/^Observation\/[A-Za-z0-9.-]+$/)) {
+    throw new Error("History retraction requires one target and one original act.");
+  }
+  return { targets, retracts };
+}
+
+export function historyRetractedTargets(acts: Observation[], patientReference: string): Map<string, Set<string>> {
+  const live = (row: Observation) => row.subject?.reference === patientReference && row.status !== "entered-in-error" && row.status !== "cancelled";
+  const actsByReference = new Map(acts.map(row => [`Observation/${row.id}`, row]));
+  const retracted = new Map<string, Set<string>>();
+  for (const observation of acts) {
+    if (!live(observation) || !observation.code.coding?.some(c => c.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && c.code === HISTORY_ITEM_RETRACTION_CODE)) continue;
+    const { targets, retracts } = parseHistoryItemRetraction(observation);
+    const original = actsByReference.get(retracts);
+    if (!original || !live(original) || original.encounter?.reference !== observation.encounter?.reference) continue;
+    const keys = retracted.get(retracts) ?? new Set<string>();
+    keys.add(historyReviewTargetKey(targets[0]));
+    retracted.set(retracts, keys);
+  }
+  return retracted;
+}
+
 export function deriveHistoryLastReviewed(
   answers: Observation[],
   acts: Observation[],
@@ -97,10 +140,13 @@ export function deriveHistoryLastReviewed(
     if (observation.id) answerTargets.set(`Observation/${observation.id}`, target);
     record(target, observation.effectiveDateTime);
   }
+  const retracted = historyRetractedTargets(acts, patientReference);
   for (const observation of acts) {
     if (!live(observation)) continue;
     if (observation.code.coding?.some(c => c.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && c.code === HISTORY_ITEM_REVIEW_CODE)) {
-      for (const target of parseHistoryItemReview(observation).targets) record(target, observation.effectiveDateTime);
+      for (const target of parseHistoryItemReview(observation).targets) {
+        if (!retracted.get(`Observation/${observation.id}`)?.has(historyReviewTargetKey(target))) record(target, observation.effectiveDateTime);
+      }
     } else if (observation.code.coding?.some(c => c.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && c.code === HISTORY_REVIEW_ATTESTATION_CODE) &&
       observation.valueCodeableConcept?.coding?.some(c => c.system === HISTORY_REVIEW_ACTION_SYSTEM && c.code === "reviewed-no-change")) {
       for (const reference of observation.derivedFrom ?? []) {

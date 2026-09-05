@@ -1,0 +1,31 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "odos-history-review",
+  "url": "https://odos2020.com/fhir/CodeSystem/odos-history-review",
+  "name": "ODOSHistoryReview",
+  "title": "ODOS History Review",
+  "status": "active",
+  "experimental": false,
+  "date": "2026-09-05",
+  "publisher": "ODOS",
+  "description": "ODOS-local application metadata for History review acts. These are not external medical terminology codes.",
+  "caseSensitive": true,
+  "content": "complete",
+  "concept": [
+    {
+      "code": "history-review-attestation",
+      "display": "History review attestation",
+      "definition": "Legacy no-change review of exactly the answers referenced in derivedFrom."
+    },
+    {
+      "code": "history-item-review",
+      "display": "History item review",
+      "definition": "Immutable review of explicitly enumerated History targets."
+    },
+    {
+      "code": "history-item-review-retraction",
+      "display": "History item review retraction",
+      "definition": "Immutable retraction of one target from the item-review act referenced in derivedFrom. The original is not modified; voiding the retraction restores that contribution."
+    }
+  ]
+}

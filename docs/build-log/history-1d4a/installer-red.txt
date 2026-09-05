@@ -1,0 +1,44 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/v035-terminology-install.test.ts
+
+TAP version 13
+# Subtest: profile installer idempotently installs ODOS EpisodeOfCare terminology
+not ok 1 - profile installer idempotently installs ODOS EpisodeOfCare terminology
+  ---
+  duration_ms: 1693.795458
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4a/mcp/tests/v035-terminology-install.test.ts:1:468'
+  failureType: 'testCodeFailure'
+  error: |-
+    Command failed: npm run install-profiles --silent
+    /Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4a/scripts/install-profiles.ts:149
+        throw new Error(
+              ^
+    
+    Error: history-review-registry.json is not a supported canonical resource with a canonical url.
+        at installCanonicalResource (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4a/scripts/install-profiles.ts:149:11)
+        at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4a/scripts/install-profiles.ts:99:11)
+    
+    Node.js v22.22.3
+    
+  code: 1
+  stack: |-
+    installCanonicalResource (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4a/scripts/install-profiles.ts:149:11)
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/history-slice-1d4a/scripts/install-profiles.ts:99:11)
+    genericNodeError (node:internal/errors:983:15)
+    wrappedFn (node:internal/errors:537:14)
+    ChildProcess.exithandler (node:child_process:417:12)
+    ChildProcess.emit (node:events:519:28)
+    maybeClose (node:internal/child_process:1101:16)
+    ChildProcess._handle.onexit (node:internal/child_process:304:5)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1847.764042

@@ -1,0 +1,26 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/historyPaginationMedplum.test.ts
+
+TAP version 13
+# Subtest: local Medplum seeds 5001 patient answers, paginates reviews, and excludes ROS in the index
+ok 1 - local Medplum seeds 5001 patient answers, paginates reviews, and excludes ROS in the index
+  ---
+  duration_ms: 21560.817417
+  type: 'test'
+  ...
+# 600 patient answers: HTTP 200; carriedForwardAnswers=600
+# 25 encounter review acts: HTTP 200; reviewAttestations=25
+# 600 ROS answers: category:not excludes all 600 before collection; patient rows=600
+# 1001 patient answers: HTTP 200; carriedForwardAnswers=1001
+# 5000 patient answers: HTTP 200; carriedForwardAnswers=5000
+# 5001 patient answers: HTTP 409; FHIR Observation query exceeded 5000 rows; no partial result was returned. Read 5001 rows across 11 pages.
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 21778.470125

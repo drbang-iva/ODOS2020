@@ -1,0 +1,14 @@
+{
+  "codeSystems": [
+    {
+      "url": "https://odos2020.com/fhir/CodeSystem/odos-history-review",
+      "file": "odos-history-review-codesystem.json",
+      "status": "active"
+    },
+    {
+      "url": "https://odos2020.com/fhir/CodeSystem/odos-history-review-action",
+      "file": "odos-history-review-action-codesystem.json",
+      "status": "active"
+    }
+  ]
+}
