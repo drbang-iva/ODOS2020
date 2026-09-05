@@ -86,13 +86,13 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
       assert.equal(await bulk.getAttribute("class").then(value => value?.includes("min-h-11")), true);
       await bulk.click();
       await ros.getByRole("status").filter({ hasText: "of 53 recorded" }).waitFor();
-      assert.equal(await bulk.count(), 1);
       await ros.getByRole("button", { name: "Resume marking unanswered No" }).waitFor();
       assert.match(await ros.getByRole("alert").innerText(), /7 of 53 recorded/);
       s.failTransactionAt(undefined);
       s.raceAt(s.transactionAttempts() + 7, async () => { markFinalBulkUnitHeld(); await finalBulkUnitReleased; });
       await ros.getByRole("button", { name: "Resume marking unanswered No" }).click();
       await finalBulkUnitHeld;
+      assert.equal(await bulk.isDisabled(), true);
       const pendingYesResponse = page.waitForResponse(response => {
         if (response.request().method() !== "POST") return false;
         const body = response.request().postDataJSON();
