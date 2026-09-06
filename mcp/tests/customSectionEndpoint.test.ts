@@ -643,9 +643,12 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
   assert.equal(anterior.every((definition) => definition.valueSchema.perEye === true), true);
   assert.deepEqual(anterior.filter((definition) => definition.allowDiagnosisMapping).map((definition) => definition.stableKey), [
     "ocular-health:anterior:lids-lashes",
+    "ocular-health:anterior:palpebral-conjunctiva",
     "ocular-health:anterior:conjunctiva",
     "ocular-health:anterior:tear-film",
     "ocular-health:anterior:cornea",
+    "ocular-health:anterior:anterior-chamber",
+    "ocular-health:anterior:iris",
     "ocular-health:anterior:lens",
   ]);
   assert.equal(anterior.filter((definition) => !definition.allowDiagnosisMapping)
@@ -1109,8 +1112,10 @@ test("OH-2 seeds five posterior structures and round-trips their worksheet findi
   assert.deepEqual(posterior.map((definition) => definition.display), ["Vitreous", "Fundus", "Macula", "Vessels", "Periphery"]);
   assert.equal(posterior.every((definition) => definition.valueSchema.perEye === true), true);
   assert.deepEqual(posterior.filter((definition) => definition.allowDiagnosisMapping).map((definition) => definition.stableKey), [
+    "ocular-health:posterior:vitreous",
     "ocular-health:posterior:fundus",
     "ocular-health:posterior:macula",
+    "ocular-health:posterior:vessels",
     "ocular-health:posterior:periphery",
   ]);
   assert.equal(posterior.filter((definition) => !definition.allowDiagnosisMapping)
@@ -1237,10 +1242,10 @@ test("OH-2b Vessels seeds and round-trips the per-eye A/V ratio grade on normal 
   assert.ok(grade?.localCode);
   assert.equal(grade.display, "A/V ratio");
   assert.deepEqual(grade.options?.map((option) => [option.code, option.display, option.active]), [
-    ["2:3", "2:3", true],
-    ["1:2", "1:2", true],
-    ["1:3", "1:3", true],
-    ["1:4", "1:4", true],
+    ["2-3", "2:3", true],
+    ["1-2", "1:2", true],
+    ["1-3", "1:3", true],
+    ["1-4", "1:4", true],
   ]);
 
   const captured = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [vessels]), {
@@ -1250,14 +1255,14 @@ test("OH-2b Vessels seeds and round-trips the per-eye A/V ratio grade on normal 
       patientReference: "Patient/p-vessels-grade",
       encounterReference: "Encounter/e-vessels-grade",
       eyes: {
-        OD: { state: "normal", customFields: [{ code: grade.localCode, value: "2:3" }] },
-        OS: { state: "abnormal", customFields: [{ code: grade.localCode, value: "1:2" }] },
+        OD: { state: "normal", customFields: [{ code: grade.localCode, value: "2-3" }] },
+        OS: { state: "abnormal", customFields: [{ code: grade.localCode, value: "1-2" }] },
       },
     },
   });
   assert.equal(captured.status, 200, JSON.stringify(captured.body));
-  assert.equal(component(fhir.observations[0], `OD_${grade.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "2:3");
-  assert.equal(component(fhir.observations[1], `OS_${grade.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "1:2");
+  assert.equal(component(fhir.observations[0], `OD_${grade.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "2-3");
+  assert.equal(component(fhir.observations[1], `OS_${grade.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "1-2");
 
   const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, [vessels]), {
     authHeader: AUTH,
@@ -1312,7 +1317,7 @@ test("anterior structure grades exclude retired LOCS III fields and round-trip t
     "Grade 0 (closed)",
   ]);
   assert.deepEqual(locs, []);
-  assert.equal(anteriorChamber.allowDiagnosisMapping, false);
+  assert.equal(anteriorChamber.allowDiagnosisMapping, true);
   assert.equal(lens.allowDiagnosisMapping, true);
   assert.equal(anteriorChamber.notBillReady && tearFilm.notBillReady && lens.notBillReady, true);
 

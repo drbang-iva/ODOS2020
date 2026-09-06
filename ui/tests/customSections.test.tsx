@@ -3097,16 +3097,16 @@ test("Vessels defaults A/V ratio to 2:3, saves a per-eye grade, and does not POS
     });
     const selects = renderer.root.findAllByType(OdosSelect);
     assert.equal(selects.length, 2);
-    assert.deepEqual(selects.map((select) => select.props.value), ["2:3", "2:3"]);
+    assert.deepEqual(selects.map((select) => select.props.value), ["2-3", "2-3"]);
     const normalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Normal");
     act(() => normalButtons[0]!.props.onClick());
-    act(() => selects[0]!.props.onChange("1:2"));
+    act(() => selects[0]!.props.onChange("1-2"));
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health");
     assert.ok(saveButton);
     await act(async () => saveButton.props.onClick());
     assert.equal(posts.length, 1);
     assert.match(posts[0]!, /CUSTOM_GRADE_A_V_RATIO/);
-    assert.match(posts[0]!, /1:2/);
+    assert.match(posts[0]!, /1-2/);
     await act(async () => saveButton.props.onClick());
     assert.equal(posts.length, 1);
   } finally {
@@ -4080,7 +4080,8 @@ function posteriorDefinitions() {
       localCode: "CUSTOM_GRADE_A_V_RATIO",
       display: "A/V ratio",
       valueType: "select" as const,
-      options: ["2:3", "1:2", "1:3", "1:4"].map((value) => ({ code: value, display: value, active: true })),
+      options: [["2-3", "2:3"], ["1-2", "1:2"], ["1-3", "1:3"], ["1-4", "1:4"]]
+        .map(([code, display]) => ({ code, display, active: true })),
       order: 1,
       active: true,
     }] : [])],
