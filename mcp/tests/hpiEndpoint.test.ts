@@ -523,12 +523,13 @@ test("HPI definition retires the eight-textarea fields and retains extensible Re
   assert.equal(definition.terminologyStatus.status, "MANDATE-14-DEFERRED");
 });
 
-test("HPI definition publishes the patient-scoped Ocular, Medical, and Social History declarations", async () => {
+test("HPI definition publishes the patient-scoped Ocular, Medical, Family, and Social History declarations", async () => {
   const result = await handleHpiDefinitionRequest(fixture().deps, { authHeader: AUTH });
   const body = result.body as { subjectSections: Array<{ key: string; subjectScope: string }> };
   assert.deepEqual(body.subjectSections.map((section) => [section.key, section.subjectScope]), [
     ["ocular-history", "patient"],
     ["medical-history", "patient"],
+    ["family-history", "patient"],
     ["social-history", "patient"],
   ]);
 });
@@ -610,6 +611,56 @@ test("patient-scoped Ocular History saves without a synthetic complaint id", asy
   const answer = parseHistoryAnswerObservation(persisted);
   assert.equal(answer.subjectScope, "patient");
   assert.equal("complaintId" in answer, false);
+});
+
+test("Family History saves one condition with positive and denied relatives through the section-aware gate", async () => {
+  const answer = {
+    id: "family-e1-conditions-glaucoma",
+    subjectScope: "patient" as const,
+    templateKey: "family-history",
+    sectionId: "conditions",
+    optionCode: "glaucoma",
+    value: { kind: "relations" as const, positive: ["father", "brother"], negative: ["mother"] },
+  };
+  const setup = fixture("provider", false);
+  const result = await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", templateAnswers: [answer] },
+  });
+
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const persisted = setup.observations.find((observation) => observation.code.coding?.some((coding) => coding.code === "history-template-answer"));
+  assert.ok(persisted);
+  assert.deepEqual(parseHistoryAnswerObservation(persisted), {
+    ...answer,
+    observationReference: `Observation/${persisted.id}`,
+  });
+});
+
+test("Family History rejects wrong section kinds, unknown or repeated relations, and conditions with no marked relatives", async () => {
+  const base = {
+    id: "family-e1-conditions-glaucoma",
+    subjectScope: "patient" as const,
+    templateKey: "family-history",
+    sectionId: "conditions",
+    optionCode: "glaucoma",
+  };
+  const cases = [
+    { answer: { ...base, value: { kind: "tri-state", status: "positive" } }, error: /wrong value type for family_conditions/ },
+    { answer: { ...base, sectionId: "notes", optionCode: undefined, value: { kind: "relations", positive: ["father"], negative: [] } }, error: /wrong value type for text/ },
+    { answer: { ...base, value: { kind: "relations", positive: ["guardian"], negative: [] } }, error: /unknown family relation/ },
+    { answer: { ...base, value: { kind: "relations", positive: ["father", "father"], negative: [] } }, error: /value is invalid/ },
+    { answer: { ...base, value: { kind: "relations", positive: [], negative: ["mother", "mother"] } }, error: /value is invalid/ },
+    { answer: { ...base, value: { kind: "relations", positive: [], negative: [] } }, error: /at least one family relation/ },
+  ];
+  for (const row of cases) {
+    const result = await handleHpiCaptureRequest(fixture("provider", false).deps, {
+      authHeader: AUTH,
+      body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", templateAnswers: [row.answer] },
+    });
+    assert.equal(result.status, 400);
+    assert.match((result.body as { error: string }).error, row.error);
+  }
 });
 
 test("patient-scoped tobacco persists as one catalog-validated selection rather than a tri-state", async () => {

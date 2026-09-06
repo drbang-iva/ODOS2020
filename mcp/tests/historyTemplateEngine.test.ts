@@ -11,6 +11,7 @@ import {
   historyTemplateComplete,
   historySubjectSectionState,
   renderDeclaredComplaintNarrative,
+  renderDeclaredSubjectSummary,
   type HistoryTemplateAnswer,
 } from "../src/clinical-graph/history-template-engine.js";
 
@@ -29,6 +30,7 @@ test("history templates expose the fixed section vocabulary and the Slice 1a com
     "laterality",
     "text",
     "single_select",
+    "family_conditions",
   ]);
   assert.deepEqual(HISTORY_TEMPLATES.map((template) => template.complaint), ["glaucoma", "routine"]);
 });
@@ -82,6 +84,66 @@ test("Medical and Social History are patient-scoped declarations using the decla
   assert.deepEqual(HISTORY_OPTION_CATALOGS.medical_history_allergies, [
     { code: "no-known-drug-allergies", display: "No known drug allergies" },
   ]);
+});
+
+test("Family History declares condition rows and the fourteen slug-only family relations", () => {
+  const family = HISTORY_SUBJECT_SECTIONS.find((section) => section.key === "family-history");
+  assert.ok(family);
+  assert.equal(family.subjectScope, "patient");
+  assert.equal(family.completionAnchor, "conditions");
+  assert.equal(family.summary, "{family_conditions}");
+  assert.equal(family.charted_when, undefined);
+  assert.deepEqual(family.sections, [
+    { id: "conditions", type: "family_conditions", label: "Conditions", catalog: "family_conditions", relations: "family_relations", required: true },
+    { id: "notes", type: "text", label: "Other family history" },
+  ]);
+  assert.deepEqual(HISTORY_OPTION_CATALOGS.family_conditions, [
+    { code: "glaucoma", display: "Glaucoma" },
+    { code: "diabetes", display: "Diabetes" },
+  ]);
+  assert.deepEqual(HISTORY_OPTION_CATALOGS.family_relations, [
+    { code: "mother", display: "Mother" },
+    { code: "father", display: "Father" },
+    { code: "sister", display: "Sister" },
+    { code: "brother", display: "Brother" },
+    { code: "daughter", display: "Daughter" },
+    { code: "son", display: "Son" },
+    { code: "uncle", display: "Uncle" },
+    { code: "aunt", display: "Aunt" },
+    { code: "nephew", display: "Nephew" },
+    { code: "niece", display: "Niece" },
+    { code: "grandmother", display: "Grandmother" },
+    { code: "grandfather", display: "Grandfather" },
+    { code: "grandson", display: "Grandson" },
+    { code: "granddaughter", display: "Granddaughter" },
+  ]);
+});
+
+test("Family History summary names positive relatives while retaining denied and unasked states in the answer", () => {
+  const family = HISTORY_SUBJECT_SECTIONS.find((section) => section.key === "family-history")!;
+  const answers: HistoryTemplateAnswer[] = [
+    {
+      id: "family-e1-conditions-glaucoma",
+      subjectScope: "patient",
+      templateKey: "family-history",
+      sectionId: "conditions",
+      optionCode: "glaucoma",
+      value: { kind: "relations", positive: ["father", "brother"], negative: ["mother"] },
+    },
+    {
+      id: "family-e1-conditions-diabetes",
+      subjectScope: "patient",
+      templateKey: "family-history",
+      sectionId: "conditions",
+      optionCode: "diabetes",
+      value: { kind: "relations", positive: ["mother"], negative: [] },
+    },
+  ];
+
+  assert.equal(historySubjectSectionState(family, answers), "charted");
+  assert.equal(renderDeclaredSubjectSummary(family, answers, { encounterStart: "2026-09-05T12:00:00Z", lastReviewed: [] }),
+    "Glaucoma — father, brother · Diabetes — mother");
+  assert.deepEqual(answers[0]?.value, { kind: "relations", positive: ["father", "brother"], negative: ["mother"] });
 });
 
 test("patient-section completeness distinguishes not started, started, and charted", () => {

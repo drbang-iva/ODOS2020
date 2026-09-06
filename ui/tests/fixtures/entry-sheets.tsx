@@ -185,10 +185,41 @@ window.fetch = async (input, init) => {
       ],
       narrative: "declaration-owned",
     }],
+    subjectSections: [{
+      key: "family-history",
+      label: "Family History",
+      subjectScope: "patient",
+      completionAnchor: "conditions",
+      summary: "{family_conditions}",
+      sections: [
+        { id: "conditions", type: "family_conditions", label: "Conditions", catalog: "family_conditions", relations: "family_relations", required: true },
+        { id: "notes", type: "text", label: "Other family history" },
+      ],
+    }],
     catalogs: {
       glaucoma_presentations: [{ code: "follow-up", display: "Follow Up" }],
       glaucoma_symptoms: [{ code: "ocular-pain", display: "ocular pain" }],
       glaucoma_workup: [{ code: "iop-check", display: "IOP check" }],
+      family_conditions: [
+        { code: "glaucoma", display: "Glaucoma" },
+        { code: "diabetes", display: "Diabetes" },
+      ],
+      family_relations: [
+        { code: "mother", display: "Mother" },
+        { code: "father", display: "Father" },
+        { code: "sister", display: "Sister" },
+        { code: "brother", display: "Brother" },
+        { code: "daughter", display: "Daughter" },
+        { code: "son", display: "Son" },
+        { code: "uncle", display: "Uncle" },
+        { code: "aunt", display: "Aunt" },
+        { code: "nephew", display: "Nephew" },
+        { code: "niece", display: "Niece" },
+        { code: "grandmother", display: "Grandmother" },
+        { code: "grandfather", display: "Grandfather" },
+        { code: "grandson", display: "Grandson" },
+        { code: "granddaughter", display: "Granddaughter" },
+      ],
     },
   });
   if (url.endsWith("/clinical-graph/encounters/test/hpi")) return Response.json({ answers: [], templateNarratives: [] });
