@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit --skipLibCheck && vite build",
-    "test": "node --import tsx --test tests/**/*.test.tsx",
+    "test": "node --import tsx --test --test-concurrency=1 tests/**/*.test.tsx",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -22,6 +22,7 @@ import {
   type OdosAppointmentStatus,
 } from "./scheduling";
 import type { AppointmentChangeInput } from "./scheduling-store";
+import type { DestructiveConfirmSpec } from "./encounter-void";
 
 export interface AppointmentModalDraft {
   patient?: { reference: string; display?: string };
@@ -229,12 +230,17 @@ export function withDateAndTime(
 export async function confirmDoubleBookAndRetry(
   err: unknown,
   retry: () => Promise<void>,
+  confirmDestructive: (spec: DestructiveConfirmSpec) => Promise<boolean>,
 ): Promise<boolean> {
   const message = err instanceof Error ? err.message : String(err);
   if (!message.includes("Pass allowDoubleBook to overbook")) {
     return false;
   }
-  const ok = window.confirm(`${message}\n\nBook anyway (double-book)?`);
+  const ok = await confirmDestructive({
+    title: message,
+    consequence: "Book anyway (double-book)?",
+    confirmLabel: "Book anyway",
+  });
   if (!ok) {
     return false;
   }

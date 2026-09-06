@@ -17,6 +17,7 @@ import { EditEntriesToggle, RemoveValueButton, SectionEditingProvider } from "..
 import { EncounterEditContext, type EncounterClearFailedDetail } from "../src/components/charting/encounter-edit-context";
 import { ExamEntrySheet } from "../src/components/charting/ExamEntrySheet";
 import { RefractionSection } from "../src/components/charting/RefractionSection";
+import { ConfirmDestructiveProvider } from "../src/components/charting/ConfirmDestructive";
 import {
   SIGNED_ENCOUNTER_TOOLTIP,
   clearEncounterConfirmSpec,
@@ -70,7 +71,7 @@ test("isClosedEncounterStatus mirrors the server's sign gate", () => {
   assert.equal(isClosedEncounterStatus(undefined), false);
 });
 
-test("confirm copy names the count and, for the visit, every section (the window.confirm fallback reads title + consequence)", () => {
+test("confirm copy names the count and, for the visit, every section", () => {
   assert.equal(
     fallbackMessage(clearSectionConfirmSpec("Pupils", 6)),
     "Clear Pupils? 6 values recorded this visit. You can undo until the chart is signed.",
@@ -118,7 +119,7 @@ test("Clear section previews the count, confirms with it, voids, and reports the
     assert.equal(button.props.disabled, undefined);
     assert.deepEqual(harness.requests, [], "nothing is fetched until the clinician acts");
     harness.confirmAnswer = true;
-    await act(async () => { await button.props.onClick(); });
+    await invokeWithConfirmation(harness, () => button.props.onClick());
     assert.deepEqual(harness.confirmations, [fallbackMessage(clearSectionConfirmSpec("Pupils", 6))]);
     assert.deepEqual(harness.requests.map((request) => request.body), [
       { scope: "section", sectionKey: "entrance:pupils", preview: true },
@@ -139,7 +140,7 @@ test("Clear section does nothing when the clinician declines the confirm", async
   );
   try {
     harness.confirmAnswer = false;
-    await act(async () => { await findClearButton(harness.renderer.root, "Clear Pupils")!.props.onClick(); });
+    await invokeWithConfirmation(harness, () => findClearButton(harness.renderer.root, "Clear Pupils")!.props.onClick());
     assert.equal(harness.confirmations.length, 1);
     assert.equal(harness.requests.filter((request) => !(request.body as { preview?: boolean }).preview).length, 0);
     assert.equal(clearedCount, 0);
@@ -167,7 +168,7 @@ test("a failed Clear section keeps the server's error on screen AND tells the en
   );
   try {
     harness.confirmAnswer = true;
-    await act(async () => { await findClearButton(harness.renderer.root, "Clear Pupils")!.props.onClick(); });
+    await invokeWithConfirmation(harness, () => findClearButton(harness.renderer.root, "Clear Pupils")!.props.onClick());
     assert.equal(clearedCount, 0, "a failed void never reports as cleared");
     assert.equal(failures.length, 1, "the encounter is told exactly once that the clear failed");
     assert.equal(failures[0]?.scope, "section");
@@ -186,7 +187,7 @@ test("a failed Clear everything keeps the server's error on screen AND tells the
   );
   try {
     harness.confirmAnswer = true;
-    await act(async () => { await findClearButton(harness.renderer.root, "Clear chart")!.props.onClick(); });
+    await invokeWithConfirmation(harness, () => findClearButton(harness.renderer.root, "Clear chart")!.props.onClick());
     assert.equal(clearedCount, 0);
     assert.equal(failures.length, 1);
     assert.equal(failures[0]?.scope, "encounter");
@@ -252,11 +253,11 @@ test("Remove confirms only when typed detail would be lost, and is reachable onl
     await act(async () => { await plain.props.onClick(); });
     assert.deepEqual(harness.confirmations, []);
     harness.confirmAnswer = false;
-    await act(async () => { await detailed.props.onClick(); });
+    await invokeWithConfirmation(harness, () => detailed.props.onClick());
     assert.deepEqual(harness.confirmations, ["Remove Reactivity · OS? Its note is discarded. You can undo until the chart is signed."]);
     assert.deepEqual(removed, ["plain"]);
     harness.confirmAnswer = true;
-    await act(async () => { await detailed.props.onClick(); });
+    await invokeWithConfirmation(harness, () => detailed.props.onClick());
     assert.deepEqual(removed, ["plain", "detailed"]);
   } finally {
     harness.restore();
@@ -337,7 +338,7 @@ test("the entry sheet chrome carries Clear chart left of Back to exam overview, 
     assert.equal(clearAll.props["data-entry-sheet-chrome"], true);
     assert.equal(clearAll.props.disabled, undefined);
     harness.confirmAnswer = true;
-    await act(async () => { await clearAll.props.onClick(); });
+    await invokeWithConfirmation(harness, () => clearAll.props.onClick());
     assert.deepEqual(harness.confirmations, [
       "Clear this chart? Pupils 6 · Refraction 4 · Complaints 2 — 31 values recorded this visit. You can undo until the chart is signed.",
     ]);
@@ -415,17 +416,17 @@ test("count honesty: Dilation section preview, confirm, void result, section sub
   try {
     await act(async () => {
       renderer = create(
-        <ClearSectionButton
+        <ConfirmDestructiveProvider><ClearSectionButton
           encounterReference={ENCOUNTER}
           sectionKey="entrance:dilation"
           label="Dilation"
           hasRecorded
           onCleared={(result) => cleared.push(result as VoidBody)}
-        />,
+        /></ConfirmDestructiveProvider>,
       );
     });
     const clear = renderer.root.findByType("button");
-    await act(async () => { await clear.props.onClick(); await flush(); });
+    await invokeConfirmation(renderer, () => clear.props.onClick(), true, confirmations);
 
     assert.equal(responses.length, 2, "one preview and one void response");
     const [preview, result] = responses;
@@ -474,15 +475,15 @@ test("count honesty: whole-visit preview, confirm, void result, section subtotal
   try {
     await act(async () => {
       renderer = create(
-        <ClearEncounterButton
+        <ConfirmDestructiveProvider><ClearEncounterButton
           encounterReference={ENCOUNTER}
           encounterStatus="in-progress"
           onCleared={(result) => cleared.push(result as VoidBody)}
-        />,
+        /></ConfirmDestructiveProvider>,
       );
     });
     const clear = renderer.root.findByType("button");
-    await act(async () => { await clear.props.onClick(); await flush(); });
+    await invokeConfirmation(renderer, () => clear.props.onClick(), true, confirmations);
 
     assert.equal(responses.length, 2, "one preview and one void response");
     const [preview, result] = responses;
@@ -553,9 +554,9 @@ test("guard 4: removing the only refraction block voids its saved Observations o
   try {
     await act(async () => {
       renderer = create(
-        <EncounterEditContext.Provider value={{ encounterStatus: "in-progress" }}>
+        <ConfirmDestructiveProvider><EncounterEditContext.Provider value={{ encounterStatus: "in-progress" }}>
           <RefractionSection patientReference="Patient/synthetic" encounterReference="Encounter/current" onSaved={() => undefined} />
-        </EncounterEditContext.Provider>,
+        </EncounterEditContext.Provider></ConfirmDestructiveProvider>,
       );
       await flush();
     });
@@ -574,7 +575,7 @@ test("guard 4: removing the only refraction block voids its saved Observations o
     assert.equal(statuses["Observation/r-od"], "preliminary");
 
     // Remove the only block: the server must see the void.
-    await act(async () => { await removeButtons()[0]!.props.onClick(); await flush(); });
+    await invokeConfirmation(renderer, () => removeButtons()[0]!.props.onClick(), true, []);
     assert.deepEqual(voidBodies, [{ scope: "observation", observationReference: ["Observation/r-od", "Observation/r-os"] }]);
     assert.equal(statuses["Observation/r-od"], "entered-in-error");
     assert.equal(statuses["Observation/r-os"], "entered-in-error");
@@ -651,9 +652,9 @@ test("Wearing Rx offers the standard persisted section clear and resets its edit
   try {
     await act(async () => {
       renderer = create(
-        <EncounterEditContext.Provider value={{ encounterStatus: "in-progress" }}>
+        <ConfirmDestructiveProvider><EncounterEditContext.Provider value={{ encounterStatus: "in-progress" }}>
           <WearingSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} />
-        </EncounterEditContext.Provider>,
+        </EncounterEditContext.Provider></ConfirmDestructiveProvider>,
       );
       await flush();
     });
@@ -667,7 +668,7 @@ test("Wearing Rx offers the standard persisted section clear and resets its edit
     assert.equal(source().props.value, "device");
     const clear = renderer.root.findAllByType(ClearSectionButton)[0]?.findByType("button");
     assert.ok(clear, "a persisted Wearing Rx must expose Clear Wearing Rx on reopen");
-    await act(async () => { await clear.props.onClick(); await flush(); });
+    await invokeConfirmation(renderer, () => clear.props.onClick(), true, confirmations);
     assert.deepEqual(voidBodies, [
       { scope: "section", sectionKey: "wearing", preview: true },
       { scope: "section", sectionKey: "wearing", preview: true },
@@ -763,9 +764,11 @@ async function renderInEncounter(element: React.ReactElement, options: {
   let renderer!: ReactTestRenderer;
   await act(async () => {
     renderer = create(
-      <EncounterEditContext.Provider value={{ encounterStatus: options.encounterStatus ?? "in-progress", onClearFailed: options.onClearFailed }}>
-        {element}
-      </EncounterEditContext.Provider>,
+      <ConfirmDestructiveProvider>
+        <EncounterEditContext.Provider value={{ encounterStatus: options.encounterStatus ?? "in-progress", onClearFailed: options.onClearFailed }}>
+          {element}
+        </EncounterEditContext.Provider>
+      </ConfirmDestructiveProvider>,
     );
     await flush();
   });
@@ -782,6 +785,41 @@ async function renderInEncounter(element: React.ReactElement, options: {
       else Reflect.deleteProperty(globalThis, "window");
     },
   };
+}
+
+async function invokeWithConfirmation(
+  harness: Awaited<ReturnType<typeof renderInEncounter>>,
+  action: () => void | Promise<void>,
+): Promise<void> {
+  await invokeConfirmation(harness.renderer, action, harness.confirmAnswer, harness.confirmations);
+}
+
+async function invokeConfirmation(
+  renderer: ReactTestRenderer,
+  action: () => void | Promise<void>,
+  answer: boolean,
+  confirmations: string[],
+): Promise<void> {
+  let pending = Promise.resolve();
+  await act(async () => {
+    pending = Promise.resolve(action());
+    await flush();
+  });
+  const dialog = renderer.root.findAll((node) => node.props.role === "alertdialog")[0];
+  assert.ok(dialog, "the in-app confirmation dialog opens");
+  const title = dialog.findAllByType("h2")[0];
+  const consequence = dialog.findAllByType("p")[0];
+  confirmations.push([title && textOf(title), consequence && textOf(consequence)].filter(Boolean).join(" "));
+  const buttons = dialog.findAllByType("button");
+  const choice = answer
+    ? buttons.find((button) => textOf(button) !== "Keep")
+    : buttons.find((button) => textOf(button) === "Keep");
+  assert.ok(choice, `${answer ? "confirm" : "safe"} dialog action exists`);
+  await act(async () => {
+    choice.props.onClick();
+    await pending;
+    await flush();
+  });
 }
 
 /** Tier 2 reads "Clear" and names its section in `aria-label`; tier 3 reads "Clear chart". */

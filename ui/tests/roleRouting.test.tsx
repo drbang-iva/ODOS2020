@@ -103,7 +103,7 @@ test("cross-side access requires at least one Desk role and one Clinic role", ()
   assert.equal(hasCrossSideAccess([]), false);
 });
 
-test("cross-side users switch between Desk and Clinic in the same tab", () => {
+test("cross-side users switch between Desk and Clinic in the same tab", async () => {
   const roles: PracticeRoleId[] = ["provider", "staff"];
   assert.equal(defaultHomePath(roles), CLINIC_PATH);
 
@@ -121,7 +121,7 @@ test("cross-side users switch between Desk and Clinic in the same tab", () => {
   } as unknown as Window & typeof globalThis;
   Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
   try {
-    openOtherSide(CLINIC_PATH);
+    await openOtherSide(CLINIC_PATH);
     assert.deepEqual(pushed, [CLINIC_PATH]);
     assert.deepEqual(events, ["popstate"]);
   } finally {

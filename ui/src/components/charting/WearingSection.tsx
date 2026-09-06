@@ -64,6 +64,7 @@ interface WearingHistoryResponse {
 
 const EYES: Eye[] = ["OD", "OS"];
 const OPERATOR = "ODOS UI clinical_graph_wearing";
+const WEARING_GRID_COLUMNS = "grid-cols-[54px_124px_124px_120px_124px_120px_100px_repeat(2,minmax(220px,1fr))]";
 
 export function WearingSection({ patientReference, encounterReference, onSaved }: Props) {
   const [definition, setDefinition] = useState<WearingDefinitionResponse | null>(null);
@@ -315,13 +316,13 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
               </div>
 
               <div className="overflow-x-auto">
-                <div className="min-w-[1510px]">
-                  <div className="grid grid-cols-[54px_repeat(4,105px)_110px_100px_repeat(2,minmax(220px,1fr))] gap-2 bg-white/[0.025] px-4 py-2 text-xs uppercase tracking-widest text-white/35">
+                <div className="min-w-[1600px]">
+                  <div className={`grid ${WEARING_GRID_COLUMNS} gap-2 bg-white/[0.025] px-4 py-2 text-xs uppercase tracking-widest text-white/35`}>
                     <div>Eye</div><div>Sphere</div><div>Cylinder</div><div>Axis</div><div>Add</div>
                     <div>Prism</div><div>Base</div><div>Dist VA</div><div>Near VA</div>
                   </div>
                   {EYES.map((eye) => (
-                    <div key={eye} className="grid grid-cols-[54px_repeat(4,105px)_110px_100px_repeat(2,minmax(220px,1fr))] items-center gap-2 border-t border-white/10 px-4 py-3">
+                    <div key={eye} className={`grid ${WEARING_GRID_COLUMNS} items-center gap-2 border-t border-white/10 px-4 py-3`}>
                       <div className="text-sm font-semibold text-white">{eye}</div>
                       <PowerDropdown value={pair[eye].sphere} options={sphereOptions} defaultValue="0.00" onChange={(value) => updateEye(pair.id, eye, { sphere: value })} ariaLabel={`${eye} sphere`} formatOption={formatDiopterOption} />
                       <PowerDropdown value={pair[eye].cylinder} options={cylinderOptions} defaultValue="0.00" onChange={(value) => updateEye(pair.id, eye, { cylinder: value })} ariaLabel={`${eye} cylinder`} formatOption={formatDiopterOption} />

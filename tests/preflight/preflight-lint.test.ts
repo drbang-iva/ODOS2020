@@ -439,6 +439,19 @@ test("v0.55e preflight pass 4 enforces CapabilityStatement claim backing tests a
   assert.equal(mismatchedCount.findings[0]?.code, "audit-event-count-vs-list-consistency");
 });
 
+test("preflight refuses native window.confirm only under UI source", () => {
+  const blocked = runVendorCanonicalShapePass({
+    files: [{ path: "ui/src/components/Unsafe.tsx", text: "window.confirm('Continue?');\n" }],
+  });
+  assert.equal(blocked.status, "hard-block");
+  assert.equal(blocked.findings[0]?.code, "ui-native-window-confirm");
+
+  const testFixture = runVendorCanonicalShapePass({
+    files: [{ path: "ui/tests/native-confirm-probe.tsx", text: "window.confirm('test probe');\n" }],
+  });
+  assert.equal(testFixture.status, "pass");
+});
+
 test("v0.5d preflight aggregate writes structured reports when requested", () => {
   const dir = mkdtempSync(join(tmpdir(), "odos-preflight-"));
   try {

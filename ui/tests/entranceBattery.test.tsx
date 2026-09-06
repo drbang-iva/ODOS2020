@@ -8,6 +8,7 @@ import { customFieldEntries } from "../../mcp/src/clinical-graph/custom-fields";
 import { buildFindingDefinitionSeeds } from "../../mcp/src/clinical-graph/finding-definition-store";
 import { COVER_MAGNITUDES, CoverTestSection } from "../src/components/charting/CoverTestSection";
 import { ClearSectionButton } from "../src/components/charting/ClearControls";
+import { ConfirmDestructiveProvider } from "../src/components/charting/ConfirmDestructive";
 import { CvfSection } from "../src/components/charting/CvfSection";
 import { DiagnosisPicker } from "../src/components/charting/DiagnosisPicker";
 import { DilationSection } from "../src/components/charting/DilationSection";
@@ -705,9 +706,7 @@ test("clearing Dilation leaves the editor unrecorded instead of pre-filling an a
     fields: { agent: { options: [{ code: "tropicamide-1", display: "Tropicamide 1%", active: true }] } },
   };
   const originalFetch = globalThis.fetch;
-  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
   let cleared = false;
-  Object.defineProperty(globalThis, "window", { configurable: true, value: { confirm: () => true } });
   globalThis.fetch = async (input, init) => {
     const url = String(input);
     if (url.includes("/clinical-graph/dilation/history")) {
@@ -729,14 +728,24 @@ test("clearing Dilation leaves the editor unrecorded instead of pre-filling an a
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<DilationSection definition={definition} patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
+      renderer = create(<ConfirmDestructiveProvider><DilationSection definition={definition} patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></ConfirmDestructiveProvider>);
       await flushEffects();
     });
     assert.equal(renderer.root.findAll((node) => node.props.ariaLabel === "Dilation agent 1").length, 1);
     const clear = renderer.root.findAllByType(ClearSectionButton)[0]?.findByType("button");
     assert.ok(clear);
+    let pending = Promise.resolve();
     await act(async () => {
-      await clear.props.onClick();
+      pending = Promise.resolve(clear.props.onClick());
+      await flushEffects();
+    });
+    const dialog = renderer.root.findAll((node) => node.props.role === "alertdialog")[0];
+    assert.ok(dialog);
+    const confirm = dialog.findAllByType("button").find((button) => button.children.join("") !== "Keep");
+    assert.ok(confirm);
+    await act(async () => {
+      confirm.props.onClick();
+      await pending;
       await flushEffects();
     });
     assert.equal(renderer.root.findAll((node) => String(node.props.ariaLabel ?? "").startsWith("Dilation agent ")).length, 0);
@@ -747,8 +756,6 @@ test("clearing Dilation leaves the editor unrecorded instead of pre-filling an a
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;
-    if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
-    else Reflect.deleteProperty(globalThis, "window");
   }
 });
 

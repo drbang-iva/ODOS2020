@@ -103,6 +103,8 @@ interface BlockPayload {
 
 const EYES: Eye[] = ["OD", "OS"];
 const OPERATOR = "ODOS UI clinical_graph_refraction";
+const REFRACTION_GRID_COLUMNS = "grid-cols-[54px_124px_124px_120px_124px_repeat(3,minmax(220px,1fr))_100px]";
+const REFRACTION_PRISM_GRID_COLUMNS = "grid-cols-[54px_124px_124px_120px_124px_120px_100px_repeat(3,minmax(220px,1fr))_100px]";
 
 export function RefractionSection({ patientReference, encounterReference, onSaved }: Props) {
   const [definition, setDefinition] = useState<RefractionDefinitionResponse | null>(null);
@@ -493,14 +495,14 @@ export function RefractionSection({ patientReference, encounterReference, onSave
               </div>
 
               <div className="overflow-x-auto">
-                <div className={block.prismEnabled ? "min-w-[1510px]" : "min-w-[1320px]"}>
-                  <div className={`grid ${block.prismEnabled ? "grid-cols-[54px_repeat(4,105px)_110px_100px_repeat(3,minmax(220px,1fr))_100px]" : "grid-cols-[54px_repeat(4,105px)_repeat(3,minmax(220px,1fr))_100px]"} gap-2 bg-white/[0.025] px-4 py-2 text-xs uppercase tracking-widest text-white/35`}>
+                <div className={block.prismEnabled ? "min-w-[1600px]" : "min-w-[1400px]"}>
+                  <div className={`grid ${block.prismEnabled ? REFRACTION_PRISM_GRID_COLUMNS : REFRACTION_GRID_COLUMNS} gap-2 bg-white/[0.025] px-4 py-2 text-xs uppercase tracking-widest text-white/35`}>
                     <div>Eye</div><div>Sphere</div><div>Cylinder</div><div>Axis</div><div>Add</div>
                     {block.prismEnabled && <><div>Prism</div><div>Base</div></>}
                     <div>Dist VA</div><div>Near VA</div><div>Dist PH</div><div />
                   </div>
                   {EYES.map((eye) => (
-                    <div key={eye} className={`grid ${block.prismEnabled ? "grid-cols-[54px_repeat(4,105px)_110px_100px_repeat(3,minmax(220px,1fr))_100px]" : "grid-cols-[54px_repeat(4,105px)_repeat(3,minmax(220px,1fr))_100px]"} items-center gap-2 border-t border-white/10 px-4 py-3`}>
+                    <div key={eye} className={`grid ${block.prismEnabled ? REFRACTION_PRISM_GRID_COLUMNS : REFRACTION_GRID_COLUMNS} items-center gap-2 border-t border-white/10 px-4 py-3`}>
                       <div className="text-sm font-semibold text-white">{eye}</div>
                       {(["sphere", "cylinder", "add"] as const).slice(0, 2).map((field) => (
                         <PowerDropdown

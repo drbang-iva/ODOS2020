@@ -4,14 +4,14 @@ import type { DestructiveConfirmSpec } from "../../lib/encounter-void";
 
 /**
  * The one place alert colour appears in the pre-finalization delete (§3): the confirm button of
- * this dialog. `window.confirm` cannot carry a red button, rename "OK", or put focus on the safe
+ * this dialog. A browser-native confirm cannot carry a red button, rename "OK", or put focus on the safe
  * choice, so every clear and every detail-losing remove confirms here instead.
  *
  * `ConfirmDestructiveProvider` mounts once per charting scene. `useConfirmDestructive()` hands a
  * surface `confirm(spec)`, which resolves `true` only when the clinician presses the confirm
- * button. Escape, the backdrop, and Keep all resolve `false`. Outside a provider (unit tests, any
- * scene that has not mounted one) the hook falls back to `window.confirm`, and to `false` when
- * even that is absent — a destructive action without a confirm surface is refused, never assumed.
+ * button. Escape, the backdrop, and Keep all resolve `false`. Outside a provider, the hook refuses
+ * the destructive action. Development builds also report the missing provider so the wiring gap
+ * is found before release.
  */
 
 export type ConfirmDestructive = (spec: DestructiveConfirmSpec) => Promise<boolean>;
@@ -49,11 +49,11 @@ export function ConfirmDestructiveProvider({ children }: { children: ReactNode }
   );
 }
 
-/** Refuses when nothing can ask: no provider, no `window.confirm` → `false`. */
-export const fallbackConfirmDestructive: ConfirmDestructive = async (spec) =>
-  typeof window !== "undefined" && typeof window.confirm === "function"
-    ? window.confirm(`${spec.title} ${spec.consequence}`)
-    : false;
+/** A missing provider cannot safely approve a destructive action. */
+export const fallbackConfirmDestructive: ConfirmDestructive = async (spec) => {
+  if (import.meta.env?.DEV) console.error(`ConfirmDestructiveProvider is missing for: ${spec.title}`);
+  return false;
+};
 
 export function useConfirmDestructive(): ConfirmDestructive {
   return useContext(ConfirmDestructiveContext) ?? fallbackConfirmDestructive;

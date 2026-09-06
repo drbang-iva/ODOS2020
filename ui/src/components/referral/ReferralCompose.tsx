@@ -20,6 +20,7 @@ import {
   type ReferralIncludeList,
   type ReferralPriority,
 } from "./referral-api";
+import { useConfirmDestructive } from "../charting/ConfirmDestructive";
 import { OdosChips } from "../inputs/OdosChips";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 import { OdosWheel } from "../inputs/OdosWheel";
@@ -70,6 +71,7 @@ export function ReferralCompose({
   api = referralApi,
   loadContext = loadComposeContext,
 }: Props) {
+  const confirmDestructive = useConfirmDestructive();
   const patientId = patientReference.replace(/^Patient\//, "");
   const [includeList, setIncludeList] = useState<ReferralIncludeList>(SYSTEM_DEFAULTS);
   const [recent, setRecent] = useState<ReferralConsultant[]>([]);
@@ -276,7 +278,11 @@ export function ReferralCompose({
 
   async function regenerate(confirmDiscard = letterTouchedRef.current): Promise<void> {
     if (!referralRef.current || sent || sendingRef.current) return;
-    if (confirmDiscard && !window.confirm("Regenerate this letter and discard your edits?")) return;
+    if (confirmDiscard && !await confirmDestructive({
+      title: "Regenerate this letter and discard your edits?",
+      consequence: "",
+      confirmLabel: "Regenerate",
+    })) return;
     setBusy("regenerate");
     setError(undefined);
     try {
@@ -294,7 +300,11 @@ export function ReferralCompose({
 
   async function chooseTemplate(nextTemplateId: string): Promise<void> {
     if (sent || sendingRef.current || nextTemplateId === templateId) return;
-    if (letterTouchedRef.current && !window.confirm("Change templates and discard your letter edits?")) return;
+    if (letterTouchedRef.current && !await confirmDestructive({
+      title: "Change templates and discard your letter edits?",
+      consequence: "",
+      confirmLabel: "Change template",
+    })) return;
     setTemplateId(nextTemplateId);
     if (!referralRef.current) return;
     setBusy("template");

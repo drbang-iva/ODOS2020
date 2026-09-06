@@ -31,7 +31,7 @@ export const EXAM_ENTRY_SHEET_CONFIG = {
   prescription: { title: "Plan · Prescriptions", layout: "paired-row-form" },
 } as const;
 
-// Refraction stays full-page until its 1320px editor has a stacked composition. It records OD/OS acuity only; OU acuity is deferred.
+// Refraction stays full-page until its 1400px editor has a stacked composition. It records OD/OS acuity only; OU acuity is deferred.
 // Eye Growth stays full-page because its imported axial-growth chart creates a 1550px sheet composition.
 
 export type ExamEntrySheetSectionId = keyof typeof EXAM_ENTRY_SHEET_CONFIG;
