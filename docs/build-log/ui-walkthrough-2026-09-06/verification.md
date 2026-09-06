@@ -31,7 +31,7 @@ Greptile's first review found that timestamp-only grouping could combine indepen
 
 The next reviews established that neither FHIR result order nor a process-local counter can prove which distinct capture is later across a restart or multiple workers. The strengthened regression was RED at 0/1 because the endpoint returned HTTP 200 for that ambiguous state. History now returns HTTP 409 when the latest recording instant contains multiple capture IDs or mixes identified and legacy rows, leaving the UI disabled instead of loading a potentially stale prescription. The guard passes 1/1; deleting the refusal restores the unsafe HTTP 200 and fails 0/1. The disposable Medplum proof also saves two captures at one recording timestamp and confirms the explicit 409 response.
 
-The final review identified the all-legacy form of the same ambiguity. Two equal-time legacy Observations have no durable evidence that they came from one multi-pair capture rather than two separate saves. Its guard was RED at 0/1 with HTTP 200, and now passes 1/1 with HTTP 409; deleting only the legacy clause reproduces the unsafe 200. A single legacy Observation remains readable.
+The follow-up review showed why the all-legacy case cannot use that refusal: the former writer represented one valid multi-pair save as multiple same-time Observations with no capture ID. The legacy compatibility guard was RED at 0/1 because that ordinary saved prescription returned HTTP 409; it now passes 1/1 and reopens both pairs. Separate legacy saves in the same millisecond are data-identical and cannot be distinguished retrospectively. All current writes carry capture identity and refuse identified or mixed collisions.
 
 ## Live synthetic persistence proof
 

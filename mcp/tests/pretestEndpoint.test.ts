@@ -573,12 +573,10 @@ test("Wearing history refuses distinct captures that share the latest recording 
   assert.match(String((history.body as { error: string }).error), /same recording time/);
 });
 
-test("Wearing history refuses multiple equal-time legacy rows without capture identity", async () => {
+test("Wearing history keeps a legacy multi-pair capture readable without capture identity", async () => {
   const { created, deps: d } = deps();
   await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, pairs: [
     { eyeglassType: "single_vision_distance", OD: { sphere: -2 } },
-  ] } });
-  await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, pairs: [
     { eyeglassType: "progressives", OD: { sphere: -3 } },
   ] } });
   for (const entry of created) {
@@ -589,8 +587,11 @@ test("Wearing history refuses multiple equal-time legacy rows without capture id
 
   const { handleWearingHistoryRequest } = await import("../src/clinical-graph/pretest-endpoint.js");
   const history = await handleWearingHistoryRequest(d, { authHeader: AUTH, query: BODY });
-  assert.equal(history.status, 409);
-  assert.match(String((history.body as { error: string }).error), /same recording time/);
+  assert.equal(history.status, 200);
+  assert.deepEqual(
+    (history.body as { pairs: Array<{ eyeglassType: string }> }).pairs.map((pair) => pair.eyeglassType),
+    ["single_vision_distance", "progressives"],
+  );
 });
 
 test("P2 Wearing left-at-home history stays distinct from an empty unsaved form", async () => {
