@@ -878,8 +878,9 @@ test("ocular-health ledger diagnoses never become more globally unreachable", as
   }
   const unreachable = ocularCatalogRows.filter((row) => !reachable.has(row.stableKey));
 
-  // Baseline: 45 on origin/main a5b6b41869070ea6a97656aefd17907760a7421b; it may fall, never rise.
-  assert.ok(unreachable.length <= 45, `Unreachable ocular-health ledger rows rose to ${unreachable.length}: ${unreachable.map((row) => row.stableKey).join(", ")}`);
+  // Pre-slice: 45 at origin/main a5b6b41869070ea6a97656aefd17907760a7421b; this slice achieved 38.
+  // Tighten this ceiling whenever the count falls so unreachable rows may never rise again.
+  assert.ok(unreachable.length <= 38, `Unreachable ocular-health ledger rows rose to ${unreachable.length}: ${unreachable.map((row) => row.stableKey).join(", ")}`);
 });
 
 test("unspecified ocular diagnosis keys never surface with qualifiers unset or set", async () => {
