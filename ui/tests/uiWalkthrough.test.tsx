@@ -44,13 +44,19 @@ async function assertReadable(input: Locator) {
   assert.equal(geometry.scrollLeft, 0, "the whole number must be visible without internal scrolling");
 }
 
+async function newWalkthroughPage(height = 1000) {
+  const page = await browser.newPage({ viewport: { width: 1440, height } });
+  page.setDefaultTimeout(5000);
+  page.setDefaultNavigationTimeout(15_000);
+  return page;
+}
+
 for (const [section, label, typed] of [
   ["wearing", "OD axis", "120"],
   ["auto-refraction", "OD auto-refraction axis", "175"],
 ] as const) {
   test(`P1 ${section}: continuous axis typing displays every digit and retains it on blur`, { timeout: 30_000 }, async () => {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-    page.setDefaultTimeout(5000);
+    const page = await newWalkthroughPage();
     try {
       await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=${section}`, { waitUntil: "networkidle" });
       const input = page.getByRole("combobox", { name: label, exact: true });
@@ -66,8 +72,7 @@ for (const [section, label, typed] of [
 }
 
 test("P1 refraction: Wearing pull displays the supplied 180 axis without keystrokes", { timeout: 30_000 }, async () => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(5000);
+  const page = await newWalkthroughPage();
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=refraction&walkthrough=1`, { waitUntil: "networkidle" });
     await page.getByRole("combobox", { name: "Pull values into refraction 1", exact: true }).click();
@@ -80,8 +85,7 @@ test("P1 refraction: Wearing pull displays the supplied 180 axis without keystro
 });
 
 test("P1 IOP: Enter keeps typed 16 even when scrolling puts another option under the pointer", { timeout: 30_000 }, async () => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(5000);
+  const page = await newWalkthroughPage();
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=iop`, { waitUntil: "networkidle" });
     const input = page.getByRole("combobox", { name: "OD IOP value", exact: true });
@@ -110,8 +114,7 @@ test("P1 IOP: Enter keeps typed 16 even when scrolling puts another option under
 });
 
 test("P3 exam-section summary text fits inside its button alongside the chevron", { timeout: 30_000 }, async () => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  page.setDefaultTimeout(5000);
+  const page = await newWalkthroughPage(900);
   try {
     await page.goto(`${origin}/tests/fixtures/exam-chart-bar-responsive.html`, { waitUntil: "networkidle" });
     const trigger = page.getByTestId("exam-completeness-trigger");
@@ -131,8 +134,7 @@ test("P3 exam-section summary text fits inside its button alongside the chevron"
 });
 
 test("P4 both binocular PD pickers offer whole-millimeter steps centered on 63", { timeout: 30_000 }, async () => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(5000);
+  const page = await newWalkthroughPage();
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=auto-refraction`, { waitUntil: "networkidle" });
     for (const eye of ["distance", "near"]) {
@@ -145,8 +147,7 @@ test("P4 both binocular PD pickers offer whole-millimeter steps centered on 63",
 });
 
 test("P5 Add complaint follows complaint articles and precedes the first History subject section", { timeout: 30_000 }, async () => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(5000);
+  const page = await newWalkthroughPage();
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=hpi`, { waitUntil: "networkidle" });
     const adder = page.getByText("Add complaint", { exact: true }).locator("..");
@@ -167,8 +168,7 @@ test("P5 Add complaint follows complaint articles and precedes the first History
 
 for (const interaction of ["iop", "assessment-search", "assessment-status"] as const) {
   test(`P0 ${interaction}: immediate navigation uses a responsive in-app discard confirmation`, { timeout: 30_000 }, async () => {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-    page.setDefaultTimeout(5000);
+    const page = await newWalkthroughPage();
     const nativeDialogs: string[] = [];
     const blockedStacks: string[] = [];
     page.on("console", (message) => { if (message.text().startsWith("BLOCKED_CONFIRM")) blockedStacks.push(message.text()); });

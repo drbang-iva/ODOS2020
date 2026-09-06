@@ -41,6 +41,8 @@ The browser proof routes the real Wearing component's HTTP requests to the real 
 
 - UI serial suite: `node --import tsx --test --test-concurrency=1 tests/**/*.test.tsx` → 1,258 pass, 0 fail, 0 cancelled, 0 skipped.
 - The standard parallel UI command was run three times and hit existing browser-startup/resource timeouts in `Collect payment` and the chart-bar browser test; both focused files pass (12/12), and the full serial suite is green.
+- The first final-head CI run reached 1,257/1,258 UI passes; the new Wearing navigation guard was the only failure because a 7.7-second Vite navigation exceeded its 5-second navigation timeout. The walkthrough helper now allows 15 seconds for navigation while retaining 5-second interaction waits. In a concurrent run with all seven browser-driven files, all 10 walkthrough guards passed; one existing ROS fixture timed out at its own 5-second wait.
+- The same CI run's MCP suite reached 4,217 pass and 44 skip with one unrelated random Bulk Data ID failure: generated base64url happened to contain standalone `SSN`, which its test rejects but its generator does not. The exact four-test file passed immediately on rerun.
 - MCP full suite with a disposable PostgreSQL instance and `ODOS_ALLOW_UNGATED_MCP=1`: 4,204 pass, 0 fail, 0 cancelled, 57 skipped. The harness recorded 41 live-stack tests as ungated, including live authorization; the flag only makes the exit code reflect executed tests.
 - MCP endpoint/history/route targeted suite after the capture-ID fixback: 43 pass, 0 fail.
 - FHIR read-grant checks: 14 pass, 0 fail.
