@@ -342,6 +342,18 @@ test("Codex is a trusted evaluator and can issue the final verdict", () => {
   assert.equal(decision.evaluator, "Codex");
 });
 
+test("Astra is a trusted evaluator and can issue the final verdict", () => {
+  const decision = evaluate({
+    comments: [comment(marker("Astra", "PASS"))],
+  });
+
+  assert.equal(decision.passed, true);
+  assert.equal(decision.reason, "passing-verdict");
+  assert.equal(decision.evaluator, "Astra");
+  assert.equal(decision.evaluatedHeadSha, CURRENT_HEAD);
+  assert.equal(decision.verdict, "PASS");
+});
+
 test("Codex's versioned and GPT-qualified forms are trusted too", () => {
   for (const evaluator of ["Codex 5.6", "GPT-5.6 Codex", "Codex (GPT-5.6)"]) {
     const decision = evaluate({ comments: [comment(marker(evaluator, "PASS"))] });
@@ -361,8 +373,12 @@ test("Codex's actual gpt-5.6-sol signature passes without an override", () => {
 
 const untrustedSignatures = [
   "Random Model 1",
+  "GPT-5.6 Terra",
+  "Terra",
   "Sonnet 5",
+  "Sonnet",
   "Gemini 3",
+  "Gemini",
   "Codex (Random Model 1)",
   "Codex (gpt-5.6-terra)",
   "Codex (gpt-5.6-sol-extra)",
@@ -405,8 +421,13 @@ exit 99
 `, { mode: 0o700 });
 
   const trustedSignatures = [
+    "Astra",
+    "Fable",
+    "Fable 5",
     "Fable 5.1",
+    "Opus",
     "Opus 5",
+    "Claude Opus 5",
     "Claude Opus 5 (Claude)",
     "Codex",
     "Codex 5.6",
@@ -452,7 +473,7 @@ exit 99
 // sent that evaluation to Opus. Deleting this test would make the untrusted-model branch
 // unreachable and the guard decorative.
 test("an untrusted model still cannot issue the final verdict", () => {
-  for (const evaluator of ["Sonnet 5", "Sonnet", "Gemini 3"]) {
+  for (const evaluator of ["GPT-5.6 Terra", "Terra", "Sonnet 5", "Sonnet", "Gemini 3", "Gemini"]) {
     const decision = evaluate({ comments: [comment(marker(evaluator, "PASS"))] });
     assert.equal(decision.passed, false, `${evaluator} must not be trusted`);
     assert.equal(decision.reason, "untrusted-model");

@@ -8,7 +8,7 @@ const SHA_PATTERN = /^[0-9a-f]{40}$/i;
 // Who is trusted, and why, is decided in performance-od/decisions/ — not restated here.
 // Current: 2026-09-02-eval-gate-trusts-codex.md
 const TRUSTED_MODEL_PATTERN =
-  /^(?:(?:Fable|(?:Claude\s+)?Opus|(?:GPT[-\s]?\d+(?:\.\d+)*\s+)?Codex)(?:\s+\d+(?:\.\d+)*)?(?:\s+\((?:Claude|GPT[-\s]?\d+(?:\.\d+)*)\))?|Codex \(GPT-5\.6-sol\))$/i;
+  /^(?:(?:Fable|(?:Claude\s+)?Opus|(?:GPT[-\s]?\d+(?:\.\d+)*\s+)?Codex)(?:\s+\d+(?:\.\d+)*)?(?:\s+\((?:Claude|GPT[-\s]?\d+(?:\.\d+)*)\))?|Codex \(GPT-5\.6-sol\)|Astra)$/i;
 const FAILING_VERDICTS = new Set(["FAIL", "BLOCKED", "NEEDS-WORK"]);
 const EXPECTED_FORM = [
   "Evaluated-by: Fable 5 — PASS   (also accepted: Opus, Codex, Codex (gpt-5.6-sol))",
