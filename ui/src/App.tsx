@@ -104,6 +104,9 @@ export function App({
   const previousPath = useRef(path);
   const historyIndex = useRef<number | null>(null);
   const restoringCancelledNavigation = useRef(false);
+  const popstateTransitionPending = useRef(false);
+  const concurrentPopstateRestore = useRef<Promise<void>>();
+  const finishConcurrentPopstateRestore = useRef<() => void>();
   if (historyIndex.current === null) {
     historyIndex.current = initializeAppHistory(
       window.history,
@@ -123,21 +126,58 @@ export function App({
         if (restoringCancelledNavigation.current) {
           restoringCancelledNavigation.current = false;
           historyIndex.current = appHistoryIndex(targetState) ?? historyIndex.current;
+          finishConcurrentPopstateRestore.current?.();
+          finishConcurrentPopstateRestore.current = undefined;
+          concurrentPopstateRestore.current = undefined;
           return;
         }
-        if (!await confirmPopstateNavigation(() => confirmUnsavedNavigation())) {
+        if (popstateTransitionPending.current) {
+          if (!concurrentPopstateRestore.current) {
+            concurrentPopstateRestore.current = new Promise<void>((resolve) => {
+              finishConcurrentPopstateRestore.current = resolve;
+            });
+          }
+          restoringCancelledNavigation.current = true;
           const restoring = restoreCancelledHistoryNavigation(
             window.history,
             historyIndex.current ?? 0,
             targetState,
             currentNavigationEntryIndex(),
           );
-          if (restoring) {
+          if (!restoring) {
+            restoringCancelledNavigation.current = false;
+            finishConcurrentPopstateRestore.current?.();
+            finishConcurrentPopstateRestore.current = undefined;
+            concurrentPopstateRestore.current = undefined;
+          }
+          return;
+        }
+        popstateTransitionPending.current = true;
+        try {
+          const targetIndex = appHistoryIndex(targetState) ?? currentNavigationEntryIndex();
+          const accepted = await confirmPopstateNavigation(() => confirmUnsavedNavigation());
+          await concurrentPopstateRestore.current;
+          const currentIndex = appHistoryIndex(window.history.state) ?? currentNavigationEntryIndex();
+          if (!accepted) {
             restoringCancelledNavigation.current = true;
+            const restoring = restoreCancelledHistoryNavigation(
+              window.history,
+              historyIndex.current ?? 0,
+              window.history.state,
+              currentIndex,
+            );
+            if (!restoring) restoringCancelledNavigation.current = false;
             return;
           }
+          if (targetIndex !== undefined && currentIndex !== undefined && targetIndex !== currentIndex) {
+            markProgrammaticNavigationConfirmed();
+            window.history.go(targetIndex - currentIndex);
+            return;
+          }
+          historyIndex.current = targetIndex ?? historyIndex.current;
+        } finally {
+          popstateTransitionPending.current = false;
         }
-        historyIndex.current = appHistoryIndex(targetState) ?? historyIndex.current;
       } else {
         historyIndex.current = appHistoryIndex(window.history.state) ?? historyIndex.current;
       }
