@@ -557,7 +557,7 @@ test("P2 Wearing history selects the latest complete capture, preserves zero, an
   assert.equal(body.pairs[0]!.OD, undefined);
 });
 
-test("Wearing history never combines distinct captures that share a recording timestamp", async () => {
+test("Wearing history selects the later complete capture when recording timestamps match", async () => {
   const { created, deps: d } = deps();
   await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, pairs: [
     { eyeglassType: "single_vision_distance", OD: { sphere: -2 } },
@@ -566,7 +566,6 @@ test("Wearing history never combines distinct captures that share a recording ti
   await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, pairs: [
     { eyeglassType: "progressives", OD: { sphere: -3 } },
   ] } });
-  created.reverse();
 
   const { handleWearingHistoryRequest } = await import("../src/clinical-graph/pretest-endpoint.js");
   const history = await handleWearingHistoryRequest(d, { authHeader: AUTH, query: BODY });

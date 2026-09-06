@@ -27,7 +27,9 @@ All browser data below is synthetic. Browser guards ran in headless Google Chrom
 
 Supplementary mutations also failed as required: deleting the Wearing HTTP route produced 1/1 failure in the route census (`98 !== 99`), and deleting the stale-response check produced 1/1 failure (`-2.00 !== -3.00`). Both mutations were restored before final verification.
 
-Greptile's first review found that timestamp-only grouping could combine independent captures saved in the same millisecond. The added equal-timestamp regression was RED at 0/1 because it reopened all three pairs from two captures. Each save now assigns a stable `WEARING_CAPTURE_ID` to every Observation, and the reader groups by that ID while isolating the legacy timestamp fallback from identified captures. The restored guard passes 1/1; mutating the capture-ID component out returns it to the same 0/1 failure.
+Greptile's first review found that timestamp-only grouping could combine independent captures saved in the same millisecond. The initial equal-timestamp regression was RED at 0/1 because it reopened all three pairs from two captures. Each save now assigns one `WEARING_CAPTURE_ID` to every Observation, and the reader groups by that ID while isolating the legacy timestamp fallback from identified captures. Removing the component returns the guard to the same 0/1 merged-pair failure.
+
+The second review found that unique random IDs still did not say which equal-time capture was later. The strengthened regression was RED at 0/1 because it reopened the older two-pair capture. Capture IDs now begin with a fixed-width microsecond order from Node's epoch-anchored monotonic clock, and equal-date history sorts by that order before grouping. The guard passes 1/1; removing the tie-break reopens the older capture and fails 0/1. The disposable Medplum proof also saves two captures at one recording timestamp and reopens only the later prescription.
 
 ## Live synthetic persistence proof
 

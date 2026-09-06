@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { performance } from "node:perf_hooks";
 import type { Bundle, Observation, ObservationComponent, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
@@ -56,6 +57,7 @@ export interface PretestEndpointResult {
 const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as const;
 const EYES = ["OD", "OS"] as const;
 const SOURCE_TYPES = ["manual", "device"] as const;
+let lastWearingCaptureOrder = 0n;
 
 const wearingEyeSchema = z.object({
   sphere: z.number().optional(),
@@ -253,7 +255,9 @@ export async function handleWearingHistoryRequest(
       && resource.encounter?.reference === parsed.data.encounterReference
       && resource.code.coding?.some((coding) => coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === "wearing_rx")
       ? [resource] : [])
-    .sort((a, b) => Date.parse(observationDate(b)) - Date.parse(observationDate(a)));
+    .sort((a, b) => Date.parse(observationDate(b)) - Date.parse(observationDate(a))
+      || (observationComponentString(b, "WEARING_CAPTURE_ID") ?? "")
+        .localeCompare(observationComponentString(a, "WEARING_CAPTURE_ID") ?? ""));
   const latest = observations[0];
   if (!latest) return { status: 200, body: { pairs: [], leftGlassesAtHome: false } };
   const recordedAt = observationDate(latest);
@@ -310,7 +314,7 @@ export async function handleWearingCaptureRequest(
   }
 
   const recordedAt = deps.now?.() ?? new Date().toISOString();
-  const captureId = `wearing-capture-${randomUUID()}`;
+  const captureId = nextWearingCaptureId();
   const provenance = pretestProvenance(staff.staffReference, recordedAt, parsed.data.sourceType);
   if (parsed.data.leftGlassesAtHome) {
     const capture = capturePretestFinding({
@@ -790,6 +794,13 @@ function wearingComponents(
     pushString(components, `${eye}_NEAR_VA`, `${eye} near VA`, payload.nearVisualAcuity);
   }
   return components;
+}
+
+function nextWearingCaptureId(): string {
+  const candidate = BigInt(Math.floor(performance.timeOrigin * 1000)) + BigInt(Math.floor(performance.now() * 1000));
+  const order = candidate > lastWearingCaptureOrder ? candidate : lastWearingCaptureOrder + 1n;
+  lastWearingCaptureOrder = order;
+  return `wearing-capture-${order.toString().padStart(20, "0")}-${randomUUID()}`;
 }
 
 function autoRefractionComponents(
