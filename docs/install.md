@@ -141,10 +141,9 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `ODOS_INBOUND_FAX_WORKER_ENABLED` | no | Set to `true` to opt in to inbound polling after WestFax is configured; defaults to off. |
 | `ODOS_INBOUND_FAX_WORKER_MS` | no | Inbound polling cadence in milliseconds; defaults to 180,000 (3 minutes), minimum 15,000. |
 
-> **Which password is which — three distinct credentials, easily confused.** Sessions have lost
-> hours to this and one credential leak traced back to it (`performance-od`
-> `decisions/2026-08-02-odos-login-identity-and-two-server-wart.md`,
-> `2026-08-08-odos-login-remediation-pr337-pr338-evals.md`):
+> **Which password is which — three distinct credentials, easily confused.** These three are
+> routinely mistaken for one another, and the failure mode is a confusing authentication error
+> rather than an obvious one:
 >
 > | Credential | Account | Where it works | Used for |
 > |---|---|---|---|
@@ -159,7 +158,7 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 > To run any live-authorization or policy-sync command locally:
 >
 > ```bash
-> read -rs "PW?ODOS admin password: " && echo
+> read -rsp "ODOS admin password: " PW && echo
 > MEDPLUM_ADMIN_EMAIL=drbang@ivaeyecare.com MEDPLUM_ADMIN_PASSWORD="$PW" \
 >   npx tsx scripts/sync-practice-role-policy-rules.ts -- --project <practice-project-id>
 > unset PW
