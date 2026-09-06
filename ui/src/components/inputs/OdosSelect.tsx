@@ -65,6 +65,7 @@ export function OdosSelect<T>(props: OdosSelectProps<T>) {
   const wasOpen = useRef(false);
   const lastCenterValue = useRef(centerValue);
   const typeAhead = useRef("");
+  const keyboardSelection = useRef(false);
   const typeAheadTimer = useRef<ReturnType<typeof setTimeout>>();
   const listboxId = useId();
   const selectedOption = options.find((option) => isEqual(option.value, value));
@@ -120,6 +121,7 @@ export function OdosSelect<T>(props: OdosSelectProps<T>) {
   }, []);
 
   function openAtCenter() {
+    keyboardSelection.current = false;
     setActiveIndex(defaultIndex(selectableOptions, centerValue, isEqual));
     setOpen(true);
   }
@@ -154,17 +156,21 @@ export function OdosSelect<T>(props: OdosSelectProps<T>) {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       moveActive(event.key === "ArrowDown" ? 1 : -1);
+      keyboardSelection.current = true;
     } else if (event.key === "Enter" && open && activeIndex >= 0) {
       event.preventDefault();
-      select(selectableOptions[activeIndex]);
+      if (props.onInputChange && !keyboardSelection.current) setOpen(false);
+      else select(selectableOptions[activeIndex]);
     } else if (event.key === "Escape" && open) {
       event.preventDefault();
       setOpen(false);
     } else if (event.key === "Home" && open) {
       event.preventDefault();
+      keyboardSelection.current = true;
       setActiveIndex(selectableOptions.length ? 0 : -1);
     } else if (event.key === "End" && open) {
       event.preventDefault();
+      keyboardSelection.current = true;
       setActiveIndex(selectableOptions.length - 1);
     } else if (!props.onInputChange && event.key.length === 1 && !event.altKey && !event.ctrlKey && !event.metaKey) {
       if (!open) openAtCenter();
@@ -190,6 +196,7 @@ export function OdosSelect<T>(props: OdosSelectProps<T>) {
             disabled={disabled}
             value={props.serializeValue(value)}
             onChange={(event) => {
+              keyboardSelection.current = false;
               props.onInputChange(props.parseInput(event.target.value));
               if (!open) openAtCenter();
             }}

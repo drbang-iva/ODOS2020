@@ -224,7 +224,7 @@ export function OdosWheel({
           onBlur={commitTypedValue}
           onClick={() => setOpen(true)}
           onKeyDown={handleKeyDown}
-          className="min-h-11 min-w-0 flex-1 bg-transparent px-3 text-sm text-[color:var(--odos-text)] outline-none disabled:opacity-45"
+          className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-sm text-[color:var(--odos-text)] outline-none disabled:opacity-45"
         />
         {unit && <span aria-hidden="true" className="flex min-h-11 items-center px-2 text-xs text-[color:var(--odos-muted)]">{unit}</span>}
         <button

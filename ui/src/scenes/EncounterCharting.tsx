@@ -117,7 +117,11 @@ type EncounterLoadState =
 
 let sidebarExpandedForSession = false;
 
-export function EncounterCharting({ patient, encounterId }: Props) {
+export function EncounterCharting(props: Props) {
+  return <ConfirmDestructiveProvider><EncounterChartingContent {...props} /></ConfirmDestructiveProvider>;
+}
+
+function EncounterChartingContent({ patient, encounterId }: Props) {
   const { config } = useRole();
   const [activeSection, setActiveSection] = useState<ChartSectionId>("va");
   const [statuses, setStatuses] = useState<SectionStatusMap>({});
@@ -245,7 +249,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     // clinician has typed since. Same guard, same question, as leaving the sheet.
     // Ask first, discard only on success: if the undo fails the typed edits stay on screen, so the
     // guard must stay armed for whatever the clinician does next.
-    if (entrySheetSection && !entrySheetGuard.confirmDiscard("Undo will discard unsaved changes in {title}. Continue?")) return;
+    if (entrySheetSection && !(await entrySheetGuard.confirmDiscard("Undo will discard unsaved changes in {title}. Continue?"))) return;
     const result = await undoEncounterVoid(encounterReference, request);
     if (entrySheetSection) entrySheetGuard.resetDirty();
     setUndoLedger(result.ledger);
@@ -806,7 +810,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
 
   return (
     <EncounterEditContext.Provider value={{ encounterStatus: encounter?.status, onCleared: handleEncounterCleared, onClearFailed: handleEncounterClearFailed }}>
-    <ConfirmDestructiveProvider>
+    <>
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
       <EncounterHeader
         patient={patient}
@@ -1231,7 +1235,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         />
       )}
     </div>
-    </ConfirmDestructiveProvider>
+    </>
     </EncounterEditContext.Provider>
   );
 }

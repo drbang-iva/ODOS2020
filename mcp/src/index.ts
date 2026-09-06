@@ -230,7 +230,7 @@ import {
   handleAutoRefractionCaptureRequest,
   handleAutoRefractionDefinitionRequest,
   handleAutoRefractionHistoryRequest,
-  handleWearingCaptureRequest, handleWearingDefinitionRequest,
+  handleWearingCaptureRequest, handleWearingDefinitionRequest, handleWearingHistoryRequest,
   registerPretestVitalsRoutes,
 } from "./clinical-graph/pretest-endpoint.js";
 import {
@@ -7381,6 +7381,20 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
           if (!res.headersSent) {
             res.status(500).json({ error: "Wearing definition route failed" });
           }
+        }
+      });
+
+      app.get("/clinical-graph/wearing/history", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleWearingHistoryRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/wearing/history failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "Wearing history could not be loaded" });
         }
       });
 

@@ -218,7 +218,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   const axisMinimum = refractionFields.axis?.minimum ?? 0;
   const axisMaximum = refractionFields.axis?.maximum ?? 180;
   const axisStep = refractionFields.axis?.step ?? 1;
-  const binocularPdOptions = useMemo(() => numericOptions(undefined, 50, 75, 0.5), []);
+  const binocularPdOptions = useMemo(() => numericOptions(undefined, 50, 75, 1), []);
   const flatKOptions = useMemo(() => numericOptions(keratometryFields.flatK, 30, 60, 0.25), [keratometryFields.flatK]);
   const steepKOptions = useMemo(() => numericOptions(keratometryFields.steepK, 30, 60, 0.25), [keratometryFields.steepK]);
 
@@ -414,7 +414,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
                   <PowerDropdown
                     value={binocularPdDistance}
                     options={binocularPdOptions}
-                    defaultValue="63.00"
+                    defaultValue="63"
                     onChange={(value) => { editorRevisionRef.current += 1; setBinocularPdDistance(value); }}
                     ariaLabel="Binocular PD distance"
                     formatOption={(value) => `${value} mm`}
@@ -425,7 +425,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
                   <PowerDropdown
                     value={binocularPdNear}
                     options={binocularPdOptions}
-                    defaultValue="63.00"
+                    defaultValue="63"
                     onChange={(value) => { editorRevisionRef.current += 1; setBinocularPdNear(value); }}
                     ariaLabel="Binocular PD near"
                     formatOption={(value) => `${value} mm`}

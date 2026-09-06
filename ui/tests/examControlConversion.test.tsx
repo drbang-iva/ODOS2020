@@ -39,7 +39,7 @@ test("Auto-Refraction uses centered PD and K spinners plus plano-centered axis w
   ]) {
     assert.match(html, new RegExp(`role="combobox"[^>]*aria-label="${label}"`));
   }
-  assert.equal((html.match(/data-default="true"[^>]*>63\.00 mm/g) ?? []).length, 2);
+  assert.equal((html.match(/data-default="true"[^>]*>63 mm/g) ?? []).length, 2);
   assert.equal((html.match(/data-default="true"[^>]*>43\.50/g) ?? []).length, 4);
   for (const label of ["OD flat axis", "OD steep axis", "OS flat axis", "OS steep axis"]) {
     assert.match(html, new RegExp(`role="combobox"[^>]*aria-label="${label}"`));

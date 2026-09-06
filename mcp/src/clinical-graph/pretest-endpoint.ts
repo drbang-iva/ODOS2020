@@ -228,6 +228,73 @@ export async function handleAutoRefractionHistoryRequest(
   };
 }
 
+export async function handleWearingHistoryRequest(
+  deps: PretestEndpointDeps,
+  input: { authHeader: string | undefined; query: unknown },
+): Promise<PretestEndpointResult> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to read Wearing history." } };
+  if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  const parsed = autoRefractionHistoryQuerySchema.safeParse(input.query);
+  if (!parsed.success) return { status: 400, body: { error: "Patient and encounter references are required." } };
+  const bundle = await staff.fhir.search<Observation>("Observation", {
+    subject: parsed.data.patientReference,
+    encounter: parsed.data.encounterReference,
+    code: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|wearing_rx`,
+    _sort: "-date",
+    _count: "1000",
+  });
+  if (bundle.link?.some((link) => link.relation === "next")) {
+    return { status: 409, body: { error: "Wearing history exceeds the read limit; no partial form was loaded." } };
+  }
+  const observations = (bundle.entry ?? []).flatMap(({ resource }) =>
+    resource?.id && isLiveObservation(resource)
+      && resource.subject?.reference === parsed.data.patientReference
+      && resource.encounter?.reference === parsed.data.encounterReference
+      && resource.code.coding?.some((coding) => coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === "wearing_rx")
+      ? [resource] : [])
+    .sort((a, b) => Date.parse(observationDate(b)) - Date.parse(observationDate(a)));
+  const latest = observations[0];
+  if (!latest) return { status: 200, body: { pairs: [], leftGlassesAtHome: false } };
+  const recordedAt = observationDate(latest);
+  if (!Number.isFinite(Date.parse(recordedAt))) {
+    return { status: 409, body: { error: "Wearing history has no recording date; the saved pairs could not be loaded." } };
+  }
+  const sameTime = observations.filter((observation) => Date.parse(observationDate(observation)) === Date.parse(recordedAt));
+  const captureIds = new Set(sameTime.flatMap((observation) => observationComponentString(observation, "WEARING_CAPTURE_ID") ?? []));
+  const hasLegacyRows = sameTime.some((observation) => !observationComponentString(observation, "WEARING_CAPTURE_ID"));
+  // Legacy multi-pair saves have only their shared timestamp; current writes carry capture identity.
+  if (captureIds.size > 1 || captureIds.size === 1 && hasLegacyRows) {
+    return { status: 409, body: { error: "Multiple Wearing captures have the same recording time; no potentially stale form was loaded." } };
+  }
+  const captureId = observationComponentString(latest, "WEARING_CAPTURE_ID");
+  const snapshot = observations.filter((observation) => captureId
+    ? observationComponentString(observation, "WEARING_CAPTURE_ID") === captureId
+    : !observationComponentString(observation, "WEARING_CAPTURE_ID")
+      && Date.parse(observationDate(observation)) === Date.parse(recordedAt));
+  const leftGlassesAtHome = observationComponent(latest, "LEFT_GLASSES_AT_HOME")?.valueBoolean === true;
+  const pairs = leftGlassesAtHome ? [] : snapshot.map((observation) => definedRecord({
+    id: observationComponentString(observation, "PAIR_ID") ?? observation.id,
+    eyeglassType: observationComponentString(observation, "EYEGLASS_TYPE"),
+    remarks: observationComponentString(observation, "REMARKS"),
+    ...Object.fromEntries(EYES.flatMap((eye) => {
+      const values = definedRecord({
+        sphere: observationComponentNumber(observation, `${eye}_SPHERE`),
+        cylinder: observationComponentNumber(observation, `${eye}_CYLINDER`),
+        axis: observationComponentNumber(observation, `${eye}_AXIS`),
+        add: observationComponentNumber(observation, `${eye}_ADD`),
+        prismAmount: observationComponentNumber(observation, `${eye}_PRISM_AMOUNT`),
+        prismBase: observationComponentString(observation, `${eye}_PRISM_BASE`),
+        distanceVisualAcuity: observationComponentString(observation, `${eye}_DISTANCE_VA`),
+        nearVisualAcuity: observationComponentString(observation, `${eye}_NEAR_VA`),
+      });
+      return Object.keys(values).length ? [[eye, values]] : [];
+    })),
+  }));
+  const sourceType = latest.note?.flatMap((note) => note.text.match(/(?:^|; )sourceType=(manual|device)(?:;|$)/)?.[1] ?? [])[0] ?? "manual";
+  return { status: 200, body: { pairs, leftGlassesAtHome, sourceType, recordedAt } };
+}
+
 export async function handleWearingCaptureRequest(
   deps: PretestEndpointDeps,
   input: { authHeader: string | undefined; body: unknown },
@@ -250,6 +317,7 @@ export async function handleWearingCaptureRequest(
   }
 
   const recordedAt = deps.now?.() ?? new Date().toISOString();
+  const captureId = `wearing-capture-${randomUUID()}`;
   const provenance = pretestProvenance(staff.staffReference, recordedAt, parsed.data.sourceType);
   if (parsed.data.leftGlassesAtHome) {
     const capture = capturePretestFinding({
@@ -259,7 +327,10 @@ export async function handleWearingCaptureRequest(
       laterality: "OU",
       value: {
         type: "components",
-        components: [{ code: "LEFT_GLASSES_AT_HOME", display: "Left glasses at home", value: true }],
+        components: [
+          { code: "WEARING_CAPTURE_ID", display: "Wearing capture ID", value: captureId },
+          { code: "LEFT_GLASSES_AT_HOME", display: "Left glasses at home", value: true },
+        ],
       },
       provenance,
       sourceType: parsed.data.sourceType,
@@ -287,7 +358,7 @@ export async function handleWearingCaptureRequest(
       laterality: "OU",
       value: {
         type: "components",
-        components: wearingComponents(pairId, pair).concat(EYES.flatMap((eye) =>
+        components: wearingComponents(captureId, pairId, pair).concat(EYES.flatMap((eye) =>
           customFieldComponents(pair[eye]?.customFields ?? [], definition, `${eye}_`))),
       },
       provenance,
@@ -703,10 +774,12 @@ function validateNumberField(
 }
 
 function wearingComponents(
+  captureId: string,
   pairId: string,
   pair: z.infer<typeof wearingPairSchema>,
 ): Extract<FindingValue, { type: "components" }>["components"] {
   const components: Extract<FindingValue, { type: "components" }>["components"] = [
+    { code: "WEARING_CAPTURE_ID", display: "Wearing capture ID", value: captureId },
     { code: "PAIR_ID", display: "Wearing pair ID", value: pairId },
     { code: "EYEGLASS_TYPE", display: "Eyeglass type", value: pair.eyeglassType },
   ];

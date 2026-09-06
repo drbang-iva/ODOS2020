@@ -43,6 +43,8 @@ import { VisitChargesSheetContent } from "../../src/components/charting/VisitCha
 import { chartEditorInventory } from "../../src/components/charting/SpineNav";
 import type { ProcedureChargeApi, VisitChargeApi } from "../../src/lib/clinical-graph-client";
 import { fhir } from "../../src/lib/fhir";
+import { ConfirmDestructiveProvider } from "../../src/components/charting/ConfirmDestructive";
+import { FHIR_CONDITION_CATEGORY_CODE_SYSTEM } from "../../src/lib/fhir-clinical/condition";
 import { RoleProvider } from "../../src/lib/role-context";
 import "../../src/styles/globals.css";
 
@@ -119,8 +121,17 @@ const COMPREHENSIVE_PROJECTION: ExamOverviewProjection = {
   },
 };
 
+const nativeFetch = window.fetch.bind(window);
+(window as typeof window & { __odosFixtureWrites?: Array<{ url: string; body: unknown }> }).__odosFixtureWrites = [];
 window.fetch = async (input, init) => {
   const url = String(input);
+  if (init?.method === "POST") {
+    (window as typeof window & { __odosFixtureWrites: Array<{ url: string; body: unknown }> }).__odosFixtureWrites.push({
+      url,
+      body: init.body ? JSON.parse(String(init.body)) : undefined,
+    });
+  }
+  if (new URLSearchParams(window.location.search).has("liveWearing") && url.includes("/clinical-graph/wearing")) return nativeFetch(input, init);
   if (url.endsWith("/clinical-graph/refraction/definition")) {
     return Response.json({
       definition: {
@@ -135,7 +146,13 @@ window.fetch = async (input, init) => {
       refractiveThreshold: 0,
     });
   }
-  if (url.includes("/clinical-graph/refraction/history")) return Response.json({ glasses: [], softCl: [], specialtyCl: [] });
+  if (url.includes("/clinical-graph/refraction/history")) return Response.json({
+    glasses: new URLSearchParams(window.location.search).has("walkthrough") ? [{
+      type: "Wearing", typeCode: "WEARING_RX", groupId: "synthetic-pair", eye: "OD",
+      date: "2026-09-06T12:00:00Z", encounterReference: "Encounter/test",
+      sphere: -2, cylinder: -0.5, axis: 180,
+    }] : [], softCl: [], specialtyCl: [],
+  });
   if (url.endsWith("/clinical-graph/iop/definition")) {
     return Response.json({
       definitions: {
@@ -250,6 +267,19 @@ window.fetch = async (input, init) => {
           answers: JSON.parse(String(init?.body ?? "{}")).templateAnswers ?? [],
           templateNarratives: [{ complaintId: "fixture-complaint-1", narrative: "is being seen for follow up." }],
         });
+  }
+  if (new URLSearchParams(window.location.search).has("walkthrough")) {
+    if (url.includes("/fhir/R4/Encounter/test")) return Response.json({
+      resourceType: "Encounter", id: "test", status: "in-progress", subject: { reference: "Patient/test" },
+      diagnosis: [{ condition: { reference: "Condition/synthetic-diagnosis" }, rank: 1 }],
+    });
+    if (url.includes("/fhir/R4/Condition")) return Response.json({
+      resourceType: "Bundle", type: "searchset", entry: [{ resource: {
+        resourceType: "Condition", id: "synthetic-diagnosis", subject: { reference: "Patient/test" },
+        encounter: { reference: "Encounter/test" }, code: { text: "Synthetic diagnosis" },
+        category: [{ coding: [{ system: FHIR_CONDITION_CATEGORY_CODE_SYSTEM, code: "encounter-diagnosis" }] }],
+      } }],
+    });
   }
   if (url.endsWith("/clinical-graph/diagnosis-catalog")) return Response.json({ diagnoses: [] });
   if (url.includes("/clinical-graph/protocols/")) return Response.json({ applications: [], offers: [] });
@@ -445,8 +475,9 @@ function renderEditor(
   markDirty: () => void,
   onDone?: () => void,
 ): React.ReactNode {
-  const patientReference = "Patient/test";
-  const encounterReference = "Encounter/test";
+  const parameters = new URLSearchParams(window.location.search);
+  const patientReference = parameters.get("patientReference") ?? "Patient/test";
+  const encounterReference = parameters.get("encounterReference") ?? "Encounter/test";
   const props = {
     patientReference,
     encounterReference,
@@ -636,4 +667,8 @@ function dilationDefinition(): CustomFindingDefinition {
   };
 }
 
-createRoot(document.getElementById("root")!).render(<RoleProvider initialRole="doctor"><Fixture /></RoleProvider>);
+createRoot(document.getElementById("root")!).render(<RoleProvider initialRole="doctor">{
+  new URLSearchParams(window.location.search).has("walkthrough")
+    ? <ConfirmDestructiveProvider><Fixture /></ConfirmDestructiveProvider>
+    : <Fixture />
+}</RoleProvider>);

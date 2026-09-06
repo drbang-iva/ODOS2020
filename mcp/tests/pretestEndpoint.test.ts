@@ -513,3 +513,105 @@ function forbiddenDiagnosisKeys(value: unknown, found: string[] = []): string[] 
   }
   return found;
 }
+
+test("P2 Wearing saved snapshot round-trips every eye and blank resave cannot overwrite or duplicate it", async () => {
+  const { created, deps: d } = deps();
+  const pair = { eyeglassType: "single_vision_distance", remarks: "Synthetic pair", OD: { sphere: -2, cylinder: -0.5, axis: 180, add: 1, prismAmount: 0.5, prismBase: "in", distanceVisualAcuity: "20/20", nearVisualAcuity: "20/20" }, OS: { sphere: -1.75 } };
+  const saved = await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, sourceType: "device", pairs: [pair, { eyeglassType: "single_vision_near", OS: { sphere: 0 } }] } });
+  assert.equal(saved.status, 200);
+  const before = structuredClone(created);
+  const blank = await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, pairs: [{ eyeglassType: "single_vision_distance" }] } });
+  assert.equal(blank.status, 400);
+  assert.deepEqual(created, before, "the pre-fix blank save refuses before any write");
+  const endpoint = await import("../src/clinical-graph/pretest-endpoint.js");
+  assert.equal(typeof endpoint.handleWearingHistoryRequest, "function", "Wearing needs a saved-value read path");
+  const history = await endpoint.handleWearingHistoryRequest(d, { authHeader: AUTH, query: BODY });
+  assert.equal(history.status, 200);
+  const body = history.body as { pairs: Array<typeof pair & { id: string }>; sourceType: string };
+  assert.equal(body.pairs.length, 2);
+  assert.ok(body.pairs.every((value) => value.id));
+  const { id, ...rest } = body.pairs[0]!;
+  assert.deepEqual(rest, pair);
+  assert.equal(body.sourceType, "device");
+  assert.deepEqual(created, before, "history performs no persistence writes");
+});
+
+test("P2 Wearing history selects the latest complete capture, preserves zero, and excludes foreign or voided rows", async () => {
+  const { created, deps: d } = deps();
+  const endpoint = await import("../src/clinical-graph/pretest-endpoint.js");
+  await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, pairs: [{ eyeglassType: "single_vision_distance", OD: { sphere: -2 } }] } });
+  d.now = () => "2026-07-10T15:00:00.000Z";
+  await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, pairs: [{ eyeglassType: "single_vision_near", OS: { sphere: 0 } }] } });
+  const newest = created.findLast(({ resource }) => resource.resourceType === "Observation")!.resource as Observation;
+  for (const change of [
+    { subject: { reference: "Patient/foreign" } },
+    { encounter: { reference: "Encounter/foreign" } },
+    { status: "entered-in-error" as const },
+  ]) created.push({ resource: { ...structuredClone(newest), id: "synthetic-excluded", effectiveDateTime: "2026-07-10T16:00:00.000Z", ...change } });
+  const history = await endpoint.handleWearingHistoryRequest(d, { authHeader: AUTH, query: BODY });
+  const body = history.body as { pairs: Array<{ eyeglassType: string; OD?: unknown; OS: { sphere: number } }> };
+  assert.equal(history.status, 200);
+  assert.equal(body.pairs.length, 1);
+  assert.equal(body.pairs[0]!.eyeglassType, "single_vision_near");
+  assert.deepEqual(body.pairs[0]!.OS, { sphere: 0 });
+  assert.equal(body.pairs[0]!.OD, undefined);
+});
+
+test("Wearing history refuses distinct captures that share the latest recording timestamp", async () => {
+  const { created, deps: d } = deps();
+  await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, pairs: [
+    { eyeglassType: "single_vision_distance", OD: { sphere: -2 } },
+    { eyeglassType: "single_vision_near", OD: { sphere: -1 } },
+  ] } });
+  await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, pairs: [
+    { eyeglassType: "progressives", OD: { sphere: -3 } },
+  ] } });
+
+  const { handleWearingHistoryRequest } = await import("../src/clinical-graph/pretest-endpoint.js");
+  const history = await handleWearingHistoryRequest(d, { authHeader: AUTH, query: BODY });
+  assert.equal(history.status, 409);
+  assert.match(String((history.body as { error: string }).error), /same recording time/);
+});
+
+test("Wearing history keeps a legacy multi-pair capture readable without capture identity", async () => {
+  const { created, deps: d } = deps();
+  await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, pairs: [
+    { eyeglassType: "single_vision_distance", OD: { sphere: -2 } },
+    { eyeglassType: "progressives", OD: { sphere: -3 } },
+  ] } });
+  for (const entry of created) {
+    if (entry.resource.resourceType !== "Observation") continue;
+    entry.resource.component = entry.resource.component?.filter((component) =>
+      !component.code.coding?.some((coding) => coding.code === "WEARING_CAPTURE_ID"));
+  }
+
+  const { handleWearingHistoryRequest } = await import("../src/clinical-graph/pretest-endpoint.js");
+  const history = await handleWearingHistoryRequest(d, { authHeader: AUTH, query: BODY });
+  assert.equal(history.status, 200);
+  assert.deepEqual(
+    (history.body as { pairs: Array<{ eyeglassType: string }> }).pairs.map((pair) => pair.eyeglassType),
+    ["single_vision_distance", "progressives"],
+  );
+});
+
+test("P2 Wearing left-at-home history stays distinct from an empty unsaved form", async () => {
+  const { deps: d } = deps();
+  await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, leftGlassesAtHome: true } });
+  const { handleWearingHistoryRequest } = await import("../src/clinical-graph/pretest-endpoint.js");
+  const history = await handleWearingHistoryRequest(d, { authHeader: AUTH, query: BODY });
+  assert.equal(history.status, 200);
+  assert.equal((history.body as { leftGlassesAtHome: boolean }).leftGlassesAtHome, true);
+  assert.deepEqual((history.body as { pairs: unknown[] }).pairs, []);
+});
+
+test("P2 Wearing history requires scoped references and refuses a truncated result", async () => {
+  const { handleWearingHistoryRequest } = await import("../src/clinical-graph/pretest-endpoint.js");
+  const { deps: d } = deps();
+  assert.equal((await handleWearingHistoryRequest(d, { authHeader: undefined, query: BODY })).status, 401);
+  assert.equal((await handleWearingHistoryRequest(d, { authHeader: AUTH, query: {} })).status, 400);
+  const staff = (await d.authenticate(AUTH))!;
+  staff.fhir.search = async () => ({ resourceType: "Bundle", type: "searchset", entry: [], link: [{ relation: "next", url: "Observation?page=2" }] });
+  const result = await handleWearingHistoryRequest({ ...d, authenticate: async () => staff }, { authHeader: AUTH, query: BODY });
+  assert.equal(result.status, 409);
+  assert.match(String((result.body as { error: string }).error), /no partial form/);
+});

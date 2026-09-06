@@ -99,7 +99,7 @@ test("Auto-Refraction renders centered binocular PD spinners and saves them at r
   assert.match(html, /Binocular PD \(OU\)/);
   assert.match(html, /role="combobox"[^>]*aria-label="Binocular PD distance"/);
   assert.match(html, /role="combobox"[^>]*aria-label="Binocular PD near"/);
-  assert.equal((html.match(/data-default="true"[^>]*>63\.00 mm/g) ?? []).length, 2);
+  assert.equal((html.match(/data-default="true"[^>]*>63 mm/g) ?? []).length, 2);
 
   const body = buildAutoRefractionRequestBody({
     patientReference: "Patient/p1",
