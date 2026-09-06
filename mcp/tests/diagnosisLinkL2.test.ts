@@ -16,6 +16,7 @@ import {
 } from "../src/clinical-graph/diagnosis-candidates-endpoint.js";
 import { handleDiagnosisOrderRequest } from "../src/clinical-graph/diagnosis-order-endpoint.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
+import { FAMILY_RESOLUTION_MODES } from "../src/clinical-graph/diagnosis-catalog-seeds.js";
 import * as diagnosisPickEndpoint from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 import {
   DX_PICK_TALLY_CODE,
@@ -764,6 +765,121 @@ test("I4 ocular records without findingDetails retain specific candidate lists",
     "t2_dr_severe_npdr_with_dme",
     "t2_dr_severe_npdr_without_dme",
   ]]);
+});
+
+test("anterior-chamber ruled findings propose only their seeded diagnoses", async () => {
+  for (const [option, expected] of [
+    ["hyphema", ["hyphema"]],
+    ["hypopyon", ["hypopyon"]],
+    ["shallow-ac", ["anatomical_narrow_angle"]],
+    ["narrow-angle-by-exam", ["anatomical_narrow_angle"]],
+  ] as const) {
+    assert.deepEqual(await ocularCandidateKeys("ocular-health:anterior:anterior-chamber", {
+      OD: { selections: [option] },
+    }), [expected], option);
+  }
+});
+
+test("iris ruled findings propose only their seeded diagnoses", async () => {
+  for (const [option, expected] of [
+    ["posterior-synechiae", ["posterior_synechiae"]],
+    ["neovascularization-rubeosis", ["iris_neovascularization"]],
+    ["pseudoexfoliation-material-on-pupil-margin", ["pseudoexfoliation_lens"]],
+  ] as const) {
+    assert.deepEqual(await ocularCandidateKeys("ocular-health:anterior:iris", {
+      OD: { selections: [option] },
+    }), [expected], option);
+  }
+});
+
+test("vitreous ruled findings propose only their seeded diagnoses", async () => {
+  for (const [option, expected] of [
+    ["vitreous-hemorrhage", ["vitreous_hemorrhage"]],
+    ["floaters", ["vitreous_opacities"]],
+  ] as const) {
+    assert.deepEqual(await ocularCandidateKeys("ocular-health:posterior:vitreous", {
+      OD: { selections: [option] },
+    }), [expected], option);
+  }
+});
+
+test("vessels ruled findings propose only their seeded diagnoses", async () => {
+  for (const option of [
+    "av-nicking",
+    "arteriolar-attenuation",
+    "sclerotic-copper-silver-wire-changes",
+  ]) {
+    assert.deepEqual(await ocularCandidateKeys("ocular-health:posterior:vessels", {
+      OD: { selections: [option] },
+    }), [["hypertensive_retinopathy"]], option);
+  }
+  assert.deepEqual(await ocularCandidateKeys("ocular-health:posterior:vessels", {
+    OD: { selections: ["neovascularization-of-the-disc-nvd"] },
+  }), [[
+    "t2_dr_pdr_with_dme",
+    "t2_dr_pdr_trd_involving_macula",
+    "t2_dr_pdr_trd_not_involving_macula",
+    "t2_dr_pdr_combined_trd_rrd",
+    "t2_dr_stable_pdr",
+    "t2_dr_pdr_without_dme",
+  ]]);
+});
+
+test("palpebral conjunctiva GPC proposes its seeded diagnosis", async () => {
+  assert.deepEqual(await ocularCandidateKeys("ocular-health:anterior:palpebral-conjunctiva", {
+    OD: { selections: ["giant-papillae-gpc"] },
+  }), [["giant_papillary_conjunctivitis"]]);
+});
+
+test("vessels A/V ratio codes follow the field::option delimiter convention", async () => {
+  const definition = (await new FhirFindingDefinitionStore(new MemoryFhir()).list())
+    .find((candidate) => candidate.stableKey === "ocular-health:posterior:vessels");
+  assert.ok(definition);
+  const field = Object.values(definition.valueSchema.fields as Record<string, {
+    display?: string;
+    localCode?: string;
+    options?: Array<{ code: string }>;
+  }>).find((candidate) => candidate.display === "A/V ratio");
+  assert.ok(field?.localCode);
+  assert.deepEqual(field.options?.map((option) => option.code), ["2-3", "1-2", "1-3", "1-4"]);
+  for (const option of field.options ?? []) {
+    assert.equal(option.code.includes(":"), false);
+    assert.equal(`${field.localCode}::${option.code}`.split("::").length, 2);
+  }
+});
+
+test("ocular-health ledger diagnoses never become more globally unreachable", async () => {
+  const ledger = JSON.parse(readFileSync(
+    new URL("../../data/code-bindings/ocular-health-phase0-ledger.json", import.meta.url),
+    "utf8",
+  )) as { diagnosisCodes: Array<{ code: string }> };
+  const ledgerCodes = new Set(ledger.diagnosisCodes.map((row) => row.code));
+  const ocularCatalogRows = buildDiagnosisCatalogSeeds().filter((row) => {
+    const codes = row.icd10 === undefined
+      ? []
+      : "code" in row.icd10
+        ? [row.icd10.code]
+        : Object.values(row.icd10.pattern).filter((code): code is string => code !== undefined);
+    return row.active && codes.length > 0 && codes.every((code) => ledgerCodes.has(code));
+  });
+  const reachable = new Set<string>();
+  const definitions = await new FhirFindingDefinitionStore(new MemoryFhir()).list();
+  for (const definition of definitions.filter((candidate) => candidate.stableKey.startsWith("ocular-health:"))) {
+    for (const candidate of definition.diagnosisCandidates ?? []) {
+      if (!candidate.active) continue;
+      if (candidate.diagnosisKey !== undefined) reachable.add(candidate.diagnosisKey);
+      if (candidate.familyGroup !== undefined) {
+        const mode = FAMILY_RESOLUTION_MODES[candidate.familyGroup];
+        if (mode?.mode === "staged") {
+          for (const member of mode.members) reachable.add(member.stableKey);
+        }
+      }
+    }
+  }
+  const unreachable = ocularCatalogRows.filter((row) => !reachable.has(row.stableKey));
+
+  // Baseline: 45 on origin/main a5b6b41869070ea6a97656aefd17907760a7421b; it may fall, never rise.
+  assert.ok(unreachable.length <= 45, `Unreachable ocular-health ledger rows rose to ${unreachable.length}: ${unreachable.map((row) => row.stableKey).join(", ")}`);
 });
 
 test("unspecified ocular diagnosis keys never surface with qualifiers unset or set", async () => {

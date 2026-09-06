@@ -179,7 +179,7 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
     sheetLabel: "Normal caliber and course",
     priority: ["AV nicking", "arteriolar attenuation", "tortuosity"],
     additional: ["AV crossing changes", "sclerotic (copper/silver-wire) changes", "Hollenhorst plaque", "retinal embolus", "vascular sheathing", "venous beading", "neovascularization of the disc (NVD)"],
-    gradeFields: [{ display: "A/V ratio", kind: "select", options: ["2:3", "1:2", "1:3", "1:4"] }],
+    gradeFields: [{ display: "A/V ratio", kind: "select", options: ["2:3", "1:2", "1:3", "1:4"], slugOptionCodes: true }],
   },
   {
     key: "periphery",
@@ -202,7 +202,23 @@ type DiagnosisCandidateSeed = DiagnosisCandidateSeedBase & (
   | { familyGroup: string; diagnosisKey?: never }
 );
 
+const TYPE_2_PDR_DIAGNOSIS_KEYS = [
+  "t2_dr_pdr_with_dme",
+  "t2_dr_pdr_trd_involving_macula",
+  "t2_dr_pdr_trd_not_involving_macula",
+  "t2_dr_pdr_combined_trd_rrd",
+  "t2_dr_stable_pdr",
+  "t2_dr_pdr_without_dme",
+] as const;
+
+function type2PdrCandidateSeeds(option: string): DiagnosisCandidateSeed[] {
+  return TYPE_2_PDR_DIAGNOSIS_KEYS.map((diagnosisKey) => ({ option, diagnosisKey }));
+}
+
 const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[]> = {
+  "ocular-health:anterior:palpebral-conjunctiva": [
+    { option: "giant-papillae-gpc", diagnosisKey: "giant_papillary_conjunctivitis" },
+  ],
   "ocular-health:anterior:lids-lashes": [
     { option: "anterior-blepharitis::ulcerative", diagnosisKey: "ulcerative_blepharitis" },
     { option: "anterior-blepharitis::seborrheic", diagnosisKey: "squamous_blepharitis" },
@@ -240,6 +256,17 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { option: "pterygium-encroaching", qualifiers: { location: "peripheral", progression: "progressive" }, diagnosisKey: "pterygium_peripheral_progressive" },
     { option: "pterygium-encroaching", qualifiers: { location: "peripheral", progression: "recurrent" }, diagnosisKey: "pterygium_recurrent" },
   ],
+  "ocular-health:anterior:anterior-chamber": [
+    { option: "hyphema", diagnosisKey: "hyphema" },
+    { option: "hypopyon", diagnosisKey: "hypopyon" },
+    { option: "shallow-ac", diagnosisKey: "anatomical_narrow_angle" },
+    { option: "narrow-angle-by-exam", diagnosisKey: "anatomical_narrow_angle" },
+  ],
+  "ocular-health:anterior:iris": [
+    { option: "posterior-synechiae", diagnosisKey: "posterior_synechiae" },
+    { option: "neovascularization-rubeosis", diagnosisKey: "iris_neovascularization" },
+    { option: "pseudoexfoliation-material-on-pupil-margin", diagnosisKey: "pseudoexfoliation_lens" },
+  ],
   "ocular-health:anterior:lens": [
     { option: "nuclear-sclerosis", diagnosisKey: "cataract_nuclear_sclerosis" },
     { option: "cortical-cataract", diagnosisKey: "cataract_cortical" },
@@ -250,6 +277,10 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { option: "pseudophakia-pciol", diagnosisKey: "pseudophakia" },
     { option: "aphakia", diagnosisKey: "aphakia" },
     { option: "pseudoexfoliation", diagnosisKey: "pseudoexfoliation_lens" },
+  ],
+  "ocular-health:posterior:vitreous": [
+    { option: "vitreous-hemorrhage", diagnosisKey: "vitreous_hemorrhage" },
+    { option: "floaters", diagnosisKey: "vitreous_opacities" },
   ],
   "ocular-health:posterior:fundus": [
     { option: "hypertensive-retinopathy", diagnosisKey: "hypertensive_retinopathy" },
@@ -265,12 +296,7 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { option: "diabetic-retinopathy-background-npdr", qualifiers: { severity: "moderate", "macular-edema": "absent" }, diagnosisKey: "t2_dr_moderate_npdr_without_dme" },
     { option: "diabetic-retinopathy-background-npdr", qualifiers: { severity: "severe", "macular-edema": "present" }, diagnosisKey: "t2_dr_severe_npdr_with_dme" },
     { option: "diabetic-retinopathy-background-npdr", qualifiers: { severity: "severe", "macular-edema": "absent" }, diagnosisKey: "t2_dr_severe_npdr_without_dme" },
-    { option: "proliferative-diabetic-retinopathy-pdr", diagnosisKey: "t2_dr_pdr_with_dme" },
-    { option: "proliferative-diabetic-retinopathy-pdr", diagnosisKey: "t2_dr_pdr_trd_involving_macula" },
-    { option: "proliferative-diabetic-retinopathy-pdr", diagnosisKey: "t2_dr_pdr_trd_not_involving_macula" },
-    { option: "proliferative-diabetic-retinopathy-pdr", diagnosisKey: "t2_dr_pdr_combined_trd_rrd" },
-    { option: "proliferative-diabetic-retinopathy-pdr", diagnosisKey: "t2_dr_stable_pdr" },
-    { option: "proliferative-diabetic-retinopathy-pdr", diagnosisKey: "t2_dr_pdr_without_dme" },
+    ...type2PdrCandidateSeeds("proliferative-diabetic-retinopathy-pdr"),
     { option: "proliferative-diabetic-retinopathy-pdr", qualifiers: { severity: "with-macular-edema" }, diagnosisKey: "t2_dr_pdr_with_dme" },
     { option: "proliferative-diabetic-retinopathy-pdr", qualifiers: { severity: "traction-rd-involving-macula" }, diagnosisKey: "t2_dr_pdr_trd_involving_macula" },
     { option: "proliferative-diabetic-retinopathy-pdr", qualifiers: { severity: "traction-rd-not-involving-macula" }, diagnosisKey: "t2_dr_pdr_trd_not_involving_macula" },
@@ -281,6 +307,12 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { option: "drusen", familyGroup: "nonexudative-amd" },
     // A few small occasional drusen are below AMD suspicion (AREDS category 1), so this remains leaf-only.
     { option: "occasional-drusen", diagnosisKey: "macular_drusen" },
+  ],
+  "ocular-health:posterior:vessels": [
+    { option: "av-nicking", diagnosisKey: "hypertensive_retinopathy" },
+    { option: "arteriolar-attenuation", diagnosisKey: "hypertensive_retinopathy" },
+    { option: "sclerotic-copper-silver-wire-changes", diagnosisKey: "hypertensive_retinopathy" },
+    ...type2PdrCandidateSeeds("neovascularization-of-the-disc-nvd"),
   ],
   "ocular-health:posterior:macula": [
     { option: "drusen", diagnosisKey: "macular_drusen" },
