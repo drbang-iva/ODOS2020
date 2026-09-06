@@ -344,10 +344,7 @@ export async function resolveVisitTypeCategoryForEncounter(
     if (!resolvedAppointment) {
       const reference = encounter?.appointment?.[0]?.reference;
       if (!reference) {
-        return encounter?.type
-          ?.flatMap((concept) => concept.coding ?? [])
-          .find((coding) => coding.system === ODOS_VISIT_TYPE_SYSTEM && coding.code)
-          ?.code;
+        return undefined;
       }
       const appointmentId = reference.match(/^Appointment\/([^/]+)$/)?.[1];
       if (!appointmentId) return undefined;
