@@ -17,6 +17,7 @@ import {
   type HistorySubjectSection,
 } from "../src/components/charting/HpiSection";
 import { EncounterEditContext } from "../src/components/charting/encounter-edit-context";
+import { buildHistoryAnswerObservation, parseHistoryAnswerObservation } from "../../mcp/src/clinical-graph/history-answer-observation.js";
 
 const TEMPLATE: HistoryTemplate = {
   complaint: "glaucoma",
@@ -879,6 +880,61 @@ test("a carried-forward family condition displays its positive relatives in the 
     });
     const chartStrip = renderer.root.findByProps({ "aria-label": "Family History on this chart" });
     assert.match(chartStrip.findByType("li").children.join(""), /^Glaucoma — father, brother/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a persisted family relations note appears in the prior-encounter strip after read-back", async () => {
+  const observation = buildHistoryAnswerObservation({
+    id: "prior-family-glaucoma",
+    subjectScope: "patient",
+    templateKey: "family-history",
+    sectionId: "conditions",
+    optionCode: "glaucoma",
+    value: { kind: "relations", positive: ["father"], negative: ["mother"], note: "Father diagnosed in his forties." },
+  }, {
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/prior",
+    recordedAt: "2026-08-01T12:00:00.000Z",
+  });
+  const restored = parseHistoryAnswerObservation(JSON.parse(JSON.stringify({ ...observation, id: "prior-family-glaucoma" })));
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/hpi/definition")) return json({
+      templates: [],
+      catalogs: {
+        family_conditions: [{ code: "glaucoma", display: "Glaucoma" }],
+        family_relations: [{ code: "father", display: "Father" }, { code: "mother", display: "Mother" }],
+      },
+      subjectSections: [{
+        key: "family-history",
+        label: "Family History",
+        subjectScope: "patient",
+        completionAnchor: "conditions",
+        sections: [{ id: "conditions", type: "family_conditions", label: "Conditions", catalog: "family_conditions", relations: "family_relations", required: true }],
+      }],
+      definition: {},
+    });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) return json({ complaints: [] });
+    if (url.endsWith("/clinical-graph/encounters/e1/hpi")) return json({
+      answers: [],
+      carriedForwardAnswers: [{ answer: restored, encounterReference: "Encounter/prior", recordedAt: "2026-08-01T12:00:00.000Z" }],
+      reviewAttestations: [],
+      templateNarratives: [],
+    });
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<EncounterEditContext.Provider value={{}}><HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></EncounterEditContext.Provider>);
+      await delay(0);
+    });
+    const chartStrip = renderer.root.findByProps({ "aria-label": "Family History on this chart" });
+    assert.match(chartStrip.findByType("li").children.join(""), /^Glaucoma — father · Father diagnosed in his forties\./);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

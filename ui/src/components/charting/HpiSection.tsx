@@ -968,7 +968,7 @@ function CarriedForwardStrip({ declaration, catalogs, rows, attestation, canRevi
       const optionCode = row.answer.value.kind === "selection" ? row.answer.value.code : row.answer.optionCode;
       const option = section?.catalog ? catalogs[section.catalog]?.find((candidate) => candidate.code === optionCode) : undefined;
       const state = row.answer.value.kind === "tri-state" ? row.answer.value.status : undefined;
-      const note = row.answer.value.kind === "tri-state" ? row.answer.value.note : undefined;
+      const note = row.answer.value.kind === "tri-state" || row.answer.value.kind === "relations" ? row.answer.value.note : undefined;
       const text = row.answer.value.kind === "text" ? row.answer.value.text : undefined;
       const positiveRelations = row.answer.value.kind === "relations" && section?.relations
         ? relationLabels(catalogs[section.relations] ?? [], new Set(row.answer.value.positive))
