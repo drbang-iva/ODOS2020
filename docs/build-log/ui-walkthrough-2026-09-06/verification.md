@@ -27,6 +27,8 @@ All browser data below is synthetic. Browser guards ran in headless Google Chrom
 
 Supplementary mutations also failed as required: deleting the Wearing HTTP route produced 1/1 failure in the route census (`98 !== 99`), and deleting the stale-response check produced 1/1 failure (`-2.00 !== -3.00`). Both mutations were restored before final verification.
 
+Greptile's first review found that timestamp-only grouping could combine independent captures saved in the same millisecond. The added equal-timestamp regression was RED at 0/1 because it reopened all three pairs from two captures. Each save now assigns a stable `WEARING_CAPTURE_ID` to every Observation, and the reader groups by that ID while isolating the legacy timestamp fallback from identified captures. The restored guard passes 1/1; mutating the capture-ID component out returns it to the same 0/1 failure.
+
 ## Live synthetic persistence proof
 
 A disposable Medplum 5.1.8/PostgreSQL 16/Redis 7 stack on dedicated ports accepted a full Wearing pair through the real capture handler and FHIR client. Direct FHIR read returned OD axis 180. A blank request returned HTTP 400 and left the one Observation byte-equivalent. The browser then hydrated OD `-2.00 / -0.50 × 180` and OS `-1.75`; unchanged Save made zero POSTs, and reload still showed axis 180.
@@ -38,7 +40,7 @@ The browser proof routes the real Wearing component's HTTP requests to the real 
 - UI serial suite: `node --import tsx --test --test-concurrency=1 tests/**/*.test.tsx` → 1,258 pass, 0 fail, 0 cancelled, 0 skipped.
 - The standard parallel UI command was run three times and hit existing browser-startup/resource timeouts in `Collect payment` and the chart-bar browser test; both focused files pass (12/12), and the full serial suite is green.
 - MCP full suite with a disposable PostgreSQL instance and `ODOS_ALLOW_UNGATED_MCP=1`: 4,204 pass, 0 fail, 0 cancelled, 57 skipped. The harness recorded 41 live-stack tests as ungated, including live authorization; the flag only makes the exit code reflect executed tests.
-- MCP endpoint/history/route targeted suite: 42 pass, 0 fail.
+- MCP endpoint/history/route targeted suite after the capture-ID fixback: 43 pass, 0 fail.
 - FHIR read-grant checks: 14 pass, 0 fail.
 - Persistent definition-route checks: 10 pass, 0 fail.
 - UI and MCP TypeScript/production builds: exit 0. Vite reports its existing 1.83 MB chunk-size warning.

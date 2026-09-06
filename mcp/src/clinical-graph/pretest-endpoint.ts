@@ -260,8 +260,11 @@ export async function handleWearingHistoryRequest(
   if (!Number.isFinite(Date.parse(recordedAt))) {
     return { status: 409, body: { error: "Wearing history has no recording date; the saved pairs could not be loaded." } };
   }
-  // A capture writes the whole form: all pairs share its recording instant. Older captures remain history.
-  const snapshot = observations.filter((observation) => Date.parse(observationDate(observation)) === Date.parse(recordedAt));
+  const captureId = observationComponentString(latest, "WEARING_CAPTURE_ID");
+  const snapshot = observations.filter((observation) => captureId
+    ? observationComponentString(observation, "WEARING_CAPTURE_ID") === captureId
+    : !observationComponentString(observation, "WEARING_CAPTURE_ID")
+      && Date.parse(observationDate(observation)) === Date.parse(recordedAt));
   const leftGlassesAtHome = observationComponent(latest, "LEFT_GLASSES_AT_HOME")?.valueBoolean === true;
   const pairs = leftGlassesAtHome ? [] : snapshot.map((observation) => definedRecord({
     id: observationComponentString(observation, "PAIR_ID") ?? observation.id,
@@ -307,6 +310,7 @@ export async function handleWearingCaptureRequest(
   }
 
   const recordedAt = deps.now?.() ?? new Date().toISOString();
+  const captureId = `wearing-capture-${randomUUID()}`;
   const provenance = pretestProvenance(staff.staffReference, recordedAt, parsed.data.sourceType);
   if (parsed.data.leftGlassesAtHome) {
     const capture = capturePretestFinding({
@@ -316,7 +320,10 @@ export async function handleWearingCaptureRequest(
       laterality: "OU",
       value: {
         type: "components",
-        components: [{ code: "LEFT_GLASSES_AT_HOME", display: "Left glasses at home", value: true }],
+        components: [
+          { code: "WEARING_CAPTURE_ID", display: "Wearing capture ID", value: captureId },
+          { code: "LEFT_GLASSES_AT_HOME", display: "Left glasses at home", value: true },
+        ],
       },
       provenance,
       sourceType: parsed.data.sourceType,
@@ -344,7 +351,7 @@ export async function handleWearingCaptureRequest(
       laterality: "OU",
       value: {
         type: "components",
-        components: wearingComponents(pairId, pair).concat(EYES.flatMap((eye) =>
+        components: wearingComponents(captureId, pairId, pair).concat(EYES.flatMap((eye) =>
           customFieldComponents(pair[eye]?.customFields ?? [], definition, `${eye}_`))),
       },
       provenance,
@@ -760,10 +767,12 @@ function validateNumberField(
 }
 
 function wearingComponents(
+  captureId: string,
   pairId: string,
   pair: z.infer<typeof wearingPairSchema>,
 ): Extract<FindingValue, { type: "components" }>["components"] {
   const components: Extract<FindingValue, { type: "components" }>["components"] = [
+    { code: "WEARING_CAPTURE_ID", display: "Wearing capture ID", value: captureId },
     { code: "PAIR_ID", display: "Wearing pair ID", value: pairId },
     { code: "EYEGLASS_TYPE", display: "Eyeglass type", value: pair.eyeglassType },
   ];

@@ -557,6 +557,24 @@ test("P2 Wearing history selects the latest complete capture, preserves zero, an
   assert.equal(body.pairs[0]!.OD, undefined);
 });
 
+test("Wearing history never combines distinct captures that share a recording timestamp", async () => {
+  const { created, deps: d } = deps();
+  await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, pairs: [
+    { eyeglassType: "single_vision_distance", OD: { sphere: -2 } },
+    { eyeglassType: "single_vision_near", OD: { sphere: -1 } },
+  ] } });
+  await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, pairs: [
+    { eyeglassType: "progressives", OD: { sphere: -3 } },
+  ] } });
+  created.reverse();
+
+  const { handleWearingHistoryRequest } = await import("../src/clinical-graph/pretest-endpoint.js");
+  const history = await handleWearingHistoryRequest(d, { authHeader: AUTH, query: BODY });
+  const body = history.body as { pairs: Array<{ eyeglassType: string }> };
+  assert.equal(history.status, 200);
+  assert.deepEqual(body.pairs.map((pair) => pair.eyeglassType), ["progressives"]);
+});
+
 test("P2 Wearing left-at-home history stays distinct from an empty unsaved form", async () => {
   const { deps: d } = deps();
   await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, leftGlassesAtHome: true } });
