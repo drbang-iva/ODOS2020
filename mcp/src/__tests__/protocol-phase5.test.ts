@@ -973,6 +973,22 @@ test("a contact-lens exam with manifest refraction and examined ocular content c
   assert.equal(annualRequests(fhir)[0]?.occurrenceDateTime, "2027-07-18");
 });
 
+test("hard gate: a historical Medicaid exam without an Appointment retains its annual recall", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    annualEncounter("historical-medicaid-exam", "medicaid-exam", "2026-07-18T15:00:00.000Z"),
+    ...fullExamObservations("historical-medicaid-exam"),
+  );
+
+  const result = await handleProtocolSignCleanupRequest(
+    { ...endpointDeps(fhir), feeScheduleFhir: fhir as never },
+    { authHeader: "Bearer test", params: { encounterId: "historical-medicaid-exam" } },
+  );
+
+  assert.equal(result.status, 200);
+  assert.equal(annualRequests(fhir).length, 1);
+});
+
 test("a standalone contact-lens exam with only over-refraction creates no annual", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
