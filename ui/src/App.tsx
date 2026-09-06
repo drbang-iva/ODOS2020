@@ -103,7 +103,7 @@ export function App({
   const setView = useViewState((state) => state.setView);
   const previousPath = useRef(path);
   const historyIndex = useRef<number | null>(null);
-  const restoringCancelledNavigation = useRef(false);
+  const restoringNavigationIndex = useRef<number>();
   const popstateTransitionPending = useRef(false);
   const concurrentPopstateRestore = useRef<Promise<void>>();
   const finishConcurrentPopstateRestore = useRef<() => void>();
@@ -123,9 +123,10 @@ export function App({
       const nextPath = window.location.pathname;
       if (event?.type === "popstate") {
         const targetState = "state" in event ? (event as PopStateEvent).state : window.history.state;
-        if (restoringCancelledNavigation.current) {
-          restoringCancelledNavigation.current = false;
-          historyIndex.current = appHistoryIndex(targetState) ?? historyIndex.current;
+        const targetIndex = appHistoryIndex(targetState) ?? currentNavigationEntryIndex();
+        if (targetIndex !== undefined && targetIndex === restoringNavigationIndex.current) {
+          restoringNavigationIndex.current = undefined;
+          historyIndex.current = targetIndex;
           finishConcurrentPopstateRestore.current?.();
           finishConcurrentPopstateRestore.current = undefined;
           concurrentPopstateRestore.current = undefined;
@@ -137,7 +138,7 @@ export function App({
               finishConcurrentPopstateRestore.current = resolve;
             });
           }
-          restoringCancelledNavigation.current = true;
+          restoringNavigationIndex.current = historyIndex.current ?? 0;
           const restoring = restoreCancelledHistoryNavigation(
             window.history,
             historyIndex.current ?? 0,
@@ -145,7 +146,7 @@ export function App({
             currentNavigationEntryIndex(),
           );
           if (!restoring) {
-            restoringCancelledNavigation.current = false;
+            restoringNavigationIndex.current = undefined;
             finishConcurrentPopstateRestore.current?.();
             finishConcurrentPopstateRestore.current = undefined;
             concurrentPopstateRestore.current = undefined;
@@ -154,19 +155,18 @@ export function App({
         }
         popstateTransitionPending.current = true;
         try {
-          const targetIndex = appHistoryIndex(targetState) ?? currentNavigationEntryIndex();
           const accepted = await confirmPopstateNavigation(() => confirmUnsavedNavigation());
           await concurrentPopstateRestore.current;
           const currentIndex = appHistoryIndex(window.history.state) ?? currentNavigationEntryIndex();
           if (!accepted) {
-            restoringCancelledNavigation.current = true;
+            restoringNavigationIndex.current = historyIndex.current ?? 0;
             const restoring = restoreCancelledHistoryNavigation(
               window.history,
               historyIndex.current ?? 0,
               window.history.state,
               currentIndex,
             );
-            if (!restoring) restoringCancelledNavigation.current = false;
+            if (!restoring) restoringNavigationIndex.current = undefined;
             return;
           }
           if (targetIndex !== undefined && currentIndex !== undefined && targetIndex !== currentIndex) {
