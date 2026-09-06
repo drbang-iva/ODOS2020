@@ -183,7 +183,7 @@ test("visit-type category resolver follows Encounter appointment to the Healthca
   }]);
 });
 
-test("visit-type category resolver falls back to ODOS Encounter.type without an Appointment", async () => {
+test("visit-type category resolver returns undefined instead of presenting Encounter.type as a category", async () => {
   let fhirCalls = 0;
   const fhir = {
     read: async () => {
@@ -210,7 +210,7 @@ test("visit-type category resolver falls back to ODOS Encounter.type without an 
   };
 
   const category = await resolveVisitTypeCategoryForEncounter(encounter, undefined, fhir);
-  assert.deepEqual({ category: category ?? null, fhirCalls }, { category: "dry-eye", fhirCalls: 0 });
+  assert.deepEqual({ category: category ?? null, fhirCalls }, { category: null, fhirCalls: 0 });
 });
 
 test("visit-type category resolver returns undefined for every unresolved link without throwing", async () => {

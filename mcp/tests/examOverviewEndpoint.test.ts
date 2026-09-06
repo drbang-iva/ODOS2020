@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type {
+  Appointment,
   Basic,
   Bundle,
   Condition,
   Encounter,
+  HealthcareService,
   MedicationAdministration,
   Observation,
   Practitioner,
@@ -34,7 +36,10 @@ import {
   handleHpiCaptureRequest,
   type HpiEndpointDeps,
 } from "../src/clinical-graph/hpi-endpoint.js";
-import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
+import {
+  ODOS_VISIT_TYPE_CATEGORY_SYSTEM,
+  ODOS_VISIT_TYPE_SYSTEM,
+} from "../src/fhir/schedulingVisitType.js";
 import { mdmProblemStatusExtension } from "../src/fhir/condition.js";
 
 test("exam overview requires chart read access before touching FHIR", async () => {
@@ -53,6 +58,7 @@ test("exam overview requires chart read access before touching FHIR", async () =
 test("derived completeness and prior change survive a fresh reload with zero clinical writes", async () => {
   const resources: Resource[] = [
     encounter(),
+    ...visitTypeContext(),
     historyFinding("history-current", "e1", "2026-08-16T12:00:00.000Z"),
     {
       ...quantityFinding("iop-current", "e1", "2026-08-16T12:00:00.000Z", 18),
@@ -174,6 +180,7 @@ test("endpoint projects carried-unreasserted and carried-reasserted from durable
   const prior = condition("prior-condition", "Encounter/e0", []);
   const resources: Resource[] = [
     encounter(),
+    ...visitTypeContext(),
     {
       ...encounter("e0"),
       period: { start: "2026-07-10T09:00:00.000Z" },
@@ -297,7 +304,7 @@ test("overview context explicitly allowlists stored human-facing event, diagnosi
     }],
   };
   const fhir = new OverviewMemoryFhir([
-    encounter(), dilation, cover, administration, foreignAdministration, notDoneAdministration,
+    encounter(), ...visitTypeContext(), dilation, cover, administration, foreignAdministration, notDoneAdministration,
     textOnlyAdministration, practitioner, diagnosis, attestation, unsignedPerformerEvent,
   ]);
 
@@ -351,7 +358,7 @@ test("optional context dependency failures omit enrichment without hiding the co
       data: "signed-proof",
     }],
   };
-  const fhir = new OverviewMemoryFhir([encounter(), dilation, attestation]);
+  const fhir = new OverviewMemoryFhir([encounter(), ...visitTypeContext(), dilation, attestation]);
   fhir.failedReads.add("MedicationAdministration/unavailable");
   fhir.failedReads.add("Practitioner/unavailable");
 
@@ -368,6 +375,7 @@ test("optional context dependency failures omit enrichment without hiding the co
 test("an unavailable optional attestation search does not hide current findings", async () => {
   const fhir = new OverviewMemoryFhir([
     encounter(),
+    ...visitTypeContext(),
     historyFinding("history-current", "e1", "2026-08-24T14:40:00.000Z"),
   ]);
   fhir.failedSearches.add("Provenance");
@@ -391,7 +399,7 @@ test("an encounter with no patient is rejected without fabricating a projection"
 test("an entered-in-error Condition cannot resolve Assessment completeness", async () => {
   const retracted = condition("retracted-condition", "Encounter/e1", []);
   retracted.verificationStatus = { coding: [{ code: "entered-in-error" }] };
-  const fhir = new OverviewMemoryFhir([encounter(), retracted]);
+  const fhir = new OverviewMemoryFhir([encounter(), ...visitTypeContext(), retracted]);
 
   const response = await handleExamOverviewRequest(deps(fhir, "provider"), request());
 
@@ -412,9 +420,9 @@ test("Conditions alone cannot resolve Assessment without diagnosis rows and requ
   }];
 
   const states = await Promise.all([
-    new OverviewMemoryFhir([encounter(), diagnosisOnly]),
-    new OverviewMemoryFhir([diagnosisRowWithoutStatus, diagnosisOnly]),
-    new OverviewMemoryFhir([completeAssessment, diagnosisOnly]),
+    new OverviewMemoryFhir([encounter(), ...visitTypeContext(), diagnosisOnly]),
+    new OverviewMemoryFhir([diagnosisRowWithoutStatus, ...visitTypeContext(), diagnosisOnly]),
+    new OverviewMemoryFhir([completeAssessment, ...visitTypeContext(), diagnosisOnly]),
   ].map(async (fhir) => {
     const response = await handleExamOverviewRequest(deps(fhir, "provider"), request());
     assert.equal(response.status, 200, JSON.stringify(response.body));
@@ -489,8 +497,28 @@ function encounter(id = "e1"): Encounter {
     status: id === "e1" ? "in-progress" : "finished",
     class: {},
     subject: { reference: "Patient/p1" },
-    type: [{ coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: "comprehensive" }] }],
+    appointment: [{ reference: `Appointment/${id}-appointment` }],
+    type: [{ coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: "routine-exam-established" }] }],
   };
+}
+
+function visitTypeContext(encounterId = "e1"): [Appointment, HealthcareService] {
+  return [
+    {
+      resourceType: "Appointment",
+      id: `${encounterId}-appointment`,
+      status: "booked",
+      participant: [{ actor: { reference: "Patient/p1" }, status: "accepted" }],
+      serviceType: [{ coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: "routine-exam-established" }] }],
+    },
+    {
+      resourceType: "HealthcareService",
+      id: "routine-exam-established",
+      active: true,
+      type: [{ coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: "routine-exam-established" }] }],
+      category: [{ coding: [{ system: ODOS_VISIT_TYPE_CATEGORY_SYSTEM, code: "comprehensive" }] }],
+    },
+  ];
 }
 
 function historyFinding(
@@ -518,7 +546,7 @@ interface HistoryWorkflow {
 }
 
 function historyWorkflow(): HistoryWorkflow {
-  const fhir = new HistoryWorkflowFhir([encounter()]);
+  const fhir = new HistoryWorkflowFhir([encounter(), ...visitTypeContext()]);
   const definition = buildHpiFindingDefinition({
     source: "manual",
     recordedAt: "1970-01-01T00:00:00.000Z",
@@ -708,6 +736,13 @@ class OverviewMemoryFhir implements ExamOverviewFhirClient {
           identifier.system === system && identifier.value === value
         );
         if (!identified) return false;
+      }
+      if (params["service-type"]) {
+        const [system, code] = params["service-type"].split("|");
+        const serviceType = (resource as HealthcareService).type?.some((concept) =>
+          concept.coding?.some((coding) => coding.system === system && coding.code === code)
+        );
+        if (!serviceType) return false;
       }
       if (params.encounter && (resource as Condition | Observation).encounter?.reference !== params.encounter) {
         return false;
