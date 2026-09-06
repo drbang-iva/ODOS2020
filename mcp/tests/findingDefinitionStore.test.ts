@@ -476,8 +476,8 @@ test("every definition-backed clinical-graph HTTP closure receives the persisten
   // (encounter-void-routes.ts), which receives clinicalGraphRouteDeps whole and is exercised
   // over HTTP by encounterVoidRoutes.test.ts — one inline route and one inline dependency
   // call fewer here.
-  assert.equal(clinicalRoutes.length, 98);
-  assert.equal(routeDependencies.length, 48);
+  assert.equal(clinicalRoutes.length, 99);
+  assert.equal(routeDependencies.length, 49);
   assert.equal(procedureRouteDependencies.length, 6);
   assert.match(source, /registerEncounterVoidRoutes\(app, authenticateWithMedplum, clinicalGraphRouteDeps\)/);
   assert.match(source, /handleHistoryReviewRequest/);

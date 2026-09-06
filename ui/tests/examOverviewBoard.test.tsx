@@ -2531,34 +2531,41 @@ test("G2: a successful no-op clear must not promote an older partial slot from '
   }
 });
 
+async function answerDiscardInDialog(harness: { renderer: ReactTestRenderer }, action: () => unknown, answer: boolean): Promise<string> {
+  let pending: unknown;
+  await act(async () => { pending = action(); await flushEffects(); });
+  const dialog = harness.renderer.root.findByProps({ role: "alertdialog" });
+  const title = textContent(dialog.findByType("h2"));
+  const button = dialog.findAllByType("button").find((node) => textContent(node) === (answer ? "Discard changes" : "Keep"))!;
+  await act(async () => { button.props.onClick(); await pending; await flushEffects(); await flushEffects(); });
+  return title;
+}
+
 test("fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing", async () => {
   const harness = await renderEncounter(PROJECTION, { undoLedger: PENDING_UNDO_LEDGER });
   const confirmations: string[] = [];
-  let answer = false;
-  Object.assign(globalThis.window, { confirm: (message: string) => { confirmations.push(message); return answer; } });
+  Object.assign(globalThis.window, { confirm: () => { throw new Error("Native confirm must not block charting"); } });
   try {
     act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
     const sheet = visibleSheet(harness);
     const aside = sheet.findByProps({ "data-testid": "exam-entry-sheet" });
     act(() => { aside.props.onInputCapture({ target: null }); });
 
-    await act(async () => { await undoButtonIn(sheet).props.onClick(); await flushEffects(); });
+    confirmations.push(await answerDiscardInDialog(harness, () => undoButtonIn(sheet).props.onClick(), false));
     assert.equal(confirmations.length, 1, "a dirty sheet asks first");
     assert.match(confirmations[0]!, /unsaved changes in Visual Acuity/i);
     assert.deepEqual(harness.undoRequests, [], "declined: nothing is undone and nothing is discarded");
     assert.equal(visibleSheet(harness).findAllByProps({ "data-undo-scope": "section" }).length, 1, "the strip stays");
 
-    answer = true;
-    await act(async () => { await undoButtonIn(visibleSheet(harness)).props.onClick(); await flushEffects(); await flushEffects(); });
+    confirmations.push(await answerDiscardInDialog(harness, () => undoButtonIn(visibleSheet(harness)).props.onClick(), true));
     assert.equal(confirmations.length, 2);
     assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }], "accepted: the undo proceeds");
 
     // The visit-level Undo in the chart bar guards the open sheet the same way.
     act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
     act(() => { visibleSheet(harness).findByProps({ "data-testid": "exam-entry-sheet" }).props.onInputCapture({ target: null }); });
-    answer = false;
     const before = harness.undoRequests.length;
-    await act(async () => { await undoButtonIn(harness.renderer.root.findByProps({ "data-chart-bar-slot": "undo" })).props.onClick(); await flushEffects(); });
+    confirmations.push(await answerDiscardInDialog(harness, () => undoButtonIn(harness.renderer.root.findByProps({ "data-chart-bar-slot": "undo" })).props.onClick(), false));
     assert.equal(confirmations.length, 3, "the chart-bar Undo asks too while a dirty sheet is open");
     assert.equal(harness.undoRequests.length, before);
   } finally {
@@ -2569,29 +2576,26 @@ test("fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, 
 test("fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks", async () => {
   const harness = await renderEncounter(PROJECTION, { undoLedger: PENDING_UNDO_LEDGER });
   const confirmations: string[] = [];
-  let answer = true;
-  Object.assign(globalThis.window, { confirm: (message: string) => { confirmations.push(message); return answer; } });
+  Object.assign(globalThis.window, { confirm: () => { throw new Error("Native confirm must not block charting"); } });
   try {
     act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
     act(() => { visibleSheet(harness).findByProps({ "data-testid": "exam-entry-sheet" }).props.onInputCapture({ target: null }); });
 
     harness.undoFailure.status = 503;
-    await act(async () => { await undoButtonIn(visibleSheet(harness)).props.onClick(); await flushEffects(); await flushEffects(); });
+    confirmations.push(await answerDiscardInDialog(harness, () => undoButtonIn(visibleSheet(harness)).props.onClick(), true));
     assert.equal(confirmations.length, 1, "the discard warning was asked and accepted");
     assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }], "the undo was attempted");
     const sheet = visibleSheet(harness);
     assert.equal(sheet.props.sectionId, "va", "the sheet stays mounted with the typed edit");
     assert.match(textContent(sheet.findByProps({ "data-undo-scope": "section" })), /Undo could not be applied/, "the failure is reported in the strip");
 
-    answer = false;
-    act(() => { sheet.findByProps({ "data-testid": "cancel-exam-entry-sheet" }).props.onClick(); });
+    confirmations.push(await answerDiscardInDialog(harness, () => sheet.findByProps({ "data-testid": "cancel-exam-entry-sheet" }).props.onClick(), false));
     assert.equal(confirmations.length, 2, "the failed Undo must leave the sheet dirty for the next transition");
     assert.equal(visibleSheet(harness).props.sectionId, "va", "declined: the sheet with the typed edit is still there");
 
     // And once an Undo succeeds, the guard is released so the remount does not ask twice.
     harness.undoFailure.status = undefined;
-    answer = true;
-    await act(async () => { await undoButtonIn(visibleSheet(harness)).props.onClick(); await flushEffects(); await flushEffects(); });
+    confirmations.push(await answerDiscardInDialog(harness, () => undoButtonIn(visibleSheet(harness)).props.onClick(), true));
     assert.equal(confirmations.length, 3);
     assert.equal(harness.undoRequests.length, 2);
     act(() => { visibleSheet(harness).findByProps({ "data-testid": "cancel-exam-entry-sheet" }).props.onClick(); });
@@ -3270,25 +3274,19 @@ test("EncounterCharting keeps a dirty mapped sheet mounted until its guarded tra
   const harness = await renderEncounter(PROJECTION);
   const prompts: string[] = [];
   try {
-    Object.assign(globalThis.window, {
-      confirm(message: string) {
-        prompts.push(message);
-        return false;
-      },
-    });
+    Object.assign(globalThis.window, { confirm: () => { throw new Error("Native confirm must not block charting"); } });
     await act(async () => editorControl(harness.renderer.root, "hpi").props.onClick());
     const hpiSheet = harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => !sheet.props.hidden);
     assert.ok(hpiSheet);
     await act(async () => hpiSheet.props.onDirty());
 
-    await act(async () => editorControl(harness.renderer.root, "va").props.onClick());
+    prompts.push(await answerDiscardInDialog(harness, () => editorControl(harness.renderer.root, "va").props.onClick(), false));
     assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => !sheet.props.hidden)?.props.sectionId, "hpi");
     assert.deepEqual(prompts, [
       "Discard unsaved changes in Chief Complaint & HPI and open Visual Acuity?",
     ]);
 
-    Object.assign(globalThis.window, { confirm: () => true });
-    await act(async () => editorControl(harness.renderer.root, "va").props.onClick());
+    await answerDiscardInDialog(harness, () => editorControl(harness.renderer.root, "va").props.onClick(), true);
     assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => !sheet.props.hidden)?.props.sectionId, "va");
     assert.equal(harness.renderer.root.findAllByType(HpiSection).length, 0);
     assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);

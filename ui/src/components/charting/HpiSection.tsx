@@ -505,6 +505,13 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
             );
           })}
 
+          <div className="odos-hpi-border rounded border border-dashed bg-bg-panel/40 p-4">
+            <p className="odos-hpi-muted text-sm font-semibold">Add complaint</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {templates.map((template) => <button key={template.complaint} type="button" className="sidebar-button" disabled={adding} onClick={() => void addComplaint(template)}>{template.label}</button>)}
+            </div>
+          </div>
+
           {subjectSections.map((declaration) => {
             const currentAnswers = answers.filter((answer) => answer.subjectScope === declaration.subjectScope && answer.templateKey === declaration.key);
             const carried = carriedForwardAnswers.filter((row) => row.answer.templateKey === declaration.key);
@@ -580,12 +587,6 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
             saveIndicator={<SaveIndicator state={saveState} clock={clock} onRetry={() => { void queueSave().catch(() => undefined); }} />}
           />)}
 
-          <div className="odos-hpi-border rounded border border-dashed bg-bg-panel/40 p-4">
-            <p className="odos-hpi-muted text-sm font-semibold">Add complaint</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {templates.map((template) => <button key={template.complaint} type="button" className="sidebar-button" disabled={adding} onClick={() => void addComplaint(template)}>{template.label}</button>)}
-            </div>
-          </div>
         </div>}
       </div>
     </section>

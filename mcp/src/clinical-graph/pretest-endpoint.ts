@@ -228,6 +228,63 @@ export async function handleAutoRefractionHistoryRequest(
   };
 }
 
+export async function handleWearingHistoryRequest(
+  deps: PretestEndpointDeps,
+  input: { authHeader: string | undefined; query: unknown },
+): Promise<PretestEndpointResult> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to read Wearing history." } };
+  if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  const parsed = autoRefractionHistoryQuerySchema.safeParse(input.query);
+  if (!parsed.success) return { status: 400, body: { error: "Patient and encounter references are required." } };
+  const bundle = await staff.fhir.search<Observation>("Observation", {
+    subject: parsed.data.patientReference,
+    encounter: parsed.data.encounterReference,
+    code: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|wearing_rx`,
+    _sort: "-date",
+    _count: "1000",
+  });
+  if (bundle.link?.some((link) => link.relation === "next")) {
+    return { status: 409, body: { error: "Wearing history exceeds the read limit; no partial form was loaded." } };
+  }
+  const observations = (bundle.entry ?? []).flatMap(({ resource }) =>
+    resource?.id && isLiveObservation(resource)
+      && resource.subject?.reference === parsed.data.patientReference
+      && resource.encounter?.reference === parsed.data.encounterReference
+      && resource.code.coding?.some((coding) => coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === "wearing_rx")
+      ? [resource] : [])
+    .sort((a, b) => Date.parse(observationDate(b)) - Date.parse(observationDate(a)));
+  const latest = observations[0];
+  if (!latest) return { status: 200, body: { pairs: [], leftGlassesAtHome: false } };
+  const recordedAt = observationDate(latest);
+  if (!Number.isFinite(Date.parse(recordedAt))) {
+    return { status: 409, body: { error: "Wearing history has no recording date; the saved pairs could not be loaded." } };
+  }
+  // A capture writes the whole form: all pairs share its recording instant. Older captures remain history.
+  const snapshot = observations.filter((observation) => Date.parse(observationDate(observation)) === Date.parse(recordedAt));
+  const leftGlassesAtHome = observationComponent(latest, "LEFT_GLASSES_AT_HOME")?.valueBoolean === true;
+  const pairs = leftGlassesAtHome ? [] : snapshot.map((observation) => definedRecord({
+    id: observationComponentString(observation, "PAIR_ID") ?? observation.id,
+    eyeglassType: observationComponentString(observation, "EYEGLASS_TYPE"),
+    remarks: observationComponentString(observation, "REMARKS"),
+    ...Object.fromEntries(EYES.flatMap((eye) => {
+      const values = definedRecord({
+        sphere: observationComponentNumber(observation, `${eye}_SPHERE`),
+        cylinder: observationComponentNumber(observation, `${eye}_CYLINDER`),
+        axis: observationComponentNumber(observation, `${eye}_AXIS`),
+        add: observationComponentNumber(observation, `${eye}_ADD`),
+        prismAmount: observationComponentNumber(observation, `${eye}_PRISM_AMOUNT`),
+        prismBase: observationComponentString(observation, `${eye}_PRISM_BASE`),
+        distanceVisualAcuity: observationComponentString(observation, `${eye}_DISTANCE_VA`),
+        nearVisualAcuity: observationComponentString(observation, `${eye}_NEAR_VA`),
+      });
+      return Object.keys(values).length ? [[eye, values]] : [];
+    })),
+  }));
+  const sourceType = latest.note?.flatMap((note) => note.text.match(/(?:^|; )sourceType=(manual|device)(?:;|$)/)?.[1] ?? [])[0] ?? "manual";
+  return { status: 200, body: { pairs, leftGlassesAtHome, sourceType, recordedAt } };
+}
+
 export async function handleWearingCaptureRequest(
   deps: PretestEndpointDeps,
   input: { authHeader: string | undefined; body: unknown },

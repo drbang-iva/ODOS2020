@@ -5,6 +5,7 @@ import type { UndoLedgerSlot } from "../../lib/encounter-undo";
 import { isClosedEncounterStatus, type EncounterVoidResult } from "../../lib/encounter-void";
 import { ClearEncounterButton } from "./ClearControls";
 import { UndoStrip } from "./UndoStrip";
+import { useConfirmDestructive } from "./ConfirmDestructive";
 
 export const EXAM_ENTRY_SHEET_CONFIG = {
   hpi: { title: "Chief Complaint & HPI", layout: "paired-row-form" },
@@ -41,6 +42,9 @@ export function isExamEntrySheetSectionId(sectionId: string): sectionId is ExamE
 }
 
 export function useExamEntrySheetGuard(sectionId?: ExamEntrySheetSectionId) {
+  const confirmDestructive = useConfirmDestructive();
+  const transitionPending = useRef(false);
+  const sectionVersion = useRef(0);
   const dirtyRef = useRef(false);
   const dirtyCheckpointRef = useRef<boolean>();
   const lastFocusRef = useRef<HTMLElement | null>(null);
@@ -49,6 +53,8 @@ export function useExamEntrySheetGuard(sectionId?: ExamEntrySheetSectionId) {
     dirtyRef.current = false;
     dirtyCheckpointRef.current = undefined;
     lastFocusRef.current = null;
+    sectionVersion.current += 1;
+    return () => { sectionVersion.current += 1; };
   }, [sectionId]);
 
   const resetDirty = useCallback((keepCancelableEditorOpen = false) => {
@@ -81,7 +87,7 @@ export function useExamEntrySheetGuard(sectionId?: ExamEntrySheetSectionId) {
    * only once the action that needed it has actually succeeded; a failed action leaves the edits
    * on screen and the guard armed for the next transition.
    */
-  const confirmDiscard = useCallback((messageTemplate?: string, destinationTitle?: string) => {
+  const confirmDiscard = useCallback(async (messageTemplate?: string, destinationTitle?: string) => {
     if (!sectionId || !dirtyRef.current) return true;
     const currentTitle = EXAM_ENTRY_SHEET_CONFIG[sectionId].title;
     const message = messageTemplate
@@ -89,19 +95,25 @@ export function useExamEntrySheetGuard(sectionId?: ExamEntrySheetSectionId) {
       : destinationTitle
         ? `Discard unsaved changes in ${currentTitle} and open ${destinationTitle}?`
         : `Discard unsaved changes in ${currentTitle}?`;
-    if (typeof window === "undefined" || typeof window.confirm !== "function" || !window.confirm(message)) {
-      lastFocusRef.current?.focus();
-      return false;
+    const version = sectionVersion.current;
+    const accepted = await confirmDestructive({ title: message, consequence: "Unsaved edits will be discarded. Saved entries remain in the chart.", confirmLabel: "Discard changes" });
+    if (version !== sectionVersion.current) return false;
+    if (!accepted) lastFocusRef.current?.focus();
+    return accepted;
+  }, [confirmDestructive, sectionId]);
+  const requestTransition = useCallback(async (destinationTitle: string | undefined, transition: () => void) => {
+    if (transitionPending.current) return false;
+    transitionPending.current = true;
+    try {
+      if (sectionId && dirtyRef.current && !(await confirmDiscard(undefined, destinationTitle))) return false;
+      dirtyRef.current = false;
+      dirtyCheckpointRef.current = undefined;
+      transition();
+      return true;
+    } finally {
+      transitionPending.current = false;
     }
-    return true;
-  }, [sectionId]);
-  const requestTransition = useCallback((destinationTitle: string | undefined, transition: () => void) => {
-    if (!confirmDiscard(undefined, destinationTitle)) return false;
-    dirtyRef.current = false;
-    dirtyCheckpointRef.current = undefined;
-    transition();
-    return true;
-  }, [confirmDiscard]);
+  }, [confirmDiscard, sectionId]);
 
   return {
     checkpointDirty,

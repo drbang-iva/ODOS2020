@@ -520,7 +520,7 @@ for (const contract of [
       await page.locator('[data-editor-section-id="va"]').click();
 
       assert.deepEqual(dialogs, [
-        `Discard unsaved changes in ${contract.currentTitle} and open Visual Acuity?`,
+        `Discard unsaved changes in ${contract.currentTitle} and open Visual Acuity? Unsaved edits will be discarded. Saved entries remain in the chart.`,
       ]);
       await page.getByRole("dialog", { name: contract.currentTitle }).waitFor();
       if (contract.focusLabel) {
@@ -604,8 +604,8 @@ test("dirty Escape and Cancel share the discard guard while pristine Escape rema
     await page.getByRole("button", { name: "Back to exam overview from Intraocular Pressure" }).click();
     await page.getByRole("dialog", { name: "Intraocular Pressure" }).waitFor({ state: "detached" });
     assert.deepEqual(dialogs, [
-      "Discard unsaved changes in Intraocular Pressure?",
-      "Discard unsaved changes in Intraocular Pressure?",
+      "Discard unsaved changes in Intraocular Pressure? Unsaved edits will be discarded. Saved entries remain in the chart.",
+      "Discard unsaved changes in Intraocular Pressure? Unsaved edits will be discarded. Saved entries remain in the chart.",
     ]);
   } finally {
     await page.close();

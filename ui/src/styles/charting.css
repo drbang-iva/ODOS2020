@@ -1346,6 +1346,7 @@
 }
 
 .odos-chart-bar-sections .odos-exam-completeness-trigger {
+  width: max-content;
   height: 100%;
   padding: 5px 12px;
   font-size: 11.5px;
@@ -1454,6 +1455,10 @@
 }
 
 .odos-exam-completeness-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   width: 100%;
   min-height: 44px;
   padding: 10px 14px;
@@ -1468,7 +1473,6 @@
 }
 
 .odos-exam-completeness-trigger::after {
-  float: right;
   content: "▾";
 }
 

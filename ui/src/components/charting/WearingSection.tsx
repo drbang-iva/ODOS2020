@@ -53,6 +53,15 @@ interface PairState {
   OS: EyeState;
 }
 
+interface WearingHistoryResponse {
+  pairs?: Array<Omit<PairState, "OD" | "OS"> & {
+    OD?: Partial<Record<keyof EyeState, string | number>>;
+    OS?: Partial<Record<keyof EyeState, string | number>>;
+  }>;
+  leftGlassesAtHome?: boolean;
+  sourceType?: string;
+}
+
 const EYES: Eye[] = ["OD", "OS"];
 const OPERATOR = "ODOS UI clinical_graph_wearing";
 
@@ -67,36 +76,58 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
   const [sourceType, setSourceType] = useState("manual");
   const { onCleared } = useEncounterEdit();
+  const [loadedFor, setLoadedFor] = useState("");
+  const [savedPayload, setSavedPayload] = useState<string>();
+  const identityKey = `${patientReference}|${encounterReference}`;
+  const ready = loadedFor === identityKey && !definitionLoading && !definitionError;
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`${clinicalGraphApiBase()}/clinical-graph/wearing/definition`, {
-      headers: authHeaders(),
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`Wearing definition request failed: ${response.status}`);
-        return await response.json() as WearingDefinitionResponse;
-      })
-      .then((body) => {
-        setDefinition(body);
-        const firstType = activeOptions(body.definition.fields.eyeglassType)[0]?.code ?? "";
-        setSourceType(defaultSourceType(activeOptions(body.definition.fields.sourceType)));
-        setPairs((current) => current.map((pair) => ({
-          ...pair,
-          eyeglassType: pair.eyeglassType || firstType,
-        })));
-      })
-      .catch((err) => {
-        if ((err as Error).name !== "AbortError") {
-          setDefinitionError(err instanceof Error ? err.message : String(err));
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setDefinitionLoading(false);
-      });
+    setDefinitionLoading(true);
+    setDefinitionError(null);
+    setLoadedFor("");
+    setSaved(null);
+    setSavedPayload(undefined);
+    setPairs([emptyPair()]);
+    setLeftGlassesAtHome(false);
+    setError(null);
+    const query = new URLSearchParams({ patientReference, encounterReference });
+    const read = async (path: string) => {
+      const response = await fetch(`${clinicalGraphApiBase()}${path}`, { headers: authHeaders(), signal: controller.signal });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? `Wearing load failed: ${response.status}`);
+      return body;
+    };
+    Promise.all([
+      read("/clinical-graph/wearing/definition") as Promise<WearingDefinitionResponse>,
+      read(`/clinical-graph/wearing/history?${query}`) as Promise<WearingHistoryResponse>,
+    ]).then(([body, history]) => {
+      if (controller.signal.aborted) return;
+      setDefinition(body);
+      const firstType = activeOptions(body.definition.fields.eyeglassType)[0]?.code ?? "";
+      const source = history.sourceType ?? defaultSourceType(activeOptions(body.definition.fields.sourceType));
+      const nextPairs = history.pairs?.length ? history.pairs.map((pair) => ({
+        id: pair.id,
+        eyeglassType: pair.eyeglassType,
+        remarks: pair.remarks ?? "",
+        OD: hydratedEye(pair.OD),
+        OS: hydratedEye(pair.OS),
+      })) : [emptyPair(firstType)];
+      const leftAtHome = history.leftGlassesAtHome ?? false;
+      setSourceType(source);
+      setPairs(nextPairs);
+      setLeftGlassesAtHome(leftAtHome);
+      if (history.pairs?.length || leftAtHome) {
+        setSavedPayload(JSON.stringify({ sourceType: source, leftGlassesAtHome: leftAtHome, pairs: leftAtHome ? [] : buildPayload(nextPairs) }));
+      }
+      setLoadedFor(identityKey);
+    }).catch((err) => {
+      if (!controller.signal.aborted) setDefinitionError(err instanceof Error ? err.message : String(err));
+    }).finally(() => {
+      if (!controller.signal.aborted) setDefinitionLoading(false);
+    });
     return () => controller.abort();
-  }, []);
+  }, [patientReference, encounterReference]);
 
   const fields = definition?.definition.fields ?? {};
   const eyeglassTypes = useMemo(() => activeOptions(fields.eyeglassType), [fields.eyeglassType]);
@@ -131,6 +162,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
   }
 
   function resetForm() {
+    setSavedPayload(undefined);
     setPairs([emptyPair(eyeglassTypes[0]?.code ?? "")]);
     setSourceType(defaultSourceType(sourceTypes));
     setLeftGlassesAtHome(false);
@@ -139,6 +171,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
   }
 
   async function save() {
+    if (!ready || saving) return;
     let payloadPairs: Array<Record<string, unknown>> = [];
     try {
       if (!leftGlassesAtHome) payloadPairs = buildPayload(pairs);
@@ -146,6 +179,9 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
       setError(err instanceof Error ? err.message : String(err));
       return;
     }
+    const payload = { sourceType, leftGlassesAtHome, pairs: payloadPairs };
+    const signature = JSON.stringify(payload);
+    if (signature === savedPayload) return;
     setSaving(true);
     setError(null);
     try {
@@ -155,9 +191,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
         body: JSON.stringify({
           patientReference,
           encounterReference,
-          sourceType,
-          leftGlassesAtHome,
-          pairs: payloadPairs,
+          ...payload,
         }),
       });
       const body = await response.json() as { pairs?: unknown[]; error?: string };
@@ -171,6 +205,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
         savedAt: new Date().toISOString(),
         operator: OPERATOR,
       };
+      setSavedPayload(signature);
       setSaved(status);
       onSaved(status);
     } catch (err) {
@@ -205,6 +240,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
               <OdosSelect
                 value={sourceType}
                 options={sourceTypes.map((option) => ({ value: option.code, label: option.display }))}
+                disabled={!ready || saving}
                 onChange={setSourceType}
                 ariaLabel="Source"
               />
@@ -212,7 +248,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
             <button
               type="button"
               onClick={addPair}
-              disabled={definitionLoading || leftGlassesAtHome || eyeglassTypes.length === 0}
+              disabled={!ready || saving || leftGlassesAtHome || eyeglassTypes.length === 0}
               className="rounded border border-brand/50 bg-brand/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand/20 disabled:opacity-45"
             >
               ＋ Add pair
@@ -224,6 +260,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
           <input
             type="checkbox"
             checked={leftGlassesAtHome}
+            disabled={!ready || saving}
             onChange={(event) => toggleLeftAtHome(event.target.checked)}
             className="h-4 w-4 accent-brand"
           />
@@ -237,7 +274,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
           </div>
         )}
 
-        <fieldset disabled={leftGlassesAtHome || definitionLoading} className="mt-5 space-y-5 disabled:opacity-45">
+        <fieldset disabled={leftGlassesAtHome || !ready || saving} className="mt-5 space-y-5 disabled:opacity-45">
           {pairs.map((pair, pairIndex) => (
             <div key={pair.id} className="overflow-hidden rounded border border-white/10 bg-white/[0.02]">
               <div className="flex flex-wrap items-end gap-3 border-b border-white/10 bg-white/[0.03] p-4">
@@ -323,17 +360,18 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
           ))}
         </fieldset>
 
-        <SectionFooter error={error} saved={saved} saving={saving || definitionLoading} onSave={save} />
+        <SectionFooter disabled={!ready} error={error} saved={saved} saving={saving || definitionLoading} onSave={save} />
       </div>
     </section>
   );
 }
 
-function SectionFooter({ error, saved, saving, onSave }: {
+function SectionFooter({ disabled, error, saved, saving, onSave }: {
   error: string | null;
   saved: SectionSaveStatus | null;
   saving: boolean;
   onSave: () => void;
+  disabled: boolean;
 }) {
   return (
     <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
@@ -344,7 +382,7 @@ function SectionFooter({ error, saved, saving, onSave }: {
       <button
         type="button"
         onClick={onSave}
-        disabled={saving}
+        disabled={disabled || saving}
         className="rounded border border-brand/60 bg-brand/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand/25 disabled:opacity-50"
       >
         {saving ? "Saving..." : "Save Wearing"}
@@ -355,6 +393,15 @@ function SectionFooter({ error, saved, saving, onSave }: {
 
 function formatDiopterOption(option: string): string {
   return formatPowerOption(Number(option));
+}
+
+function hydratedEye(eye: Partial<Record<keyof EyeState, string | number>> | undefined): EyeState {
+  const row = emptyEye();
+  for (const field of Object.keys(row) as Array<keyof EyeState>) {
+    const value = eye?.[field];
+    row[field] = typeof value === "number" && field !== "axis" ? value.toFixed(2) : value === undefined ? "" : String(value);
+  }
+  return row;
 }
 
 function emptyPair(eyeglassType = ""): PairState {
