@@ -543,6 +543,45 @@ test("Family History keeps a three-state relative value per condition and remove
   renderer.unmount();
 });
 
+test("Family History restores a persisted relation note in its editor", () => {
+  const declaration: HistorySubjectSection = {
+    key: "family-history",
+    label: "Family History",
+    subjectScope: "patient",
+    completionAnchor: "conditions",
+    sections: [{
+      id: "conditions",
+      type: "family_conditions",
+      label: "Conditions",
+      catalog: "family_conditions",
+      relations: "family_relations",
+      required: true,
+    }],
+  };
+  const renderer = create(<HistorySubjectSectionEditor
+    encounterId="e1"
+    declaration={declaration}
+    catalogs={{
+      family_conditions: [{ code: "glaucoma", display: "Glaucoma" }],
+      family_relations: [{ code: "father", display: "Father" }, { code: "mother", display: "Mother" }],
+    }}
+    answers={[{
+      id: "family-e1-conditions-glaucoma",
+      subjectScope: "patient",
+      templateKey: "family-history",
+      sectionId: "conditions",
+      optionCode: "glaucoma",
+      value: { kind: "relations", positive: ["father"], negative: ["mother"], note: "Mother denied disease; father diagnosed at 42." },
+    }]}
+    editMode={false}
+    onChange={() => undefined}
+    onRemoveTyped={() => undefined}
+  />);
+
+  assert.equal(renderer.root.findByProps({ "aria-label": "Glaucoma note" }).props.value, "Mother denied disease; father diagnosed at 42.");
+  renderer.unmount();
+});
+
 test("clearing a selected tobacco chip voids its one Observation before saving the empty section", async () => {
   const originalFetch = globalThis.fetch;
   const voidBodies: unknown[] = [];
@@ -829,6 +868,19 @@ test("a carried-forward text section displays its recorded value in the prior-en
 });
 
 test("a carried-forward family condition displays its positive relatives in the prior-encounter strip", async () => {
+  const observation = buildHistoryAnswerObservation({
+    id: "prior-family-glaucoma",
+    subjectScope: "patient",
+    templateKey: "family-history",
+    sectionId: "conditions",
+    optionCode: "glaucoma",
+    value: { kind: "relations", positive: ["father", "brother"], negative: ["mother"] },
+  }, {
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/prior",
+    recordedAt: "2026-08-01T12:00:00.000Z",
+  });
+  const restored = parseHistoryAnswerObservation(JSON.parse(JSON.stringify({ ...observation, id: "prior-family-glaucoma" })));
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input) => {
     const url = String(input);
@@ -855,15 +907,7 @@ test("a carried-forward family condition displays its positive relatives in the 
     if (url.endsWith("/clinical-graph/encounters/e1/hpi")) return json({
       answers: [],
       carriedForwardAnswers: [{
-        answer: {
-          id: "prior-family-glaucoma",
-          subjectScope: "patient",
-          templateKey: "family-history",
-          sectionId: "conditions",
-          optionCode: "glaucoma",
-          observationReference: "Observation/prior-family-glaucoma",
-          value: { kind: "relations", positive: ["father", "brother"], negative: ["mother"] },
-        },
+        answer: restored,
         encounterReference: "Encounter/prior",
         recordedAt: "2026-08-01T12:00:00.000Z",
       }],
@@ -880,6 +924,68 @@ test("a carried-forward family condition displays its positive relatives in the 
     });
     const chartStrip = renderer.root.findByProps({ "aria-label": "Family History on this chart" });
     assert.match(chartStrip.findByType("li").children.join(""), /^Glaucoma — father, brother/);
+    const detail = chartStrip.findByProps({ "aria-label": "Glaucoma family relation details" });
+    assert.match(detail.findByType("summary").children.join(""), /Review family details/);
+    assert.match(detail.findAllByType("p").map((node) => node.children.join("")).join(" "), /Positive: father, brother/);
+    assert.match(detail.findAllByType("p").map((node) => node.children.join("")).join(" "), /Denied: mother/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a carried-forward denial-only family condition exposes the denied relative in review detail", async () => {
+  const observation = buildHistoryAnswerObservation({
+    id: "prior-family-glaucoma",
+    subjectScope: "patient",
+    templateKey: "family-history",
+    sectionId: "conditions",
+    optionCode: "glaucoma",
+    value: { kind: "relations", positive: [], negative: ["mother"] },
+  }, {
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/prior",
+    recordedAt: "2026-08-01T12:00:00.000Z",
+  });
+  const restored = parseHistoryAnswerObservation(JSON.parse(JSON.stringify({ ...observation, id: "prior-family-glaucoma" })));
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/hpi/definition")) return json({
+      templates: [],
+      catalogs: {
+        family_conditions: [{ code: "glaucoma", display: "Glaucoma" }],
+        family_relations: [{ code: "father", display: "Father" }, { code: "mother", display: "Mother" }],
+      },
+      subjectSections: [{
+        key: "family-history",
+        label: "Family History",
+        subjectScope: "patient",
+        completionAnchor: "conditions",
+        sections: [{ id: "conditions", type: "family_conditions", label: "Conditions", catalog: "family_conditions", relations: "family_relations", required: true }],
+      }],
+      definition: {},
+    });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) return json({ complaints: [] });
+    if (url.endsWith("/clinical-graph/encounters/e1/hpi")) return json({
+      answers: [],
+      carriedForwardAnswers: [{ answer: restored, encounterReference: "Encounter/prior", recordedAt: "2026-08-01T12:00:00.000Z" }],
+      reviewAttestations: [],
+      templateNarratives: [],
+    });
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<EncounterEditContext.Provider value={{}}><HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></EncounterEditContext.Provider>);
+      await delay(0);
+    });
+    const chartStrip = renderer.root.findByProps({ "aria-label": "Family History on this chart" });
+    assert.match(chartStrip.findByType("li").children.join(""), /^Glaucoma/);
+    const detail = chartStrip.findByProps({ "aria-label": "Glaucoma family relation details" });
+    assert.match(detail.findByType("summary").children.join(""), /Review family details/);
+    assert.match(detail.findAllByType("p").map((node) => node.children.join("")).join(" "), /Denied: mother/);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

@@ -868,6 +868,13 @@ function FamilyConditionControl({ condition, relations, answer, onPut }: {
         onClick={() => cycle(relation.code)}
       >{state === "negative" ? `no ${relation.display}` : relation.display}</button>;
     })}</div>
+    {value && <input
+      aria-label={`${condition.display} note`}
+      className="sidebar-input mt-2"
+      placeholder="Optional note"
+      value={value.note ?? ""}
+      onChange={(event) => onPut({ ...value, note: event.target.value }, condition.code)}
+    />}
   </div>;
 }
 
@@ -973,8 +980,18 @@ function CarriedForwardStrip({ declaration, catalogs, rows, attestation, canRevi
       const positiveRelations = row.answer.value.kind === "relations" && section?.relations
         ? relationLabels(catalogs[section.relations] ?? [], new Set(row.answer.value.positive))
         : [];
+      const negativeRelations = row.answer.value.kind === "relations" && section?.relations
+        ? relationLabels(catalogs[section.relations] ?? [], new Set(row.answer.value.negative))
+        : [];
       const label = `${state === "negative" ? "No " : ""}${option?.display ?? optionCode ?? text ?? section?.label ?? "History value"}${positiveRelations.length ? ` — ${positiveRelations.join(", ")}` : ""}${row.answer.eye ? ` ${row.answer.eye}` : ""}`;
-      return <li key={row.answer.observationReference ?? row.answer.id}>{label}{note ? ` · ${note}` : ""} <span className="odos-hpi-faint">· {row.recordedAt.slice(0, 10)}</span></li>;
+      return <li key={row.answer.observationReference ?? row.answer.id}>
+        {label}{note ? ` · ${note}` : ""} <span className="odos-hpi-faint">· {row.recordedAt.slice(0, 10)}</span>
+        {row.answer.value.kind === "relations" && <details aria-label={`${option?.display ?? optionCode ?? "Family condition"} family relation details`} className="mt-1 ml-3">
+          <summary className="cursor-pointer text-xs text-sky-200">Review family details</summary>
+          {positiveRelations.length > 0 && <p className="odos-hpi-faint mt-1 text-xs">Positive: {positiveRelations.join(", ")}</p>}
+          {negativeRelations.length > 0 && <p className="odos-hpi-faint text-xs">Denied: {negativeRelations.join(", ")}</p>}
+        </details>}
+      </li>;
     })}</ul>
     <div className="mt-3 flex flex-wrap items-center gap-3">
       <button type="button" className="sidebar-button" disabled={!canReviewNoChange} title={canReviewNoChange ? undefined : "This section has edits on today's encounter."} onClick={onReview}>Reviewed today, no change</button>

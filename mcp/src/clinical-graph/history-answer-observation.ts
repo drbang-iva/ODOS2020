@@ -296,7 +296,10 @@ function validRelationsValue(value: Record<string, unknown>): boolean {
   const positive = value.positive;
   const negative = value.negative;
   if (!stringArray(positive) || !stringArray(negative)) return false;
-  return optionalText(value.note) && !positive.some((relation) => negative.includes(relation));
+  return optionalText(value.note) &&
+    new Set(positive).size === positive.length &&
+    new Set(negative).size === negative.length &&
+    !positive.some((relation) => negative.includes(relation));
 }
 
 function stringArray(value: unknown): value is string[] {

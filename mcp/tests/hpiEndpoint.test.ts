@@ -637,7 +637,7 @@ test("Family History saves one condition with positive and denied relatives thro
   });
 });
 
-test("Family History rejects wrong section kinds, unknown relations, and conditions with no marked relatives", async () => {
+test("Family History rejects wrong section kinds, unknown or repeated relations, and conditions with no marked relatives", async () => {
   const base = {
     id: "family-e1-conditions-glaucoma",
     subjectScope: "patient" as const,
@@ -649,6 +649,8 @@ test("Family History rejects wrong section kinds, unknown relations, and conditi
     { answer: { ...base, value: { kind: "tri-state", status: "positive" } }, error: /wrong value type for family_conditions/ },
     { answer: { ...base, sectionId: "notes", optionCode: undefined, value: { kind: "relations", positive: ["father"], negative: [] } }, error: /wrong value type for text/ },
     { answer: { ...base, value: { kind: "relations", positive: ["guardian"], negative: [] } }, error: /unknown family relation/ },
+    { answer: { ...base, value: { kind: "relations", positive: ["father", "father"], negative: [] } }, error: /value is invalid/ },
+    { answer: { ...base, value: { kind: "relations", positive: [], negative: ["mother", "mother"] } }, error: /value is invalid/ },
     { answer: { ...base, value: { kind: "relations", positive: [], negative: [] } }, error: /at least one family relation/ },
   ];
   for (const row of cases) {
