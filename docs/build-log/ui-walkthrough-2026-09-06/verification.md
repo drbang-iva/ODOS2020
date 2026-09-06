@@ -29,7 +29,9 @@ Supplementary mutations also failed as required: deleting the Wearing HTTP route
 
 Greptile's first review found that timestamp-only grouping could combine independent captures saved in the same millisecond. The initial equal-timestamp regression was RED at 0/1 because it reopened all three pairs from two captures. Each save now assigns one `WEARING_CAPTURE_ID` to every Observation, and the reader groups by that ID while isolating the legacy timestamp fallback from identified captures. Removing the component returns the guard to the same 0/1 merged-pair failure.
 
-The next reviews established that neither FHIR result order nor a process-local counter can prove which distinct capture is later across a restart or multiple workers. The final strengthened regression was RED at 0/1 because the endpoint returned HTTP 200 for that ambiguous state. History now returns HTTP 409 when the latest recording instant contains multiple capture IDs or mixes identified and legacy rows, leaving the UI disabled instead of loading a potentially stale prescription. The guard passes 1/1; deleting the refusal restores the unsafe HTTP 200 and fails 0/1. The disposable Medplum proof also saves two captures at one recording timestamp and confirms the explicit 409 response.
+The next reviews established that neither FHIR result order nor a process-local counter can prove which distinct capture is later across a restart or multiple workers. The strengthened regression was RED at 0/1 because the endpoint returned HTTP 200 for that ambiguous state. History now returns HTTP 409 when the latest recording instant contains multiple capture IDs or mixes identified and legacy rows, leaving the UI disabled instead of loading a potentially stale prescription. The guard passes 1/1; deleting the refusal restores the unsafe HTTP 200 and fails 0/1. The disposable Medplum proof also saves two captures at one recording timestamp and confirms the explicit 409 response.
+
+The final review identified the all-legacy form of the same ambiguity. Two equal-time legacy Observations have no durable evidence that they came from one multi-pair capture rather than two separate saves. Its guard was RED at 0/1 with HTTP 200, and now passes 1/1 with HTTP 409; deleting only the legacy clause reproduces the unsafe 200. A single legacy Observation remains readable.
 
 ## Live synthetic persistence proof
 
@@ -44,7 +46,7 @@ The browser proof routes the real Wearing component's HTTP requests to the real 
 - The first final-head CI run reached 1,257/1,258 UI passes; the new Wearing navigation guard was the only failure because a 7.7-second Vite navigation exceeded its 5-second navigation timeout. The walkthrough helper now allows 15 seconds for navigation while retaining 5-second interaction waits. In a concurrent run with all seven browser-driven files, all 10 walkthrough guards passed; one existing ROS fixture timed out at its own 5-second wait.
 - The same CI run's MCP suite reached 4,217 pass and 44 skip with one unrelated random Bulk Data ID failure: generated base64url happened to contain standalone `SSN`, which its test rejects but its generator does not. The exact four-test file passed immediately on rerun.
 - MCP full suite with a disposable PostgreSQL instance and `ODOS_ALLOW_UNGATED_MCP=1`: 4,204 pass, 0 fail, 0 cancelled, 57 skipped. The harness recorded 41 live-stack tests as ungated, including live authorization; the flag only makes the exit code reflect executed tests.
-- MCP endpoint/history/route targeted suite after the capture-ID fixback: 43 pass, 0 fail.
+- MCP endpoint/history/route targeted suite after the capture-ID fixback: 44 pass, 0 fail.
 - FHIR read-grant checks: 14 pass, 0 fail.
 - Persistent definition-route checks: 10 pass, 0 fail.
 - UI and MCP TypeScript/production builds: exit 0. Vite reports its existing 1.83 MB chunk-size warning.

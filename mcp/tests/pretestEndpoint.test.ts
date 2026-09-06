@@ -573,6 +573,26 @@ test("Wearing history refuses distinct captures that share the latest recording 
   assert.match(String((history.body as { error: string }).error), /same recording time/);
 });
 
+test("Wearing history refuses multiple equal-time legacy rows without capture identity", async () => {
+  const { created, deps: d } = deps();
+  await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, pairs: [
+    { eyeglassType: "single_vision_distance", OD: { sphere: -2 } },
+  ] } });
+  await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, pairs: [
+    { eyeglassType: "progressives", OD: { sphere: -3 } },
+  ] } });
+  for (const entry of created) {
+    if (entry.resource.resourceType !== "Observation") continue;
+    entry.resource.component = entry.resource.component?.filter((component) =>
+      !component.code.coding?.some((coding) => coding.code === "WEARING_CAPTURE_ID"));
+  }
+
+  const { handleWearingHistoryRequest } = await import("../src/clinical-graph/pretest-endpoint.js");
+  const history = await handleWearingHistoryRequest(d, { authHeader: AUTH, query: BODY });
+  assert.equal(history.status, 409);
+  assert.match(String((history.body as { error: string }).error), /same recording time/);
+});
+
 test("P2 Wearing left-at-home history stays distinct from an empty unsaved form", async () => {
   const { deps: d } = deps();
   await handleWearingCaptureRequest(d, { authHeader: AUTH, body: { ...BODY, leftGlassesAtHome: true } });

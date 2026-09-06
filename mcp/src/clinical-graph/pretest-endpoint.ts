@@ -262,7 +262,8 @@ export async function handleWearingHistoryRequest(
   }
   const sameTime = observations.filter((observation) => Date.parse(observationDate(observation)) === Date.parse(recordedAt));
   const captureIds = new Set(sameTime.flatMap((observation) => observationComponentString(observation, "WEARING_CAPTURE_ID") ?? []));
-  if (captureIds.size > 1 || captureIds.size === 1 && sameTime.some((observation) => !observationComponentString(observation, "WEARING_CAPTURE_ID"))) {
+  const hasLegacyRows = sameTime.some((observation) => !observationComponentString(observation, "WEARING_CAPTURE_ID"));
+  if (captureIds.size > 1 || captureIds.size === 1 && hasLegacyRows || captureIds.size === 0 && sameTime.length > 1) {
     return { status: 409, body: { error: "Multiple Wearing captures have the same recording time; no potentially stale form was loaded." } };
   }
   const captureId = observationComponentString(latest, "WEARING_CAPTURE_ID");
