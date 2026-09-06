@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { Patient } from "@medplum/fhirtypes";
+import type { Patient, ServiceRequest } from "@medplum/fhirtypes";
 import { AssessmentSection } from "../../src/components/charting/AssessmentSection";
 import { AutoRefractionSection } from "../../src/components/charting/AutoRefractionSection";
 import { CoverTestSection } from "../../src/components/charting/CoverTestSection";
@@ -31,6 +31,7 @@ import { HpiSection } from "../../src/components/charting/HpiSection";
 import { ImagingSection } from "../../src/components/charting/ImagingSection";
 import { IopSection } from "../../src/components/charting/IopSection";
 import { MyopiaManagementSection } from "../../src/components/charting/MyopiaManagementSection";
+import { OcularHealthSection } from "../../src/components/charting/OcularHealthSection";
 import { OrthoKSection } from "../../src/components/charting/OrthoKSection";
 import { PrescriptionSection } from "../../src/components/charting/PrescriptionSection";
 import { RefractionSection } from "../../src/components/charting/RefractionSection";
@@ -44,6 +45,12 @@ import { chartEditorInventory } from "../../src/components/charting/SpineNav";
 import type { ProcedureChargeApi, VisitChargeApi } from "../../src/lib/clinical-graph-client";
 import { fhir } from "../../src/lib/fhir";
 import { ConfirmDestructiveProvider } from "../../src/components/charting/ConfirmDestructive";
+import { ReferralCompose } from "../../src/components/referral/ReferralCompose";
+import {
+  REFERRAL_LETTER_BODY_EXTENSION_URL,
+  type ReferralApi,
+  type ReferralIncludeList,
+} from "../../src/components/referral/referral-api";
 import { FHIR_CONDITION_CATEGORY_CODE_SYSTEM } from "../../src/lib/fhir-clinical/condition";
 import { RoleProvider } from "../../src/lib/role-context";
 import "../../src/styles/globals.css";
@@ -125,6 +132,7 @@ const nativeFetch = window.fetch.bind(window);
 (window as typeof window & { __odosFixtureWrites?: Array<{ url: string; body: unknown }> }).__odosFixtureWrites = [];
 window.fetch = async (input, init) => {
   const url = String(input);
+  const fixtureParams = new URLSearchParams(window.location.search);
   if (init?.method === "POST") {
     (window as typeof window & { __odosFixtureWrites: Array<{ url: string; body: unknown }> }).__odosFixtureWrites.push({
       url,
@@ -132,6 +140,40 @@ window.fetch = async (input, init) => {
     });
   }
   if (new URLSearchParams(window.location.search).has("liveWearing") && url.includes("/clinical-graph/wearing")) return nativeFetch(input, init);
+  if (fixtureParams.get("confirmSurface") === "ocular" && url.includes("/clinical-graph/custom/") && url.includes("/history")) {
+    return Response.json({ rows: [{
+      eye: "OD",
+      state: "abnormal",
+      values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+      findingDetails: { "synthetic-finding": { grade: "trace" } },
+    }] });
+  }
+  if (fixtureParams.get("confirmSurface") === "prescription") {
+    if (url.includes("/fhir/R4/Encounter/test")) return Response.json({
+      resourceType: "Encounter", id: "test", status: "in-progress", class: {}, subject: { reference: "Patient/test" },
+      participant: [{ individual: { reference: "Practitioner/test" } }],
+    });
+    if (url.includes("/fhir/R4/Patient/test")) return Response.json({ resourceType: "Patient", id: "test" });
+    if (url.includes("/fhir/R4/Condition?")) return Response.json({ resourceType: "Bundle", type: "searchset", entry: [] });
+    if (url.includes("/fhir/R4/MedicationRequest?")) return Response.json({
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: [{ resource: {
+        resourceType: "MedicationRequest", id: "rx-confirm", status: "active", intent: "order",
+        subject: { reference: "Patient/test" }, encounter: { reference: "Encounter/test" },
+        medicationCodeableConcept: { text: "Synthetic ophthalmic" }, dosageInstruction: [{ text: "1 drop OU nightly" }],
+        authoredOn: "2026-09-06", requester: { reference: "Practitioner/test" },
+        extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-transmission-method", valueCode: "electronically-sent" }],
+        identifier: [{ system: "https://odos2020.com/fhir/sid/weno-switch-message-id", value: "synthetic-message" }],
+      } }],
+    });
+    if (url.endsWith("/weno/switch/configuration")) return Response.json({ configured: true, reason: "Synthetic WENO configuration." });
+    if (url.endsWith("/weno/medication-requests/rx-confirm/cancel")) return Response.json({
+      result: { kind: "status", code: "000", description: "Cancellation accepted" },
+      medicationRequest: { resourceType: "MedicationRequest", id: "rx-confirm", status: "cancelled", intent: "order", subject: { reference: "Patient/test" }, medicationCodeableConcept: { text: "Synthetic ophthalmic" } },
+      resendable: false,
+    });
+  }
   if (url.endsWith("/clinical-graph/refraction/definition")) {
     return Response.json({
       definition: {
@@ -469,6 +511,29 @@ function Fixture() {
   );
 }
 
+function ConfirmSurfaceFixture() {
+  const surface = new URLSearchParams(window.location.search).get("confirmSurface");
+  if (surface === "ocular") {
+    return <main className="h-screen overflow-auto bg-bg-deep text-white"><OcularHealthSection
+      definitions={[syntheticQualifiedOcularDefinition()]}
+      patientReference="Patient/test"
+      encounterReference="Encounter/test"
+      onSaved={() => undefined}
+      fetchImpl={window.fetch}
+    /></main>;
+  }
+  if (surface === "referral") {
+    return <ReferralCompose
+      patientReference="Patient/test"
+      encounterReference="Encounter/test"
+      onClose={() => undefined}
+      api={CONFIRM_REFERRAL_API}
+      loadContext={async () => ({ doctorDisplay: "Dr. Synthetic", findingCount: 3, hasPlan: true })}
+    />;
+  }
+  return <Fixture />;
+}
+
 function renderEditor(
   sectionId: FixtureSectionId,
   resetDirty: (keepCancelableEditorOpen?: boolean) => void,
@@ -667,8 +732,76 @@ function dilationDefinition(): CustomFindingDefinition {
   };
 }
 
-createRoot(document.getElementById("root")!).render(<RoleProvider initialRole="doctor">{
-  new URLSearchParams(window.location.search).has("walkthrough")
-    ? <ConfirmDestructiveProvider><Fixture /></ConfirmDestructiveProvider>
-    : <Fixture />
-}</RoleProvider>);
+function syntheticQualifiedOcularDefinition(): CustomFindingDefinition {
+  return {
+    ...emptyDefinition("ocular-health:anterior:synthetic-qualified", "Synthetic Qualified", true),
+    normalTemplate: "Synthetic normal.",
+    customFields: [{
+      localCode: "CUSTOM_ABNORMAL_FINDINGS_01",
+      display: "Abnormal findings",
+      valueType: "multi-select",
+      options: [{
+        code: "synthetic-finding",
+        display: "Synthetic Finding",
+        active: true,
+        priority: true,
+        qualifiers: [{ kind: "graded", key: "grade", display: "Synthetic qualifier control", options: ["trace", "marked"] }],
+      }],
+      order: 0,
+      active: true,
+    }],
+  };
+}
+
+const CONFIRM_INCLUDE_LIST: ReferralIncludeList = {
+  letter: true,
+  demographics: true,
+  history: true,
+  clinical_summary: false,
+  images: false,
+  hipaa_cover_sheet: false,
+  history_count: 2,
+};
+
+const CONFIRM_REFERRAL: ServiceRequest = {
+  resourceType: "ServiceRequest",
+  id: "referral-confirm",
+  meta: { versionId: "1" },
+  status: "draft",
+  intent: "order",
+  code: { text: "Specialist referral" },
+  subject: { reference: "Patient/test" },
+  encounter: { reference: "Encounter/test" },
+  requester: { reference: "Practitioner/test" },
+  performer: [{ reference: "Organization/retina", display: "Retina Group" }],
+  extension: [{ url: REFERRAL_LETTER_BODY_EXTENSION_URL, valueString: "Dear Retina Group, please evaluate this patient." }],
+};
+
+const CONFIRM_REFERRAL_API: ReferralApi = {
+  listTemplates: async () => [
+    { id: "general", name: "General Referral", letterType: "referral", specialty: "ophthalmology", register: "formal", curated: true },
+    { id: "retina", name: "Retina Referral", letterType: "referral", specialty: "retina", register: "formal", curated: true },
+  ],
+  loadDefaults: async () => CONFIRM_INCLUDE_LIST,
+  saveDefaults: async (includeList) => includeList,
+  searchConsultants: async () => [],
+  loadRecentConsultants: async () => [{ reference: "Organization/retina", display: "Retina Group" }],
+  createReferral: async () => CONFIRM_REFERRAL,
+  createInboundReferral: async () => CONFIRM_REFERRAL,
+  listInboundReferrals: async () => [],
+  previewConsultReport: async () => ({ pdfBase64: "", bodyHtml: "", documentReference: "DocumentReference/preview", sourceEncounter: { reference: "Encounter/test", date: "2026-09-06", label: "Synthetic encounter" } }),
+  updateReferral: async () => CONFIRM_REFERRAL,
+  regenerateReferral: async () => CONFIRM_REFERRAL,
+  applyTemplate: async () => CONFIRM_REFERRAL,
+  previewReferral: async () => ({ serviceRequestReference: "ServiceRequest/referral-confirm", pdfBase64: "", bodyHtml: "", documentReference: "DocumentReference/preview" }),
+  sendReferral: async () => ({ serviceRequestReference: "ServiceRequest/referral-confirm", pdfBase64: "", bodyHtml: "", documentReference: "DocumentReference/sent" }),
+  recordPrintRequested: async () => undefined,
+  faxReferral: async () => ({ fax: { reference: "DocumentReference/fax", status: "Pending" } }),
+  loadFaxStatus: async () => null,
+};
+
+createRoot(document.getElementById("root")!).render(
+  <RoleProvider initialRole="doctor">
+    <ConfirmDestructiveProvider><ConfirmSurfaceFixture /></ConfirmDestructiveProvider>
+  </RoleProvider>,
+);

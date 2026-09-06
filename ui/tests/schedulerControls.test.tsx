@@ -5,7 +5,10 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { OdosChips } from "../src/components/inputs/OdosChips";
-import type { AppointmentModalDraft } from "../src/lib/scheduler-appointment-ui";
+import {
+  confirmDoubleBookAndRetry,
+  type AppointmentModalDraft,
+} from "../src/lib/scheduler-appointment-ui";
 import {
   ODOS_DISCIPLINE_SYSTEM,
   buildAppointmentBlockContent,
@@ -46,6 +49,26 @@ const SCHEDULER_RESOURCES: Schedule[] = [
 const ROUTINE = visitType("routine", "Routine Exam", 30);
 const OFF_PRESET = visitType("off-preset", "Off-preset Visit", 20);
 const CUSTOM_DURATION = visitType("custom-duration", "Custom-duration Visit", 25);
+
+test("double-book retry uses the in-app confirmation contract and keeps decline safe", async () => {
+  const specs: Array<{ title: string; consequence: string; confirmLabel?: string }> = [];
+  let retries = 0;
+  const conflict = new Error("This slot is occupied. Pass allowDoubleBook to overbook");
+
+  assert.equal(await confirmDoubleBookAndRetry(conflict, async () => { retries += 1; }, async (spec) => {
+    specs.push(spec);
+    return false;
+  }), false);
+  assert.equal(retries, 0);
+  assert.deepEqual(specs, [{
+    title: conflict.message,
+    consequence: "Book anyway (double-book)?",
+    confirmLabel: "Book anyway",
+  }]);
+
+  assert.equal(await confirmDoubleBookAndRetry(conflict, async () => { retries += 1; }, async () => true), true);
+  assert.equal(retries, 1);
+});
 
 test("appointment block content trims notes and omits blank comments", () => {
   const withNote = buildAppointmentBlockContent(

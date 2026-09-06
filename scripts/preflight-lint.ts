@@ -252,6 +252,7 @@ const BULK_JOB_ID_PHI_CONSTRUCTOR_PATTERN =
 const BULK_META_SECURITY_STRIP_PATTERN =
   /delete\s+\w+\.meta\.security|\.meta\s*=\s*undefined|\.meta\.security\s*=\s*undefined|JSON\.stringify\([^,\n]+,\s*(?:replacer|[^)]*meta)/;
 const BULK_FORBIDDEN_EXPORT_ENDPOINT_PATTERN = /Patient\/(?::id|\{id\})\/\$export|\/Patient\/:id\/\$export/;
+const UI_NATIVE_CONFIRM_PATTERN = /\bwindow\.confirm\s*\(/;
 
 export const DIRECT_MEDPLUM_FHIR_BYPASS_ALLOWLIST = [
   "mcp/src/smart/registration/dynamic-client-registration.ts",
@@ -385,6 +386,16 @@ export function runVendorCanonicalShapePass(
   for (const file of files) {
     const lines = file.text.split(/\r?\n/);
     for (const [index, line] of lines.entries()) {
+      if (displayPath(file.path).startsWith("ui/src/") && UI_NATIVE_CONFIRM_PATTERN.test(line)) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "ui-native-window-confirm",
+          message: "Native window.confirm blocks the UI thread; use ConfirmDestructiveProvider and useConfirmDestructive().",
+          source: displayPath(file.path),
+          line: index + 1,
+        });
+      }
       if (MEDPLUM_CLIENT_APP_PATTERN.test(line) && !isMedplumAdapterPath(file.path)) {
         findings.push({
           pass: "vendor-canonical-shapes",

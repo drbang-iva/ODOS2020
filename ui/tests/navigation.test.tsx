@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  confirmAppNavigation,
   confirmPopstateNavigation,
   initializeAppHistory,
   interceptAppNavigation,
@@ -33,19 +34,19 @@ function clickEvent(link: HTMLAnchorElement, options: Partial<MouseEvent> = {}) 
   return { event, wasPrevented: () => prevented };
 }
 
-test("same-origin anchor clicks use pushState without assigning location", () => {
+test("same-origin anchor clicks use pushState without assigning location", async () => {
   const location = { href: "http://odos.local/settings", origin: "http://odos.local" };
   const pushes: string[] = [];
   const history = { pushState: (_state: unknown, _title: string, url?: string | URL | null) => pushes.push(String(url)) };
   const click = clickEvent(anchor("/settings/staff?from=index#roles"));
 
-  assert.equal(interceptAppNavigation(click.event, location, history), true);
+  assert.equal(await interceptAppNavigation(click.event, location, history), true);
   assert.equal(click.wasPrevented(), true);
   assert.deepEqual(pushes, ["/settings/staff?from=index#roles"]);
   assert.deepEqual(location, { href: "http://odos.local/settings", origin: "http://odos.local" });
 });
 
-test("modified, middle, and target-blank anchor clicks retain native navigation", () => {
+test("modified, middle, and target-blank anchor clicks retain native navigation", async () => {
   const location = { href: "http://odos.local/settings", origin: "http://odos.local" };
   const pushes: string[] = [];
   const history = { pushState: (_state: unknown, _title: string, url?: string | URL | null) => pushes.push(String(url)) };
@@ -59,13 +60,13 @@ test("modified, middle, and target-blank anchor clicks retain native navigation"
   ];
 
   for (const click of clicks) {
-    assert.equal(interceptAppNavigation(click.event, location, history), false);
+    assert.equal(await interceptAppNavigation(click.event, location, history), false);
     assert.equal(click.wasPrevented(), false);
   }
   assert.deepEqual(pushes, []);
 });
 
-test("external, native, download, hash, and full-page routes retain native navigation", () => {
+test("external, native, download, hash, and full-page routes retain native navigation", async () => {
   const location = { href: "http://odos.local/settings", origin: "http://odos.local" };
   const pushes: string[] = [];
   const history = { pushState: (_state: unknown, _title: string, url?: string | URL | null) => pushes.push(String(url)) };
@@ -83,34 +84,43 @@ test("external, native, download, hash, and full-page routes retain native navig
 
   for (const link of links) {
     const click = clickEvent(link);
-    assert.equal(interceptAppNavigation(click.event, location, history), false);
+    assert.equal(await interceptAppNavigation(click.event, location, history), false);
     assert.equal(click.wasPrevented(), false);
   }
   assert.deepEqual(pushes, []);
 });
 
-test("already-handled internal clicks do not create a second history entry", () => {
+test("already-handled internal clicks do not create a second history entry", async () => {
   const location = { href: "http://odos.local/desk", origin: "http://odos.local" };
   const pushes: string[] = [];
   const history = { pushState: (_state: unknown, _title: string, url?: string | URL | null) => pushes.push(String(url)) };
   const click = clickEvent(anchor("/settings"), { defaultPrevented: true });
 
-  assert.equal(interceptAppNavigation(click.event, location, history), false);
+  assert.equal(await interceptAppNavigation(click.event, location, history), false);
   assert.deepEqual(pushes, []);
 });
 
-test("a blocked settings navigation prevents the same-origin history change", () => {
+test("a blocked settings navigation prevents the same-origin history change", async () => {
   const location = { href: "http://odos.local/settings/visit-types", origin: "http://odos.local" };
   const pushes: string[] = [];
   const history = { pushState: (_state: unknown, _title: string, url?: string | URL | null) => pushes.push(String(url)) };
   const click = clickEvent(anchor("/settings"));
 
   assert.equal(
-    interceptAppNavigation(click.event, location, history, () => false),
+    await interceptAppNavigation(click.event, location, history, () => false),
     false,
   );
   assert.equal(click.wasPrevented(), true);
   assert.deepEqual(pushes, []);
+});
+
+test("a missing confirmation provider fails closed when settings are dirty", async () => {
+  const unregister = registerNavigationBlocker(() => true);
+  try {
+    assert.equal(await confirmAppNavigation(), false);
+  } finally {
+    unregister();
+  }
 });
 
 test("browser history prompts unless the navigation was already confirmed", () => {

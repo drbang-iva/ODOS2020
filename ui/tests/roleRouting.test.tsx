@@ -30,6 +30,8 @@ import {
 import { CLINIC_PATH, DESK_HOME_PATH } from "../src/scenes/DeskHome";
 import type { ViewState } from "../src/lib/view-state";
 import { useViewState } from "../src/lib/view-state";
+import { ConfirmDestructiveProvider } from "../src/components/charting/ConfirmDestructive";
+import { confirmPopstateNavigation, registerNavigationBlocker } from "../src/lib/navigation";
 
 function RouteProbe(_props: RouteSwitchProps) {
   return <main>Route probe</main>;
@@ -103,7 +105,7 @@ test("cross-side access requires at least one Desk role and one Clinic role", ()
   assert.equal(hasCrossSideAccess([]), false);
 });
 
-test("cross-side users switch between Desk and Clinic in the same tab", () => {
+test("cross-side users switch between Desk and Clinic in the same tab", async () => {
   const roles: PracticeRoleId[] = ["provider", "staff"];
   assert.equal(defaultHomePath(roles), CLINIC_PATH);
 
@@ -121,7 +123,7 @@ test("cross-side users switch between Desk and Clinic in the same tab", () => {
   } as unknown as Window & typeof globalThis;
   Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
   try {
-    openOtherSide(CLINIC_PATH);
+    await openOtherSide(CLINIC_PATH);
     assert.deepEqual(pushed, [CLINIC_PATH]);
     assert.deepEqual(events, ["popstate"]);
   } finally {
@@ -451,6 +453,119 @@ test("a Clinic deep link stays on the chart after front-desk-only role routing",
   } finally {
     if (renderer) act(() => renderer.unmount());
     useViewState.setState({ view: { kind: "picker" } });
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("rapid browser Back presses keep one confirmation and restore the committed route", async () => {
+  const originalWindow = globalThis.window;
+  const originalStorage = globalThis.sessionStorage;
+  const storage = memoryStorage();
+  const entries = [
+    { state: { __odosHistoryIndex: 0 }, pathname: "/settings" },
+    { state: { __odosHistoryIndex: 1 }, pathname: "/settings/visit-types" },
+    { state: { __odosHistoryIndex: 2 }, pathname: "/settings/packages" },
+  ];
+  let index = 2;
+  let popstateListener: ((event: Event) => void) | undefined;
+  const location = {
+    href: "http://localhost/settings/packages",
+    origin: "http://localhost",
+    pathname: entries[index]!.pathname,
+    search: "",
+    hash: "",
+  };
+  const syncLocation = () => {
+    location.pathname = entries[index]!.pathname;
+    location.href = `http://localhost${location.pathname}`;
+  };
+  const dispatchCurrentPopstate = () => {
+    popstateListener?.({ type: "popstate", state: entries[index]!.state } as unknown as PopStateEvent);
+  };
+  const windowStub = {
+    location,
+    navigation: { currentEntry: { get index() { return index; } } },
+    history: {
+      get state() { return entries[index]!.state; },
+      replaceState: (state: unknown, _title: string, url?: string | URL | null) => {
+        entries[index] = { state: state as { __odosHistoryIndex: number }, pathname: String(url ?? location.pathname) };
+        syncLocation();
+      },
+      go: (delta: number) => {
+        index += delta;
+        syncLocation();
+        queueMicrotask(dispatchCurrentPopstate);
+      },
+    },
+    fetch: globalThis.fetch,
+    addEventListener: (type: string, listener: (event: Event) => void) => {
+      if (type === "popstate") popstateListener = listener;
+    },
+    removeEventListener: (type: string, listener: (event: Event) => void) => {
+      if (type === "popstate" && popstateListener === listener) popstateListener = undefined;
+    },
+    setInterval: () => 1,
+    clearInterval: () => undefined,
+  } as unknown as Window & typeof globalThis;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
+  Object.defineProperty(globalThis, "sessionStorage", { configurable: true, value: storage });
+  confirmPopstateNavigation(() => true);
+  const unregister = registerNavigationBlocker(() => true);
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <ConfirmDestructiveProvider>
+          <App resolveRoles={async () => ({ roles: ["admin"] })} RouteComponent={RouteProbe} />
+        </ConfirmDestructiveProvider>,
+      );
+    });
+
+    index = 1;
+    syncLocation();
+    act(dispatchCurrentPopstate);
+    await act(async () => { await Promise.resolve(); });
+    assert.equal(renderer.root.findAll((node) => node.props.role === "alertdialog").length, 1);
+
+    index = 0;
+    syncLocation();
+    act(dispatchCurrentPopstate);
+    await act(async () => { await Promise.resolve(); });
+    assert.equal(index, 2);
+    assert.equal(location.pathname, "/settings/packages");
+    assert.equal(renderer.root.findAll((node) => node.props.role === "alertdialog").length, 1);
+
+    await act(async () => {
+      renderer.root.findAllByType("button").find((button) => button.children.includes("Keep"))!.props.onClick();
+      await Promise.resolve();
+    });
+    assert.equal(index, 2);
+    assert.equal(location.pathname, "/settings/packages");
+    assert.equal(renderer.root.findAll((node) => node.props.role === "alertdialog").length, 0);
+
+    index = 1;
+    syncLocation();
+    act(dispatchCurrentPopstate);
+    await act(async () => { await Promise.resolve(); });
+    index = 0;
+    syncLocation();
+    act(dispatchCurrentPopstate);
+    await act(async () => { await Promise.resolve(); });
+
+    await act(async () => {
+      renderer.root.findAllByType("button").find((button) => button.children.includes("Leave"))!.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    assert.equal(index, 1);
+    assert.equal(location.pathname, "/settings/visit-types");
+    assert.equal(renderer.root.findAll((node) => node.props.role === "alertdialog").length, 0);
+  } finally {
+    unregister();
+    if (renderer) act(() => renderer.unmount());
+    fhir.logout(storage);
+    Object.defineProperty(globalThis, "sessionStorage", { configurable: true, value: originalStorage });
     Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
 });

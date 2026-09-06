@@ -59,6 +59,7 @@ import {
   type PracticeRoleId,
 } from "../lib/practice-roles";
 import type { WatcherAlert, WatcherTaskAction } from "../lib/watchers";
+import { useConfirmDestructive } from "../components/charting/ConfirmDestructive";
 
 export function groupWatcherAlertsByAppointment(
   alerts: readonly WatcherAlert[],
@@ -80,6 +81,7 @@ export function SchedulerDayGrid({
   initialAppointmentId?: string;
   onWatcherAction?: (taskId: string, action: WatcherTaskAction) => void | Promise<void>;
 } = {}) {
+  const confirmDestructive = useConfirmDestructive();
   const clinicMode = useSchedulingStore((state) => state.clinicMode);
   const view = useSchedulingStore((state) => state.view);
   const date = useSchedulingStore((state) => state.date);
@@ -303,7 +305,7 @@ export function SchedulerDayGrid({
       setMoveSource(null);
     } catch (err) {
       if (!allowDoubleBook) {
-        await confirmDoubleBookAndRetry(err, () => moveToCell(source, resource, startMinutes, true));
+        await confirmDoubleBookAndRetry(err, () => moveToCell(source, resource, startMinutes, true), confirmDestructive);
       }
     }
   }

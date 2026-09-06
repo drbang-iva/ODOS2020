@@ -349,7 +349,7 @@ test("§3.3 copy: every dialog spec is the final table's wording", () => {
 // Guard 9 — the fallback still refuses
 // ---------------------------------------------------------------------------
 
-test("guard 9: useConfirmDestructive outside a provider falls back to window.confirm, and resolves false when even that is absent", async () => {
+test("guard 9: useConfirmDestructive outside a provider always refuses the destructive action", async () => {
   const answers: boolean[] = [];
   function Probe() {
     const confirm = useConfirmDestructive();
@@ -363,11 +363,9 @@ test("guard 9: useConfirmDestructive outside a provider falls back to window.con
     await act(async () => { await renderer.root.findByType("button").props.onClick(); });
     assert.deepEqual(answers, [false], "no surface at all → refused");
 
-    const seen: string[] = [];
-    Object.defineProperty(globalThis, "window", { configurable: true, value: { confirm(message: string) { seen.push(message); return true; } } });
+    Object.defineProperty(globalThis, "window", { configurable: true, value: { confirm: () => true } });
     await act(async () => { await renderer.root.findByType("button").props.onClick(); });
-    assert.deepEqual(answers, [false, true], "window.confirm is the fallback surface");
-    assert.deepEqual(seen, ["Clear Pupils? 6 values recorded this visit."]);
+    assert.deepEqual(answers, [false, false], "a native confirm cannot approve a destructive action");
   } finally {
     renderer?.unmount();
     if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);

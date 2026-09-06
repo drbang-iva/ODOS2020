@@ -24,6 +24,7 @@ import {
 import { formatStepValue } from "./power-options";
 import { DiagnosisPicker } from "./DiagnosisPicker";
 import type { SectionSaveStatus } from "./types";
+import { useConfirmDestructive } from "./ConfirmDestructive";
 
 export type Eye = "OD" | "OS";
 type ExamState = "normal" | "abnormal" | "deferred";
@@ -92,6 +93,7 @@ export function OcularHealthSection({
   const [error, setError] = useState<string | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);
   const { onCleared } = useEncounterEdit();
+  const confirmDestructive = useConfirmDestructive();
   const definitionKey = useMemo(() => definitions.map((definition) => definition.stableKey).join("|"), [definitions]);
   const historyIdentity = `${patientReference}\u0000${encounterReference}\u0000${definitionKey}`;
   const groups = useMemo(() => segmentGroups(definitions), [definitions]);
@@ -212,11 +214,11 @@ export function OcularHealthSection({
     }));
   }
 
-  function setExamState(definition: CustomFindingDefinition, eye: Eye, state: ExamState) {
+  async function setExamState(definition: CustomFindingDefinition, eye: Eye, state: ExamState) {
     const current = captures[definition.stableKey]?.[eye] ?? emptyEye();
     if (current.state === "abnormal" && state !== "abnormal") {
       const described = describedFindingNames(abnormalField(definition), current);
-      if (described.length > 0 && !confirmDestroy(described, "Changing the exam state")) return;
+      if (described.length > 0 && !await confirmDestroy(confirmDestructive, described, "Changing the exam state")) return;
     }
     updateEye(definition.stableKey, eye, (current) => ({
       ...current,
@@ -226,20 +228,20 @@ export function OcularHealthSection({
     }));
   }
 
-  function copyEye(definition: CustomFindingDefinition, from: Eye, to: Eye) {
+  async function copyEye(definition: CustomFindingDefinition, from: Eye, to: Eye) {
     const destination = captures[definition.stableKey]?.[to] ?? emptyEye();
     const described = describedFindingNames(abnormalField(definition), destination);
-    if (described.length > 0 && !confirmDestroy(described, "Copying the other eye")) return;
+    if (described.length > 0 && !await confirmDestroy(confirmDestructive, described, "Copying the other eye")) return;
     const source = captures[definition.stableKey]?.[from] ?? emptyEye();
     updateEye(definition.stableKey, to, () => {
       return copyEyeCapture(source, definition);
     });
   }
 
-  function setSelections(definition: CustomFindingDefinition, eye: Eye, selections: string[]) {
+  async function setSelections(definition: CustomFindingDefinition, eye: Eye, selections: string[]) {
     const current = captures[definition.stableKey]?.[eye] ?? emptyEye();
     const destroyed = destroyedFindingNames(abnormalField(definition), current, selections);
-    if (destroyed.length > 0 && !confirmDestroy(destroyed, "Removing the finding")) return;
+    if (destroyed.length > 0 && !await confirmDestroy(confirmDestructive, destroyed, "Removing the finding")) return;
     updateEye(definition.stableKey, eye, (capture) => ({
       ...capture,
       selections,
@@ -667,9 +669,13 @@ function hasRecordedDetails(details: Record<string, FindingQualifierValue> | und
   return details !== undefined && Object.keys(details).length > 0;
 }
 
-function confirmDestroy(findings: string[], action: string): boolean {
+function confirmDestroy(confirmDestructive: ReturnType<typeof useConfirmDestructive>, findings: string[], action: string): Promise<boolean> {
   const names = [...new Set(findings)].join(", ");
-  return window.confirm(`${action} will discard recorded details for ${names}. Continue?`);
+  return confirmDestructive({
+    title: `${action} will discard recorded details for ${names}. Continue?`,
+    consequence: "",
+    confirmLabel: "Continue",
+  });
 }
 
 function StateButton({ label, selected, onClick }: { label: string; selected: boolean; onClick(): void }) {

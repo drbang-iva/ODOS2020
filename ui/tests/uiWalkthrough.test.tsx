@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { after, before, test } from "node:test";
-import { chromium, type Browser, type Locator } from "playwright-core";
+import { chromium, type Browser, type Locator, type Page } from "playwright-core";
 import { createServer, type ViteDevServer } from "vite";
 
 let server: ViteDevServer;
@@ -28,20 +28,67 @@ before(async () => {
 });
 after(async () => { await browser?.close(); await server?.close(); });
 
-async function assertReadable(input: Locator) {
+async function assertReadable(input: Locator, minimumMargin = 0) {
   const geometry = await input.evaluate((node) => {
     const element = node as HTMLInputElement;
     const style = getComputedStyle(element);
     const context = document.createElement("canvas").getContext("2d")!;
     context.font = style.font;
-    return {
-      available: element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
-      textWidth: context.measureText(element.value).width,
-      scrollLeft: element.scrollLeft,
-    };
+    const available = element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    const textWidth = context.measureText(element.value).width;
+    return { available, textWidth, margin: available - textWidth, scrollLeft: element.scrollLeft };
   });
-  assert.ok(geometry.available >= geometry.textWidth, `numeric text is clipped: ${JSON.stringify(geometry)}`);
+  assert.ok(geometry.margin >= minimumMargin, `numeric text margin is below ${minimumMargin}px: ${JSON.stringify(geometry)}`);
   assert.equal(geometry.scrollLeft, 0, "the whole number must be visible without internal scrolling");
+  return geometry;
+}
+
+async function assertResponsiveConfirmation(page: Page, act: () => Promise<unknown>, expectedText: string) {
+  const nativeDialogs: string[] = [];
+  page.on("dialog", async (dialog) => {
+    nativeDialogs.push(dialog.message());
+    await dialog.dismiss();
+  });
+  await act();
+  assert.deepEqual(nativeDialogs, [], `native confirm blocked the renderer: ${JSON.stringify(nativeDialogs)}`);
+  const dialog = page.getByRole("alertdialog");
+  await dialog.waitFor();
+  const copy = await dialog.locator("h2, p").allTextContents();
+  assert.equal(copy.filter(Boolean).join(" "), expectedText);
+  const ticks = await page.evaluate(() => new Promise<number>((resolve) => {
+    let count = 0;
+    const timer = setInterval(() => { if (++count === 3) { clearInterval(timer); resolve(count); } }, 10);
+  }));
+  assert.equal(ticks, 3, "the event loop stays live while the confirmation is open");
+  await dialog.getByRole("button", { name: "Keep", exact: true }).click();
+}
+
+interface NumericReadabilityCase {
+  section: string;
+  expectedCount?: number;
+  prepare?: (page: Page) => Promise<void>;
+  widestByLabel: Record<string, string>;
+}
+
+async function measureAllNumericInputs(page: Page, widestByLabel: Record<string, string>, expectedCount = Object.keys(widestByLabel).length) {
+  await page.evaluate(() => document.fonts.ready);
+  const inputs = page.locator('input[inputmode="decimal"]');
+  await inputs.first().waitFor();
+  const labels = await inputs.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-label")));
+  assert.equal(await inputs.count(), expectedCount, `every numeric input in the sheet must have a range-derived widest-value case: ${JSON.stringify(labels)}`);
+  const measurements: Array<{ label: string; value: string; available: number; textWidth: number; margin: number; scrollLeft: number }> = [];
+  for (let index = 0; index < await inputs.count(); index += 1) {
+    const input = inputs.nth(index);
+    const label = await input.getAttribute("aria-label");
+    assert.ok(label && Object.hasOwn(widestByLabel, label), `numeric input ${label ?? index} has no widest legitimate value`);
+    const value = widestByLabel[label];
+    await input.fill(value);
+    assert.equal(await input.inputValue(), value, `${label} accepts its range-derived widest value`);
+    const geometry = await assertReadable(input, 8);
+    measurements.push({ label, value, ...geometry });
+    await input.press("Tab");
+  }
+  return measurements;
 }
 
 async function newWalkthroughPage(height = 1000) {
@@ -164,6 +211,87 @@ test("P5 Add complaint follows complaint articles and precedes the first History
     assert.equal(await adder.evaluate((element) => element.previousElementSibling?.tagName), "ARTICLE");
     assert.equal(await adder.evaluate((element) => element.nextElementSibling?.getAttribute("data-testid")), "history-family-history");
   } finally { await page.close(); }
+});
+
+for (const [surface, act, expectedText] of [
+  ["ocular", async (page: Page) => page.getByRole("button", { name: "Normal", exact: true }).first().click(), "Changing the exam state will discard recorded details for Synthetic Finding. Continue?"],
+  ["prescription", async (page: Page) => page.getByRole("button", { name: "Cancel prescription", exact: true }).click(), "This prescription is already at the pharmacy. Cancelling it cannot be undone from ODOS. Continue?"],
+] as const) {
+  test(`close-out ${surface}: destructive action uses a responsive in-app confirmation`, { timeout: 30_000 }, async () => {
+    const page = await newWalkthroughPage();
+    try {
+      const section = surface === "prescription" ? "&section=prescription" : "";
+      await page.goto(`${origin}/tests/fixtures/entry-sheets.html?walkthrough=1&confirmSurface=${surface}${section}`, { waitUntil: "networkidle" });
+      await assertResponsiveConfirmation(page, () => act(page), expectedText);
+    } finally { await page.close(); }
+  });
+}
+
+for (const action of ["regenerate", "template"] as const) {
+  test(`close-out referral ${action}: edited letter uses a responsive in-app confirmation`, { timeout: 30_000 }, async () => {
+    const page = await newWalkthroughPage();
+    try {
+      await page.goto(`${origin}/tests/fixtures/entry-sheets.html?walkthrough=1&confirmSurface=referral`, { waitUntil: "networkidle" });
+      await page.getByRole("button", { name: /Retina Group/ }).click();
+      const letter = page.getByRole("textbox", { name: "Referral letter", exact: true });
+      await letter.waitFor();
+      await letter.evaluate((element) => {
+        element.innerHTML = "Edited clinician letter";
+        element.dispatchEvent(new InputEvent("input", { bubbles: true }));
+      });
+      const expectedText = action === "regenerate"
+        ? "Regenerate this letter and discard your edits?"
+        : "Change templates and discard your letter edits?";
+      await assertResponsiveConfirmation(page, () => action === "regenerate"
+        ? page.getByRole("button", { name: "↺ Regenerate", exact: true }).click()
+        : page.getByRole("combobox", { name: "Referral letter template", exact: true }).selectOption("retina"), expectedText);
+    } finally { await page.close(); }
+  });
+}
+
+test("close-out numeric guard measures every numeric input at its widest legitimate value", { timeout: 60_000 }, async () => {
+  const eyeFields = (prefix: string, fields: Record<string, string>) => Object.fromEntries(
+    ["OD", "OS"].flatMap((eye) => Object.entries(fields).map(([field, value]) => [`${eye} ${prefix}${field}`, value])),
+  );
+  const cases: NumericReadabilityCase[] = [
+    {
+      section: "refraction",
+      expectedCount: 18,
+      prepare: async (page) => { await page.getByRole("switch", { name: "Prism for refraction 1", exact: true }).click(); },
+      widestByLabel: eyeFields("", { sphere: "-20.00", cylinder: "-20.00", axis: "180", add: "-20.00", "prism amount": "20.00" }),
+    },
+    {
+      section: "wearing",
+      widestByLabel: eyeFields("", { sphere: "-16.00", cylinder: "-8.00", axis: "180", add: "5.00", "prism amount": "20.00" }),
+    },
+    {
+      section: "auto-refraction",
+      widestByLabel: {
+        ...eyeFields("auto-refraction ", { sphere: "-16.00", cylinder: "-8.00", axis: "180" }),
+        "Binocular PD distance": "75",
+        "Binocular PD near": "75",
+        ...eyeFields("", { "flat K": "60.00", "flat axis": "180", "steep K": "60.00", "steep axis": "180" }),
+      },
+    },
+    {
+      section: "iop",
+      widestByLabel: eyeFields("", { "IOP value": "80", "corneal hysteresis": "15.00" }),
+    },
+  ];
+  const page = await newWalkthroughPage();
+  const allMeasurements: Array<{ section: string; label: string; value: string; available: number; textWidth: number; margin: number; scrollLeft: number }> = [];
+  try {
+    for (const entry of cases) {
+      await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=${entry.section}`, { waitUntil: "networkidle" });
+      await entry.prepare?.(page);
+      const measurements = await measureAllNumericInputs(page, entry.widestByLabel, entry.expectedCount);
+      console.log(`NUMERIC_READABILITY ${entry.section} ${JSON.stringify(measurements)}`);
+      if (capture) await page.screenshot({ path: `${capture}/numeric-${entry.section}.png` });
+      allMeasurements.push(...measurements.map((measurement) => ({ section: entry.section, ...measurement })));
+    }
+  } finally { await page.close(); }
+  const clipped = allMeasurements.filter(({ margin, scrollLeft }) => margin < 8 || scrollLeft !== 0);
+  assert.deepEqual(clipped, [], `numeric fields need at least 8px text margin at their widest legitimate value: ${JSON.stringify(allMeasurements)}`);
 });
 
 for (const interaction of ["iop", "assessment-search", "assessment-status"] as const) {

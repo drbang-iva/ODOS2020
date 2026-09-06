@@ -12,8 +12,8 @@ export function registerNavigationBlocker(blocker: () => boolean): () => void {
 }
 
 export function confirmAppNavigation(
-  confirm: (message: string) => boolean = (message) => window.confirm(message),
-): boolean {
+  confirm: (message: string) => boolean | Promise<boolean> = () => false,
+): boolean | Promise<boolean> {
   if (![...navigationBlockers].some((blocker) => blocker())) return true;
   return confirm("You have unsaved settings changes. Leave without saving them?");
 }
@@ -23,8 +23,8 @@ export function markProgrammaticNavigationConfirmed(): void {
 }
 
 export function confirmPopstateNavigation(
-  confirm?: (message: string) => boolean,
-): boolean {
+  confirm?: (message: string) => boolean | Promise<boolean>,
+): boolean | Promise<boolean> {
   if (confirmedProgrammaticNavigation) {
     confirmedProgrammaticNavigation = false;
     return true;
@@ -79,12 +79,12 @@ export function restoreCancelledHistoryNavigation(
   return true;
 }
 
-export function interceptAppNavigation(
+export async function interceptAppNavigation(
   event: MouseEvent,
   location: NavigationLocation = window.location,
   history: NavigationHistory = window.history,
-  allowNavigation: () => boolean = confirmAppNavigation,
-): boolean {
+  allowNavigation: () => boolean | Promise<boolean> = confirmAppNavigation,
+): Promise<boolean> {
   if (event.defaultPrevented
     || event.button !== 0
     || event.metaKey
@@ -105,12 +105,8 @@ export function interceptAppNavigation(
   const destination = new URL(href, location.href);
   if (destination.origin !== location.origin || requiresFullPageNavigation(destination.pathname)) return false;
 
-  if (!allowNavigation()) {
-    event.preventDefault();
-    return false;
-  }
-
   event.preventDefault();
+  if (!await allowNavigation()) return false;
   pushAppHistory(history, `${destination.pathname}${destination.search}${destination.hash}`);
   return true;
 }

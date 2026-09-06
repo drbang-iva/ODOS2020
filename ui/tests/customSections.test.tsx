@@ -31,8 +31,35 @@ import { VaSection } from "../src/components/charting/VaSection";
 import { OdosSelect } from "../src/components/inputs/OdosSelect";
 import { OdosChips } from "../src/components/inputs/OdosChips";
 import { OdosWheel } from "../src/components/inputs/OdosWheel";
+import { ConfirmDestructiveProvider } from "../src/components/charting/ConfirmDestructive";
 import { PatientRoute } from "../src/App";
 import { fhir } from "../src/lib/fhir";
+
+function withConfirmation(child: React.ReactNode) {
+  return <ConfirmDestructiveProvider>{child}</ConfirmDestructiveProvider>;
+}
+
+function confirmationDialog(renderer: ReactTestRenderer) {
+  return renderer.root.findAllByProps({ role: "alertdialog" })[0];
+}
+
+function confirmationCopy(renderer: ReactTestRenderer): string {
+  return confirmationDialog(renderer)?.findByType("h2").children.join("") ?? "";
+}
+
+async function settleConfirmation(renderer: ReactTestRenderer, label: "Keep" | "Continue") {
+  const button = confirmationDialog(renderer)?.findAllByType("button").find((candidate) => candidate.children.join("") === label);
+  assert.ok(button, `${label} confirmation action is present`);
+  await act(async () => button.props.onClick());
+}
+
+function beginConfirmation(action: () => void | Promise<void>): Promise<void> {
+  let pending = Promise.resolve();
+  act(() => {
+    pending = Promise.resolve(action());
+  });
+  return pending;
+}
 import { RoleProvider } from "../src/lib/role-context";
 import { EncounterCharting } from "../src/scenes/EncounterCharting";
 import {
@@ -2035,14 +2062,8 @@ test("presence-only ocular findings never create worksheet rows", async () => {
 
 test("described finding destruction is guarded from Zone A and the row remove path prunes the next POST", async () => {
   const definition = syntheticQualifiedOcularDefinition();
-  const originalWindow = globalThis.window;
   const prompts: string[] = [];
-  const decisions = [false, true];
   const posts: Array<Record<string, any>> = [];
-  Object.defineProperty(globalThis, "window", {
-    configurable: true,
-    value: { confirm: (message: string) => { prompts.push(message); return decisions.shift() ?? false; } },
-  });
   const fetchImpl = (async (_input, init) => {
     if (init?.method === "POST") {
       posts.push(JSON.parse(String(init.body)));
@@ -2058,22 +2079,28 @@ test("described finding destruction is guarded from Zone A and the row remove pa
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<OcularHealthSection
+      renderer = create(withConfirmation(<OcularHealthSection
         definitions={[definition]}
         patientReference="Patient/p-confirm-destroy"
         encounterReference="Encounter/e-confirm-destroy"
         onSaved={() => undefined}
         apiBase="http://test"
         fetchImpl={fetchImpl}
-      />);
+      />));
       await flushEffects();
     });
     const zoneButton = () => renderer.root.findAllByType("button")
       .find((button) => button.children.join("") === "Synthetic Finding")!;
-    act(() => zoneButton().props.onClick());
+    let pending = beginConfirmation(() => zoneButton().props.onClick());
+    prompts.push(confirmationCopy(renderer));
+    await settleConfirmation(renderer, "Keep");
+    await act(async () => pending);
     assert.equal(zoneButton().props["aria-pressed"], true);
     assert.equal(renderer.root.findAllByProps({ "data-finding-row": "synthetic-finding" }).length, 1);
-    act(() => renderer.root.findByProps({ "aria-label": "Remove Synthetic Finding" }).props.onClick());
+    pending = beginConfirmation(() => renderer.root.findByProps({ "aria-label": "Remove Synthetic Finding" }).props.onClick());
+    prompts.push(confirmationCopy(renderer));
+    await settleConfirmation(renderer, "Continue");
+    await act(async () => pending);
     assert.equal(zoneButton().props["aria-pressed"], false);
     assert.equal(renderer.root.findAllByProps({ "data-finding-row": "synthetic-finding" }).length, 0);
     assert.equal(prompts.length, 2);
@@ -2087,18 +2114,11 @@ test("described finding destruction is guarded from Zone A and the row remove pa
     });
   } finally {
     renderer?.unmount();
-    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
 });
 
 test("undescribed finding deselection is instant without a confirmation dialog", async () => {
   const definition = syntheticWorksheetOcularDefinition();
-  const originalWindow = globalThis.window;
-  let confirmCalls = 0;
-  Object.defineProperty(globalThis, "window", {
-    configurable: true,
-    value: { confirm: () => { confirmCalls += 1; return false; } },
-  });
   const fetchImpl = (async () => jsonResponse({ rows: [{
     eye: "OD",
     state: "abnormal",
@@ -2107,35 +2127,29 @@ test("undescribed finding deselection is instant without a confirmation dialog",
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<OcularHealthSection
+      renderer = create(withConfirmation(<OcularHealthSection
         definitions={[definition]}
         patientReference="Patient/p-no-confirm"
         encounterReference="Encounter/e-no-confirm"
         onSaved={() => undefined}
         apiBase="http://test"
         fetchImpl={fetchImpl}
-      />);
+      />));
       await flushEffects();
     });
     const presence = renderer.root.findAllByType("button")
       .find((button) => button.children.join("") === "Synthetic Presence Only")!;
-    act(() => presence.props.onClick());
-    assert.equal(confirmCalls, 0);
+    await act(async () => presence.props.onClick());
+    assert.equal(confirmationDialog(renderer), undefined);
     assert.equal(presence.props["aria-pressed"], false);
   } finally {
     renderer?.unmount();
-    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
 });
 
 test("removing a parent with selected child codes confirms before destroying the nested details", async () => {
   const definition = syntheticWorksheetOcularDefinition();
-  const originalWindow = globalThis.window;
   const prompts: string[] = [];
-  Object.defineProperty(globalThis, "window", {
-    configurable: true,
-    value: { confirm: (message: string) => { prompts.push(message); return false; } },
-  });
   const fetchImpl = (async () => jsonResponse({ rows: [{
     eye: "OD",
     state: "abnormal",
@@ -2147,19 +2161,22 @@ test("removing a parent with selected child codes confirms before destroying the
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<OcularHealthSection
+      renderer = create(withConfirmation(<OcularHealthSection
         definitions={[definition]}
         patientReference="Patient/p-child-confirm"
         encounterReference="Encounter/e-child-confirm"
         onSaved={() => undefined}
         apiBase="http://test"
         fetchImpl={fetchImpl}
-      />);
+      />));
       await flushEffects();
     });
     const parent = renderer.root.findAllByType("button")
       .find((button) => button.children.join("") === "Synthetic Demodex")!;
-    act(() => parent.props.onClick());
+    const pending = beginConfirmation(() => parent.props.onClick());
+    prompts.push(confirmationCopy(renderer));
+    await settleConfirmation(renderer, "Keep");
+    await act(async () => pending);
     assert.equal(prompts.length, 1);
     assert.match(prompts[0]!, /Synthetic Demodex/);
     assert.equal(parent.props["aria-pressed"], true);
@@ -2167,18 +2184,12 @@ test("removing a parent with selected child codes confirms before destroying the
       .find((button) => button.children.join("") === "Synthetic Collarettes")!.props["aria-pressed"], true);
   } finally {
     renderer?.unmount();
-    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
 });
 
 test("changing away from abnormal confirms before destroying recorded finding details", async () => {
   const definition = syntheticQualifiedOcularDefinition();
-  const originalWindow = globalThis.window;
   const prompts: string[] = [];
-  Object.defineProperty(globalThis, "window", {
-    configurable: true,
-    value: { confirm: (message: string) => { prompts.push(message); return false; } },
-  });
   const fetchImpl = (async () => jsonResponse({ rows: [{
     eye: "OD",
     state: "abnormal",
@@ -2188,37 +2199,33 @@ test("changing away from abnormal confirms before destroying recorded finding de
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<OcularHealthSection
+      renderer = create(withConfirmation(<OcularHealthSection
         definitions={[definition]}
         patientReference="Patient/p-state-confirm"
         encounterReference="Encounter/e-state-confirm"
         onSaved={() => undefined}
         apiBase="http://test"
         fetchImpl={fetchImpl}
-      />);
+      />));
       await flushEffects();
     });
     const normal = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Normal")[0]!;
-    act(() => normal.props.onClick());
+    const pending = beginConfirmation(() => normal.props.onClick());
+    prompts.push(confirmationCopy(renderer));
+    await settleConfirmation(renderer, "Keep");
+    await act(async () => pending);
     assert.equal(prompts.length, 1);
     assert.match(prompts[0]!, /Synthetic Finding/);
     const abnormal = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Abnormal")[0]!;
     assert.match(abnormal.props.className, /bg-brand/);
   } finally {
     renderer?.unmount();
-    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
 });
 
 test("copying an eye confirms before replacing destination finding details", async () => {
   const definition = syntheticQualifiedOcularDefinition();
-  const originalWindow = globalThis.window;
   const prompts: string[] = [];
-  const decisions = [false, true];
-  Object.defineProperty(globalThis, "window", {
-    configurable: true,
-    value: { confirm: (message: string) => { prompts.push(message); return decisions.shift() ?? false; } },
-  });
   const fetchImpl = (async () => jsonResponse({ rows: [
     {
       eye: "OD",
@@ -2236,14 +2243,14 @@ test("copying an eye confirms before replacing destination finding details", asy
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<OcularHealthSection
+      renderer = create(withConfirmation(<OcularHealthSection
         definitions={[definition]}
         patientReference="Patient/p-copy-guard"
         encounterReference="Encounter/e-copy-guard"
         onSaved={() => undefined}
         apiBase="http://test"
         fetchImpl={fetchImpl}
-      />);
+      />));
       await flushEffects();
     });
     const grades = () => renderer.root.findAllByType(OdosChips)
@@ -2251,26 +2258,25 @@ test("copying an eye confirms before replacing destination finding details", asy
     const copyToOs = renderer.root.findAllByType("button")
       .find((button) => button.children.join("") === "Copy to OS →")!;
     assert.deepEqual(grades().map((grade) => grade.props.selected), [["marked"], ["trace"]]);
-    act(() => copyToOs.props.onClick());
+    let pending = beginConfirmation(() => copyToOs.props.onClick());
+    prompts.push(confirmationCopy(renderer));
+    await settleConfirmation(renderer, "Keep");
+    await act(async () => pending);
     assert.deepEqual(grades().map((grade) => grade.props.selected), [["marked"], ["trace"]]);
-    act(() => copyToOs.props.onClick());
+    pending = beginConfirmation(() => copyToOs.props.onClick());
+    prompts.push(confirmationCopy(renderer));
+    await settleConfirmation(renderer, "Continue");
+    await act(async () => pending);
     assert.deepEqual(grades().map((grade) => grade.props.selected), [["marked"], ["marked"]]);
     assert.equal(prompts.length, 2);
     assert.ok(prompts.every((prompt) => prompt.includes("Synthetic Finding")));
   } finally {
     renderer?.unmount();
-    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
 });
 
 test("copying into an undescribed destination does not ask for confirmation", async () => {
   const definition = syntheticQualifiedOcularDefinition();
-  const originalWindow = globalThis.window;
-  let confirmCalls = 0;
-  Object.defineProperty(globalThis, "window", {
-    configurable: true,
-    value: { confirm: () => { confirmCalls += 1; return false; } },
-  });
   const fetchImpl = (async () => jsonResponse({ rows: [
     {
       eye: "OD",
@@ -2287,26 +2293,25 @@ test("copying into an undescribed destination does not ask for confirmation", as
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<OcularHealthSection
+      renderer = create(withConfirmation(<OcularHealthSection
         definitions={[definition]}
         patientReference="Patient/p-copy-no-guard"
         encounterReference="Encounter/e-copy-no-guard"
         onSaved={() => undefined}
         apiBase="http://test"
         fetchImpl={fetchImpl}
-      />);
+      />));
       await flushEffects();
     });
     const copyToOs = renderer.root.findAllByType("button")
       .find((button) => button.children.join("") === "Copy to OS →")!;
-    act(() => copyToOs.props.onClick());
+    await act(async () => copyToOs.props.onClick());
     const grades = renderer.root.findAllByType(OdosChips)
       .filter((chips) => chips.props.ariaLabel === "Synthetic qualifier control");
     assert.deepEqual(grades.map((grade) => grade.props.selected), [["marked"], ["marked"]]);
-    assert.equal(confirmCalls, 0);
+    assert.equal(confirmationDialog(renderer), undefined);
   } finally {
     renderer?.unmount();
-    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
 });
 

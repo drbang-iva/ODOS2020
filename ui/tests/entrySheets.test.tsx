@@ -31,6 +31,18 @@ after(async () => {
   await server?.close();
 });
 
+async function settleDiscardDialog(page: Page, expected: string, answer: "Keep" | "Discard changes") {
+  const dialog = page.getByRole("alertdialog");
+  await dialog.waitFor();
+  const copy = [
+    await dialog.locator("h2").textContent(),
+    await dialog.locator("p").textContent(),
+  ].filter(Boolean).join(" ");
+  assert.equal(copy, expected);
+  await dialog.getByRole("button", { name: answer, exact: true }).click();
+  await dialog.waitFor({ state: "detached" });
+}
+
 test("all width-safe static sections expose truthful layout-only contracts", async () => {
   const entrySheets = await import("../src/components/charting/ExamEntrySheet").catch(() => undefined);
   assert.ok(entrySheets, "the exam entry-sheet module must exist");
@@ -89,7 +101,7 @@ const PLANNED_SHEET_SECTIONS = new Set<string>([
 const USABLE_HORIZONTAL_SCROLL = new Set<string>(["va", "cup-disc"]);
 
 const DEFERRED_MEASURED_MINIMUMS = {
-  wearing: 1510,
+  wearing: 1600,
   "auto-refraction": 1380,
   "pretest-vitals": 1152,
   refraction: 1500,
@@ -507,21 +519,16 @@ for (const contract of [
   test(`${contract.sectionId} edits warn before an overview swap`, { timeout: 30_000 }, async () => {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     page.setDefaultTimeout(5_000);
-    const dialogs: string[] = [];
-    page.on("dialog", async (dialog) => {
-      dialogs.push(dialog.message());
-      await dialog.dismiss();
-    });
     try {
       await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
       await page.getByRole("button", { name: contract.opener }).click();
       await contract.edit(page);
       await openChartAnotherGroup(page, "va");
       await page.locator('[data-editor-section-id="va"]').click();
-
-      assert.deepEqual(dialogs, [
+      await settleDiscardDialog(page,
         `Discard unsaved changes in ${contract.currentTitle} and open Visual Acuity? Unsaved edits will be discarded. Saved entries remain in the chart.`,
-      ]);
+        "Keep",
+      );
       await page.getByRole("dialog", { name: contract.currentTitle }).waitFor();
       if (contract.focusLabel) {
         assert.equal(
@@ -538,11 +545,6 @@ for (const contract of [
 test("focusing a pristine field does not warn before a clinical sheet swap", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
-  const dialogs: string[] = [];
-  page.on("dialog", async (dialog) => {
-    dialogs.push(dialog.message());
-    await dialog.accept();
-  });
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Open IOP" }).click();
@@ -553,7 +555,7 @@ test("focusing a pristine field does not warn before a clinical sheet swap", { t
     await page.locator('[data-editor-section-id="va"]').click();
 
     await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
-    assert.deepEqual(dialogs, []);
+    assert.equal(await page.getByRole("alertdialog").count(), 0);
   } finally {
     await page.close();
   }
@@ -562,11 +564,6 @@ test("focusing a pristine field does not warn before a clinical sheet swap", { t
 test("presentational sheet controls do not warn before a clinical sheet swap", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
-  const dialogs: string[] = [];
-  page.on("dialog", async (dialog) => {
-    dialogs.push(dialog.message());
-    await dialog.accept();
-  });
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Open Gonioscopy" }).click();
@@ -575,7 +572,7 @@ test("presentational sheet controls do not warn before a clinical sheet swap", {
     await page.locator('[data-editor-section-id="va"]').click();
 
     await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
-    assert.deepEqual(dialogs, []);
+    assert.equal(await page.getByRole("alertdialog").count(), 0);
   } finally {
     await page.close();
   }
@@ -584,13 +581,6 @@ test("presentational sheet controls do not warn before a clinical sheet swap", {
 test("dirty Escape and Cancel share the discard guard while pristine Escape remains silent", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
-  const dialogs: string[] = [];
-  let accept = false;
-  page.on("dialog", async (dialog) => {
-    dialogs.push(dialog.message());
-    if (accept) await dialog.accept();
-    else await dialog.dismiss();
-  });
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Open IOP" }).click();
@@ -599,14 +589,19 @@ test("dirty Escape and Cancel share the discard guard while pristine Escape rema
     await field.fill("16");
 
     await page.keyboard.press("Escape");
+    await settleDiscardDialog(
+      page,
+      "Discard unsaved changes in Intraocular Pressure? Unsaved edits will be discarded. Saved entries remain in the chart.",
+      "Keep",
+    );
     await page.getByRole("dialog", { name: "Intraocular Pressure" }).waitFor();
-    accept = true;
     await page.getByRole("button", { name: "Back to exam overview from Intraocular Pressure" }).click();
+    await settleDiscardDialog(
+      page,
+      "Discard unsaved changes in Intraocular Pressure? Unsaved edits will be discarded. Saved entries remain in the chart.",
+      "Discard changes",
+    );
     await page.getByRole("dialog", { name: "Intraocular Pressure" }).waitFor({ state: "detached" });
-    assert.deepEqual(dialogs, [
-      "Discard unsaved changes in Intraocular Pressure? Unsaved edits will be discarded. Saved entries remain in the chart.",
-      "Discard unsaved changes in Intraocular Pressure? Unsaved edits will be discarded. Saved entries remain in the chart.",
-    ]);
   } finally {
     await page.close();
   }

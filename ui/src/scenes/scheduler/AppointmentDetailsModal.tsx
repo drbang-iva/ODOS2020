@@ -42,6 +42,7 @@ import {
   type ReferralApi,
   type ReferralConsultant,
 } from "../../components/referral/referral-api";
+import { useConfirmDestructive } from "../../components/charting/ConfirmDestructive";
 
 type PatientInsuranceLoader = (patientReference: string) => Promise<InsuranceScreenData>;
 
@@ -86,6 +87,7 @@ export function AppointmentDetailsModal({
   loadPatientInsurance?: PatientInsuranceLoader;
   correspondenceApi?: Pick<ReferralApi, "searchConsultants" | "createInboundReferral">;
 }) {
+  const confirmDestructive = useConfirmDestructive();
   const fallbackDraft = useMemo(
     () => {
       if (appointment) {
@@ -246,7 +248,7 @@ export function AppointmentDetailsModal({
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (!allowDoubleBook && (await confirmDoubleBookAndRetry(err, () => save(true)))) {
+      if (!allowDoubleBook && (await confirmDoubleBookAndRetry(err, () => save(true), confirmDestructive))) {
         return;
       }
       setError(savedThisAttempt && inboundReferral
@@ -294,7 +296,7 @@ export function AppointmentDetailsModal({
       if (
         !targetAppointment
         && !allowDoubleBook
-        && (await confirmDoubleBookAndRetry(err, () => transition(status, true)))
+        && (await confirmDoubleBookAndRetry(err, () => transition(status, true), confirmDestructive))
       ) {
         return;
       }

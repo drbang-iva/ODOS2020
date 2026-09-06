@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { EncounterCharting } from "./scenes/EncounterCharting";
 import { ProcedureDefinitionsSettings } from "./scenes/settings/ProcedureDefinitionsSettings";
 import { AuditLog } from "./scenes/AuditLog";
@@ -66,6 +66,7 @@ import {
 } from "./lib/navigation";
 import type { Patient } from "@medplum/fhirtypes";
 import { loadAndApplyAppearance } from "./lib/appearance";
+import { useConfirmDestructive } from "./components/charting/ConfirmDestructive";
 
 export function App({
   resolveRoles = resolveSessionRoles,
@@ -92,11 +93,20 @@ export function App({
   const [accountEmail, setAccountEmail] = useState<string>();
   const [roleError, setRoleError] = useState<string>();
   const [path, setPath] = useState(window.location.pathname);
+  const confirmDestructive = useConfirmDestructive();
+  const confirmUnsavedNavigation = useCallback(() => confirmDestructive({
+    title: "You have unsaved settings changes. Leave without saving them?",
+    consequence: "",
+    confirmLabel: "Leave",
+  }), [confirmDestructive]);
   const view = useViewState((state) => state.view);
   const setView = useViewState((state) => state.setView);
   const previousPath = useRef(path);
   const historyIndex = useRef<number | null>(null);
-  const restoringCancelledNavigation = useRef(false);
+  const restoringNavigationIndex = useRef<number>();
+  const popstateTransitionPending = useRef(false);
+  const concurrentPopstateRestore = useRef<Promise<void>>();
+  const finishConcurrentPopstateRestore = useRef<() => void>();
   if (historyIndex.current === null) {
     historyIndex.current = initializeAppHistory(
       window.history,
@@ -109,28 +119,65 @@ export function App({
   const initialClinicView = useRef(clinicViewFromSearch(initialSearch.current, { kind: "picker" }));
 
   useEffect(() => {
-    const updatePath = (event?: Event) => {
+    const updatePath = async (event?: Event) => {
       const nextPath = window.location.pathname;
       if (event?.type === "popstate") {
         const targetState = "state" in event ? (event as PopStateEvent).state : window.history.state;
-        if (restoringCancelledNavigation.current) {
-          restoringCancelledNavigation.current = false;
-          historyIndex.current = appHistoryIndex(targetState) ?? historyIndex.current;
+        const targetIndex = appHistoryIndex(targetState) ?? currentNavigationEntryIndex();
+        if (targetIndex !== undefined && targetIndex === restoringNavigationIndex.current) {
+          restoringNavigationIndex.current = undefined;
+          historyIndex.current = targetIndex;
+          finishConcurrentPopstateRestore.current?.();
+          finishConcurrentPopstateRestore.current = undefined;
+          concurrentPopstateRestore.current = undefined;
           return;
         }
-        if (!confirmPopstateNavigation()) {
+        if (popstateTransitionPending.current) {
+          if (!concurrentPopstateRestore.current) {
+            concurrentPopstateRestore.current = new Promise<void>((resolve) => {
+              finishConcurrentPopstateRestore.current = resolve;
+            });
+          }
+          restoringNavigationIndex.current = historyIndex.current ?? 0;
           const restoring = restoreCancelledHistoryNavigation(
             window.history,
             historyIndex.current ?? 0,
             targetState,
             currentNavigationEntryIndex(),
           );
-          if (restoring) {
-            restoringCancelledNavigation.current = true;
+          if (!restoring) {
+            restoringNavigationIndex.current = undefined;
+            finishConcurrentPopstateRestore.current?.();
+            finishConcurrentPopstateRestore.current = undefined;
+            concurrentPopstateRestore.current = undefined;
+          }
+          return;
+        }
+        popstateTransitionPending.current = true;
+        try {
+          const accepted = await confirmPopstateNavigation(() => confirmUnsavedNavigation());
+          await concurrentPopstateRestore.current;
+          const currentIndex = appHistoryIndex(window.history.state) ?? currentNavigationEntryIndex();
+          if (!accepted) {
+            restoringNavigationIndex.current = historyIndex.current ?? 0;
+            const restoring = restoreCancelledHistoryNavigation(
+              window.history,
+              historyIndex.current ?? 0,
+              window.history.state,
+              currentIndex,
+            );
+            if (!restoring) restoringNavigationIndex.current = undefined;
             return;
           }
+          if (targetIndex !== undefined && currentIndex !== undefined && targetIndex !== currentIndex) {
+            markProgrammaticNavigationConfirmed();
+            window.history.go(targetIndex - currentIndex);
+            return;
+          }
+          historyIndex.current = targetIndex ?? historyIndex.current;
+        } finally {
+          popstateTransitionPending.current = false;
         }
-        historyIndex.current = appHistoryIndex(targetState) ?? historyIndex.current;
       } else {
         historyIndex.current = appHistoryIndex(window.history.state) ?? historyIndex.current;
       }
@@ -138,8 +185,8 @@ export function App({
       previousPath.current = nextPath;
       setPath(nextPath);
     };
-    const interceptLink = (event: MouseEvent) => {
-      if (interceptAppNavigation(event)) updatePath();
+    const interceptLink = async (event: MouseEvent) => {
+      if (await interceptAppNavigation(event, window.location, window.history, () => confirmAppNavigation(() => confirmUnsavedNavigation()))) void updatePath();
     };
     window.addEventListener("popstate", updatePath);
     window.addEventListener("click", interceptLink);
@@ -147,7 +194,7 @@ export function App({
       window.removeEventListener("popstate", updatePath);
       window.removeEventListener("click", interceptLink);
     };
-  }, [setView]);
+  }, [confirmUnsavedNavigation, setView]);
 
   useEffect(() => {
     const stopIntercepting = fhir.interceptUnauthorizedResponses(window);
@@ -298,8 +345,11 @@ export function clinicRouteView(search: string, view: ViewState): ViewState {
   return view.kind === "picker" ? clinicViewFromSearch(search, view) : view;
 }
 
-export function openOtherSide(path: typeof CLINIC_PATH | typeof DESK_HOME_PATH): void {
-  if (!confirmAppNavigation()) return;
+export async function openOtherSide(
+  path: typeof CLINIC_PATH | typeof DESK_HOME_PATH,
+  allowNavigation: () => boolean | Promise<boolean> = confirmAppNavigation,
+): Promise<void> {
+  if (!await allowNavigation()) return;
   markProgrammaticNavigationConfirmed();
   pushAppHistory(window.history, path);
   window.dispatchEvent(new Event("popstate"));
@@ -315,7 +365,12 @@ function currentNavigationEntryIndex(): number | undefined {
 
 export function RoleSwitchPill({ target }: { target: typeof CLINIC_PATH | typeof DESK_HOME_PATH }) {
   const label = target === CLINIC_PATH ? "Clinic" : "Desk";
-  return <button className="odos-pill odos-clinic-pill" type="button" onClick={() => openOtherSide(target)}>Switch to {label} <span aria-hidden>→</span></button>;
+  const confirmDestructive = useConfirmDestructive();
+  return <button className="odos-pill odos-clinic-pill" type="button" onClick={() => void openOtherSide(target, () => confirmAppNavigation(() => confirmDestructive({
+    title: "You have unsaved settings changes. Leave without saving them?",
+    consequence: "",
+    confirmLabel: "Leave",
+  })))}>Switch to {label} <span aria-hidden>→</span></button>;
 }
 
 export interface RouteSwitchProps {

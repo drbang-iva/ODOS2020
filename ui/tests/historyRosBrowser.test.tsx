@@ -18,7 +18,7 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
   const server = await createServer({ root: resolve(import.meta.dirname, ".."), logLevel: "silent", server: { host: "127.0.0.1", port: 0 }, plugins: [{
     name: "ros-proof",
     resolveId(id) { if (id === "/ros-proof.js") return id; },
-    load(id) { if (id === "/ros-proof.js") return `import React from 'react'; import {createRoot} from 'react-dom/client'; import {HpiSection} from '/src/components/charting/HpiSection.tsx'; import '/src/styles/globals.css'; createRoot(document.getElementById('root')).render(React.createElement(HpiSection,{patientReference:'Patient/ros-test',encounterReference:'Encounter/current',onSaved:()=>{}}));`; },
+    load(id) { if (id === "/ros-proof.js") return `import React from 'react'; import {createRoot} from 'react-dom/client'; import {HpiSection} from '/src/components/charting/HpiSection.tsx'; import {ConfirmDestructiveProvider} from '/src/components/charting/ConfirmDestructive.tsx'; import '/src/styles/globals.css'; createRoot(document.getElementById('root')).render(React.createElement(ConfirmDestructiveProvider,null,React.createElement(HpiSection,{patientReference:'Patient/ros-test',encounterReference:'Encounter/current',onSaved:()=>{}})));`; },
     configureServer(vite) { vite.middlewares.use(async (req, res, next) => {
       if (req.url === "/ros-proof") { res.setHeader("Content-Type", "text/html"); res.end(await vite.transformIndexHtml(req.url, '<html><body><div id="root"></div><script type="module" src="/ros-proof.js"></script></body></html>')); return; }
       if (!req.url?.startsWith("/clinical-graph/")) return next();
@@ -67,8 +67,8 @@ for (const scenario of ["comprehensive burst and explicit immutable reviews", "f
       await row.getByRole("checkbox").click();
       await row.getByRole("button", { name: /Undo/ }).waitFor();
       assert.equal(await clear.count(), 1, "retracted reviews remain recorded and clearable");
-      page.on("dialog", dialog => dialog.accept());
       await clear.click();
+      await page.getByRole("alertdialog").getByRole("button", { name: "Clear History", exact: true }).click();
       await row.getByRole("button", { name: /Undo/ }).waitFor({ state: "detached" });
       assert.equal(await clear.count(), 0);
       const record = await api.handleHistoryItemActsRequest(s.deps, { authHeader: "synthetic", params: { encounterId: "current" } });

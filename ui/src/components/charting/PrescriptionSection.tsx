@@ -28,6 +28,7 @@ import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 import { OdosSelect } from "../inputs/OdosSelect";
+import { useConfirmDestructive } from "./ConfirmDestructive";
 import {
   PharmacyDirectoryPicker,
   pharmacyFromDirectoryResult,
@@ -299,6 +300,7 @@ export function PrescriptionEditor({
 }
 
 export function PrescriptionSection({ patientReference, encounterReference, onSaved }: Props) {
+  const confirmDestructive = useConfirmDestructive();
   const [requests, setRequests] = useState<MedicationRequest[]>([]);
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [patient, setPatient] = useState<Patient>();
@@ -559,9 +561,11 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
       setError("This prescription must be saved before it can be cancelled.");
       return;
     }
-    if (!window.confirm(
-      "This prescription is already at the pharmacy. Cancelling it cannot be undone from ODOS. Continue?",
-    )) return;
+    if (!await confirmDestructive({
+      title: "This prescription is already at the pharmacy.",
+      consequence: "Cancelling it cannot be undone from ODOS. Continue?",
+      confirmLabel: "Continue",
+    })) return;
     setCancellingId(request.id);
     setCancelFeedback((current) => {
       const next = { ...current };

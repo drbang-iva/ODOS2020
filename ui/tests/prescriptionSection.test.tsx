@@ -20,6 +20,7 @@ import {
   withDirectoryResult,
   withDrugText,
 } from "../src/components/charting/PrescriptionSection";
+import { ConfirmDestructiveProvider } from "../src/components/charting/ConfirmDestructive";
 import { CONCURRENT_EDIT_MESSAGE, toError } from "../src/lib/fhir";
 import {
   buildMedicationRequest,
@@ -505,48 +506,34 @@ test("a non-cancelled prescription never shows completed WENO cancellation prove
 
 test("declining cancellation confirmation does not call the WENO cancel route", async () => {
   const originalFetch = globalThis.fetch;
-  const originalWindow = globalThis.window;
   const requests: Array<{ url: string; method: string | undefined }> = [];
-  const confirmations: string[] = [];
   const request = electronicallySentPrescription();
   globalThis.fetch = prescriptionSectionFetch(request, async (url, init) => {
     requests.push({ url, method: init?.method });
     return undefined;
   });
-  Object.defineProperty(globalThis, "window", {
-    configurable: true,
-    value: {
-      confirm(message: string) {
-        confirmations.push(message);
-        return false;
-      },
-    },
-  });
-
   let renderer: ReactTestRenderer | undefined;
   try {
     renderer = await renderPrescriptionSection();
     const cancel = findButton(renderer, "Cancel prescription");
     assert.ok(cancel);
     await act(async () => cancel.props.onClick());
-
-    assert.equal(confirmations.length, 1);
-    assert.match(confirmations[0]!, /already at the pharmacy/i);
-    assert.match(confirmations[0]!, /cannot be undone from ODOS/i);
+    const dialog = renderer.root.findByProps({ role: "alertdialog" });
+    assert.match(JSON.stringify(renderer.toJSON()), /already at the pharmacy/i);
+    assert.match(JSON.stringify(renderer.toJSON()), /cannot be undone from ODOS/i);
+    await act(async () => findButton(renderer, "Keep")!.props.onClick());
     assert.equal(
       requests.some(({ url }) => url.endsWith("/weno/medication-requests/rx-1/cancel")),
       false,
     );
   } finally {
     if (renderer) act(() => renderer.unmount());
-    restoreWindow(originalWindow);
     globalThis.fetch = originalFetch;
   }
 });
 
 test("a successful WENO cancellation updates the row and shows status feedback", async () => {
   const originalFetch = globalThis.fetch;
-  const originalWindow = globalThis.window;
   const cancelRequests: Array<{ url: string; method: string | undefined }> = [];
   const request = electronicallySentPrescription();
   const cancelled = { ...request, status: "cancelled" as const };
@@ -559,8 +546,6 @@ test("a successful WENO cancellation updates the row and shows status feedback",
       resendable: false,
     });
   });
-  stubWindowConfirm(true);
-
   let renderer: ReactTestRenderer | undefined;
   try {
     renderer = await renderPrescriptionSection();
@@ -568,6 +553,10 @@ test("a successful WENO cancellation updates the row and shows status feedback",
     assert.ok(cancel);
     await act(async () => {
       cancel.props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => {
+      findButton(renderer!, "Continue")!.props.onClick();
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
@@ -580,14 +569,12 @@ test("a successful WENO cancellation updates the row and shows status feedback",
     assert.equal(findButton(renderer, "Cancel prescription"), undefined);
   } finally {
     if (renderer) act(() => renderer.unmount());
-    restoreWindow(originalWindow);
     globalThis.fetch = originalFetch;
   }
 });
 
 test("an unknown WENO cancellation outcome renders the cancellation reservation panel", async () => {
   const originalFetch = globalThis.fetch;
-  const originalWindow = globalThis.window;
   const request = electronicallySentPrescription();
   globalThis.fetch = prescriptionSectionFetch(request, async (url) => {
     if (!url.endsWith("/weno/medication-requests/rx-1/cancel")) return undefined;
@@ -610,8 +597,6 @@ test("an unknown WENO cancellation outcome renders the cancellation reservation 
       resendable: false,
     });
   });
-  stubWindowConfirm(true);
-
   let renderer: ReactTestRenderer | undefined;
   try {
     renderer = await renderPrescriptionSection();
@@ -619,6 +604,10 @@ test("an unknown WENO cancellation outcome renders the cancellation reservation 
     assert.ok(cancel);
     await act(async () => {
       cancel.props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => {
+      findButton(renderer!, "Continue")!.props.onClick();
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
@@ -629,7 +618,6 @@ test("an unknown WENO cancellation outcome renders the cancellation reservation 
     assert.ok(findButton(renderer, "Pharmacy verified — clear cancellation reservation"));
   } finally {
     if (renderer) act(() => renderer.unmount());
-    restoreWindow(originalWindow);
     globalThis.fetch = originalFetch;
   }
 });
@@ -1092,11 +1080,13 @@ async function renderPrescriptionSection(): Promise<ReactTestRenderer> {
   let renderer!: ReactTestRenderer;
   await act(async () => {
     renderer = create(
-      <PrescriptionSection
-        patientReference="Patient/patient-1"
-        encounterReference="Encounter/encounter-1"
-        onSaved={NOOP}
-      />,
+      <ConfirmDestructiveProvider>
+        <PrescriptionSection
+          patientReference="Patient/patient-1"
+          encounterReference="Encounter/encounter-1"
+          onSaved={NOOP}
+        />
+      </ConfirmDestructiveProvider>,
     );
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
@@ -1106,24 +1096,6 @@ async function renderPrescriptionSection(): Promise<ReactTestRenderer> {
 function findButton(renderer: ReactTestRenderer, text: string) {
   return renderer.root.findAllByType("button")
     .find((button) => button.children.includes(text));
-}
-
-function stubWindowConfirm(result: boolean): void {
-  Object.defineProperty(globalThis, "window", {
-    configurable: true,
-    value: { confirm: () => result },
-  });
-}
-
-function restoreWindow(originalWindow: Window & typeof globalThis | undefined): void {
-  if (originalWindow) {
-    Object.defineProperty(globalThis, "window", {
-      configurable: true,
-      value: originalWindow,
-    });
-    return;
-  }
-  Reflect.deleteProperty(globalThis, "window");
 }
 
 function jsonResponse(body: unknown): Response {
