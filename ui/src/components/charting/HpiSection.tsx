@@ -10,10 +10,12 @@ import type { SectionSaveStatus } from "./types";
 
 export type HistorySectionType =
   | "presentation" | "symptoms" | "quality" | "severity" | "duration" | "risk_factors"
-  | "treatment" | "numeric" | "presents_for" | "interval" | "laterality" | "text" | "single_select";
+  | "treatment" | "numeric" | "presents_for" | "interval" | "laterality" | "text" | "single_select"
+  | "family_conditions";
 export type HistoryTriState = "positive" | "negative";
 export type HistoryAnswerValue =
   | { kind: "tri-state"; status: HistoryTriState; note?: string }
+  | { kind: "relations"; positive: string[]; negative: string[]; note?: string }
   | { kind: "selection"; code: string }
   | { kind: "severity"; level: "mild" | "moderate" | "severe" }
   | { kind: "duration"; value: number; unit: "days" | "weeks" | "months" | "years" }
@@ -48,6 +50,7 @@ export interface HistoryTemplateSection {
   prefill?: "last_plan";
   required?: boolean;
   group_by?: "system";
+  relations?: string;
 }
 
 export interface HistoryTemplate {
@@ -767,6 +770,17 @@ function TemplateSection({ section, catalogs, answers, suggestions = [], editMod
       })}</div>
     </TemplateField>;
   }
+  if (section.type === "family_conditions" && section.catalog && section.relations) {
+    return <TemplateField label={section.label} required={section.required}>
+      <div className="space-y-4">{(catalogs[section.catalog] ?? []).map((option) => <FamilyConditionControl
+        key={option.code}
+        condition={option}
+        relations={catalogs[section.relations!] ?? []}
+        answer={answers.find((candidate) => candidate.sectionId === section.id && candidate.optionCode === option.code)}
+        onPut={onPut}
+      />)}</div>
+    </TemplateField>;
+  }
   if ((section.type === "symptoms" || section.type === "quality" || section.type === "risk_factors" || section.type === "treatment" || section.type === "presents_for") && section.catalog) {
     return <TemplateField label={section.label} required={section.required}>
       <div className="space-y-2">{(catalogs[section.catalog] ?? []).map((option) => <CatalogOptionControl
@@ -805,6 +819,60 @@ function TemplateSection({ section, catalogs, answers, suggestions = [], editMod
     return <TemplateField label={section.label}><textarea className="sidebar-input min-h-24 resize-y" value={value} onChange={(event) => onPut({ kind: "text", text: event.target.value })} /><TypedRemove editMode={editMode} answer={answer} label={section.label} onRemove={onRemoveTyped} /></TemplateField>;
   }
   return null;
+}
+
+function FamilyConditionControl({ condition, relations, answer, onPut }: {
+  condition: HistoryCatalogs[string][number];
+  relations: HistoryCatalogs[string];
+  answer: HistoryTemplateAnswer | undefined;
+  onPut: (value: HistoryAnswerValue | undefined, optionCode?: string) => void;
+}) {
+  const value = answer?.value.kind === "relations" ? answer.value : undefined;
+  const positive = new Set(value?.positive ?? []);
+  const negative = new Set(value?.negative ?? []);
+  const positiveLabels = relationLabels(relations, positive);
+
+  function cycle(relationCode: string) {
+    const current: HistoryTriState | undefined = positive.has(relationCode) ? "positive" : negative.has(relationCode) ? "negative" : undefined;
+    const next = cycleHistoryTriState(current);
+    const nextPositive = new Set(positive);
+    const nextNegative = new Set(negative);
+    nextPositive.delete(relationCode);
+    nextNegative.delete(relationCode);
+    if (next === "positive") nextPositive.add(relationCode);
+    if (next === "negative") nextNegative.add(relationCode);
+    if (nextPositive.size + nextNegative.size === 0) {
+      onPut(undefined, condition.code);
+      return;
+    }
+    onPut({
+      kind: "relations",
+      positive: relations.filter((relation) => nextPositive.has(relation.code)).map((relation) => relation.code),
+      negative: relations.filter((relation) => nextNegative.has(relation.code)).map((relation) => relation.code),
+      ...(value?.note !== undefined ? { note: value.note } : {}),
+    }, condition.code);
+  }
+
+  return <div className="odos-hpi-border rounded border p-3">
+    <p className="odos-hpi-text text-sm font-semibold">
+      {condition.display}{positiveLabels.length ? ` — ${positiveLabels.join(", ")}` : ""}
+    </p>
+    <div className="mt-2 flex flex-wrap gap-2">{relations.map((relation) => {
+      const state: HistoryTriState | undefined = positive.has(relation.code) ? "positive" : negative.has(relation.code) ? "negative" : undefined;
+      return <button
+        key={relation.code}
+        type="button"
+        aria-label={`${condition.display} ${relation.display}: ${state ?? "unasked"}`}
+        aria-pressed={state === "positive"}
+        className={`${chipClass(state)} min-h-11`}
+        onClick={() => cycle(relation.code)}
+      >{state === "negative" ? `no ${relation.display}` : relation.display}</button>;
+    })}</div>
+  </div>;
+}
+
+function relationLabels(relations: HistoryCatalogs[string], selected: ReadonlySet<string>): string[] {
+  return relations.filter((relation) => selected.has(relation.code)).map((relation) => relation.display.toLowerCase());
 }
 
 function CatalogOptionControl({ section, option, answers, suggestions, onTriState, onPut }: {
@@ -902,7 +970,10 @@ function CarriedForwardStrip({ declaration, catalogs, rows, attestation, canRevi
       const state = row.answer.value.kind === "tri-state" ? row.answer.value.status : undefined;
       const note = row.answer.value.kind === "tri-state" ? row.answer.value.note : undefined;
       const text = row.answer.value.kind === "text" ? row.answer.value.text : undefined;
-      const label = `${state === "negative" ? "No " : ""}${option?.display ?? optionCode ?? text ?? section?.label ?? "History value"}${row.answer.eye ? ` ${row.answer.eye}` : ""}`;
+      const positiveRelations = row.answer.value.kind === "relations" && section?.relations
+        ? relationLabels(catalogs[section.relations] ?? [], new Set(row.answer.value.positive))
+        : [];
+      const label = `${state === "negative" ? "No " : ""}${option?.display ?? optionCode ?? text ?? section?.label ?? "History value"}${positiveRelations.length ? ` — ${positiveRelations.join(", ")}` : ""}${row.answer.eye ? ` ${row.answer.eye}` : ""}`;
       return <li key={row.answer.observationReference ?? row.answer.id}>{label}{note ? ` · ${note}` : ""} <span className="odos-hpi-faint">· {row.recordedAt.slice(0, 10)}</span></li>;
     })}</ul>
     <div className="mt-3 flex flex-wrap items-center gap-3">

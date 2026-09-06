@@ -281,6 +281,7 @@ export function assertHistoryTemplateAnswer(value: unknown): HistoryTemplateAnsw
 function validateValue(value: Record<string, unknown>): void {
   if (value.kind === "tri-state" && ["positive", "negative"].includes(String(value.status)) && optionalText(value.note) &&
     (value.status === "positive" || value.note === undefined)) return;
+  if (value.kind === "relations" && validRelationsValue(value)) return;
   if (value.kind === "selection" && validCode(value.code)) return;
   if (value.kind === "severity" && ["mild", "moderate", "severe"].includes(String(value.level))) return;
   if (value.kind === "duration" && typeof value.value === "number" && Number.isFinite(value.value) && value.value > 0 && ["days", "weeks", "months", "years"].includes(String(value.unit))) return;
@@ -289,6 +290,17 @@ function validateValue(value: Record<string, unknown>): void {
   if (value.kind === "laterality" && ["OD-worse", "OS-worse", "equal", "other"].includes(String(value.code)) && optionalText(value.note)) return;
   if (value.kind === "text" && typeof value.text === "string") return;
   throw new Error("History template answer value is invalid.");
+}
+
+function validRelationsValue(value: Record<string, unknown>): boolean {
+  const positive = value.positive;
+  const negative = value.negative;
+  if (!stringArray(positive) || !stringArray(negative)) return false;
+  return optionalText(value.note) && !positive.some((relation) => negative.includes(relation));
+}
+
+function stringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 
 function validCode(value: unknown): boolean {

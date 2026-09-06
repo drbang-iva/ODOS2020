@@ -72,3 +72,53 @@ test("a patient-scoped answer persists its scope distinctly from complaint answe
     recordedAt: "2026-09-03T15:00:00.000Z",
   }), /exactly one subject/i);
 });
+
+test("a family relations answer persists and parses back with denied and unasked relatives distinct", () => {
+  const answer = {
+    id: "family-e1-conditions-glaucoma",
+    subjectScope: "patient",
+    templateKey: "family-history",
+    sectionId: "conditions",
+    optionCode: "glaucoma",
+    value: {
+      kind: "relations",
+      positive: ["father", "brother"],
+      negative: ["mother"],
+      note: "Maternal history denied",
+    },
+  } as const;
+  const observation = buildHistoryAnswerObservation(answer, {
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    recordedAt: "2026-09-05T15:00:00.000Z",
+  });
+
+  assert.deepEqual(parseHistoryAnswerObservation({ ...observation, id: "obs-family-1" }), {
+    ...answer,
+    observationReference: "Observation/obs-family-1",
+  });
+  assert.deepEqual(answer.value.negative, ["mother"], "an unlisted relative remains unasked");
+});
+
+test("family relations shape requires two string arrays without overlap and an optional string note", () => {
+  const base = {
+    id: "family-e1-conditions-glaucoma",
+    subjectScope: "patient",
+    templateKey: "family-history",
+    sectionId: "conditions",
+    optionCode: "glaucoma",
+  };
+  for (const value of [
+    { kind: "relations", negative: [] },
+    { kind: "relations", positive: [], negative: "mother" },
+    { kind: "relations", positive: [7], negative: [] },
+    { kind: "relations", positive: ["father"], negative: ["father"] },
+    { kind: "relations", positive: [], negative: [], note: 7 },
+  ]) {
+    assert.throws(() => buildHistoryAnswerObservation({ ...base, value } as never, {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      recordedAt: "2026-09-05T15:00:00.000Z",
+    }), /value is invalid/i);
+  }
+});

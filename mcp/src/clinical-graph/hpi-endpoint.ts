@@ -1185,6 +1185,7 @@ function validateTemplateAnswers(answers: HistoryTemplateAnswer[], complaints: E
 function sectionValueKind(sectionType: HistoryTemplate["sections"][number]["type"]): HistoryTemplateAnswer["value"]["kind"] {
   if (sectionType === "symptoms" || sectionType === "quality" || sectionType === "risk_factors" || sectionType === "treatment" || sectionType === "presents_for") return "tri-state";
   if (sectionType === "presentation" || sectionType === "single_select") return "selection";
+  if (sectionType === "family_conditions") return "relations";
   return sectionType;
 }
 
@@ -1194,6 +1195,22 @@ function validateSubjectSectionAnswer(
 ): string | undefined {
   const expectedKind = sectionValueKind(section.type);
   if (answer.value.kind !== expectedKind) return `History answer ${answer.id} has the wrong value type for ${section.type}.`;
+  if (answer.value.kind === "relations") {
+    if (section.type !== "family_conditions" || !section.catalog || !section.relations || !answer.optionCode || answer.eye) {
+      return `History answer ${answer.id} has invalid family relations coordinates.`;
+    }
+    if (!HISTORY_OPTION_CATALOGS[section.catalog]?.some((option) => option.code === answer.optionCode)) {
+      return `History answer ${answer.id} names an unknown catalog option.`;
+    }
+    if (answer.value.positive.length + answer.value.negative.length === 0) {
+      return `History answer ${answer.id} must mark at least one family relation.`;
+    }
+    const relationCodes = new Set(HISTORY_OPTION_CATALOGS[section.relations]?.map((option) => option.code));
+    if (!relationCodes.size || [...answer.value.positive, ...answer.value.negative].some((code) => !relationCodes.has(code))) {
+      return `History answer ${answer.id} names an unknown family relation.`;
+    }
+    return undefined;
+  }
   if (section.type === "single_select") {
     if (answer.value.kind !== "selection") {
       return `History answer ${answer.id} has an invalid selection for ${section.type}.`;

@@ -479,6 +479,69 @@ test("a declared single-select replaces one answer and then clears that same ans
   renderer.unmount();
 });
 
+test("Family History keeps a three-state relative value per condition and removes an empty row", () => {
+  const declaration: HistorySubjectSection = {
+    key: "family-history",
+    label: "Family History",
+    subjectScope: "patient",
+    completionAnchor: "conditions",
+    sections: [{
+      id: "conditions",
+      type: "family_conditions",
+      label: "Conditions",
+      catalog: "family_conditions",
+      relations: "family_relations",
+      required: true,
+    }],
+  };
+  const catalogs: HistoryCatalogs = {
+    family_conditions: [{ code: "glaucoma", display: "Glaucoma" }],
+    family_relations: [
+      { code: "mother", display: "Mother" },
+      { code: "father", display: "Father" },
+      { code: "sister", display: "Sister" },
+    ],
+  };
+  const changes: Array<{ next: HistoryTemplateAnswer | undefined; prior: HistoryTemplateAnswer | undefined }> = [];
+  let answers: HistoryTemplateAnswer[] = [];
+  const props = () => ({
+    encounterId: "e1",
+    declaration,
+    catalogs,
+    answers,
+    editMode: false,
+    onChange: (next: HistoryTemplateAnswer | undefined, prior: HistoryTemplateAnswer | undefined) => changes.push({ next, prior }),
+    onRemoveTyped: () => undefined,
+  });
+  const renderer = create(<HistorySubjectSectionEditor {...props()} />);
+  const click = (label: string) => {
+    act(() => renderer.root.findByProps({ "aria-label": label }).props.onClick());
+    const next = changes.at(-1)?.next;
+    answers = next ? [next] : [];
+    act(() => renderer.update(<HistorySubjectSectionEditor {...props()} />));
+  };
+
+  const father = renderer.root.findByProps({ "aria-label": "Glaucoma Father: unasked" });
+  assert.match(father.props.className, /min-h-11/);
+  click("Glaucoma Father: unasked");
+  click("Glaucoma Mother: unasked");
+  assert.match(renderer.root.findAllByType("p").map((node) => node.children.join("")).join(" "), /Glaucoma — mother, father/);
+  click("Glaucoma Mother: positive");
+
+  assert.deepEqual(changes.at(-1)?.next?.value, {
+    kind: "relations",
+    positive: ["father"],
+    negative: ["mother"],
+  });
+  assert.ok(renderer.root.findByProps({ "aria-label": "Glaucoma Sister: unasked" }));
+
+  click("Glaucoma Mother: negative");
+  click("Glaucoma Father: positive");
+  click("Glaucoma Father: negative");
+  assert.equal(changes.at(-1)?.next, undefined, "a condition with no marked relatives is not an answer");
+  renderer.unmount();
+});
+
 test("clearing a selected tobacco chip voids its one Observation before saving the empty section", async () => {
   const originalFetch = globalThis.fetch;
   const voidBodies: unknown[] = [];
@@ -758,6 +821,64 @@ test("a carried-forward text section displays its recorded value in the prior-en
     });
     const chartStrip = renderer.root.findByProps({ "aria-label": "Social History on this chart" });
     assert.match(chartStrip.findByType("li").children.join(""), /^Accountant/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a carried-forward family condition displays its positive relatives in the prior-encounter strip", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/hpi/definition")) return json({
+      templates: [],
+      catalogs: {
+        family_conditions: [{ code: "glaucoma", display: "Glaucoma" }],
+        family_relations: [
+          { code: "mother", display: "Mother" },
+          { code: "father", display: "Father" },
+          { code: "brother", display: "Brother" },
+        ],
+      },
+      subjectSections: [{
+        key: "family-history",
+        label: "Family History",
+        subjectScope: "patient",
+        completionAnchor: "conditions",
+        sections: [{ id: "conditions", type: "family_conditions", label: "Conditions", catalog: "family_conditions", relations: "family_relations", required: true }],
+      }],
+      definition: {},
+    });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) return json({ complaints: [] });
+    if (url.endsWith("/clinical-graph/encounters/e1/hpi")) return json({
+      answers: [],
+      carriedForwardAnswers: [{
+        answer: {
+          id: "prior-family-glaucoma",
+          subjectScope: "patient",
+          templateKey: "family-history",
+          sectionId: "conditions",
+          optionCode: "glaucoma",
+          observationReference: "Observation/prior-family-glaucoma",
+          value: { kind: "relations", positive: ["father", "brother"], negative: ["mother"] },
+        },
+        encounterReference: "Encounter/prior",
+        recordedAt: "2026-08-01T12:00:00.000Z",
+      }],
+      reviewAttestations: [],
+      templateNarratives: [],
+    });
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<EncounterEditContext.Provider value={{}}><HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></EncounterEditContext.Provider>);
+      await delay(0);
+    });
+    const chartStrip = renderer.root.findByProps({ "aria-label": "Family History on this chart" });
+    assert.match(chartStrip.findByType("li").children.join(""), /^Glaucoma — father, brother/);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

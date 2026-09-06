@@ -12,6 +12,7 @@ export const HISTORY_SECTION_TYPES = [
   "laterality",
   "text",
   "single_select",
+  "family_conditions",
 ] as const;
 
 export type HistorySectionType = typeof HISTORY_SECTION_TYPES[number];
@@ -164,6 +165,26 @@ export const HISTORY_OPTION_CATALOGS: Record<string, HistoryCatalogOption[]> = {
   social_history_home_safety: options([
     ["does-not-feel-safe-at-home", "Does not feel safe at home"],
   ]),
+  family_conditions: options([
+    ["glaucoma", "Glaucoma"],
+    ["diabetes", "Diabetes"],
+  ]),
+  family_relations: options([
+    ["mother", "Mother"],
+    ["father", "Father"],
+    ["sister", "Sister"],
+    ["brother", "Brother"],
+    ["daughter", "Daughter"],
+    ["son", "Son"],
+    ["uncle", "Uncle"],
+    ["aunt", "Aunt"],
+    ["nephew", "Nephew"],
+    ["niece", "Niece"],
+    ["grandmother", "Grandmother"],
+    ["grandfather", "Grandfather"],
+    ["grandson", "Grandson"],
+    ["granddaughter", "Granddaughter"],
+  ]),
 };
 
 export interface HistoryTemplateSection {
@@ -177,6 +198,7 @@ export interface HistoryTemplateSection {
   prefill?: "last_plan";
   required?: boolean;
   group_by?: "system";
+  relations?: string;
 }
 
 export interface HistoryTemplate {
@@ -234,6 +256,17 @@ export const HISTORY_SUBJECT_SECTIONS: HistorySubjectSection[] = [
       section("ophthalmic-medications", "treatment", "Ophthalmic medications", { catalog: "medical_history_ophthalmic_medications", per_eye: true, required: true }),
       section("systemic-medications", "treatment", "Systemic medications", { catalog: "medical_history_systemic_medications", per_eye: false, required: true }),
       section("allergies", "risk_factors", "Allergies", { catalog: "medical_history_allergies", required: true }),
+    ],
+  },
+  {
+    key: "family-history",
+    label: "Family History",
+    subjectScope: "patient",
+    completionAnchor: "conditions",
+    summary: "{family_conditions}",
+    sections: [
+      section("conditions", "family_conditions", "Conditions", { catalog: "family_conditions", relations: "family_relations", required: true }),
+      section("notes", "text", "Other family history"),
     ],
   },
   {
@@ -295,6 +328,7 @@ export const HISTORY_TEMPLATES: HistoryTemplate[] = [
 
 export type HistoryTemplateValue =
   | { kind: "tri-state"; status: TriState; note?: string }
+  | { kind: "relations"; positive: string[]; negative: string[]; note?: string }
   | { kind: "selection"; code: string }
   | { kind: "severity"; level: "mild" | "moderate" | "severe" }
   | { kind: "duration"; value: number; unit: "days" | "weeks" | "months" | "years" }
@@ -449,9 +483,27 @@ export function renderDeclaredSubjectSummary(
   const replacements = new Map([
     ["reviewed_systems", coverage.join("; ")],
     ["positives", positives.length ? `Reports ${positives.join(", ")}` : ""],
+    ["family_conditions", relationRows(declaration, answers)],
   ]);
   return (declaration.summary ?? "").replace(/\{([^}]+)\}/g, (_match, token: string) => registeredToken(replacements, token))
     .replace(/\s+\./g, ".").replace(/\.{2,}/g, ".").trim();
+}
+
+function relationRows(declaration: HistorySubjectSection, answers: HistoryTemplateAnswer[]): string {
+  const sectionValue = declaration.sections.find((section) => section.type === "family_conditions");
+  if (!sectionValue?.catalog || !sectionValue.relations) return "";
+  const conditionCatalog = catalog(sectionValue.catalog);
+  const relationCatalog = catalog(sectionValue.relations);
+  return answers.flatMap((answer) => {
+    if (answer.sectionId !== sectionValue.id || !answer.optionCode || answer.value.kind !== "relations" || !answer.value.positive.length) return [];
+    const condition = conditionCatalog.find((option) => option.code === answer.optionCode);
+    if (!condition) return [];
+    const relatives = answer.value.positive.flatMap((code) => {
+      const relation = relationCatalog.find((option) => option.code === code);
+      return relation ? [relation.display.toLowerCase()] : [];
+    });
+    return relatives.length ? [`${condition.display} — ${relatives.join(", ")}`] : [];
+  }).join(" · ");
 }
 
 function registeredToken(replacements: Map<string, string>, token: string): string {
