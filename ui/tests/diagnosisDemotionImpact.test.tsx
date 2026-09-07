@@ -90,6 +90,16 @@ test("DiagnosisPicker surfaces a stranded-charge warning after its variable Poss
 
     assert.match(JSON.stringify(renderer.toJSON()), /Synthetic procedure/);
     assert.match(JSON.stringify(renderer.toJSON()), /will not reach claim until re-pointed/);
+
+    await act(async () => {
+      renderer.update(<DiagnosisPicker
+        encounterReference="Encounter/e1"
+        observationReferences={["Observation/finding-1"]}
+        refreshKey={1}
+      />);
+      await flushEffects();
+    });
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /will not reach claim until re-pointed/);
   } finally {
     act(() => renderer?.unmount());
     globalThis.fetch = originalFetch;
@@ -191,6 +201,14 @@ test("AssessmentSection surfaces a stranded-charge warning after its variable Di
 
     assert.match(JSON.stringify(renderer.toJSON()), /Synthetic procedure/);
     assert.match(JSON.stringify(renderer.toJSON()), /will not reach claim until re-pointed/);
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("odos:diagnosis-picked", {
+        detail: { encounterReference: "Encounter/e1" },
+      }));
+      await flushEffects();
+    });
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /will not reach claim until re-pointed/);
   } finally {
     act(() => renderer?.unmount());
     globalThis.fetch = originalFetch;

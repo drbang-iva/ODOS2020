@@ -68,6 +68,7 @@ export function DiagnosisPicker({
   const observationKey = observationReferences?.join("|") ?? "";
 
   async function load(signal?: AbortSignal) {
+    setDiagnosisDemotionImpact(undefined);
     const requestVersion = ++loadVersion.current;
     try {
       const [candidateFindings, catalogResponse, conditions] = await Promise.all([
@@ -139,8 +140,11 @@ export function DiagnosisPicker({
         action,
         source,
       });
-      setDiagnosisDemotionImpact(result);
-      await load();
+      try {
+        await load();
+      } finally {
+        setDiagnosisDemotionImpact(result);
+      }
       setOpenId(null);
       setCatalogSelection(undefined);
       setProposalCatalogSelections((current) => {

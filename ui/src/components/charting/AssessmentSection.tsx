@@ -151,6 +151,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   const encounterId = encounterReference.replace(/^Encounter\//, "");
 
   async function load() {
+    setDiagnosisDemotionImpact(undefined);
     setError(null);
     const loadedEncounter = await fhir.read<Encounter>("Encounter", encounterId);
     const [conditionBundle, visitStatuses, procedureResult] = await Promise.all([
