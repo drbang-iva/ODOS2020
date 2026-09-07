@@ -112,6 +112,22 @@ function rowsWithQualifierScopedPterygium(): FindingDispositionRegistryRow[] {
   ];
 }
 
+function rowsWithNarrowPterygiumDisposition(
+  disposition: FindingDispositionRegistryRow["disposition"],
+): FindingDispositionRegistryRow[] {
+  const rows = rowsWithQualifierScopedPterygium();
+  const peripheralRow = rows.find((row) => row.qualifierContext === "location=peripheral");
+  assert.ok(peripheralRow);
+  return [
+    ...rows,
+    {
+      ...peripheralRow,
+      qualifierContext: "location=peripheral&progression=stationary",
+      disposition,
+    },
+  ];
+}
+
 function assertDispositionCoverage(
   rows: readonly FindingDispositionRegistryRow[],
   chips: readonly FindingChip[],
@@ -152,7 +168,6 @@ function assertDispositionConsistency(
   rows: readonly FindingDispositionRegistryRow[],
   definitions: readonly ClinicalFindingDefinition[],
 ): void {
-  const proposals = rows.filter((row) => row.disposition.kind === "proposes");
   const targets = activeTriggerTargets(definitions);
   const qualifierRowBases = new Set(rows
     .filter((row) => row.qualifierContext !== undefined)
@@ -173,23 +188,28 @@ function assertDispositionConsistency(
       && entries.every(([key, value]) => qualifiers[key] === value);
   };
 
-  // A qualifier proposal must match that option and context. A base proposal
-  // matches an option trigger, or a qualifier trigger only while the chip has no
+  // A qualifier row matches that option and context. A base row matches an
+  // option trigger, or a qualifier trigger only while the chip has no
   // qualifier-scoped rows; the completeness guard separately forbids mixing both.
-  const proposalsWithoutTriggers = proposals
-    .filter((row) => {
-      const rowBaseKey = baseKey(row);
-      return !targets.some((target) => {
-        if (baseKey(target) !== rowBaseKey) return false;
-        if (row.qualifierContext !== undefined) {
-          return target.kind === "qualifier"
-            && target.qualifiers !== undefined
-            && contextMatches(row.qualifierContext, target.qualifiers);
-        }
-        return target.kind === "option" || !qualifierRowBases.has(rowBaseKey);
-      });
-    })
+  const rowMatchesTarget = (row: FindingDispositionRegistryRow): boolean => {
+    const rowBaseKey = baseKey(row);
+    return targets.some((target) => {
+      if (baseKey(target) !== rowBaseKey) return false;
+      if (row.qualifierContext !== undefined) {
+        return target.kind === "qualifier"
+          && target.qualifiers !== undefined
+          && contextMatches(row.qualifierContext, target.qualifiers);
+      }
+      return target.kind === "option" || !qualifierRowBases.has(rowBaseKey);
+    });
+  };
+  const proposalsWithoutTriggers = rows
+    .filter((row) => row.disposition.kind === "proposes" && !rowMatchesTarget(row))
     .map(buildFindingDispositionKey);
+  const nonProposalsWithTriggers = rows
+    .filter((row) => row.disposition.kind !== "proposes" && rowMatchesTarget(row))
+    .map(buildFindingDispositionKey);
+  const proposals = rows.filter((row) => row.disposition.kind === "proposes");
   const triggersWithoutProposals = targets
     .filter((target) => {
       const targetBaseKey = baseKey(target);
@@ -208,6 +228,11 @@ function assertDispositionConsistency(
     sortedUnique(proposalsWithoutTriggers),
     [],
     `Proposes dispositions without a matching active trigger: ${proposalsWithoutTriggers.join(", ")}`,
+  );
+  assert.deepEqual(
+    sortedUnique(nonProposalsWithTriggers),
+    [],
+    `Non-proposes dispositions matched by active triggers: ${nonProposalsWithTriggers.join(", ")}`,
   );
   assert.deepEqual(
     sortedUnique(triggersWithoutProposals),
@@ -268,6 +293,58 @@ test("witness B1: two qualifier-scoped pterygium rows satisfy completeness by ba
 
 test("witness B2: qualifier-scoped pterygium proposals agree with central and peripheral qualifier triggers", () => {
   assertDispositionConsistency(rowsWithQualifierScopedPterygium(), ocularHealthDefinitions());
+});
+
+test("witness H: a pending narrower qualifier row under a matching trigger fails Guard 2", () => {
+  assert.throws(
+    () => assertDispositionConsistency(
+      rowsWithNarrowPterygiumDisposition({ kind: "pending" }),
+      ocularHealthDefinitions(),
+    ),
+    /Non-proposes dispositions matched by active triggers: .*location=peripheral&progression=stationary/,
+  );
+});
+
+test("witness I: overlapping qualifier rows both marked proposes pass Guard 2", () => {
+  assertDispositionConsistency(
+    rowsWithNarrowPterygiumDisposition({ kind: "proposes", entrySurface: "finding" }),
+    ocularHealthDefinitions(),
+  );
+});
+
+test("witness J: a pending qualifier row with no matching trigger passes Guard 2", () => {
+  const rows = rowsWithQualifierScopedPterygium();
+  const peripheralRow = rows.find((row) => row.qualifierContext === "location=peripheral");
+  assert.ok(peripheralRow);
+
+  assertDispositionConsistency([
+    ...rows,
+    { ...peripheralRow, qualifierContext: "location=temporal", disposition: { kind: "pending" } },
+  ], ocularHealthDefinitions());
+});
+
+test("witness K: a pending base row under a live option trigger fails Guard 2", () => {
+  const pterygiumKey = buildFindingDispositionKey(PTERYGIUM_IDENTITY);
+  const pendingBaseRows = FINDING_DISPOSITION_ROWS.map((row) =>
+    buildFindingDispositionKey(row) === pterygiumKey
+      ? { ...row, disposition: { kind: "pending" } as const }
+      : row
+  );
+
+  assert.throws(
+    () => assertDispositionConsistency(pendingBaseRows, ocularHealthDefinitions()),
+    /Non-proposes dispositions matched by active triggers: .*pterygium/,
+  );
+});
+
+test("an active qualifier trigger without any disposition scope still fails Guard 2", () => {
+  const centralOnlyRows = rowsWithQualifierScopedPterygium()
+    .filter((row) => row.qualifierContext !== "location=peripheral");
+
+  assert.throws(
+    () => assertDispositionConsistency(centralOnlyRows, ocularHealthDefinitions()),
+    /Active triggers without a matching proposes disposition: .*location=peripheral&progression=stationary/,
+  );
 });
 
 test("witness C: a chip carrying both a base row and a qualifier row fails the either-or assertion", () => {
