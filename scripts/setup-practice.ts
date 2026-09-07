@@ -1441,12 +1441,13 @@ function setupStateIsComplete(state: SetupPracticeState): boolean {
   );
 }
 
-const LEGACY_VISIT_TYPE_CATEGORY_IDS = new Set([
-  "comprehensive",
-  "dry-eye",
-  "myopia-management",
-  "diagnostic-only",
-]);
+const LEGACY_VISIT_TYPE_CATEGORY_TARGETS: Readonly<Record<string, { code: string; label: string }>> = {
+  comprehensive: { code: "exams", label: "Exams" },
+  "dry-eye": { code: "medical", label: "Medical" },
+  "myopia-management": { code: "medical", label: "Medical" },
+  "diagnostic-only": { code: "medical", label: "Medical" },
+};
+const LEGACY_VISIT_TYPE_CATEGORY_IDS = new Set(Object.keys(LEGACY_VISIT_TYPE_CATEGORY_TARGETS));
 
 const VISIT_TYPE_CATEGORY_BY_CODE: Readonly<Record<string, { code: string; label: string }>> = {
   "routine-exam-new": { code: "exams", label: "Exams" },
@@ -1462,8 +1463,11 @@ function reconcileInstalledVisitType(visitType: HealthcareService): HealthcareSe
   if (code === "medicaid-exam") {
     return visitType.active === false ? visitType : { ...visitType, active: false };
   }
-  const category = code ? VISIT_TYPE_CATEGORY_BY_CODE[code] : undefined;
   const aesthetics = code?.startsWith("aesthetics-") === true;
+  const category = aesthetics
+    ? undefined
+    : (code ? VISIT_TYPE_CATEGORY_BY_CODE[code] : undefined)
+      ?? LEGACY_VISIT_TYPE_CATEGORY_TARGETS[visitTypeCategory(visitType)?.code ?? ""];
   let reconciled = category || aesthetics
     ? replaceVisitTypeCategory(visitType, category)
     : visitType;

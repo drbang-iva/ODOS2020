@@ -497,6 +497,29 @@ test("a completed pre-taxonomy setup migrates installed visit categories and ret
         }),
         id: "aesthetics",
       },
+      {
+        ...buildVisitType({
+          code: "practice-annual-exam",
+          name: "Practice Annual Exam",
+          discipline: "eyecare",
+          categoryCode: "comprehensive",
+          categoryLabel: "Comprehensive",
+          durationMinutes: 50,
+          active: false,
+        }),
+        id: "custom-legacy-exam",
+      },
+      {
+        ...buildVisitType({
+          code: "practice-dry-eye-check",
+          name: "Practice Dry Eye Check",
+          discipline: "eyecare",
+          categoryCode: "dry-eye",
+          categoryLabel: "Dry Eye",
+          durationMinutes: 25,
+        }),
+        id: "custom-legacy-medical",
+      },
     );
     adapter.visitTypeConfigs.push({
       ...buildVisitTypeConfigResource({
@@ -568,6 +591,18 @@ test("a completed pre-taxonomy setup migrates installed visit categories and ret
       name: "Testing Visit",
     });
     assert.equal(visitTypeState.aesthetics?.category, undefined);
+    assert.deepEqual(visitTypeState["custom-legacy-exam"], {
+      active: false,
+      category: "exams",
+      duration: 50,
+      name: "Practice Annual Exam",
+    });
+    assert.deepEqual(visitTypeState["custom-legacy-medical"], {
+      active: true,
+      category: "medical",
+      duration: 25,
+      name: "Practice Dry Eye Check",
+    });
     assert.deepEqual(parseVisitTypeConfig(adapter.visitTypeConfigs[0]!).categories, [
       { id: "exams", label: "Exams", order: 0 },
       { id: "contact-lens", label: "Contact Lens", order: 1 },
@@ -586,6 +621,8 @@ test("a completed pre-taxonomy setup migrates installed visit categories and ret
         { eventType: "update", resourceId: "medical" },
         { eventType: "update", resourceId: "testing" },
         { eventType: "update", resourceId: "aesthetics" },
+        { eventType: "update", resourceId: "custom-legacy-exam" },
+        { eventType: "update", resourceId: "custom-legacy-medical" },
       ],
     );
     assert.equal(
