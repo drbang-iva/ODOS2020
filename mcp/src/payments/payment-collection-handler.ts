@@ -225,7 +225,7 @@ async function createCollection(
     }
     if (settlement.attributionWarning) {
       throw new CollectionInputError(
-        `${reference} cannot be collected because attributed payments exceed the charge amount: ${settlement.attributionWarning}`,
+        `${reference} cannot be collected because its attributed amount is inconsistent: ${settlement.attributionWarning}`,
       );
     }
     if (settlement.openCents === 0) {
@@ -453,10 +453,12 @@ function chargeSettlements(
     const ambiguityReason = ambiguityByCharge.get(reference);
     const attributionWarning = attributedCents > amountCents
       ? `${reference} has ${attributedCents} attributed cents against its ${amountCents}-cent charge amount.`
-      : undefined;
+      : attributedCents < 0
+        ? `${reference} has ${attributedCents} net attributed cents; reversing allocations exceed recorded positive allocations.`
+        : undefined;
     const settlement: ChargeSettlement = {
       attributedCents,
-      openCents: ambiguityReason ? null : Math.max(0, amountCents - attributedCents),
+      openCents: ambiguityReason ? null : Math.min(amountCents, Math.max(0, amountCents - attributedCents)),
       ...(ambiguityReason ? { ambiguityReason } : {}),
       ...(attributionWarning ? { attributionWarning } : {}),
     };

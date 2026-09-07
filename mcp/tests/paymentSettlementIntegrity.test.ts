@@ -317,6 +317,27 @@ test("over-attribution stays visible as a named nonnegative warning", async () =
   assert.match(lines[0]?.attributionWarning ?? "", /ChargeItem\/charge-over.*1100.*1000/i);
 });
 
+test("a standalone reversal cannot increase the collectable amount beyond the original charge", async () => {
+  const lines = await openLines(fixture({
+    charges: [charge("charge-orphan-reversal")],
+    payments: [allocation(
+      "payment-orphan-reversal",
+      "ChargeItem/charge-orphan-reversal",
+      -400,
+      INSURANCE_CHARGE_ITEM_ALLOCATION_DETAIL_CODE,
+    )],
+  }));
+
+  assert.deepEqual(observed(lines, ["charge-orphan-reversal"]), {
+    openByCharge: { "charge-orphan-reversal": 1_000 },
+    openLineCount: 1,
+  });
+  assert.match(
+    lines[0]?.attributionWarning ?? "",
+    /ChargeItem\/charge-orphan-reversal.*-400.*reversing allocations exceed recorded positive allocations/i,
+  );
+});
+
 interface CollectionHarness {
   audits: unknown[];
   deps: PaymentCollectionHandlerDeps;
@@ -538,7 +559,7 @@ test("collection refuses an over-attributed charge with its id and attribution r
   assert.equal(result.status, 400);
   assert.match(
     (result.body as { error: string }).error,
-    /ChargeItem\/charge-collection cannot be collected because attributed payments exceed the charge amount:.*1100.*1000/i,
+    /ChargeItem\/charge-collection cannot be collected because its attributed amount is inconsistent:.*1100.*1000/i,
   );
   assert.equal(harness.transactionCount(), 0);
 });
