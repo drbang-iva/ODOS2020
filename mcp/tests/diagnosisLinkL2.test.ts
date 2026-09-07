@@ -18,6 +18,7 @@ import { handleDiagnosisOrderRequest } from "../src/clinical-graph/diagnosis-ord
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
 import { FAMILY_RESOLUTION_MODES } from "../src/clinical-graph/diagnosis-catalog-seeds.js";
 import {
+  buildEntranceFindingDefinitions,
   VISUAL_FIELD_DEFECT_KEY,
   VISUAL_FIELD_DESCRIPTOR_FIELD,
   visualFieldDescriptorResolution,
@@ -38,8 +39,19 @@ import {
   matchingQualifierGroups,
   updateDiagnosisCandidateSchema,
 } from "../src/clinical-graph/diagnosis-mapping.js";
-import type { FindingInstance } from "../src/clinical-graph/glaucoma-suspect.js";
+import {
+  buildGlaucomaFindingDefinitionStubs,
+  captureGlaucomaFinding,
+  evaluateGlaucomaDiagnosisSuggestions,
+  evaluateIopDiagnosisSuggestions,
+  type ClinicalGraphProvenance,
+  type FindingInstance,
+} from "../src/clinical-graph/glaucoma-suspect.js";
 import { handleEomCaptureRequest } from "../src/clinical-graph/eom-endpoint.js";
+import {
+  buildRefractionFindingDefinitionStub,
+  evaluateRefractiveErrorSuggestions,
+} from "../src/clinical-graph/refraction-suspect.js";
 
 const { handleDiagnosisPickRequest } = diagnosisPickEndpoint;
 
@@ -897,39 +909,106 @@ test("active ocular-health diagnosis mappings name active options on their decla
 });
 
 test("diagnosis reachability reports mapping, rule, and visual-field descriptor channels against separate baselines", () => {
-  const ruleReachableKeys = new Set([
-    "anisometropia",
-    "astigmatism",
-    "glaucoma_suspect_open_angle_high",
-    "glaucoma_suspect_open_angle_low",
-    "hyperopia",
-    "myopia",
-    "ocular_hypertension",
-    "presbyopia",
-  ]);
-  const expectedVisualFieldDescriptorKeys = new Set([
-    "vf_heteronymous_bilateral",
-    "vf_homonymous_bilateral",
-    "vf_other_localized",
-  ]);
-  const visualFieldDescriptorReachableKeys = new Set([
-    "field-loss-od",
-    "field-loss-os",
-    "bitemporal-hemianopsia",
-    "right-homonymous-hemianopsia",
-    "left-homonymous-hemianopsia",
-    "superior-right-homonymous-quadrantanopia",
-    "inferior-right-homonymous-quadrantanopia",
-    "superior-left-homonymous-quadrantanopia",
-    "inferior-left-homonymous-quadrantanopia",
-  ].flatMap((descriptor) => {
+  const provenance: ClinicalGraphProvenance = {
+    source: "manual",
+    recordedAt: "2026-09-07T12:00:00.000Z",
+    actorReference: "Practitioner/disposition-census",
+  };
+  const activeLedgerRows = buildDiagnosisCatalogSeeds().filter((row) => row.active);
+  const visualFieldDefinition = buildEntranceFindingDefinitions(provenance)
+    .find((definition) => definition.stableKey === VISUAL_FIELD_DEFECT_KEY);
+  assert.ok(visualFieldDefinition);
+  const visualFieldDescriptorOptions = Object.values(visualFieldDefinition.valueSchema.fields as Record<
+    string,
+    { localCode?: string; options?: Array<{ code: string; active?: boolean }> }
+  >).find((field) => field.localCode === VISUAL_FIELD_DESCRIPTOR_FIELD)?.options ?? [];
+  const visualFieldDescriptorReachableKeys = new Set(visualFieldDescriptorOptions.flatMap((descriptor) => {
+    if (descriptor.active !== true) return [];
     const resolution = visualFieldDescriptorResolution(VISUAL_FIELD_DEFECT_KEY, {
       type: "components",
-      components: [{ code: VISUAL_FIELD_DESCRIPTOR_FIELD, display: "Field Defect", value: descriptor }],
+      components: [{ code: VISUAL_FIELD_DESCRIPTOR_FIELD, display: "Field Defect", value: descriptor.code }],
     });
     return resolution?.diagnosisKey ? [resolution.diagnosisKey] : [];
   }));
-  assert.deepEqual([...visualFieldDescriptorReachableKeys].sort(), [...expectedVisualFieldDescriptorKeys].sort());
+
+  const glaucomaDefinitions = buildGlaucomaFindingDefinitionStubs({ provenance });
+  const cupDiscDefinition = glaucomaDefinitions.find((definition) => definition.stableKey === "cup_disc_ratio");
+  const iopDefinition = glaucomaDefinitions.find((definition) => definition.stableKey === "intraocular_pressure");
+  assert.ok(cupDiscDefinition);
+  assert.ok(iopDefinition);
+  const cupDiscEvaluations = [0.5, 0.75].flatMap((ratio, index) => {
+    const captured = captureGlaucomaFinding({
+      definition: cupDiscDefinition,
+      patientReference: "Patient/disposition-census",
+      encounterReference: `Encounter/disposition-census-cup-${index}`,
+      findingInstanceId: `finding-disposition-census-cup-${index}`,
+      laterality: "OD",
+      value: { type: "quantity", value: ratio, unit: "ratio", code: "1" },
+      recordedAt: provenance.recordedAt,
+      provenance,
+    });
+    return evaluateGlaucomaDiagnosisSuggestions({
+      findings: [captured.finding],
+      findingDefinitions: glaucomaDefinitions,
+      provenance,
+    });
+  });
+  const iopCaptured = captureGlaucomaFinding({
+    definition: iopDefinition,
+    patientReference: "Patient/disposition-census",
+    encounterReference: "Encounter/disposition-census-iop",
+    findingInstanceId: "finding-disposition-census-iop",
+    laterality: "OD",
+    value: { type: "quantity", value: 22, unit: "mmHg", system: "http://unitsofmeasure.org", code: "mm[Hg]" },
+    recordedAt: provenance.recordedAt,
+    provenance,
+  });
+  const iopEvaluations = evaluateIopDiagnosisSuggestions({
+    findings: [iopCaptured.finding],
+    findingDefinitions: glaucomaDefinitions,
+    provenance,
+  });
+  const refractionDefinition = buildRefractionFindingDefinitionStub(provenance);
+  const refractionFinding = (
+    id: string,
+    laterality: "OD" | "OS",
+    sphere: number,
+  ): FindingInstance => ({
+    id,
+    state: "committed",
+    presence: "present",
+    findingDefinitionId: refractionDefinition.id,
+    patientReference: "Patient/disposition-census",
+    encounterReference: "Encounter/disposition-census-refraction",
+    laterality,
+    value: {
+      type: "json",
+      value: { blockId: "disposition-census", refractionType: "MANIFEST", sphere, cylinder: -1, add: 2 },
+    },
+    sourceType: "manual",
+    recordedAt: provenance.recordedAt,
+    provenance,
+  });
+  const refractionEvaluations = evaluateRefractiveErrorSuggestions({
+    findings: [
+      refractionFinding("finding-disposition-census-refraction-od", "OD", -2),
+      refractionFinding("finding-disposition-census-refraction-os", "OS", 2),
+    ],
+    findingDefinitions: [refractionDefinition],
+    provenance,
+  });
+  const ruleReachableKeys = new Set([
+    ...cupDiscEvaluations,
+    ...iopEvaluations,
+    ...refractionEvaluations,
+  ].map((evaluation) => {
+    const emittedKey = evaluation.diagnosisDefinition.stableKey;
+    const catalogRow = activeLedgerRows
+      .filter((row) => emittedKey === row.stableKey || emittedKey.startsWith(`${row.stableKey}_`))
+      .sort((left, right) => right.stableKey.length - left.stableKey.length)[0];
+    assert.ok(catalogRow, `Rule evaluator emitted a diagnosis absent from the active catalog: ${emittedKey}`);
+    return catalogRow.stableKey;
+  }));
   const mappingReachableKeys = new Set<string>();
   for (const definition of buildFindingDefinitionSeeds().filter((candidate) => candidate.active)) {
     for (const candidate of definition.diagnosisCandidates ?? []) {
@@ -943,7 +1022,6 @@ test("diagnosis reachability reports mapping, rule, and visual-field descriptor 
       }
     }
   }
-  const activeLedgerRows = buildDiagnosisCatalogSeeds().filter((row) => row.active);
   const reachedBy = (keys: ReadonlySet<string>) => activeLedgerRows.filter((row) => keys.has(row.stableKey)).length;
 
   assert.deepEqual({
