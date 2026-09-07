@@ -16,12 +16,8 @@ import { openPatientOverview, patientOverviewView, useViewState } from "../src/l
 import { normalizeFhirReference, opticalOrderPath } from "../src/lib/optical-order";
 import { OVERVIEW_PANEL_REGISTRY } from "../src/lib/card-registry";
 import { RoleProvider } from "../src/lib/role-context";
-import {
-  buildVisitType,
-  defaultVisitTypeCatalog,
-  ODOS_VISIT_TYPE_SYSTEM,
-  visitTypeCode,
-} from "../src/lib/scheduling";
+import { ODOS_VISIT_TYPE_SYSTEM } from "../src/lib/scheduling";
+import { DEFAULT_VISIT_TYPE_CATEGORIES } from "../src/lib/visit-type-config";
 import { BalanceChips } from "../src/components/commercial/BalanceChips";
 import { CreditBankDepositSheet } from "../src/components/commercial/CreditBankDepositSheet";
 import { SaleSheet } from "../src/components/commercial/SaleSheet";
@@ -37,8 +33,6 @@ const seriesTrackerApiStub = {
   fetchProtocols: async () => [],
   prescribe: async () => { throw new Error("The overview test does not prescribe programs."); },
 };
-
-const loadDefaultVisitTypes = async () => defaultVisitTypeCatalog("eyecare");
 
 test("Clinic flow and unsigned-chart clicks both route through PatientOverview", () => {
   useViewState.setState({ view: { kind: "picker" } });
@@ -369,7 +363,6 @@ test("Start today's visit assigns the provider, starts the encounter, and opens 
   let createdEncounter: Encounter | undefined;
   let transactionCount = 0;
   const api: StartExamApi = {
-    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => { calls.push("assign-provider"); },
     createProgram: async () => { throw new Error("Stand-alone visits do not create programs."); },
@@ -405,7 +398,7 @@ test("Start today's visit assigns the provider, starts the encounter, and opens 
   });
   act(() => renderer.root.findAllByType(OdosSelect).find((select) =>
     select.props.ariaLabel === "Visit type"
-  )!.props.onChange("routine-exam-new"));
+  )!.props.onChange("dry-eye"));
   const startButton = renderer.root.findAllByType("button").find((button) =>
     button.children.join("") === "Start today's visit →"
   );
@@ -420,10 +413,10 @@ test("Start today's visit assigns the provider, starts the encounter, and opens 
   assert.deepEqual(createdEncounter?.type, [{
     coding: [{
       system: ODOS_VISIT_TYPE_SYSTEM,
-      code: "routine-exam-new",
-      display: "Routine Exam (New)",
+      code: "dry-eye",
+      display: "Dry Eye",
     }],
-    text: "Routine Exam (New)",
+    text: "Dry Eye",
   }]);
   assert.deepEqual(useViewState.getState().view, {
     kind: "encounter",
@@ -433,16 +426,33 @@ test("Start today's visit assigns the provider, starts the encounter, and opens 
   renderer.unmount();
 });
 
-test("Start today's visit refuses an empty active visit-type catalog", async () => {
+test("Start today's visit still succeeds with no visit type", async () => {
+  let createdEncounter: Encounter | undefined;
   let transactionCount = 0;
   const api: StartExamApi = {
-    loadVisitTypes: async () => [],
     loadPrograms: async () => [],
     assignProvider: async () => undefined,
     createProgram: async () => { throw new Error("not reached"); },
-    executeTransaction: async (): Promise<Bundle> => {
+    executeTransaction: async (bundle): Promise<Bundle> => {
       transactionCount += 1;
-      throw new Error("not reached");
+      if (transactionCount === 1) createdEncounter = bundle.entry?.[0]?.resource as Encounter;
+      return transactionCount === 1
+        ? {
+            resourceType: "Bundle",
+            type: "transaction-response",
+            entry: [
+              { response: { status: "201 Created", location: "Encounter/encounter-untyped/_history/1" } },
+              { response: { status: "201 Created" } },
+            ],
+          }
+        : {
+            resourceType: "Bundle",
+            type: "transaction-response",
+            entry: [
+              { response: { status: "200 OK" } },
+              { response: { status: "201 Created" } },
+            ],
+          };
     },
     now: () => new Date("2026-08-03T14:00:00.000Z"),
   };
@@ -450,76 +460,23 @@ test("Start today's visit refuses an empty active visit-type catalog", async () 
   await act(async () => {
     renderer = create(<StartExam patient={patient} api={api} />);
   });
-  const startButton = renderer.root.findAllByType("button").find((button) =>
-    button.children.join("") === "Start today's visit →"
-  )!;
-  assert.equal(startButton.props.disabled, true);
-  assert.equal(transactionCount, 0);
-  assert.equal(renderer.root.findByProps({ role: "alert" }).children.join(""), "No active coded visit types are configured for this practice.");
-  renderer.unmount();
-});
+  act(() => renderer.root.findAllByType(OdosSelect).find((select) =>
+    select.props.ariaLabel === "Visit type"
+  )!.props.onChange(""));
 
-test("Start today's visit stays disabled when the practice visit-type catalog cannot load", async () => {
-  const api: StartExamApi = {
-    loadVisitTypes: async () => { throw new Error("Visit catalog unavailable"); },
-    loadPrograms: async () => [],
-    assignProvider: async () => undefined,
-    createProgram: async () => { throw new Error("not reached"); },
-    executeTransaction: async () => { throw new Error("not reached"); },
-    now: () => new Date("2026-08-03T14:00:00.000Z"),
-  };
-  let renderer!: ReactTestRenderer;
-  await act(async () => {
-    renderer = create(<StartExam patient={patient} api={api} />);
-  });
-  assert.equal(renderer.root.findAllByType("button").find((button) =>
-    button.children.join("") === "Start today's visit →"
-  )!.props.disabled, true);
-  assert.equal(renderer.root.findByProps({ role: "alert" }).children.join(""), "Visit catalog unavailable");
-  renderer.unmount();
-});
-
-test("Start today's visit rechecks that the selected catalog service is still active before writing", async () => {
-  let catalogReads = 0;
-  let transactionCount = 0;
-  const active = {
-    ...buildVisitType({
-      code: "practice-annual",
-      name: "Practice Annual Exam",
-      discipline: "eyecare",
-      categoryCode: "exams",
-      categoryLabel: "Exams",
-      durationMinutes: 40,
-    }),
-    id: "practice-annual-service",
-  };
-  const api: StartExamApi = {
-    loadVisitTypes: async () => {
-      catalogReads += 1;
-      return catalogReads === 1 ? [active] : [{ ...active, active: false }];
-    },
-    loadPrograms: async () => [],
-    assignProvider: async () => undefined,
-    createProgram: async () => { throw new Error("not reached"); },
-    executeTransaction: async () => {
-      transactionCount += 1;
-      throw new Error("not reached");
-    },
-    now: () => new Date("2026-08-03T14:00:00.000Z"),
-  };
-  let renderer!: ReactTestRenderer;
-  await act(async () => {
-    renderer = create(<StartExam patient={patient} api={api} />);
-  });
   await act(async () => {
     renderer.root.findAllByType("button").find((button) =>
       button.children.join("") === "Start today's visit →"
     )!.props.onClick();
-    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
-  assert.equal(catalogReads, 2);
-  assert.equal(transactionCount, 0);
-  assert.equal(renderer.root.findByProps({ role: "alert" }).children.join(""), "The selected visit type is no longer active. Choose an active practice visit type and try again.");
+
+  assert.equal(createdEncounter?.type, undefined);
+  assert.deepEqual(useViewState.getState().view, {
+    kind: "encounter",
+    patientId: "patient-1",
+    encounterId: "encounter-untyped",
+  });
   renderer.unmount();
 });
 
@@ -528,7 +485,6 @@ test("retrying a failed status transition reuses the created encounter", async (
   let encounterCreates = 0;
   let statusAttempts = 0;
   const api: StartExamApi = {
-    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => { providerAssignments += 1; },
     createProgram: async () => { throw new Error("not reached"); },
@@ -591,7 +547,6 @@ test("retrying encounter creation reuses a newly created Program", async () => {
   let transactionAttempts = 0;
   const encounterProgramReferences: Array<string | undefined> = [];
   const api: StartExamApi = {
-    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => { providerAssignments += 1; },
     createProgram: async () => {
@@ -658,7 +613,6 @@ test("start options lock while provider assignment is pending", async () => {
   let releaseProvider!: () => void;
   const providerPending = new Promise<void>((resolve) => { releaseProvider = resolve; });
   const api: StartExamApi = {
-    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => providerPending,
     createProgram: async () => { throw new Error("not reached"); },
@@ -698,7 +652,6 @@ test("start options lock while provider assignment is pending", async () => {
 
 test("a patient without an id never renders as an encounter retry", async () => {
   const api: StartExamApi = {
-    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => undefined,
     createProgram: async () => { throw new Error("not reached"); },
@@ -716,7 +669,6 @@ test("a patient without an id never renders as an encounter retry", async () => 
 
 test("start-exam failures remain visible on the patient overview", async () => {
   const api: StartExamApi = {
-    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => { throw new Error("Provider assignment unavailable"); },
     createProgram: async () => { throw new Error("not reached"); },
@@ -741,25 +693,7 @@ test("start-exam failures remain visible on the patient overview", async () => {
 
 test("start-exam mode choices expose existing and new Program selectors", async () => {
   let programLoads = 0;
-  const practiceVisitTypes = [
-    buildVisitType({
-      code: "practice-annual",
-      name: "Practice Annual Exam",
-      discipline: "eyecare",
-      categoryCode: "exams",
-      categoryLabel: "Exams",
-      durationMinutes: 40,
-    }),
-    buildVisitType({
-      code: "routine-exam-new",
-      name: "Retired starter exam",
-      discipline: "eyecare",
-      durationMinutes: 30,
-      active: false,
-    }),
-  ];
   const api: StartExamApi = {
-    loadVisitTypes: async () => practiceVisitTypes,
     loadPrograms: async () => {
       programLoads += 1;
       return [{
@@ -783,8 +717,11 @@ test("start-exam mode choices expose existing and new Program selectors", async 
     select.props.ariaLabel === "Visit type"
   );
   assert.deepEqual(visitTypeSelect?.props.options, [
-    { value: "", label: "Select a visit type" },
-    { value: "practice-annual", label: "Practice Annual Exam" },
+    { value: "", label: "Not recorded" },
+    ...DEFAULT_VISIT_TYPE_CATEGORIES
+      .filter((category) => category.active !== false)
+      .sort((left, right) => left.order - right.order)
+      .map((category) => ({ value: category.id, label: category.label })),
   ]);
   assert.deepEqual(
     renderer.root.findAllByProps({ className: "odos-start-exam-field-label" })
@@ -811,7 +748,6 @@ test("start-exam mode choices expose existing and new Program selectors", async 
 
 test("existing-program mode cannot submit without an active Program", async () => {
   const api: StartExamApi = {
-    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => undefined,
     createProgram: async () => { throw new Error("not reached"); },

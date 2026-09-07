@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Bundle, EpisodeOfCare, HealthcareService, Patient } from "@medplum/fhirtypes";
+import type { Bundle, EpisodeOfCare, Patient } from "@medplum/fhirtypes";
 import {
   assertTransactionSuccess,
   buildEncounterStatusPatchBundle,
@@ -10,21 +10,21 @@ import { createProgram } from "../lib/clinical-actions";
 import { clinicalGraphApiBase } from "../lib/clinical-graph-client";
 import { episodeTypeLabel } from "../lib/clinical-view-model";
 import { fhir } from "../lib/fhir";
-import { searchAll } from "../lib/fhir-search";
 import {
   EPISODE_OF_CARE_TYPE_CODES,
   type EpisodeOfCareTypeCode,
 } from "../lib/fhir-clinical/episodeOfCare";
 import { useViewState } from "../lib/view-state";
-import {
-  ODOS_VISIT_TYPE_SYSTEM,
-  visitTypeCode,
-} from "../lib/scheduling";
+import { ODOS_VISIT_TYPE_SYSTEM } from "../lib/scheduling";
+import { DEFAULT_VISIT_TYPE_CATEGORIES } from "../lib/visit-type-config";
 import { OdosSelect } from "./inputs/OdosSelect";
 
 const PROVIDER_ASSIGNMENT_TIMEOUT_MS = 15_000;
+const VISIT_TYPE_CATEGORIES = DEFAULT_VISIT_TYPE_CATEGORIES
+  .filter((category) => category.active !== false)
+  .sort((left, right) => left.order - right.order);
+
 export interface StartExamApi {
-  loadVisitTypes: () => Promise<HealthcareService[]>;
   loadPrograms: (patientId: string) => Promise<EpisodeOfCare[]>;
   assignProvider: (patientId: string) => Promise<void>;
   createProgram: typeof createProgram;
@@ -33,12 +33,6 @@ export interface StartExamApi {
 }
 
 const defaultStartExamApi: StartExamApi = {
-  async loadVisitTypes() {
-    return await searchAll<HealthcareService>(fhir, "HealthcareService", {
-      active: "true",
-      _count: "100",
-    });
-  },
   async loadPrograms(patientId) {
     const bundle = await fhir.search<EpisodeOfCare>("EpisodeOfCare", {
       patient: `Patient/${patientId}`,
@@ -84,9 +78,7 @@ export function StartExam({
   api?: StartExamApi;
 }) {
   const setView = useViewState((state) => state.setView);
-  const [visitTypes, setVisitTypes] = useState<{ id: string; label: string }[]>([]);
-  const [visitTypesLoading, setVisitTypesLoading] = useState(true);
-  const [visitTypeId, setVisitTypeId] = useState("");
+  const [visitTypeId, setVisitTypeId] = useState(VISIT_TYPE_CATEGORIES[0]?.id ?? "");
   const [startMode, setStartMode] = useState<"standalone" | "existing" | "new">("standalone");
   const [programType, setProgramType] = useState<EpisodeOfCareTypeCode>("glaucoma");
   const [selectedProgramId, setSelectedProgramId] = useState("");
@@ -117,37 +109,6 @@ export function StartExam({
 
   useEffect(() => {
     let cancelled = false;
-    setVisitTypesLoading(true);
-    api.loadVisitTypes()
-      .then((resources) => {
-        if (cancelled) return;
-        const options = resources
-          .filter((visitType) => visitType.active !== false)
-          .flatMap((visitType) => {
-            const id = visitTypeCode(visitType);
-            return id ? [{ id, label: visitType.name ?? id }] : [];
-          });
-        setVisitTypes(options);
-        if (options.length === 0) {
-          setStartError("No active coded visit types are configured for this practice.");
-        }
-        setVisitTypeId((current) =>
-          options.some((option) => option.id === current) ? current : options[0]?.id ?? ""
-        );
-      })
-      .catch((reason: unknown) => {
-        if (!cancelled) setStartError(reason instanceof Error ? reason.message : String(reason));
-      })
-      .finally(() => {
-        if (!cancelled) setVisitTypesLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [api]);
-
-  useEffect(() => {
-    let cancelled = false;
 
     async function loadPrograms() {
       if (startMode !== "existing" || !patient.id) return;
@@ -168,11 +129,6 @@ export function StartExam({
 
   async function startExam() {
     if (!patient.id || starting) return;
-    const visitType = visitTypes.find((candidate) => candidate.id === visitTypeId);
-    if (!visitType) {
-      setStartError("Choose an active practice visit type before starting the visit.");
-      return;
-    }
 
     setStarting(true);
     setStartError(null);
@@ -182,28 +138,24 @@ export function StartExam({
       if (!encounterId) {
         await assignProvider(patient.id);
         const episodeReference = await resolveProgramReference();
-        const currentVisitType = (await api.loadVisitTypes()).find((candidate) =>
-          candidate.active !== false && visitTypeCode(candidate) === visitType.id
-        );
-        if (!currentVisitType) {
-          throw new Error(
-            "The selected visit type is no longer active. Choose an active practice visit type and try again.",
-          );
-        }
-        const currentVisitTypeLabel = currentVisitType.name ?? visitType.id;
+        const visitType = VISIT_TYPE_CATEGORIES.find((category) => category.id === visitTypeId);
         const createResponse = await api.executeTransaction(
           buildStartEncounterCreateBundle({
             patientId: patient.id,
             now: now.toISOString(),
             episodeReference,
-            visitType: {
-              coding: [{
-                system: ODOS_VISIT_TYPE_SYSTEM,
-                code: visitType.id,
-                display: currentVisitTypeLabel,
-              }],
-              text: currentVisitTypeLabel,
-            },
+            ...(visitType
+              ? {
+                  visitType: {
+                    coding: [{
+                      system: ODOS_VISIT_TYPE_SYSTEM,
+                      code: visitType.id,
+                      display: visitType.label,
+                    }],
+                    text: visitType.label,
+                  },
+                }
+              : {}),
           }),
           "start_encounter",
         );
@@ -267,15 +219,15 @@ export function StartExam({
         <OdosSelect
           value={visitTypeId}
           options={[
-            { value: "", label: visitTypesLoading ? "Loading visit types…" : "Select a visit type" },
-            ...visitTypes.map((visitType) => ({
-              value: visitType.id,
-              label: visitType.label,
+            { value: "", label: "Not recorded" },
+            ...VISIT_TYPE_CATEGORIES.map((category) => ({
+              value: category.id,
+              label: category.label,
             })),
           ]}
           onChange={setVisitTypeId}
-          disabled={lockStartOptions || visitTypesLoading}
           ariaLabel="Visit type"
+          disabled={lockStartOptions}
         />
       </div>
       <div className="odos-start-exam-field-label">Program enrollment</div>
@@ -317,7 +269,7 @@ export function StartExam({
       {startError && <p className="odos-overview-error" role="alert">{startError}</p>}
       <button
         type="button"
-        disabled={!patient.id || starting || visitTypesLoading || !visitTypeId || visitTypes.length === 0 || (startMode === "existing" && !selectedProgramId)}
+        disabled={!patient.id || starting || (startMode === "existing" && !selectedProgramId)}
         onClick={() => void startExam()}
         className="odos-overview-button is-primary odos-start-exam-submit"
       >
