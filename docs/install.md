@@ -147,8 +147,8 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 >
 > | Credential | Account | Where it works | Used for |
 > |---|---|---|---|
-> | **Your ODOS login** | `drbang@ivaeyecare.com` | the **deployed server** (e.g. Iris) | signing in to ODOS day to day |
-> | **ODOS admin password** | `drbang@ivaeyecare.com` | **each instance separately**, set at `setup-practice` | the *human* project admin; the identity `sync-practice-role-policy-rules`, `migrate-three-role-model` and the live-authz tests must authenticate as |
+> | **Your ODOS login** | `<your-odos-admin-email>` | the **deployed server** | signing in to ODOS day to day |
+> | **ODOS admin password** | `<your-odos-admin-email>` | **each instance separately**, set at `setup-practice` | the *human* project admin; the identity `sync-practice-role-policy-rules`, `migrate-three-role-model` and the live-authz tests must authenticate as |
 > | **`MEDPLUM_ADMIN_PASSWORD`** | `MEDPLUM_ADMIN_EMAIL` (e.g. `admin@laptop.odos.local`) | the instance that created it | break-glass service account only. It is **not** a project admin of the practice project and cannot sync policies. |
 >
 > The same email can exist on two instances with **different passwords** — a laptop dev stack and
@@ -159,7 +159,7 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 >
 > ```bash
 > read -rsp "ODOS admin password: " PW && echo
-> MEDPLUM_ADMIN_EMAIL=drbang@ivaeyecare.com MEDPLUM_ADMIN_PASSWORD="$PW" \
+> MEDPLUM_ADMIN_EMAIL=<your-odos-admin-email> MEDPLUM_ADMIN_PASSWORD="$PW" \
 >   npx tsx scripts/sync-practice-role-policy-rules.ts -- --project <practice-project-id>
 > unset PW
 > ```
