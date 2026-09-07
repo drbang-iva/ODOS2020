@@ -516,7 +516,7 @@ function visitTypeContext(encounterId = "e1"): [Appointment, HealthcareService] 
       id: "routine-exam-established",
       active: true,
       type: [{ coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: "routine-exam-established" }] }],
-      category: [{ coding: [{ system: ODOS_VISIT_TYPE_CATEGORY_SYSTEM, code: "comprehensive" }] }],
+      category: [{ coding: [{ system: ODOS_VISIT_TYPE_CATEGORY_SYSTEM, code: "exams" }] }],
     },
   ];
 }

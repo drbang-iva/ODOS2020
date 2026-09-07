@@ -40,10 +40,9 @@ test("visit-type config strips active unless false and starter seed is exact", (
   assert.deepEqual(
     DEFAULT_VISIT_TYPE_CATEGORIES.map(({ id, label }) => ({ id, label })),
     [
-      { id: "comprehensive", label: "Comprehensive" },
-      { id: "dry-eye", label: "Dry Eye" },
-      { id: "myopia-management", label: "Myopia Management" },
-      { id: "diagnostic-only", label: "Diagnostic-Only" },
+      { id: "exams", label: "Exams" },
+      { id: "contact-lens", label: "Contact Lens" },
+      { id: "medical", label: "Medical" },
     ],
   );
 });

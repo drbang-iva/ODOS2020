@@ -24,12 +24,12 @@ const GROUP: FindingSectionGroup = {
   active: true,
 };
 
-const DRY_EYE_GROUP: FindingSectionGroup = {
+const SPECIALTY_WORKUP_GROUP: FindingSectionGroup = {
   id: "finding-section-group-dry-eye-workup",
   groupKey: "dry-eye-workup",
   label: "Dry Eye Workup",
   sectionKeyPrefixes: ["dry-eye:"],
-  defaultForVisitTypeCategories: ["dry-eye"],
+  defaultForVisitTypeCategories: ["specialty-workup"],
   active: true,
 };
 
@@ -62,7 +62,7 @@ test("ungrouped definitions remain visible for every category while grouped defi
   );
 });
 
-test("dry-eye category renders the eight-section battery in order while comprehensive renders none and leaves Pupils", async () => {
+test("a custom specialty category renders its configured battery while a general category leaves it absent", async () => {
   const originalFetch = globalThis.fetch;
   const originalRead = fhir.read;
   const originalDocument = globalThis.document;
@@ -116,12 +116,12 @@ test("dry-eye category renders the eight-section battery in order while comprehe
       return jsonResponse({
         canWrite: false,
         canPullIn: true,
-        groups: [DRY_EYE_GROUP],
+        groups: [SPECIALTY_WORKUP_GROUP],
         visitTypeCategories: [
-          { id: "dry-eye", label: "Dry Eye" },
-          { id: "comprehensive", label: "Comprehensive" },
+          { id: "specialty-workup", label: "Specialty Workup" },
+          { id: "general", label: "General" },
         ],
-        visitTypeCategory: dryEye ? "dry-eye" : "comprehensive",
+        visitTypeCategory: dryEye ? "specialty-workup" : "general",
         defaultGroupKeys: dryEye ? ["dry-eye-workup"] : [],
         overrideGroupKeys: [],
         effectiveGroupKeys: dryEye ? ["dry-eye-workup"] : [],
@@ -192,7 +192,7 @@ test("dry-eye category renders the eight-section battery in order while comprehe
         .some((span) => span.children.includes("Pupils")),
     );
     assert.deepEqual(
-      filterDefinitionsForSectionGroups(definitions, [DRY_EYE_GROUP], [])
+      filterDefinitionsForSectionGroups(definitions, [SPECIALTY_WORKUP_GROUP], [])
         .filter((definition) => definition.stableKey === "entrance:pupils")
         .map((definition) => definition.stableKey),
       ["entrance:pupils"],

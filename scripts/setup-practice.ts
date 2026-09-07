@@ -33,6 +33,7 @@ import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/f
 import { searchAll, searchProjectAll } from "../mcp/src/fhir-search.js";
 import { buildSchedulingResource } from "../mcp/src/fhir/schedulingResource.js";
 import {
+  ODOS_VISIT_TYPE_SYSTEM,
   defaultVisitTypeCatalog,
   visitTypeCode,
 } from "../mcp/src/fhir/schedulingVisitType.js";
@@ -53,6 +54,8 @@ export const SETUP_WIZARD_HEADER =
   "Run ODOS on your own hardware. Your patients, your machines, your data.";
 export const SETUP_WIZARD_ACTION_REASON = "v0.5d setup wizard first-run provisioning";
 export const SETUP_WIZARD_NOOP_REASON = "v0.5d setup wizard re-run, already provisioned";
+export const SETUP_VISIT_TYPE_TAXONOMY_REASON =
+  "retire the legacy payer-named Medicaid visit type";
 export const SETUP_PRACTICE_ORGANIZATION_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/setup-practice-organization";
 export const SETUP_PRACTICE_LOCATION_IDENTIFIER_SYSTEM =
@@ -96,6 +99,7 @@ export interface SetupPracticeState {
   schedulingConfigId?: string;
   visitTypeIds?: string[];
   visitTypeConfigId?: string;
+  visitTypeTaxonomyReconciled?: boolean;
   accessPolicyCreated?: boolean;
   accessPolicyId?: string;
   accessPolicyAssigned?: boolean;
@@ -139,6 +143,7 @@ export interface SetupPracticeAdapter {
     visitTypeConfig: Basic;
     visitTypeConfigCreated: boolean;
   }>;
+  retireLegacyMedicaidVisitTypes(): Promise<readonly HealthcareService[]>;
   createFirstAdminAccessPolicies(config: SetupPracticeConfig, session: AdminSession): Promise<readonly {
     role: PracticeRoleId;
     policy: AccessPolicy;
@@ -242,6 +247,25 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
       actionReason: SETUP_WIZARD_ACTION_REASON,
     }),
   );
+
+  if (!state.visitTypeTaxonomyReconciled) {
+    const retired = await adapter.retireLegacyMedicaidVisitTypes();
+    for (const visitType of retired) {
+      if (!visitType.id) {
+        throw new Error("Retired Medicaid HealthcareService returned without an id.");
+      }
+      await emit(buildSetupAuditRow({
+        eventType: "update",
+        resourceType: "HealthcareService",
+        resourceId: visitType.id,
+        actionReason: SETUP_VISIT_TYPE_TAXONOMY_REASON,
+      }));
+    }
+    state = persistSetupState(config.statePath, {
+      ...state,
+      visitTypeTaxonomyReconciled: true,
+    });
+  }
 
   let practitioner: Practitioner | undefined;
   if (state.practitionerCreated && state.practitionerId) {
@@ -646,6 +670,17 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     };
   }
 
+  async retireLegacyMedicaidVisitTypes(): Promise<readonly HealthcareService[]> {
+    const retired: HealthcareService[] = [];
+    for (const visitType of this.visitTypes) {
+      if (visitTypeCode(visitType) === "medicaid-exam" && visitType.active !== false) {
+        visitType.active = false;
+        retired.push(visitType);
+      }
+    }
+    return retired;
+  }
+
   async createFirstAdminAccessPolicies(
     _config: SetupPracticeConfig,
     session: AdminSession,
@@ -1006,6 +1041,24 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     };
   }
 
+  async retireLegacyMedicaidVisitTypes(): Promise<readonly HealthcareService[]> {
+    const matches = (await searchAll<HealthcareService>(this.client(), "HealthcareService", {
+      "service-type": `${ODOS_VISIT_TYPE_SYSTEM}|medicaid-exam`,
+      _count: "100",
+    })).filter((visitType) => visitTypeCode(visitType) === "medicaid-exam");
+    const retired: HealthcareService[] = [];
+    for (const visitType of matches) {
+      if (visitType.active === false || !visitType.id) continue;
+      retired.push(await this.client().update<HealthcareService>(
+        "HealthcareService",
+        visitType.id,
+        { ...visitType, active: false },
+        visitType.meta?.versionId ? { "If-Match": `W/\"${visitType.meta.versionId}\"` } : undefined,
+      ));
+    }
+    return retired;
+  }
+
   async createFirstAdminAccessPolicies(
     _config: SetupPracticeConfig,
     session: AdminSession,
@@ -1348,7 +1401,8 @@ function setupStateIsComplete(state: SetupPracticeState): boolean {
     && state.organizationId
     && state.locationCreated
     && state.locationId
-    && state.schedulingProvisioned,
+    && state.schedulingProvisioned
+    && state.visitTypeTaxonomyReconciled,
   );
 }
 

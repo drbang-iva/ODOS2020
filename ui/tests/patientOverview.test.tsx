@@ -16,8 +16,11 @@ import { openPatientOverview, patientOverviewView, useViewState } from "../src/l
 import { normalizeFhirReference, opticalOrderPath } from "../src/lib/optical-order";
 import { OVERVIEW_PANEL_REGISTRY } from "../src/lib/card-registry";
 import { RoleProvider } from "../src/lib/role-context";
-import { ODOS_VISIT_TYPE_SYSTEM } from "../src/lib/scheduling";
-import { DEFAULT_VISIT_TYPE_CATEGORIES } from "../src/lib/visit-type-config";
+import {
+  defaultVisitTypeCatalog,
+  ODOS_VISIT_TYPE_SYSTEM,
+  visitTypeCode,
+} from "../src/lib/scheduling";
 import { BalanceChips } from "../src/components/commercial/BalanceChips";
 import { CreditBankDepositSheet } from "../src/components/commercial/CreditBankDepositSheet";
 import { SaleSheet } from "../src/components/commercial/SaleSheet";
@@ -398,7 +401,7 @@ test("Start today's visit assigns the provider, starts the encounter, and opens 
   });
   act(() => renderer.root.findAllByType(OdosSelect).find((select) =>
     select.props.ariaLabel === "Visit type"
-  )!.props.onChange("dry-eye"));
+  )!.props.onChange("routine-exam-new"));
   const startButton = renderer.root.findAllByType("button").find((button) =>
     button.children.join("") === "Start today's visit →"
   );
@@ -413,10 +416,10 @@ test("Start today's visit assigns the provider, starts the encounter, and opens 
   assert.deepEqual(createdEncounter?.type, [{
     coding: [{
       system: ODOS_VISIT_TYPE_SYSTEM,
-      code: "dry-eye",
-      display: "Dry Eye",
+      code: "routine-exam-new",
+      display: "Routine Exam (New)",
     }],
-    text: "Dry Eye",
+    text: "Routine Exam (New)",
   }]);
   assert.deepEqual(useViewState.getState().view, {
     kind: "encounter",
@@ -718,10 +721,12 @@ test("start-exam mode choices expose existing and new Program selectors", async 
   );
   assert.deepEqual(visitTypeSelect?.props.options, [
     { value: "", label: "Not recorded" },
-    ...DEFAULT_VISIT_TYPE_CATEGORIES
-      .filter((category) => category.active !== false)
-      .sort((left, right) => left.order - right.order)
-      .map((category) => ({ value: category.id, label: category.label })),
+    ...defaultVisitTypeCatalog("eyecare")
+      .filter((visitType) => visitType.active !== false)
+      .map((visitType) => ({
+        value: visitTypeCode(visitType),
+        label: visitType.name,
+      })),
   ]);
   assert.deepEqual(
     renderer.root.findAllByProps({ className: "odos-start-exam-field-label" })

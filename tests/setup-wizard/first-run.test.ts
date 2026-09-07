@@ -218,7 +218,7 @@ test("setup wizard creates canonical role policies and binds one first-admin com
     assert.equal(schedulingConfig.officeBySchedule["Schedule/schedule-1"], "main");
 
     assert.deepEqual(firstRun.auditRows.map((row) => row.eventType), [
-      ...Array.from({ length: 21 }, () => "create"),
+      ...Array.from({ length: 20 }, () => "create"),
       "projectmembership-lifecycle",
     ]);
     for (const row of firstRun.auditRows) {
@@ -287,7 +287,6 @@ test("setup persists the default visit-type catalog and category config", async 
       "routine-exam-established",
       "contact-lens-exam",
       "contact-lens-follow-up",
-      "medicaid-exam",
       "office-visit",
       "special-testing",
       "aesthetics-consult",
@@ -296,11 +295,11 @@ test("setup persists the default visit-type catalog and category config", async 
     ]);
     assert.deepEqual(
       parseVisitTypeConfig(adapter.visitTypeConfigs[0]!).categories.map((category) => category.id),
-      ["comprehensive", "dry-eye", "myopia-management", "diagnostic-only"],
+      ["exams", "contact-lens", "medical"],
     );
     assert.equal(
       result.auditRows.filter((row) => row.resourceType === "HealthcareService" && row.eventType === "create").length,
-      10,
+      9,
     );
     assert.equal(
       result.auditRows.filter((row) =>
@@ -340,7 +339,7 @@ test("a setup re-run is a no-op and preserves edited or deactivated visit-type d
     await runSetupPractice({ adapter, config, skipInteractiveBoundaryCheck: true });
     const preserved = adapter.visitTypes.find((visitType) => visitTypeCode(visitType) === "routine-exam-new");
     assert.equal(preserved, existing);
-    assert.equal(adapter.visitTypes.length, 10);
+    assert.equal(adapter.visitTypes.length, 9);
     assert.equal(adapter.visitTypes.filter((visitType) => visitTypeCode(visitType) === "routine-exam-new").length, 1);
     assert.equal(preserved.name, "Practice-edited comprehensive visit");
     assert.equal(preserved.active, false);
@@ -349,7 +348,7 @@ test("a setup re-run is a no-op and preserves edited or deactivated visit-type d
     const secondRun = await runSetupPractice({ adapter, config, skipInteractiveBoundaryCheck: true });
 
     assert.equal(secondRun.noOp, true);
-    assert.equal(adapter.visitTypes.length, 10);
+    assert.equal(adapter.visitTypes.length, 9);
     assert.equal(preserved.name, "Practice-edited comprehensive visit");
     assert.equal(preserved.active, false);
     assert.equal(secondRun.auditRows.length, 1);
@@ -399,7 +398,7 @@ test("setup reuses a pre-existing canonical Provider policy while creating Staff
       "Location",
       "Schedule",
       "Basic",
-      ...Array.from({ length: 10 }, () => "HealthcareService"),
+      ...Array.from({ length: 9 }, () => "HealthcareService"),
       "Basic",
       "AccessPolicy",
       "AccessPolicy",
@@ -412,6 +411,85 @@ test("setup reuses a pre-existing canonical Provider policy while creating Staff
     assert.deepEqual(adapter.membership.access?.map((access) => access.policy.reference), [
       "AccessPolicy/access-policy-4",
     ]);
+  } finally {
+    rmSync(dir, { force: true, recursive: true });
+  }
+});
+
+test("a completed pre-taxonomy setup retires every installed Medicaid visit type before becoming a no-op", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-retire-medicaid-"));
+  try {
+    const statePath = join(dir, ".odos-setup-state.json");
+    const adapter = new InMemorySetupPracticeAdapter();
+    adapter.visitTypes.push(
+      {
+        ...buildVisitType({
+          code: "medicaid-exam",
+          name: "Medicaid Exam",
+          discipline: "eyecare",
+          durationMinutes: 30,
+        }),
+        id: "legacy-medicaid-active",
+      },
+      {
+        ...buildVisitType({
+          code: "medicaid-exam",
+          name: "Practice-edited Medicaid label",
+          discipline: "eyecare",
+          durationMinutes: 45,
+          active: false,
+        }),
+        id: "legacy-medicaid-inactive",
+      },
+    );
+    writeFileSync(statePath, JSON.stringify({
+      version: "v0.5d",
+      adminProjectCreated: true,
+      projectId: "project-1",
+      practitionerCreated: true,
+      practitionerId: "practitioner-1",
+      organizationCreated: true,
+      organizationId: "organization-1",
+      locationCreated: true,
+      locationId: "location-1",
+      schedulingProvisioned: true,
+      scheduleId: "schedule-1",
+      schedulingConfigId: "scheduling-config-1",
+      accessPolicyCreated: true,
+      accessPolicyId: "access-policy-1",
+      accessPolicyAssigned: true,
+      completed: true,
+    }));
+    const config = {
+      baseUrl: "http://localhost:8103",
+      practiceName: "ODOS Test Practice",
+      adminEmail: "human-admin@example.test",
+      adminName: "ODOS Admin",
+      adminPassword: "not-real-password",
+      statePath,
+    };
+
+    const migrated = await runSetupPractice({ adapter, config, skipInteractiveBoundaryCheck: true });
+
+    assert.equal(migrated.noOp, false);
+    assert.deepEqual(
+      adapter.visitTypes.map((visitType) => ({ id: visitType.id, active: visitType.active })),
+      [
+        { id: "legacy-medicaid-active", active: false },
+        { id: "legacy-medicaid-inactive", active: false },
+      ],
+    );
+    assert.equal(migrated.state.visitTypeTaxonomyReconciled, true);
+    assert.deepEqual(
+      migrated.auditRows
+        .filter((row) => row.resourceType === "HealthcareService")
+        .map((row) => ({ eventType: row.eventType, resourceId: row.resourceId })),
+      [{ eventType: "update", resourceId: "legacy-medicaid-active" }],
+    );
+
+    const rerun = await runSetupPractice({ adapter, config, skipInteractiveBoundaryCheck: true });
+    assert.equal(rerun.noOp, true);
+    assert.equal(rerun.auditRows.length, 1);
   } finally {
     rmSync(dir, { force: true, recursive: true });
   }

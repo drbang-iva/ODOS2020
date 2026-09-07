@@ -15,14 +15,20 @@ import {
   type EpisodeOfCareTypeCode,
 } from "../lib/fhir-clinical/episodeOfCare";
 import { useViewState } from "../lib/view-state";
-import { ODOS_VISIT_TYPE_SYSTEM } from "../lib/scheduling";
-import { DEFAULT_VISIT_TYPE_CATEGORIES } from "../lib/visit-type-config";
+import {
+  defaultVisitTypeCatalog,
+  ODOS_VISIT_TYPE_SYSTEM,
+  visitTypeCode,
+} from "../lib/scheduling";
 import { OdosSelect } from "./inputs/OdosSelect";
 
 const PROVIDER_ASSIGNMENT_TIMEOUT_MS = 15_000;
-const VISIT_TYPE_CATEGORIES = DEFAULT_VISIT_TYPE_CATEGORIES
-  .filter((category) => category.active !== false)
-  .sort((left, right) => left.order - right.order);
+const VISIT_TYPES = defaultVisitTypeCatalog("eyecare")
+  .filter((visitType) => visitType.active !== false)
+  .flatMap((visitType) => {
+    const id = visitTypeCode(visitType);
+    return id ? [{ id, label: visitType.name ?? id }] : [];
+  });
 
 export interface StartExamApi {
   loadPrograms: (patientId: string) => Promise<EpisodeOfCare[]>;
@@ -78,7 +84,7 @@ export function StartExam({
   api?: StartExamApi;
 }) {
   const setView = useViewState((state) => state.setView);
-  const [visitTypeId, setVisitTypeId] = useState(VISIT_TYPE_CATEGORIES[0]?.id ?? "");
+  const [visitTypeId, setVisitTypeId] = useState(VISIT_TYPES[0]?.id ?? "");
   const [startMode, setStartMode] = useState<"standalone" | "existing" | "new">("standalone");
   const [programType, setProgramType] = useState<EpisodeOfCareTypeCode>("glaucoma");
   const [selectedProgramId, setSelectedProgramId] = useState("");
@@ -138,7 +144,7 @@ export function StartExam({
       if (!encounterId) {
         await assignProvider(patient.id);
         const episodeReference = await resolveProgramReference();
-        const visitType = VISIT_TYPE_CATEGORIES.find((category) => category.id === visitTypeId);
+        const visitType = VISIT_TYPES.find((candidate) => candidate.id === visitTypeId);
         const createResponse = await api.executeTransaction(
           buildStartEncounterCreateBundle({
             patientId: patient.id,
@@ -220,9 +226,9 @@ export function StartExam({
           value={visitTypeId}
           options={[
             { value: "", label: "Not recorded" },
-            ...VISIT_TYPE_CATEGORIES.map((category) => ({
-              value: category.id,
-              label: category.label,
+            ...VISIT_TYPES.map((visitType) => ({
+              value: visitType.id,
+              label: visitType.label,
             })),
           ]}
           onChange={setVisitTypeId}

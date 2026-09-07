@@ -33,7 +33,7 @@ export const DRY_EYE_WORKUP_SECTION_GROUP: FindingSectionGroup = {
   groupKey: "dry-eye-workup",
   label: "Dry Eye Workup",
   sectionKeyPrefixes: ["dry-eye:"],
-  defaultForVisitTypeCategories: ["dry-eye"],
+  defaultForVisitTypeCategories: [],
   active: true,
 };
 

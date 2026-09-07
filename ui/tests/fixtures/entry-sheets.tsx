@@ -111,7 +111,7 @@ const FIXTURE_PATIENT: Patient = {
 
 const COMPREHENSIVE_PROJECTION: ExamOverviewProjection = {
   ...FIXTURE_PROJECTION,
-  visitTypeCategoryId: "comprehensive",
+  visitTypeCategoryId: "exams",
   completeness: {
     status: "incomplete",
     requiredSectionCount: 6,

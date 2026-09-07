@@ -302,7 +302,7 @@ test("prior comparison ignores future and encounter-less Observations", () => {
   });
 });
 
-test("comprehensive clinical completeness is traceable and missing deferred documentation does not make it incomplete", () => {
+test("Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete", () => {
   const definitions = [
     definition("hpi_ros", "hpi"),
     definition("entrance:pupils", "entrance:pupils"),
@@ -328,7 +328,7 @@ test("comprehensive clinical completeness is traceable and missing deferred docu
   const projection = buildExamOverviewProjection({
     encounterReference: "Encounter/e1",
     patientReference: "Patient/p1",
-    visitTypeCategoryId: "comprehensive",
+    visitTypeCategoryId: "exams",
     definitions,
     currentObservations: current,
     priorObservationCandidates: [],
@@ -352,7 +352,7 @@ test("carried-unreasserted does not resolve today's section while carried-reasse
   const common = {
     encounterReference: "Encounter/e1",
     patientReference: "Patient/p1",
-    visitTypeCategoryId: "comprehensive",
+    visitTypeCategoryId: "exams",
     definitions,
     currentObservations: current,
     priorObservationCandidates: [],

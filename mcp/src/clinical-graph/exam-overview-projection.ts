@@ -128,7 +128,7 @@ export type ClinicalSectionApplicabilityRegistry = Record<
 // This registry measures clinical section completeness only. It is not billing-documentation
 // adequacy and must not be consumed by, derived from, or joined to billing-code selection.
 export const CLINICAL_SECTION_REQUIREMENTS: ClinicalSectionApplicabilityRegistry = {
-  comprehensive: {
+  exams: {
     required: [
       findingRequirement("history", "History", ["hpi"]),
       findingRequirement("entrance", "Entrance", ["entrance:"]),

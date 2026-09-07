@@ -511,7 +511,7 @@ test("UI scheduler mirror clinic-mode errors match the kernel verbatim", () => {
 test("UI scheduler mirror visit-type readers match the kernel", () => {
   const visitType = buildVisitType({
     code: "special-testing",
-    name: "Special Testing",
+    name: "Testing Visit",
     discipline: "eyecare",
     durationMinutes: 30,
     color: "#cc88ff",

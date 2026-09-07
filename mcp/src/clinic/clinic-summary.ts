@@ -368,24 +368,43 @@ export async function resolveVisitTypeCategoryForEncounter(
     }
     const code = appointmentVisitTypeCode(resolvedAppointment);
     if (!code) return undefined;
-    const bundle = await fhir.search<HealthcareService>("HealthcareService", {
-      "service-type": `${ODOS_VISIT_TYPE_SYSTEM}|${code}`,
-      _count: "10",
-    });
-    const service = (bundle.entry ?? [])
-      .map((entry) => entry.resource)
-      .find(
-        (candidate): candidate is HealthcareService =>
-          candidate?.resourceType === "HealthcareService" &&
-          candidate.active !== false &&
-          visitTypeCode(candidate) === code,
-      );
-    return service ? visitTypeCategory(service)?.code : undefined;
+    return await findVisitTypeCategoryByCode(code, fhir);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Visit-type category resolution failed: ${message}`);
     throw new Error(`Visit-type category resolution failed: ${message}`);
   }
+}
+
+export async function resolveVisitTypeCategoryByCode(
+  code: string,
+  fhir: Pick<MedplumClient, "search">,
+): Promise<string | undefined> {
+  try {
+    return await findVisitTypeCategoryByCode(code, fhir);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Visit-type category resolution failed: ${message}`);
+    throw new Error(`Visit-type category resolution failed: ${message}`);
+  }
+}
+
+async function findVisitTypeCategoryByCode(
+  code: string,
+  fhir: Pick<MedplumClient, "search">,
+): Promise<string | undefined> {
+  const bundle = await fhir.search<HealthcareService>("HealthcareService", {
+    "service-type": `${ODOS_VISIT_TYPE_SYSTEM}|${code}`,
+    _count: "10",
+  });
+  const service = (bundle.entry ?? [])
+    .map((entry) => entry.resource)
+    .find(
+      (candidate): candidate is HealthcareService =>
+        candidate?.resourceType === "HealthcareService" &&
+        visitTypeCode(candidate) === code,
+    );
+  return service ? visitTypeCategory(service)?.code : undefined;
 }
 
 function ageOnDate(birthDate: string, onDate: string): number {
