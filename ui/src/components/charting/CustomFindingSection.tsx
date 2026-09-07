@@ -53,6 +53,7 @@ export interface CustomFindingDefinition {
   display: string;
   active: boolean;
   perEye: boolean;
+  relatedFindingDefinitionKeys?: string[];
   customFields: CustomFindingField[];
   fields?: Record<string, {
     display?: string;

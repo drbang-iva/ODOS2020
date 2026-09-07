@@ -302,6 +302,9 @@ function definitionSummary(definition: ClinicalFindingDefinition) {
     active: definition.active,
     sourceStatus: definition.sourceStatus,
     perEye: definition.valueSchema.perEye === true,
+    relatedFindingDefinitionKeys: Array.isArray(definition.valueSchema.relatedFindingDefinitionKeys)
+      ? definition.valueSchema.relatedFindingDefinitionKeys.filter((value): value is string => typeof value === "string")
+      : undefined,
     fields: asRecord(definition.valueSchema.fields),
     customFields: customFieldEntries(definition, true),
     normalTemplate: typeof definition.normalSemantics?.template === "string"
