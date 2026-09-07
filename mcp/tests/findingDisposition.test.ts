@@ -61,6 +61,7 @@ function optionTriggerTargets(trigger: MappingTrigger): Array<{ field: string; o
 }
 
 function activeTriggerKeys(): string[] {
+  const abnormalFindingChipKeys = new Set(abnormalFindingChips().map(buildFindingDispositionKey));
   return ocularHealthDefinitions().flatMap((definition) =>
     (definition.diagnosisCandidates ?? [])
       .filter((candidate) => candidate.active)
@@ -70,7 +71,7 @@ function activeTriggerKeys(): string[] {
         fieldLocalCode: field,
         optionCode: option,
       }))
-  );
+  ).filter((key) => abnormalFindingChipKeys.has(key));
 }
 
 function sortedUnique(values: readonly string[]): string[] {
