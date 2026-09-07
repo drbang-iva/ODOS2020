@@ -6,6 +6,10 @@ export type CollectTender = "CASH" | "CHECK" | "CARD_MANUAL";
 export interface OpenChargeLine {
   id: string;
   amountCents: number;
+  openCents: number | null;
+  attributedCents: number;
+  ambiguityReason?: string;
+  attributionWarning?: string;
   description: string;
   date: string;
   source: "optical" | "other";
@@ -46,9 +50,11 @@ export interface CompletedCollection {
   outcome: "success";
   amountChargedCents: number;
   tender: CollectTender;
+  replayed: boolean;
 }
 
 export interface CollectionRequest {
+  requestId: string;
   patientReference: string;
   selectedOpenChargeLineIds: string[];
   amountCents: number;
@@ -83,7 +89,8 @@ export async function collectRecordedTender(
   const body = await readJson(response);
   if (!response.ok) throw new Error(paymentError(response, body));
   if (!isPreparedCollection(body) || !isPositiveInteger((body as { amountChargedCents?: unknown }).amountChargedCents) ||
-      (body as { outcome?: unknown }).outcome !== "success" || !isCollectTender((body as { tender?: unknown }).tender)) {
+      (body as { outcome?: unknown }).outcome !== "success" || !isCollectTender((body as { tender?: unknown }).tender) ||
+      typeof (body as { replayed?: unknown }).replayed !== "boolean") {
     throw new Error("Recorded-tender collection response is invalid.");
   }
   return body as CompletedCollection;
@@ -140,6 +147,10 @@ function isOpenChargeLine(value: unknown): value is OpenChargeLine {
   if (typeof value !== "object" || value === null) return false;
   const line = value as Record<string, unknown>;
   return typeof line.id === "string" && isNonnegativeInteger(line.amountCents) &&
+    (line.openCents === null || isNonnegativeInteger(line.openCents)) &&
+    typeof line.attributedCents === "number" && Number.isInteger(line.attributedCents) &&
+    (line.ambiguityReason === undefined || typeof line.ambiguityReason === "string") &&
+    (line.attributionWarning === undefined || typeof line.attributionWarning === "string") &&
     typeof line.description === "string" && typeof line.date === "string" &&
     (line.source === "optical" || line.source === "other") &&
     (line.code === undefined || typeof line.code === "string") &&

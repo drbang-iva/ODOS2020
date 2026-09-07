@@ -1,16 +1,18 @@
 import { randomUUID } from "node:crypto";
-import type { Basic, Bundle, CodeableConcept, Condition, Encounter, Observation, Provenance } from "@medplum/fhirtypes";
+import type { Basic, Bundle, ChargeItem, CodeableConcept, Condition, Encounter, Money, Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import {
   buildEncounterDiagnosisComponent,
   buildEncounterDiagnosisCondition,
+  isConfirmedEncounterDiagnosis,
   verificationStatusConcept,
   type ConditionVerificationStatusCode,
 } from "../fhir/condition.js";
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { isRelativeFhirReference } from "../fhir/reference.js";
+import { searchAll, type FhirSearchClient } from "../fhir-search.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { FhirDiagnosisPickTallyStore } from "./diagnosis-pick-tally-store.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
@@ -33,12 +35,23 @@ export const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/Naming
 export const DIAGNOSIS_CATALOG_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/diagnosis-catalog";
 export const DIAGNOSIS_PICK_WRITE_HEADERS = { "X-ODOS-Source": "diagnosis-pick" } as const;
 
-type PickResource = Basic | Condition | Encounter | Observation | Provenance;
+type PickResource = Basic | ChargeItem | Condition | Encounter | Observation | Provenance;
 type LateralityBucket = "right" | "left" | "bilateral" | "unspecified" | "none";
 
-export interface DiagnosisPickFhirClient {
+interface StrandedCharge {
+  reference: string;
+  display: string;
+  amount: Money | null;
+}
+
+interface DiagnosisDemotionImpact {
+  strandedCharges: StrandedCharge[];
+  unaffectedChargeCount: number;
+  strandedChargesComputed: boolean;
+}
+
+export interface DiagnosisPickFhirClient extends FhirSearchClient {
   read<T extends PickResource>(resourceType: T["resourceType"], id: string): Promise<T>;
-  search<T extends PickResource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   create<T extends PickResource>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
   update<T extends PickResource>(resourceType: T["resourceType"], id: string, resource: T, extraHeaders?: Record<string, string>): Promise<T>;
   executeTransaction(
@@ -303,6 +316,23 @@ export async function handleDiagnosisPickRequest(
   if (!condition || !provenance) throw new Error("Diagnosis pick transaction exhausted its retry budget.");
 
   const conditionReference = `Condition/${condition.id}`;
+  let demotionImpact: DiagnosisDemotionImpact = {
+    strandedCharges: [],
+    unaffectedChargeCount: 0,
+    strandedChargesComputed: true,
+  };
+  if (existing && isConfirmedEncounterDiagnosis(existing) && !isConfirmedEncounterDiagnosis(condition)) {
+    try {
+      demotionImpact = await diagnosisDemotionImpact(staff.fhir, encounterReference, conditionReference);
+    } catch (error) {
+      demotionImpact = {
+        strandedCharges: [],
+        unaffectedChargeCount: 0,
+        strandedChargesComputed: false,
+      };
+      console.error(`Diagnosis demotion charge impact failed after ${conditionReference}: ${errorMessage(error)}`);
+    }
+  }
 
   const diagnosisVisitStatus = parsed.data.status
     ? await deps.diagnosisVisitStatusStore.upsert({
@@ -334,9 +364,53 @@ export async function handleDiagnosisPickRequest(
       ...(linkedEncounter ? { encounter: linkedEncounter } : {}),
       provenanceReference: provenance.id ? `Provenance/${provenance.id}` : undefined,
       action: parsed.data.action,
+      ...demotionImpact,
       ...(diagnosisVisitStatus ? { diagnosisVisitStatus } : {}),
     },
   };
+}
+
+async function diagnosisDemotionImpact(
+  fhir: DiagnosisPickFhirClient,
+  encounterReference: string,
+  changedConditionReference: string,
+): Promise<DiagnosisDemotionImpact> {
+  const [conditions, charges] = await Promise.all([
+    searchAll<Condition>(fhir, "Condition", { encounter: encounterReference, _count: "200" }),
+    searchAll<ChargeItem>(fhir, "ChargeItem", { context: encounterReference, _count: "100" }),
+  ]);
+  const confirmedConditionReferences = new Set(
+    conditions.flatMap((condition) => {
+      return condition.id && isConfirmedEncounterDiagnosis(condition)
+        ? [`Condition/${condition.id}`]
+        : [];
+    }),
+  );
+  const touchingCharges = charges.flatMap((charge) => {
+    return charge.supportingInformation?.some((reference) => reference.reference === changedConditionReference)
+      ? [charge]
+      : [];
+  });
+  let unaffectedChargeCount = 0;
+  const strandedCharges: StrandedCharge[] = [];
+  for (const charge of touchingCharges) {
+    const retainsConfirmedDiagnosis = charge.supportingInformation?.some((reference) =>
+      reference.reference !== undefined &&
+      confirmedConditionReferences.has(reference.reference)
+    );
+    if (retainsConfirmedDiagnosis) {
+      unaffectedChargeCount += 1;
+      continue;
+    }
+    if (!charge.id) continue;
+    const reference = `ChargeItem/${charge.id}`;
+    strandedCharges.push({
+      reference,
+      display: charge.code.text ?? charge.code.coding?.find((coding) => coding.display)?.display ?? reference,
+      amount: charge.priceOverride ?? null,
+    });
+  }
+  return { strandedCharges, unaffectedChargeCount, strandedChargesComputed: true };
 }
 
 function pendingStageDiagnosis(

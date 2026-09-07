@@ -7,10 +7,12 @@ import {
   readDiagnosisCandidates,
   submitDiagnosisPick,
   type DiagnosisCandidateSuggestion,
+  type DiagnosisDemotionImpact,
 } from "../../lib/clinical-graph-client";
 import { fhir } from "../../lib/fhir";
 import { searchAll } from "../../lib/fhir-search";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
+import { DiagnosisDemotionImpactNotice } from "./DiagnosisDemotionImpactNotice";
 
 interface Candidate {
   diagnosisKey: string;
@@ -60,11 +62,16 @@ export function DiagnosisPicker({
   const [overridden, setOverridden] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [diagnosisDemotionImpact, setDiagnosisDemotionImpact] = useState<DiagnosisDemotionImpact>();
   const loadVersion = useRef(0);
   const encounterId = encounterReference.replace(/^Encounter\//, "");
   const observationKey = observationReferences?.join("|") ?? "";
+  const loadScopeKey = [encounterReference, findingDefinitionKey, mode, observationKey, refreshKey].join("\u0000");
+  const currentLoadScopeKey = useRef(loadScopeKey);
+  currentLoadScopeKey.current = loadScopeKey;
 
   async function load(signal?: AbortSignal) {
+    setDiagnosisDemotionImpact(undefined);
     const requestVersion = ++loadVersion.current;
     try {
       const [candidateFindings, catalogResponse, conditions] = await Promise.all([
@@ -126,17 +133,23 @@ export function DiagnosisPicker({
   }, [catalog]);
 
   async function pick(finding: CandidateFinding, diagnosisKey: string, action: "possible" | "confirm" | "discard", source: Candidate["source"] | "catalog-search") {
+    const actionLoadScopeKey = loadScopeKey;
     setBusy(`${finding.findingInstanceId}:${diagnosisKey}:${action}`);
     setError(null);
     try {
-      await submitDiagnosisPick({
+      const result = await submitDiagnosisPick({
         encounterReference,
         findingInstanceId: finding.findingInstanceId,
         diagnosisKey,
         action,
         source,
       });
-      await load();
+      if (currentLoadScopeKey.current !== actionLoadScopeKey) return;
+      try {
+        await load();
+      } finally {
+        if (currentLoadScopeKey.current === actionLoadScopeKey) setDiagnosisDemotionImpact(result);
+      }
       setOpenId(null);
       setCatalogSelection(undefined);
       setProposalCatalogSelections((current) => {
@@ -151,11 +164,20 @@ export function DiagnosisPicker({
     }
   }
 
-  if (findings.length === 0) return error ? <div className="mt-3 text-xs text-[color:var(--odos-alert)]">{error}</div> : null;
+  if (findings.length === 0) {
+    if (!error && !diagnosisDemotionImpact) return null;
+    return (
+      <div className="mt-3 space-y-2">
+        <DiagnosisDemotionImpactNotice impact={diagnosisDemotionImpact} />
+        {error && <div className="text-xs text-[color:var(--odos-alert)]">{error}</div>}
+      </div>
+    );
+  }
 
   if (mode === "proposal") {
     return (
       <div data-testid="structure-diagnosis-rail" className="mt-4 space-y-3 border-t border-[color:var(--odos-line)] pt-4">
+        <DiagnosisDemotionImpactNotice impact={diagnosisDemotionImpact} />
         {findings.map((finding) => (
           <div key={finding.findingInstanceId} className="space-y-3 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-3">
             {finding.candidates.length > 0 && (
@@ -216,6 +238,7 @@ export function DiagnosisPicker({
 
   return (
     <div className="mt-3 space-y-2">
+      <DiagnosisDemotionImpactNotice impact={diagnosisDemotionImpact} />
       {findings.map((finding) => (
         <div key={finding.findingInstanceId} className="relative inline-block align-top">
           {finding.suppression && !overridden.has(finding.findingInstanceId) ? (

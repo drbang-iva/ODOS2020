@@ -21,6 +21,21 @@ const FEE_CATEGORY_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-f
 const FEE_MODIFIER_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-modifier`;
 export const FEE_ROUTING_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-routing`;
 const DISALLOWED_CONCEPT_LATERALITY_MODIFIERS = new Set(["RT", "LT", "50"]);
+const PROCEDURE_LATERALITY_MODIFIER_EXTENSION_URL =
+  `${BASE}/StructureDefinition/odos-procedure-laterality-modifier`;
+
+export const PROCEDURE_LATERALITY_MODIFIER_ELIGIBLE_CONCEPT_KEYS: ReadonlySet<string> = new Set();
+
+export function procedureLateralityModifier(
+  procedureConceptKey: string,
+  laterality: ChargeProposal["laterality"],
+  eligibleConceptKeys: ReadonlySet<string> = PROCEDURE_LATERALITY_MODIFIER_ELIGIBLE_CONCEPT_KEYS,
+): "RT" | "LT" | undefined {
+  if (!eligibleConceptKeys.has(procedureConceptKey)) return undefined;
+  if (laterality === "OD") return "RT";
+  if (laterality === "OS") return "LT";
+  return undefined;
+}
 
 export const ODOS_UNPRICED_CHARGE_EXTENSION_URL =
   `${BASE}/StructureDefinition/odos-unpriced-charge`;
@@ -413,6 +428,7 @@ export async function materializeAcceptedChargeProposals(input: {
   charges: RowStore<ChargeProposal>;
   applications: RowStore<ProtocolApplication>;
   now?: () => string;
+  modifierEligibleProcedureConceptKeys?: ReadonlySet<string>;
 }): Promise<{ materialized: number; finalized: number }> {
   const proposals = (await input.charges.list()).filter((proposal) =>
     proposal.encounterId === input.encounterId && proposal.state === "accepted"
@@ -479,6 +495,7 @@ export async function materializeAcceptedChargeProposals(input: {
       enteredDate,
       totalCents,
       unpriced: unitPriceCents === undefined,
+      modifierEligibleProcedureConceptKeys: input.modifierEligibleProcedureConceptKeys,
     });
     const saved = await input.fhir.create(chargeItem, {
       "X-ODOS-Source": "protocol-charge-materializer",
@@ -572,10 +589,16 @@ function buildChargeItem(input: {
   enteredDate: string;
   totalCents: number;
   unpriced: boolean;
+  modifierEligibleProcedureConceptKeys?: ReadonlySet<string>;
 }): ChargeItem {
   const display = input.definition?.title ?? displayFromKey(input.proposal.procedureConceptKey);
   const canonical = input.definition?.url ?? procedureFeeCanonical(input.proposal.procedureConceptKey);
   const version = input.definition?.version;
+  const lateralityModifier = procedureLateralityModifier(
+    input.proposal.procedureConceptKey,
+    input.proposal.laterality,
+    input.modifierEligibleProcedureConceptKeys,
+  );
   return {
     resourceType: "ChargeItem",
     identifier: [{ system: CHARGE_PROPOSAL_IDENTIFIER_SYSTEM, value: input.proposal.id }],
@@ -593,6 +616,7 @@ function buildChargeItem(input: {
     context: { reference: `Encounter/${input.proposal.encounterId}` },
     occurrenceDateTime: input.occurrenceDateTime,
     quantity: { value: input.proposal.units },
+    // priceOverride is the total for this line and quantity; see fhir/opticalCharge.ts.
     priceOverride: { value: input.totalCents / 100, currency: "USD" },
     enterer: { reference: input.actorReference },
     enteredDate: input.enteredDate,
@@ -600,6 +624,12 @@ function buildChargeItem(input: {
     ...(input.proposal.laterality
       ? { bodysite: chargeItemBodysite(input.proposal.laterality) }
       : {}),
+    ...(lateralityModifier ? {
+      modifierExtension: [{
+        url: PROCEDURE_LATERALITY_MODIFIER_EXTENSION_URL,
+        extension: [{ url: "code", valueCode: lateralityModifier }],
+      }],
+    } : {}),
     ...(input.unpriced ? {
       extension: [{ url: ODOS_UNPRICED_CHARGE_EXTENSION_URL, valueBoolean: true }],
     } : {}),

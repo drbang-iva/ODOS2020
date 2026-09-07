@@ -89,8 +89,8 @@ Expected local endpoints:
 
 | Service | URL |
 |---|---|
-| FHIR API | `http://localhost:8103/fhir/R4` |
-| Medplum admin UI | `http://localhost:8100` |
+| FHIR API | `http://localhost:8103/fhir/R4` — loopback-only by design (INGRESS-0) |
+| Medplum admin UI | `http://localhost:8100` — loopback-only by design (INGRESS-0) |
 | Postgres | `127.0.0.1:5433` |
 | Redis | `127.0.0.1:6379` |
 
@@ -140,6 +140,29 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `WESTFAX_USERNAME`, `WESTFAX_PASSWORD`, `WESTFAX_PRODUCT_ID`, `WESTFAX_CALLBACK_BASE_URL` | yes for fax | Server-only WestFax credentials, the practice fax-line ProductId, and the HTTPS callback origin. |
 | `ODOS_INBOUND_FAX_WORKER_ENABLED` | no | Set to `true` to opt in to inbound polling after WestFax is configured; defaults to off. |
 | `ODOS_INBOUND_FAX_WORKER_MS` | no | Inbound polling cadence in milliseconds; defaults to 180,000 (3 minutes), minimum 15,000. |
+
+> **Which password is which — three distinct credentials, easily confused.** These three are
+> routinely mistaken for one another, and the failure mode is a confusing authentication error
+> rather than an obvious one:
+>
+> | Credential | Account | Where it works | Used for |
+> |---|---|---|---|
+> | **Your ODOS login** | `<your-odos-admin-email>` | the **deployed server** | signing in to ODOS day to day |
+> | **ODOS admin password** | `<your-odos-admin-email>` | **each instance separately**, set at `setup-practice` | the *human* project admin; the identity `sync-practice-role-policy-rules`, `migrate-three-role-model` and the live-authz tests must authenticate as |
+> | **`MEDPLUM_ADMIN_PASSWORD`** | `MEDPLUM_ADMIN_EMAIL` (e.g. `admin@laptop.odos.local`) | the instance that created it | break-glass service account only. It is **not** a project admin of the practice project and cannot sync policies. |
+>
+> The same email can exist on two instances with **different passwords** — a laptop dev stack and
+> a deployed server do not share a database. When a command answers `User not found`, that is
+> Medplum reporting *no membership in the target project*, not a bad password.
+>
+> To run any live-authorization or policy-sync command locally:
+>
+> ```bash
+> read -rsp "ODOS admin password: " PW && echo
+> MEDPLUM_ADMIN_EMAIL=<your-odos-admin-email> MEDPLUM_ADMIN_PASSWORD="$PW" \
+>   npx tsx scripts/sync-practice-role-policy-rules.ts -- --project <practice-project-id>
+> unset PW
+> ```
 
 Google Workspace communications setup and the documented manual-send verification path are in
 [`docs/google-workspace-comms.md`](google-workspace-comms.md).

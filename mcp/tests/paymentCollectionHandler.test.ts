@@ -10,6 +10,8 @@ import {
   type PaymentCollectionHandlerDeps,
 } from "../src/payments/payment-collection-handler.js";
 
+const REQUEST_ID = "11111111-1111-4111-8111-111111111111";
+
 function fixture(
   searchEntries: ChargeItem[] = [],
   sealed = false,
@@ -84,6 +86,8 @@ test("open charges returns integer cents and derives optical source from DeviceR
     body: [{
       id: "charge-1",
       amountCents: 12_345,
+      openCents: 12_345,
+      attributedCents: 0,
       description: "Frames",
       date: "2026-07-15",
       source: "optical",
@@ -111,6 +115,8 @@ test("open charges flags a materialized zero-dollar charge whose fee schedule en
   assert.deepEqual((result.body as Array<{ id: string; amountCents: number; unpriced: boolean }>)[0], {
     id: "charge-unpriced",
     amountCents: 0,
+    openCents: 0,
+    attributedCents: 0,
     description: "Frames",
     date: "2026-07-15",
     source: "optical",
@@ -137,6 +143,7 @@ test("recorded-tender collection posts a server-side Invoice transaction and emi
   const result = await handleRecordedTenderCollectionRequest(deps, {
     authHeader: "Bearer good",
     body: {
+      requestId: REQUEST_ID,
       patientReference: "Patient/patient-1",
       selectedOpenChargeLineIds: ["charge-1"],
       amountCents: 12_345,
@@ -164,6 +171,7 @@ test("CARD_MANUAL uses the same record-only Invoice transaction and never a proc
   const result = await handleRecordedTenderCollectionRequest(deps, {
     authHeader: "Bearer good",
     body: {
+      requestId: REQUEST_ID,
       patientReference: "Patient/patient-1",
       selectedOpenChargeLineIds: ["charge-1"],
       amountCents: 12_345,
@@ -185,6 +193,7 @@ test("recorded optical collection threads date and verified staff into its Invoi
   const result = await handleRecordedTenderCollectionRequest(deps, {
     authHeader: "Bearer good",
     body: {
+      requestId: REQUEST_ID,
       patientReference: "Patient/patient-1",
       selectedOpenChargeLineIds: ["charge-1"],
       amountCents: 12_345,
@@ -209,6 +218,7 @@ test("recorded-tender collection rejects a non-integer cent amount before readin
   const result = await handleRecordedTenderCollectionRequest(deps, {
     authHeader: "Bearer good",
     body: {
+      requestId: REQUEST_ID,
       patientReference: "Patient/patient-1",
       selectedOpenChargeLineIds: ["charge-1"],
       amountCents: 123.45,
@@ -227,6 +237,7 @@ test("recorded-tender collection returns 400 when amount does not equal the sele
   const result = await handleRecordedTenderCollectionRequest(deps, {
     authHeader: "Bearer good",
     body: {
+      requestId: REQUEST_ID,
       patientReference: "Patient/patient-1",
       selectedOpenChargeLineIds: ["charge-1"],
       amountCents: 12_344,
@@ -250,6 +261,7 @@ test("recorded-tender collection blocks a named unpriced charge before creating 
   const result = await handleRecordedTenderCollectionRequest(deps, {
     authHeader: "Bearer good",
     body: {
+      requestId: REQUEST_ID,
       patientReference: "Patient/patient-1",
       selectedOpenChargeLineIds: ["charge-unpriced"],
       amountCents: 0,
@@ -277,6 +289,7 @@ test("recorded-tender collection still rejects an unmarked zero-dollar charge", 
   const result = await handleRecordedTenderCollectionRequest(deps, {
     authHeader: "Bearer good",
     body: {
+      requestId: REQUEST_ID,
       patientReference: "Patient/patient-1",
       selectedOpenChargeLineIds: ["charge-zero"],
       amountCents: 0,
@@ -286,7 +299,7 @@ test("recorded-tender collection still rejects an unmarked zero-dollar charge", 
 
   assert.deepEqual(result, {
     status: 400,
-    body: { error: "amountCents must be a positive integer number of cents." },
+    body: { error: "ChargeItem/charge-zero has zero open amount and cannot be collected." },
   });
   assert.equal(transactions.length, 0);
   assert.equal(audits.length, 0);
@@ -298,6 +311,7 @@ test("recorded-tender collection rejects all record-only tenders after the day i
     const result = await handleRecordedTenderCollectionRequest(deps, {
       authHeader: "Bearer good",
       body: {
+        requestId: REQUEST_ID,
         patientReference: "Patient/patient-1",
         selectedOpenChargeLineIds: ["charge-1"],
         amountCents: 12_345,
@@ -317,6 +331,7 @@ test("recorded-tender collection checks the practice-local seal date across a UT
   const result = await handleRecordedTenderCollectionRequest(deps, {
     authHeader: "Bearer good",
     body: {
+      requestId: REQUEST_ID,
       patientReference: "Patient/patient-1",
       selectedOpenChargeLineIds: ["charge-1"],
       amountCents: 12_345,

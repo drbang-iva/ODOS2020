@@ -73,7 +73,9 @@ services:
       - medplum-binary:/data/binary
       - ./backup:/backup
     ports:
-      - "8103:8103"
+      # INGRESS-0 (2026-09-07): loopback-bound by design. Medplum is reached only via ODOS.
+      # Do not rebind to 0.0.0.0 — see performance-od/decisions/2026-09-07-odos-public-ingress-design.md §5.2
+      - "127.0.0.1:8103:8103"
     command: ["file:/config/medplum.config.json,env"]
     networks:
       - odos-internal
@@ -84,7 +86,9 @@ services:
     depends_on:
       - medplum-server
     ports:
-      - "8100:3000"
+      # INGRESS-0 (2026-09-07): loopback-bound by design. Medplum is reached only via ODOS.
+      # Do not rebind to 0.0.0.0 — see performance-od/decisions/2026-09-07-odos-public-ingress-design.md §5.2
+      - "127.0.0.1:8100:3000"
     environment:
       MEDPLUM_BASE_URL: http://localhost:8103/
     networks:
