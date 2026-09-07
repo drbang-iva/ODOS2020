@@ -9,4 +9,6 @@ test("Medplum host ports stay loopback-only", () => {
   assert.match(compose, /\n\s+- "127\.0\.0\.1:8100:3000"/);
   assert.doesNotMatch(compose, /\n\s+- "8103:8103"/);
   assert.doesNotMatch(compose, /\n\s+- "8100:3000"/);
+  assert.doesNotMatch(compose, /\n\s+- "0\.0\.0\.0:8103:8103"/);
+  assert.doesNotMatch(compose, /\n\s+- "0\.0\.0\.0:8100:3000"/);
 });
