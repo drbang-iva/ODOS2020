@@ -897,9 +897,11 @@ function relatedReadingsByTarget(
           const sortedRows = rows
             .filter((row) => Number.isFinite(Date.parse(row.recordedAt)))
             .sort((left, right) => Date.parse(right.recordedAt) - Date.parse(left.recordedAt));
+          const eyeRows = sortedRows.filter((row) => row.eye === eye);
+          const latestCurrentRow = context === "current" ? eyeRows[0] : undefined;
           for (const field of definition.customFields.filter((candidate) => candidate.active).sort((left, right) => left.order - right.order)) {
-            const row = sortedRows.find((candidate) =>
-              candidate.eye === eye && candidate.values.some((value) => value.code === field.localCode)
+            const row = latestCurrentRow ?? eyeRows.find((candidate) =>
+              candidate.values.some((value) => value.code === field.localCode)
             );
             const stored = row?.values.find((value) => value.code === field.localCode);
             if (!row || !stored) continue;

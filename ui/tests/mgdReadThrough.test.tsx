@@ -93,6 +93,26 @@ test("current and prior gland data render together with distinct visit context",
   }
 });
 
+test("a newer current-encounter save cannot repopulate a gland field it omitted", async () => {
+  const catalog = await catalogDefinitions();
+  const latestCurrentRows: GlandRow[] = [{
+    observationReference: "Observation/gland-current-latest-od",
+    recordedAt: "2026-09-07T12:20:00.000Z",
+    eye: "OD",
+    values: [
+      { code: "CUSTOM_EXPRESSIBILITY", label: "Expressibility", value: "normal" },
+    ],
+  }, ...CURRENT_GLAND_ROWS];
+  const { renderer } = await renderLids(catalog, [], latestCurrentRows);
+  try {
+    assert.deepEqual(relatedReadingText(renderer), [
+      "This visit: Dry Eye · Gland Function · Expressibility: Normal · Sep 7, 2026",
+    ]);
+  } finally {
+    renderer.unmount();
+  }
+});
+
 test("present dry-eye gland data renders beside an unchecked MGD finding with source and date", async () => {
   const catalog = await catalogDefinitions();
   const { renderer } = await renderLids(catalog, GLAND_ROWS);
