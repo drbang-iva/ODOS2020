@@ -1087,7 +1087,7 @@ async function coveragePayerName(coverage: Coverage): Promise<string> {
 }
 
 function chargeLineTotal(charge: ProfessionalClaimChargeItemInput): number {
-  return Number(charge.priceOverride?.value ?? 0) * Number(charge.quantity?.value ?? 1);
+  return Number(charge.priceOverride?.value ?? 0);
 }
 
 function claimTotal(claim: ProfessionalClaimInput): number {

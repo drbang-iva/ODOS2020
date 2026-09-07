@@ -212,7 +212,10 @@ export function buildProfessionalClaim(input: ProfessionalClaimInput): Claim {
     }
     const coding = firstCoding(chargeItem);
     const quantity = chargeItem.quantity?.value ?? 1;
-    const unitCents = moneyToCents(chargeItem.priceOverride);
+    const lineTotalCents = moneyToCents(chargeItem.priceOverride);
+    const unitCents = Number.isSafeInteger(quantity) && quantity > 0 && lineTotalCents % quantity === 0
+      ? lineTotalCents / quantity
+      : undefined;
     const diagnosisSequence = claimDiagnosisSequence(chargeItem, input.diagnoses.length);
     const { laterality } = chargeItemLaterality(chargeItem);
     const lineControlNumber = /^[A-Za-z0-9 .-]{1,30}$/.test(chargeItem.id)
@@ -243,8 +246,8 @@ export function buildProfessionalClaim(input: ProfessionalClaimInput): Claim {
       ...(diagnosisSequence.length ? { diagnosisSequence } : {}),
       ...(laterality ? { bodySite: { text: laterality } } : {}),
       quantity: { value: quantity },
-      unitPrice: money(unitCents),
-      net: money(unitCents * quantity),
+      ...(unitCents === undefined ? {} : { unitPrice: money(unitCents) }),
+      net: money(lineTotalCents),
     };
   });
   const lineControlNumbers = items.map((item) => claimLineControlNumber(item));
