@@ -4,6 +4,7 @@ import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 
 import { stdin as input, stdout as output } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { resolve } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import type {
   AccessPolicy,
   Basic,
@@ -13,6 +14,7 @@ import type {
   Practitioner,
   Project,
   ProjectMembership,
+  Resource,
   Schedule,
   User,
 } from "@medplum/fhirtypes";
@@ -33,8 +35,13 @@ import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/f
 import { searchAll, searchProjectAll } from "../mcp/src/fhir-search.js";
 import { buildSchedulingResource } from "../mcp/src/fhir/schedulingResource.js";
 import {
+  ODOS_VISIT_DURATION_EXTENSION_URL,
+  ODOS_VISIT_TYPE_CATEGORY_SYSTEM,
+  ODOS_VISIT_TYPE_SYSTEM,
   defaultVisitTypeCatalog,
+  visitTypeCategory,
   visitTypeCode,
+  visitTypeDurationMinutes,
 } from "../mcp/src/fhir/schedulingVisitType.js";
 import {
   buildSchedulingPracticeConfigResource,
@@ -46,6 +53,7 @@ import {
   ODOS_VISIT_TYPE_CONFIG_CODE,
   ODOS_VISIT_TYPE_CONFIG_SYSTEM,
   buildVisitTypeConfigResource,
+  parseVisitTypeConfig,
 } from "../mcp/src/scheduling/visit-type-config.js";
 import { ensureLiveOperatorIdentity } from "./operator-identity.js";
 
@@ -53,6 +61,8 @@ export const SETUP_WIZARD_HEADER =
   "Run ODOS on your own hardware. Your patients, your machines, your data.";
 export const SETUP_WIZARD_ACTION_REASON = "v0.5d setup wizard first-run provisioning";
 export const SETUP_WIZARD_NOOP_REASON = "v0.5d setup wizard re-run, already provisioned";
+export const SETUP_VISIT_TYPE_TAXONOMY_REASON =
+  "reconcile the accepted visit-type taxonomy and retire the payer-named Medicaid visit type";
 export const SETUP_PRACTICE_ORGANIZATION_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/setup-practice-organization";
 export const SETUP_PRACTICE_LOCATION_IDENTIFIER_SYSTEM =
@@ -96,6 +106,12 @@ export interface SetupPracticeState {
   schedulingConfigId?: string;
   visitTypeIds?: string[];
   visitTypeConfigId?: string;
+  visitTypeTaxonomyReconciled?: boolean;
+  visitTypeTaxonomyPendingAudits?: {
+    resourceType: "HealthcareService" | "Basic";
+    resourceId: string;
+  }[];
+  visitTypeTaxonomyMutationApplied?: boolean;
   accessPolicyCreated?: boolean;
   accessPolicyId?: string;
   accessPolicyAssigned?: boolean;
@@ -139,6 +155,8 @@ export interface SetupPracticeAdapter {
     visitTypeConfig: Basic;
     visitTypeConfigCreated: boolean;
   }>;
+  planVisitTypeTaxonomyReconciliation(): Promise<readonly Resource[]>;
+  reconcileVisitTypeTaxonomy(updates?: readonly Resource[]): Promise<readonly Resource[]>;
   createFirstAdminAccessPolicies(config: SetupPracticeConfig, session: AdminSession): Promise<readonly {
     role: PracticeRoleId;
     policy: AccessPolicy;
@@ -242,6 +260,62 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
       actionReason: SETUP_WIZARD_ACTION_REASON,
     }),
   );
+
+  if (!state.visitTypeTaxonomyReconciled) {
+    let pendingAudits = state.visitTypeTaxonomyPendingAudits ?? [];
+    if (!state.visitTypeTaxonomyMutationApplied) {
+      const plannedUpdates = await adapter.planVisitTypeTaxonomyReconciliation();
+      const plannedAudits = plannedUpdates.map((resource) => {
+        if (!resource.id || (resource.resourceType !== "HealthcareService" && resource.resourceType !== "Basic")) {
+          throw new Error(`Planned ${resource.resourceType} reconciliation returned without an auditable id.`);
+        }
+        return { resourceType: resource.resourceType, resourceId: resource.id };
+      });
+      pendingAudits = [...pendingAudits, ...plannedAudits].filter((pending, index, all) =>
+        all.findIndex((candidate) =>
+          candidate.resourceType === pending.resourceType && candidate.resourceId === pending.resourceId
+        ) === index
+      );
+      if (pendingAudits.length > 0) {
+        state = persistSetupState(config.statePath, {
+          ...state,
+          visitTypeTaxonomyPendingAudits: pendingAudits,
+        });
+      }
+      if (plannedUpdates.length > 0) {
+        await adapter.reconcileVisitTypeTaxonomy(plannedUpdates);
+      }
+      if (pendingAudits.length > 0) {
+        state = persistSetupState(config.statePath, {
+          ...state,
+          visitTypeTaxonomyMutationApplied: true,
+        });
+      }
+    }
+    while (pendingAudits.length > 0) {
+      const [pending, ...remaining] = pendingAudits;
+      await emit(buildSetupAuditRow({
+        eventType: "update",
+        resourceType: pending!.resourceType,
+        resourceId: pending!.resourceId,
+        actionReason: SETUP_VISIT_TYPE_TAXONOMY_REASON,
+      }));
+      pendingAudits = remaining;
+      state = persistSetupState(config.statePath, {
+        ...state,
+        visitTypeTaxonomyPendingAudits: pendingAudits.length > 0 ? pendingAudits : undefined,
+      });
+    }
+    const {
+      visitTypeTaxonomyPendingAudits: _completedAudits,
+      visitTypeTaxonomyMutationApplied: _completedMutation,
+      ...taxonomyReconciledState
+    } = state;
+    state = persistSetupState(config.statePath, {
+      ...taxonomyReconciledState,
+      visitTypeTaxonomyReconciled: true,
+    });
+  }
 
   let practitioner: Practitioner | undefined;
   if (state.practitionerCreated && state.practitionerId) {
@@ -646,6 +720,42 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     };
   }
 
+  async planVisitTypeTaxonomyReconciliation(): Promise<readonly Resource[]> {
+    const planned: Resource[] = [];
+    for (const visitType of this.visitTypes) {
+      const reconciled = reconcileInstalledVisitType(visitType);
+      if (isDeepStrictEqual(reconciled, visitType)) continue;
+      planned.push(reconciled);
+    }
+    for (const config of this.visitTypeConfigs) {
+      const reconciled = reconcileInstalledVisitTypeConfig(config);
+      if (isDeepStrictEqual(reconciled, config)) continue;
+      planned.push(reconciled);
+    }
+    return planned;
+  }
+
+  async reconcileVisitTypeTaxonomy(
+    updates?: readonly Resource[],
+  ): Promise<readonly Resource[]> {
+    const plannedUpdates = updates ?? await this.planVisitTypeTaxonomyReconciliation();
+    for (const update of plannedUpdates) {
+      if (!update.id) throw new Error(`Planned ${update.resourceType} reconciliation returned without an id.`);
+      if (update.resourceType === "HealthcareService") {
+        const index = this.visitTypes.findIndex((visitType) => visitType.id === update.id);
+        if (index < 0) throw new Error(`Installed HealthcareService/${update.id} was not found for reconciliation.`);
+        this.visitTypes.splice(index, 1, update);
+      } else if (update.resourceType === "Basic") {
+        const index = this.visitTypeConfigs.findIndex((config) => config.id === update.id);
+        if (index < 0) throw new Error(`Installed Basic/${update.id} was not found for reconciliation.`);
+        this.visitTypeConfigs.splice(index, 1, update);
+      } else {
+        throw new Error(`Unsupported ${update.resourceType} visit-type taxonomy reconciliation.`);
+      }
+    }
+    return plannedUpdates;
+  }
+
   async createFirstAdminAccessPolicies(
     _config: SetupPracticeConfig,
     session: AdminSession,
@@ -1006,6 +1116,64 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     };
   }
 
+  async planVisitTypeTaxonomyReconciliation(): Promise<readonly Resource[]> {
+    const visitTypes = await searchAll<HealthcareService>(this.client(), "HealthcareService", {
+      _count: "100",
+    });
+    const planned: Resource[] = [];
+    for (const visitType of visitTypes) {
+      const reconciled = reconcileInstalledVisitType(visitType);
+      if (isDeepStrictEqual(reconciled, visitType)) continue;
+      if (!visitType.id) throw new Error("Installed HealthcareService returned without an id.");
+      planned.push(reconciled);
+    }
+    const configs = (await searchAll<Basic>(this.client(), "Basic", {
+      code: `${ODOS_VISIT_TYPE_CONFIG_SYSTEM}|${ODOS_VISIT_TYPE_CONFIG_CODE}`,
+      _count: "100",
+    })).filter((basic) => basic.code?.coding?.some((coding) =>
+      coding.system === ODOS_VISIT_TYPE_CONFIG_SYSTEM && coding.code === ODOS_VISIT_TYPE_CONFIG_CODE
+    ));
+    if (configs.length > 1) {
+      throw new Error(`Expected at most one visit-type-config Basic; found ${configs.length}.`);
+    }
+    if (configs[0]) {
+      const reconciled = reconcileInstalledVisitTypeConfig(configs[0]);
+      if (!isDeepStrictEqual(reconciled, configs[0])) {
+        if (!configs[0].id) throw new Error("Installed visit-type-config Basic returned without an id.");
+        planned.push(reconciled);
+      }
+    }
+    return planned;
+  }
+
+  async reconcileVisitTypeTaxonomy(
+    updates?: readonly Resource[],
+  ): Promise<readonly Resource[]> {
+    const plannedUpdates = updates ?? await this.planVisitTypeTaxonomyReconciliation();
+    const updated: Resource[] = [];
+    for (const update of plannedUpdates) {
+      if (!update.id) throw new Error(`Planned ${update.resourceType} reconciliation returned without an id.`);
+      if (update.resourceType === "HealthcareService") {
+        updated.push(await this.client().update<HealthcareService>(
+          "HealthcareService",
+          update.id,
+          update,
+          update.meta?.versionId ? { "If-Match": `W/\"${update.meta.versionId}\"` } : undefined,
+        ));
+      } else if (update.resourceType === "Basic") {
+        updated.push(await this.client().update<Basic>(
+          "Basic",
+          update.id,
+          update,
+          update.meta?.versionId ? { "If-Match": `W/\"${update.meta.versionId}\"` } : undefined,
+        ));
+      } else {
+        throw new Error(`Unsupported ${update.resourceType} visit-type taxonomy reconciliation.`);
+      }
+    }
+    return updated;
+  }
+
   async createFirstAdminAccessPolicies(
     _config: SetupPracticeConfig,
     session: AdminSession,
@@ -1348,8 +1516,111 @@ function setupStateIsComplete(state: SetupPracticeState): boolean {
     && state.organizationId
     && state.locationCreated
     && state.locationId
-    && state.schedulingProvisioned,
+    && state.schedulingProvisioned
+    && state.visitTypeTaxonomyReconciled,
   );
+}
+
+const LEGACY_VISIT_TYPE_CATEGORY_TARGETS: Readonly<Record<string, { code: string; label: string }>> = {
+  comprehensive: { code: "exams", label: "Exams" },
+  "dry-eye": { code: "medical", label: "Medical" },
+  "myopia-management": { code: "medical", label: "Medical" },
+  "diagnostic-only": { code: "medical", label: "Medical" },
+};
+const LEGACY_VISIT_TYPE_CATEGORY_IDS = new Set(Object.keys(LEGACY_VISIT_TYPE_CATEGORY_TARGETS));
+
+const VISIT_TYPE_CATEGORY_BY_CODE: Readonly<Record<string, { code: string; label: string }>> = {
+  "routine-exam-new": { code: "exams", label: "Exams" },
+  "routine-exam-established": { code: "exams", label: "Exams" },
+  "contact-lens-exam": { code: "contact-lens", label: "Contact Lens" },
+  "contact-lens-follow-up": { code: "contact-lens", label: "Contact Lens" },
+  "office-visit": { code: "medical", label: "Medical" },
+  "special-testing": { code: "medical", label: "Medical" },
+};
+
+function reconcileInstalledVisitType(visitType: HealthcareService): HealthcareService {
+  const code = visitTypeCode(visitType);
+  if (code === "medicaid-exam") {
+    return visitType.active === false ? visitType : { ...visitType, active: false };
+  }
+  const aesthetics = code?.startsWith("aesthetics-") === true;
+  const category = aesthetics
+    ? undefined
+    : (code ? VISIT_TYPE_CATEGORY_BY_CODE[code] : undefined)
+      ?? LEGACY_VISIT_TYPE_CATEGORY_TARGETS[visitTypeCategory(visitType)?.code ?? ""];
+  let reconciled = category || aesthetics
+    ? replaceVisitTypeCategory(visitType, category)
+    : visitType;
+  const hasLegacyTestingDefaults = code === "special-testing"
+    && visitType.name === "Special Testing (VF / OCT / Dry Eye)"
+    && visitTypeDurationMinutes(visitType) === 30;
+  if (hasLegacyTestingDefaults) {
+    reconciled = {
+      ...reconciled,
+      name: "Testing Visit",
+      type: reconciled.type?.map((concept) => ({
+        ...concept,
+        text: concept.text === visitType.name ? "Testing Visit" : concept.text,
+        coding: concept.coding?.map((coding) =>
+          coding.system === ODOS_VISIT_TYPE_SYSTEM && coding.code === code
+            ? { ...coding, display: "Testing Visit" }
+            : coding
+        ),
+      })),
+      extension: reconciled.extension?.map((extension) =>
+        extension.url === ODOS_VISIT_DURATION_EXTENSION_URL
+          ? { ...extension, valuePositiveInt: 20 }
+          : extension
+      ),
+    };
+  }
+  return reconciled;
+}
+
+function replaceVisitTypeCategory(
+  visitType: HealthcareService,
+  category: { code: string; label: string } | undefined,
+): HealthcareService {
+  if (visitTypeCategory(visitType)?.code === category?.code) return visitType;
+  const retained = (visitType.category ?? []).flatMap((concept) => {
+    const coding = concept.coding?.filter((candidate) =>
+      candidate.system !== ODOS_VISIT_TYPE_CATEGORY_SYSTEM
+    );
+    if (concept.coding && coding?.length === 0) return [];
+    return [{ ...concept, ...(coding ? { coding } : {}) }];
+  });
+  return {
+    ...visitType,
+    category: [
+      ...retained,
+      ...(category
+        ? [{
+            coding: [{
+              system: ODOS_VISIT_TYPE_CATEGORY_SYSTEM,
+              code: category.code,
+              display: category.label,
+            }],
+            text: category.label,
+          }]
+        : []),
+    ],
+  };
+}
+
+function reconcileInstalledVisitTypeConfig(config: Basic): Basic {
+  const desiredIds = new Set(DEFAULT_VISIT_TYPE_CATEGORIES.map((category) => category.id));
+  const custom = parseVisitTypeConfig(config).categories.filter((category) =>
+    !LEGACY_VISIT_TYPE_CATEGORY_IDS.has(category.id) && !desiredIds.has(category.id)
+  );
+  return buildVisitTypeConfigResource({
+    categories: [
+      ...DEFAULT_VISIT_TYPE_CATEGORIES,
+      ...custom.map((category, index) => ({
+        ...category,
+        order: DEFAULT_VISIT_TYPE_CATEGORIES.length + index,
+      })),
+    ],
+  }, config);
 }
 
 function localTimezoneOffset(now = new Date()): string {
