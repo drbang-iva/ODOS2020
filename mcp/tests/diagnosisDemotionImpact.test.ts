@@ -90,6 +90,46 @@ test("C: demoting a diagnosis with no linked charge returns the complete empty i
   });
 });
 
+test("a sole-pointer charge on a later search page is still reported as stranded", async () => {
+  const fhir = diagnosisPickFhir(new PagedImpactFhir());
+  const confirmed = await pick(fhir, "presbyopia", "confirm");
+  const charge = addCharge(fhir, [conditionReference(confirmed)]);
+  fhir.chargeFirstPageIds = new Set();
+  fhir.paginateImpact = true;
+
+  const result = await pick(fhir, "presbyopia", "possible");
+
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.deepEqual(impact(result), {
+    strandedCharges: [{
+      reference: "ChargeItem/charge-1",
+      display: "Synthetic procedure",
+      amount: { value: 70.25, currency: "USD" },
+    }],
+    unaffectedChargeCount: 0,
+    strandedChargesComputed: true,
+  });
+  assert.deepEqual(await fhir.read<ChargeItem>("ChargeItem", charge.id!), charge);
+});
+
+test("a confirmed diagnosis on a later search page keeps a multi-pointer charge unaffected", async () => {
+  const fhir = diagnosisPickFhir(new PagedImpactFhir());
+  const first = await pick(fhir, "presbyopia", "confirm");
+  const second = await pick(fhir, "diplopia", "confirm");
+  addCharge(fhir, [conditionReference(first), conditionReference(second)]);
+  fhir.conditionFirstPageIds = new Set([(first.body as { condition: Condition }).condition.id!]);
+  fhir.paginateImpact = true;
+
+  const result = await pick(fhir, "presbyopia", "possible");
+
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.deepEqual(impact(result), {
+    strandedCharges: [],
+    unaffectedChargeCount: 1,
+    strandedChargesComputed: true,
+  });
+});
+
 test("D: discard reports a sole-pointer charge as stranded under the same contract", async () => {
   const fhir = diagnosisPickFhir();
   const confirmed = await pick(fhir, "presbyopia", "confirm");
@@ -254,7 +294,7 @@ function diagnosisPickFhir<T extends MemoryFhir>(fhir: T = new MemoryFhir() as T
 }
 
 class MemoryFhir {
-  readonly baseUrl = "http://synthetic.invalid/fhir/R4";
+  readonly baseUrl = "http://synthetic.invalid";
   readonly resources: Resource[] = [];
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
@@ -374,6 +414,50 @@ class MemoryFhir {
       this.resources.splice(0, this.resources.length, ...resourcesBefore);
       throw error;
     }
+  }
+}
+
+class PagedImpactFhir extends MemoryFhir {
+  paginateImpact = false;
+  conditionFirstPageIds?: Set<string>;
+  chargeFirstPageIds?: Set<string>;
+
+  override async search<T extends Resource>(
+    resourceType: T["resourceType"],
+    params: Record<string, string> = {},
+  ): Promise<Bundle<T>> {
+    const bundle = await super.search<T>(resourceType, params);
+    if (!this.paginateImpact) return bundle;
+    const isImpactSearch = (resourceType === "Condition" && params.encounter) ||
+      (resourceType === "ChargeItem" && params.context);
+    if (!isImpactSearch) return bundle;
+    const firstPageIds = resourceType === "Condition" ? this.conditionFirstPageIds : this.chargeFirstPageIds;
+    if (firstPageIds === undefined) return bundle;
+    const firstEntries = (bundle.entry ?? []).filter((entry) => entry.resource?.id && firstPageIds.has(entry.resource.id));
+    const hasLaterPage = firstEntries.length < (bundle.entry ?? []).length;
+    return {
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: firstEntries,
+      ...(hasLaterPage ? {
+        link: [{
+          relation: "next",
+          url: `${this.baseUrl}/fhir/R4/${resourceType}?impact-page=2`,
+        }],
+      } : {}),
+    };
+  }
+
+  async searchUrl<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>> {
+    assert.equal(new URL(url, this.baseUrl).searchParams.get("impact-page"), "2");
+    const params = resourceType === "Condition" ? { encounter: "Encounter/e1" } : { context: "Encounter/e1" };
+    const bundle = await super.search<T>(resourceType, params);
+    const firstPageIds = resourceType === "Condition" ? this.conditionFirstPageIds : this.chargeFirstPageIds;
+    return {
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: (bundle.entry ?? []).filter((entry) => entry.resource?.id && !firstPageIds?.has(entry.resource.id)),
+    };
   }
 }
 

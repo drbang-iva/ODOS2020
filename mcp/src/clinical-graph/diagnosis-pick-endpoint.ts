@@ -12,6 +12,7 @@ import {
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { isRelativeFhirReference } from "../fhir/reference.js";
+import { searchAll, type FhirSearchClient } from "../fhir-search.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { FhirDiagnosisPickTallyStore } from "./diagnosis-pick-tally-store.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
@@ -49,9 +50,8 @@ interface DiagnosisDemotionImpact {
   strandedChargesComputed: boolean;
 }
 
-export interface DiagnosisPickFhirClient {
+export interface DiagnosisPickFhirClient extends FhirSearchClient {
   read<T extends PickResource>(resourceType: T["resourceType"], id: string): Promise<T>;
-  search<T extends PickResource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   create<T extends PickResource>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
   update<T extends PickResource>(resourceType: T["resourceType"], id: string, resource: T, extraHeaders?: Record<string, string>): Promise<T>;
   executeTransaction(
@@ -375,21 +375,19 @@ async function diagnosisDemotionImpact(
   encounterReference: string,
   changedConditionReference: string,
 ): Promise<DiagnosisDemotionImpact> {
-  const [conditionBundle, chargeBundle] = await Promise.all([
-    fhir.search<Condition>("Condition", { encounter: encounterReference, _count: "200" }),
-    fhir.search<ChargeItem>("ChargeItem", { context: encounterReference, _count: "100" }),
+  const [conditions, charges] = await Promise.all([
+    searchAll<Condition>(fhir, "Condition", { encounter: encounterReference, _count: "200" }),
+    searchAll<ChargeItem>(fhir, "ChargeItem", { context: encounterReference, _count: "100" }),
   ]);
   const confirmedConditionReferences = new Set(
-    (conditionBundle.entry ?? []).flatMap((entry) => {
-      const condition = entry.resource;
-      return condition?.id && isConfirmedEncounterDiagnosis(condition)
+    conditions.flatMap((condition) => {
+      return condition.id && isConfirmedEncounterDiagnosis(condition)
         ? [`Condition/${condition.id}`]
         : [];
     }),
   );
-  const touchingCharges = (chargeBundle.entry ?? []).flatMap((entry) => {
-    const charge = entry.resource;
-    return charge?.supportingInformation?.some((reference) => reference.reference === changedConditionReference)
+  const touchingCharges = charges.flatMap((charge) => {
+    return charge.supportingInformation?.some((reference) => reference.reference === changedConditionReference)
       ? [charge]
       : [];
   });
