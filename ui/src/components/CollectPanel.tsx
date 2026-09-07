@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   centsFromMoneyInput,
   collectRecordedTender,
@@ -37,6 +37,8 @@ export function CollectPanel({
   onCollected,
   onPackageBalanceChanged,
   loadCharges = fetchOpenCharges,
+  collectTender = collectRecordedTender,
+  requestIdFactory = () => crypto.randomUUID(),
 }: {
   patientReference: string;
   patientName?: string;
@@ -48,10 +50,12 @@ export function CollectPanel({
   onCollected?: (result: CollectPanelResult) => void;
   onPackageBalanceChanged?: () => void;
   loadCharges?: (patientReference: string) => Promise<OpenChargeLine[]>;
+  collectTender?: typeof collectRecordedTender;
+  requestIdFactory?: () => string;
 }) {
   const [charges, setCharges] = useState<OpenChargeLine[]>(initialCharges ? [...initialCharges] : []);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () => new Set((initialCharges ?? []).map((charge) => charge.id)),
+    () => new Set((initialCharges ?? []).filter(isCollectableCharge).map((charge) => charge.id)),
   );
   const [tender, setTender] = useState<CollectTender>("CASH");
   const [amountInput, setAmountInput] = useState("0.00");
@@ -65,13 +69,14 @@ export function CollectPanel({
   const [creditBank, setCreditBank] = useState<PatientCreditBank>();
   const [creditBankLoading, setCreditBankLoading] = useState(false);
   const [creditBankError, setCreditBankError] = useState<string>();
+  const collectionAttempt = useRef<{ fingerprint: string; requestId: string }>();
   const { dialogRef, initialFocusRef, titleId } = useDockedPanel(onClose, !embedded);
 
   useEffect(() => {
     if (initialCharges) {
       const next = [...initialCharges];
       setCharges(next);
-      setSelectedIds(new Set(next.map((charge) => charge.id)));
+      setSelectedIds(new Set(next.filter(isCollectableCharge).map((charge) => charge.id)));
       setLoading(false);
       return;
     }
@@ -81,7 +86,7 @@ export function CollectPanel({
       .then((next) => {
         if (cancelled) return;
         setCharges(next);
-        setSelectedIds(new Set(next.map((charge) => charge.id)));
+        setSelectedIds(new Set(next.filter(isCollectableCharge).map((charge) => charge.id)));
       })
       .catch((cause) => {
         if (!cancelled) setError(messageOf(cause));
@@ -122,15 +127,15 @@ export function CollectPanel({
   }, [disabled]);
 
   const selectedCharges = useMemo(
-    () => charges.filter((charge) => selectedIds.has(charge.id)),
+    () => charges.filter((charge) => selectedIds.has(charge.id) && isCollectableCharge(charge)),
     [charges, selectedIds],
   );
   const openBalanceCents = useMemo(
-    () => charges.reduce((total, charge) => total + charge.amountCents, 0),
+    () => charges.reduce((total, charge) => total + (charge.openCents ?? 0), 0),
     [charges],
   );
   const collectingCents = useMemo(
-    () => selectedCharges.reduce((total, charge) => total + charge.amountCents, 0),
+    () => selectedCharges.reduce((total, charge) => total + (charge.openCents ?? 0), 0),
     [selectedCharges],
   );
 
@@ -153,7 +158,12 @@ export function CollectPanel({
         amountCents,
         ...(opticalOrder ? { opticalOrder } : {}),
       };
-      const result = await collectRecordedTender({ ...request, tender });
+      const fingerprint = JSON.stringify({ ...request, tender });
+      if (!collectionAttempt.current || collectionAttempt.current.fingerprint !== fingerprint) {
+        collectionAttempt.current = { fingerprint, requestId: requestIdFactory() };
+      }
+      const result = await collectTender({ ...request, tender, requestId: collectionAttempt.current.requestId });
+      collectionAttempt.current = undefined;
       setReceipt({ result, lines: selectedCharges });
       onCollected?.(result);
     } catch (cause) {
@@ -198,11 +208,12 @@ export function CollectPanel({
           <div className="flex flex-wrap gap-2" aria-label="Open charges">
             {charges.map((charge) => {
               const selected = selectedIds.has(charge.id);
+              const collectable = isCollectableCharge(charge);
               return (
                 <div key={charge.id} className="min-w-[240px] flex-1">
                   <button
                     type="button"
-                    disabled={disabled}
+                    disabled={disabled || !collectable}
                     aria-pressed={selected}
                     onClick={() => setSelectedIds((current) => {
                       const next = new Set(current);
@@ -211,10 +222,12 @@ export function CollectPanel({
                     })}
                     className={`w-full rounded-full border px-3 py-2 text-left text-xs ${selected ? "border-blue-400 bg-blue-950/60 text-blue-100" : "border-white/15 text-white/55"}`}
                   >
-                    <span className="block font-bold">{charge.description} · {money(charge.amountCents)}</span>
+                    <span className="block font-bold">{charge.description} · {charge.openCents === null ? "Amount unavailable" : money(charge.openCents)}</span>
                     <span className="text-[11px] opacity-60">{charge.source === "optical" ? "Optical" : "Other"}{charge.date ? ` · ${charge.date}` : ""}</span>
                   </button>
-                  {!disabled && <CheckoutRedeem
+                  {charge.ambiguityReason && <p role="alert" className="mt-1 text-xs text-amber-200">{charge.ambiguityReason}</p>}
+                  {charge.attributionWarning && <p role="alert" className="mt-1 text-xs text-red-200">{charge.attributionWarning}</p>}
+                  {!disabled && collectable && <CheckoutRedeem
                     patientReference={patientReference}
                     chargeItemReference={`ChargeItem/${charge.id}`}
                     procedureReference={charge.procedureReference}
@@ -231,10 +244,10 @@ export function CollectPanel({
                       onPackageBalanceChanged?.();
                     }}
                   />}
-                  {!disabled && <CheckoutBankCredit
+                  {!disabled && collectable && <CheckoutBankCredit
                     patientReference={patientReference}
                     chargeItemReference={`ChargeItem/${charge.id}`}
-                    amountCents={charge.amountCents}
+                    amountCents={charge.openCents!}
                     creditBank={creditBank}
                     loading={creditBankLoading}
                     loadError={creditBankError}
@@ -371,7 +384,7 @@ function ReceiptView({
         <p className="text-sm text-white/50">{tenderLabel(tender)} · Invoice/{receipt.result.invoiceId}</p>
       </header>
       <div className="flex-1 space-y-2 p-4">
-        {receipt.lines.map((line) => <div key={line.id} className="flex justify-between border-b border-white/10 py-2 text-sm"><span>{line.description}</span><span>{money(line.amountCents)}</span></div>)}
+        {receipt.lines.map((line) => <div key={line.id} className="flex justify-between border-b border-white/10 py-2 text-sm"><span>{line.description}</span><span>{money(line.openCents ?? 0)}</span></div>)}
       </div>
       <footer className="flex justify-end gap-2 border-t border-white/10 p-4">
         <button type="button" disabled={!footer.ready} onClick={print} className="rounded border border-white/15 px-4 py-2 disabled:opacity-40">Print receipt</button>
@@ -415,15 +428,19 @@ function receiptSummary(
   tender: CollectTender,
   receipt: { result: CollectPanelResult; lines: OpenChargeLine[] },
 ): FinancialSummary {
-  const lines = receipt.lines.map((line) => ({
-    description: line.description,
-    ...(line.code ? { code: line.code } : {}),
-    quantity: line.quantity ?? 1,
-    feeCents: line.feeCents ?? line.amountCents,
-    ...(line.discount ? { discount: line.discount } : {}),
-    taxCents: line.taxCents ?? 0,
-    patientBalanceCents: line.amountCents,
-  }));
+  const lines = receipt.lines.map((line) => {
+    const collectedCents = line.openCents ?? 0;
+    const collectingOriginalAmount = collectedCents === line.amountCents;
+    return {
+      description: line.description,
+      ...(line.code ? { code: line.code } : {}),
+      quantity: collectingOriginalAmount ? (line.quantity ?? 1) : 1,
+      feeCents: collectingOriginalAmount ? (line.feeCents ?? collectedCents) : collectedCents,
+      ...(collectingOriginalAmount && line.discount ? { discount: line.discount } : {}),
+      taxCents: collectingOriginalAmount ? (line.taxCents ?? 0) : 0,
+      patientBalanceCents: collectedCents,
+    };
+  });
   const chargesSubtotalCents = lines.reduce((sum, line) => sum + line.feeCents, 0);
   const discountTotalCents = lines.reduce((sum, line) => sum + (line.discount?.amountCents ?? 0), 0);
   const taxTotalCents = lines.reduce((sum, line) => sum + line.taxCents, 0);
@@ -452,4 +469,9 @@ function receiptSummary(
 
 function tenderLabel(tender: CollectTender): string {
   return TENDERS.find((entry) => entry.code === tender)?.label ?? tender;
+}
+
+function isCollectableCharge(charge: OpenChargeLine): boolean {
+  return charge.openCents !== null && charge.openCents > 0 &&
+    charge.ambiguityReason === undefined && charge.attributionWarning === undefined;
 }

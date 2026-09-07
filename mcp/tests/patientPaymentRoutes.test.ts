@@ -17,7 +17,7 @@ test("all patient-payment HTTP routes reach their handlers", async () => {
       ["GET", "/payments/credit/unapplied?patientReference=Patient%2Fpatient-1", 200, undefined],
       ["GET", "/payments/reconciliations?patientReference=Patient%2Fpatient-1", 200, undefined],
       ["GET", "/payments/patient/Patient%2Fpatient-1/open-charges", 200, undefined],
-      ["POST", "/payments/collect", 400, /patientReference/],
+      ["POST", "/payments/collect", 400, /requestId/],
     ];
     for (const [method, path, status, error] of cases) {
       const response = await call(fixture.baseUrl, method, path, "Bearer good");
