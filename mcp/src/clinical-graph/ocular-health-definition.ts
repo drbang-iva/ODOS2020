@@ -115,10 +115,10 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     priority: [
       sunDerivedGradedFinding("cells", "cells", [
         "Trace (1–5)",
-        "1+ (6–15 cells)",
-        "2+ (16–25 cells)",
-        "3+ (26–50 cells)",
-        "4+ (>50 cells)",
+        "1+ (6–15)",
+        "2+ (16–25)",
+        "3+ (26–50)",
+        "4+ (>50)",
       ]),
       sunDerivedGradedFinding("flare", "flare", [
         "1+ (faint)",

@@ -957,10 +957,10 @@ test("anterior chamber cells and flare expose the operator-adapted SUN-derived o
   const expected = {
     cells: [
       "Trace (1–5)",
-      "1+ (6–15 cells)",
-      "2+ (16–25 cells)",
-      "3+ (26–50 cells)",
-      "4+ (>50 cells)",
+      "1+ (6–15)",
+      "2+ (16–25)",
+      "3+ (26–50)",
+      "4+ (>50)",
     ],
     flare: [
       "1+ (faint)",
@@ -1001,7 +1001,7 @@ test("anterior chamber cell and flare grades round-trip without setting the sibl
     valueType?: string;
   }>).find((field) => field.valueType === "multi-select");
   assert.ok(findingField?.localCode);
-  const cellGrade = "2+ (16–25 cells)";
+  const cellGrade = "2+ (16–25)";
   const flareGrade = "1+ (faint)";
 
   const capture = await handleCustomSectionCaptureRequest(
