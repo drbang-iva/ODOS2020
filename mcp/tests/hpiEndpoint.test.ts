@@ -497,7 +497,7 @@ test("a complaint-backed hpi_ros capture makes the exam overview report History 
   const projection = buildExamOverviewProjection({
     encounterReference: "Encounter/e1",
     patientReference: "Patient/p1",
-    visitTypeCategoryId: "comprehensive",
+    visitTypeCategoryId: "exams",
     definitions: [buildHpiFindingDefinition({
       source: "manual",
       recordedAt: "1970-01-01T00:00:00.000Z",

@@ -36,6 +36,14 @@ const CATEGORIES: PersistedVisitTypeConfig = {
   ],
 };
 
+const STARTER_CATEGORIES: PersistedVisitTypeConfig = {
+  categories: [
+    { id: "exams", label: "Exams", order: 0 },
+    { id: "contact-lens", label: "Contact Lens", order: 1 },
+    { id: "medical", label: "Medical", order: 2 },
+  ],
+};
+
 function visitType(
   id: string,
   name: string,
@@ -539,10 +547,10 @@ test("both starter controls stage with zero writes and Save preserves the existi
         (category: { id: string }) => category.id,
       ) ?? []
     ),
-    ["comprehensive", "dry-eye", "myopia-management", "diagnostic-only"],
+    ["exams", "contact-lens", "medical"],
   );
-  assert.equal(visitTypes.length, 10);
-  assert.equal(new Set(visitTypes.map(visitTypeCode)).size, 10);
+  assert.equal(visitTypes.length, 9);
+  assert.equal(new Set(visitTypes.map(visitTypeCode)).size, 9);
   act(() => renderer.unmount());
 });
 
@@ -552,7 +560,7 @@ test("a failed starter commit reports the exact boundary and retry creates each 
   await act(async () => {
     renderer = create(
       <VisitTypeSettingsReady
-        config={CATEGORIES}
+        config={STARTER_CATEGORIES}
         canWrite
         client={fixture.client as VisitTypeSettingsClient}
         initialVisitTypes={[]}
@@ -574,7 +582,7 @@ test("a failed starter commit reports the exact boundary and retry creates each 
   assert.equal(fixture.successfulVisitTypeCreateCodes.length, 3);
   assert.match(
     JSON.stringify(renderer.toJSON()),
-    /Visit type save failed after 3 of 10 changes were applied.*7 changes were not attempted.*Re-run Save/,
+    /Visit type save failed after 3 of 9 changes were applied.*6 changes were not attempted.*Re-run Save/,
   );
 
   await act(async () => {
@@ -582,11 +590,11 @@ test("a failed starter commit reports the exact boundary and retry creates each 
     await new Promise((resolve) => setImmediate(resolve));
   });
 
-  assert.equal(fixture.successfulVisitTypeCreateCodes.length, 10);
-  assert.equal(new Set(fixture.successfulVisitTypeCreateCodes).size, 10);
+  assert.equal(fixture.successfulVisitTypeCreateCodes.length, 9);
+  assert.equal(new Set(fixture.successfulVisitTypeCreateCodes).size, 9);
   assert.equal(
     fixture.resources.filter((resource) => resource.resourceType === "HealthcareService").length,
-    10,
+    9,
   );
   assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /Unsaved settings changes/);
   act(() => renderer.unmount());
@@ -601,7 +609,7 @@ test("retry reconciles an unknown create outcome before issuing another starter 
   await act(async () => {
     renderer = create(
       <VisitTypeSettingsReady
-        config={CATEGORIES}
+        config={STARTER_CATEGORIES}
         canWrite
         client={fixture.client as VisitTypeSettingsClient}
         initialVisitTypes={[]}
@@ -623,11 +631,11 @@ test("retry reconciles an unknown create outcome before issuing another starter 
     button(renderer, "Save").props.onClick();
     await new Promise((resolve) => setImmediate(resolve));
   });
-  assert.equal(fixture.successfulVisitTypeCreateCodes.length, 10);
-  assert.equal(new Set(fixture.successfulVisitTypeCreateCodes).size, 10);
+  assert.equal(fixture.successfulVisitTypeCreateCodes.length, 9);
+  assert.equal(new Set(fixture.successfulVisitTypeCreateCodes).size, 9);
   assert.equal(
     fixture.resources.filter((resource) => resource.resourceType === "HealthcareService").length,
-    10,
+    9,
   );
   act(() => renderer.unmount());
 });
@@ -657,7 +665,7 @@ test("category and visit-type failures identify which write group was applied", 
   });
   assert.match(
     JSON.stringify(renderer.toJSON()),
-    /Category settings saved.*Visit type save failed after 3 of 10 changes were applied/,
+    /Category settings saved.*Visit type save failed after 3 of 9 changes were applied/,
   );
   assert.equal(
     visitFailure.resources.filter((resource) => resource.resourceType === "Basic").length,

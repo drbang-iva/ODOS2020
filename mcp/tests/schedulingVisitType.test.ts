@@ -87,7 +87,7 @@ test("color defaults to the discipline's primary band color when the operator om
 test("eligible resources ride as repeating odos-eligible-resource valueReference extensions", () => {
   const hs = buildVisitType({
     code: "special-testing",
-    name: "Special Testing",
+    name: "Testing Visit",
     discipline: "eyecare",
     durationMinutes: 30,
     color: "#cc88ff",
@@ -164,6 +164,29 @@ test("the default catalog filters by clinic mode — modularity exercised at the
   assert.equal(combined.length, eyecareOnly.length + aestheticsOnly.length);
   assert.ok(eyecareOnly.every((hs) => visitTypeDiscipline(hs) === "eyecare"));
   assert.ok(aestheticsOnly.every((hs) => visitTypeDiscipline(hs) === "aesthetics"));
+});
+
+test("the starter catalog assigns the accepted scheduling groups and retires payer-named Medicaid", () => {
+  const catalog = defaultVisitTypeCatalog("both");
+  assert.deepEqual(
+    catalog.map((visitType) => ({
+      code: visitTypeCode(visitType),
+      name: visitType.name,
+      category: visitTypeCategory(visitType)?.code,
+      durationMinutes: visitTypeDurationMinutes(visitType),
+    })),
+    [
+      { code: "routine-exam-new", name: "Routine Exam (New)", category: "exams", durationMinutes: 30 },
+      { code: "routine-exam-established", name: "Routine Exam (Established)", category: "exams", durationMinutes: 30 },
+      { code: "contact-lens-exam", name: "Contact Lens Exam", category: "contact-lens", durationMinutes: 30 },
+      { code: "contact-lens-follow-up", name: "Contact Lens Follow-Up", category: "contact-lens", durationMinutes: 15 },
+      { code: "office-visit", name: "Office Visit (Medical)", category: "medical", durationMinutes: 20 },
+      { code: "special-testing", name: "Testing Visit", category: "medical", durationMinutes: 20 },
+      { code: "aesthetics-consult", name: "Aesthetics Consult", category: undefined, durationMinutes: 30 },
+      { code: "aesthetics-treatment", name: "Aesthetics Treatment", category: undefined, durationMinutes: 60 },
+      { code: "aesthetics-follow-up", name: "Aesthetics Follow-Up", category: undefined, durationMinutes: 15 },
+    ],
+  );
 });
 
 test("the eyecare catalog resolves the shipped contact-lens visit types", () => {

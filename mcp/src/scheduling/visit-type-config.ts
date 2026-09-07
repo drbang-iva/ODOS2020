@@ -18,10 +18,9 @@ export interface PersistedVisitTypeConfig {
 }
 
 export const DEFAULT_VISIT_TYPE_CATEGORIES: VisitTypeCategoryConfig[] = [
-  { id: "comprehensive", label: "Comprehensive", order: 0 },
-  { id: "dry-eye", label: "Dry Eye", order: 1 },
-  { id: "myopia-management", label: "Myopia Management", order: 2 },
-  { id: "diagnostic-only", label: "Diagnostic-Only", order: 3 },
+  { id: "exams", label: "Exams", order: 0 },
+  { id: "contact-lens", label: "Contact Lens", order: 1 },
+  { id: "medical", label: "Medical", order: 2 },
 ];
 
 const KEBAB_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

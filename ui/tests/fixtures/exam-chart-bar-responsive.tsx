@@ -96,7 +96,7 @@ function Fixture() {
 const boardProjection = {
   encounterReference: "Encounter/synthetic-browser-proof",
   patientReference: "Patient/synthetic-browser-proof",
-  visitTypeCategoryId: "comprehensive",
+  visitTypeCategoryId: "exams",
   findings: [
     finding("eom-od", "entrance:eom", "entrance", "EOM", "OD", "normal"),
     finding("eom-os", "entrance:eom", "entrance", "EOM", "OS", "normal"),

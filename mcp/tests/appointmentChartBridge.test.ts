@@ -13,7 +13,6 @@ import {
   ODOS_VISIT_TYPE_SYSTEM,
   ODOS_VISION_COVERAGE_EXTENSION_URL,
 } from "../../ui/src/lib/scheduling.js";
-import { DEFAULT_VISIT_TYPE_CATEGORIES } from "../../ui/src/lib/visit-type-config.js";
 import {
   buildMedplumAccessPolicy,
   getRoleDeclaration,
@@ -72,15 +71,13 @@ test("omitting appointment context preserves the existing encounter shape and un
 });
 
 test("stand-alone visit type matches the complete CodeableConcept copied by the importer", () => {
-  const category = DEFAULT_VISIT_TYPE_CATEGORIES.find((candidate) => candidate.id === "dry-eye");
-  assert.ok(category);
   const migratedEncounterTypeFixture = {
     coding: [{
       system: ODOS_VISIT_TYPE_SYSTEM,
-      code: category.id,
-      display: category.label,
+      code: "routine-exam-new",
+      display: "Routine Exam (New)",
     }],
-    text: category.label,
+    text: "Routine Exam (New)",
   };
   const bundle = buildStartEncounterCreateBundle({
     patientId: "patient-1",

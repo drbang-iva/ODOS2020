@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Basic, Bundle, CarePlan, Condition, Encounter, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
+import type { Appointment, Basic, Bundle, CarePlan, Condition, Encounter, HealthcareService, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import {
   DRY_EYE_AT_HOME_REGIMEN_INIT_PROTOCOL,
   DRY_EYE_EVALUATION_PROTOCOL,
@@ -656,7 +656,7 @@ test("sign cleanup requires clinical.sign at the handler boundary", async () => 
 test("a full eye exam creates a service-date annual, and the next full exam completes it without touching medical follow-up", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("annual-first", "routine-exam-established", "2026-01-31T15:00:00.000Z"),
+    ...annualEncounter("annual-first", "routine-exam-established", "2026-01-31T15:00:00.000Z"),
     ...fullExamObservations("annual-first"),
     {
       resourceType: "ServiceRequest",
@@ -685,7 +685,7 @@ test("a full eye exam creates a service-date annual, and the next full exam comp
   assert.equal(annuals[0]?.reasonCode?.[0]?.text, "Annual eye examination");
 
   fhir.resources.push(
-    annualEncounter("annual-second", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
+    ...annualEncounter("annual-second", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
     ...fullExamObservations("annual-second"),
   );
   const second = await handleProtocolSignCleanupRequest(deps, {
@@ -723,9 +723,9 @@ test("a full eye exam creates a service-date annual, and the next full exam comp
 test("re-signing an older full exam does not replace the newer active annual", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("historical-first", "routine-exam-established", "2026-01-15T15:00:00.000Z"),
+    ...annualEncounter("historical-first", "routine-exam-established", "2026-01-15T15:00:00.000Z"),
     ...fullExamObservations("historical-first"),
-    annualEncounter("historical-second", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
+    ...annualEncounter("historical-second", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
     ...fullExamObservations("historical-second"),
   );
   const deps = { ...endpointDeps(fhir), feeScheduleFhir: fhir as never };
@@ -755,10 +755,10 @@ test("re-signing an older full exam does not replace the newer active annual", a
 test("re-signing a completed source reconciles separate active annual duplicates", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("completed-source", "routine-exam-established", "2026-01-15T15:00:00.000Z"),
+    ...annualEncounter("completed-source", "routine-exam-established", "2026-01-15T15:00:00.000Z"),
     ...fullExamObservations("completed-source"),
-    annualEncounter("duplicate-older", "routine-exam-established", "2026-04-15T15:00:00.000Z"),
-    annualEncounter("duplicate-newer", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
+    ...annualEncounter("duplicate-older", "routine-exam-established", "2026-04-15T15:00:00.000Z"),
+    ...annualEncounter("duplicate-newer", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
     { ...annualServiceRequest("completed-source-annual", "Encounter/completed-source", "2027-01-15"), status: "completed" },
     annualServiceRequest("duplicate-older-annual", "Encounter/duplicate-older", "2027-04-15"),
     annualServiceRequest("duplicate-newer-annual", "Encounter/duplicate-newer", "2027-08-20"),
@@ -779,9 +779,9 @@ test("re-signing a completed source reconciles separate active annual duplicates
 test("late signing an older full exam keeps the annual from the latest service date", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("late-sign-older", "routine-exam-established", "2026-01-15T15:00:00.000Z"),
+    ...annualEncounter("late-sign-older", "routine-exam-established", "2026-01-15T15:00:00.000Z"),
     ...fullExamObservations("late-sign-older"),
-    annualEncounter("signed-first-newer", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
+    ...annualEncounter("signed-first-newer", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
     ...fullExamObservations("signed-first-newer"),
   );
   const deps = { ...endpointDeps(fhir), feeScheduleFhir: fhir as never };
@@ -807,8 +807,8 @@ test("late signing an older full exam keeps the annual from the latest service d
 test("an adjusted due date cannot override verified full-exam service chronology", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("adjusted-due-older", "routine-exam-established", "2026-01-15T15:00:00.000Z"),
-    annualEncounter("adjusted-due-newer", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
+    ...annualEncounter("adjusted-due-older", "routine-exam-established", "2026-01-15T15:00:00.000Z"),
+    ...annualEncounter("adjusted-due-newer", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
     ...fullExamObservations("adjusted-due-newer"),
     annualServiceRequest("adjusted-due-annual", "Encounter/adjusted-due-older", "2028-01-15"),
   );
@@ -826,9 +826,9 @@ test("an adjusted due date cannot override verified full-exam service chronology
 test("same-day annual reconciliation keeps the encounter with the latest service time", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("same-day-earlier", "routine-exam-established", "2026-08-20T09:00:00-04:00"),
+    ...annualEncounter("same-day-earlier", "routine-exam-established", "2026-08-20T09:00:00-04:00"),
     ...fullExamObservations("same-day-earlier"),
-    annualEncounter("same-day-later", "routine-exam-established", "2026-08-20T15:00:00-04:00"),
+    ...annualEncounter("same-day-later", "routine-exam-established", "2026-08-20T15:00:00-04:00"),
     ...fullExamObservations("same-day-later"),
   );
   const deps = { ...endpointDeps(fhir), feeScheduleFhir: fhir as never };
@@ -850,9 +850,9 @@ test("same-day annual reconciliation keeps the encounter with the latest service
 test("concurrent full-exam signing converges to one annual from the latest service time", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("concurrent-earlier", "routine-exam-established", "2026-08-20T09:00:00-04:00"),
+    ...annualEncounter("concurrent-earlier", "routine-exam-established", "2026-08-20T09:00:00-04:00"),
     ...fullExamObservations("concurrent-earlier"),
-    annualEncounter("concurrent-later", "routine-exam-established", "2026-08-20T15:00:00-04:00"),
+    ...annualEncounter("concurrent-later", "routine-exam-established", "2026-08-20T15:00:00-04:00"),
     ...fullExamObservations("concurrent-later"),
   );
   fhir.delayFirstTwoAnnualSearches = true;
@@ -878,7 +878,7 @@ test("concurrent full-exam signing converges to one annual from the latest servi
 test("annual due date preserves the Encounter service calendar day across timezone offsets", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("offset-service-date", "routine-exam-established", "2026-01-31T23:30:00-05:00"),
+    ...annualEncounter("offset-service-date", "routine-exam-established", "2026-01-31T23:30:00-05:00"),
     ...fullExamObservations("offset-service-date"),
   );
 
@@ -893,9 +893,9 @@ test("annual due date preserves the Encounter service calendar day across timezo
 test("a failed stale-annual closure annotates that duplicate when a retry can write it", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("closure-newer", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
+    ...annualEncounter("closure-newer", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
     ...fullExamObservations("closure-newer"),
-    annualEncounter("closure-older", "routine-exam-established", "2026-01-15T15:00:00.000Z"),
+    ...annualEncounter("closure-older", "routine-exam-established", "2026-01-15T15:00:00.000Z"),
     ...fullExamObservations("closure-older"),
   );
   const deps = { ...endpointDeps(fhir), feeScheduleFhir: fhir as never };
@@ -920,7 +920,7 @@ test("a failed stale-annual closure annotates that duplicate when a retry can wr
 test("an annual with unavailable Encounter provenance cannot abort reconciliation", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("missing-provenance-current", "routine-exam-established", "2026-07-18T15:00:00.000Z"),
+    ...annualEncounter("missing-provenance-current", "routine-exam-established", "2026-07-18T15:00:00.000Z"),
     ...fullExamObservations("missing-provenance-current"),
     annualServiceRequest("missing-provenance-annual", "Encounter/deleted-source", "2028-01-01"),
   );
@@ -941,7 +941,7 @@ test("an annual with unavailable Encounter provenance cannot abort reconciliatio
 test("a realistic post-cataract office visit with refraction and examined anterior segment creates no annual", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("post-cataract", "office-visit", "2026-07-18T15:00:00.000Z"),
+    ...annualEncounter("post-cataract", "office-visit", "2026-07-18T15:00:00.000Z"),
     ...fullExamObservations("post-cataract"),
   );
 
@@ -955,10 +955,10 @@ test("a realistic post-cataract office visit with refraction and examined anteri
   assert.equal(annualRequests(fhir).length, 0);
 });
 
-test("a contact-lens exam with manifest refraction and examined ocular content creates an annual", async () => {
+test("a contact-lens booking with manifest refraction and examined ocular content does not create an annual", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("contact-lens-comprehensive", "contact-lens-exam", "2026-07-18T15:00:00.000Z"),
+    ...annualEncounter("contact-lens-comprehensive", "contact-lens-exam", "2026-07-18T15:00:00.000Z"),
     refractionObservation("contact-lens-comprehensive", "MANIFEST"),
     ocularHealthObservation("contact-lens-comprehensive"),
   );
@@ -969,14 +969,64 @@ test("a contact-lens exam with manifest refraction and examined ocular content c
   );
 
   assert.equal(result.status, 200);
+  assert.equal("annualRecall" in (result.body as object), false);
+  assert.equal(annualRequests(fhir).length, 0);
+});
+
+test("annual recall follows an inactive renamed service's Exams category without enumerating its code", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    ...appointmentBackedAnnualContext({
+      encounterId: "custom-exam",
+      visitTypeCode: "practice-custom-eye-visit",
+      visitTypeName: "Renamed by the practice",
+      categoryCode: "exams",
+      categoryLabel: "Exams",
+      active: false,
+      serviceDate: "2026-07-18T15:00:00.000Z",
+    }),
+    ...fullExamObservations("custom-exam"),
+  );
+
+  const result = await handleProtocolSignCleanupRequest(
+    { ...endpointDeps(fhir), feeScheduleFhir: fhir as never },
+    { authHeader: "Bearer test", params: { encounterId: "custom-exam" } },
+  );
+
+  assert.equal(result.status, 200);
   assert.equal(annualRequests(fhir).length, 1);
-  assert.equal(annualRequests(fhir)[0]?.occurrenceDateTime, "2027-07-18");
+});
+
+test("a stand-alone Encounter resolves its visit type through the HealthcareService Exams category", async () => {
+  const fhir = new EndpointFhir();
+  const service = appointmentBackedAnnualContext({
+    encounterId: "standalone-routine",
+    visitTypeCode: "practice-standalone-exam",
+    visitTypeName: "Practice stand-alone exam",
+    categoryCode: "exams",
+    categoryLabel: "Exams",
+    active: true,
+    serviceDate: "2026-07-18T15:00:00.000Z",
+  })[2];
+  fhir.resources.push(
+    legacyAnnualEncounter("standalone-routine", "practice-standalone-exam", "2026-07-18T15:00:00.000Z"),
+    service,
+    ...fullExamObservations("standalone-routine"),
+  );
+
+  const result = await handleProtocolSignCleanupRequest(
+    { ...endpointDeps(fhir), feeScheduleFhir: fhir as never },
+    { authHeader: "Bearer test", params: { encounterId: "standalone-routine" } },
+  );
+
+  assert.equal(result.status, 200);
+  assert.equal(annualRequests(fhir).length, 1);
 });
 
 test("hard gate: a historical Medicaid exam without an Appointment retains its annual recall", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("historical-medicaid-exam", "medicaid-exam", "2026-07-18T15:00:00.000Z"),
+    legacyAnnualEncounter("historical-medicaid-exam", "medicaid-exam", "2026-07-18T15:00:00.000Z"),
     ...fullExamObservations("historical-medicaid-exam"),
   );
 
@@ -992,7 +1042,7 @@ test("hard gate: a historical Medicaid exam without an Appointment retains its a
 test("a standalone contact-lens exam with only over-refraction creates no annual", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("contact-lens-standalone", "contact-lens-exam", "2026-07-18T15:00:00.000Z"),
+    ...annualEncounter("contact-lens-standalone", "contact-lens-exam", "2026-07-18T15:00:00.000Z"),
     refractionObservation("contact-lens-standalone", "OVER_REFRACTION"),
     ocularHealthObservation("contact-lens-standalone"),
   );
@@ -1010,7 +1060,7 @@ test("a standalone contact-lens exam with only over-refraction creates no annual
 test("autorefraction alone creates no annual at a full-exam visit type", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("autorefraction-only", "routine-exam-established", "2026-07-18T15:00:00.000Z"),
+    ...annualEncounter("autorefraction-only", "routine-exam-established", "2026-07-18T15:00:00.000Z"),
     refractionObservation("autorefraction-only", "AUTOREFRACTION"),
     ocularHealthObservation("autorefraction-only"),
   );
@@ -1035,7 +1085,7 @@ test("annual recall requires both refraction and an examined ocular component", 
   for (const [encounterId, observations] of cases) {
     const fhir = new EndpointFhir();
     fhir.resources.push(
-      annualEncounter(encounterId, "routine-exam-new", "2026-07-18T15:00:00.000Z"),
+      ...annualEncounter(encounterId, "routine-exam-new", "2026-07-18T15:00:00.000Z"),
       ...observations,
     );
     const result = await handleProtocolSignCleanupRequest(
@@ -1051,9 +1101,9 @@ test("annual recall requires both refraction and an examined ocular component", 
 test("annual closure failure stays observable without blocking encounter signing", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("closure-failure", "routine-exam-established", "2026-07-18T15:00:00.000Z"),
+    ...annualEncounter("closure-failure", "routine-exam-established", "2026-07-18T15:00:00.000Z"),
     ...fullExamObservations("closure-failure"),
-    annualEncounter("prior-full-exam", "routine-exam-established", "2025-08-01T15:00:00.000Z"),
+    ...annualEncounter("prior-full-exam", "routine-exam-established", "2025-08-01T15:00:00.000Z"),
     {
       ...annualServiceRequest("current-annual", "Encounter/closure-failure", "2027-07-18"),
       note: [{ text: "Existing annual note." }],
@@ -1098,9 +1148,9 @@ test("annual closure failure stays observable without blocking encounter signing
 test("annual closure annotation cannot reactivate a concurrently completed annual", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
-    annualEncounter("closure-race-current", "routine-exam-established", "2026-07-18T15:00:00.000Z"),
+    ...annualEncounter("closure-race-current", "routine-exam-established", "2026-07-18T15:00:00.000Z"),
     ...fullExamObservations("closure-race-current"),
-    annualEncounter("closure-race-prior", "routine-exam-established", "2025-07-18T15:00:00.000Z"),
+    ...annualEncounter("closure-race-prior", "routine-exam-established", "2025-07-18T15:00:00.000Z"),
     annualServiceRequest("closure-race-old-annual", "Encounter/closure-race-prior", "2026-07-18"),
   );
   fhir.failServiceRequestUpdateOnceIds.add("closure-race-old-annual");
@@ -1768,14 +1818,31 @@ test("protocol numeric findings require the explicit cup-disc ratio unit mapping
   assert.throws(() => protocolFindingObservation({ ...base, findingDefKey: "iop" }), /explicit unit mapping/);
 });
 
-type EndpointResource = Basic | Observation | ServiceRequest | CarePlan | Condition | Encounter;
+type EndpointResource = Appointment | Basic | Observation | ServiceRequest | CarePlan | Condition | Encounter | HealthcareService;
 
 const ANNUAL_TEST_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/odos-protocol-module";
 const ANNUAL_TEST_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/annual-recall-source";
 const OPHTHALMOLOGY_TEST_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/ophthalmology";
 const VISIT_TYPE_TEST_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/visit-type";
 
-function annualEncounter(id: string, visitTypeCode: string, serviceDate: string): Encounter {
+function annualEncounter(id: string, visitTypeCode: string, serviceDate: string): [Encounter, Appointment, HealthcareService] {
+  const category = visitTypeCode.startsWith("routine-exam")
+    ? { code: "exams", label: "Exams" }
+    : visitTypeCode.startsWith("contact-lens")
+      ? { code: "contact-lens", label: "Contact Lens" }
+      : { code: "medical", label: "Medical" };
+  return appointmentBackedAnnualContext({
+    encounterId: id,
+    visitTypeCode,
+    visitTypeName: visitTypeCode,
+    categoryCode: category.code,
+    categoryLabel: category.label,
+    active: true,
+    serviceDate,
+  });
+}
+
+function legacyAnnualEncounter(id: string, visitTypeCode: string, serviceDate: string): Encounter {
   return {
     resourceType: "Encounter",
     id,
@@ -1785,6 +1852,50 @@ function annualEncounter(id: string, visitTypeCode: string, serviceDate: string)
     type: [{ coding: [{ system: VISIT_TYPE_TEST_CODE_SYSTEM, code: visitTypeCode }] }],
     period: { start: serviceDate },
   };
+}
+
+function appointmentBackedAnnualContext(input: {
+  encounterId: string;
+  visitTypeCode: string;
+  visitTypeName: string;
+  categoryCode: string;
+  categoryLabel: string;
+  active: boolean;
+  serviceDate: string;
+}): [Encounter, Appointment, HealthcareService] {
+  const appointmentId = `appointment-${input.encounterId}`;
+  return [
+    {
+      resourceType: "Encounter",
+      id: input.encounterId,
+      status: "in-progress",
+      class: { code: "AMB" },
+      subject: { reference: "Patient/patient-annual" },
+      appointment: [{ reference: `Appointment/${appointmentId}` }],
+      period: { start: input.serviceDate },
+    },
+    {
+      resourceType: "Appointment",
+      id: appointmentId,
+      status: "fulfilled",
+      participant: [{ actor: { reference: "Patient/patient-annual" }, status: "accepted" }],
+      serviceType: [{ coding: [{ system: VISIT_TYPE_TEST_CODE_SYSTEM, code: input.visitTypeCode }] }],
+    },
+    {
+      resourceType: "HealthcareService",
+      id: `service-${input.encounterId}`,
+      active: input.active,
+      name: input.visitTypeName,
+      type: [{ coding: [{ system: VISIT_TYPE_TEST_CODE_SYSTEM, code: input.visitTypeCode }] }],
+      category: [{
+        coding: [{
+          system: "https://odos2020.com/fhir/CodeSystem/visit-type-category",
+          code: input.categoryCode,
+          display: input.categoryLabel,
+        }],
+      }],
+    },
+  ];
 }
 
 function refractionObservation(encounterId: string, refractionType = "MANIFEST"): Observation {

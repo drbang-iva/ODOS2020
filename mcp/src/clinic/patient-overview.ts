@@ -39,6 +39,7 @@ import {
   MIGRATION_TAG_SYSTEM,
 } from "../legacy-import/access-policy.js";
 import { practiceDate } from "./clinic-summary.js";
+import { isEyeExamVisit } from "./eye-exam-visit.js";
 
 export const PATIENT_STICKY_NOTE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/patient-sticky-note";
 export const PATIENT_STICKY_NOTE_CODE = "patient-sticky-note";
@@ -145,7 +146,6 @@ export type OverviewFhir = Pick<MedplumClient, "read" | "search" | "searchUrl" |
 export class StickyNoteValidationError extends Error {}
 export class PatientOverviewVisitNotFoundError extends Error {}
 
-const EYE_EXAM_VISIT_CODES = ["routine-exam-new", "routine-exam-established", "medicaid-exam"];
 const ENCOUNTER_LEDGER_CONDITION_CATEGORIES = ["encounter-diagnosis", "problem-list-item"]
   .map((code) => `${FHIR_CONDITION_CATEGORY_CODE_SYSTEM}|${code}`)
   .join(",");
@@ -166,9 +166,7 @@ export async function loadPatientOverview(
     _count: "100",
     _sort: "-date",
   };
-  if (filter === "eye-exams") {
-    encounterParams.type = EYE_EXAM_VISIT_CODES.map((code) => `${ODOS_VISIT_TYPE_SYSTEM}|${code}`).join(",");
-  } else if (filter === "office-visits") {
+  if (filter === "office-visits") {
     encounterParams.type = `${ODOS_VISIT_TYPE_SYSTEM}|office-visit`;
   }
 
@@ -244,10 +242,17 @@ export async function loadPatientOverview(
     delete encounterParams.type;
     encounterParams._id = diagnosisEncounterIds.join(",");
   }
-  const encounters = await searchAll<Encounter>(fhir, "Encounter", encounterParams);
+  const candidateEncounters = await searchAll<Encounter>(fhir, "Encounter", encounterParams);
+  const encounters = filter === "eye-exams" && !diagnosisEncounterIds
+    ? (await Promise.all(candidateEncounters.map(async (encounter) =>
+        await isEyeExamVisit(encounter, undefined, fhir) ? encounter : undefined
+      ))).filter((encounter): encounter is Encounter => encounter !== undefined)
+    : candidateEncounters;
   const summaryEncounters = filter === "all" && !diagnosisEncounterIds
     ? encounters
-    : await searchAll<Encounter>(fhir, "Encounter", { patient: patientId, _count: "100", _sort: "-date" });
+    : filter === "eye-exams" && !diagnosisEncounterIds
+      ? candidateEncounters
+      : await searchAll<Encounter>(fhir, "Encounter", { patient: patientId, _count: "100", _sort: "-date" });
   const encounterReferenceList = encounters.flatMap((encounter) =>
     encounter.id ? [`Encounter/${encounter.id}`] : [],
   );

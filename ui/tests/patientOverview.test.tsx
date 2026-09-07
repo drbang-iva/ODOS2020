@@ -398,7 +398,7 @@ test("Start today's visit assigns the provider, starts the encounter, and opens 
   });
   act(() => renderer.root.findAllByType(OdosSelect).find((select) =>
     select.props.ariaLabel === "Visit type"
-  )!.props.onChange("dry-eye"));
+  )!.props.onChange("exams"));
   const startButton = renderer.root.findAllByType("button").find((button) =>
     button.children.join("") === "Start today's visit →"
   );
@@ -413,10 +413,10 @@ test("Start today's visit assigns the provider, starts the encounter, and opens 
   assert.deepEqual(createdEncounter?.type, [{
     coding: [{
       system: ODOS_VISIT_TYPE_SYSTEM,
-      code: "dry-eye",
-      display: "Dry Eye",
+      code: "exams",
+      display: "Exams",
     }],
-    text: "Dry Eye",
+    text: "Exams",
   }]);
   assert.deepEqual(useViewState.getState().view, {
     kind: "encounter",

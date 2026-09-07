@@ -77,7 +77,7 @@ import { EncounterCharting } from "../src/scenes/EncounterCharting";
 const PROJECTION: ExamOverviewProjection = {
   encounterReference: "Encounter/exam-1",
   patientReference: "Patient/patient-1",
-  visitTypeCategoryId: "comprehensive",
+  visitTypeCategoryId: "exams",
   findings: [
     {
       observationReference: "Observation/iop-os",
@@ -195,7 +195,7 @@ const PROJECTION: ExamOverviewProjection = {
 const BY_EXCEPTION_PROJECTION = {
   encounterReference: "Encounter/exam-1",
   patientReference: "Patient/patient-1",
-  visitTypeCategoryId: "comprehensive",
+  visitTypeCategoryId: "exams",
   findings: [
     {
       observationReference: "Observation/eom-od",
@@ -4099,7 +4099,7 @@ function zeroFindingComprehensiveProjection(): ExamOverviewProjection {
   return buildExamOverviewProjection({
     encounterReference: "Encounter/exam-1",
     patientReference: "Patient/patient-1",
-    visitTypeCategoryId: "comprehensive",
+    visitTypeCategoryId: "exams",
     definitions: [],
     currentObservations: [],
     priorObservationCandidates: [],

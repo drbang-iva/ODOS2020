@@ -218,7 +218,7 @@ test("setup wizard creates canonical role policies and binds one first-admin com
     assert.equal(schedulingConfig.officeBySchedule["Schedule/schedule-1"], "main");
 
     assert.deepEqual(firstRun.auditRows.map((row) => row.eventType), [
-      ...Array.from({ length: 21 }, () => "create"),
+      ...Array.from({ length: 20 }, () => "create"),
       "projectmembership-lifecycle",
     ]);
     for (const row of firstRun.auditRows) {
@@ -287,7 +287,6 @@ test("setup persists the default visit-type catalog and category config", async 
       "routine-exam-established",
       "contact-lens-exam",
       "contact-lens-follow-up",
-      "medicaid-exam",
       "office-visit",
       "special-testing",
       "aesthetics-consult",
@@ -296,11 +295,11 @@ test("setup persists the default visit-type catalog and category config", async 
     ]);
     assert.deepEqual(
       parseVisitTypeConfig(adapter.visitTypeConfigs[0]!).categories.map((category) => category.id),
-      ["comprehensive", "dry-eye", "myopia-management", "diagnostic-only"],
+      ["exams", "contact-lens", "medical"],
     );
     assert.equal(
       result.auditRows.filter((row) => row.resourceType === "HealthcareService" && row.eventType === "create").length,
-      10,
+      9,
     );
     assert.equal(
       result.auditRows.filter((row) =>
@@ -340,7 +339,7 @@ test("a setup re-run is a no-op and preserves edited or deactivated visit-type d
     await runSetupPractice({ adapter, config, skipInteractiveBoundaryCheck: true });
     const preserved = adapter.visitTypes.find((visitType) => visitTypeCode(visitType) === "routine-exam-new");
     assert.equal(preserved, existing);
-    assert.equal(adapter.visitTypes.length, 10);
+    assert.equal(adapter.visitTypes.length, 9);
     assert.equal(adapter.visitTypes.filter((visitType) => visitTypeCode(visitType) === "routine-exam-new").length, 1);
     assert.equal(preserved.name, "Practice-edited comprehensive visit");
     assert.equal(preserved.active, false);
@@ -349,7 +348,7 @@ test("a setup re-run is a no-op and preserves edited or deactivated visit-type d
     const secondRun = await runSetupPractice({ adapter, config, skipInteractiveBoundaryCheck: true });
 
     assert.equal(secondRun.noOp, true);
-    assert.equal(adapter.visitTypes.length, 10);
+    assert.equal(adapter.visitTypes.length, 9);
     assert.equal(preserved.name, "Practice-edited comprehensive visit");
     assert.equal(preserved.active, false);
     assert.equal(secondRun.auditRows.length, 1);
@@ -399,7 +398,7 @@ test("setup reuses a pre-existing canonical Provider policy while creating Staff
       "Location",
       "Schedule",
       "Basic",
-      ...Array.from({ length: 10 }, () => "HealthcareService"),
+      ...Array.from({ length: 9 }, () => "HealthcareService"),
       "Basic",
       "AccessPolicy",
       "AccessPolicy",

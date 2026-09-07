@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type {
+  Appointment,
   Bundle,
   CarePlan,
   ChargeItem,
@@ -37,7 +38,7 @@ import {
   verificationStatusConcept,
 } from "../src/fhir/condition.js";
 import { buildEyeBodyStructure } from "../src/fhir/ophthalmology/bodyStructure.js";
-import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
+import { buildVisitType, ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 import { DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM } from "../src/fhir/dryEyeProcedure.js";
@@ -443,8 +444,8 @@ test("condition summary is unchanged when the visit ledger is filtered to eye ex
   fake.add(encounter("office-newest", "2026-06-01T14:00:00Z", "office-visit"));
   fake.add(encounter("office-second", "2026-05-01T14:00:00Z", "office-visit"));
   fake.add(encounter("office-third", "2026-04-01T14:00:00Z", "office-visit"));
-  fake.add(encounter("eye-newest", "2025-03-01T14:00:00Z", "routine-exam-new"));
-  fake.add(encounter("eye-second", "2025-02-01T14:00:00Z", "routine-exam-established"));
+  addCategorizedEncounter(fake, "eye-newest", "2025-03-01T14:00:00Z", "routine-exam-new", "exams", "Exams");
+  addCategorizedEncounter(fake, "eye-second", "2025-02-01T14:00:00Z", "routine-exam-established", "exams", "Exams");
   fake.add(encounter("eye-third", "2025-01-01T14:00:00Z", "medicaid-exam"));
   fake.add(condition("diabetes", "Type 2 diabetes mellitus", {
     category: "problem-list-item", encounterId: "office-newest", code: "DX-DIABETES",
@@ -466,6 +467,43 @@ test("condition summary is unchanged when the visit ledger is filtered to eye ex
   assert.deepEqual(eyeExams.snapshot.medicalConditions, unfiltered.snapshot.medicalConditions);
   assert.deepEqual(eyeExams.snapshot.ocularHistory, unfiltered.snapshot.ocularHistory);
   assert.deepEqual(eyeExams.visits.map((visit) => visit.encounterId), ["eye-newest", "eye-second", "eye-third"]);
+});
+
+test("eye-exam filtering follows the appointment category and retains only the shared Medicaid legacy case", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  const categoryExam = encounter("category-exam", "2026-06-01T14:00:00Z");
+  categoryExam.type = undefined;
+  categoryExam.appointment = [{ reference: "Appointment/category-exam" }];
+  fake.add(categoryExam);
+  fake.add({
+    resourceType: "Appointment",
+    id: "category-exam",
+    status: "fulfilled",
+    participant: [{ actor: { reference: "Patient/p1" }, status: "accepted" }],
+    serviceType: [{ coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: "practice-custom-eye-visit" }] }],
+  } satisfies Appointment);
+  const renamedInactiveExam = buildVisitType({
+    code: "practice-custom-eye-visit",
+    name: "Renamed by the practice",
+    discipline: "eyecare",
+    categoryCode: "exams",
+    categoryLabel: "Exams",
+    durationMinutes: 30,
+    active: false,
+  });
+  renamedInactiveExam.id = "service-category-exam";
+  fake.add(renamedInactiveExam);
+  fake.add(encounter("legacy-medicaid", "2025-06-01T14:00:00Z", "medicaid-exam"));
+  fake.add(encounter("contact-lens", "2024-06-01T14:00:00Z", "contact-lens-exam"));
+
+  const overview = await loadPatientOverview(fake as never, "p1", { filter: "eye-exams" });
+
+  assert.deepEqual(overview.visits.map((visit) => visit.encounterId), ["category-exam", "legacy-medicaid"]);
+  assert.equal(
+    fake.searches.find((search) => search.resourceType === "Encounter")?.params.type,
+    undefined,
+  );
 });
 
 test("condition summary is unchanged when the visit ledger is filtered by diagnosis", async () => {
@@ -809,7 +847,7 @@ test("patient overview route stays available with more than 1000 other-patient P
 test("empty snapshot stays honestly empty and visit filters issue distinct FHIR searches", async () => {
   const fake = new FakeFhir();
   fake.add(patient());
-  fake.add(encounter("eye-visit", "2026-06-01T14:00:00Z", "routine-exam-new"));
+  addCategorizedEncounter(fake, "eye-visit", "2026-06-01T14:00:00Z", "routine-exam-new", "exams", "Exams");
   fake.add(encounter("office-visit", "2026-05-01T14:00:00Z", "office-visit"));
 
   const eye = await loadPatientOverview(fake as never, "p1", { filter: "eye-exams" });
@@ -818,7 +856,8 @@ test("empty snapshot stays honestly empty and visit filters issue distinct FHIR 
   });
   assert.deepEqual(eye.visits.map((visit) => visit.encounterId), ["eye-visit"]);
   assert.ok(fake.searches.some((row) => row.resourceType === "Encounter" && !row.params.type && !row.params._id));
-  assert.match(fake.searches.find((row) => row.resourceType === "Encounter" && row.params.type)?.params.type ?? "", /routine-exam-new/);
+  assert.equal(fake.searches.some((row) => row.resourceType === "Encounter" && row.params.type), false);
+  assert.ok(fake.searches.some((row) => row.resourceType === "HealthcareService"));
 
   fake.searches.length = 0;
   const office = await loadPatientOverview(fake as never, "p1", { filter: "office-visits" });
@@ -1259,6 +1298,37 @@ function encounter(id: string, start: string, visitCode?: string): Encounter {
     participant: [{ individual: { display: "Dr. Clinician" } }],
     serviceProvider: { display: "Practice location" },
   };
+}
+
+function addCategorizedEncounter(
+  fake: FakeFhir,
+  id: string,
+  start: string,
+  visitCode: string,
+  categoryCode: string,
+  categoryLabel: string,
+): void {
+  const categorized = encounter(id, start);
+  categorized.type = undefined;
+  categorized.appointment = [{ reference: `Appointment/${id}` }];
+  fake.add(categorized);
+  fake.add({
+    resourceType: "Appointment",
+    id,
+    status: "fulfilled",
+    participant: [{ actor: { reference: "Patient/p1" }, status: "accepted" }],
+    serviceType: [{ coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: visitCode }] }],
+  } satisfies Appointment);
+  const service = buildVisitType({
+    code: visitCode,
+    name: visitCode,
+    discipline: "eyecare",
+    categoryCode,
+    categoryLabel,
+    durationMinutes: 30,
+  });
+  service.id = `service-${id}`;
+  fake.add(service);
 }
 
 function condition(id: string, name: string, options: { category: "problem-list-item" | "encounter-diagnosis"; bodySite?: string; encounterId?: string; code?: string }): Condition {

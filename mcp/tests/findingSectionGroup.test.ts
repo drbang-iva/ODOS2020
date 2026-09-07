@@ -20,6 +20,7 @@ import {
 import {
   FhirEncounterSectionOverrideStore,
   FhirFindingSectionGroupStore,
+  DRY_EYE_WORKUP_SECTION_GROUP,
   FindingSectionGroupAlreadyExistsError,
   FINDING_SECTION_GROUP_CODE,
   FINDING_SECTION_GROUP_CODE_SYSTEM,
@@ -33,6 +34,10 @@ import { buildSchedulingAppointment } from "../src/fhir/schedulingAppointment.js
 import { buildVisitType, ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 
 const AUTH = "Bearer good";
+
+test("the built-in dry-eye workup carries no visit-category program semantics", () => {
+  assert.deepEqual(DRY_EYE_WORKUP_SECTION_GROUP.defaultForVisitTypeCategories, []);
+});
 
 class MemoryFhir implements FindingSectionGroupFhirClient {
   readonly resources: Resource[] = [];

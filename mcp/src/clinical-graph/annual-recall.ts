@@ -1,9 +1,8 @@
 import { isDeepStrictEqual } from "node:util";
 import type { Bundle, Encounter, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
-import { resolveVisitTypeCategoryForEncounter } from "../clinic/clinic-summary.js";
+import { isEyeExamVisit } from "../clinic/eye-exam-visit.js";
 import { searchAll } from "../fhir-search.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
-import { ODOS_VISIT_TYPE_SYSTEM } from "../fhir/schedulingVisitType.js";
 import { normalizeObservationExamState } from "./exam-overview-projection.js";
 
 export const ANNUAL_RECALL_CODE_SYSTEM =
@@ -13,13 +12,6 @@ export const ANNUAL_RECALL_SOURCE_IDENTIFIER_SYSTEM =
 export const ANNUAL_RECALL_PATIENT_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/annual-recall-patient";
 
-const FULL_EXAM_VISIT_TYPE_CODES = new Set([
-  "comprehensive",
-  "routine-exam-new",
-  "routine-exam-established",
-  "medicaid-exam",
-  "contact-lens-exam",
-]);
 const PRIMARY_REFRACTION_TYPES = new Set(["MANIFEST", "CYCLOPLEGIC", "FINAL_RX"]);
 const REFRACTION_MEASUREMENT_CODES = new Set([
   "SPHERE",
@@ -249,14 +241,7 @@ async function isFullEyeExam(
   encounter: Encounter,
   observations: readonly Observation[],
 ): Promise<boolean> {
-  const directVisitType = encounter.type
-    ?.flatMap((concept) => concept.coding ?? [])
-    .find((coding) => coding.system === ODOS_VISIT_TYPE_SYSTEM && coding.code)
-    ?.code;
-  const fullExamVisitType = directVisitType !== undefined && FULL_EXAM_VISIT_TYPE_CODES.has(directVisitType)
-    ? true
-    : await resolveVisitTypeCategoryForEncounter(encounter, undefined, fhir) === "comprehensive";
-  if (!fullExamVisitType) return false;
+  if (!await isEyeExamVisit(encounter, undefined, fhir)) return false;
   const usable = observations.filter((observation) =>
     observation.status !== "entered-in-error" && observation.status !== "cancelled"
   );
