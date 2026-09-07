@@ -224,14 +224,25 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     normalTemplate: "Clear; no cataract.",
     sheetLabel: "Clear",
     priority: [
-      gradedLensFinding("nuclear-sclerosis", "nuclear sclerosis"),
+      gradedLensFinding("nuclear-sclerosis", "nuclear sclerosis", [{
+        kind: "graded",
+        key: "colour",
+        display: "Colour",
+        options: [
+          "1+ (pale yellow)",
+          "2+ (yellow)",
+          "3+ (dark yellow/amber)",
+          "4+ (dark brown/black; brunescent)",
+        ],
+        scheme: "Shirao; Sharma; LOCS III two-axis architecture",
+      }]),
       gradedLensFinding("cortical-cataract", "cortical cataract"),
       gradedLensFinding("posterior-subcapsular-psc", "posterior subcapsular (PSC)"),
       "pseudophakia (PCIOL)",
       gradedLensFinding("posterior-capsular-opacification-pco", "posterior capsular opacification (PCO) (after cataract)"),
       gradedLensFinding("mixed", "Mixed"),
     ],
-    additional: ["anterior polar", "posterior polar", "anterior subcapsular", "brunescent", "mature cataract", "pseudophakia (ACIOL)", "aphakia", "phacodonesis", "pseudoexfoliation", "dislocated lens/IOL", "IOL deposits", "polychromatic (Christmas-tree)"],
+    additional: ["anterior polar", "posterior polar", gradedLensFinding("anterior-subcapsular", "anterior subcapsular"), "mature cataract", "pseudophakia (ACIOL)", "aphakia", "phacodonesis", "pseudoexfoliation", "dislocated lens/IOL", "IOL deposits", "polychromatic (Christmas-tree)"],
   },
 ];
 
@@ -622,11 +633,21 @@ function sourcedCornealGradedFinding(
   };
 }
 
-function gradedLensFinding(key: string, display: string): FindingSeed {
+function gradedLensFinding(
+  key: string,
+  display: string,
+  additionalQualifiers: QualifierSeed[] = [],
+): FindingSeed {
   return {
     key,
     display,
-    qualifiers: [{ kind: "graded", key: "grade", display: "Grade", options: ["1+", "2+", "3+", "4+"] }],
+    qualifiers: [{
+      kind: "graded",
+      key: "grade",
+      display: "Grade",
+      options: ["1+", "2+", "3+", "4+"],
+      scheme: "Operator-ruled ODOS 1–4+ present-finding scale (2026-08-09)",
+    }, ...additionalQualifiers],
   };
 }
 

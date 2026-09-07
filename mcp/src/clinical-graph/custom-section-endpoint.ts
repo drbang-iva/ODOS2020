@@ -57,11 +57,29 @@ interface RetiredFindingQualifierReadTranslation {
   persistedValue: FindingQualifierValue;
 }
 
+interface RetiredFindingReadTranslation {
+  definitionStableKey: string;
+  retiredFindingCode: string;
+  replacementFindingCode: string;
+  replacementQualifierValues: Readonly<Record<string, FindingQualifierValue>>;
+}
+
 const RETIRED_FINDING_QUALIFIER_READ_TRANSLATIONS: readonly RetiredFindingQualifierReadTranslation[] = [{
   definitionStableKey: "ocular-health:anterior:cornea",
   findingCode: "superficial-punctate-keratitis-spk",
   qualifierKey: "grade",
   persistedValue: "Grade 0",
+}];
+
+// Read only: remove after a persisted-data census or migration confirms that no live Lens
+// brunescent selection components remain.
+const RETIRED_FINDING_READ_TRANSLATIONS: readonly RetiredFindingReadTranslation[] = [{
+  definitionStableKey: "ocular-health:anterior:lens",
+  retiredFindingCode: "brunescent",
+  replacementFindingCode: "nuclear-sclerosis",
+  replacementQualifierValues: {
+    colour: "4+ (dark brown/black; brunescent)",
+  },
 }];
 
 const clockHourExtentSchema = z.object({
@@ -316,7 +334,13 @@ export async function handleCustomSectionHistoryRequest(
     const perEye = definition.valueSchema.perEye === true;
     const prefix = perEye && (eye === "OD" || eye === "OS") ? `${eye}_` : "";
     const values = customFieldEntries(definition, true).flatMap((field) => {
-      const value = observationCustomValue(observation, field, prefix);
+      const value = translateRetiredFindingSelectionsForRead(
+        observation,
+        definition.stableKey,
+        field,
+        prefix,
+        observationCustomValue(observation, field, prefix),
+      );
       return value === undefined ? [] : [{
         code: field.localCode,
         label: field.display,
@@ -473,7 +497,72 @@ function observationFindingDetails(
     }
     if (Object.keys(details).length > 0) findingDetails[option.code] = details;
   }
+  for (const translation of retiredFindingTranslationsForObservation(
+    observation,
+    definition.stableKey,
+    field.localCode,
+    codePrefix,
+  )) {
+    const replacement = field.options?.find((option) =>
+      option.code === translation.replacementFindingCode && option.active
+    );
+    if (!replacement) continue;
+    const qualifierKeys = new Set((replacement.qualifiers ?? []).map((qualifier) => qualifier.key));
+    const translated = Object.fromEntries(
+      Object.entries(translation.replacementQualifierValues)
+        .filter(([qualifierKey]) => qualifierKeys.has(qualifierKey)),
+    );
+    findingDetails[replacement.code] = {
+      ...translated,
+      ...findingDetails[replacement.code],
+    };
+  }
   return hasFindingDetails(findingDetails) ? findingDetails : undefined;
+}
+
+function translateRetiredFindingSelectionsForRead(
+  observation: Observation,
+  definitionStableKey: string,
+  field: Parameters<typeof observationCustomValue>[1],
+  codePrefix: string,
+  persistedValue: ReturnType<typeof observationCustomValue>,
+): ReturnType<typeof observationCustomValue> {
+  if (field.valueType !== "multi-select") return persistedValue;
+  const selected = Array.isArray(persistedValue) ? [...persistedValue] : [];
+  for (const translation of retiredFindingTranslationsForObservation(
+    observation,
+    definitionStableKey,
+    field.localCode,
+    codePrefix,
+  )) {
+    const retiredIndex = selected.indexOf(translation.retiredFindingCode);
+    if (retiredIndex >= 0) selected.splice(retiredIndex, 1);
+    if (!selected.includes(translation.replacementFindingCode)) {
+      selected.push(translation.replacementFindingCode);
+    }
+  }
+  return selected.length > 0 ? selected : undefined;
+}
+
+function retiredFindingTranslationsForObservation(
+  observation: Observation,
+  definitionStableKey: string,
+  fieldCode: string,
+  codePrefix: string,
+): readonly RetiredFindingReadTranslation[] {
+  const namespacedPrefix = `${codePrefix}${fieldCode}::`;
+  const selectedFindingCodes = new Set((observation.component ?? []).flatMap((component) => {
+    if (component.valueBoolean !== true) return [];
+    const code = component.code.coding?.find((coding) => coding.code)?.code;
+    return code?.startsWith(namespacedPrefix) ? [code.slice(namespacedPrefix.length)] : [];
+  }));
+  return RETIRED_FINDING_READ_TRANSLATIONS.filter((translation) =>
+    translation.definitionStableKey === definitionStableKey &&
+    (
+      selectedFindingCodes.has(translation.retiredFindingCode) ||
+      findComponent(observation, `${codePrefix}${translation.retiredFindingCode}`)?.valueBoolean === true
+    )
+  );
 }
 
 function observationFindingQualifierValue(
