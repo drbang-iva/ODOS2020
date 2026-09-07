@@ -50,6 +50,20 @@ export interface CustomSectionEndpointDeps {
 const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as const;
 const EYES: Eye[] = ["OD", "OS"];
 
+interface RetiredFindingQualifierReadTranslation {
+  definitionStableKey: string;
+  findingCode: string;
+  qualifierKey: string;
+  persistedValue: FindingQualifierValue;
+}
+
+const RETIRED_FINDING_QUALIFIER_READ_TRANSLATIONS: readonly RetiredFindingQualifierReadTranslation[] = [{
+  definitionStableKey: "ocular-health:anterior:cornea",
+  findingCode: "superficial-punctate-keratitis-spk",
+  qualifierKey: "grade",
+  persistedValue: "Grade 0",
+}];
+
 const clockHourExtentSchema = z.object({
   from: z.number().finite().min(1).max(12),
   to: z.number().finite().min(1).max(12),
@@ -446,7 +460,15 @@ function observationFindingDetails(
         observation,
         findingDetailComponentCode(codePrefix, field.localCode, option.code, qualifier.key),
       );
-      const value = component ? observationFindingQualifierValue(component, qualifier) : undefined;
+      const persistedValue = component ? observationFindingQualifierValue(component, qualifier) : undefined;
+      const value = persistedValue === undefined
+        ? undefined
+        : translateRetiredFindingQualifierForRead(
+            definition.stableKey,
+            option.code,
+            qualifier.key,
+            persistedValue,
+          );
       if (value !== undefined) details[qualifier.key] = value;
     }
     if (Object.keys(details).length > 0) findingDetails[option.code] = details;
@@ -473,6 +495,25 @@ function observationFindingQualifierValue(
   }
   return component.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code ??
     (component.valueString?.trim() || undefined);
+}
+
+function translateRetiredFindingQualifierForRead(
+  definitionStableKey: string,
+  findingCode: string,
+  qualifierKey: string,
+  persistedValue: FindingQualifierValue,
+): FindingQualifierValue | undefined {
+  // A selected SPK chip records a deliberate abnormal finding, while Grade 0 records absence.
+  // Hydration keeps the chip and drops only that contradictory retired rung; the Observation stays
+  // untouched. Remove this entry after a persisted-data census or migration confirms that no live
+  // SPK Grade 0 qualifier components remain.
+  const retired = RETIRED_FINDING_QUALIFIER_READ_TRANSLATIONS.some((translation) =>
+    translation.definitionStableKey === definitionStableKey &&
+    translation.findingCode === findingCode &&
+    translation.qualifierKey === qualifierKey &&
+    translation.persistedValue === persistedValue
+  );
+  return retired ? undefined : persistedValue;
 }
 
 function findingDetailComponentCode(

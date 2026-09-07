@@ -96,8 +96,82 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     display: "Cornea",
     normalTemplate: "Clear, no staining; normal thickness and clarity.",
     sheetLabel: "Clear and compact",
-    priority: [cornealStainingFinding(), "dry eye keratopathy", "arcus", "scar", keratoconusFinding(), "guttata", pterygiumFinding("pterygium-encroaching", "pterygium (encroaching)"), "neovascularization", "infiltrate"],
-    additional: ["abrasion", "dendrite", "edema", "foreign body", "filaments", "erosion", "RCES (recurrent erosion)", "EBMD (map-dot-fingerprint)", "Fuchs' endothelial dystrophy", "band keratopathy", "Salzmann's nodule", "keratic precipitates", "ulcer", "haze", "opacification", "pannus", "nodules", "phlyctenule", "Descemet folds", "Krukenberg spindle", "iron line (Hudson-Stahli/Stocker's/Fleischer's)", "Vogt striae", "vortex keratopathy (verticillata)", "Thygeson's SPK", "lipid keratopathy", "Mooren's ulcer", "Terrien's marginal degeneration", "peripheral thinning", "central thinning", "hydrops", "pigment on endothelium"],
+    priority: [
+      cornealStainingFinding(),
+      "dry eye keratopathy",
+      {
+        key: "arcus",
+        display: "arcus",
+        qualifiers: [{
+          kind: "enum",
+          key: "extent",
+          display: "Extent",
+          options: ["Inferior", "Superior", "Partial", "Complete (360°)"].map((display) => ({
+            code: optionCode(display),
+            display,
+          })),
+        }],
+      },
+      "scar",
+      keratoconusFinding(),
+      sourcedCornealGradedFinding("guttata", "guttata", [
+        "1+ (central/paracentral nonconfluent guttae)",
+        "2+ (1–2 mm confluent central/paracentral guttae)",
+        "3+ (>2–5 mm confluent central/paracentral guttae)",
+        "4+ (>5 mm confluent central/paracentral guttae, with or without edema)",
+      ], "Modified Krachmer (ODOS 1–4+ collapse)"),
+      pterygiumFinding("pterygium-encroaching", "pterygium (encroaching)"),
+      sourcedCornealGradedFinding("neovascularization", "neovascularization", [
+        "1+ (<1.0 mm vessel penetration)",
+        "2+ (≥1.0 to <1.5 mm vessel penetration)",
+        "3+ (≥1.5 to 2.0 mm vessel penetration)",
+        "4+ (>2.0 mm vessel penetration)",
+      ]),
+      sourcedCornealGradedFinding("infiltrate", "infiltrate", [
+        "1+ (one faint peripheral infiltrate without staining)",
+        "2+ (a few faint infiltrates)",
+        "3+ (multiple dense infiltrates)",
+        "4+ (marked infiltrates with overlying staining)",
+      ]),
+    ],
+    additional: [
+      "abrasion",
+      "dendrite",
+      sourcedCornealGradedFinding("edema", "edema", [
+        "1+ (barely discernible localized epithelial/subepithelial or stromal haze; 1–20 microcysts)",
+        "2+ (faint definite localized/generalized epithelial/stromal haze; 21–50 microcysts)",
+        "3+ (significant localized/generalized epithelial/stromal haze; 51–100 microcysts)",
+        "4+ (widespread epithelial/stromal clouding, coalescent bullae, or striae; >100 microcysts or bullae)",
+      ]),
+      "foreign body",
+      "filaments",
+      "erosion",
+      "RCES (recurrent erosion)",
+      "EBMD (map-dot-fingerprint)",
+      "Fuchs' endothelial dystrophy",
+      "band keratopathy",
+      "Salzmann's nodule",
+      "keratic precipitates",
+      "ulcer",
+      "haze",
+      "opacification",
+      "pannus",
+      "nodules",
+      "phlyctenule",
+      "Descemet folds",
+      "Krukenberg spindle",
+      "iron line (Hudson-Stahli/Stocker's/Fleischer's)",
+      "Vogt striae",
+      "vortex keratopathy (verticillata)",
+      "Thygeson's SPK",
+      "lipid keratopathy",
+      "Mooren's ulcer",
+      "Terrien's marginal degeneration",
+      "peripheral thinning",
+      "central thinning",
+      "hydrops",
+      "pigment on endothelium",
+    ],
     gradeFields: [
       {
         display: "Vital dye",
@@ -518,20 +592,33 @@ function cornealStainingFinding(): FindingSeed {
       {
         kind: "graded",
         key: "grade",
-        display: "Corneal staining grade (grading scheme provisional)",
-        options: ["Grade 0", "Grade 1", "Grade 2", "Grade 3", "Grade 4"],
-        scheme: "grading scheme provisional",
+        display: "Corneal staining grade (FDA Appendix C; Efron-corroborated)",
+        options: ["Grade 1", "Grade 2", "Grade 3", "Grade 4"],
+        scheme: "FDA Appendix C; Efron-corroborated",
       },
       {
         kind: "enum",
         key: "zone",
-        display: "Corneal staining zone (grading scheme provisional)",
+        display: "Corneal staining zone",
         options: ["Central", "Nasal", "Temporal", "Superior", "Inferior", "Diffuse"].map((display) => ({
           code: optionCode(display),
           display,
         })),
       },
     ],
+  };
+}
+
+function sourcedCornealGradedFinding(
+  key: string,
+  display: string,
+  options: string[],
+  scheme = "FDA Appendix C; Efron-corroborated",
+): FindingSeed {
+  return {
+    key,
+    display,
+    qualifiers: [{ kind: "graded", key: "grade", display: "Grade", options, scheme }],
   };
 }
 
