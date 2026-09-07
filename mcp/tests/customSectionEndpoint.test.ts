@@ -897,11 +897,11 @@ test("ocular-health cleanup keeps only clinically scoped chips and qualifiers", 
 
   const lens = findings("ocular-health:anterior:lens");
   const lensGrades = [
-    "nuclear-sclerosis",
     "cortical-cataract",
     "posterior-subcapsular-psc",
     "posterior-capsular-opacification-pco",
     "mixed",
+    "anterior-subcapsular",
   ];
   for (const code of lensGrades) {
     assert.deepEqual(lens.find((option) => option.code === code)?.qualifiers, [{
@@ -909,6 +909,7 @@ test("ocular-health cleanup keeps only clinically scoped chips and qualifiers", 
       key: "grade",
       display: "Grade",
       options: ["1+", "2+", "3+", "4+"],
+      scheme: "Operator-ruled ODOS 1–4+ present-finding scale (2026-08-09)",
     }], code);
   }
   assert.equal(
@@ -1195,6 +1196,431 @@ test("a new SPK finding cannot be written with retired Grade 0", async () => {
     error: "OD finding superficial-punctate-keratitis-spk qualifier grade requires a configured grade option.",
   });
   assert.equal(fhir.observations.length, 0);
+});
+
+test("retired SPK Grade 0 translation does not drop the same value from another corneal finding", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const cornea = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:cornea");
+  assert.ok(cornea);
+  const field = Object.values(cornea.valueSchema.fields as Record<string, {
+    localCode: string;
+    valueType?: string;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field);
+
+  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: cornea.stableKey },
+    body: {
+      patientReference: "Patient/p-spk-scope",
+      encounterReference: "Encounter/e-spk-scope",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["neovascularization"] }],
+          findingDetails: {
+            neovascularization: { grade: "1+ (<1.0 mm vessel penetration)" },
+          },
+        },
+      },
+    },
+  });
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const gradeCoding = component(
+    fhir.observations[0],
+    `OD_${field.localCode}::neovascularization::grade`,
+  )?.valueCodeableConcept?.coding?.[0];
+  assert.ok(gradeCoding);
+  gradeCoding.code = "Grade 0";
+  gradeCoding.display = "Grade 0";
+
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: cornea.stableKey },
+    query: { patient: "Patient/p-spk-scope", encounter: "Encounter/e-spk-scope" },
+  });
+  const [row] = (history.body as {
+    rows: Array<{ findingDetails?: Record<string, Record<string, string>> }>;
+  }).rows;
+  assert.equal(row?.findingDetails?.neovascularization?.grade, "Grade 0");
+});
+
+test("lens exposes sourced independent grade and colour axes without a zero rung or selectable brunescent finding", async () => {
+  const definitions = await catalog(new MemoryFhir());
+  const lens = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:lens");
+  assert.ok(lens);
+  const findings = Object.values(lens.valueSchema.fields as Record<string, {
+    valueType?: string;
+    options?: Array<{
+      code: string;
+      priority?: boolean;
+      qualifiers?: Array<{
+        kind: string;
+        key: string;
+        display: string;
+        options?: string[];
+        scheme?: string;
+      }>;
+    }>;
+  }>).find((field) => field.valueType === "multi-select")?.options ?? [];
+  const finding = (code: string) => findings.find((candidate) => candidate.code === code);
+  const psc = finding("posterior-subcapsular-psc");
+  const asc = finding("anterior-subcapsular");
+  const nuclear = finding("nuclear-sclerosis");
+  assert.ok(psc && asc && nuclear);
+
+  assert.equal(psc.priority, true);
+  assert.equal(asc.priority, false);
+  assert.deepEqual(asc.qualifiers, psc.qualifiers);
+  assert.deepEqual(nuclear.qualifiers, [
+    {
+      kind: "graded",
+      key: "grade",
+      display: "Grade",
+      options: ["1+", "2+", "3+", "4+"],
+      scheme: "Operator-ruled ODOS 1–4+ present-finding scale (2026-08-09)",
+    },
+    {
+      kind: "graded",
+      key: "colour",
+      display: "Colour",
+      options: [
+        "1+ (pale yellow)",
+        "2+ (yellow)",
+        "3+ (dark yellow/amber)",
+        "4+ (dark brown/black; brunescent)",
+      ],
+      scheme: "Shirao; Sharma; LOCS III two-axis architecture",
+    },
+  ]);
+  assert.equal(finding("brunescent"), undefined);
+
+  const gradedQualifiers = findings.flatMap((option) =>
+    (option.qualifiers ?? []).filter((qualifier) => qualifier.kind === "graded")
+  );
+  for (const qualifier of gradedQualifiers) {
+    assert.ok(qualifier.scheme);
+    for (const option of qualifier.options ?? []) {
+      const rung = option.replace(/\s*\(.*/, "").trim();
+      assert.doesNotMatch(rung, /^(?:grade\s*)?0$|\bnone\b/i);
+    }
+  }
+});
+
+test("nuclear sclerosis grade and colour round-trip independently by eye", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const lens = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:lens");
+  assert.ok(lens);
+  const field = Object.values(lens.valueSchema.fields as Record<string, {
+    localCode?: string;
+    valueType?: string;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field?.localCode);
+  const grade = "2+";
+  const colour = "3+ (dark yellow/amber)";
+
+  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    body: {
+      patientReference: "Patient/p-lens-axis",
+      encounterReference: "Encounter/e-lens-axis",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["nuclear-sclerosis"] }],
+          findingDetails: { "nuclear-sclerosis": { grade } },
+        },
+        OS: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["nuclear-sclerosis"] }],
+          findingDetails: { "nuclear-sclerosis": { colour } },
+        },
+      },
+    },
+  });
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const qualifierCode = (eye: "OD" | "OS", key: "grade" | "colour") =>
+    `${eye}_${field.localCode}::nuclear-sclerosis::${key}`;
+  assert.equal(
+    component(fhir.observations[0], qualifierCode("OD", "grade"))?.valueCodeableConcept?.coding?.[0]?.code,
+    grade,
+  );
+  assert.equal(component(fhir.observations[0], qualifierCode("OD", "colour")), undefined);
+  assert.equal(component(fhir.observations[1], qualifierCode("OS", "grade")), undefined);
+  assert.equal(
+    component(fhir.observations[1], qualifierCode("OS", "colour"))?.valueCodeableConcept?.coding?.[0]?.code,
+    colour,
+  );
+
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    query: { patient: "Patient/p-lens-axis", encounter: "Encounter/e-lens-axis" },
+  });
+  const rows = (history.body as {
+    rows: Array<{ eye: string; findingDetails?: Record<string, Record<string, string>> }>;
+  }).rows;
+  assert.deepEqual(rows.map((row) => [row.eye, row.findingDetails?.["nuclear-sclerosis"]]), [
+    ["OD", { grade }],
+    ["OS", { colour }],
+  ]);
+});
+
+test("historical brunescent alone rehydrates as nuclear colour and resaves while new brunescent is rejected", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const lens = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:lens");
+  assert.ok(lens);
+  const field = Object.values(lens.valueSchema.fields as Record<string, {
+    localCode?: string;
+    valueType?: string;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field?.localCode);
+
+  const captured = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    body: {
+      patientReference: "Patient/p-brunescent-alone",
+      encounterReference: "Encounter/e-brunescent-alone",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["mature-cataract"] }],
+        },
+      },
+    },
+  });
+  assert.equal(captured.status, 200, JSON.stringify(captured.body));
+  const selectionCoding = component(
+    fhir.observations[0],
+    `OD_${field.localCode}::mature-cataract`,
+  )?.code.coding?.[0];
+  assert.ok(selectionCoding);
+  selectionCoding.code = `OD_${field.localCode}::brunescent`;
+  selectionCoding.display = "brunescent";
+  const persistedHistoricalObservation = structuredClone(fhir.observations[0]);
+
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    query: { patient: "Patient/p-brunescent-alone", encounter: "Encounter/e-brunescent-alone" },
+  });
+  assert.equal(history.status, 200);
+  const [row] = (history.body as {
+    rows: Array<{
+      state?: string;
+      values: Array<{ code: string; value: number | string | string[] }>;
+      findingDetails?: Record<string, Record<string, string>>;
+    }>;
+  }).rows;
+  assert.ok(row);
+  assert.deepEqual(row.values, [{
+    code: field.localCode,
+    label: "Abnormal findings",
+    value: ["nuclear-sclerosis"],
+  }]);
+  assert.deepEqual(row.findingDetails, {
+    "nuclear-sclerosis": { colour: "4+ (dark brown/black; brunescent)" },
+  });
+  assert.equal(row.findingDetails?.["nuclear-sclerosis"]?.grade, undefined);
+  assert.deepEqual(fhir.observations[0], persistedHistoricalObservation);
+
+  const resave = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    body: {
+      patientReference: "Patient/p-brunescent-alone",
+      encounterReference: "Encounter/e-brunescent-alone",
+      eyes: {
+        OD: {
+          state: row.state,
+          customFields: row.values.map(({ code, value }) => ({ code, value })),
+          findingDetails: row.findingDetails,
+        },
+      },
+    },
+  });
+  assert.equal(resave.status, 200, JSON.stringify(resave.body));
+  assert.deepEqual(fhir.observations[0], persistedHistoricalObservation);
+
+  const rejected = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    body: {
+      patientReference: "Patient/p-new-brunescent",
+      encounterReference: "Encounter/e-new-brunescent",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["brunescent"] }],
+        },
+      },
+    },
+  });
+  assert.equal(rejected.status, 400);
+  assert.match(String((rejected.body as { error: string }).error), /unknown or inactive option: brunescent/);
+});
+
+test("historical brunescent merges with a recorded nuclear grade into one deduplicated finding", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const lens = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:lens");
+  assert.ok(lens);
+  const field = Object.values(lens.valueSchema.fields as Record<string, {
+    localCode?: string;
+    valueType?: string;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field?.localCode);
+
+  const captured = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    body: {
+      patientReference: "Patient/p-brunescent-merged",
+      encounterReference: "Encounter/e-brunescent-merged",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["nuclear-sclerosis"] }],
+          findingDetails: { "nuclear-sclerosis": { grade: "3+" } },
+        },
+      },
+    },
+  });
+  assert.equal(captured.status, 200, JSON.stringify(captured.body));
+  const nuclearSelection = component(
+    fhir.observations[0],
+    `OD_${field.localCode}::nuclear-sclerosis`,
+  );
+  assert.ok(nuclearSelection);
+  const historicalBrunescent = structuredClone(nuclearSelection);
+  const selectionCoding = historicalBrunescent.code.coding?.[0];
+  assert.ok(selectionCoding);
+  selectionCoding.code = `OD_${field.localCode}::brunescent`;
+  selectionCoding.display = "brunescent";
+  fhir.observations[0]!.component?.push(historicalBrunescent);
+  const persistedHistoricalObservation = structuredClone(fhir.observations[0]);
+
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    query: { patient: "Patient/p-brunescent-merged", encounter: "Encounter/e-brunescent-merged" },
+  });
+  const [row] = (history.body as {
+    rows: Array<{
+      state?: string;
+      values: Array<{ code: string; value: number | string | string[] }>;
+      findingDetails?: Record<string, Record<string, string>>;
+    }>;
+  }).rows;
+  assert.ok(row);
+  assert.deepEqual(row.values[0]?.value, ["nuclear-sclerosis"]);
+  assert.equal((row.values[0]?.value as string[]).filter((code) => code === "nuclear-sclerosis").length, 1);
+  assert.deepEqual(row.findingDetails, {
+    "nuclear-sclerosis": {
+      grade: "3+",
+      colour: "4+ (dark brown/black; brunescent)",
+    },
+  });
+  assert.deepEqual(fhir.observations[0], persistedHistoricalObservation);
+
+  const resave = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    body: {
+      patientReference: "Patient/p-brunescent-merged",
+      encounterReference: "Encounter/e-brunescent-merged",
+      eyes: {
+        OD: {
+          state: row.state,
+          customFields: row.values.map(({ code, value }) => ({ code, value })),
+          findingDetails: row.findingDetails,
+        },
+      },
+    },
+  });
+  assert.equal(resave.status, 200, JSON.stringify(resave.body));
+  assert.deepEqual(fhir.observations[0], persistedHistoricalObservation);
+});
+
+test("retired finding translation stays scoped to lens brunescent", async () => {
+  const [synthetic] = buildOcularHealthDefinitions([{
+    key: "synthetic-lens-scope",
+    display: "Synthetic lens scope",
+    normalTemplate: "Synthetic normal.",
+    priority: ["nuclear sclerosis"],
+    additional: ["brunescent", "mature cataract"],
+  }], "ocular-health:synthetic:", SYNTHETIC_PROVENANCE);
+  assert.ok(synthetic);
+  const field = Object.values(synthetic.valueSchema.fields as Record<string, {
+    localCode?: string;
+    valueType?: string;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field?.localCode);
+  const fhir = new MemoryFhir();
+  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [synthetic]), {
+    authHeader: AUTH,
+    params: { stableKey: synthetic.stableKey },
+    body: {
+      patientReference: "Patient/p-finding-scope",
+      encounterReference: "Encounter/e-finding-scope",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["brunescent", "mature-cataract"] }],
+        },
+      },
+    },
+  });
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, [synthetic]), {
+    authHeader: AUTH,
+    params: { stableKey: synthetic.stableKey },
+    query: { patient: "Patient/p-finding-scope", encounter: "Encounter/e-finding-scope" },
+  });
+  const selected = (history.body as {
+    rows: Array<{ values: Array<{ value: string[] }> }>;
+  }).rows[0]?.values[0]?.value;
+  assert.deepEqual(selected, ["brunescent", "mature-cataract"]);
+
+  const lensFhir = new MemoryFhir();
+  const definitions = await catalog(lensFhir);
+  const lens = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:lens");
+  assert.ok(lens);
+  const lensField = Object.values(lens.valueSchema.fields as Record<string, {
+    localCode?: string;
+    valueType?: string;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(lensField?.localCode);
+  const lensCapture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", lensFhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    body: {
+      patientReference: "Patient/p-finding-code-scope",
+      encounterReference: "Encounter/e-finding-code-scope",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: lensField.localCode, value: ["mature-cataract"] }],
+        },
+      },
+    },
+  });
+  assert.equal(lensCapture.status, 200, JSON.stringify(lensCapture.body));
+  const lensHistory = await handleCustomSectionHistoryRequest(clinicalDeps("provider", lensFhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    query: { patient: "Patient/p-finding-code-scope", encounter: "Encounter/e-finding-code-scope" },
+  });
+  const lensSelected = (lensHistory.body as {
+    rows: Array<{ values: Array<{ value: string[] }> }>;
+  }).rows[0]?.values[0]?.value;
+  assert.deepEqual(lensSelected, ["mature-cataract"]);
 });
 
 test("corneal graded qualifiers never offer a zero or none rung", async () => {
