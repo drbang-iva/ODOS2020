@@ -18,8 +18,16 @@ import {
   runSetupPractice,
 } from "../../scripts/setup-practice.ts";
 import { parseSchedulingPracticeConfig } from "../../mcp/src/scheduling/practice-config.ts";
-import { buildVisitType, visitTypeCode } from "../../mcp/src/fhir/schedulingVisitType.ts";
-import { parseVisitTypeConfig } from "../../mcp/src/scheduling/visit-type-config.ts";
+import {
+  buildVisitType,
+  visitTypeCategory,
+  visitTypeCode,
+  visitTypeDurationMinutes,
+} from "../../mcp/src/fhir/schedulingVisitType.ts";
+import {
+  buildVisitTypeConfigResource,
+  parseVisitTypeConfig,
+} from "../../mcp/src/scheduling/visit-type-config.ts";
 
 test("fresh Compose startup maps ODOS service credentials into Medplum's super-admin seed settings", () => {
   const compose = readFileSync(new URL("../../docker-compose.yml", import.meta.url), "utf8");
@@ -338,11 +346,12 @@ test("a setup re-run is a no-op and preserves edited or deactivated visit-type d
     };
     await runSetupPractice({ adapter, config, skipInteractiveBoundaryCheck: true });
     const preserved = adapter.visitTypes.find((visitType) => visitTypeCode(visitType) === "routine-exam-new");
-    assert.equal(preserved, existing);
+    assert.notEqual(preserved, existing);
     assert.equal(adapter.visitTypes.length, 9);
     assert.equal(adapter.visitTypes.filter((visitType) => visitTypeCode(visitType) === "routine-exam-new").length, 1);
     assert.equal(preserved.name, "Practice-edited comprehensive visit");
     assert.equal(preserved.active, false);
+    assert.equal(visitTypeCategory(preserved)?.code, "exams");
     assert.equal(preserved.extension?.find((extension) => extension.url.endsWith("odos-visit-duration"))?.valuePositiveInt, 45);
 
     const secondRun = await runSetupPractice({ adapter, config, skipInteractiveBoundaryCheck: true });
@@ -416,7 +425,7 @@ test("setup reuses a pre-existing canonical Provider policy while creating Staff
   }
 });
 
-test("a completed pre-taxonomy setup retires every installed Medicaid visit type before becoming a no-op", async () => {
+test("a completed pre-taxonomy setup migrates installed visit categories and retires Medicaid before becoming a no-op", async () => {
   const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-retire-medicaid-"));
   try {
     const statePath = join(dir, ".odos-setup-state.json");
@@ -441,7 +450,66 @@ test("a completed pre-taxonomy setup retires every installed Medicaid visit type
         }),
         id: "legacy-medicaid-inactive",
       },
+      {
+        ...buildVisitType({
+          code: "routine-exam-new",
+          name: "Practice Annual Exam",
+          discipline: "eyecare",
+          durationMinutes: 40,
+        }),
+        id: "routine-customized",
+      },
+      {
+        ...buildVisitType({
+          code: "contact-lens-exam",
+          name: "Contact Lens Exam",
+          discipline: "eyecare",
+          durationMinutes: 30,
+        }),
+        id: "contact-lens",
+      },
+      {
+        ...buildVisitType({
+          code: "office-visit",
+          name: "Office Visit (Medical)",
+          discipline: "eyecare",
+          durationMinutes: 20,
+        }),
+        id: "medical",
+      },
+      {
+        ...buildVisitType({
+          code: "special-testing",
+          name: "Special Testing (VF / OCT / Dry Eye)",
+          discipline: "eyecare",
+          durationMinutes: 30,
+        }),
+        id: "testing",
+      },
+      {
+        ...buildVisitType({
+          code: "aesthetics-consult",
+          name: "Aesthetics Consult",
+          discipline: "aesthetics",
+          categoryCode: "dry-eye",
+          categoryLabel: "Dry Eye",
+          durationMinutes: 30,
+        }),
+        id: "aesthetics",
+      },
     );
+    adapter.visitTypeConfigs.push({
+      ...buildVisitTypeConfigResource({
+        categories: [
+          { id: "comprehensive", label: "Comprehensive", order: 0 },
+          { id: "dry-eye", label: "Dry Eye", order: 1 },
+          { id: "myopia-management", label: "Myopia Management", order: 2 },
+          { id: "diagnostic-only", label: "Diagnostic-Only", order: 3 },
+          { id: "post-op", label: "Post-op", order: 4 },
+        ],
+      }),
+      id: "legacy-visit-type-config",
+    });
     writeFileSync(statePath, JSON.stringify({
       version: "v0.5d",
       adminProjectCreated: true,
@@ -472,19 +540,57 @@ test("a completed pre-taxonomy setup retires every installed Medicaid visit type
     const migrated = await runSetupPractice({ adapter, config, skipInteractiveBoundaryCheck: true });
 
     assert.equal(migrated.noOp, false);
-    assert.deepEqual(
-      adapter.visitTypes.map((visitType) => ({ id: visitType.id, active: visitType.active })),
-      [
-        { id: "legacy-medicaid-active", active: false },
-        { id: "legacy-medicaid-inactive", active: false },
-      ],
-    );
+    const visitTypeState = Object.fromEntries(adapter.visitTypes.map((visitType) => [visitType.id, {
+      active: visitType.active,
+      category: visitTypeCategory(visitType)?.code,
+      duration: visitTypeDurationMinutes(visitType),
+      name: visitType.name,
+    }]));
+    assert.deepEqual(visitTypeState["legacy-medicaid-active"], {
+      active: false,
+      category: undefined,
+      duration: 30,
+      name: "Medicaid Exam",
+    });
+    assert.equal(visitTypeState["legacy-medicaid-inactive"]?.active, false);
+    assert.deepEqual(visitTypeState["routine-customized"], {
+      active: true,
+      category: "exams",
+      duration: 40,
+      name: "Practice Annual Exam",
+    });
+    assert.equal(visitTypeState["contact-lens"]?.category, "contact-lens");
+    assert.equal(visitTypeState.medical?.category, "medical");
+    assert.deepEqual(visitTypeState.testing, {
+      active: true,
+      category: "medical",
+      duration: 20,
+      name: "Testing Visit",
+    });
+    assert.equal(visitTypeState.aesthetics?.category, undefined);
+    assert.deepEqual(parseVisitTypeConfig(adapter.visitTypeConfigs[0]!).categories, [
+      { id: "exams", label: "Exams", order: 0 },
+      { id: "contact-lens", label: "Contact Lens", order: 1 },
+      { id: "medical", label: "Medical", order: 2 },
+      { id: "post-op", label: "Post-op", order: 3 },
+    ]);
     assert.equal(migrated.state.visitTypeTaxonomyReconciled, true);
     assert.deepEqual(
       migrated.auditRows
         .filter((row) => row.resourceType === "HealthcareService")
         .map((row) => ({ eventType: row.eventType, resourceId: row.resourceId })),
-      [{ eventType: "update", resourceId: "legacy-medicaid-active" }],
+      [
+        { eventType: "update", resourceId: "legacy-medicaid-active" },
+        { eventType: "update", resourceId: "routine-customized" },
+        { eventType: "update", resourceId: "contact-lens" },
+        { eventType: "update", resourceId: "medical" },
+        { eventType: "update", resourceId: "testing" },
+        { eventType: "update", resourceId: "aesthetics" },
+      ],
+    );
+    assert.equal(
+      migrated.auditRows.some((row) => row.resourceType === "Basic" && row.resourceId === "legacy-visit-type-config"),
+      true,
     );
 
     const rerun = await runSetupPractice({ adapter, config, skipInteractiveBoundaryCheck: true });

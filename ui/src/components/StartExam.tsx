@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Bundle, EpisodeOfCare, Patient } from "@medplum/fhirtypes";
+import type { Bundle, EpisodeOfCare, HealthcareService, Patient } from "@medplum/fhirtypes";
 import {
   assertTransactionSuccess,
   buildEncounterStatusPatchBundle,
@@ -10,27 +10,21 @@ import { createProgram } from "../lib/clinical-actions";
 import { clinicalGraphApiBase } from "../lib/clinical-graph-client";
 import { episodeTypeLabel } from "../lib/clinical-view-model";
 import { fhir } from "../lib/fhir";
+import { searchAll } from "../lib/fhir-search";
 import {
   EPISODE_OF_CARE_TYPE_CODES,
   type EpisodeOfCareTypeCode,
 } from "../lib/fhir-clinical/episodeOfCare";
 import { useViewState } from "../lib/view-state";
 import {
-  defaultVisitTypeCatalog,
   ODOS_VISIT_TYPE_SYSTEM,
   visitTypeCode,
 } from "../lib/scheduling";
 import { OdosSelect } from "./inputs/OdosSelect";
 
 const PROVIDER_ASSIGNMENT_TIMEOUT_MS = 15_000;
-const VISIT_TYPES = defaultVisitTypeCatalog("eyecare")
-  .filter((visitType) => visitType.active !== false)
-  .flatMap((visitType) => {
-    const id = visitTypeCode(visitType);
-    return id ? [{ id, label: visitType.name ?? id }] : [];
-  });
-
 export interface StartExamApi {
+  loadVisitTypes: () => Promise<HealthcareService[]>;
   loadPrograms: (patientId: string) => Promise<EpisodeOfCare[]>;
   assignProvider: (patientId: string) => Promise<void>;
   createProgram: typeof createProgram;
@@ -39,6 +33,12 @@ export interface StartExamApi {
 }
 
 const defaultStartExamApi: StartExamApi = {
+  async loadVisitTypes() {
+    return await searchAll<HealthcareService>(fhir, "HealthcareService", {
+      active: "true",
+      _count: "100",
+    });
+  },
   async loadPrograms(patientId) {
     const bundle = await fhir.search<EpisodeOfCare>("EpisodeOfCare", {
       patient: `Patient/${patientId}`,
@@ -84,7 +84,9 @@ export function StartExam({
   api?: StartExamApi;
 }) {
   const setView = useViewState((state) => state.setView);
-  const [visitTypeId, setVisitTypeId] = useState(VISIT_TYPES[0]?.id ?? "");
+  const [visitTypes, setVisitTypes] = useState<{ id: string; label: string }[]>([]);
+  const [visitTypesLoading, setVisitTypesLoading] = useState(true);
+  const [visitTypeId, setVisitTypeId] = useState("");
   const [startMode, setStartMode] = useState<"standalone" | "existing" | "new">("standalone");
   const [programType, setProgramType] = useState<EpisodeOfCareTypeCode>("glaucoma");
   const [selectedProgramId, setSelectedProgramId] = useState("");
@@ -112,6 +114,34 @@ export function StartExam({
     setPendingEncounter(undefined);
     setPendingNewProgram(undefined);
   }, [patient.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setVisitTypesLoading(true);
+    api.loadVisitTypes()
+      .then((resources) => {
+        if (cancelled) return;
+        const options = resources
+          .filter((visitType) => visitType.active !== false)
+          .flatMap((visitType) => {
+            const id = visitTypeCode(visitType);
+            return id ? [{ id, label: visitType.name ?? id }] : [];
+          });
+        setVisitTypes(options);
+        setVisitTypeId((current) =>
+          options.some((option) => option.id === current) ? current : options[0]?.id ?? ""
+        );
+      })
+      .catch((reason: unknown) => {
+        if (!cancelled) setStartError(reason instanceof Error ? reason.message : String(reason));
+      })
+      .finally(() => {
+        if (!cancelled) setVisitTypesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,7 +174,7 @@ export function StartExam({
       if (!encounterId) {
         await assignProvider(patient.id);
         const episodeReference = await resolveProgramReference();
-        const visitType = VISIT_TYPES.find((candidate) => candidate.id === visitTypeId);
+        const visitType = visitTypes.find((candidate) => candidate.id === visitTypeId);
         const createResponse = await api.executeTransaction(
           buildStartEncounterCreateBundle({
             patientId: patient.id,
@@ -226,14 +256,14 @@ export function StartExam({
           value={visitTypeId}
           options={[
             { value: "", label: "Not recorded" },
-            ...VISIT_TYPES.map((visitType) => ({
+            ...visitTypes.map((visitType) => ({
               value: visitType.id,
               label: visitType.label,
             })),
           ]}
           onChange={setVisitTypeId}
+          disabled={lockStartOptions || visitTypesLoading}
           ariaLabel="Visit type"
-          disabled={lockStartOptions}
         />
       </div>
       <div className="odos-start-exam-field-label">Program enrollment</div>

@@ -17,6 +17,7 @@ import { normalizeFhirReference, opticalOrderPath } from "../src/lib/optical-ord
 import { OVERVIEW_PANEL_REGISTRY } from "../src/lib/card-registry";
 import { RoleProvider } from "../src/lib/role-context";
 import {
+  buildVisitType,
   defaultVisitTypeCatalog,
   ODOS_VISIT_TYPE_SYSTEM,
   visitTypeCode,
@@ -36,6 +37,8 @@ const seriesTrackerApiStub = {
   fetchProtocols: async () => [],
   prescribe: async () => { throw new Error("The overview test does not prescribe programs."); },
 };
+
+const loadDefaultVisitTypes = async () => defaultVisitTypeCatalog("eyecare");
 
 test("Clinic flow and unsigned-chart clicks both route through PatientOverview", () => {
   useViewState.setState({ view: { kind: "picker" } });
@@ -366,6 +369,7 @@ test("Start today's visit assigns the provider, starts the encounter, and opens 
   let createdEncounter: Encounter | undefined;
   let transactionCount = 0;
   const api: StartExamApi = {
+    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => { calls.push("assign-provider"); },
     createProgram: async () => { throw new Error("Stand-alone visits do not create programs."); },
@@ -433,6 +437,7 @@ test("Start today's visit still succeeds with no visit type", async () => {
   let createdEncounter: Encounter | undefined;
   let transactionCount = 0;
   const api: StartExamApi = {
+    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => undefined,
     createProgram: async () => { throw new Error("not reached"); },
@@ -488,6 +493,7 @@ test("retrying a failed status transition reuses the created encounter", async (
   let encounterCreates = 0;
   let statusAttempts = 0;
   const api: StartExamApi = {
+    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => { providerAssignments += 1; },
     createProgram: async () => { throw new Error("not reached"); },
@@ -550,6 +556,7 @@ test("retrying encounter creation reuses a newly created Program", async () => {
   let transactionAttempts = 0;
   const encounterProgramReferences: Array<string | undefined> = [];
   const api: StartExamApi = {
+    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => { providerAssignments += 1; },
     createProgram: async () => {
@@ -616,6 +623,7 @@ test("start options lock while provider assignment is pending", async () => {
   let releaseProvider!: () => void;
   const providerPending = new Promise<void>((resolve) => { releaseProvider = resolve; });
   const api: StartExamApi = {
+    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => providerPending,
     createProgram: async () => { throw new Error("not reached"); },
@@ -655,6 +663,7 @@ test("start options lock while provider assignment is pending", async () => {
 
 test("a patient without an id never renders as an encounter retry", async () => {
   const api: StartExamApi = {
+    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => undefined,
     createProgram: async () => { throw new Error("not reached"); },
@@ -672,6 +681,7 @@ test("a patient without an id never renders as an encounter retry", async () => 
 
 test("start-exam failures remain visible on the patient overview", async () => {
   const api: StartExamApi = {
+    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => { throw new Error("Provider assignment unavailable"); },
     createProgram: async () => { throw new Error("not reached"); },
@@ -696,7 +706,25 @@ test("start-exam failures remain visible on the patient overview", async () => {
 
 test("start-exam mode choices expose existing and new Program selectors", async () => {
   let programLoads = 0;
+  const practiceVisitTypes = [
+    buildVisitType({
+      code: "practice-annual",
+      name: "Practice Annual Exam",
+      discipline: "eyecare",
+      categoryCode: "exams",
+      categoryLabel: "Exams",
+      durationMinutes: 40,
+    }),
+    buildVisitType({
+      code: "routine-exam-new",
+      name: "Retired starter exam",
+      discipline: "eyecare",
+      durationMinutes: 30,
+      active: false,
+    }),
+  ];
   const api: StartExamApi = {
+    loadVisitTypes: async () => practiceVisitTypes,
     loadPrograms: async () => {
       programLoads += 1;
       return [{
@@ -721,12 +749,7 @@ test("start-exam mode choices expose existing and new Program selectors", async 
   );
   assert.deepEqual(visitTypeSelect?.props.options, [
     { value: "", label: "Not recorded" },
-    ...defaultVisitTypeCatalog("eyecare")
-      .filter((visitType) => visitType.active !== false)
-      .map((visitType) => ({
-        value: visitTypeCode(visitType),
-        label: visitType.name,
-      })),
+    { value: "practice-annual", label: "Practice Annual Exam" },
   ]);
   assert.deepEqual(
     renderer.root.findAllByProps({ className: "odos-start-exam-field-label" })
@@ -753,6 +776,7 @@ test("start-exam mode choices expose existing and new Program selectors", async 
 
 test("existing-program mode cannot submit without an active Program", async () => {
   const api: StartExamApi = {
+    loadVisitTypes: loadDefaultVisitTypes,
     loadPrograms: async () => [],
     assignProvider: async () => undefined,
     createProgram: async () => { throw new Error("not reached"); },
