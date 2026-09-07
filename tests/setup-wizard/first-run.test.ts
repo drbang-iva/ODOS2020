@@ -638,6 +638,79 @@ test("a completed pre-taxonomy setup migrates installed visit categories and ret
   }
 });
 
+test("a taxonomy audit failure remains pending and is emitted before reconciliation can complete", async () => {
+  class RetryableTaxonomyAuditAdapter extends InMemorySetupPracticeAdapter {
+    failTaxonomyAudit = true;
+
+    override async emitAudit(row: Parameters<InMemorySetupPracticeAdapter["emitAudit"]>[0]) {
+      if (this.failTaxonomyAudit && row.eventType === "update" && row.resourceType === "HealthcareService") {
+        this.failTaxonomyAudit = false;
+        throw new Error("synthetic taxonomy audit failure");
+      }
+      return super.emitAudit(row);
+    }
+  }
+
+  const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-taxonomy-audit-"));
+  try {
+    const statePath = join(dir, ".odos-setup-state.json");
+    const adapter = new RetryableTaxonomyAuditAdapter();
+    adapter.visitTypes.push({
+      ...buildVisitType({
+        code: "routine-exam-new",
+        name: "Routine Exam (New)",
+        discipline: "eyecare",
+        durationMinutes: 30,
+      }),
+      id: "legacy-routine",
+    });
+    writeFileSync(statePath, JSON.stringify({
+      version: "v0.5d",
+      adminProjectCreated: true,
+      projectId: "project-1",
+      practitionerCreated: true,
+      practitionerId: "practitioner-1",
+      organizationCreated: true,
+      organizationId: "organization-1",
+      locationCreated: true,
+      locationId: "location-1",
+      schedulingProvisioned: true,
+      accessPolicyCreated: true,
+      accessPolicyId: "access-policy-1",
+      accessPolicyAssigned: true,
+      completed: true,
+    }));
+    const options = {
+      adapter,
+      config: {
+        baseUrl: "http://localhost:8103",
+        practiceName: "ODOS Test Practice",
+        adminEmail: "human-admin@example.test",
+        adminName: "ODOS Admin",
+        adminPassword: "not-real-password",
+        statePath,
+      },
+      skipInteractiveBoundaryCheck: true,
+    } as const;
+
+    await assert.rejects(runSetupPractice(options), /synthetic taxonomy audit failure/);
+    assert.equal(readSetupState(statePath).visitTypeTaxonomyReconciled, undefined);
+    assert.deepEqual(readSetupState(statePath).visitTypeTaxonomyPendingAudits, [{
+      resourceType: "HealthcareService",
+      resourceId: "legacy-routine",
+    }]);
+
+    const retry = await runSetupPractice(options);
+    assert.equal(retry.state.visitTypeTaxonomyReconciled, true);
+    assert.equal(retry.state.visitTypeTaxonomyPendingAudits, undefined);
+    assert.equal(adapter.auditRows.filter((row) =>
+      row.eventType === "update" && row.resourceType === "HealthcareService" && row.resourceId === "legacy-routine"
+    ).length, 1);
+  } finally {
+    rmSync(dir, { force: true, recursive: true });
+  }
+});
+
 test("a completed legacy setup without the scheduling marker resumes and seeds the missing foundation", async () => {
   const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-legacy-state-"));
   try {

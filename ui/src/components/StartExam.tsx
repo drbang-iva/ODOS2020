@@ -182,6 +182,15 @@ export function StartExam({
       if (!encounterId) {
         await assignProvider(patient.id);
         const episodeReference = await resolveProgramReference();
+        const currentVisitType = (await api.loadVisitTypes()).find((candidate) =>
+          candidate.active !== false && visitTypeCode(candidate) === visitType.id
+        );
+        if (!currentVisitType) {
+          throw new Error(
+            "The selected visit type is no longer active. Choose an active practice visit type and try again.",
+          );
+        }
+        const currentVisitTypeLabel = currentVisitType.name ?? visitType.id;
         const createResponse = await api.executeTransaction(
           buildStartEncounterCreateBundle({
             patientId: patient.id,
@@ -191,9 +200,9 @@ export function StartExam({
               coding: [{
                 system: ODOS_VISIT_TYPE_SYSTEM,
                 code: visitType.id,
-                display: visitType.label,
+                display: currentVisitTypeLabel,
               }],
-              text: visitType.label,
+              text: currentVisitTypeLabel,
             },
           }),
           "start_encounter",

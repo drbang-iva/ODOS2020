@@ -107,6 +107,10 @@ export interface SetupPracticeState {
   visitTypeIds?: string[];
   visitTypeConfigId?: string;
   visitTypeTaxonomyReconciled?: boolean;
+  visitTypeTaxonomyPendingAudits?: {
+    resourceType: "HealthcareService" | "Basic";
+    resourceId: string;
+  }[];
   accessPolicyCreated?: boolean;
   accessPolicyId?: string;
   accessPolicyAssigned?: boolean;
@@ -256,20 +260,37 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
   );
 
   if (!state.visitTypeTaxonomyReconciled) {
-    const reconciled = await adapter.reconcileVisitTypeTaxonomy();
-    for (const resource of reconciled) {
-      if (!resource.id) {
-        throw new Error(`Reconciled ${resource.resourceType} returned without an id.`);
-      }
+    let pendingAudits = state.visitTypeTaxonomyPendingAudits ?? [];
+    if (pendingAudits.length === 0) {
+      const reconciled = await adapter.reconcileVisitTypeTaxonomy();
+      pendingAudits = reconciled.map((resource) => {
+        if (!resource.id || (resource.resourceType !== "HealthcareService" && resource.resourceType !== "Basic")) {
+          throw new Error(`Reconciled ${resource.resourceType} returned without an auditable id.`);
+        }
+        return { resourceType: resource.resourceType, resourceId: resource.id };
+      });
+      state = persistSetupState(config.statePath, {
+        ...state,
+        ...(pendingAudits.length > 0 ? { visitTypeTaxonomyPendingAudits: pendingAudits } : {}),
+      });
+    }
+    while (pendingAudits.length > 0) {
+      const [pending, ...remaining] = pendingAudits;
       await emit(buildSetupAuditRow({
         eventType: "update",
-        resourceType: resource.resourceType,
-        resourceId: resource.id,
+        resourceType: pending!.resourceType,
+        resourceId: pending!.resourceId,
         actionReason: SETUP_VISIT_TYPE_TAXONOMY_REASON,
       }));
+      pendingAudits = remaining;
+      state = persistSetupState(config.statePath, {
+        ...state,
+        visitTypeTaxonomyPendingAudits: pendingAudits.length > 0 ? pendingAudits : undefined,
+      });
     }
+    const { visitTypeTaxonomyPendingAudits: _completedAudits, ...taxonomyReconciledState } = state;
     state = persistSetupState(config.statePath, {
-      ...state,
+      ...taxonomyReconciledState,
       visitTypeTaxonomyReconciled: true,
     });
   }

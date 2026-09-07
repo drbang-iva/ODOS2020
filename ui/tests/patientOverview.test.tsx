@@ -463,7 +463,7 @@ test("Start today's visit stays disabled when the practice visit-type catalog ca
   const api: StartExamApi = {
     loadVisitTypes: async () => { throw new Error("Visit catalog unavailable"); },
     loadPrograms: async () => [],
-    assignProvider: async () => { throw new Error("not reached"); },
+    assignProvider: async () => undefined,
     createProgram: async () => { throw new Error("not reached"); },
     executeTransaction: async () => { throw new Error("not reached"); },
     now: () => new Date("2026-08-03T14:00:00.000Z"),
@@ -476,6 +476,50 @@ test("Start today's visit stays disabled when the practice visit-type catalog ca
     button.children.join("") === "Start today's visit →"
   )!.props.disabled, true);
   assert.equal(renderer.root.findByProps({ role: "alert" }).children.join(""), "Visit catalog unavailable");
+  renderer.unmount();
+});
+
+test("Start today's visit rechecks that the selected catalog service is still active before writing", async () => {
+  let catalogReads = 0;
+  let transactionCount = 0;
+  const active = {
+    ...buildVisitType({
+      code: "practice-annual",
+      name: "Practice Annual Exam",
+      discipline: "eyecare",
+      categoryCode: "exams",
+      categoryLabel: "Exams",
+      durationMinutes: 40,
+    }),
+    id: "practice-annual-service",
+  };
+  const api: StartExamApi = {
+    loadVisitTypes: async () => {
+      catalogReads += 1;
+      return catalogReads === 1 ? [active] : [{ ...active, active: false }];
+    },
+    loadPrograms: async () => [],
+    assignProvider: async () => undefined,
+    createProgram: async () => { throw new Error("not reached"); },
+    executeTransaction: async () => {
+      transactionCount += 1;
+      throw new Error("not reached");
+    },
+    now: () => new Date("2026-08-03T14:00:00.000Z"),
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<StartExam patient={patient} api={api} />);
+  });
+  await act(async () => {
+    renderer.root.findAllByType("button").find((button) =>
+      button.children.join("") === "Start today's visit →"
+    )!.props.onClick();
+    await Promise.resolve();
+  });
+  assert.equal(catalogReads, 2);
+  assert.equal(transactionCount, 0);
+  assert.equal(renderer.root.findByProps({ role: "alert" }).children.join(""), "The selected visit type is no longer active. Choose an active practice visit type and try again.");
   renderer.unmount();
 });
 
