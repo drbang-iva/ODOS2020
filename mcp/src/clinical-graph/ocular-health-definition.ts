@@ -254,7 +254,32 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
     normalTemplate: "No vitreal hemorrhage, cells, or pigment.",
     sheetLabel: "Optically clear",
     priority: ["posterior vitreous detachment (PVD)", "syneresis", "floaters"],
-    additional: ["asteroid hyalosis", "vitreous hemorrhage", "vitreous cells", "Shafer's sign (tobacco dust)", "vitreous opacities", "anterior hyaloid", "synchysis"],
+    additional: [
+      "asteroid hyalosis",
+      {
+        key: "vitreous-hemorrhage",
+        display: "vitreous hemorrhage",
+        qualifiers: [{
+          kind: "graded",
+          key: "grade",
+          display: "Grade",
+          options: [
+            "1+ (mild; retinal detail visible)",
+            "2+ (moderate; large retinal vessels visible, central detail obscured)",
+            "3+ (dense; red reflex present, no central detail posterior to the equator)",
+            "4+ (very dense; no red reflex)",
+          ],
+          scheme: "AOS vitreous hemorrhage scale; Roche BP41321 corroboration",
+        }],
+      },
+      "vitreous cells",
+      // Shafer's sign stays binary because any pigment is a retinal-break alarm that prompts a
+      // careful peripheral search; a severity rung would falsely imply a milder response.
+      "Shafer's sign (tobacco dust)",
+      "vitreous opacities",
+      "anterior hyaloid",
+      "synchysis",
+    ],
   },
   {
     key: "fundus",
@@ -286,8 +311,29 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
     display: "Periphery",
     normalTemplate: "Normal peripheral retina without tears, breaks, holes, or detachment.",
     sheetLabel: "Flat and attached",
-    priority: ["lattice degeneration", "cobblestone/paving-stone degeneration", "retinal hole", "white-without-pressure", "chorioretinal scar"],
-    additional: ["retinal tear", retinalDetachmentFinding(), "retinoschisis", "retinal tuft", "pigmentary changes", "cystoid degeneration", "operculated hole", "horseshoe tear", "drusen", "occasional drusen"],
+    priority: [
+      "lattice degeneration",
+      "cobblestone/paving-stone degeneration",
+      retinalSubtypeFinding("retinal-hole", "retinal hole", [
+        { code: "non-operculated", display: "Non-operculated" },
+        { code: "operculated", display: "Operculated" },
+      ]),
+      "white-without-pressure",
+      "chorioretinal scar",
+    ],
+    additional: [
+      retinalSubtypeFinding("retinal-tear", "retinal tear", [
+        { code: "other", display: "Other" },
+        { code: "horseshoe", display: "Horseshoe (flap)" },
+      ]),
+      retinalDetachmentFinding(),
+      "retinoschisis",
+      "retinal tuft",
+      "pigmentary changes",
+      "cystoid degeneration",
+      "drusen",
+      "occasional drusen",
+    ],
   },
 ];
 
@@ -430,10 +476,8 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { option: "cnvm", familyGroup: "exudative-amd" },
   ],
   "ocular-health:posterior:periphery": [
-    { option: "horseshoe-tear", diagnosisKey: "retinal_horseshoe_tear" },
     { option: "retinal-tear", diagnosisKey: "retinal_horseshoe_tear" },
     { option: "retinal-hole", diagnosisKey: "retinal_round_hole" },
-    { option: "operculated-hole", diagnosisKey: "retinal_round_hole" },
     { option: "retinoschisis", diagnosisKey: "retinoschisis" },
     { option: "retinal-detachment", diagnosisKey: "retinal_detachment_single_break" },
     { option: "drusen", diagnosisKey: "macular_drusen" },
@@ -687,6 +731,18 @@ function retinalDetachmentFinding(): FindingSeed {
         { code: "macula-off", display: "Macula off" },
       ],
     }],
+  };
+}
+
+function retinalSubtypeFinding(
+  key: string,
+  display: string,
+  options: Array<{ code: string; display: string }>,
+): FindingSeed {
+  return {
+    key,
+    display,
+    qualifiers: [{ kind: "enum", key: "subtype", display: "Subtype", options }],
   };
 }
 

@@ -44,6 +44,26 @@ const RETIRED_FINDING_READ_TRANSLATIONS: readonly RetiredFindingReadTranslation[
   retiredFindingCode: "macular-hole-full-lamellar",
   replacementFindingCode: "macular-hole",
   replacementQualifierValues: {},
+}, {
+  // Read only and lossless: the historical chip asserted exactly the operculated subtype now
+  // recorded here. Remove after a persisted-data census or migration confirms that no live
+  // Periphery operculated-hole selection components remain.
+  definitionStableKey: "ocular-health:posterior:periphery",
+  retiredFindingCode: "operculated-hole",
+  replacementFindingCode: "retinal-hole",
+  replacementQualifierValues: {
+    subtype: "operculated",
+  },
+}, {
+  // Read only and lossless: the historical chip asserted exactly the horseshoe subtype now
+  // recorded here. Remove after a persisted-data census or migration confirms that no live
+  // Periphery horseshoe-tear selection components remain.
+  definitionStableKey: "ocular-health:posterior:periphery",
+  retiredFindingCode: "horseshoe-tear",
+  replacementFindingCode: "retinal-tear",
+  replacementQualifierValues: {
+    subtype: "horseshoe",
+  },
 }];
 
 export function translateRetiredFindingRead(

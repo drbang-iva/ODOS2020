@@ -2186,6 +2186,331 @@ test("retired macular-hole translation exact-matches both the Macula definition 
   assert.deepEqual(await selectedFrom(wrongCode, "macular-hole-legacy-alternate"), ["macular-hole-legacy-alternate"]);
 });
 
+test("posterior Slice 5 exposes the sourced vitreous hemorrhage scale and categorical retinal subtypes", async () => {
+  const definitions = await catalog(new MemoryFhir());
+  const finding = (
+    stableKey: string,
+    code: string,
+  ) => {
+    const definition = definitions.find((candidate) => candidate.stableKey === stableKey);
+    assert.ok(definition);
+    return Object.values(definition.valueSchema.fields as Record<string, {
+      valueType?: string;
+      options?: Array<{
+        code: string;
+        qualifiers?: Array<{
+          kind: string;
+          key: string;
+          display: string;
+          options?: Array<string | { code: string; display: string }>;
+          scheme?: string;
+        }>;
+      }>;
+    }>).find((field) => field.valueType === "multi-select")?.options?.find((option) => option.code === code);
+  };
+  const flareGrade = finding("ocular-health:anterior:anterior-chamber", "flare")?.qualifiers?.[0];
+  const hemorrhageGrade = finding("ocular-health:posterior:vitreous", "vitreous-hemorrhage")?.qualifiers?.[0];
+  assert.ok(flareGrade && hemorrhageGrade);
+  assert.deepEqual(
+    { kind: hemorrhageGrade.kind, key: hemorrhageGrade.key, display: hemorrhageGrade.display },
+    { kind: flareGrade.kind, key: flareGrade.key, display: flareGrade.display },
+  );
+  assert.deepEqual(hemorrhageGrade.options, [
+    "1+ (mild; retinal detail visible)",
+    "2+ (moderate; large retinal vessels visible, central detail obscured)",
+    "3+ (dense; red reflex present, no central detail posterior to the equator)",
+    "4+ (very dense; no red reflex)",
+  ]);
+  assert.equal(hemorrhageGrade.scheme, "AOS vitreous hemorrhage scale; Roche BP41321 corroboration");
+  for (const option of hemorrhageGrade.options ?? []) {
+    assert.equal(typeof option, "string");
+    assert.doesNotMatch(String(option).replace(/\s*\(.*/, "").trim(), /^(?:grade\s*)?0$|\bnone\b/i);
+  }
+
+  assert.equal(finding("ocular-health:posterior:periphery", "operculated-hole"), undefined);
+  assert.equal(finding("ocular-health:posterior:periphery", "horseshoe-tear"), undefined);
+  assert.deepEqual(finding("ocular-health:posterior:periphery", "retinal-hole")?.qualifiers, [{
+    kind: "enum",
+    key: "subtype",
+    display: "Subtype",
+    options: [
+      { code: "non-operculated", display: "Non-operculated" },
+      { code: "operculated", display: "Operculated" },
+    ],
+  }]);
+  assert.deepEqual(finding("ocular-health:posterior:periphery", "retinal-tear")?.qualifiers, [{
+    kind: "enum",
+    key: "subtype",
+    display: "Subtype",
+    options: [
+      { code: "other", display: "Other" },
+      { code: "horseshoe", display: "Horseshoe (flap)" },
+    ],
+  }]);
+});
+
+test("each folded retinal subtype proposes the same diagnosis as its retired chip", async () => {
+  const cases = [
+    { option: "retinal-hole", subtype: "non-operculated", diagnosisKey: "retinal_round_hole" },
+    { option: "retinal-hole", subtype: "operculated", diagnosisKey: "retinal_round_hole" },
+    { option: "retinal-tear", subtype: "other", diagnosisKey: "retinal_horseshoe_tear" },
+    { option: "retinal-tear", subtype: "horseshoe", diagnosisKey: "retinal_horseshoe_tear" },
+  ] as const;
+  for (const [index, row] of cases.entries()) {
+    const fhir = new MemoryFhir();
+    const definitions = await catalog(fhir);
+    const periphery = definitions.find((definition) => definition.stableKey === "ocular-health:posterior:periphery");
+    assert.ok(periphery);
+    const field = Object.values(periphery.valueSchema.fields as Record<string, {
+      localCode?: string;
+      valueType?: string;
+    }>).find((candidate) => candidate.valueType === "multi-select");
+    assert.ok(field?.localCode);
+    const encounterId = `posterior-fold-diagnosis-${index}`;
+    const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [periphery]), {
+      authHeader: AUTH,
+      params: { stableKey: periphery.stableKey },
+      body: {
+        patientReference: `Patient/${encounterId}`,
+        encounterReference: `Encounter/${encounterId}`,
+        eyes: {
+          OD: {
+            state: "abnormal",
+            customFields: [{ code: field.localCode, value: [row.option] }],
+            findingDetails: { [row.option]: { subtype: row.subtype } },
+          },
+        },
+      },
+    });
+    assert.equal(capture.status, 200, JSON.stringify(capture.body));
+    const candidates = await handleDiagnosisCandidatesRequest({
+      authenticate: async () => ({
+        staffReference: "Practitioner/doc-1",
+        actorRole: "provider",
+        fhir,
+      }),
+      now: () => NOW,
+    }, {
+      authHeader: AUTH,
+      params: { encounterId },
+    });
+    assert.equal(candidates.status, 200, JSON.stringify(candidates.body));
+    assert.deepEqual((candidates.body as {
+      findings: Array<{ candidates: Array<{ diagnosisKey: string }> }>;
+    }).findings.map((findingRow) => findingRow.candidates.map((candidate) => candidate.diagnosisKey)), [[row.diagnosisKey]]);
+  }
+});
+
+test("both historical retinal chips rehydrate losslessly, resave, and remain invalid for new writes", async () => {
+  const cases = [
+    { retired: "operculated-hole", replacement: "retinal-hole", subtype: "operculated" },
+    { retired: "horseshoe-tear", replacement: "retinal-tear", subtype: "horseshoe" },
+  ] as const;
+  for (const [index, row] of cases.entries()) {
+    const fhir = new MemoryFhir();
+    const definitions = await catalog(fhir);
+    const periphery = definitions.find((definition) => definition.stableKey === "ocular-health:posterior:periphery");
+    assert.ok(periphery);
+    const field = Object.values(periphery.valueSchema.fields as Record<string, {
+      localCode?: string;
+      valueType?: string;
+    }>).find((candidate) => candidate.valueType === "multi-select");
+    assert.ok(field?.localCode);
+    const patientReference = `Patient/posterior-legacy-${index}`;
+    const encounterReference = `Encounter/posterior-legacy-${index}`;
+    const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [periphery]), {
+      authHeader: AUTH,
+      params: { stableKey: periphery.stableKey },
+      body: {
+        patientReference,
+        encounterReference,
+        eyes: {
+          OD: {
+            state: "abnormal",
+            customFields: [{ code: field.localCode, value: [row.replacement] }],
+            findingDetails: { [row.replacement]: { subtype: row.subtype } },
+          },
+        },
+      },
+    });
+    assert.equal(capture.status, 200, JSON.stringify(capture.body));
+    const observation = fhir.observations[0];
+    assert.ok(observation);
+    const selectionCoding = component(
+      observation,
+      `OD_${field.localCode}::${row.replacement}`,
+    )?.code.coding?.[0];
+    assert.ok(selectionCoding);
+    selectionCoding.code = `OD_${field.localCode}::${row.retired}`;
+    selectionCoding.display = row.retired;
+    const detailCode = `OD_${field.localCode}::${row.replacement}::subtype`;
+    observation.component = observation.component?.filter((entry) =>
+      !entry.code.coding?.some((coding) => coding.code === detailCode)
+    );
+    const persistedHistoricalObservation = structuredClone(observation);
+
+    const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, [periphery]), {
+      authHeader: AUTH,
+      params: { stableKey: periphery.stableKey },
+      query: { patient: patientReference, encounter: encounterReference },
+    });
+    assert.equal(history.status, 200, JSON.stringify(history.body));
+    const [historyRow] = (history.body as {
+      rows: Array<{
+        state?: string;
+        values: Array<{ code: string; value: string[] }>;
+        findingDetails?: Record<string, Record<string, string>>;
+      }>;
+    }).rows;
+    assert.ok(historyRow);
+    assert.deepEqual(historyRow.values[0]?.value, [row.replacement]);
+    assert.deepEqual(historyRow.findingDetails, { [row.replacement]: { subtype: row.subtype } });
+    assert.deepEqual(fhir.observations[0], persistedHistoricalObservation);
+
+    const resave = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [periphery]), {
+      authHeader: AUTH,
+      params: { stableKey: periphery.stableKey },
+      body: {
+        patientReference,
+        encounterReference,
+        eyes: {
+          OD: {
+            state: historyRow.state,
+            customFields: historyRow.values.map(({ code, value }) => ({ code, value })),
+            findingDetails: historyRow.findingDetails,
+          },
+        },
+      },
+    });
+    assert.equal(resave.status, 200, JSON.stringify(resave.body));
+    assert.deepEqual(fhir.observations[0], persistedHistoricalObservation);
+
+    const rejected = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [periphery]), {
+      authHeader: AUTH,
+      params: { stableKey: periphery.stableKey },
+      body: {
+        patientReference: `Patient/posterior-new-retired-${index}`,
+        encounterReference: `Encounter/posterior-new-retired-${index}`,
+        eyes: {
+          OD: {
+            state: "abnormal",
+            customFields: [{ code: field.localCode, value: [row.retired] }],
+          },
+        },
+      },
+    });
+    assert.equal(rejected.status, 400);
+    assert.match(String((rejected.body as { error: string }).error), new RegExp(`unknown or inactive option: ${row.retired}`));
+  }
+});
+
+test("retired periphery translations exact-match both their definition and finding codes", async () => {
+  const selectedFrom = async (definition: ClinicalFindingDefinition, selectedCode: string) => {
+    const field = Object.values(definition.valueSchema.fields as Record<string, {
+      localCode?: string;
+      valueType?: string;
+    }>).find((candidate) => candidate.valueType === "multi-select");
+    assert.ok(field?.localCode);
+    const fhir = new MemoryFhir();
+    const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [definition]), {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      body: {
+        patientReference: `Patient/posterior-scope-${selectedCode}`,
+        encounterReference: `Encounter/posterior-scope-${selectedCode}`,
+        eyes: { OD: { state: "abnormal", customFields: [{ code: field.localCode, value: [selectedCode] }] } },
+      },
+    });
+    assert.equal(capture.status, 200, JSON.stringify(capture.body));
+    const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, [definition]), {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      query: { patient: `Patient/posterior-scope-${selectedCode}`, encounter: `Encounter/posterior-scope-${selectedCode}` },
+    });
+    return (history.body as { rows: Array<{ values: Array<{ value: string[] }> }> }).rows[0]?.values[0]?.value;
+  };
+  const [wrongDefinition] = buildOcularHealthDefinitions([{
+    key: "periphery",
+    display: "Synthetic Periphery",
+    normalTemplate: "Synthetic normal.",
+    priority: ["retinal hole"],
+    additional: ["retinal tear", "operculated hole", "horseshoe tear"],
+  }], "ocular-health:synthetic:", SYNTHETIC_PROVENANCE);
+  assert.ok(wrongDefinition);
+  assert.deepEqual(await selectedFrom(wrongDefinition, "operculated-hole"), ["operculated-hole"]);
+  assert.deepEqual(await selectedFrom(wrongDefinition, "horseshoe-tear"), ["horseshoe-tear"]);
+
+  const [wrongCodes] = buildOcularHealthDefinitions([{
+    key: "periphery",
+    display: "Periphery",
+    normalTemplate: "Synthetic normal.",
+    priority: ["retinal hole"],
+    additional: ["retinal tear", "operculated hole legacy alternate", "horseshoe tear legacy alternate"],
+  }], "ocular-health:posterior:", SYNTHETIC_PROVENANCE);
+  assert.ok(wrongCodes);
+  assert.deepEqual(await selectedFrom(wrongCodes, "operculated-hole-legacy-alternate"), ["operculated-hole-legacy-alternate"]);
+  assert.deepEqual(await selectedFrom(wrongCodes, "horseshoe-tear-legacy-alternate"), ["horseshoe-tear-legacy-alternate"]);
+});
+
+test("persisted retinal subtype qualifiers override conflicting read translations", async () => {
+  const cases = [
+    { retired: "operculated-hole", replacement: "retinal-hole", persisted: "non-operculated" },
+    { retired: "horseshoe-tear", replacement: "retinal-tear", persisted: "other" },
+  ] as const;
+  for (const [index, row] of cases.entries()) {
+    const fhir = new MemoryFhir();
+    const definitions = await catalog(fhir);
+    const periphery = definitions.find((definition) => definition.stableKey === "ocular-health:posterior:periphery");
+    assert.ok(periphery);
+    const field = Object.values(periphery.valueSchema.fields as Record<string, {
+      localCode?: string;
+      valueType?: string;
+    }>).find((candidate) => candidate.valueType === "multi-select");
+    assert.ok(field?.localCode);
+    const patientReference = `Patient/posterior-precedence-${index}`;
+    const encounterReference = `Encounter/posterior-precedence-${index}`;
+    const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [periphery]), {
+      authHeader: AUTH,
+      params: { stableKey: periphery.stableKey },
+      body: {
+        patientReference,
+        encounterReference,
+        eyes: {
+          OD: {
+            state: "abnormal",
+            customFields: [{ code: field.localCode, value: [row.replacement] }],
+            findingDetails: { [row.replacement]: { subtype: row.persisted } },
+          },
+        },
+      },
+    });
+    assert.equal(capture.status, 200, JSON.stringify(capture.body));
+    const replacementSelection = component(fhir.observations[0], `OD_${field.localCode}::${row.replacement}`);
+    assert.ok(replacementSelection);
+    const retiredSelection = structuredClone(replacementSelection);
+    const retiredCoding = retiredSelection.code.coding?.[0];
+    assert.ok(retiredCoding);
+    retiredCoding.code = `OD_${field.localCode}::${row.retired}`;
+    retiredCoding.display = row.retired;
+    fhir.observations[0]?.component?.push(retiredSelection);
+
+    const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, [periphery]), {
+      authHeader: AUTH,
+      params: { stableKey: periphery.stableKey },
+      query: { patient: patientReference, encounter: encounterReference },
+    });
+    assert.equal(history.status, 200, JSON.stringify(history.body));
+    const [historyRow] = (history.body as {
+      rows: Array<{
+        values: Array<{ value: string[] }>;
+        findingDetails?: Record<string, Record<string, string>>;
+      }>;
+    }).rows;
+    assert.deepEqual(historyRow?.values[0]?.value, [row.replacement]);
+    assert.equal(historyRow?.findingDetails?.[row.replacement]?.subtype, row.persisted);
+  }
+});
+
 test("posterior drusen seeds preserve leaf ids and add staged-family targets in ruled order", async () => {
   const definitions = await catalog(new MemoryFhir());
   const targets = (stableKey: string) => definitions.find((definition) => definition.stableKey === stableKey)
@@ -2211,9 +2536,9 @@ test("posterior drusen seeds preserve leaf ids and add staged-family targets in 
     { option: "occasional-drusen", id: "SEED_MACULAR_DRUSEN_28", diagnosisKey: "macular_drusen" },
   ]);
   assert.deepEqual(targets("ocular-health:posterior:periphery")?.slice(-3), [
-    { option: "drusen", id: "SEED_MACULAR_DRUSEN_7", diagnosisKey: "macular_drusen" },
-    { option: "drusen", id: "SEED_NONEXUDATIVE-AMD_8", familyGroup: "nonexudative-amd" },
-    { option: "occasional-drusen", id: "SEED_MACULAR_DRUSEN_9", diagnosisKey: "macular_drusen" },
+    { option: "drusen", id: "SEED_MACULAR_DRUSEN_5", diagnosisKey: "macular_drusen" },
+    { option: "drusen", id: "SEED_NONEXUDATIVE-AMD_6", familyGroup: "nonexudative-amd" },
+    { option: "occasional-drusen", id: "SEED_MACULAR_DRUSEN_7", diagnosisKey: "macular_drusen" },
   ]);
   const macula = definitions.find((definition) => definition.stableKey === "ocular-health:posterior:macula");
   assert.equal(macula?.allowDiagnosisMapping, true);
@@ -2244,7 +2569,7 @@ test("OH-2 seeds five posterior structures and round-trips their worksheet findi
     }],
     ["Periphery", {
       priority: ["lattice degeneration", "cobblestone/paving-stone degeneration", "retinal hole", "white-without-pressure", "chorioretinal scar"],
-      additional: ["retinal tear", "retinal detachment", "retinoschisis", "retinal tuft", "pigmentary changes", "cystoid degeneration", "operculated hole", "horseshoe tear", "drusen", "occasional drusen"],
+      additional: ["retinal tear", "retinal detachment", "retinoschisis", "retinal tuft", "pigmentary changes", "cystoid degeneration", "drusen", "occasional drusen"],
     }],
   ]);
   for (const [display, expected] of expectedRefinements) {
