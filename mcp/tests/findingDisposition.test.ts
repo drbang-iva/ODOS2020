@@ -133,9 +133,9 @@ test("clinical dispositions carry every required reason and ruling reference", (
 test("pending ocular-health finding dispositions never increase", () => {
   const pending = FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "pending");
 
-  // M0 baseline: 158 at origin/main 5237da3d55beb2dc5f0c114b2072c70b82132612.
+  // M0 ship baseline: 153 at origin/main 1bd9f80434c94b721f8a87c8d574e13445f230c4.
   // Tighten this ceiling whenever the count falls so pending dispositions may never rise again.
-  assert.ok(pending.length <= 158, `Pending ocular-health finding dispositions rose to ${pending.length}.`);
+  assert.ok(pending.length <= 153, `Pending ocular-health finding dispositions rose to ${pending.length}.`);
 });
 
 test("the compiled disposition registry has no effective-definition dependency surface", async () => {

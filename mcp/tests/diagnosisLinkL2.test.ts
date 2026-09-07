@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import type { AddressInfo } from "node:net";
+import { fileURLToPath } from "node:url";
 import type { Basic, Bundle, Condition, Encounter, Observation, Provenance, Resource } from "@medplum/fhirtypes";
 import express from "express";
+import ts from "typescript";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import { handleCupDiscCaptureRequest } from "../src/clinical-graph/cup-disc-endpoint.js";
 import {
@@ -44,6 +46,7 @@ import {
   captureGlaucomaFinding,
   evaluateGlaucomaDiagnosisSuggestions,
   evaluateIopDiagnosisSuggestions,
+  GLAUCOMA_FINDING_DEFINITION_KEYS,
   type ClinicalGraphProvenance,
   type FindingInstance,
 } from "../src/clinical-graph/glaucoma-suspect.js";
@@ -54,6 +57,154 @@ import {
 } from "../src/clinical-graph/refraction-suspect.js";
 
 const { handleDiagnosisPickRequest } = diagnosisPickEndpoint;
+
+const GLAUCOMA_RULE_FINDING_KEYS_NOT_YET_EXERCISED = new Set([
+  "corneal_hysteresis",
+  "pachymetry_um",
+  "rnfl_gcc",
+]);
+const RULE_CATALOG_KEYS_NOT_YET_EXERCISED = new Set<string>();
+
+function sortedUnique(values: readonly string[]): string[] {
+  return [...new Set(values)].sort();
+}
+
+function parseSource(sourceUrl: URL): ts.SourceFile {
+  const sourcePath = fileURLToPath(sourceUrl);
+  return ts.createSourceFile(
+    sourcePath,
+    readFileSync(sourcePath, "utf8"),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+}
+
+function stringUnionMembers(source: ts.SourceFile, aliasName: string): string[] {
+  const declaration = source.statements.find((statement): statement is ts.TypeAliasDeclaration =>
+    ts.isTypeAliasDeclaration(statement) && statement.name.text === aliasName
+  );
+  assert.ok(declaration, `Missing evaluator declaration ${aliasName}.`);
+  const members = ts.isUnionTypeNode(declaration.type) ? declaration.type.types : [declaration.type];
+  const values = members.flatMap((member) =>
+    ts.isLiteralTypeNode(member) && ts.isStringLiteralLike(member.literal) ? [member.literal.text] : []
+  );
+  assert.equal(values.length, members.length, `${aliasName} must remain an enumerable string-literal union.`);
+  return values;
+}
+
+function catalogKeyForRuleDeclaration(): {
+  resolve(stableKey: string): string;
+  declaredCatalogKeys: string[];
+} {
+  const source = parseSource(new URL("../src/clinical-graph/diagnosis-candidates-endpoint.ts", import.meta.url));
+  const declaration = source.statements.find((statement): statement is ts.FunctionDeclaration =>
+    ts.isFunctionDeclaration(statement) && statement.name?.text === "catalogKeyForRule"
+  );
+  assert.ok(declaration?.body, "Missing catalogKeyForRule declaration.");
+
+  const declaredCatalogKeys = new Set<string>();
+  const enumeratedLoopVariables = new Set<string>();
+  const unsupportedReturns: string[] = [];
+  const stableKeyParameter = declaration.parameters[0]?.name;
+  assert.ok(stableKeyParameter && ts.isIdentifier(stableKeyParameter));
+  const arrayValues = (expression: ts.Expression): string[] => {
+    let unwrapped = expression;
+    while (ts.isAsExpression(unwrapped) || ts.isSatisfiesExpression(unwrapped) || ts.isParenthesizedExpression(unwrapped)) {
+      unwrapped = unwrapped.expression;
+    }
+    return ts.isArrayLiteralExpression(unwrapped)
+      ? unwrapped.elements.flatMap((element) => ts.isStringLiteralLike(element) ? [element.text] : [])
+      : [];
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isForOfStatement(node) && ts.isVariableDeclarationList(node.initializer)) {
+      const variable = node.initializer.declarations[0]?.name;
+      const values = arrayValues(node.expression);
+      if (variable && ts.isIdentifier(variable) && values.length > 0) {
+        let returnsVariable = false;
+        const inspectLoop = (child: ts.Node): void => {
+          if (ts.isReturnStatement(child) && child.expression && ts.isIdentifier(child.expression) &&
+              child.expression.text === variable.text) {
+            returnsVariable = true;
+          }
+          ts.forEachChild(child, inspectLoop);
+        };
+        inspectLoop(node.statement);
+        if (returnsVariable) {
+          enumeratedLoopVariables.add(variable.text);
+          values.forEach((value) => declaredCatalogKeys.add(value));
+        }
+      }
+    }
+    if (ts.isReturnStatement(node) && node.expression) {
+      if (ts.isStringLiteralLike(node.expression)) {
+        declaredCatalogKeys.add(node.expression.text);
+      } else if (!ts.isIdentifier(node.expression) ||
+          (node.expression.text !== stableKeyParameter.text && !enumeratedLoopVariables.has(node.expression.text))) {
+        unsupportedReturns.push(node.expression.getText(source));
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(declaration.body);
+  assert.deepEqual(
+    unsupportedReturns,
+    [],
+    `catalogKeyForRule gained non-enumerable return declarations: ${unsupportedReturns.join(", ")}`,
+  );
+
+  const transpiled = ts.transpileModule(
+    `${declaration.getText(source)}\nmodule.exports.catalogKeyForRule = catalogKeyForRule;`,
+    { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } },
+  ).outputText;
+  const loaded = { exports: {} as { catalogKeyForRule?: (stableKey: string) => string } };
+  const evaluate = new Function("module", "exports", transpiled) as (
+    module: typeof loaded,
+    exports: typeof loaded.exports,
+  ) => void;
+  evaluate(loaded, loaded.exports);
+  assert.equal(typeof loaded.exports.catalogKeyForRule, "function");
+
+  return {
+    resolve: loaded.exports.catalogKeyForRule!,
+    declaredCatalogKeys: sortedUnique([...declaredCatalogKeys]),
+  };
+}
+
+function declaredRuleCatalogKeys(resolve: (stableKey: string) => string): string[] {
+  const glaucomaSource = parseSource(new URL("../src/clinical-graph/glaucoma-suspect.ts", import.meta.url));
+  const refractionSource = parseSource(new URL("../src/clinical-graph/refraction-suspect.ts", import.meta.url));
+  const cupDiscKeys = stringUnionMembers(glaucomaSource, "GlaucomaCupDiscRiskTier")
+    .filter((tier) => tier !== "normal")
+    .map((tier) => resolve(`glaucoma_suspect_open_angle_${tier}_od`));
+  const iopKeys = stringUnionMembers(glaucomaSource, "GlaucomaIopRiskTier")
+    .filter((tier) => tier !== "normal")
+    .map(() => resolve("ocular_hypertension_od"));
+  const refractiveKeys = stringUnionMembers(refractionSource, "RefractiveDiagnosisKind")
+    .map((kind) => resolve(`${kind}_od`));
+  return sortedUnique([...cupDiscKeys, ...iopKeys, ...refractiveKeys]);
+}
+
+function assertDeclaredInventory(
+  label: string,
+  declaredValues: readonly string[],
+  exercisedValues: ReadonlySet<string>,
+  notYetExercisedValues: ReadonlySet<string>,
+): void {
+  const declared = new Set(declaredValues);
+  const unexpectedExercises = sortedUnique([...exercisedValues].filter((key) => !declared.has(key)));
+  const staleDeferrals = sortedUnique([...notYetExercisedValues].filter((key) => !declared.has(key)));
+  const exercisedDeferrals = sortedUnique([...notYetExercisedValues].filter((key) => exercisedValues.has(key)));
+  const unaccountedDeclarations = sortedUnique(declaredValues.filter((key) =>
+    !exercisedValues.has(key) && !notYetExercisedValues.has(key)
+  ));
+
+  assert.deepEqual(unexpectedExercises, [], `${label} fixtures exercised undeclared keys: ${unexpectedExercises.join(", ")}`);
+  assert.deepEqual(staleDeferrals, [], `${label} not-yet-exercised list names undeclared keys: ${staleDeferrals.join(", ")}`);
+  assert.deepEqual(exercisedDeferrals, [], `${label} keys cannot be both exercised and not-yet-exercised: ${exercisedDeferrals.join(", ")}`);
+  assert.deepEqual(unaccountedDeclarations, [], `${label} declarations are unaccounted: ${unaccountedDeclarations.join(", ")}`);
+}
 
 test("condition code resolution returns zero, one, or two codes only when the catalog declaration permits it", () => {
   const resolve = (diagnosisPickEndpoint as typeof diagnosisPickEndpoint & {
@@ -936,6 +1087,12 @@ test("diagnosis reachability reports mapping, rule, and visual-field descriptor 
   const iopDefinition = glaucomaDefinitions.find((definition) => definition.stableKey === "intraocular_pressure");
   assert.ok(cupDiscDefinition);
   assert.ok(iopDefinition);
+  assertDeclaredInventory(
+    "Glaucoma evaluator finding-definition",
+    GLAUCOMA_FINDING_DEFINITION_KEYS,
+    new Set([cupDiscDefinition.stableKey, iopDefinition.stableKey]),
+    GLAUCOMA_RULE_FINDING_KEYS_NOT_YET_EXERCISED,
+  );
   const cupDiscEvaluations = [0.5, 0.75].flatMap((ratio, index) => {
     const captured = captureGlaucomaFinding({
       definition: cupDiscDefinition,
@@ -997,18 +1154,36 @@ test("diagnosis reachability reports mapping, rule, and visual-field descriptor 
     findingDefinitions: [refractionDefinition],
     provenance,
   });
-  const ruleReachableKeys = new Set([
+  const catalogRuleDeclaration = catalogKeyForRuleDeclaration();
+  const declaredRuleKeys = sortedUnique([
+    ...catalogRuleDeclaration.declaredCatalogKeys,
+    ...declaredRuleCatalogKeys(catalogRuleDeclaration.resolve),
+  ]);
+  const exercisedRuleKeys = new Set([
     ...cupDiscEvaluations,
     ...iopEvaluations,
     ...refractionEvaluations,
   ].map((evaluation) => {
     const emittedKey = evaluation.diagnosisDefinition.stableKey;
-    const catalogRow = activeLedgerRows
-      .filter((row) => emittedKey === row.stableKey || emittedKey.startsWith(`${row.stableKey}_`))
-      .sort((left, right) => right.stableKey.length - left.stableKey.length)[0];
+    const catalogKey = catalogRuleDeclaration.resolve(emittedKey);
+    const catalogRow = activeLedgerRows.find((row) => row.stableKey === catalogKey);
     assert.ok(catalogRow, `Rule evaluator emitted a diagnosis absent from the active catalog: ${emittedKey}`);
     return catalogRow.stableKey;
   }));
+  assertDeclaredInventory(
+    "Rule evaluator catalog",
+    declaredRuleKeys,
+    exercisedRuleKeys,
+    RULE_CATALOG_KEYS_NOT_YET_EXERCISED,
+  );
+  const activeLedgerKeys = new Set(activeLedgerRows.map((row) => row.stableKey));
+  const declaredKeysMissingFromCatalog = declaredRuleKeys.filter((key) => !activeLedgerKeys.has(key));
+  assert.deepEqual(
+    declaredKeysMissingFromCatalog,
+    [],
+    `Rule evaluator declarations are absent from the active catalog: ${declaredKeysMissingFromCatalog.join(", ")}`,
+  );
+  const declaredRuleKeySet = new Set(declaredRuleKeys);
   const mappingReachableKeys = new Set<string>();
   for (const definition of buildFindingDefinitionSeeds().filter((candidate) => candidate.active)) {
     for (const candidate of definition.diagnosisCandidates ?? []) {
@@ -1027,11 +1202,11 @@ test("diagnosis reachability reports mapping, rule, and visual-field descriptor 
   assert.deepEqual({
     activeLedgerRows: activeLedgerRows.length,
     mapping: reachedBy(mappingReachableKeys),
-    rules: reachedBy(ruleReachableKeys),
+    rules: reachedBy(declaredRuleKeySet),
     visualFieldDescriptors: reachedBy(visualFieldDescriptorReachableKeys),
   }, {
-    activeLedgerRows: 132,
-    mapping: 58,
+    activeLedgerRows: 134,
+    mapping: 63,
     rules: 8,
     visualFieldDescriptors: 3,
   });

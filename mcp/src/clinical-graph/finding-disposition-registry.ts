@@ -4,7 +4,7 @@
  * are deliberately out of scope.
  *
  * Seeded mechanically from ODOS2020 commit
- * 5237da3d55beb2dc5f0c114b2072c70b82132612: an active option named by an
+ * 1bd9f80434c94b721f8a87c8d574e13445f230c4: an active option named by an
  * active option or qualifier trigger was marked proposes/finding; every other
  * active option was marked pending. All later edits are by hand.
  *
@@ -234,13 +234,15 @@ export const FINDING_DISPOSITION_ROWS: readonly FindingDispositionRegistryRow[] 
   { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "drusen", disposition: { kind: "proposes", entrySurface: "finding" } },
   { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "rpe-changes", disposition: { kind: "pending" } },
   { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "dry-amd", disposition: { kind: "proposes", entrySurface: "finding" } },
-  { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "epiretinal-membrane-erm", disposition: { kind: "pending" } },
+  { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "epiretinal-membrane-erm", disposition: { kind: "proposes", entrySurface: "finding" } },
   { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "pigment-mottling", disposition: { kind: "pending" } },
   { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "wet-amd", disposition: { kind: "proposes", entrySurface: "finding" } },
-  { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "cnvm", disposition: { kind: "pending" } },
-  { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "geographic-atrophy", disposition: { kind: "pending" } },
-  { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "macular-hole-full-lamellar", disposition: { kind: "pending" } },
-  { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "cystoid-macular-edema-cme", disposition: { kind: "pending" } },
+  { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "cnvm", disposition: { kind: "proposes", entrySurface: "finding" } },
+  { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "geographic-atrophy", disposition: { kind: "proposes", entrySurface: "finding" } },
+  { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "lamellar-macular-hole", disposition: { kind: "proposes", entrySurface: "finding" } },
+  { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "macular-hole", disposition: { kind: "proposes", entrySurface: "finding" } },
+  { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "macular-pseudohole", disposition: { kind: "proposes", entrySurface: "finding" } },
+  { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "cystoid-macular-edema-cme", disposition: { kind: "proposes", entrySurface: "finding" } },
   { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "diabetic-macular-edema", disposition: { kind: "pending" } },
   { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "vitreomacular-traction", disposition: { kind: "pending" } },
   { definitionStableKey: "ocular-health:posterior:macula", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_03", optionCode: "subretinal-fluid", disposition: { kind: "pending" } },
