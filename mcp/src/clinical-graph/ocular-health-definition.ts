@@ -123,8 +123,8 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
       pterygiumFinding("pterygium-encroaching", "pterygium (encroaching)"),
       sourcedCornealGradedFinding("neovascularization", "neovascularization", [
         "1+ (<1.0 mm vessel penetration)",
-        "2+ (1.0–1.5 mm vessel penetration)",
-        "3+ (1.5–2.0 mm vessel penetration)",
+        "2+ (≥1.0 to <1.5 mm vessel penetration)",
+        "3+ (≥1.5 to 2.0 mm vessel penetration)",
         "4+ (>2.0 mm vessel penetration)",
       ]),
       sourcedCornealGradedFinding("infiltrate", "infiltrate", [
@@ -593,12 +593,7 @@ function cornealStainingFinding(): FindingSeed {
         kind: "graded",
         key: "grade",
         display: "Corneal staining grade (FDA Appendix C; Efron-corroborated)",
-        options: [
-          "Grade 1 (minimal superficial staining or stippling)",
-          "Grade 2 (regional or diffuse punctate staining)",
-          "Grade 3 (dense coalesced staining up to 2 mm)",
-          "Grade 4 (dense coalescent staining >2 mm or full-thickness abrasion)",
-        ],
+        options: ["Grade 1", "Grade 2", "Grade 3", "Grade 4"],
         scheme: "FDA Appendix C; Efron-corroborated",
       },
       {

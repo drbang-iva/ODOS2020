@@ -867,12 +867,7 @@ test("ocular-health cleanup keeps only clinically scoped chips and qualifiers", 
       kind: "graded",
       key: "grade",
       display: "Corneal staining grade (FDA Appendix C; Efron-corroborated)",
-      options: [
-        "Grade 1 (minimal superficial staining or stippling)",
-        "Grade 2 (regional or diffuse punctate staining)",
-        "Grade 3 (dense coalesced staining up to 2 mm)",
-        "Grade 4 (dense coalescent staining >2 mm or full-thickness abrasion)",
-      ],
+      options: ["Grade 1", "Grade 2", "Grade 3", "Grade 4"],
       scheme: "FDA Appendix C; Efron-corroborated",
     },
     {
@@ -967,8 +962,8 @@ test("corneal findings expose sourced grade axes and arcus extent through live q
       scheme: "FDA Appendix C; Efron-corroborated",
       options: [
         "1+ (<1.0 mm vessel penetration)",
-        "2+ (1.0–1.5 mm vessel penetration)",
-        "3+ (1.5–2.0 mm vessel penetration)",
+        "2+ (≥1.0 to <1.5 mm vessel penetration)",
+        "3+ (≥1.5 to 2.0 mm vessel penetration)",
         "4+ (>2.0 mm vessel penetration)",
       ],
     },
@@ -1025,6 +1020,70 @@ test("corneal findings expose sourced grade axes and arcus extent through live q
     ],
   });
   assert.notEqual(arcusQualifier?.kind, lensQualifier.kind);
+});
+
+test("historical positive SPK grades remain editable after the provisional scale is sourced", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const cornea = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:cornea");
+  assert.ok(cornea);
+  const field = Object.values(cornea.valueSchema.fields as Record<string, {
+    localCode: string;
+    valueType?: string;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field);
+
+  const legacyCapture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: cornea.stableKey },
+    body: {
+      patientReference: "Patient/p-spk-legacy",
+      encounterReference: "Encounter/e-spk-legacy",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["superficial-punctate-keratitis-spk"] }],
+          findingDetails: {
+            "superficial-punctate-keratitis-spk": { grade: "Grade 1" },
+          },
+        },
+      },
+    },
+  });
+  assert.equal(legacyCapture.status, 200, JSON.stringify(legacyCapture.body));
+
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: cornea.stableKey },
+    query: { patient: "Patient/p-spk-legacy", encounter: "Encounter/e-spk-legacy" },
+  });
+  assert.equal(history.status, 200);
+  const [row] = (history.body as {
+    rows: Array<{
+      state?: string;
+      values: Array<{ code: string; value: number | string | string[] }>;
+      findingDetails?: Record<string, Record<string, string>>;
+    }>;
+  }).rows;
+  assert.ok(row);
+  assert.equal(row.findingDetails?.["superficial-punctate-keratitis-spk"]?.grade, "Grade 1");
+
+  const resave = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: cornea.stableKey },
+    body: {
+      patientReference: "Patient/p-spk-legacy",
+      encounterReference: "Encounter/e-spk-legacy",
+      eyes: {
+        OD: {
+          state: row.state,
+          customFields: row.values.map(({ code, value }) => ({ code, value })),
+          findingDetails: row.findingDetails,
+        },
+      },
+    },
+  });
+  assert.equal(resave.status, 200, JSON.stringify(resave.body));
 });
 
 test("corneal graded qualifiers never offer a zero or none rung", async () => {
