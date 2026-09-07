@@ -170,8 +170,8 @@ async function createCollection(
   staffReference: string,
   timeZone?: string,
 ): Promise<CollectionCreationResult> {
-  await assertDayNotSealed(fhir, collectedAt, timeZone);
   if (body.opticalOrder) {
+    await assertDayNotSealed(fhir, collectedAt, timeZone);
     assertPositiveCollectionAmount(body.amountCents);
     if (body.opticalOrder.patientReference !== body.patientReference) {
       throw new CollectionInputError("The optical order patient must match patientReference.");
@@ -197,6 +197,7 @@ async function createCollection(
 
   const existing = await findCollectionByRequestId(fhir, body.requestId);
   if (existing) return replayedCollection(existing, body);
+  await assertDayNotSealed(fhir, collectedAt, timeZone);
 
   const chargeItems = await Promise.all(body.selectedOpenChargeLineIds.map((id) =>
     fhir.read<ChargeItem>("ChargeItem", id),
@@ -420,8 +421,10 @@ function chargeSettlements(
       invoice.totalNet?.currency,
       `${invoiceReference} totalNet`,
     );
+    const hasTenderMarker = invoice.extension?.some(
+      (extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL,
+    ) ?? false;
     const fullySettled = invoice.status === "balanced"
-      || invoice.extension?.some((extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL)
       || (totalNetCents !== undefined && allocatedCents === totalNetCents);
 
     if (fullySettled) {
@@ -432,14 +435,16 @@ function chargeSettlements(
       }
       continue;
     }
-    if (allocatedCents !== 0) {
+    if (allocatedCents !== 0 || hasTenderMarker) {
       for (const line of invoice.lineItem ?? []) {
         const chargeReference = line.chargeItemReference?.reference;
         if (!chargeReference) continue;
         // Match statements.ts:300: when payment attribution is ambiguous, refuse rather than inventing a split.
         ambiguityByCharge.set(
           chargeReference,
-          `${invoiceReference} has a partial ${allocatedCents}-cent allocation against ${totalNetCents ?? "unknown"} net cents; the charge-level open amount is ambiguous.`,
+          allocatedCents !== 0
+            ? `${invoiceReference} has a partial ${allocatedCents}-cent allocation against ${totalNetCents ?? "unknown"} net cents; the charge-level open amount is ambiguous.`
+            : `${invoiceReference} is issued with a tender marker but no persisted tender amount; the charge-level open amount is ambiguous.`,
         );
       }
     }

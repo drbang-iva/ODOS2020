@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Bundle, ChargeItem, Invoice, PaymentReconciliation, Resource } from "@medplum/fhirtypes";
+import type { Basic, Bundle, ChargeItem, Invoice, PaymentReconciliation, Resource } from "@medplum/fhirtypes";
 import type { FhirSearchParams } from "../src/fhir-client.js";
 import {
   handleOpenChargesRequest,
   handleRecordedTenderCollectionRequest,
+  ODOS_COLLECTION_REQUEST_IDENTIFIER_SYSTEM,
   type OpenChargeLine,
   type PaymentCollectionHandlerDeps,
 } from "../src/payments/payment-collection-handler.js";
@@ -274,6 +275,31 @@ test("G — a record-only tender on a balanced invoice leaves zero open cents an
   });
 });
 
+test("an issued Invoice tender marker without a persisted amount leaves its charge explicitly ambiguous", async () => {
+  const partiallyTendered = invoice("invoice-partial-tender", [{
+    chargeItemReference: "ChargeItem/charge-partial-tender",
+    amountCents: 1_000,
+  }]);
+  partiallyTendered.extension = [{
+    url: ODOS_PAYMENT_TENDER_EXTENSION_URL,
+    valueCodeableConcept: { coding: [{ code: "CASH" }] },
+  }];
+
+  const lines = await openLines(fixture({
+    charges: [charge("charge-partial-tender")],
+    invoices: [partiallyTendered],
+  }));
+
+  assert.deepEqual(observed(lines, ["charge-partial-tender"]), {
+    openByCharge: { "charge-partial-tender": null },
+    openLineCount: 1,
+  });
+  assert.match(
+    lines[0]?.ambiguityReason ?? "",
+    /Invoice\/invoice-partial-tender.*tender marker.*no persisted tender amount/i,
+  );
+});
+
 test("J — a reversing allocation restores the reversed amount to the open charge", async () => {
   const lines = await openLines(fixture({
     charges: [charge("charge-j")],
@@ -349,6 +375,7 @@ function collectionFixture(options: {
   concurrentWrites?: number;
   invoices?: Invoice[];
   payments?: PaymentReconciliation[];
+  sealed?: boolean;
 } = {}): CollectionHarness {
   const charges = [charge("charge-collection")];
   const invoices: Invoice[] = options.invoices ? [...options.invoices] : [];
@@ -377,6 +404,7 @@ function collectionFixture(options: {
       let resources: Resource[] = [];
       if (resourceType === "ChargeItem") resources = charges;
       if (resourceType === "PaymentReconciliation") resources = payments;
+      if (resourceType === "Basic" && options.sealed) resources = [collectionDaySeal()];
       if (resourceType === "Invoice") {
         const identifier = query.get("identifier");
         resources = identifier
@@ -429,6 +457,29 @@ function collectionFixture(options: {
   };
 }
 
+function collectionDaySeal(): Basic {
+  return {
+    resourceType: "Basic",
+    id: "settlement-day-seal",
+    identifier: [{
+      system: "https://odos2020.com/fhir/NamingSystem/day-seal-date",
+      value: "2026-09-07",
+    }],
+    code: {
+      coding: [{
+        system: "https://odos2020.com/fhir/CodeSystem/day-seal",
+        code: "day-seal",
+      }],
+    },
+    created: "2026-09-07",
+    author: { reference: "Practitioner/staff-1" },
+    extension: [{
+      url: "https://odos2020.com/fhir/StructureDefinition/day-seal-timestamp",
+      valueInstant: "2026-09-07T21:00:00.000Z",
+    }],
+  };
+}
+
 function transactionResponse(status: string, invoiceId: string): Bundle {
   return {
     resourceType: "Bundle",
@@ -475,6 +526,32 @@ test("H — concurrent replay with the same requestId returns one Invoice and re
   );
   assert.equal(harness.audits.length, 1);
   assert.equal(projectDayLedgerPayments(harness.invoices, "2026-09-07", "America/New_York").totalCents, 1_000);
+});
+
+test("a sealed-day retry returns the matching collection replay without a second write", async () => {
+  const requestId = "12121212-1212-4212-8212-121212121212";
+  const existing = invoice("invoice-sealed-replay", [{
+    chargeItemReference: "ChargeItem/charge-collection",
+    amountCents: 1_000,
+  }]);
+  existing.status = "balanced";
+  existing.identifier = [{ system: ODOS_COLLECTION_REQUEST_IDENTIFIER_SYSTEM, value: requestId }];
+  existing.extension = [{
+    url: ODOS_PAYMENT_TENDER_EXTENSION_URL,
+    valueCodeableConcept: { coding: [{ code: "CASH" }] },
+  }];
+  const harness = collectionFixture({ invoices: [existing], sealed: true });
+
+  const result = await handleRecordedTenderCollectionRequest(harness.deps, {
+    authHeader: "Bearer synthetic",
+    body: collectionBody(requestId),
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal((result.body as { replayed: boolean }).replayed, true);
+  assert.equal((result.body as { invoiceId: string }).invoiceId, "invoice-sealed-replay");
+  assert.equal(harness.transactionCount(), 0);
+  assert.equal(harness.audits.length, 0);
 });
 
 test("concurrent reuse of one requestId for different collection details refuses the collision", async () => {
