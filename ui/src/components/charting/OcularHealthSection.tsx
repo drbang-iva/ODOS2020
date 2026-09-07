@@ -23,6 +23,7 @@ import {
 } from "./FindingWorksheetControls";
 import { formatStepValue } from "./power-options";
 import { DiagnosisPicker } from "./DiagnosisPicker";
+import { formatDate } from "./PrescriptionSection";
 import type { SectionSaveStatus } from "./types";
 import { useConfirmDestructive } from "./ConfirmDestructive";
 
@@ -43,7 +44,7 @@ interface HistoryRow {
   recordedAt: string;
   eye?: Eye;
   state?: ExamState;
-  values: Array<{ code: string; value: number | string | string[] }>;
+  values: Array<{ code: string; label?: string; value: number | string | string[]; unit?: string }>;
   findingDetails?: FindingDetails;
   other?: string;
   normalTemplate?: string;
@@ -56,8 +57,20 @@ interface CurrentHistory {
 
 type PriorReadings = Record<Eye, PriorFindingReadings>;
 
+interface RelatedFindingReading {
+  key: string;
+  context: "current" | "prior";
+  recordedAt: string;
+  source: string;
+  field: string;
+  value: string;
+}
+
+type RelatedFindingReadings = Record<Eye, RelatedFindingReading[]>;
+
 interface Props {
   definitions: CustomFindingDefinition[];
+  catalogDefinitions?: CustomFindingDefinition[];
   focusedStableKey?: string;
   patientReference: string;
   encounterReference: string;
@@ -71,9 +84,11 @@ const EYES: Eye[] = ["OD", "OS"];
 const ANTERIOR_PREFIX = "ocular-health:anterior:";
 const POSTERIOR_PREFIX = "ocular-health:posterior:";
 const DRY_EYE_ANTERIOR_STABLE_KEY = "dry-eye:conjunctival-staining";
+const MGD_OPTION_CODE = "meibomian-gland-dysfunction";
 
 export function OcularHealthSection({
   definitions,
+  catalogDefinitions = [],
   focusedStableKey,
   patientReference,
   encounterReference,
@@ -86,6 +101,7 @@ export function OcularHealthSection({
   const [pristine, setPristine] = useState<Record<string, Record<Eye, EyeCapture>>>(() => emptyCaptures(definitions));
   const [currentHistory, setCurrentHistory] = useState<CurrentHistory | null>(null);
   const [priors, setPriors] = useState<Record<string, PriorReadings>>({});
+  const [relatedReadings, setRelatedReadings] = useState<Record<string, RelatedFindingReadings>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedDiagnosisObservations, setSavedDiagnosisObservations] = useState<Record<string, string[]>>({});
@@ -95,6 +111,16 @@ export function OcularHealthSection({
   const { onCleared } = useEncounterEdit();
   const confirmDestructive = useConfirmDestructive();
   const definitionKey = useMemo(() => definitions.map((definition) => definition.stableKey).join("|"), [definitions]);
+  const relatedDefinitions = useMemo(
+    () => relatedDefinitionsForTargets(catalogDefinitions, definitions),
+    [catalogDefinitions, definitions],
+  );
+  const relatedDefinitionKey = useMemo(
+    () => relatedDefinitions
+      .map((definition) => `${definition.stableKey}:${definition.relatedFindingDefinitionKeys?.join(",")}`)
+      .join("|"),
+    [relatedDefinitions],
+  );
   const historyIdentity = `${patientReference}\u0000${encounterReference}\u0000${definitionKey}`;
   const groups = useMemo(() => segmentGroups(definitions), [definitions]);
   const runnerEnabled = groups.some((group) => group.label === "Anterior Segment") &&
@@ -181,6 +207,46 @@ export function OcularHealthSection({
       });
     return () => controller.abort();
   }, [historyIdentity, currentHistory, encounterRecordedAt, apiBase, fetchImpl]);
+
+  useEffect(() => {
+    setRelatedReadings({});
+    if (!relatedDefinitions.length) return;
+    const controller = new AbortController();
+    const base = apiBase ?? clinicalGraphApiBase();
+    Promise.all(relatedDefinitions.map(async (definition) => {
+      try {
+        const endpoint = `${base}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}/history`;
+        const currentQuery = new URLSearchParams({ patient: patientReference, encounter: encounterReference });
+        const patientQuery = new URLSearchParams({ patient: patientReference });
+        const [currentResponse, patientResponse] = await Promise.all([
+          fetchImpl(`${endpoint}?${currentQuery}`, { headers: authHeaders(), signal: controller.signal }),
+          fetchImpl(`${endpoint}?${patientQuery}`, { headers: authHeaders(), signal: controller.signal }),
+        ]);
+        const currentBody = await currentResponse.json() as { rows?: HistoryRow[]; error?: string };
+        const patientBody = await patientResponse.json() as { rows?: HistoryRow[]; error?: string };
+        if (!currentResponse.ok) throw new Error(currentBody.error ?? `${definition.display} current related history failed: ${currentResponse.status}`);
+        if (!patientResponse.ok) throw new Error(patientBody.error ?? `${definition.display} related history failed: ${patientResponse.status}`);
+        if (currentBody.rows !== undefined && !Array.isArray(currentBody.rows)) throw new Error(`${definition.display} current related history was malformed.`);
+        if (patientBody.rows !== undefined && !Array.isArray(patientBody.rows)) throw new Error(`${definition.display} related history was malformed.`);
+        const currentRows = currentBody.rows ?? [];
+        const priorRows = rowsBeforeEncounter(
+          excludeCurrentEncounterRows(patientBody.rows ?? [], currentRows),
+          encounterRecordedAt,
+        );
+        return { definition, currentRows, priorRows };
+      } catch (caught) {
+        if ((caught as Error).name === "AbortError") throw caught;
+        return { definition, currentRows: [], priorRows: [] };
+      }
+    }))
+      .then((sources) => {
+        if (!controller.signal.aborted) setRelatedReadings(relatedReadingsByTarget(definitions, sources));
+      })
+      .catch((caught) => {
+        if ((caught as Error).name !== "AbortError") setRelatedReadings({});
+      });
+    return () => controller.abort();
+  }, [definitionKey, relatedDefinitionKey, patientReference, encounterReference, encounterRecordedAt, apiBase, fetchImpl]);
 
   useEffect(() => {
     if (runnerEnabled) {
@@ -397,6 +463,7 @@ export function OcularHealthSection({
             const grades = gradeFields(definition);
             const row = captures[definition.stableKey] ?? emptyRow();
             const prior = priors[definition.stableKey] ?? emptyPriorReadings();
+            const related = relatedReadings[definition.stableKey] ?? emptyRelatedReadings();
             const diagnosisObservations = savedDiagnosisObservations[definition.stableKey] ?? [];
             const focused = runnerEnabled && definition.stableKey === highlightedStructureKey;
             return (
@@ -413,6 +480,7 @@ export function OcularHealthSection({
                     eye={eye}
                     capture={row[eye]}
                     prior={prior[eye]}
+                    related={related[eye]}
                     field={field}
                     gradeFields={grades}
                     normalTemplate={definition.normalTemplate}
@@ -505,10 +573,11 @@ function StructureRail({ groups, captures, focusedStableKey, onFocus }: {
   );
 }
 
-function EyePanel({ eye, capture, prior, field, gradeFields, normalTemplate, allowDeferred, onState, onSelections, onFindingDetail, onGrade, onOther, onCopy }: {
+function EyePanel({ eye, capture, prior, related, field, gradeFields, normalTemplate, allowDeferred, onState, onSelections, onFindingDetail, onGrade, onOther, onCopy }: {
   eye: Eye;
   capture: EyeCapture;
   prior: PriorFindingReadings;
+  related: RelatedFindingReading[];
   field?: CustomFindingField;
   gradeFields: CustomFindingField[];
   normalTemplate?: string;
@@ -576,8 +645,8 @@ function EyePanel({ eye, capture, prior, field, gradeFields, normalTemplate, all
         <div className="mt-4 space-y-4">
           <div role="group" aria-label="What is present" className="space-y-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">What is present</div>
-            <OptionList ariaLabel="Priority ocular health findings" options={priority} allOptions={options} selected={capture.selections} prior={prior} onChange={onSelections} />
-            {additional.length > 0 && <details><summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">More findings ({additional.length})</summary><div className="mt-3"><OptionList ariaLabel="Additional ocular health findings" options={additional} allOptions={options} selected={capture.selections} prior={prior} onChange={onSelections} /></div></details>}
+            <OptionList ariaLabel="Priority ocular health findings" options={priority} allOptions={options} selected={capture.selections} prior={prior} related={related} onChange={onSelections} />
+            {additional.length > 0 && <details><summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">More findings ({additional.length})</summary><div className="mt-3"><OptionList ariaLabel="Additional ocular health findings" options={additional} allOptions={options} selected={capture.selections} prior={prior} related={related} onChange={onSelections} /></div></details>}
           </div>
           {worksheetOptions.length > 0 && (
             <div role="group" aria-label="Describe each" className="space-y-3">
@@ -602,12 +671,13 @@ function EyePanel({ eye, capture, prior, field, gradeFields, normalTemplate, all
   );
 }
 
-function OptionList({ ariaLabel, options, allOptions, selected, prior, onChange }: {
+function OptionList({ ariaLabel, options, allOptions, selected, prior, related, onChange }: {
   ariaLabel: string;
   options: NonNullable<CustomFindingField["options"]>;
   allOptions: NonNullable<CustomFindingField["options"]>;
   selected: string[];
   prior: PriorFindingReadings;
+  related: RelatedFindingReading[];
   onChange(selected: string[]): void;
 }) {
   const optionCodes = options.map((option) => option.code);
@@ -633,6 +703,11 @@ function OptionList({ ariaLabel, options, allOptions, selected, prior, onChange 
       />
       {presenceOnlyPriors.map(({ option, reading }) => (
         <PriorValue key={option.code} reading={reading} value={`${findingChipLabel(option.display)} present`} />
+      ))}
+      {options.some((option) => option.code === MGD_OPTION_CODE) && related.map((reading) => (
+        <div key={reading.key} data-related-finding-reading="" className="mt-1 text-xs font-normal text-[color:var(--odos-faint)]">
+          {reading.context === "current" ? "This visit" : "Prior"}: {reading.source} · {reading.field}: {reading.value} · {formatDate(reading.recordedAt)}
+        </div>
       ))}
     </div>
   );
@@ -788,6 +863,92 @@ function priorReadingsFromRows(
 
 function emptyPriorReadings(): PriorReadings {
   return { OD: {}, OS: {} };
+}
+
+export function relatedDefinitionsForTargets(
+  catalogDefinitions: CustomFindingDefinition[],
+  targetDefinitions: Array<Pick<CustomFindingDefinition, "stableKey">>,
+): CustomFindingDefinition[] {
+  const targetKeys = new Set(targetDefinitions.map((definition) => definition.stableKey));
+  return catalogDefinitions.filter((definition) =>
+    definition.active && definition.relatedFindingDefinitionKeys?.some((stableKey) => targetKeys.has(stableKey))
+  );
+}
+
+function relatedReadingsByTarget(
+  targetDefinitions: Array<Pick<CustomFindingDefinition, "stableKey">>,
+  sources: Array<{
+    definition: CustomFindingDefinition;
+    currentRows: HistoryRow[];
+    priorRows: HistoryRow[];
+  }>,
+): Record<string, RelatedFindingReadings> {
+  const targetKeys = new Set(targetDefinitions.map((definition) => definition.stableKey));
+  const readings = Object.fromEntries(
+    targetDefinitions.map((definition) => [definition.stableKey, emptyRelatedReadings()]),
+  ) as Record<string, RelatedFindingReadings>;
+  for (const { definition, currentRows, priorRows } of sources) {
+    const source = relatedSourceLabel(definition);
+    for (const targetKey of definition.relatedFindingDefinitionKeys ?? []) {
+      if (!targetKeys.has(targetKey)) continue;
+      const target = readings[targetKey] ?? emptyRelatedReadings();
+      for (const eye of EYES) {
+        for (const [context, rows] of [["current", currentRows], ["prior", priorRows]] as const) {
+          const sortedRows = rows
+            .filter((row) => Number.isFinite(Date.parse(row.recordedAt)))
+            .sort((left, right) => Date.parse(right.recordedAt) - Date.parse(left.recordedAt));
+          const eyeRows = sortedRows.filter((row) => row.eye === eye);
+          const latestCurrentRow = context === "current" ? eyeRows[0] : undefined;
+          for (const field of definition.customFields.filter((candidate) => candidate.active).sort((left, right) => left.order - right.order)) {
+            const row = latestCurrentRow ?? eyeRows.find((candidate) =>
+              candidate.values.some((value) => value.code === field.localCode)
+            );
+            const stored = row?.values.find((value) => value.code === field.localCode);
+            if (!row || !stored) continue;
+            const value = formatRelatedValue(field, stored.value, stored.unit);
+            if (!value) continue;
+            target[eye].push({
+              key: `${definition.stableKey}:${eye}:${context}:${field.localCode}`,
+              context,
+              recordedAt: row.recordedAt,
+              source,
+              field: stored.label ?? field.display,
+              value,
+            });
+          }
+        }
+      }
+      readings[targetKey] = target;
+    }
+  }
+  return readings;
+}
+
+function emptyRelatedReadings(): RelatedFindingReadings {
+  return { OD: [], OS: [] };
+}
+
+function relatedSourceLabel(definition: CustomFindingDefinition): string {
+  const namespace = (definition.sectionKey ?? definition.stableKey).split(":")[0];
+  const group = namespace.includes("-") ? findingChipLabel(namespace.replaceAll("-", " ")) : undefined;
+  return group ? `${group} · ${definition.display}` : definition.display;
+}
+
+function formatRelatedValue(
+  field: CustomFindingField,
+  value: number | string | string[],
+  storedUnit: string | undefined,
+): string {
+  const unit = storedUnit ?? field.unit;
+  if (Array.isArray(value)) {
+    return value.map((entry) => field.options?.find((option) => option.code === entry)?.display ?? findingChipLabel(entry)).join(", ");
+  }
+  if (typeof value === "number") {
+    const formatted = field.step === undefined ? String(value) : formatStepValue(value, field.step);
+    return `${formatted}${unit ? ` ${unit}` : ""}`;
+  }
+  if (!value.trim()) return "";
+  return field.options?.find((option) => option.code === value)?.display ?? findingChipLabel(value);
 }
 
 function abnormalField(definition: CustomFindingDefinition): CustomFindingField | undefined {

@@ -1030,6 +1030,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
           {activeSection.startsWith("ocular-health:") && (
             <OcularHealthSection
               definitions={ocularHealthDefinitions}
+              catalogDefinitions={catalog.definitions}
               focusedStableKey={activeSection}
               patientReference={patientReference}
               encounterReference={encounterReference}
