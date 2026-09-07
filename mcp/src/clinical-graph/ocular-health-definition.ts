@@ -270,7 +270,7 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
     normalTemplate: "Healthy foveal reflex; no drusen, edema, or exudate.",
     sheetLabel: "Healthy foveal reflex",
     priority: ["drusen", "RPE changes", "dry AMD", "epiretinal membrane (ERM)", "pigment mottling"],
-    additional: ["wet AMD", "CNVM", "geographic atrophy", "macular hole (full/lamellar)", "cystoid macular edema (CME)", "diabetic macular edema", "vitreomacular traction", "subretinal fluid", "macular edema", "pigment clumping"],
+    additional: ["wet AMD", "CNVM", "geographic atrophy", macularHoleFinding(), "lamellar macular hole", "macular pseudohole", "cystoid macular edema (CME)", "diabetic macular edema", "vitreomacular traction", "subretinal fluid", "macular edema", "pigment clumping"],
   },
   {
     key: "vessels",
@@ -419,6 +419,15 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { option: "drusen", familyGroup: "nonexudative-amd" },
     { option: "dry-amd", familyGroup: "nonexudative-amd" },
     { option: "wet-amd", familyGroup: "exudative-amd" },
+    { option: "epiretinal-membrane-erm", diagnosisKey: "epiretinal_membrane" },
+    { option: "macular-hole", diagnosisKey: "macular_hole" },
+    { option: "lamellar-macular-hole", diagnosisKey: "macular_hole" },
+    { option: "macular-pseudohole", diagnosisKey: "macular_hole" },
+    { option: "cystoid-macular-edema-cme", diagnosisKey: "cme_following_cataract_surgery" },
+    { option: "cystoid-macular-edema-cme", diagnosisKey: "cystoid_macular_degeneration" },
+    { option: "cystoid-macular-edema-cme", diagnosisKey: "retinal_edema" },
+    { option: "geographic-atrophy", familyGroup: "nonexudative-amd" },
+    { option: "cnvm", familyGroup: "exudative-amd" },
   ],
   "ocular-health:posterior:periphery": [
     { option: "horseshoe-tear", diagnosisKey: "retinal_horseshoe_tear" },
@@ -676,6 +685,24 @@ function retinalDetachmentFinding(): FindingSeed {
       options: [
         { code: "macula-on", display: "Macula on" },
         { code: "macula-off", display: "Macula off" },
+      ],
+    }],
+  };
+}
+
+function macularHoleFinding(): FindingSeed {
+  return {
+    key: "macular-hole",
+    display: "macular hole",
+    qualifiers: [{
+      kind: "enum",
+      key: "stage",
+      display: "Gass stage",
+      options: [
+        { code: "stage-1", display: "Stage I (impending hole; yellow spot or ring, no vitreofoveal separation)" },
+        { code: "stage-2", display: "Stage II (small full-thickness hole, <400 µm)" },
+        { code: "stage-3", display: "Stage III (full-thickness hole, ≥400 µm, without complete PVD)" },
+        { code: "stage-4", display: "Stage IV (full-thickness hole with complete PVD)" },
       ],
     }],
   };

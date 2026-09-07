@@ -17,6 +17,12 @@
       "name": "NLM Clinical Tables ICD-10-CM API",
       "url": "https://clinicaltables.nlm.nih.gov/apidoc/icd10cm/v3/doc.html",
       "accessDate": "2026-08-10"
+    },
+    "cmsIcd10CmFy2026MsDrgV43": {
+      "type": "primary-cms-icd10-cm",
+      "name": "CMS ICD-10-CM/PCS MS-DRG v43.0 Definitions Manual, FY2026",
+      "url": "https://www.cms.gov/icd10m/FY2026-fr-v43-fullcode-cms/fullcode_cms/P0460.html",
+      "accessDate": "2026-09-07"
     }
   },
   "amendments": [
@@ -25,6 +31,12 @@
       "scopeDelta": "Added dry eye syndrome (H04.12-) diagnosis catalog family.",
       "codesAdded": ["H04.121", "H04.122", "H04.123", "H04.129"],
       "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "accessDate": "2026-09-07",
+      "scopeDelta": "Added post-cataract cystoid macular edema (H59.03-) and retinal edema (H35.81).",
+      "codesAdded": ["H59.031", "H59.032", "H59.033", "H59.039", "H35.81"],
+      "sourceRefs": ["cmsIcd10CmFy2026MsDrgV43", "cdcIcd10Cm2026CodeDescriptions"]
     }
   ],
   "diagnosisCodes": [
@@ -119,6 +131,11 @@
     { "code": "H35.342", "display": "Macular cyst, hole, or pseudohole, left eye", "family": "H35.34-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H35.343", "display": "Macular cyst, hole, or pseudohole, bilateral", "family": "H35.34-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H35.349", "display": "Macular cyst, hole, or pseudohole, unspecified eye", "family": "H35.34-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H59.031", "display": "Cystoid macular edema following cataract surgery, right eye", "family": "H59.03-", "laterality": "OD", "sourceRefs": ["cmsIcd10CmFy2026MsDrgV43", "cdcIcd10Cm2026CodeDescriptions"] },
+    { "code": "H59.032", "display": "Cystoid macular edema following cataract surgery, left eye", "family": "H59.03-", "laterality": "OS", "sourceRefs": ["cmsIcd10CmFy2026MsDrgV43", "cdcIcd10Cm2026CodeDescriptions"] },
+    { "code": "H59.033", "display": "Cystoid macular edema following cataract surgery, bilateral", "family": "H59.03-", "laterality": "OU", "sourceRefs": ["cmsIcd10CmFy2026MsDrgV43", "cdcIcd10Cm2026CodeDescriptions"] },
+    { "code": "H59.039", "display": "Cystoid macular edema following cataract surgery, unspecified eye", "family": "H59.03-", "laterality": "UNKNOWN", "sourceRefs": ["cmsIcd10CmFy2026MsDrgV43", "cdcIcd10Cm2026CodeDescriptions"] },
+    { "code": "H35.81", "display": "Retinal edema", "family": "H35.81", "laterality": "NONE", "sourceRefs": ["cmsIcd10CmFy2026MsDrgV43", "cdcIcd10Cm2026CodeDescriptions"] },
     { "code": "H11.31", "display": "Conjunctival hemorrhage, right eye", "family": "H11.3-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H11.32", "display": "Conjunctival hemorrhage, left eye", "family": "H11.3-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H11.33", "display": "Conjunctival hemorrhage, bilateral", "family": "H11.3-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },

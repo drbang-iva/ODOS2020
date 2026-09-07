@@ -36,6 +36,14 @@ const RETIRED_FINDING_READ_TRANSLATIONS: readonly RetiredFindingReadTranslation[
   replacementQualifierValues: {
     colour: "4+ (dark brown/black; brunescent)",
   },
+}, {
+  // Read only: the historical chip could mean full-thickness or lamellar, so preserve the finding
+  // without asserting its type or a Gass stage. Remove after a persisted-data census or migration
+  // confirms that no live Macula macular-hole-full-lamellar selection components remain.
+  definitionStableKey: "ocular-health:posterior:macula",
+  retiredFindingCode: "macular-hole-full-lamellar",
+  replacementFindingCode: "macular-hole",
+  replacementQualifierValues: {},
 }];
 
 export function translateRetiredFindingRead(

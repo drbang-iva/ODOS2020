@@ -245,6 +245,8 @@ function buildSeeds(): DiagnosisCatalogRow[] {
     familySeed("epiretinal_membrane", "Puckering of macula (epiretinal membrane)", "epiretinal-membrane", "H35.37-", ocularHealth, provenance),
     familySeed("cystoid_macular_degeneration", "Cystoid macular degeneration", "cystoid-macular-degeneration", "H35.35-", ocularHealth, provenance),
     familySeed("macular_hole", "Macular cyst, hole, or pseudohole", "macular-hole", "H35.34-", ocularHealth, provenance),
+    familySeed("cme_following_cataract_surgery", "Cystoid macular edema following cataract surgery", "cystoid-macular-edema-following-cataract-surgery", "H59.03-", ocularHealth, provenance),
+    fixedSeed("retinal_edema", "Retinal edema", "retinal-edema", "H35.81", ocularHealth, provenance),
     familySeed("subconjunctival_hemorrhage", "Conjunctival hemorrhage", "subconjunctival-hemorrhage", "H11.3-", ocularHealth, provenance),
     familySeed("conjunctivochalasis", "Conjunctivochalasis", "conjunctivochalasis", "H11.82-", ocularHealth, provenance),
     familySeed("vitreous_degeneration", "Vitreous degeneration", "vitreous-degeneration", "H43.81-", ocularHealth, provenance),

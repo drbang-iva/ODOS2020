@@ -1949,6 +1949,243 @@ test("retinal-detachment macula status remains documentation-only for diagnosis 
   ]);
 });
 
+test("Macula splits the hole findings, keeps Gass as an enum, and declares every ruled candidate route", async () => {
+  const definitions = await catalog(new MemoryFhir());
+  const macula = definitions.find((definition) => definition.stableKey === "ocular-health:posterior:macula");
+  assert.ok(macula);
+  const findings = Object.values(macula.valueSchema.fields as Record<string, {
+    valueType?: string;
+    options?: Array<{
+      code: string;
+      display: string;
+      qualifiers?: Array<Record<string, unknown>>;
+    }>;
+  }>).find((field) => field.valueType === "multi-select")?.options ?? [];
+  const finding = (code: string) => findings.find((candidate) => candidate.code === code);
+
+  assert.equal(finding("macular-hole-full-lamellar"), undefined);
+  assert.equal(finding("macular-hole")?.display, "macular hole");
+  assert.equal(finding("lamellar-macular-hole")?.display, "lamellar macular hole");
+  assert.equal(finding("macular-pseudohole")?.display, "macular pseudohole");
+  assert.deepEqual(finding("macular-hole")?.qualifiers, [{
+    kind: "enum",
+    key: "stage",
+    display: "Gass stage",
+    options: [
+      { code: "stage-1", display: "Stage I (impending hole; yellow spot or ring, no vitreofoveal separation)" },
+      { code: "stage-2", display: "Stage II (small full-thickness hole, <400 µm)" },
+      { code: "stage-3", display: "Stage III (full-thickness hole, ≥400 µm, without complete PVD)" },
+      { code: "stage-4", display: "Stage IV (full-thickness hole with complete PVD)" },
+    ],
+  }]);
+  assert.equal(finding("lamellar-macular-hole")?.qualifiers, undefined);
+  assert.equal(finding("macular-pseudohole")?.qualifiers, undefined);
+
+  const targets = (option: string) => macula.diagnosisCandidates
+    ?.filter((candidate) => candidate.trigger.kind === "option" && candidate.trigger.anyOf.includes(option))
+    .map((candidate) => candidate.diagnosisKey ?? candidate.familyGroup);
+  assert.deepEqual(targets("epiretinal-membrane-erm"), ["epiretinal_membrane"]);
+  for (const option of ["macular-hole", "lamellar-macular-hole", "macular-pseudohole"]) {
+    assert.deepEqual(targets(option), ["macular_hole"], option);
+  }
+  assert.deepEqual(targets("cystoid-macular-edema-cme"), [
+    "cme_following_cataract_surgery",
+    "cystoid_macular_degeneration",
+    "retinal_edema",
+  ]);
+  assert.deepEqual(targets("geographic-atrophy"), ["nonexudative-amd"]);
+  assert.deepEqual(targets("cnvm"), ["exudative-amd"]);
+});
+
+test("each newly wired Macula selection proposes the ruled target through the diagnosis-candidate endpoint", async () => {
+  const cases = [
+    ["epiretinal-membrane-erm", ["epiretinal_membrane"]],
+    ["macular-hole", ["macular_hole"]],
+    ["lamellar-macular-hole", ["macular_hole"]],
+    ["macular-pseudohole", ["macular_hole"]],
+    ["cystoid-macular-edema-cme", ["cme_following_cataract_surgery", "cystoid_macular_degeneration", "retinal_edema"]],
+    ["geographic-atrophy", ["nonexudative-amd"]],
+    ["cnvm", ["exudative-amd"]],
+  ] as const;
+
+  for (const [option, expectedTargets] of cases) {
+    const fhir = new MemoryFhir();
+    const definitions = await catalog(fhir);
+    const macula = definitions.find((definition) => definition.stableKey === "ocular-health:posterior:macula");
+    assert.ok(macula);
+    const field = Object.values(macula.valueSchema.fields as Record<string, {
+      localCode: string;
+      valueType: string;
+    }>).find((candidate) => candidate.valueType === "multi-select");
+    assert.ok(field);
+    const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [macula]), {
+      authHeader: AUTH,
+      params: { stableKey: macula.stableKey },
+      body: {
+        patientReference: `Patient/macula-${option}`,
+        encounterReference: `Encounter/macula-${option}`,
+        eyes: {
+          OD: {
+            state: "abnormal",
+            customFields: [{ code: field.localCode, value: [option] }],
+          },
+        },
+      },
+    });
+    assert.equal(capture.status, 200, `${option}: ${JSON.stringify(capture.body)}`);
+    const response = await handleDiagnosisCandidatesRequest({
+      authenticate: async () => ({
+        staffReference: "Practitioner/doc-1",
+        actorRole: "provider",
+        fhir,
+      }),
+      now: () => NOW,
+    }, {
+      authHeader: AUTH,
+      params: { encounterId: `macula-${option}` },
+    });
+    assert.equal(response.status, 200, `${option}: ${JSON.stringify(response.body)}`);
+    const candidates = (response.body as {
+      findings: Array<{ candidates: Array<{ diagnosisKey?: string; familyGroup?: string }> }>;
+    }).findings[0]?.candidates ?? [];
+    const actualTargets = candidates.map((candidate) => candidate.diagnosisKey ?? candidate.familyGroup).sort();
+    assert.deepEqual(actualTargets, [...expectedTargets].sort(), option);
+  }
+});
+
+test("historical ambiguous macular-hole selections rehydrate without an invented stage and resave", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const macula = definitions.find((definition) => definition.stableKey === "ocular-health:posterior:macula");
+  assert.ok(macula);
+  const field = Object.values(macula.valueSchema.fields as Record<string, {
+    localCode?: string;
+    valueType?: string;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field?.localCode);
+  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: macula.stableKey },
+    body: {
+      patientReference: "Patient/p-legacy-macular-hole",
+      encounterReference: "Encounter/e-legacy-macular-hole",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["macular-hole"] }],
+        },
+      },
+    },
+  });
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const selectionCoding = component(
+    fhir.observations[0],
+    `OD_${field.localCode}::macular-hole`,
+  )?.code.coding?.[0];
+  assert.ok(selectionCoding);
+  selectionCoding.code = `OD_${field.localCode}::macular-hole-full-lamellar`;
+  selectionCoding.display = "macular hole (full/lamellar)";
+  const persistedHistoricalObservation = structuredClone(fhir.observations[0]);
+
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: macula.stableKey },
+    query: { patient: "Patient/p-legacy-macular-hole", encounter: "Encounter/e-legacy-macular-hole" },
+  });
+  const [row] = (history.body as {
+    rows: Array<{
+      state?: string;
+      values: Array<{ code: string; value: string[] }>;
+      findingDetails?: Record<string, Record<string, string>>;
+    }>;
+  }).rows;
+  assert.ok(row);
+  assert.deepEqual(row.values[0]?.value, ["macular-hole"]);
+  assert.equal(row.findingDetails?.["macular-hole"]?.stage, undefined);
+  assert.deepEqual(fhir.observations[0], persistedHistoricalObservation);
+
+  const resave = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: macula.stableKey },
+    body: {
+      patientReference: "Patient/p-legacy-macular-hole",
+      encounterReference: "Encounter/e-legacy-macular-hole",
+      eyes: {
+        OD: {
+          state: row.state,
+          customFields: row.values.map(({ code, value }) => ({ code, value })),
+          findingDetails: row.findingDetails,
+        },
+      },
+    },
+  });
+  assert.equal(resave.status, 200, JSON.stringify(resave.body));
+  assert.deepEqual(fhir.observations[0], persistedHistoricalObservation);
+
+  const rejected = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: macula.stableKey },
+    body: {
+      patientReference: "Patient/p-new-legacy-macular-hole",
+      encounterReference: "Encounter/e-new-legacy-macular-hole",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["macular-hole-full-lamellar"] }],
+        },
+      },
+    },
+  });
+  assert.equal(rejected.status, 400);
+  assert.match(String((rejected.body as { error: string }).error), /unknown or inactive option: macular-hole-full-lamellar/);
+});
+
+test("retired macular-hole translation exact-matches both the Macula definition and finding code", async () => {
+  const selectedFrom = async (definition: ClinicalFindingDefinition, selectedCode: string) => {
+    const field = Object.values(definition.valueSchema.fields as Record<string, {
+      localCode?: string;
+      valueType?: string;
+    }>).find((candidate) => candidate.valueType === "multi-select");
+    assert.ok(field?.localCode);
+    const fhir = new MemoryFhir();
+    const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [definition]), {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      body: {
+        patientReference: `Patient/scope-${selectedCode}`,
+        encounterReference: `Encounter/scope-${selectedCode}`,
+        eyes: { OD: { state: "abnormal", customFields: [{ code: field.localCode, value: [selectedCode] }] } },
+      },
+    });
+    assert.equal(capture.status, 200, JSON.stringify(capture.body));
+    const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, [definition]), {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      query: { patient: `Patient/scope-${selectedCode}`, encounter: `Encounter/scope-${selectedCode}` },
+    });
+    return (history.body as { rows: Array<{ values: Array<{ value: string[] }> }> }).rows[0]?.values[0]?.value;
+  };
+  const [wrongDefinition] = buildOcularHealthDefinitions([{
+    key: "synthetic-macula",
+    display: "Synthetic Macula",
+    normalTemplate: "Synthetic normal.",
+    priority: ["macular hole"],
+    additional: ["macular hole (full/lamellar)"],
+  }], "ocular-health:synthetic:", SYNTHETIC_PROVENANCE);
+  assert.ok(wrongDefinition);
+  assert.deepEqual(await selectedFrom(wrongDefinition, "macular-hole-full-lamellar"), ["macular-hole-full-lamellar"]);
+
+  const [wrongCode] = buildOcularHealthDefinitions([{
+    key: "macula",
+    display: "Macula",
+    normalTemplate: "Synthetic normal.",
+    priority: ["macular hole"],
+    additional: ["macular hole legacy alternate"],
+  }], "ocular-health:posterior:", SYNTHETIC_PROVENANCE);
+  assert.ok(wrongCode);
+  assert.deepEqual(await selectedFrom(wrongCode, "macular-hole-legacy-alternate"), ["macular-hole-legacy-alternate"]);
+});
+
 test("posterior drusen seeds preserve leaf ids and add staged-family targets in ruled order", async () => {
   const definitions = await catalog(new MemoryFhir());
   const targets = (stableKey: string) => definitions.find((definition) => definition.stableKey === stableKey)
@@ -1980,7 +2217,7 @@ test("posterior drusen seeds preserve leaf ids and add staged-family targets in 
   ]);
   const macula = definitions.find((definition) => definition.stableKey === "ocular-health:posterior:macula");
   assert.equal(macula?.allowDiagnosisMapping, true);
-  assert.equal(macula?.diagnosisCandidates?.length, 4);
+  assert.equal(macula?.diagnosisCandidates?.length, 13);
 });
 
 test("OH-2 seeds five posterior structures and round-trips their worksheet findings per eye without diagnosis codes", async () => {
