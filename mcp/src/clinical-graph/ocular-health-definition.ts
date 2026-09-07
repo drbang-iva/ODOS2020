@@ -338,6 +338,7 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
 ];
 
 interface DiagnosisCandidateSeedBase {
+  id?: string;
   option: string;
   fieldDisplay?: string;
   qualifiers?: Record<string, string>;
@@ -476,14 +477,15 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { option: "cnvm", familyGroup: "exudative-amd" },
   ],
   "ocular-health:posterior:periphery": [
-    { option: "retinal-tear", diagnosisKey: "retinal_horseshoe_tear" },
-    { option: "retinal-hole", diagnosisKey: "retinal_round_hole" },
-    { option: "retinoschisis", diagnosisKey: "retinoschisis" },
-    { option: "retinal-detachment", diagnosisKey: "retinal_detachment_single_break" },
-    { option: "drusen", diagnosisKey: "macular_drusen" },
-    { option: "drusen", familyGroup: "nonexudative-amd" },
+    // These public IDs keep their pre-fold values after the two retired mapping rows are removed.
+    { id: "SEED_RETINAL_HORSESHOE_TEAR_2", option: "retinal-tear", diagnosisKey: "retinal_horseshoe_tear" },
+    { id: "SEED_RETINAL_ROUND_HOLE_3", option: "retinal-hole", diagnosisKey: "retinal_round_hole" },
+    { id: "SEED_RETINOSCHISIS_5", option: "retinoschisis", diagnosisKey: "retinoschisis" },
+    { id: "SEED_RETINAL_DETACHMENT_SINGLE_BREAK_6", option: "retinal-detachment", diagnosisKey: "retinal_detachment_single_break" },
+    { id: "SEED_MACULAR_DRUSEN_7", option: "drusen", diagnosisKey: "macular_drusen" },
+    { id: "SEED_NONEXUDATIVE-AMD_8", option: "drusen", familyGroup: "nonexudative-amd" },
     // A few small occasional drusen are below AMD suspicion (AREDS category 1), so this remains leaf-only.
-    { option: "occasional-drusen", diagnosisKey: "macular_drusen" },
+    { id: "SEED_MACULAR_DRUSEN_9", option: "occasional-drusen", diagnosisKey: "macular_drusen" },
   ],
   "dry-eye:markers": [
     {
@@ -617,7 +619,7 @@ export function applyOcularHealthDiagnosisCandidates(
     const trigger: DiagnosisCandidateEntry["trigger"] = seed.qualifiers
       ? { kind: "qualifier", field: field.localCode, option: seed.option, qualifiers: seed.qualifiers }
       : { kind: "option", field: field.localCode, anyOf: [seed.option] };
-    const id = `SEED_${(seed.diagnosisKey ?? seed.familyGroup!).toUpperCase()}_${index + 1}`;
+    const id = seed.id ?? `SEED_${(seed.diagnosisKey ?? seed.familyGroup!).toUpperCase()}_${index + 1}`;
     return seed.diagnosisKey !== undefined
       ? { id, diagnosisKey: seed.diagnosisKey, trigger, priority: true, origin: "seed", active: true }
       : { id, familyGroup: seed.familyGroup!, trigger, priority: true, origin: "seed", active: true };
