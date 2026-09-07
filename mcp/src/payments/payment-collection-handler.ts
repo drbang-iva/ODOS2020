@@ -14,10 +14,18 @@ import type { AssembleOpticalCashOrderInput } from "../fhir/opticalOrderComposit
 import { buildPaymentAuditRecord } from "./payment-audit.js";
 import { StaffRoleServiceUnavailableError } from "./payment-endpoint.js";
 import type { ChargeHandlerResult } from "./payment-charge-handler.js";
+import {
+  HL7_PAYMENT_TYPE_SYSTEM,
+  INSURANCE_CHARGE_ITEM_ALLOCATION_DETAIL_CODE,
+  ODOS_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
+} from "./payment-reconciliation.js";
 import { assertDayNotSealed, DayAlreadySealedError } from "../desk/day-seal.js";
 import { ODOS_UNPRICED_CHARGE_EXTENSION_URL } from "../clinical-graph/procedure-fee-schedule.js";
 
 export type CollectionFhirClient = Pick<MedplumClient, "read" | "search" | "executeTransaction">;
+
+export const ODOS_COLLECTION_REQUEST_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/collection-request";
 
 export interface CollectionAuthenticatedStaff {
   staffReference: string;
@@ -36,6 +44,10 @@ export interface PaymentCollectionHandlerDeps {
 export interface OpenChargeLine {
   id: string;
   amountCents: number;
+  openCents: number | null;
+  attributedCents: number;
+  ambiguityReason?: string;
+  attributionWarning?: string;
   description: string;
   date: string;
   source: "optical" | "other";
@@ -53,11 +65,16 @@ interface OpticalOrderDraft extends AssembleOpticalCashOrderInput {
 }
 
 interface CollectionBody {
+  requestId: string;
   patientReference: string;
   selectedOpenChargeLineIds: string[];
   amountCents: number;
   tender: "CASH" | "CHECK" | "CARD_MANUAL";
   opticalOrder?: OpticalOrderDraft;
+}
+
+interface CollectionCreationResult extends CreatedOpticalCashOrderIds {
+  replayed: boolean;
 }
 
 export async function handleOpenChargesRequest(
@@ -86,24 +103,11 @@ export async function handleOpenChargesRequest(
   )) {
     return { status: 409, body: { error: "Open-charge query exceeded one FHIR page; refusing a partial balance." } };
   }
-  const settledInvoices = new Set((paymentBundle.entry ?? []).flatMap((entry) =>
-    (entry.resource?.detail ?? []).flatMap((detail) => detail.request?.reference ?? []),
-  ));
-  const closedCharges = new Set((invoiceBundle.entry ?? []).flatMap((entry) => {
-    const invoice = entry.resource;
-    const paid = invoice && (
-      invoice.status === "balanced" ||
-      invoice.extension?.some((extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL) ||
-      (invoice.id && settledInvoices.has(`Invoice/${invoice.id}`))
-    );
-    return paid ? (invoice.lineItem ?? []).flatMap((line) => line.chargeItemReference?.reference ?? []) : [];
-  }));
-  const items = (chargeBundle.entry ?? []).flatMap((entry) => {
-    const chargeItem = entry.resource;
-    return chargeItem?.id && chargeItem.status === "billable" && !closedCharges.has(`ChargeItem/${chargeItem.id}`)
-      ? openChargeLine(chargeItem)
-      : [];
-  });
+  const items = openChargeLines(
+    (chargeBundle.entry ?? []).flatMap((entry) => entry.resource ?? []),
+    (invoiceBundle.entry ?? []).flatMap((entry) => entry.resource ?? []),
+    (paymentBundle.entry ?? []).flatMap((entry) => entry.resource ?? []),
+  );
   return { status: 200, body: items };
 }
 
@@ -117,7 +121,7 @@ export async function handleRecordedTenderCollectionRequest(
   if ("error" in parsed) return { status: 400, body: { error: parsed.error } };
   const collectedAt = deps.now?.() ?? new Date().toISOString();
 
-  let created: CreatedOpticalCashOrderIds;
+  let created: CollectionCreationResult;
   try {
     created = await createCollection(
       staff.staff.fhir,
@@ -135,17 +139,19 @@ export async function handleRecordedTenderCollectionRequest(
     }
     throw error;
   }
-  await deps.recordAudit(buildPaymentAuditRecord({
-    eventType: "payment.charge.completed",
-    staffReference: staff.staff.staffReference,
-    actorRole: staff.actorRole,
-    patientReference: parsed.body.patientReference,
-    paymentRecordReference: `Invoice/${created.invoiceId}`,
-    purpose: "PATIENT_PAYMENT",
-    adapterName: "manual-record",
-    outcome: "success",
-    timestamp: collectedAt,
-  }));
+  if (!created.replayed) {
+    await deps.recordAudit(buildPaymentAuditRecord({
+      eventType: "payment.charge.completed",
+      staffReference: staff.staff.staffReference,
+      actorRole: staff.actorRole,
+      patientReference: parsed.body.patientReference,
+      paymentRecordReference: `Invoice/${created.invoiceId}`,
+      purpose: "PATIENT_PAYMENT",
+      adapterName: "manual-record",
+      outcome: "success",
+      timestamp: collectedAt,
+    }));
+  }
   return {
     status: 200,
     body: {
@@ -163,7 +169,7 @@ async function createCollection(
   collectedAt: string,
   staffReference: string,
   timeZone?: string,
-): Promise<CreatedOpticalCashOrderIds> {
+): Promise<CollectionCreationResult> {
   await assertDayNotSealed(fhir, collectedAt, timeZone);
   if (body.opticalOrder) {
     assertPositiveCollectionAmount(body.amountCents);
@@ -178,19 +184,24 @@ async function createCollection(
     }
     const totalCents = charges.reduce((total, charge) => total + netChargeCents(charge), 0);
     assertCollectionAmount(body.amountCents, totalCents);
-    return createOpticalCashOrder(fhir, {
+    const created = await createOpticalCashOrder(fhir, {
       ...body.opticalOrder,
       charges: charges.map(({ id: _id, ...charge }) => charge),
       tender: body.tender,
       date: collectedAt,
       staffReference,
     });
+    // M5 owns idempotency for this multi-resource optical transaction; M1b protects only recorded-tender Invoice creation.
+    return { ...created, replayed: false };
   }
+
+  const existing = await findCollectionByRequestId(fhir, body.requestId);
+  if (existing) return replayedCollection(existing, body);
 
   const chargeItems = await Promise.all(body.selectedOpenChargeLineIds.map((id) =>
     fhir.read<ChargeItem>("ChargeItem", id),
   ));
-  const lines = chargeItems.map((chargeItem) => {
+  for (const chargeItem of chargeItems) {
     if (!chargeItem.id || chargeItem.subject.reference !== body.patientReference) {
       throw new CollectionInputError("Every selected ChargeItem must belong to the requested patient.");
     }
@@ -202,43 +213,265 @@ async function createCollection(
         `ChargeItem/${chargeItem.id} (${chargeDescription(chargeItem)}) requires a fee schedule entry before it can be collected.`,
       );
     }
-    return { chargeItemReference: `ChargeItem/${chargeItem.id}`, amountCents: chargeAmountCents(chargeItem) };
+  }
+  const settlements = await loadChargeSettlements(fhir, body.patientReference, chargeItems);
+  const lines = chargeItems.map((chargeItem) => {
+    const reference = `ChargeItem/${chargeItem.id!}`;
+    const settlement = settlements.get(reference)!;
+    if (settlement.ambiguityReason) {
+      throw new CollectionInputError(
+        `${reference} cannot be collected because its open amount is ambiguous: ${settlement.ambiguityReason}`,
+      );
+    }
+    if (settlement.attributionWarning) {
+      throw new CollectionInputError(
+        `${reference} cannot be collected because attributed payments exceed the charge amount: ${settlement.attributionWarning}`,
+      );
+    }
+    if (settlement.openCents === 0) {
+      throw new CollectionInputError(`${reference} has zero open amount and cannot be collected.`);
+    }
+    return { chargeItemReference: reference, amountCents: settlement.openCents! };
   });
   assertPositiveCollectionAmount(body.amountCents);
   const totalCents = lines.reduce((total, line) => total + line.amountCents, 0);
   assertCollectionAmount(body.amountCents, totalCents);
-  const invoice = buildOpticalInvoice({
+  const invoice: Invoice = {
+    ...buildOpticalInvoice({
     patientReference: body.patientReference,
     date: collectedAt,
     staffReference,
     lineItems: lines,
     tender: body.tender,
     status: "balanced",
-  });
+    }),
+    identifier: [{ system: ODOS_COLLECTION_REQUEST_IDENTIFIER_SYSTEM, value: body.requestId }],
+  };
   const fullUrl = `urn:uuid:${randomUUID()}`;
   const request: Bundle = {
     resourceType: "Bundle",
     type: "transaction",
-    entry: [{ fullUrl, resource: invoice, request: { method: "POST", url: "Invoice" } }],
+    entry: [{
+      fullUrl,
+      resource: invoice,
+      request: {
+        method: "POST",
+        url: "Invoice",
+        // Same-request replay is atomic; different request ids can still race on one ChargeItem.
+        ifNoneExist: `identifier=${ODOS_COLLECTION_REQUEST_IDENTIFIER_SYSTEM}|${body.requestId}`,
+      },
+    }],
   };
   const response = await fhir.executeTransaction(request);
-  const invoiceId = response.entry?.[0]?.response?.location?.match(/^Invoice\/([^/]+)/)?.[1];
+  const transactionResponse = response.entry?.[0]?.response;
+  const invoiceId = transactionResponse?.location?.match(/^Invoice\/([^/]+)/)?.[1];
   if (!invoiceId) throw new Error("Collection transaction did not return an Invoice id.");
+  const replayed = transactionResponse?.status?.startsWith("200") ?? false;
+  if (replayed) {
+    return replayedCollection(await fhir.read<Invoice>("Invoice", invoiceId), body);
+  }
   return {
     deviceRequestId: "",
     taskId: "",
     invoiceId,
     chargeItemIds: chargeItems.map((chargeItem) => chargeItem.id!),
+    replayed: false,
   };
 }
 
-function openChargeLine(chargeItem: ChargeItem): OpenChargeLine[] {
+interface ChargeSettlement {
+  attributedCents: number;
+  openCents: number | null;
+  ambiguityReason?: string;
+  attributionWarning?: string;
+}
+
+async function findCollectionByRequestId(
+  fhir: CollectionFhirClient,
+  requestId: string,
+): Promise<Invoice | undefined> {
+  const bundle = await fhir.search<Invoice>("Invoice", {
+    identifier: `${ODOS_COLLECTION_REQUEST_IDENTIFIER_SYSTEM}|${requestId}`,
+    _count: "2",
+  });
+  if (bundle.link?.some((link) => link.relation === "next")) {
+    throw new CollectionInputError(`Collection request ${requestId} matched more than one Invoice.`);
+  }
+  const invoices = (bundle.entry ?? []).flatMap((entry) => entry.resource ?? []);
+  if (invoices.length > 1) {
+    throw new CollectionInputError(`Collection request ${requestId} matched more than one Invoice.`);
+  }
+  return invoices[0];
+}
+
+function replayedCollection(invoice: Invoice, body: CollectionBody): CollectionCreationResult {
+  const invoiceReference = `Invoice/${invoice.id ?? "(unknown)"}`;
+  const chargeItemIds = (invoice.lineItem ?? []).flatMap((line) => {
+    const match = line.chargeItemReference?.reference?.match(/^ChargeItem\/([A-Za-z0-9.-]+)$/);
+    return match ? [match[1]] : [];
+  });
+  const sameChargeItems = [...chargeItemIds].sort().join("\n")
+    === [...body.selectedOpenChargeLineIds].sort().join("\n");
+  const sameTender = invoice.extension?.some((extension) =>
+    extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL
+    && extension.valueCodeableConcept?.coding?.some((coding) => coding.code === body.tender),
+  ) ?? false;
+  if (
+    !invoice.id
+    || invoice.subject?.reference !== body.patientReference
+    || !sameChargeItems
+    || optionalMoneyCents(invoice.totalNet?.value, invoice.totalNet?.currency, `${invoiceReference} totalNet`)
+      !== body.amountCents
+    || !sameTender
+  ) {
+    throw new CollectionInputError(`requestId ${body.requestId} was already used for a different collection.`);
+  }
+  return {
+    deviceRequestId: "",
+    taskId: "",
+    invoiceId: invoice.id,
+    chargeItemIds,
+    replayed: true,
+  };
+}
+
+async function loadChargeSettlements(
+  fhir: CollectionFhirClient,
+  patientReference: string,
+  chargeItems: ChargeItem[],
+): Promise<Map<string, ChargeSettlement>> {
+  const [invoiceBundle, paymentBundle] = await Promise.all([
+    fhir.search<Invoice>("Invoice", { subject: patientReference, _count: "1000" }),
+    fhir.search<PaymentReconciliation>("PaymentReconciliation", { status: "active", _count: "1000" }),
+  ]);
+  if ([invoiceBundle, paymentBundle].some((bundle) => bundle.link?.some((link) => link.relation === "next"))) {
+    throw new CollectionInputError("Open-charge query exceeded one FHIR page; refusing a partial balance.");
+  }
+  return chargeSettlements(
+    chargeItems,
+    (invoiceBundle.entry ?? []).flatMap((entry) => entry.resource ?? []),
+    (paymentBundle.entry ?? []).flatMap((entry) => entry.resource ?? []),
+  );
+}
+
+function openChargeLines(
+  chargeItems: ChargeItem[],
+  invoices: Invoice[],
+  payments: PaymentReconciliation[],
+): OpenChargeLine[] {
+  const settlements = chargeSettlements(chargeItems, invoices, payments);
+  return chargeItems.flatMap((chargeItem) => {
+    if (!chargeItem.id || chargeItem.status !== "billable") return [];
+    const settlement = settlements.get(`ChargeItem/${chargeItem.id}`)!;
+    return settlement.openCents !== 0 || settlement.ambiguityReason || settlement.attributionWarning || isUnpricedCharge(chargeItem)
+      ? openChargeLine(chargeItem, settlement)
+      : [];
+  });
+}
+
+function chargeSettlements(
+  chargeItems: ChargeItem[],
+  invoices: Invoice[],
+  payments: PaymentReconciliation[],
+): Map<string, ChargeSettlement> {
+  const attributedByCharge = new Map<string, number>();
+  const ambiguityByCharge = new Map<string, string>();
+
+  for (const payment of payments) {
+    if (payment.status !== "active") continue;
+    for (const detail of payment.detail ?? []) {
+      if (!detailHasCode(
+        detail,
+        ODOS_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
+        INSURANCE_CHARGE_ITEM_ALLOCATION_DETAIL_CODE,
+      )) continue;
+      const reference = detail.request?.reference;
+      if (!reference) continue;
+      addCents(
+        attributedByCharge,
+        reference,
+        moneyCents(detail.amount?.value, detail.amount?.currency, `${paymentReference(payment)} ChargeItem allocation`),
+      );
+    }
+  }
+
+  for (const invoice of invoices) {
+    if (!invoice.id) continue;
+    const invoiceReference = `Invoice/${invoice.id}`;
+    const allocatedCents = payments.filter((payment) => payment.status === "active").reduce(
+      (total, payment) => total + (payment.detail ?? []).reduce(
+        (paymentTotal, detail) => detail.request?.reference === invoiceReference && detailHasCode(
+          detail,
+          HL7_PAYMENT_TYPE_SYSTEM,
+          "payment",
+        )
+          ? paymentTotal + moneyCents(
+            detail.amount?.value,
+            detail.amount?.currency,
+            `${paymentReference(payment)} ${invoiceReference} allocation`,
+          )
+          : paymentTotal,
+        0,
+      ),
+      0,
+    );
+    const totalNetCents = optionalMoneyCents(
+      invoice.totalNet?.value,
+      invoice.totalNet?.currency,
+      `${invoiceReference} totalNet`,
+    );
+    const fullySettled = invoice.status === "balanced"
+      || invoice.extension?.some((extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL)
+      || (totalNetCents !== undefined && allocatedCents === totalNetCents);
+
+    if (fullySettled) {
+      for (const line of invoice.lineItem ?? []) {
+        const chargeReference = line.chargeItemReference?.reference;
+        if (!chargeReference) continue;
+        addCents(attributedByCharge, chargeReference, invoiceLineCents(line, invoiceReference));
+      }
+      continue;
+    }
+    if (allocatedCents !== 0) {
+      for (const line of invoice.lineItem ?? []) {
+        const chargeReference = line.chargeItemReference?.reference;
+        if (!chargeReference) continue;
+        // Match statements.ts:300: when payment attribution is ambiguous, refuse rather than inventing a split.
+        ambiguityByCharge.set(
+          chargeReference,
+          `${invoiceReference} has a partial ${allocatedCents}-cent allocation against ${totalNetCents ?? "unknown"} net cents; the charge-level open amount is ambiguous.`,
+        );
+      }
+    }
+  }
+
+  return new Map(chargeItems.flatMap((chargeItem) => {
+    if (!chargeItem.id || chargeItem.status !== "billable") return [];
+    const reference = `ChargeItem/${chargeItem.id}`;
+    const amountCents = chargeAmountCents(chargeItem);
+    const attributedCents = attributedByCharge.get(reference) ?? 0;
+    const ambiguityReason = ambiguityByCharge.get(reference);
+    const attributionWarning = attributedCents > amountCents
+      ? `${reference} has ${attributedCents} attributed cents against its ${amountCents}-cent charge amount.`
+      : undefined;
+    const settlement: ChargeSettlement = {
+      attributedCents,
+      openCents: ambiguityReason ? null : Math.max(0, amountCents - attributedCents),
+      ...(ambiguityReason ? { ambiguityReason } : {}),
+      ...(attributionWarning ? { attributionWarning } : {}),
+    };
+    return [[reference, settlement] as const];
+  }));
+}
+
+function openChargeLine(chargeItem: ChargeItem, settlement: ChargeSettlement): OpenChargeLine[] {
   if (!chargeItem.id) return [];
   const coding = chargeItem.code?.coding?.[0];
   const amountCents = chargeAmountCents(chargeItem);
   return [{
     id: chargeItem.id,
     amountCents,
+    ...settlement,
     description: chargeDescription(chargeItem),
     date: chargeItem.occurrenceDateTime ?? chargeItem.enteredDate ?? "",
     source: chargeItem.supportingInformation?.some((reference) =>
@@ -250,6 +483,59 @@ function openChargeLine(chargeItem: ChargeItem): OpenChargeLine[] {
     ...(procedureReference(chargeItem) ? { procedureReference: procedureReference(chargeItem) } : {}),
     feeCents: amountCents,
   }];
+}
+
+function addCents(target: Map<string, number>, reference: string, amountCents: number): void {
+  target.set(reference, (target.get(reference) ?? 0) + amountCents);
+}
+
+function detailHasCode(
+  detail: NonNullable<PaymentReconciliation["detail"]>[number],
+  system: string,
+  code: string,
+): boolean {
+  return detail.type.coding?.some((coding) => coding.system === system && coding.code === code) ?? false;
+}
+
+function invoiceLineCents(
+  line: NonNullable<Invoice["lineItem"]>[number],
+  invoiceReference: string,
+): number {
+  return (line.priceComponent ?? []).reduce((total, component) => {
+    const cents = moneyCents(
+      component.amount?.value,
+      component.amount?.currency,
+      `${invoiceReference} ${component.type} line amount`,
+    );
+    if (component.type === "informational") return total;
+    return component.type === "discount" || component.type === "deduction"
+      ? total - cents
+      : total + cents;
+  }, 0);
+}
+
+function optionalMoneyCents(
+  value: number | undefined,
+  currency: string | undefined,
+  label: string,
+): number | undefined {
+  return value === undefined ? undefined : moneyCents(value, currency, label);
+}
+
+function moneyCents(value: number | undefined, currency: string | undefined, label: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || (currency && currency !== "USD")) {
+    throw new Error(`${label} must be a finite USD amount.`);
+  }
+  const scaled = value * 100;
+  const cents = Math.round(scaled);
+  if (Math.abs(scaled - cents) > 0.000001 || !Number.isInteger(cents)) {
+    throw new Error(`${label} must resolve to whole cents.`);
+  }
+  return cents;
+}
+
+function paymentReference(payment: PaymentReconciliation): string {
+  return `PaymentReconciliation/${payment.id ?? "(unknown)"}`;
 }
 
 function isUnpricedCharge(chargeItem: ChargeItem): boolean {
@@ -312,6 +598,9 @@ function assertPositiveCollectionAmount(amountCents: number): void {
 function parseCollectionBody(raw: unknown): { body: CollectionBody } | { error: string } {
   if (typeof raw !== "object" || raw === null) return { error: "Request body must be a JSON object." };
   const body = raw as Record<string, unknown>;
+  if (typeof body.requestId !== "string" || !isUuid(body.requestId)) {
+    return { error: "requestId must be a client-supplied UUID." };
+  }
   const patientReference = normalizePatientReference(body.patientReference);
   if (!patientReference) return { error: 'patientReference must be a local "Patient/<id>" reference.' };
   if (!Array.isArray(body.selectedOpenChargeLineIds) || body.selectedOpenChargeLineIds.length === 0 ||
@@ -337,6 +626,7 @@ function parseCollectionBody(raw: unknown): { body: CollectionBody } | { error: 
   }
   return {
     body: {
+      requestId: body.requestId,
       patientReference,
       selectedOpenChargeLineIds: body.selectedOpenChargeLineIds as string[],
       amountCents: body.amountCents,
@@ -346,6 +636,10 @@ function parseCollectionBody(raw: unknown): { body: CollectionBody } | { error: 
       } : {}),
     },
   };
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 async function authenticatedStaff(

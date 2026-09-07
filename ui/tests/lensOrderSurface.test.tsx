@@ -591,6 +591,7 @@ test("OpticalOrder does not advance the Task or header when the physical invento
       outcome: "success",
       amountChargedCents: 0,
       tender: "CASH",
+      replayed: false,
     });
   });
 

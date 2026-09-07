@@ -344,6 +344,8 @@ export function OpticalOrder({
     chargeLines.filter((line) => line.selected).map((line) => ({
       id: line.id,
       amountCents: patientBalanceCents(line),
+      openCents: patientBalanceCents(line),
+      attributedCents: 0,
       description: line.procedure || "Optical charge",
       date: header.serviceDate,
       source: "optical",

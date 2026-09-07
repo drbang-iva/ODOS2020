@@ -15,7 +15,7 @@ import type { PatientCreditBank, PatientPackageInstance } from "../src/lib/comme
 import type { OpenChargeLine } from "../src/lib/collect";
 
 const CHARGES: OpenChargeLine[] = [
-  { id: "charge-1", amountCents: 10_000, description: "Exam balance", date: "2026-08-16", source: "other" },
+  { id: "charge-1", amountCents: 10_000, openCents: 10_000, attributedCents: 0, description: "Exam balance", date: "2026-08-16", source: "other" },
 ];
 
 const CREDIT_BANK: PatientCreditBank = {
