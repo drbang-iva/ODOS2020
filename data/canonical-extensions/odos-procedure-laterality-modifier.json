@@ -1,0 +1,76 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "odos-procedure-laterality-modifier",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-procedure-laterality-modifier",
+  "version": "wiring-m1a-1",
+  "name": "ODOSProcedureLateralityModifier",
+  "title": "ODOS Procedure Laterality Modifier",
+  "status": "active",
+  "date": "2026-09-07",
+  "publisher": "ODOS",
+  "description": "Carries a verified side modifier on an eligible procedure ChargeItem. Procedure and payer eligibility are governed separately and the shipped eligibility allowlist is empty.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "ChargeItem"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Side modifier for an eligible procedure charge",
+        "min": 0,
+        "max": "1",
+        "isModifier": true,
+        "isModifierReason": "The code qualifies which side of the body the billed procedure applies to."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "slicing": {
+          "discriminator": [{ "type": "value", "path": "url" }],
+          "rules": "closed"
+        },
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:code",
+        "path": "Extension.extension",
+        "sliceName": "code",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:code.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "code"
+      },
+      {
+        "id": "Extension.extension:code.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "code" }]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-procedure-laterality-modifier"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

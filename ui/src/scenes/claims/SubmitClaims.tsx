@@ -951,7 +951,7 @@ function DiagnosisLines({ lines, onChange, errors }: { lines: DiagnosisLine[]; o
   );
 }
 
-function ChargeLines({ lines, onChange, errors }: { lines: ChargeLine[]; onChange: (lines: ChargeLine[]) => void; errors: readonly string[] }) {
+export function ChargeLines({ lines, onChange, errors }: { lines: ChargeLine[]; onChange: (lines: ChargeLine[]) => void; errors: readonly string[] }) {
   const update = (index: number, value: ChargeLine) => onChange(lines.map((line, candidate) => candidate === index ? value : line));
   return (
     <div className="space-y-3">
@@ -961,7 +961,7 @@ function ChargeLines({ lines, onChange, errors }: { lines: ChargeLine[]; onChang
             <SelectField label="Code set" value={line.codeType} options={[{ value: "CPT", label: "CPT" }, { value: "HCPCS", label: "HCPCS" }]} onChange={(codeType) => update(index, { ...line, codeType: codeType as "CPT" | "HCPCS" })} />
             <Field label="Code" value={line.code} error={claimError(errors, `Charge ${index + 1} code`)} onChange={(code) => update(index, { ...line, code })} />
             <Field label="Description" value={line.description} onChange={(description) => update(index, { ...line, description })} />
-            <Field label="Fee (USD)" value={line.feeDollars} placeholder="125.50" inputMode="decimal" error={claimError(errors, `Charge ${index + 1} fee`)} onChange={(feeDollars) => update(index, { ...line, feeDollars })} />
+            <Field label="Line total (USD)" value={line.feeDollars} placeholder="125.50" inputMode="decimal" error={claimError(errors, `Charge ${index + 1} fee`)} onChange={(feeDollars) => update(index, { ...line, feeDollars })} />
             <Field label="Quantity" type="number" inputMode="numeric" value={line.quantity} error={claimError(errors, `Charge ${index + 1} quantity`)} onChange={(quantity) => update(index, { ...line, quantity })} />
             <button type="button" disabled={lines.length === 1} onClick={() => onChange(removeChargeLine(lines, index))} className="rounded border border-white/15 px-3 py-2 text-sm text-white/60 disabled:opacity-30">Remove</button>
           </div>
@@ -1087,7 +1087,7 @@ async function coveragePayerName(coverage: Coverage): Promise<string> {
 }
 
 function chargeLineTotal(charge: ProfessionalClaimChargeItemInput): number {
-  return Number(charge.priceOverride?.value ?? 0) * Number(charge.quantity?.value ?? 1);
+  return Number(charge.priceOverride?.value ?? 0);
 }
 
 function claimTotal(claim: ProfessionalClaimInput): number {

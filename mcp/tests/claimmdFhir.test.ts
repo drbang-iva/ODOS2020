@@ -171,7 +171,7 @@ test("buildClaimMdProfessionalClaimJson round-trips the FHIR claim to Claim.MD's
   assert.equal(payload.claim[0].claim_form, "1500");
   assert.equal(payload.claim[0].payerid, "PAYERTEST");
   assert.equal(payload.claim[0].pcn, "ODOS-CLAIM-900");
-  assert.equal(payload.claim[0].total_charge, "225.00");
+  assert.equal(payload.claim[0].total_charge, "175.00");
   assert.equal(payload.claim[0].diag_1, "DX-A");
   assert.equal(payload.claim[0].charge.length, 2);
   assert.equal(payload.claim[0].charge[0].proc_code, "PROC-A");

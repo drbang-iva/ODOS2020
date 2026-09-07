@@ -567,7 +567,8 @@ test("Claim Review renders named human summary, line detail, and calculated tota
   assert.match(html, /Synthetic procedure/);
   assert.match(html, /Fee \$125\.50/);
   assert.match(html, /Qty 2/);
-  assert.match(html, /\$251\.00/);
+  assert.match(html, /Claim total.*\$125\.50/);
+  assert.doesNotMatch(html, /\$251\.00/);
   assert.match(html, /Greenville, SC 29601/);
   assert.doesNotMatch(html, /patientReference/);
   assert.doesNotMatch(html, /<pre/);
