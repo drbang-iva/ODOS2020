@@ -89,8 +89,8 @@ Expected local endpoints:
 
 | Service | URL |
 |---|---|
-| FHIR API | `http://localhost:8103/fhir/R4` |
-| Medplum admin UI | `http://localhost:8100` |
+| FHIR API | `http://localhost:8103/fhir/R4` — loopback-only by design (INGRESS-0) |
+| Medplum admin UI | `http://localhost:8100` — loopback-only by design (INGRESS-0) |
 | Postgres | `127.0.0.1:5433` |
 | Redis | `127.0.0.1:6379` |
 
