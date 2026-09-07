@@ -931,7 +931,7 @@ test("ocular-health cleanup keeps only clinically scoped chips and qualifiers", 
   }]);
 });
 
-test("anterior chamber cells and flare expose exact SUN options through the lens graded-qualifier shape", async () => {
+test("anterior chamber cells and flare expose the operator-adapted SUN-derived options through the lens graded-qualifier shape", async () => {
   const definitions = await catalog(new MemoryFhir());
   const anteriorChamber = definitions.find((definition) =>
     definition.stableKey === "ocular-health:anterior:anterior-chamber"
@@ -956,19 +956,17 @@ test("anterior chamber cells and flare expose exact SUN options through the lens
 
   const expected = {
     cells: [
-      "0 (<1 cell)",
-      "0.5+ (1–5 cells)",
+      "Trace (1–5)",
       "1+ (6–15 cells)",
       "2+ (16–25 cells)",
       "3+ (26–50 cells)",
       "4+ (>50 cells)",
     ],
     flare: [
-      "0 (None)",
-      "1+ (Faint)",
-      "2+ (Moderate; iris and lens details clear)",
-      "3+ (Marked; iris and lens details hazy)",
-      "4+ (Intense; fibrin or plastic aqueous)",
+      "1+ (faint)",
+      "2+ (moderate; iris and lens clear)",
+      "3+ (marked; iris and lens hazy)",
+      "4+ (intense; fibrin or plastic aqueous)",
     ],
   };
   for (const [findingCode, options] of Object.entries(expected)) {
@@ -986,7 +984,7 @@ test("anterior chamber cells and flare expose exact SUN options through the lens
       key: "grade",
       display: "Grade",
       options,
-      scheme: "SUN",
+      scheme: "SUN-derived (ODOS present-finding scale)",
     }, findingCode);
   }
 });
@@ -1004,7 +1002,7 @@ test("anterior chamber cell and flare grades round-trip without setting the sibl
   }>).find((field) => field.valueType === "multi-select");
   assert.ok(findingField?.localCode);
   const cellGrade = "2+ (16–25 cells)";
-  const flareGrade = "1+ (Faint)";
+  const flareGrade = "1+ (faint)";
 
   const capture = await handleCustomSectionCaptureRequest(
     clinicalDeps("provider", fhir, definitions),

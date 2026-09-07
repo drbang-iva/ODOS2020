@@ -113,20 +113,18 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     normalTemplate: "Deep and quiet; no cells or flare.",
     sheetLabel: "Deep and quiet",
     priority: [
-      sunGradedFinding("cells", "cells", [
-        "0 (<1 cell)",
-        "0.5+ (1–5 cells)",
+      sunDerivedGradedFinding("cells", "cells", [
+        "Trace (1–5)",
         "1+ (6–15 cells)",
         "2+ (16–25 cells)",
         "3+ (26–50 cells)",
         "4+ (>50 cells)",
       ]),
-      sunGradedFinding("flare", "flare", [
-        "0 (None)",
-        "1+ (Faint)",
-        "2+ (Moderate; iris and lens details clear)",
-        "3+ (Marked; iris and lens details hazy)",
-        "4+ (Intense; fibrin or plastic aqueous)",
+      sunDerivedGradedFinding("flare", "flare", [
+        "1+ (faint)",
+        "2+ (moderate; iris and lens clear)",
+        "3+ (marked; iris and lens hazy)",
+        "4+ (intense; fibrin or plastic aqueous)",
       ]),
       "shallow AC",
     ],
@@ -545,11 +543,17 @@ function gradedLensFinding(key: string, display: string): FindingSeed {
   };
 }
 
-function sunGradedFinding(key: string, display: string, options: string[]): FindingSeed {
+function sunDerivedGradedFinding(key: string, display: string, options: string[]): FindingSeed {
   return {
     key,
     display,
-    qualifiers: [{ kind: "graded", key: "grade", display: "Grade", options, scheme: "SUN" }],
+    qualifiers: [{
+      kind: "graded",
+      key: "grade",
+      display: "Grade",
+      options,
+      scheme: "SUN-derived (ODOS present-finding scale)",
+    }],
   };
 }
 
