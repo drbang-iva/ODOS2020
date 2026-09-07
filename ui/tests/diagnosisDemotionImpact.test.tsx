@@ -42,6 +42,8 @@ test("the shared demotion presenter makes an unavailable post-write impact compu
 test("DiagnosisPicker surfaces a stranded-charge warning after its variable Possible action", async () => {
   const originalFetch = globalThis.fetch;
   const restoreWindow = installWindow();
+  let deferPick = false;
+  let resolveDeferredPick: ((response: Response) => void) | undefined;
   globalThis.fetch = async (input, init) => {
     const url = String(input);
     if (url.includes("diagnosis-candidates")) {
@@ -61,6 +63,7 @@ test("DiagnosisPicker surfaces a stranded-charge warning after its variable Poss
     }
     if (url.includes("diagnosis-catalog")) return Response.json({ diagnoses: [] });
     if (url.includes("diagnosis-picks") && init?.method === "POST") {
+      if (deferPick) return new Promise<Response>((resolve) => { resolveDeferredPick = resolve; });
       return Response.json({
         condition: { resourceType: "Condition", id: "condition-1" },
         action: "possible",
@@ -100,6 +103,35 @@ test("DiagnosisPicker surfaces a stranded-charge warning after its variable Poss
       await flushEffects();
     });
     assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /will not reach claim until re-pointed/);
+
+    const nextToggle = renderer.root.findAllByType("button").find((button) => textContent(button).includes("dx ▾"));
+    assert.ok(nextToggle);
+    act(() => nextToggle.props.onClick());
+    const nextPossible = renderer.root.findAllByType("button").find((button) => textContent(button) === "Possible");
+    assert.ok(nextPossible);
+    deferPick = true;
+    let pendingPick!: Promise<void>;
+    act(() => { pendingPick = nextPossible.props.onClick(); });
+    await flushEffects();
+    assert.ok(resolveDeferredPick);
+    await act(async () => {
+      renderer.update(<DiagnosisPicker
+        encounterReference="Encounter/e2"
+        observationReferences={["Observation/finding-1"]}
+        refreshKey={2}
+      />);
+      await flushEffects();
+    });
+    resolveDeferredPick(Response.json({
+      condition: { resourceType: "Condition", id: "condition-1" },
+      action: "possible",
+      ...impact,
+    }));
+    await act(async () => {
+      await pendingPick;
+      await flushEffects();
+    });
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /will not reach claim until re-pointed/);
   } finally {
     act(() => renderer?.unmount());
     globalThis.fetch = originalFetch;
@@ -112,6 +144,8 @@ test("AssessmentSection surfaces a stranded-charge warning after its variable Di
   const restoreWindow = installWindow();
   const originalRead = fhir.read;
   const originalSearch = fhir.search;
+  let deferPick = false;
+  let resolveDeferredPick: ((response: Response) => void) | undefined;
   const possibleCondition: Condition = {
     resourceType: "Condition",
     id: "condition-1",
@@ -131,11 +165,11 @@ test("AssessmentSection surfaces a stranded-charge warning after its variable Di
     }],
     code: { text: "Presbyopia" },
   };
-  fhir.read = (async (resourceType: string) => {
+  fhir.read = (async (resourceType: string, id: string) => {
     if (resourceType === "Encounter") {
       return {
         resourceType: "Encounter",
-        id: "e1",
+        id,
         status: "in-progress",
         class: {},
         subject: { reference: "Patient/p1" },
@@ -157,6 +191,7 @@ test("AssessmentSection surfaces a stranded-charge warning after its variable Di
   globalThis.fetch = async (input, init) => {
     const url = String(input);
     if (url.includes("/diagnosis-picks") && init?.method === "POST") {
+      if (deferPick) return new Promise<Response>((resolve) => { resolveDeferredPick = resolve; });
       return Response.json({
         condition: {
           ...possibleCondition,
@@ -206,6 +241,43 @@ test("AssessmentSection surfaces a stranded-charge warning after its variable Di
       window.dispatchEvent(new CustomEvent("odos:diagnosis-picked", {
         detail: { encounterReference: "Encounter/e1" },
       }));
+      await flushEffects();
+    });
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /will not reach claim until re-pointed/);
+
+    const nextDiscard = renderer.root.findAllByType("button").find((button) => textContent(button) === "Discard");
+    assert.ok(nextDiscard);
+    deferPick = true;
+    let pendingPick!: Promise<void>;
+    act(() => { pendingPick = nextDiscard.props.onClick(); });
+    await flushEffects();
+    assert.ok(resolveDeferredPick);
+    await act(async () => {
+      renderer.update(
+        <RoleProvider initialRole="provider">
+          <AssessmentSection
+            patientReference="Patient/p1"
+            encounterReference="Encounter/e2"
+            onSaved={() => undefined}
+          />
+        </RoleProvider>,
+      );
+      await flushEffects();
+      await flushEffects();
+    });
+    resolveDeferredPick(Response.json({
+      condition: {
+        ...possibleCondition,
+        verificationStatus: { coding: [{
+          system: "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+          code: "refuted",
+        }] },
+      },
+      action: "discard",
+      ...impact,
+    }));
+    await act(async () => {
+      await pendingPick;
       await flushEffects();
     });
     assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /will not reach claim until re-pointed/);

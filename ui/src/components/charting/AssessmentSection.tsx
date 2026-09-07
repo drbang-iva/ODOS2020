@@ -149,6 +149,8 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   const protocolTriggerRef = useRef<HTMLButtonElement>(null);
   const protocolDialogRef = useRef<HTMLDivElement>(null);
   const encounterId = encounterReference.replace(/^Encounter\//, "");
+  const currentEncounterReference = useRef(encounterReference);
+  currentEncounterReference.current = encounterReference;
 
   async function load() {
     setDiagnosisDemotionImpact(undefined);
@@ -329,6 +331,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   }
 
   async function decidePossible(condition: Condition, action: "confirm" | "discard") {
+    const actionEncounterReference = encounterReference;
     const identifierValue = condition.identifier?.find((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM)?.value;
     if (!identifierValue) {
       setError("This possible diagnosis is missing its diagnosis catalog link.");
@@ -344,7 +347,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
         ...(lateralityBucket === "left" ? { laterality: "OS" as const } : {}),
         ...(lateralityBucket === "bilateral" ? { laterality: "OU" as const } : {}),
       });
-      setDiagnosisDemotionImpact(result);
+      if (currentEncounterReference.current === actionEncounterReference) setDiagnosisDemotionImpact(result);
     }, false);
   }
 

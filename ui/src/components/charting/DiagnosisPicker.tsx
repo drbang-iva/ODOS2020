@@ -66,6 +66,9 @@ export function DiagnosisPicker({
   const loadVersion = useRef(0);
   const encounterId = encounterReference.replace(/^Encounter\//, "");
   const observationKey = observationReferences?.join("|") ?? "";
+  const loadScopeKey = [encounterReference, findingDefinitionKey, mode, observationKey, refreshKey].join("\u0000");
+  const currentLoadScopeKey = useRef(loadScopeKey);
+  currentLoadScopeKey.current = loadScopeKey;
 
   async function load(signal?: AbortSignal) {
     setDiagnosisDemotionImpact(undefined);
@@ -130,6 +133,7 @@ export function DiagnosisPicker({
   }, [catalog]);
 
   async function pick(finding: CandidateFinding, diagnosisKey: string, action: "possible" | "confirm" | "discard", source: Candidate["source"] | "catalog-search") {
+    const actionLoadScopeKey = loadScopeKey;
     setBusy(`${finding.findingInstanceId}:${diagnosisKey}:${action}`);
     setError(null);
     try {
@@ -140,10 +144,11 @@ export function DiagnosisPicker({
         action,
         source,
       });
+      if (currentLoadScopeKey.current !== actionLoadScopeKey) return;
       try {
         await load();
       } finally {
-        setDiagnosisDemotionImpact(result);
+        if (currentLoadScopeKey.current === actionLoadScopeKey) setDiagnosisDemotionImpact(result);
       }
       setOpenId(null);
       setCatalogSelection(undefined);
