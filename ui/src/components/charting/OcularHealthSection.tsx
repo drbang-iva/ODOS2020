@@ -23,6 +23,7 @@ import {
 } from "./FindingWorksheetControls";
 import { formatStepValue } from "./power-options";
 import { DiagnosisPicker } from "./DiagnosisPicker";
+import { formatDate } from "./PrescriptionSection";
 import type { SectionSaveStatus } from "./types";
 import { useConfirmDestructive } from "./ConfirmDestructive";
 
@@ -58,6 +59,7 @@ type PriorReadings = Record<Eye, PriorFindingReadings>;
 
 interface RelatedFindingReading {
   key: string;
+  context: "current" | "prior";
   recordedAt: string;
   source: string;
   field: string;
@@ -214,15 +216,27 @@ export function OcularHealthSection({
     Promise.all(relatedDefinitions.map(async (definition) => {
       try {
         const endpoint = `${base}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}/history`;
+        const currentQuery = new URLSearchParams({ patient: patientReference, encounter: encounterReference });
         const patientQuery = new URLSearchParams({ patient: patientReference });
-        const response = await fetchImpl(`${endpoint}?${patientQuery}`, { headers: authHeaders(), signal: controller.signal });
-        const body = await response.json() as { rows?: HistoryRow[]; error?: string };
-        if (!response.ok) throw new Error(body.error ?? `${definition.display} related history failed: ${response.status}`);
-        if (body.rows !== undefined && !Array.isArray(body.rows)) throw new Error(`${definition.display} related history was malformed.`);
-        return { definition, rows: body.rows ?? [] };
+        const [currentResponse, patientResponse] = await Promise.all([
+          fetchImpl(`${endpoint}?${currentQuery}`, { headers: authHeaders(), signal: controller.signal }),
+          fetchImpl(`${endpoint}?${patientQuery}`, { headers: authHeaders(), signal: controller.signal }),
+        ]);
+        const currentBody = await currentResponse.json() as { rows?: HistoryRow[]; error?: string };
+        const patientBody = await patientResponse.json() as { rows?: HistoryRow[]; error?: string };
+        if (!currentResponse.ok) throw new Error(currentBody.error ?? `${definition.display} current related history failed: ${currentResponse.status}`);
+        if (!patientResponse.ok) throw new Error(patientBody.error ?? `${definition.display} related history failed: ${patientResponse.status}`);
+        if (currentBody.rows !== undefined && !Array.isArray(currentBody.rows)) throw new Error(`${definition.display} current related history was malformed.`);
+        if (patientBody.rows !== undefined && !Array.isArray(patientBody.rows)) throw new Error(`${definition.display} related history was malformed.`);
+        const currentRows = currentBody.rows ?? [];
+        const priorRows = rowsBeforeEncounter(
+          excludeCurrentEncounterRows(patientBody.rows ?? [], currentRows),
+          encounterRecordedAt,
+        );
+        return { definition, currentRows, priorRows };
       } catch (caught) {
         if ((caught as Error).name === "AbortError") throw caught;
-        return { definition, rows: [] };
+        return { definition, currentRows: [], priorRows: [] };
       }
     }))
       .then((sources) => {
@@ -232,7 +246,7 @@ export function OcularHealthSection({
         if ((caught as Error).name !== "AbortError") setRelatedReadings({});
       });
     return () => controller.abort();
-  }, [definitionKey, relatedDefinitionKey, patientReference, apiBase, fetchImpl]);
+  }, [definitionKey, relatedDefinitionKey, patientReference, encounterReference, encounterRecordedAt, apiBase, fetchImpl]);
 
   useEffect(() => {
     if (runnerEnabled) {
@@ -691,8 +705,8 @@ function OptionList({ ariaLabel, options, allOptions, selected, prior, related, 
         <PriorValue key={option.code} reading={reading} value={`${findingChipLabel(option.display)} present`} />
       ))}
       {options.some((option) => option.code === MGD_OPTION_CODE) && related.map((reading) => (
-        <div key={reading.key} data-related-finding-reading="">
-          <PriorValue reading={reading} value={`${reading.source} · ${reading.field}: ${reading.value}`} />
+        <div key={reading.key} data-related-finding-reading="" className="mt-1 text-xs font-normal text-[color:var(--odos-faint)]">
+          {reading.context === "current" ? "This visit" : "Prior"}: {reading.source} · {reading.field}: {reading.value} · {formatDate(reading.recordedAt)}
         </div>
       ))}
     </div>
@@ -863,36 +877,43 @@ export function relatedDefinitionsForTargets(
 
 function relatedReadingsByTarget(
   targetDefinitions: Array<Pick<CustomFindingDefinition, "stableKey">>,
-  sources: Array<{ definition: CustomFindingDefinition; rows: HistoryRow[] }>,
+  sources: Array<{
+    definition: CustomFindingDefinition;
+    currentRows: HistoryRow[];
+    priorRows: HistoryRow[];
+  }>,
 ): Record<string, RelatedFindingReadings> {
   const targetKeys = new Set(targetDefinitions.map((definition) => definition.stableKey));
   const readings = Object.fromEntries(
     targetDefinitions.map((definition) => [definition.stableKey, emptyRelatedReadings()]),
   ) as Record<string, RelatedFindingReadings>;
-  for (const { definition, rows } of sources) {
+  for (const { definition, currentRows, priorRows } of sources) {
     const source = relatedSourceLabel(definition);
-    const sortedRows = rows
-      .filter((row) => Number.isFinite(Date.parse(row.recordedAt)))
-      .sort((left, right) => Date.parse(right.recordedAt) - Date.parse(left.recordedAt));
     for (const targetKey of definition.relatedFindingDefinitionKeys ?? []) {
       if (!targetKeys.has(targetKey)) continue;
       const target = readings[targetKey] ?? emptyRelatedReadings();
       for (const eye of EYES) {
-        for (const field of definition.customFields.filter((candidate) => candidate.active).sort((left, right) => left.order - right.order)) {
-          const row = sortedRows.find((candidate) =>
-            candidate.eye === eye && candidate.values.some((value) => value.code === field.localCode)
-          );
-          const stored = row?.values.find((value) => value.code === field.localCode);
-          if (!row || !stored) continue;
-          const value = formatRelatedValue(field, stored.value, stored.unit);
-          if (!value) continue;
-          target[eye].push({
-            key: `${definition.stableKey}:${eye}:${field.localCode}`,
-            recordedAt: row.recordedAt,
-            source,
-            field: stored.label ?? field.display,
-            value,
-          });
+        for (const [context, rows] of [["current", currentRows], ["prior", priorRows]] as const) {
+          const sortedRows = rows
+            .filter((row) => Number.isFinite(Date.parse(row.recordedAt)))
+            .sort((left, right) => Date.parse(right.recordedAt) - Date.parse(left.recordedAt));
+          for (const field of definition.customFields.filter((candidate) => candidate.active).sort((left, right) => left.order - right.order)) {
+            const row = sortedRows.find((candidate) =>
+              candidate.eye === eye && candidate.values.some((value) => value.code === field.localCode)
+            );
+            const stored = row?.values.find((value) => value.code === field.localCode);
+            if (!row || !stored) continue;
+            const value = formatRelatedValue(field, stored.value, stored.unit);
+            if (!value) continue;
+            target[eye].push({
+              key: `${definition.stableKey}:${eye}:${context}:${field.localCode}`,
+              context,
+              recordedAt: row.recordedAt,
+              source,
+              field: stored.label ?? field.display,
+              value,
+            });
+          }
         }
       }
       readings[targetKey] = target;

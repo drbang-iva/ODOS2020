@@ -15,8 +15,16 @@ const LIDS_KEY = "ocular-health:anterior:lids-lashes";
 const MGD_OPTION = "meibomian-gland-dysfunction";
 const PATIENT_REFERENCE = "Patient/mgd-reader";
 const ENCOUNTER_REFERENCE = "Encounter/routine-exam";
+const ENCOUNTER_RECORDED_AT = "2026-09-07T12:30:00.000Z";
 
-const GLAND_ROWS = [{
+interface GlandRow {
+  observationReference: string;
+  recordedAt: string;
+  eye: "OD" | "OS";
+  values: Array<{ code: string; label: string; value: number | string }>;
+}
+
+const GLAND_ROWS: GlandRow[] = [{
   observationReference: "Observation/gland-od",
   recordedAt: "2023-09-07T12:00:00.000Z",
   eye: "OD",
@@ -26,6 +34,64 @@ const GLAND_ROWS = [{
     { code: "CUSTOM_GLANDS_YIELDING_LIQUID", label: "Glands yielding liquid", value: 7 },
   ],
 }];
+
+const CURRENT_GLAND_ROWS: GlandRow[] = [{
+  observationReference: "Observation/gland-current-od",
+  recordedAt: "2026-09-07T12:00:00.000Z",
+  eye: "OD",
+  values: [
+    { code: "CUSTOM_EXPRESSIBILITY", label: "Expressibility", value: "normal" },
+    { code: "CUSTOM_SECRETION_QUALITY", label: "Secretion quality", value: "clear" },
+    { code: "CUSTOM_GLANDS_YIELDING_LIQUID", label: "Glands yielding liquid", value: 12 },
+  ],
+}];
+
+test("current-encounter gland data renders as this visit and never as prior", async () => {
+  const catalog = await catalogDefinitions();
+  const { renderer } = await renderLids(catalog, [], CURRENT_GLAND_ROWS);
+  try {
+    const readings = relatedReadingText(renderer);
+    assert.deepEqual(readings, [
+      "This visit: Dry Eye · Gland Function · Expressibility: Normal · Sep 7, 2026",
+      "This visit: Dry Eye · Gland Function · Secretion quality: Clear · Sep 7, 2026",
+      "This visit: Dry Eye · Gland Function · Glands yielding liquid: 12 · Sep 7, 2026",
+    ]);
+    assert.equal(readings.some((reading) => reading.startsWith("Prior:")), false);
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("prior-encounter gland data retains the prior label and recorded date", async () => {
+  const catalog = await catalogDefinitions();
+  const { renderer } = await renderLids(catalog, GLAND_ROWS);
+  try {
+    assert.deepEqual(relatedReadingText(renderer), [
+      "Prior: Dry Eye · Gland Function · Expressibility: Reduced · Sep 7, 2023",
+      "Prior: Dry Eye · Gland Function · Secretion quality: Inspissated · Sep 7, 2023",
+      "Prior: Dry Eye · Gland Function · Glands yielding liquid: 7 · Sep 7, 2023",
+    ]);
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("current and prior gland data render together with distinct visit context", async () => {
+  const catalog = await catalogDefinitions();
+  const { renderer } = await renderLids(catalog, GLAND_ROWS, CURRENT_GLAND_ROWS);
+  try {
+    assert.deepEqual(relatedReadingText(renderer), [
+      "This visit: Dry Eye · Gland Function · Expressibility: Normal · Sep 7, 2026",
+      "This visit: Dry Eye · Gland Function · Secretion quality: Clear · Sep 7, 2026",
+      "This visit: Dry Eye · Gland Function · Glands yielding liquid: 12 · Sep 7, 2026",
+      "Prior: Dry Eye · Gland Function · Expressibility: Reduced · Sep 7, 2023",
+      "Prior: Dry Eye · Gland Function · Secretion quality: Inspissated · Sep 7, 2023",
+      "Prior: Dry Eye · Gland Function · Glands yielding liquid: 7 · Sep 7, 2023",
+    ]);
+  } finally {
+    renderer.unmount();
+  }
+});
 
 test("present dry-eye gland data renders beside an unchecked MGD finding with source and date", async () => {
   const catalog = await catalogDefinitions();
@@ -126,7 +192,8 @@ async function catalogDefinitions(): Promise<CustomFindingDefinition[]> {
 
 async function renderLids(
   catalogDefinitions: CustomFindingDefinition[],
-  glandRows: typeof GLAND_ROWS,
+  glandRows: GlandRow[],
+  currentGlandRows: GlandRow[] = [],
 ): Promise<{
   renderer: ReactTestRenderer;
   writes: Array<{ url: string; body: unknown }>;
@@ -161,7 +228,11 @@ async function renderLids(
           : [],
       });
     }
-    return jsonResponse({ rows: glandRows });
+    return jsonResponse({
+      rows: url.searchParams.has("encounter")
+        ? currentGlandRows
+        : [...currentGlandRows, ...glandRows],
+    });
   }) as typeof fetch;
   let renderer!: ReactTestRenderer;
   await act(async () => {
@@ -172,6 +243,7 @@ async function renderLids(
         catalogDefinitions,
         patientReference: PATIENT_REFERENCE,
         encounterReference: ENCOUNTER_REFERENCE,
+        encounterRecordedAt: ENCOUNTER_RECORDED_AT,
         onSaved: () => undefined,
         apiBase: "http://test",
         fetchImpl,
