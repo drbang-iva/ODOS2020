@@ -128,6 +128,9 @@ export function StartExam({
             return id ? [{ id, label: visitType.name ?? id }] : [];
           });
         setVisitTypes(options);
+        if (options.length === 0) {
+          setStartError("No active coded visit types are configured for this practice.");
+        }
         setVisitTypeId((current) =>
           options.some((option) => option.id === current) ? current : options[0]?.id ?? ""
         );
@@ -165,6 +168,11 @@ export function StartExam({
 
   async function startExam() {
     if (!patient.id || starting) return;
+    const visitType = visitTypes.find((candidate) => candidate.id === visitTypeId);
+    if (!visitType) {
+      setStartError("Choose an active practice visit type before starting the visit.");
+      return;
+    }
 
     setStarting(true);
     setStartError(null);
@@ -174,24 +182,19 @@ export function StartExam({
       if (!encounterId) {
         await assignProvider(patient.id);
         const episodeReference = await resolveProgramReference();
-        const visitType = visitTypes.find((candidate) => candidate.id === visitTypeId);
         const createResponse = await api.executeTransaction(
           buildStartEncounterCreateBundle({
             patientId: patient.id,
             now: now.toISOString(),
             episodeReference,
-            ...(visitType
-              ? {
-                  visitType: {
-                    coding: [{
-                      system: ODOS_VISIT_TYPE_SYSTEM,
-                      code: visitType.id,
-                      display: visitType.label,
-                    }],
-                    text: visitType.label,
-                  },
-                }
-              : {}),
+            visitType: {
+              coding: [{
+                system: ODOS_VISIT_TYPE_SYSTEM,
+                code: visitType.id,
+                display: visitType.label,
+              }],
+              text: visitType.label,
+            },
           }),
           "start_encounter",
         );
@@ -255,7 +258,7 @@ export function StartExam({
         <OdosSelect
           value={visitTypeId}
           options={[
-            { value: "", label: "Not recorded" },
+            { value: "", label: visitTypesLoading ? "Loading visit types…" : "Select a visit type" },
             ...visitTypes.map((visitType) => ({
               value: visitType.id,
               label: visitType.label,
@@ -305,7 +308,7 @@ export function StartExam({
       {startError && <p className="odos-overview-error" role="alert">{startError}</p>}
       <button
         type="button"
-        disabled={!patient.id || starting || (startMode === "existing" && !selectedProgramId)}
+        disabled={!patient.id || starting || visitTypesLoading || !visitTypeId || visitTypes.length === 0 || (startMode === "existing" && !selectedProgramId)}
         onClick={() => void startExam()}
         className="odos-overview-button is-primary odos-start-exam-submit"
       >

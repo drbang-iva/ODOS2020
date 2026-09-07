@@ -433,34 +433,16 @@ test("Start today's visit assigns the provider, starts the encounter, and opens 
   renderer.unmount();
 });
 
-test("Start today's visit still succeeds with no visit type", async () => {
-  let createdEncounter: Encounter | undefined;
+test("Start today's visit refuses an empty active visit-type catalog", async () => {
   let transactionCount = 0;
   const api: StartExamApi = {
-    loadVisitTypes: loadDefaultVisitTypes,
+    loadVisitTypes: async () => [],
     loadPrograms: async () => [],
     assignProvider: async () => undefined,
     createProgram: async () => { throw new Error("not reached"); },
-    executeTransaction: async (bundle): Promise<Bundle> => {
+    executeTransaction: async (): Promise<Bundle> => {
       transactionCount += 1;
-      if (transactionCount === 1) createdEncounter = bundle.entry?.[0]?.resource as Encounter;
-      return transactionCount === 1
-        ? {
-            resourceType: "Bundle",
-            type: "transaction-response",
-            entry: [
-              { response: { status: "201 Created", location: "Encounter/encounter-untyped/_history/1" } },
-              { response: { status: "201 Created" } },
-            ],
-          }
-        : {
-            resourceType: "Bundle",
-            type: "transaction-response",
-            entry: [
-              { response: { status: "200 OK" } },
-              { response: { status: "201 Created" } },
-            ],
-          };
+      throw new Error("not reached");
     },
     now: () => new Date("2026-08-03T14:00:00.000Z"),
   };
@@ -468,23 +450,32 @@ test("Start today's visit still succeeds with no visit type", async () => {
   await act(async () => {
     renderer = create(<StartExam patient={patient} api={api} />);
   });
-  act(() => renderer.root.findAllByType(OdosSelect).find((select) =>
-    select.props.ariaLabel === "Visit type"
-  )!.props.onChange(""));
+  const startButton = renderer.root.findAllByType("button").find((button) =>
+    button.children.join("") === "Start today's visit →"
+  )!;
+  assert.equal(startButton.props.disabled, true);
+  assert.equal(transactionCount, 0);
+  assert.equal(renderer.root.findByProps({ role: "alert" }).children.join(""), "No active coded visit types are configured for this practice.");
+  renderer.unmount();
+});
 
+test("Start today's visit stays disabled when the practice visit-type catalog cannot load", async () => {
+  const api: StartExamApi = {
+    loadVisitTypes: async () => { throw new Error("Visit catalog unavailable"); },
+    loadPrograms: async () => [],
+    assignProvider: async () => { throw new Error("not reached"); },
+    createProgram: async () => { throw new Error("not reached"); },
+    executeTransaction: async () => { throw new Error("not reached"); },
+    now: () => new Date("2026-08-03T14:00:00.000Z"),
+  };
+  let renderer!: ReactTestRenderer;
   await act(async () => {
-    renderer.root.findAllByType("button").find((button) =>
-      button.children.join("") === "Start today's visit →"
-    )!.props.onClick();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    renderer = create(<StartExam patient={patient} api={api} />);
   });
-
-  assert.equal(createdEncounter?.type, undefined);
-  assert.deepEqual(useViewState.getState().view, {
-    kind: "encounter",
-    patientId: "patient-1",
-    encounterId: "encounter-untyped",
-  });
+  assert.equal(renderer.root.findAllByType("button").find((button) =>
+    button.children.join("") === "Start today's visit →"
+  )!.props.disabled, true);
+  assert.equal(renderer.root.findByProps({ role: "alert" }).children.join(""), "Visit catalog unavailable");
   renderer.unmount();
 });
 
@@ -748,7 +739,7 @@ test("start-exam mode choices expose existing and new Program selectors", async 
     select.props.ariaLabel === "Visit type"
   );
   assert.deepEqual(visitTypeSelect?.props.options, [
-    { value: "", label: "Not recorded" },
+    { value: "", label: "Select a visit type" },
     { value: "practice-annual", label: "Practice Annual Exam" },
   ]);
   assert.deepEqual(
