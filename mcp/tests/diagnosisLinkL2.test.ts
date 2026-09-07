@@ -17,13 +17,21 @@ import {
 import { handleDiagnosisOrderRequest } from "../src/clinical-graph/diagnosis-order-endpoint.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
 import { FAMILY_RESOLUTION_MODES } from "../src/clinical-graph/diagnosis-catalog-seeds.js";
+import {
+  VISUAL_FIELD_DEFECT_KEY,
+  VISUAL_FIELD_DESCRIPTOR_FIELD,
+  visualFieldDescriptorResolution,
+} from "../src/clinical-graph/entrance-definition.js";
 import * as diagnosisPickEndpoint from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 import {
   DX_PICK_TALLY_CODE,
   DX_PICK_TALLY_CODE_SYSTEM,
   FhirDiagnosisPickTallyStore,
 } from "../src/clinical-graph/diagnosis-pick-tally-store.js";
-import { FhirFindingDefinitionStore } from "../src/clinical-graph/finding-definition-store.js";
+import {
+  buildFindingDefinitionSeeds,
+  FhirFindingDefinitionStore,
+} from "../src/clinical-graph/finding-definition-store.js";
 import {
   createDiagnosisCandidateSchema,
   evaluateMappingTrigger,
@@ -846,6 +854,109 @@ test("vessels A/V ratio codes follow the field::option delimiter convention", as
     assert.equal(option.code.includes(":"), false);
     assert.equal(`${field.localCode}::${option.code}`.split("::").length, 2);
   }
+});
+
+test("active ocular-health diagnosis mappings name active options on their declared fields", () => {
+  const violations: string[] = [];
+  const inspectTrigger = (
+    definitionKey: string,
+    fields: Record<string, { active?: boolean; options?: Array<{ code?: string; active?: boolean }> }>,
+    trigger: Parameters<typeof evaluateMappingTrigger>[0],
+  ): void => {
+    if (trigger.kind === "allOf") {
+      for (const nested of trigger.triggers) inspectTrigger(definitionKey, fields, nested);
+      return;
+    }
+    const targets = trigger.kind === "option"
+      ? trigger.anyOf.map((option) => ({ field: trigger.field, option }))
+      : trigger.kind === "qualifier"
+        ? [{ field: trigger.field, option: trigger.option }]
+        : [];
+    for (const target of targets) {
+      const field = fields[target.field];
+      const option = field?.options?.find((candidate) => candidate.code === target.option);
+      if (field?.active !== true || option?.active !== true) {
+        violations.push(`${definitionKey}::${target.field}::${target.option}`);
+      }
+    }
+  };
+
+  for (const definition of buildFindingDefinitionSeeds().filter((candidate) =>
+    candidate.active && candidate.stableKey.startsWith("ocular-health:")
+  )) {
+    const fields = definition.valueSchema.fields as Record<
+      string,
+      { active?: boolean; options?: Array<{ code?: string; active?: boolean }> }
+    >;
+    for (const candidate of definition.diagnosisCandidates ?? []) {
+      if (candidate.active) inspectTrigger(definition.stableKey, fields, candidate.trigger);
+    }
+  }
+
+  assert.deepEqual(violations, [], `Ocular-health diagnosis triggers name missing or inactive options: ${violations.join(", ")}`);
+});
+
+test("diagnosis reachability reports mapping, rule, and visual-field descriptor channels against separate baselines", () => {
+  const ruleReachableKeys = new Set([
+    "anisometropia",
+    "astigmatism",
+    "glaucoma_suspect_open_angle_high",
+    "glaucoma_suspect_open_angle_low",
+    "hyperopia",
+    "myopia",
+    "ocular_hypertension",
+    "presbyopia",
+  ]);
+  const expectedVisualFieldDescriptorKeys = new Set([
+    "vf_heteronymous_bilateral",
+    "vf_homonymous_bilateral",
+    "vf_other_localized",
+  ]);
+  const visualFieldDescriptorReachableKeys = new Set([
+    "field-loss-od",
+    "field-loss-os",
+    "bitemporal-hemianopsia",
+    "right-homonymous-hemianopsia",
+    "left-homonymous-hemianopsia",
+    "superior-right-homonymous-quadrantanopia",
+    "inferior-right-homonymous-quadrantanopia",
+    "superior-left-homonymous-quadrantanopia",
+    "inferior-left-homonymous-quadrantanopia",
+  ].flatMap((descriptor) => {
+    const resolution = visualFieldDescriptorResolution(VISUAL_FIELD_DEFECT_KEY, {
+      type: "components",
+      components: [{ code: VISUAL_FIELD_DESCRIPTOR_FIELD, display: "Field Defect", value: descriptor }],
+    });
+    return resolution?.diagnosisKey ? [resolution.diagnosisKey] : [];
+  }));
+  assert.deepEqual([...visualFieldDescriptorReachableKeys].sort(), [...expectedVisualFieldDescriptorKeys].sort());
+  const mappingReachableKeys = new Set<string>();
+  for (const definition of buildFindingDefinitionSeeds().filter((candidate) => candidate.active)) {
+    for (const candidate of definition.diagnosisCandidates ?? []) {
+      if (!candidate.active) continue;
+      if (candidate.diagnosisKey !== undefined) mappingReachableKeys.add(candidate.diagnosisKey);
+      if (candidate.familyGroup !== undefined) {
+        const mode = FAMILY_RESOLUTION_MODES[candidate.familyGroup];
+        if (mode?.mode === "staged") {
+          for (const member of mode.members) mappingReachableKeys.add(member.stableKey);
+        }
+      }
+    }
+  }
+  const activeLedgerRows = buildDiagnosisCatalogSeeds().filter((row) => row.active);
+  const reachedBy = (keys: ReadonlySet<string>) => activeLedgerRows.filter((row) => keys.has(row.stableKey)).length;
+
+  assert.deepEqual({
+    activeLedgerRows: activeLedgerRows.length,
+    mapping: reachedBy(mappingReachableKeys),
+    rules: reachedBy(ruleReachableKeys),
+    visualFieldDescriptors: reachedBy(visualFieldDescriptorReachableKeys),
+  }, {
+    activeLedgerRows: 132,
+    mapping: 58,
+    rules: 8,
+    visualFieldDescriptors: 3,
+  });
 });
 
 test("ocular-health ledger diagnoses never become more globally unreachable", async () => {
