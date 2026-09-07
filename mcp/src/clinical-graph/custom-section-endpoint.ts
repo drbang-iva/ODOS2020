@@ -22,6 +22,10 @@ import {
   type CapturedGlaucomaFinding,
 } from "./glaucoma-suspect.js";
 import { withDocumentationElements } from "./documentation-elements.js";
+import {
+  translateRetiredFindingQualifierForRead,
+  translateRetiredFindingRead,
+} from "./finding-read-compatibility.js";
 import { isLiveObservation } from "./observation-liveness.js";
 
 type Eye = "OD" | "OS";
@@ -49,38 +53,6 @@ export interface CustomSectionEndpointDeps {
 
 const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as const;
 const EYES: Eye[] = ["OD", "OS"];
-
-interface RetiredFindingQualifierReadTranslation {
-  definitionStableKey: string;
-  findingCode: string;
-  qualifierKey: string;
-  persistedValue: FindingQualifierValue;
-}
-
-interface RetiredFindingReadTranslation {
-  definitionStableKey: string;
-  retiredFindingCode: string;
-  replacementFindingCode: string;
-  replacementQualifierValues: Readonly<Record<string, FindingQualifierValue>>;
-}
-
-const RETIRED_FINDING_QUALIFIER_READ_TRANSLATIONS: readonly RetiredFindingQualifierReadTranslation[] = [{
-  definitionStableKey: "ocular-health:anterior:cornea",
-  findingCode: "superficial-punctate-keratitis-spk",
-  qualifierKey: "grade",
-  persistedValue: "Grade 0",
-}];
-
-// Read only: remove after a persisted-data census or migration confirms that no live Lens
-// brunescent selection components remain.
-const RETIRED_FINDING_READ_TRANSLATIONS: readonly RetiredFindingReadTranslation[] = [{
-  definitionStableKey: "ocular-health:anterior:lens",
-  retiredFindingCode: "brunescent",
-  replacementFindingCode: "nuclear-sclerosis",
-  replacementQualifierValues: {
-    colour: "4+ (dark brown/black; brunescent)",
-  },
-}];
 
 const clockHourExtentSchema = z.object({
   from: z.number().finite().min(1).max(12),
@@ -334,13 +306,12 @@ export async function handleCustomSectionHistoryRequest(
     const perEye = definition.valueSchema.perEye === true;
     const prefix = perEye && (eye === "OD" || eye === "OS") ? `${eye}_` : "";
     const values = customFieldEntries(definition, true).flatMap((field) => {
-      const value = translateRetiredFindingSelectionsForRead(
+      const value = translateRetiredFindingRead(
         observation,
         definition.stableKey,
         field,
         prefix,
-        observationCustomValue(observation, field, prefix),
-      );
+      ).value;
       return value === undefined ? [] : [{
         code: field.localCode,
         label: field.display,
@@ -476,6 +447,12 @@ function observationFindingDetails(
 ): FindingDetails | undefined {
   const field = customFieldEntries(definition, true).find((candidate) => candidate.valueType === "multi-select");
   if (!field) return undefined;
+  const compatibility = translateRetiredFindingRead(
+    observation,
+    definition.stableKey,
+    field,
+    codePrefix,
+  );
   const findingDetails: FindingDetails = {};
   for (const option of field.options ?? []) {
     const details: Record<string, FindingQualifierValue> = {};
@@ -497,72 +474,13 @@ function observationFindingDetails(
     }
     if (Object.keys(details).length > 0) findingDetails[option.code] = details;
   }
-  for (const translation of retiredFindingTranslationsForObservation(
-    observation,
-    definition.stableKey,
-    field.localCode,
-    codePrefix,
-  )) {
-    const replacement = field.options?.find((option) =>
-      option.code === translation.replacementFindingCode && option.active
-    );
-    if (!replacement) continue;
-    const qualifierKeys = new Set((replacement.qualifiers ?? []).map((qualifier) => qualifier.key));
-    const translated = Object.fromEntries(
-      Object.entries(translation.replacementQualifierValues)
-        .filter(([qualifierKey]) => qualifierKeys.has(qualifierKey)),
-    );
-    findingDetails[replacement.code] = {
+  for (const [findingCode, translated] of Object.entries(compatibility.findingDetails)) {
+    findingDetails[findingCode] = {
       ...translated,
-      ...findingDetails[replacement.code],
+      ...findingDetails[findingCode],
     };
   }
   return hasFindingDetails(findingDetails) ? findingDetails : undefined;
-}
-
-function translateRetiredFindingSelectionsForRead(
-  observation: Observation,
-  definitionStableKey: string,
-  field: Parameters<typeof observationCustomValue>[1],
-  codePrefix: string,
-  persistedValue: ReturnType<typeof observationCustomValue>,
-): ReturnType<typeof observationCustomValue> {
-  if (field.valueType !== "multi-select") return persistedValue;
-  const selected = Array.isArray(persistedValue) ? [...persistedValue] : [];
-  for (const translation of retiredFindingTranslationsForObservation(
-    observation,
-    definitionStableKey,
-    field.localCode,
-    codePrefix,
-  )) {
-    const retiredIndex = selected.indexOf(translation.retiredFindingCode);
-    if (retiredIndex >= 0) selected.splice(retiredIndex, 1);
-    if (!selected.includes(translation.replacementFindingCode)) {
-      selected.push(translation.replacementFindingCode);
-    }
-  }
-  return selected.length > 0 ? selected : undefined;
-}
-
-function retiredFindingTranslationsForObservation(
-  observation: Observation,
-  definitionStableKey: string,
-  fieldCode: string,
-  codePrefix: string,
-): readonly RetiredFindingReadTranslation[] {
-  const namespacedPrefix = `${codePrefix}${fieldCode}::`;
-  const selectedFindingCodes = new Set((observation.component ?? []).flatMap((component) => {
-    if (component.valueBoolean !== true) return [];
-    const code = component.code.coding?.find((coding) => coding.code)?.code;
-    return code?.startsWith(namespacedPrefix) ? [code.slice(namespacedPrefix.length)] : [];
-  }));
-  return RETIRED_FINDING_READ_TRANSLATIONS.filter((translation) =>
-    translation.definitionStableKey === definitionStableKey &&
-    (
-      selectedFindingCodes.has(translation.retiredFindingCode) ||
-      findComponent(observation, `${codePrefix}${translation.retiredFindingCode}`)?.valueBoolean === true
-    )
-  );
 }
 
 function observationFindingQualifierValue(
@@ -584,25 +502,6 @@ function observationFindingQualifierValue(
   }
   return component.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code ??
     (component.valueString?.trim() || undefined);
-}
-
-function translateRetiredFindingQualifierForRead(
-  definitionStableKey: string,
-  findingCode: string,
-  qualifierKey: string,
-  persistedValue: FindingQualifierValue,
-): FindingQualifierValue | undefined {
-  // A selected SPK chip records a deliberate abnormal finding, while Grade 0 records absence.
-  // Hydration keeps the chip and drops only that contradictory retired rung; the Observation stays
-  // untouched. Remove this entry after a persisted-data census or migration confirms that no live
-  // SPK Grade 0 qualifier components remain.
-  const retired = RETIRED_FINDING_QUALIFIER_READ_TRANSLATIONS.some((translation) =>
-    translation.definitionStableKey === definitionStableKey &&
-    translation.findingCode === findingCode &&
-    translation.qualifierKey === qualifierKey &&
-    translation.persistedValue === persistedValue
-  );
-  return retired ? undefined : persistedValue;
 }
 
 function findingDetailComponentCode(

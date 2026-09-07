@@ -2,9 +2,10 @@ import type { Observation } from "@medplum/fhirtypes";
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import {
   customFieldEntries,
-  observationCustomValue,
+  type FindingQualifierValue,
   type QualifierSeed,
 } from "./custom-fields.js";
+import { translateRetiredFindingRead } from "./finding-read-compatibility.js";
 import { findingDefinitionForObservation } from "./finding-observation-match.js";
 import { isLiveObservation } from "./observation-liveness.js";
 import type {
@@ -649,7 +650,8 @@ function sheetFindingProjection(
     : "";
   const sheetFindings = customFieldEntries(definition, true).flatMap((field) => {
     if (field.valueType !== "multi-select") return [];
-    const selected = observationCustomValue(observation, field, prefix);
+    const compatibility = translateRetiredFindingRead(observation, definition.stableKey, field, prefix);
+    const selected = compatibility.value;
     if (!Array.isArray(selected)) return [];
     return selected.flatMap((optionCode) => {
       const option = field.options?.find((candidate) => candidate.code === optionCode);
@@ -658,7 +660,12 @@ function sheetFindingProjection(
         const component = observation.component?.find((row) => row.code.coding?.some((coding) =>
           coding.code === `${prefix}${field.localCode}::${option.code}::${qualifier.key}`
         ));
-        const label = component ? sheetQualifierLabel(component, qualifier) : undefined;
+        const translatedValue = compatibility.findingDetails[option.code]?.[qualifier.key];
+        const label = component
+          ? sheetQualifierLabel(component, qualifier)
+          : translatedValue === undefined
+            ? undefined
+            : sheetQualifierValueLabel(translatedValue);
         return label ? [label] : [];
       });
       return [{ display: option.display, qualifiers }];
@@ -668,6 +675,11 @@ function sheetFindingProjection(
     ...(normalLabel ? { normalLabel } : {}),
     ...(sheetFindings.length ? { sheetFindings } : {}),
   };
+}
+
+function sheetQualifierValueLabel(value: FindingQualifierValue): string {
+  if (typeof value === "number" || typeof value === "string") return String(value);
+  return `${value.from}–${value.to} o'clock ${value.clockwise ? "clockwise" : "counterclockwise"}`;
 }
 
 function sheetQualifierLabel(

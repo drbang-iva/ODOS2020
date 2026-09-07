@@ -215,6 +215,62 @@ test("ocular findings project affirmative normal text and every selected qualifi
   ]);
 });
 
+test("historical Lens brunescent selections project through Overview with the same merge semantics as sheet history", () => {
+  const lens = buildAnteriorOcularHealthDefinitions(PROVENANCE)
+    .find((row) => row.stableKey === "ocular-health:anterior:lens");
+  assert.ok(lens);
+  const field = Object.values(lens.valueSchema.fields as Record<string, {
+    localCode: string;
+    valueType: string;
+  }>).find((row) => row.valueType === "multi-select");
+  assert.ok(field);
+  const prefix = (eye: "OD" | "OS") => `${eye}_${field.localCode}`;
+  const sources = [
+    observation("lens-brunescent-alone", lens.stableKey, {
+      extension: [{
+        url: "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+        valueCodeableConcept: { coding: [{ code: "OD" }] },
+      }],
+      interpretation: [{ coding: [{ code: "abnormal" }] }],
+      component: [booleanComponent(`${prefix("OD")}::brunescent`, true)],
+    }),
+    observation("lens-brunescent-merged", lens.stableKey, {
+      extension: [{
+        url: "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+        valueCodeableConcept: { coding: [{ code: "OS" }] },
+      }],
+      interpretation: [{ coding: [{ code: "abnormal" }] }],
+      component: [
+        booleanComponent(`${prefix("OS")}::nuclear-sclerosis`, true),
+        codeComponent(`${prefix("OS")}::nuclear-sclerosis::grade`, "3+", "3+"),
+        booleanComponent(`${prefix("OS")}::brunescent`, true),
+      ],
+    }),
+  ];
+  const before = structuredClone(sources);
+
+  const projection = buildExamOverviewProjection({
+    encounterReference: "Encounter/e1",
+    patientReference: "Patient/p1",
+    definitions: [lens],
+    currentObservations: sources,
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+
+  assert.deepEqual(projection.findings.map((finding) => finding.sheetFindings), [
+    [{
+      display: "nuclear sclerosis",
+      qualifiers: ["4+ (dark brown/black; brunescent)"],
+    }],
+    [{
+      display: "nuclear sclerosis",
+      qualifiers: ["3+", "4+ (dark brown/black; brunescent)"],
+    }],
+  ]);
+  assert.deepEqual(sources, before);
+});
+
 test("finding projection follows definition order instead of lexical section keys", () => {
   const definitions = [
     definition("ocular-health:anterior:lids-lashes", "ocular-health:anterior:lids-lashes"),
