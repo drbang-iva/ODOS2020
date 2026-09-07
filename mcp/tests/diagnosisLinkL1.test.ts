@@ -266,6 +266,8 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     "epiretinal_membrane",
     "cystoid_macular_degeneration",
     "macular_hole",
+    "cme_following_cataract_surgery",
+    "retinal_edema",
     "subconjunctival_hemorrhage",
     "conjunctivochalasis",
     "vitreous_degeneration",
@@ -451,7 +453,7 @@ test("ocular-health dry eye amendment dates only the four newly verified rows", 
 
   assert.equal(ledger.accessDate, "2026-08-10");
   assert.match(ledger.scope, /dry eye syndrome \(H04\.12-\)/);
-  assert.deepEqual(ledger.amendments, [{
+  assert.deepEqual(ledger.amendments?.filter((row) => row.scopeDelta.includes("dry eye syndrome")), [{
     accessDate: "2026-08-17",
     scopeDelta: "Added dry eye syndrome (H04.12-) diagnosis catalog family.",
     codesAdded: ["H04.121", "H04.122", "H04.123", "H04.129"],
@@ -554,6 +556,50 @@ test("Wave A diagnosis families resolve every verified laterality code", () => {
     "cdcIcd10Cm2026CodeDescriptions",
     "nlmClinicalTablesIcd10Cm",
   ]);
+});
+
+test("Macula edema catalog additions are backed by the two ruled FY2026 primary sources", () => {
+  const ledger = JSON.parse(readFileSync(
+    resolve(process.cwd(), "../data/code-bindings/ocular-health-phase0-ledger.json"),
+    "utf8",
+  )) as {
+    accessDate: string;
+    sources: Record<string, { url: string; accessDate: string }>;
+    amendments?: Array<{ accessDate: string; codesAdded: string[]; sourceRefs: string[] }>;
+    diagnosisCodes: Array<{ code: string; display: string; family: string; laterality: string; sourceRefs: string[] }>;
+  };
+  const sourceRefs = ["cmsIcd10CmFy2026MsDrgV43", "cdcIcd10Cm2026CodeDescriptions"];
+  assert.equal(ledger.sources.cmsIcd10CmFy2026MsDrgV43?.url, "https://www.cms.gov/icd10m/FY2026-fr-v43-fullcode-cms/fullcode_cms/P0460.html");
+  assert.equal(ledger.sources.cmsIcd10CmFy2026MsDrgV43?.accessDate, "2026-09-07");
+  assert.deepEqual(ledger.amendments?.at(-1), {
+    accessDate: "2026-09-07",
+    scopeDelta: "Added post-cataract cystoid macular edema (H59.03-) and retinal edema (H35.81).",
+    codesAdded: ["H59.031", "H59.032", "H59.033", "H59.039", "H35.81"],
+    sourceRefs,
+  });
+  assert.deepEqual(ledger.diagnosisCodes.filter((row) =>
+    row.family === "H59.03-" || row.family === "H35.81"
+  ), [
+    { code: "H59.031", display: "Cystoid macular edema following cataract surgery, right eye", family: "H59.03-", laterality: "OD", sourceRefs },
+    { code: "H59.032", display: "Cystoid macular edema following cataract surgery, left eye", family: "H59.03-", laterality: "OS", sourceRefs },
+    { code: "H59.033", display: "Cystoid macular edema following cataract surgery, bilateral", family: "H59.03-", laterality: "OU", sourceRefs },
+    { code: "H59.039", display: "Cystoid macular edema following cataract surgery, unspecified eye", family: "H59.03-", laterality: "UNKNOWN", sourceRefs },
+    { code: "H35.81", display: "Retinal edema", family: "H35.81", laterality: "NONE", sourceRefs },
+  ]);
+
+  const seeds = buildDiagnosisCatalogSeeds();
+  const cme = seeds.find((row) => row.stableKey === "cme_following_cataract_surgery");
+  const edema = seeds.find((row) => row.stableKey === "retinal_edema");
+  assert.deepEqual(cme?.icd10, {
+    pattern: { unspecifiedEye: "H59.039", right: "H59.031", left: "H59.032", bilateral: "H59.033" },
+  });
+  assert.equal(cme?.lateralityRequired, true);
+  assert.deepEqual(edema?.icd10, { code: "H35.81", display: "Retinal edema" });
+  assert.equal(edema?.lateralityRequired, false);
+  for (const seed of [cme, edema]) {
+    assert.equal(seed?.codingStatus, "verified");
+    assert.deepEqual(seed?.provenance.ledgerRefs, sourceRefs);
+  }
 });
 
 test("Wave B diagnosis families resolve every verified laterality code", () => {
@@ -1027,7 +1073,7 @@ test("lens Phase 0 ledger and catalog seeds preserve verified codes and laterali
     lens_dislocation_posterior: { pattern: { unspecifiedEye: "H27.139", right: "H27.131", left: "H27.132", bilateral: "H27.133" } },
   };
 
-  assert.equal(allSeeds.length, 132);
+  assert.equal(allSeeds.length, 134);
   assert.equal(seeds.length, 12);
   for (const [stableKey, icd10] of Object.entries(expected)) {
     const seed = seeds.find((row) => row.stableKey === stableKey);

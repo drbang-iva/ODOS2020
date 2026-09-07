@@ -271,6 +271,38 @@ test("historical Lens brunescent selections project through Overview with the sa
   assert.deepEqual(sources, before);
 });
 
+test("historical ambiguous macular-hole selections project as an ungraded macular hole without mutating the source", () => {
+  const macula = buildPosteriorOcularHealthDefinitions(PROVENANCE)
+    .find((row) => row.stableKey === "ocular-health:posterior:macula");
+  assert.ok(macula);
+  const field = Object.values(macula.valueSchema.fields as Record<string, {
+    localCode: string;
+    valueType: string;
+  }>).find((row) => row.valueType === "multi-select");
+  assert.ok(field);
+  const source = observation("legacy-macular-hole", macula.stableKey, {
+    extension: [{
+      url: "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+      valueCodeableConcept: { coding: [{ code: "OD" }] },
+    }],
+    interpretation: [{ coding: [{ code: "abnormal" }] }],
+    component: [booleanComponent(`OD_${field.localCode}::macular-hole-full-lamellar`, true)],
+  });
+  const before = structuredClone(source);
+
+  const projection = buildExamOverviewProjection({
+    encounterReference: "Encounter/e1",
+    patientReference: "Patient/p1",
+    definitions: [macula],
+    currentObservations: [source],
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+
+  assert.deepEqual(projection.findings[0]?.sheetFindings, [{ display: "macular hole", qualifiers: [] }]);
+  assert.deepEqual(source, before);
+});
+
 test("finding projection follows definition order instead of lexical section keys", () => {
   const definitions = [
     definition("ocular-health:anterior:lids-lashes", "ocular-health:anterior:lids-lashes"),
