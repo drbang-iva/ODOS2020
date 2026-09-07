@@ -866,14 +866,19 @@ test("ocular-health cleanup keeps only clinically scoped chips and qualifiers", 
     {
       kind: "graded",
       key: "grade",
-      display: "Corneal staining grade (grading scheme provisional)",
-      options: ["Grade 0", "Grade 1", "Grade 2", "Grade 3", "Grade 4"],
-      scheme: "grading scheme provisional",
+      display: "Corneal staining grade (FDA Appendix C; Efron-corroborated)",
+      options: [
+        "Grade 1 (minimal superficial staining or stippling)",
+        "Grade 2 (regional or diffuse punctate staining)",
+        "Grade 3 (dense coalesced staining up to 2 mm)",
+        "Grade 4 (dense coalescent staining >2 mm or full-thickness abrasion)",
+      ],
+      scheme: "FDA Appendix C; Efron-corroborated",
     },
     {
       kind: "enum",
       key: "zone",
-      display: "Corneal staining zone (grading scheme provisional)",
+      display: "Corneal staining zone",
       options: [
         { code: "central", display: "Central" },
         { code: "nasal", display: "Nasal" },
@@ -929,6 +934,148 @@ test("ocular-health cleanup keeps only clinically scoped chips and qualifiers", 
       { code: "macula-off", display: "Macula off" },
     ],
   }]);
+});
+
+test("corneal findings expose sourced grade axes and arcus extent through live qualifier precedents", async () => {
+  const definitions = await catalog(new MemoryFhir());
+  const definition = (stableKey: string) => {
+    const found = definitions.find((candidate) => candidate.stableKey === stableKey);
+    assert.ok(found, stableKey);
+    return found;
+  };
+  const findings = (stableKey: string) => Object.values(
+    definition(stableKey).valueSchema.fields as Record<string, {
+      valueType?: string;
+      options?: Array<{
+        code: string;
+        qualifiers?: Array<Record<string, unknown>>;
+      }>;
+    }>,
+  ).find((field) => field.valueType === "multi-select")?.options ?? [];
+  const qualifier = (stableKey: string, findingCode: string) =>
+    findings(stableKey).find((finding) => finding.code === findingCode)?.qualifiers?.[0];
+  const lensQualifier = qualifier("ocular-health:anterior:lens", "nuclear-sclerosis");
+  const anteriorChamberQualifier = qualifier("ocular-health:anterior:anterior-chamber", "cells");
+  assert.ok(lensQualifier && anteriorChamberQualifier);
+  assert.deepEqual(
+    [anteriorChamberQualifier.kind, anteriorChamberQualifier.key, anteriorChamberQualifier.display],
+    [lensQualifier.kind, lensQualifier.key, lensQualifier.display],
+  );
+
+  const expectedGrades = {
+    neovascularization: {
+      scheme: "FDA Appendix C; Efron-corroborated",
+      options: [
+        "1+ (<1.0 mm vessel penetration)",
+        "2+ (1.0–1.5 mm vessel penetration)",
+        "3+ (1.5–2.0 mm vessel penetration)",
+        "4+ (>2.0 mm vessel penetration)",
+      ],
+    },
+    edema: {
+      scheme: "FDA Appendix C; Efron-corroborated",
+      options: [
+        "1+ (barely discernible localized epithelial/subepithelial or stromal haze; 1–20 microcysts)",
+        "2+ (faint definite localized/generalized epithelial/stromal haze; 21–50 microcysts)",
+        "3+ (significant localized/generalized epithelial/stromal haze; 51–100 microcysts)",
+        "4+ (widespread epithelial/stromal clouding, coalescent bullae, or striae; >100 microcysts or bullae)",
+      ],
+    },
+    infiltrate: {
+      scheme: "FDA Appendix C; Efron-corroborated",
+      options: [
+        "1+ (one faint peripheral infiltrate without staining)",
+        "2+ (a few faint infiltrates)",
+        "3+ (multiple dense infiltrates)",
+        "4+ (marked infiltrates with overlying staining)",
+      ],
+    },
+    guttata: {
+      scheme: "Modified Krachmer (ODOS 1–4+ collapse)",
+      options: [
+        "1+ (central/paracentral nonconfluent guttae)",
+        "2+ (1–2 mm confluent central/paracentral guttae)",
+        "3+ (>2–5 mm confluent central/paracentral guttae)",
+        "4+ (>5 mm confluent central/paracentral guttae, with or without edema)",
+      ],
+    },
+  };
+  for (const [findingCode, expected] of Object.entries(expectedGrades)) {
+    const cornealQualifier = qualifier("ocular-health:anterior:cornea", findingCode);
+    assert.ok(cornealQualifier, findingCode);
+    assert.deepEqual(
+      [cornealQualifier.kind, cornealQualifier.key, cornealQualifier.display],
+      [lensQualifier.kind, lensQualifier.key, lensQualifier.display],
+      findingCode,
+    );
+    assert.deepEqual(cornealQualifier.options, expected.options, findingCode);
+    assert.equal(cornealQualifier.scheme, expected.scheme, findingCode);
+  }
+
+  const arcusQualifier = qualifier("ocular-health:anterior:cornea", "arcus");
+  assert.deepEqual(arcusQualifier, {
+    kind: "enum",
+    key: "extent",
+    display: "Extent",
+    options: [
+      { code: "inferior", display: "Inferior" },
+      { code: "superior", display: "Superior" },
+      { code: "partial", display: "Partial" },
+      { code: "complete-360", display: "Complete (360°)" },
+    ],
+  });
+  assert.notEqual(arcusQualifier?.kind, lensQualifier.kind);
+});
+
+test("corneal graded qualifiers never offer a zero or none rung", async () => {
+  const definitions = await catalog(new MemoryFhir());
+  const cornea = definitions.find((definition) =>
+    definition.stableKey === "ocular-health:anterior:cornea"
+  );
+  assert.ok(cornea);
+  const findings = Object.values(cornea.valueSchema.fields as Record<string, {
+    valueType?: string;
+    options?: Array<{
+      code: string;
+      qualifiers?: Array<{ kind?: string; options?: unknown[] }>;
+    }>;
+  }>).find((field) => field.valueType === "multi-select")?.options ?? [];
+
+  for (const finding of findings) {
+    for (const qualifier of finding.qualifiers ?? []) {
+      if (qualifier.kind !== "graded") continue;
+      for (const option of qualifier.options ?? []) {
+        assert.equal(typeof option, "string", finding.code);
+        const rung = (option as string).replace(/\s*\(.*/, "").trim();
+        assert.doesNotMatch(rung, /^(?:grade\s*)?0$|\bnone\b/i, `${finding.code}: ${rung}`);
+      }
+    }
+  }
+});
+
+test("every corneal graded qualifier has exactly four options", async () => {
+  const definitions = await catalog(new MemoryFhir());
+  const cornea = definitions.find((definition) =>
+    definition.stableKey === "ocular-health:anterior:cornea"
+  );
+  assert.ok(cornea);
+  const findings = Object.values(cornea.valueSchema.fields as Record<string, {
+    valueType?: string;
+    options?: Array<{
+      code: string;
+      qualifiers?: Array<{ kind?: string; options?: unknown[] }>;
+    }>;
+  }>).find((field) => field.valueType === "multi-select")?.options ?? [];
+  const gradedQualifiers = findings.flatMap((finding) =>
+    (finding.qualifiers ?? [])
+      .filter((qualifier) => qualifier.kind === "graded")
+      .map((qualifier) => ({ finding: finding.code, options: qualifier.options ?? [] }))
+  );
+
+  assert.equal(gradedQualifiers.length, 5);
+  for (const qualifier of gradedQualifiers) {
+    assert.equal(qualifier.options.length, 4, qualifier.finding);
+  }
 });
 
 test("anterior chamber cells and flare expose the operator-adapted SUN-derived options through the lens graded-qualifier shape", async () => {

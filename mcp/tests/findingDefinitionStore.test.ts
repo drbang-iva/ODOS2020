@@ -235,8 +235,8 @@ test("DE-1 seeds seven new definitions and references the one existing TBUT stab
   assert.deepEqual(
     spk?.qualifiers?.map((qualifier) => qualifier.display),
     [
-      "Corneal staining grade (grading scheme provisional)",
-      "Corneal staining zone (grading scheme provisional)",
+      "Corneal staining grade (FDA Appendix C; Efron-corroborated)",
+      "Corneal staining zone",
     ],
   );
   for (const stableKey of [
