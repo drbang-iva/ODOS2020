@@ -1,6 +1,6 @@
 {
   "resourceType": "ODOSCanonicalExtensionRegistry",
-  "generatedAt": "2026-09-04",
+  "generatedAt": "2026-09-07",
   "extensions": [
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/claim-touch-count",
@@ -559,6 +559,12 @@
       "namespace": "claims",
       "status": "active",
       "sliceConsumer": "claim-invoice-seam-phase-a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-procedure-laterality-modifier",
+      "namespace": "claims",
+      "status": "active",
+      "sliceConsumer": "wiring-m1a"
     },
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-stedi-claim-input",

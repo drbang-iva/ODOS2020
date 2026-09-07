@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ClaimReview } from "../src/scenes/claims/SubmitClaims";
+import { ChargeLines, ClaimReview } from "../src/scenes/claims/SubmitClaims";
 import type { ProfessionalClaimInput } from "../src/lib/submit-claims";
 
 test("claim review shows priceOverride as the line total without multiplying by quantity", () => {
@@ -18,6 +18,25 @@ test("claim review shows priceOverride as the line total without multiplying by 
   assert.match(html, /Fee \$20\.00 · Qty 2/);
   assert.match(html, /Claim total.*\$20\.00/);
   assert.doesNotMatch(html, /\$40\.00/);
+});
+
+test("manual charge entry labels the fee as the complete line total", () => {
+  const html = renderToStaticMarkup(
+    <ChargeLines
+      lines={[{
+        codeType: "CPT",
+        code: "SYNTHETIC",
+        description: "Synthetic procedure",
+        feeDollars: "20.00",
+        quantity: "2",
+      }]}
+      errors={[]}
+      onChange={() => undefined}
+    />,
+  );
+
+  assert.match(html, /Line total \(USD\)/);
+  assert.doesNotMatch(html, /Fee \(USD\)/);
 });
 
 function claimInput(): ProfessionalClaimInput {

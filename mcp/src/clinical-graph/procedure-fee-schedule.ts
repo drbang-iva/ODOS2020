@@ -21,7 +21,8 @@ const FEE_CATEGORY_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-f
 const FEE_MODIFIER_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-modifier`;
 export const FEE_ROUTING_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-routing`;
 const DISALLOWED_CONCEPT_LATERALITY_MODIFIERS = new Set(["RT", "LT", "50"]);
-const PROCEDURE_LATERALITY_MODIFIER_EXTENSION_URL = "urn:odos:procedure-laterality-modifier";
+const PROCEDURE_LATERALITY_MODIFIER_EXTENSION_URL =
+  `${BASE}/StructureDefinition/odos-procedure-laterality-modifier`;
 
 export const PROCEDURE_LATERALITY_MODIFIER_ELIGIBLE_CONCEPT_KEYS: ReadonlySet<string> = new Set();
 

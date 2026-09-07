@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { test } from "node:test";
 import type {
   Bundle,
@@ -27,6 +29,8 @@ import {
 import type { ChargeProposal, ProtocolApplication } from "../src/clinical-graph/protocol-types.js";
 
 const SERVICE_DATE = "2026-09-07";
+const PROCEDURE_LATERALITY_MODIFIER_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-procedure-laterality-modifier";
 
 test("A: one $10 unit stays a $10 line and claim across draft, FHIR, Claim.MD, and Stedi", async () => {
   const result = await buildAmountWitness([{ id: "line-a", units: 1, unitPriceCents: 1_000 }]);
@@ -83,6 +87,10 @@ test("B5: an explicitly eligible fixture concept carries OD/OS as RT/LT through 
     [["RT"], ["LT"]],
   );
   assert.deepEqual(
+    result.input.chargeItems.map((chargeItem) => chargeItem.modifierExtension?.[0]?.url),
+    [PROCEDURE_LATERALITY_MODIFIER_URL, PROCEDURE_LATERALITY_MODIFIER_URL],
+  );
+  assert.deepEqual(
     result.claimMd.claim[0]?.charge.map((line) => line.mod1),
     ["RT", "LT"],
   );
@@ -91,6 +99,22 @@ test("B5: an explicitly eligible fixture concept carries OD/OS as RT/LT through 
       line.professionalService.procedureModifiers),
     [["RT"], ["LT"]],
   );
+});
+
+test("B5: the laterality modifier extension is defined and registered canonically", async () => {
+  const directory = resolve(import.meta.dirname, "../../data/canonical-extensions");
+  const definition = JSON.parse(await readFile(
+    resolve(directory, "odos-procedure-laterality-modifier.json"),
+    "utf8",
+  )) as { resourceType?: string; url?: string; context?: Array<{ expression?: string }> };
+  const registry = JSON.parse(await readFile(resolve(directory, "registry.json"), "utf8")) as {
+    extensions?: Array<{ url?: string }>;
+  };
+
+  assert.equal(definition.resourceType, "StructureDefinition");
+  assert.equal(definition.url, PROCEDURE_LATERALITY_MODIFIER_URL);
+  assert.deepEqual(definition.context, [{ type: "element", expression: "ChargeItem" }]);
+  assert.ok(registry.extensions?.some((entry) => entry.url === PROCEDURE_LATERALITY_MODIFIER_URL));
 });
 
 test("B5: the shipped eligibility allowlist is empty and emits no modifier", async () => {
