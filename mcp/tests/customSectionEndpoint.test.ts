@@ -1086,6 +1086,117 @@ test("historical positive SPK grades remain editable after the provisional scale
   assert.equal(resave.status, 200, JSON.stringify(resave.body));
 });
 
+test("historical SPK Grade 0 rehydrates as an ungraded finding and resaves without changing the original Observation", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const cornea = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:cornea");
+  assert.ok(cornea);
+  const field = Object.values(cornea.valueSchema.fields as Record<string, {
+    localCode: string;
+    valueType?: string;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field);
+
+  const historicalCapture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: cornea.stableKey },
+    body: {
+      patientReference: "Patient/p-spk-grade-zero",
+      encounterReference: "Encounter/e-spk-grade-zero",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["superficial-punctate-keratitis-spk"] }],
+          findingDetails: {
+            "superficial-punctate-keratitis-spk": { grade: "Grade 1" },
+          },
+        },
+      },
+    },
+  });
+  assert.equal(historicalCapture.status, 200, JSON.stringify(historicalCapture.body));
+  const historicalObservation = fhir.observations[0];
+  const gradeCoding = component(
+    historicalObservation,
+    `OD_${field.localCode}::superficial-punctate-keratitis-spk::grade`,
+  )?.valueCodeableConcept?.coding?.[0];
+  assert.ok(gradeCoding);
+  gradeCoding.code = "Grade 0";
+  gradeCoding.display = "Grade 0";
+  const persistedHistoricalObservation = structuredClone(historicalObservation);
+
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: cornea.stableKey },
+    query: { patient: "Patient/p-spk-grade-zero", encounter: "Encounter/e-spk-grade-zero" },
+  });
+  assert.equal(history.status, 200);
+  const [row] = (history.body as {
+    rows: Array<{
+      state?: string;
+      values: Array<{ code: string; value: number | string | string[] }>;
+      findingDetails?: Record<string, Record<string, string>>;
+    }>;
+  }).rows;
+  assert.ok(row);
+  assert.equal(row.findingDetails?.["superficial-punctate-keratitis-spk"]?.grade, undefined);
+  assert.deepEqual(historicalObservation, persistedHistoricalObservation);
+
+  const resave = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: cornea.stableKey },
+    body: {
+      patientReference: "Patient/p-spk-grade-zero",
+      encounterReference: "Encounter/e-spk-grade-zero",
+      eyes: {
+        OD: {
+          state: row.state,
+          customFields: row.values.map(({ code, value }) => ({ code, value })),
+          findingDetails: row.findingDetails,
+        },
+      },
+    },
+  });
+  assert.equal(resave.status, 200, JSON.stringify(resave.body));
+  assert.equal(fhir.observations.length, 2);
+  assert.deepEqual(fhir.observations[0], persistedHistoricalObservation);
+});
+
+test("a new SPK finding cannot be written with retired Grade 0", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const cornea = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:cornea");
+  assert.ok(cornea);
+  const field = Object.values(cornea.valueSchema.fields as Record<string, {
+    localCode: string;
+    valueType?: string;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field);
+
+  const result = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: cornea.stableKey },
+    body: {
+      patientReference: "Patient/p-new-spk-grade-zero",
+      encounterReference: "Encounter/e-new-spk-grade-zero",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["superficial-punctate-keratitis-spk"] }],
+          findingDetails: {
+            "superficial-punctate-keratitis-spk": { grade: "Grade 0" },
+          },
+        },
+      },
+    },
+  });
+  assert.equal(result.status, 400);
+  assert.deepEqual(result.body, {
+    error: "OD finding superficial-punctate-keratitis-spk qualifier grade requires a configured grade option.",
+  });
+  assert.equal(fhir.observations.length, 0);
+});
+
 test("corneal graded qualifiers never offer a zero or none rung", async () => {
   const definitions = await catalog(new MemoryFhir());
   const cornea = definitions.find((definition) =>
