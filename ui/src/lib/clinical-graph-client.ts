@@ -1,4 +1,4 @@
-import type { Condition, Encounter } from "@medplum/fhirtypes";
+import type { Condition, Encounter, Money } from "@medplum/fhirtypes";
 import { CONCURRENT_EDIT_MESSAGE, fhir } from "./fhir";
 
 export interface ClinicalGraphErrorBody {
@@ -282,7 +282,7 @@ export async function submitDiagnosisPick(input: {
   source?: "rule" | "mapping" | "catalog-search";
   status?: DiagnosisVisitStatus;
   stageDeferred?: boolean;
-}): Promise<{ condition: Condition; encounter?: Encounter }> {
+}): Promise<DiagnosisPickResponse> {
   const encounterId = input.encounterReference.replace(/^Encounter\//, "");
   const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-picks`, {
     method: "POST",
@@ -297,11 +297,32 @@ export async function submitDiagnosisPick(input: {
       ...(input.stageDeferred ? { stageDeferred: true } : {}),
     }),
   });
-  const body = await response.json() as { condition?: Condition; encounter?: Encounter; error?: string };
+  const body = await response.json() as Partial<DiagnosisPickResponse> & { error?: string };
   if (!response.ok) throw clinicalGraphResponseError(response, body, `Diagnosis pick failed: ${response.status}`);
   if (!body.condition) throw new Error("Diagnosis pick response did not include the Condition.");
   window.dispatchEvent(new CustomEvent("odos:diagnosis-picked", { detail: { encounterReference: input.encounterReference } }));
-  return { condition: body.condition, ...(body.encounter ? { encounter: body.encounter } : {}) };
+  return {
+    condition: body.condition,
+    ...(body.encounter ? { encounter: body.encounter } : {}),
+    strandedCharges: body.strandedCharges ?? [],
+    unaffectedChargeCount: body.unaffectedChargeCount ?? 0,
+    strandedChargesComputed: body.strandedChargesComputed ?? true,
+  };
+}
+
+export interface DiagnosisDemotionImpact {
+  strandedCharges: Array<{
+    reference: string;
+    display: string;
+    amount: Money | null;
+  }>;
+  unaffectedChargeCount: number;
+  strandedChargesComputed: boolean;
+}
+
+export interface DiagnosisPickResponse extends DiagnosisDemotionImpact {
+  condition: Condition;
+  encounter?: Encounter;
 }
 
 export async function updateDiagnosisOrder(

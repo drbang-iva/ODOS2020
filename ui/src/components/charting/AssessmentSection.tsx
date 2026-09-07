@@ -31,6 +31,7 @@ import {
   updateDiagnosisOrder,
   updateDiagnosisVisitStatus,
   type AttachedProcedure,
+  type DiagnosisDemotionImpact,
   type DiagnosisVisitStatus,
 } from "../../lib/clinical-graph-client";
 import { ODOS_EXTENSION_URLS } from "../../lib/fhir-ophthalmology/extensions";
@@ -63,6 +64,7 @@ import {
   conditionResolvedCodeLabel,
   ICD10_CM_CODE_SYSTEM,
 } from "../../lib/diagnosis-code-resolution";
+import { DiagnosisDemotionImpactNotice } from "./DiagnosisDemotionImpactNotice";
 
 const VERIFICATION_STATUS_SYSTEM = "http://terminology.hl7.org/CodeSystem/condition-ver-status";
 
@@ -126,6 +128,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [diagnosisDemotionImpact, setDiagnosisDemotionImpact] = useState<DiagnosisDemotionImpact>();
   const [protocolApplications, setProtocolApplications] = useState<Array<{
     id: string;
     protocolId: string;
@@ -146,8 +149,11 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   const protocolTriggerRef = useRef<HTMLButtonElement>(null);
   const protocolDialogRef = useRef<HTMLDivElement>(null);
   const encounterId = encounterReference.replace(/^Encounter\//, "");
+  const currentEncounterReference = useRef(encounterReference);
+  currentEncounterReference.current = encounterReference;
 
   async function load() {
+    setDiagnosisDemotionImpact(undefined);
     setError(null);
     const loadedEncounter = await fhir.read<Encounter>("Encounter", encounterId);
     const [conditionBundle, visitStatuses, procedureResult] = await Promise.all([
@@ -325,6 +331,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   }
 
   async function decidePossible(condition: Condition, action: "confirm" | "discard") {
+    const actionEncounterReference = encounterReference;
     const identifierValue = condition.identifier?.find((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM)?.value;
     if (!identifierValue) {
       setError("This possible diagnosis is missing its diagnosis catalog link.");
@@ -332,7 +339,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     }
     const [diagnosisKey = "", lateralityBucket] = identifierValue.split("::").slice(-2);
     await runEdit(action, async () => {
-      await submitDiagnosisPick({
+      const result = await submitDiagnosisPick({
         encounterReference,
         diagnosisKey,
         action,
@@ -340,6 +347,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
         ...(lateralityBucket === "left" ? { laterality: "OS" as const } : {}),
         ...(lateralityBucket === "bilateral" ? { laterality: "OU" as const } : {}),
       });
+      if (currentEncounterReference.current === actionEncounterReference) setDiagnosisDemotionImpact(result);
     }, false);
   }
 
@@ -616,6 +624,11 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
         )}
 
         {error && <div className="mt-4 rounded border border-[color:var(--odos-alert)] bg-[color:var(--odos-surface-2)] p-3 text-sm text-[color:var(--odos-alert)]">{error}</div>}
+        {diagnosisDemotionImpact && (
+          <div className="mt-4">
+            <DiagnosisDemotionImpactNotice impact={diagnosisDemotionImpact} />
+          </div>
+        )}
 
         {canShowEditing && captureOpen && (
           <div className="mt-4 flex flex-wrap items-end gap-3 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4">
