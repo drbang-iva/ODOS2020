@@ -112,7 +112,24 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     display: "Anterior Chamber",
     normalTemplate: "Deep and quiet; no cells or flare.",
     sheetLabel: "Deep and quiet",
-    priority: ["cells", "flare", "shallow AC"],
+    priority: [
+      sunGradedFinding("cells", "cells", [
+        "0 (<1 cell)",
+        "0.5+ (1–5 cells)",
+        "1+ (6–15 cells)",
+        "2+ (16–25 cells)",
+        "3+ (26–50 cells)",
+        "4+ (>50 cells)",
+      ]),
+      sunGradedFinding("flare", "flare", [
+        "0 (None)",
+        "1+ (Faint)",
+        "2+ (Moderate; iris and lens details clear)",
+        "3+ (Marked; iris and lens details hazy)",
+        "4+ (Intense; fibrin or plastic aqueous)",
+      ]),
+      "shallow AC",
+    ],
     additional: ["hyphema", "hypopyon", "peripheral anterior synechiae", "pigment", "narrow angle (by exam)"],
     gradeFields: [{
       display: "Van Herick",
@@ -525,6 +542,14 @@ function gradedLensFinding(key: string, display: string): FindingSeed {
     key,
     display,
     qualifiers: [{ kind: "graded", key: "grade", display: "Grade", options: ["1+", "2+", "3+", "4+"] }],
+  };
+}
+
+function sunGradedFinding(key: string, display: string, options: string[]): FindingSeed {
+  return {
+    key,
+    display,
+    qualifiers: [{ kind: "graded", key: "grade", display: "Grade", options, scheme: "SUN" }],
   };
 }
 

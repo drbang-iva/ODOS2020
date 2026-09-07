@@ -931,6 +931,143 @@ test("ocular-health cleanup keeps only clinically scoped chips and qualifiers", 
   }]);
 });
 
+test("anterior chamber cells and flare expose exact SUN options through the lens graded-qualifier shape", async () => {
+  const definitions = await catalog(new MemoryFhir());
+  const anteriorChamber = definitions.find((definition) =>
+    definition.stableKey === "ocular-health:anterior:anterior-chamber"
+  );
+  const lens = definitions.find((definition) =>
+    definition.stableKey === "ocular-health:anterior:lens"
+  );
+  assert.ok(anteriorChamber && lens);
+  const findings = (definition: ClinicalFindingDefinition) => Object.values(
+    definition.valueSchema.fields as Record<string, {
+      valueType?: string;
+      options?: Array<{
+        code: string;
+        qualifiers?: Array<Record<string, unknown>>;
+      }>;
+    }>,
+  ).find((field) => field.valueType === "multi-select")?.options ?? [];
+  const lensQualifier = findings(lens)
+    .find((finding) => finding.code === "nuclear-sclerosis")
+    ?.qualifiers?.[0];
+  assert.ok(lensQualifier);
+
+  const expected = {
+    cells: [
+      "0 (<1 cell)",
+      "0.5+ (1–5 cells)",
+      "1+ (6–15 cells)",
+      "2+ (16–25 cells)",
+      "3+ (26–50 cells)",
+      "4+ (>50 cells)",
+    ],
+    flare: [
+      "0 (None)",
+      "1+ (Faint)",
+      "2+ (Moderate; iris and lens details clear)",
+      "3+ (Marked; iris and lens details hazy)",
+      "4+ (Intense; fibrin or plastic aqueous)",
+    ],
+  };
+  for (const [findingCode, options] of Object.entries(expected)) {
+    const qualifier = findings(anteriorChamber)
+      .find((finding) => finding.code === findingCode)
+      ?.qualifiers?.[0];
+    assert.ok(qualifier, findingCode);
+    assert.deepEqual(
+      [qualifier.kind, qualifier.key, qualifier.display],
+      [lensQualifier.kind, lensQualifier.key, lensQualifier.display],
+      findingCode,
+    );
+    assert.deepEqual(qualifier, {
+      kind: "graded",
+      key: "grade",
+      display: "Grade",
+      options,
+      scheme: "SUN",
+    }, findingCode);
+  }
+});
+
+test("anterior chamber cell and flare grades round-trip without setting the sibling axis", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const anteriorChamber = definitions.find((definition) =>
+    definition.stableKey === "ocular-health:anterior:anterior-chamber"
+  );
+  assert.ok(anteriorChamber);
+  const findingField = Object.values(anteriorChamber.valueSchema.fields as Record<string, {
+    localCode?: string;
+    valueType?: string;
+  }>).find((field) => field.valueType === "multi-select");
+  assert.ok(findingField?.localCode);
+  const cellGrade = "2+ (16–25 cells)";
+  const flareGrade = "1+ (Faint)";
+
+  const capture = await handleCustomSectionCaptureRequest(
+    clinicalDeps("provider", fhir, definitions),
+    {
+      authHeader: AUTH,
+      params: { stableKey: anteriorChamber.stableKey },
+      body: {
+        patientReference: "Patient/p-sun-grades",
+        encounterReference: "Encounter/e-sun-grades",
+        eyes: {
+          OD: {
+            state: "abnormal",
+            customFields: [{ code: findingField.localCode, value: ["cells", "flare"] }],
+            findingDetails: { cells: { grade: cellGrade } },
+          },
+          OS: {
+            state: "abnormal",
+            customFields: [{ code: findingField.localCode, value: ["cells", "flare"] }],
+            findingDetails: { flare: { grade: flareGrade } },
+          },
+        },
+      },
+    },
+  );
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const qualifierCode = (eye: "OD" | "OS", finding: "cells" | "flare") =>
+    `${eye}_${findingField.localCode}::${finding}::grade`;
+  assert.equal(
+    component(fhir.observations[0], qualifierCode("OD", "cells"))
+      ?.valueCodeableConcept?.coding?.[0]?.code,
+    cellGrade,
+  );
+  assert.equal(component(fhir.observations[0], qualifierCode("OD", "flare")), undefined);
+  assert.equal(component(fhir.observations[1], qualifierCode("OS", "cells")), undefined);
+  assert.equal(
+    component(fhir.observations[1], qualifierCode("OS", "flare"))
+      ?.valueCodeableConcept?.coding?.[0]?.code,
+    flareGrade,
+  );
+
+  const history = await handleCustomSectionHistoryRequest(
+    clinicalDeps("provider", fhir, definitions),
+    {
+      authHeader: AUTH,
+      params: { stableKey: anteriorChamber.stableKey },
+      query: {
+        patient: "Patient/p-sun-grades",
+        encounter: "Encounter/e-sun-grades",
+      },
+    },
+  );
+  const rows = (history.body as {
+    rows: Array<{
+      eye: string;
+      findingDetails?: Record<string, Record<string, string>>;
+    }>;
+  }).rows;
+  assert.deepEqual(rows.map((row) => [row.eye, row.findingDetails]), [
+    ["OD", { cells: { grade: cellGrade } }],
+    ["OS", { flare: { grade: flareGrade } }],
+  ]);
+});
+
 test("GET diagnosis candidates returns nuclear cataract after ocular-health capture regardless of grade", async (t) => {
   const fhir = new MemoryFhir();
   const definitions = await catalog(fhir);
