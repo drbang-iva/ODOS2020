@@ -37,6 +37,14 @@ const RETIRED_FINDING_READ_TRANSLATIONS: readonly RetiredFindingReadTranslation[
     colour: "4+ (dark brown/black; brunescent)",
   },
 }, {
+  // Read only: the historical chip could mean Hudson-Stähli, Stocker's, or Fleischer's, so
+  // preserve the iron-line finding without asserting a subtype. Remove after a persisted-data
+  // census or migration confirms that no live Cornea combined iron-line components remain.
+  definitionStableKey: "ocular-health:anterior:cornea",
+  retiredFindingCode: "iron-line-hudson-stahli-stocker-s-fleischer-s",
+  replacementFindingCode: "iron-line",
+  replacementQualifierValues: {},
+}, {
   // Read only: the historical chip could mean full-thickness or lamellar, so preserve the finding
   // without asserting its type or a Gass stage. Remove after a persisted-data census or migration
   // confirms that no live Macula macular-hole-full-lamellar selection components remain.

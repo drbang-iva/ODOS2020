@@ -1755,7 +1755,7 @@ test("prior-encounter confirmed glaucoma reveals both staged glaucoma families w
     search.params.subject === "Patient/p1" && search.params.encounter === undefined), true);
 });
 
-test("posterior drusen returns an ordered leaf and staged family while occasional drusen stays leaf-only and read-only", async () => {
+test("posterior plain drusen returns an ordered leaf and staged family while occasional drusen stays descriptive", async () => {
   const fhir = new MemoryFhir();
   fhir.resources.push({
     resourceType: "Encounter",
@@ -1821,9 +1821,7 @@ test("posterior drusen returns an ordered leaf and staged family while occasiona
     source: "mapping",
   });
   const periphery = findings.find((finding) => finding.findingDefinitionKey === "ocular-health:posterior:periphery");
-  assert.deepEqual(periphery?.candidates.map((candidate) => candidate.diagnosisKey ?? candidate.familyGroup), [
-    "macular_drusen",
-  ]);
+  assert.deepEqual(periphery?.candidates, []);
   assert.equal(fhir.writes.length, writesBeforeRead);
   assert.equal(fhir.resources.some((resource) => resource.resourceType === "Condition"), false);
 
