@@ -160,7 +160,20 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
       "phlyctenule",
       "Descemet folds",
       "Krukenberg spindle",
-      "iron line (Hudson-Stahli/Stocker's/Fleischer's)",
+      {
+        key: "iron-line",
+        display: "iron line",
+        qualifiers: [{
+          kind: "enum",
+          key: "subtype",
+          display: "Subtype",
+          options: [
+            { code: "hudson-stahli", display: "Hudson-Stähli" },
+            { code: "stockers", display: "Stocker's" },
+            { code: "fleischers", display: "Fleischer's" },
+          ],
+        }],
+      },
       "Vogt striae",
       "vortex keratopathy (verticillata)",
       "Thygeson's SPK",
@@ -452,8 +465,6 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { option: "proliferative-diabetic-retinopathy-pdr", qualifiers: { severity: "without-macular-edema" }, diagnosisKey: "t2_dr_pdr_without_dme" },
     { option: "drusen", diagnosisKey: "macular_drusen" },
     { option: "drusen", familyGroup: "nonexudative-amd" },
-    // A few small occasional drusen are below AMD suspicion (AREDS category 1), so this remains leaf-only.
-    { option: "occasional-drusen", diagnosisKey: "macular_drusen" },
   ],
   "ocular-health:posterior:vessels": [
     { option: "av-nicking", diagnosisKey: "hypertensive_retinopathy" },
@@ -484,8 +495,6 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { id: "SEED_RETINAL_DETACHMENT_SINGLE_BREAK_6", option: "retinal-detachment", diagnosisKey: "retinal_detachment_single_break" },
     { id: "SEED_MACULAR_DRUSEN_7", option: "drusen", diagnosisKey: "macular_drusen" },
     { id: "SEED_NONEXUDATIVE-AMD_8", option: "drusen", familyGroup: "nonexudative-amd" },
-    // A few small occasional drusen are below AMD suspicion (AREDS category 1), so this remains leaf-only.
-    { id: "SEED_MACULAR_DRUSEN_9", option: "occasional-drusen", diagnosisKey: "macular_drusen" },
   ],
   "dry-eye:markers": [
     {

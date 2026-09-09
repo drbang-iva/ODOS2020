@@ -51,6 +51,13 @@ test("Ocular History is a patient-scoped declaration with conditions and surgeri
     note_on_positive: true,
   });
   assert.equal(HISTORY_OPTION_CATALOGS.ocular_history_conditions.find((option) => option.code === "strabismus")?.per_eye, false);
+  assert.deepEqual(HISTORY_OPTION_CATALOGS.ocular_history_conditions.filter((option) =>
+    ["pseudophakia-pciol", "pseudophakia-aciol", "aphakia"].includes(option.code)
+  ), [
+    { code: "pseudophakia-pciol", display: "Pseudophakia (PCIOL)", per_eye: true, note_on_positive: true },
+    { code: "pseudophakia-aciol", display: "Pseudophakia (ACIOL)", per_eye: true, note_on_positive: true },
+    { code: "aphakia", display: "Aphakia", per_eye: true, note_on_positive: true },
+  ]);
 });
 
 test("Medical and Social History are patient-scoped declarations using the declared section vocabulary", () => {

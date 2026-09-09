@@ -307,6 +307,83 @@ test("translated enum qualifiers render their display and preserve unknown codes
   assert.deepEqual(source, before);
 });
 
+test("corneal iron line exposes the three ruled subtype choices", () => {
+  const cornea = buildAnteriorOcularHealthDefinitions(PROVENANCE)
+    .find((row) => row.stableKey === "ocular-health:anterior:cornea");
+  assert.ok(cornea);
+  const field = customFieldEntries(cornea, true).find((row) => row.valueType === "multi-select");
+  const ironLine = field?.options?.find((option) => option.code === "iron-line");
+  const subtype = ironLine?.qualifiers?.find((qualifier) => qualifier.key === "subtype");
+
+  assert.equal(ironLine?.display, "iron line");
+  assert.ok(subtype?.kind === "enum");
+  assert.deepEqual(subtype.options, [
+    { code: "hudson-stahli", display: "Hudson-Stähli" },
+    { code: "stockers", display: "Stocker's" },
+    { code: "fleischers", display: "Fleischer's" },
+  ]);
+});
+
+test("newly charted Fleischer's iron-line subtype projects its display instead of its code", () => {
+  const cornea = buildAnteriorOcularHealthDefinitions(PROVENANCE)
+    .find((row) => row.stableKey === "ocular-health:anterior:cornea");
+  assert.ok(cornea);
+  const field = customFieldEntries(cornea, true).find((row) => row.valueType === "multi-select");
+  assert.ok(field);
+  const prefix = `OD_${field.localCode}`;
+  const projection = buildExamOverviewProjection({
+    encounterReference: "Encounter/e1",
+    patientReference: "Patient/p1",
+    definitions: [cornea],
+    currentObservations: [observation("iron-line-fleischers", cornea.stableKey, {
+      extension: [{
+        url: "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+        valueCodeableConcept: { coding: [{ code: "OD" }] },
+      }],
+      interpretation: [{ coding: [{ code: "abnormal" }] }],
+      component: [
+        booleanComponent(`${prefix}::iron-line`, true),
+        codeComponent(`${prefix}::iron-line::subtype`, "fleischers", "Fleischer's"),
+      ],
+    })],
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+
+  assert.deepEqual(projection.findings[0]?.sheetFindings, [{
+    display: "iron line",
+    qualifiers: ["Fleischer's"],
+  }]);
+});
+
+test("historical combined iron-line selections project without asserting a subtype", () => {
+  const cornea = buildAnteriorOcularHealthDefinitions(PROVENANCE)
+    .find((row) => row.stableKey === "ocular-health:anterior:cornea");
+  assert.ok(cornea);
+  const field = customFieldEntries(cornea, true).find((row) => row.valueType === "multi-select");
+  assert.ok(field);
+  const source = observation("legacy-iron-line", cornea.stableKey, {
+    extension: [{
+      url: "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+      valueCodeableConcept: { coding: [{ code: "OD" }] },
+    }],
+    interpretation: [{ coding: [{ code: "abnormal" }] }],
+    component: [booleanComponent(`OD_${field.localCode}::iron-line-hudson-stahli-stocker-s-fleischer-s`, true)],
+  });
+  const before = structuredClone(source);
+  const projection = buildExamOverviewProjection({
+    encounterReference: "Encounter/e1",
+    patientReference: "Patient/p1",
+    definitions: [cornea],
+    currentObservations: [source],
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+
+  assert.deepEqual(projection.findings[0]?.sheetFindings, [{ display: "iron line", qualifiers: [] }]);
+  assert.deepEqual(source, before);
+});
+
 test("historical ambiguous macular-hole selections project as an ungraded macular hole without mutating the source", () => {
   const macula = buildPosteriorOcularHealthDefinitions(PROVENANCE)
     .find((row) => row.stableKey === "ocular-health:posterior:macula");

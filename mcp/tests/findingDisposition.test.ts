@@ -287,6 +287,75 @@ test("Guard 2: proposes dispositions and active ocular-health triggers agree in 
   assertDispositionConsistency(FINDING_DISPOSITION_ROWS, ocularHealthDefinitions());
 });
 
+test("ruled benign findings are descriptive while pinguecula and plain drusen remain codeable", () => {
+  const descriptiveIdentities = [
+    ["ocular-health:anterior:conjunctiva", "CUSTOM_ABNORMAL_FINDINGS_04", "nevus"],
+    ["ocular-health:anterior:conjunctiva", "CUSTOM_ABNORMAL_FINDINGS_04", "pigmentation"],
+    ["ocular-health:anterior:conjunctiva", "CUSTOM_ABNORMAL_FINDINGS_04", "concretion"],
+    ["ocular-health:anterior:cornea", "CUSTOM_ABNORMAL_FINDINGS_06", "krukenberg-spindle"],
+    ["ocular-health:anterior:iris", "CUSTOM_ABNORMAL_FINDINGS_08", "nevus"],
+    ["ocular-health:anterior:iris", "CUSTOM_ABNORMAL_FINDINGS_08", "heterochromia"],
+    ["ocular-health:anterior:anterior-chamber", "CUSTOM_ABNORMAL_FINDINGS_07", "pigment"],
+    ["ocular-health:posterior:fundus", "CUSTOM_ABNORMAL_FINDINGS_02", "choroidal-nevus"],
+    ["ocular-health:posterior:fundus", "CUSTOM_ABNORMAL_FINDINGS_02", "myelinated-nerve-fiber"],
+    ["ocular-health:posterior:fundus", "CUSTOM_ABNORMAL_FINDINGS_02", "occasional-drusen"],
+    ["ocular-health:posterior:periphery", "CUSTOM_ABNORMAL_FINDINGS_05", "retinal-tuft"],
+    ["ocular-health:posterior:periphery", "CUSTOM_ABNORMAL_FINDINGS_05", "white-without-pressure"],
+    ["ocular-health:posterior:periphery", "CUSTOM_ABNORMAL_FINDINGS_05", "cobblestone-paving-stone-degeneration"],
+    ["ocular-health:posterior:periphery", "CUSTOM_ABNORMAL_FINDINGS_05", "occasional-drusen"],
+    ["ocular-health:posterior:vitreous", "CUSTOM_ABNORMAL_FINDINGS_01", "syneresis"],
+  ] as const;
+
+  for (const [definitionStableKey, fieldLocalCode, optionCode] of descriptiveIdentities) {
+    const key = buildFindingDispositionKey({ definitionStableKey, fieldLocalCode, optionCode });
+    const row = FINDING_DISPOSITION_REGISTRY.get(key);
+    assert.equal(row?.disposition.kind, "descriptive", key);
+  }
+
+  for (const [definitionStableKey, fieldLocalCode, optionCode] of [
+    ["ocular-health:anterior:conjunctiva", "CUSTOM_ABNORMAL_FINDINGS_04", "pinguecula"],
+    ["ocular-health:posterior:fundus", "CUSTOM_ABNORMAL_FINDINGS_02", "drusen"],
+    ["ocular-health:posterior:macula", "CUSTOM_ABNORMAL_FINDINGS_03", "drusen"],
+    ["ocular-health:posterior:periphery", "CUSTOM_ABNORMAL_FINDINGS_05", "drusen"],
+  ] as const) {
+    const key = buildFindingDispositionKey({ definitionStableKey, fieldLocalCode, optionCode });
+    assert.equal(FINDING_DISPOSITION_REGISTRY.get(key)?.disposition.kind, "proposes", key);
+  }
+});
+
+test("iron-line subtypes carry descriptive dispositions except Fleischer's pending ruling", () => {
+  const ironLineRows = FINDING_DISPOSITION_ROWS.filter((row) =>
+    row.definitionStableKey === "ocular-health:anterior:cornea"
+    && row.fieldLocalCode === "CUSTOM_ABNORMAL_FINDINGS_06"
+    && row.optionCode === "iron-line"
+  );
+
+  assert.deepEqual(ironLineRows, [{
+    definitionStableKey: "ocular-health:anterior:cornea",
+    fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_06",
+    optionCode: "iron-line",
+    qualifierContext: "subtype=hudson-stahli",
+    disposition: { kind: "descriptive", reason: "Normal age-related corneal iron line." },
+  }, {
+    definitionStableKey: "ocular-health:anterior:cornea",
+    fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_06",
+    optionCode: "iron-line",
+    qualifierContext: "subtype=stockers",
+    disposition: { kind: "descriptive", reason: "Corneal iron line at a pterygium head." },
+  }, {
+    definitionStableKey: "ocular-health:anterior:cornea",
+    fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_06",
+    optionCode: "iron-line",
+    qualifierContext: "subtype=fleischers",
+    disposition: {
+      kind: "awaiting-ruling",
+      question: "Does Fleischer's ring propose keratoconus, or only flag it for workup?",
+      owner: "Eric Bang",
+      reference: "decisions/2026-09-08-odos-exam-overhaul-three-contracts.md",
+    },
+  }]);
+});
+
 test("witness B1: two qualifier-scoped pterygium rows satisfy completeness by base chip identity", () => {
   assertDispositionCoverage(rowsWithQualifierScopedPterygium(), abnormalFindingChips());
 });
@@ -405,13 +474,15 @@ test("witness A: the frozen registry keeps one base proposes row for pterygium a
   }]);
   assert.equal(pterygiumTargets.filter((target) => target.kind === "option").length, 4);
   assert.equal(pterygiumTargets.filter((target) => target.kind === "qualifier").length, 4);
-  assert.equal(FINDING_DISPOSITION_ROWS.length, 209);
-  assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "proposes").length, 56);
-  assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "pending").length, 153);
+  assert.equal(FINDING_DISPOSITION_ROWS.length, 211);
+  assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "proposes").length, 54);
+  assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "pending").length, 139);
+  assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "descriptive").length, 17);
+  assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "awaiting-ruling").length, 1);
   assertDispositionCoverage(FINDING_DISPOSITION_ROWS, abnormalFindingChips());
   assertDispositionConsistency(FINDING_DISPOSITION_ROWS, ocularHealthDefinitions());
   assertDispositionRequirements(FINDING_DISPOSITION_ROWS);
-  assertPendingRowCeiling(FINDING_DISPOSITION_ROWS, 153);
+  assertPendingRowCeiling(FINDING_DISPOSITION_ROWS, 139);
 });
 
 test("Guard 3: clinical dispositions carry every required reason and ruling reference", () => {
@@ -419,10 +490,10 @@ test("Guard 3: clinical dispositions carry every required reason and ruling refe
 });
 
 test("Guard 4: pending ocular-health finding-disposition rows never increase", () => {
-  // M0 ship baseline: 153 at origin/main 1bd9f80434c94b721f8a87c8d574e13445f230c4.
+  // Ocular-status and iron-line ruling baseline: 139 on drbang-iva/ocular-catalog.
   // This ceiling counts registry rows, not chips; qualifier-scoped rows can make those units differ.
   // Tighten this ceiling whenever the row count falls so pending dispositions may never rise again.
-  assertPendingRowCeiling(FINDING_DISPOSITION_ROWS, 153);
+  assertPendingRowCeiling(FINDING_DISPOSITION_ROWS, 139);
 });
 
 test("Guard 5: the compiled disposition registry has no effective-definition dependency surface", async () => {

@@ -2319,7 +2319,6 @@ test("surviving Periphery diagnosis mappings keep their pre-fold public ids", as
     { id: "SEED_RETINAL_DETACHMENT_SINGLE_BREAK_6", option: "retinal-detachment", target: "retinal_detachment_single_break" },
     { id: "SEED_MACULAR_DRUSEN_7", option: "drusen", target: "macular_drusen" },
     { id: "SEED_NONEXUDATIVE-AMD_8", option: "drusen", target: "nonexudative-amd" },
-    { id: "SEED_MACULAR_DRUSEN_9", option: "occasional-drusen", target: "macular_drusen" },
   ]);
 });
 
@@ -2533,7 +2532,7 @@ test("persisted retinal subtype qualifiers override conflicting read translation
   }
 });
 
-test("posterior drusen seeds preserve leaf ids and add staged-family targets in ruled order", async () => {
+test("posterior drusen seeds preserve plain-drusen mappings while occasional drusen stays non-codeable", async () => {
   const definitions = await catalog(new MemoryFhir());
   const targets = (stableKey: string) => definitions.find((definition) => definition.stableKey === stableKey)
     ?.diagnosisCandidates?.filter((candidate) => candidate.trigger.kind === "option" &&
@@ -2552,15 +2551,13 @@ test("posterior drusen seeds preserve leaf ids and add staged-family targets in 
     { option: "dry-amd", id: "SEED_NONEXUDATIVE-AMD_3", familyGroup: "nonexudative-amd" },
     { option: "wet-amd", id: "SEED_EXUDATIVE-AMD_4", familyGroup: "exudative-amd" },
   ]);
-  assert.deepEqual(targets("ocular-health:posterior:fundus")?.slice(-4), [
+  assert.deepEqual(targets("ocular-health:posterior:fundus")?.slice(-2), [
     { option: "drusen", id: "SEED_MACULAR_DRUSEN_26", diagnosisKey: "macular_drusen" },
     { option: "drusen", id: "SEED_NONEXUDATIVE-AMD_27", familyGroup: "nonexudative-amd" },
-    { option: "occasional-drusen", id: "SEED_MACULAR_DRUSEN_28", diagnosisKey: "macular_drusen" },
   ]);
-  assert.deepEqual(targets("ocular-health:posterior:periphery")?.slice(-3), [
+  assert.deepEqual(targets("ocular-health:posterior:periphery")?.slice(-2), [
     { option: "drusen", id: "SEED_MACULAR_DRUSEN_7", diagnosisKey: "macular_drusen" },
     { option: "drusen", id: "SEED_NONEXUDATIVE-AMD_8", familyGroup: "nonexudative-amd" },
-    { option: "occasional-drusen", id: "SEED_MACULAR_DRUSEN_9", diagnosisKey: "macular_drusen" },
   ]);
   const macula = definitions.find((definition) => definition.stableKey === "ocular-health:posterior:macula");
   assert.equal(macula?.allowDiagnosisMapping, true);
