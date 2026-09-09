@@ -561,3 +561,27 @@ async function captureConsoleErrors<T>(operation: () => Promise<T>): Promise<{
     console.error = original;
   }
 }
+
+
+test("DEFER-1 guard 1: dilation permits deferral", () => {
+  const dilation = buildFindingDefinitionSeeds().find((definition) => definition.stableKey === "entrance:dilation");
+  assert.equal(dilation?.normalSemantics?.allowDeferred, true);
+});
+
+test("DEFER-1 guard 2: the complete seed has exactly one deferrable definition", () => {
+  const deferrableKeys = buildFindingDefinitionSeeds()
+    .filter((definition) => definition.normalSemantics?.allowDeferred === true)
+    .map((definition) => definition.stableKey)
+    .sort();
+  assert.deepEqual(deferrableKeys, ["entrance:dilation"]);
+});
+
+test("DEFER-1 guard 3: stateDefinition factory output does not grant deferral", () => {
+  const factoryOutputs = buildFindingDefinitionSeeds().filter((definition) =>
+    definition.valueSchema.type === "entrance-state-section"
+  );
+  assert.ok(factoryOutputs.length > 0);
+  for (const definition of factoryOutputs) {
+    assert.notEqual(definition.normalSemantics?.allowDeferred, true, definition.stableKey);
+  }
+});

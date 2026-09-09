@@ -1,3 +1,4 @@
+import { DILATION_KEY } from "./entrance-definition.js";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
@@ -272,7 +273,10 @@ export async function handleFindingDefinitionMutationRequest(
       return { status: 200, body: { definition: definitionSummary(saved) } };
     }
     if (parsed.data.action === "update-normal-template") {
-      if (asRecord(definition.valueSchema).type !== "ocular-health-structure") {
+      if (parsed.data.allowDeferred === true && definition.stableKey !== DILATION_KEY) {
+        return { status: 400, body: { error: "Deferral is only permitted for dilation." } };
+      }
+      if (asRecord(definition.valueSchema).type !== "ocular-health-structure" && definition.stableKey !== DILATION_KEY) {
         return { status: 409, body: { error: "Only ocular-health structures have normal templates." } };
       }
       const saved = await store.save({

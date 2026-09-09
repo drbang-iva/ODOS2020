@@ -1,0 +1,6 @@
+active_observations|6144
+observations_with_EXAM_STATE|0
+deferred_observations_all_definitions|0
+impossible_state_negative_control|0
+synthetic_deferred_positive_control|1
+synthetic_impossible_negative_control|0

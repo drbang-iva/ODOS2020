@@ -825,3 +825,19 @@ function visualFieldDefinition(): CustomFindingDefinition {
     }],
   };
 }
+
+
+test("DEFER-1 guard 5: entrance Deferred button follows the definition permission", () => {
+  const pupils = buildFindingDefinitionSeeds().find((definition) => definition.stableKey === "entrance:pupils");
+  assert.ok(pupils);
+  for (const allowDeferred of [undefined, false, true]) {
+    const html = renderToStaticMarkup(<EntranceStateSection
+      definition={{ stableKey: pupils.stableKey, display: pupils.display, active: true,
+        perEye: true, customFields: [], allowDeferred }}
+      patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined}
+    />);
+    assert.equal((html.match(/>deferred</g) ?? []).length, allowDeferred === true ? 2 : 0);
+    assert.equal((html.match(/>normal</g) ?? []).length, 2);
+    assert.equal((html.match(/>abnormal</g) ?? []).length, 2);
+  }
+});

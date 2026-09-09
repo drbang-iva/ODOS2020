@@ -64,7 +64,6 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     sheetLabel: "Smooth and pink",
     priority: ["papillae", "follicles", "giant papillae (GPC)"],
     additional: ["concretions", "symblepharon", "scarring", "membrane/pseudomembrane", "hyperemia"],
-    allowDeferred: true,
   },
   {
     key: "conjunctiva",

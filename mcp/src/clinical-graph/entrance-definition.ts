@@ -70,7 +70,7 @@ export function buildEntranceFindingDefinitions(
         perEye: true,
         fields: Object.fromEntries(eomPositionFields().map((field) => [field.localCode, field])),
       },
-      normalSemantics: { template: "Full OU — SAFE", allowDeferred: true },
+      normalSemantics: { template: "Full OU — SAFE" },
       sourceStatus: "verified-seed",
       allowDiagnosisMapping: true,
       diagnosisCandidates: ["diplopia", "paralytic_strabismus"].map((diagnosisKey, index) => ({
@@ -179,7 +179,7 @@ export function buildEntranceFindingDefinitions(
           administeredBy: { display: "Administered by", type: "string" },
         },
       },
-      normalSemantics: { diagnosisSuggestions: false },
+      normalSemantics: { diagnosisSuggestions: false, allowDeferred: true },
       sourceStatus: "verified-seed",
       allowDiagnosisMapping: false,
       documentationElements: [{ code: "entrance.dilation.dfe", origin: "seed", active: true }],
@@ -338,7 +338,6 @@ function stateDefinition(
     },
     normalSemantics: {
       template,
-      allowDeferred: true,
       ...(config.setupMessage ? { setupMessage: config.setupMessage } : {}),
     },
     sourceStatus: config.sourceStatus ?? "verified-seed",
