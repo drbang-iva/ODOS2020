@@ -4,9 +4,7 @@ import { test } from "node:test";
 import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
-  loadDiagnosisImagingOpen,
   loadEncounterChartView,
-  saveDiagnosisImagingOpen,
   saveEncounterChartView,
 } from "../src/lib/diagnosis-workspace-preferences";
 import type { Condition, Encounter } from "@medplum/fhirtypes";
@@ -23,7 +21,6 @@ import {
   orderedEncounterConditions,
 } from "../src/components/charting/DiagnosisWorkspace";
 import { OdosSearchPicker } from "../src/components/inputs/OdosSearchPicker";
-import { DiagnosisImagingRegion } from "../src/components/charting/DiagnosisImagingRegion";
 import {
   DiagnosisFindingsTable,
   UnassignedFindingsTray,
@@ -49,17 +46,12 @@ test("diagnosis workspace preferences default safely and round-trip valid select
   const storage = memoryStorage();
 
   assert.equal(loadEncounterChartView(storage), "diagnosis");
-  assert.equal(loadDiagnosisImagingOpen(storage), true);
 
   saveEncounterChartView("structure", storage);
-  saveDiagnosisImagingOpen(false, storage);
   assert.equal(loadEncounterChartView(storage), "structure");
-  assert.equal(loadDiagnosisImagingOpen(storage), false);
 
   storage.setItem("odos:encounter-chart-view", "future-view");
-  storage.setItem("odos:diagnosis-imaging-open", "maybe");
   assert.equal(loadEncounterChartView(storage), "diagnosis");
-  assert.equal(loadDiagnosisImagingOpen(storage), true);
 });
 
 test("diagnosis rail follows Encounter.diagnosis rank order without normalizing gaps", () => {
@@ -1440,40 +1432,6 @@ test("same-encounter finding refresh reloads diagnosis candidates for newly char
     });
     assert.equal(candidateReads, 2);
     assert.ok(renderer.root.findByProps({ "aria-label": "Add suggested diagnosis Macular drusen" }));
-  } finally {
-    act(() => renderer?.unmount());
-    globalThis.fetch = originalFetch;
-  }
-});
-
-test("imaging hides the prior patient's rows as soon as the patient reference changes", async () => {
-  const originalFetch = globalThis.fetch;
-  let resolveFirst!: (response: Response) => void;
-  globalThis.fetch = ((input: string | URL | Request) => {
-    const url = String(input);
-    if (url.includes("Patient%2Fone")) {
-      return new Promise<Response>((resolve) => { resolveFirst = resolve; });
-    }
-    return new Promise<Response>(() => undefined);
-  }) as typeof fetch;
-  let renderer!: ReactTestRenderer;
-  try {
-    await act(async () => {
-      renderer = create(<DiagnosisImagingRegion patientReference="Patient/one" />);
-    });
-    await act(async () => {
-      resolveFirst(new Response(JSON.stringify({ images: [{
-        id: "old-image",
-        title: "Prior patient OCT",
-        date: "2026-08-09",
-        contentState: "missing",
-      }] }), { status: 200, headers: { "Content-Type": "application/json" } }));
-      await Promise.resolve();
-    });
-    assert.match(JSON.stringify(renderer.toJSON()), /Prior patient OCT/);
-
-    act(() => renderer.update(<DiagnosisImagingRegion patientReference="Patient/two" />));
-    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /Prior patient OCT/);
   } finally {
     act(() => renderer?.unmount());
     globalThis.fetch = originalFetch;
