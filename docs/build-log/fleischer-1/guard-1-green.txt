@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: FLEISCHER-1 guard 1: Fleischer's subtype is descriptive and proposes no diagnosis
+ok 1 - FLEISCHER-1 guard 1: Fleischer's subtype is descriptive and proposes no diagnosis
+  ---
+  duration_ms: 16.767
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 203.987458

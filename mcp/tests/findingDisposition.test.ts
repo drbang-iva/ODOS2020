@@ -1,3 +1,4 @@
+import { evaluateMappingTrigger } from "../src/clinical-graph/diagnosis-mapping.js";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -14,6 +15,7 @@ import { buildFindingDefinitionSeeds } from "../src/clinical-graph/finding-defin
 import type {
   ClinicalFindingDefinition,
   MappingTrigger,
+  FindingInstance,
 } from "../src/clinical-graph/glaucoma-suspect.js";
 
 interface FindingChip {
@@ -323,7 +325,7 @@ test("ruled benign findings are descriptive while pinguecula and plain drusen re
   }
 });
 
-test("iron-line subtypes carry descriptive dispositions except Fleischer's pending ruling", () => {
+test("iron-line subtypes carry descriptive dispositions", () => {
   const ironLineRows = FINDING_DISPOSITION_ROWS.filter((row) =>
     row.definitionStableKey === "ocular-health:anterior:cornea"
     && row.fieldLocalCode === "CUSTOM_ABNORMAL_FINDINGS_06"
@@ -348,10 +350,8 @@ test("iron-line subtypes carry descriptive dispositions except Fleischer's pendi
     optionCode: "iron-line",
     qualifierContext: "subtype=fleischers",
     disposition: {
-      kind: "awaiting-ruling",
-      question: "Does Fleischer's ring propose keratoconus, or only flag it for workup?",
-      owner: "Eric Bang",
-      reference: "decisions/2026-09-08-odos-exam-overhaul-three-contracts.md",
+      kind: "descriptive",
+      reason: "Corneal iron ring associated with keratoconus; charted as a sign, not a diagnosis. Confirm with topography before charting keratoconus.",
     },
   }]);
 });
@@ -477,8 +477,8 @@ test("witness A: the frozen registry keeps one base proposes row for pterygium a
   assert.equal(FINDING_DISPOSITION_ROWS.length, 211);
   assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "proposes").length, 54);
   assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "pending").length, 139);
-  assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "descriptive").length, 17);
-  assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "awaiting-ruling").length, 1);
+  assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "descriptive").length, 18);
+  assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "awaiting-ruling").length, 0);
   assertDispositionCoverage(FINDING_DISPOSITION_ROWS, abnormalFindingChips());
   assertDispositionConsistency(FINDING_DISPOSITION_ROWS, ocularHealthDefinitions());
   assertDispositionRequirements(FINDING_DISPOSITION_ROWS);
@@ -546,4 +546,43 @@ test("finding-disposition keys round-trip nested option codes without treating d
   };
 
   assert.deepEqual(parseFindingDispositionKey(buildFindingDispositionKey(identity)), identity);
+});
+
+
+test("FLEISCHER-1 guard 1: Fleischer's subtype is descriptive and proposes no diagnosis", () => {
+  const identity = {
+    definitionStableKey: "ocular-health:anterior:cornea",
+    fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_06",
+    optionCode: "iron-line",
+    qualifierContext: "subtype=fleischers",
+  };
+  const disposition = FINDING_DISPOSITION_REGISTRY.get(buildFindingDispositionKey(identity))?.disposition;
+  assert.equal(disposition?.kind, "descriptive");
+  const cornea = buildFindingDefinitionSeeds().find((definition) => definition.stableKey === identity.definitionStableKey);
+  assert.ok(cornea);
+  const finding: FindingInstance = {
+    id: "fleischer-test", state: "committed", presence: "present",
+    findingDefinitionId: cornea.id, patientReference: "Patient/synthetic",
+    encounterReference: "Encounter/synthetic", laterality: "OD", sourceType: "manual",
+    recordedAt: cornea.provenance.recordedAt, provenance: cornea.provenance,
+    interpretation: "abnormal",
+    value: { type: "components", components: [
+      { code: `${identity.fieldLocalCode}::iron-line`, display: "Iron line", value: true },
+      { code: `${identity.fieldLocalCode}::iron-line::subtype`, display: "Subtype", value: "fleischers" },
+    ] },
+  };
+  const proposals = (candidate: FindingInstance) => (cornea.diagnosisCandidates ?? [])
+    .filter((mapping) => mapping.active && evaluateMappingTrigger(mapping.trigger, candidate))
+    .map((mapping) => mapping.diagnosisKey);
+  assert.deepEqual(proposals(finding), []);
+  const positiveControl: FindingInstance = { ...finding, value: { type: "components", components: [
+    { code: `${identity.fieldLocalCode}::keratoconus`, display: "Keratoconus", value: true },
+    { code: `${identity.fieldLocalCode}::keratoconus::stability`, display: "Stability", value: "stable" },
+  ] } };
+  assert.ok(proposals(positiveControl).length > 0, "direct keratoconus selection must exercise the proposing path");
+});
+
+test("FLEISCHER-1 guard 2: no registry row awaits an operator ruling", () => {
+  const blockedRows = FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "awaiting-ruling");
+  assert.equal(blockedRows.length, 0, blockedRows.map(buildFindingDispositionKey).join(", "));
 });
