@@ -3277,6 +3277,22 @@ async function selectContextTab(root: ReactTestInstance, tab: "images" | "engage
   await act(async () => root.findAllByType(ExamRightPanelTabs)[0].props.onSelect(tab));
 }
 
+test("DXIMAGING-1 diagnosis has exactly one imaging surface in the shared panel", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    await act(async () => chartViewButton(harness.renderer.root, "By diagnosis").props.onClick());
+    const root = harness.renderer.root;
+    assert.equal(root.findAllByType(DiagnosisWorkspace).length, 1);
+    const panel = root.findByType(ExamRightPanelSurface);
+    assert.equal(panel.props.active, true);
+    const images = panel.findAllByProps({ role: "tab", "data-panel-tab": "images" });
+    assert.equal(images.length, 1);
+    assert.equal(images[0].props["aria-selected"], true);
+    assert.equal(root.findAll((node) => typeof node.type === "string"
+      && String(node.props.className ?? "").split(" ").includes("odos-diagnosis-imaging")).length, 0);
+  } finally { harness.restore(); }
+});
+
 test("C1 tab survives a stage change", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
