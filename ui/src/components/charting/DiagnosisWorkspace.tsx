@@ -42,7 +42,6 @@ import {
   ReorderImpressionsModal,
   buildReorderImpressionRows,
 } from "./ReorderImpressionsModal";
-import { DiagnosisImagingRegion } from "./DiagnosisImagingRegion";
 import {
   DiagnosisFindingsTable,
   UnassignedFindingsTray,
@@ -679,7 +678,6 @@ export function DiagnosisWorkspace({
         )}
       </main>
 
-      <DiagnosisImagingRegion patientReference={patientReference} />
       {reorderOpen && encounter && (
         <ReorderImpressionsModal
           rows={buildReorderImpressionRows(encounter, visitConditions, attachedProcedures)}

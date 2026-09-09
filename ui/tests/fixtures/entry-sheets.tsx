@@ -472,12 +472,23 @@ function Fixture() {
           {panelMode && (
             <ExamRightPanelSurface
               active={panelState.activeTab === "images"}
-              label="Images"
+              label="Photos"
               panelId={EXAM_RIGHT_PANEL_IDS.images}
               labelledBy="fixture-images-panel-images-tab"
               tabs={panelTabs("fixture-images-panel")}
             >
               <p>Two synthetic patient studies</p>
+            </ExamRightPanelSurface>
+          )}
+          {panelMode && (
+            <ExamRightPanelSurface
+              active={panelState.activeTab === "imaging"}
+              label="Imaging"
+              panelId={EXAM_RIGHT_PANEL_IDS.imaging}
+              labelledBy="fixture-imaging-panel-imaging-tab"
+              tabs={panelTabs("fixture-imaging-panel")}
+            >
+              <p>Diagnostic imaging fixture</p>
             </ExamRightPanelSurface>
           )}
           {panelMode && (
