@@ -405,8 +405,8 @@ test("witness A: the frozen registry keeps one base proposes row for pterygium a
   }]);
   assert.equal(pterygiumTargets.filter((target) => target.kind === "option").length, 4);
   assert.equal(pterygiumTargets.filter((target) => target.kind === "qualifier").length, 4);
-  assert.equal(FINDING_DISPOSITION_ROWS.length, 211);
-  assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "proposes").length, 58);
+  assert.equal(FINDING_DISPOSITION_ROWS.length, 209);
+  assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "proposes").length, 56);
   assert.equal(FINDING_DISPOSITION_ROWS.filter((row) => row.disposition.kind === "pending").length, 153);
   assertDispositionCoverage(FINDING_DISPOSITION_ROWS, abnormalFindingChips());
   assertDispositionConsistency(FINDING_DISPOSITION_ROWS, ocularHealthDefinitions());

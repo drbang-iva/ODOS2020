@@ -269,8 +269,6 @@ export const FINDING_DISPOSITION_ROWS: readonly FindingDispositionRegistryRow[] 
   { definitionStableKey: "ocular-health:posterior:periphery", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_05", optionCode: "retinal-tuft", disposition: { kind: "pending" } },
   { definitionStableKey: "ocular-health:posterior:periphery", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_05", optionCode: "pigmentary-changes", disposition: { kind: "pending" } },
   { definitionStableKey: "ocular-health:posterior:periphery", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_05", optionCode: "cystoid-degeneration", disposition: { kind: "pending" } },
-  { definitionStableKey: "ocular-health:posterior:periphery", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_05", optionCode: "operculated-hole", disposition: { kind: "proposes", entrySurface: "finding" } },
-  { definitionStableKey: "ocular-health:posterior:periphery", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_05", optionCode: "horseshoe-tear", disposition: { kind: "proposes", entrySurface: "finding" } },
   { definitionStableKey: "ocular-health:posterior:periphery", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_05", optionCode: "drusen", disposition: { kind: "proposes", entrySurface: "finding" } },
   { definitionStableKey: "ocular-health:posterior:periphery", fieldLocalCode: "CUSTOM_ABNORMAL_FINDINGS_05", optionCode: "occasional-drusen", disposition: { kind: "proposes", entrySurface: "finding" } },
 ] satisfies readonly FindingDispositionRegistryRow[];
