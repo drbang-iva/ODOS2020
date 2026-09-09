@@ -1,0 +1,42 @@
+TAP version 13
+# Subtest: AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine
+not ok 1 - AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine
+  ---
+  duration_ms: 24.900583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/av-ratio-default/ui/tests/customSections.test.tsx:1:104739'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   {
+    -     code: 'CUSTOM_GRADE_A_V_RATIO',
+    -     value: '2-3'
+    -   }
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      code: 'CUSTOM_GRADE_A_V_RATIO'
+      value: '2-3'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/av-ratio-default/ui/tests/customSections.test.tsx:3291:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 730.130458

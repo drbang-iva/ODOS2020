@@ -1,0 +1,124 @@
+TAP version 13
+# Subtest: posterior seeded history renders honestly and zero-data eyes remain untouched
+not ok 1 - posterior seeded history renders honestly and zero-data eyes remain untouched
+  ---
+  duration_ms: 24.740917
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/av-ratio-default/ui/tests/customSections.test.tsx:1:101019'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    10 !== 12
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 12
+  actual: 10
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/av-ratio-default/ui/tests/customSections.test.tsx:3189:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine
+ok 2 - AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine
+  ---
+  duration_ms: 9.685917
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 unentered normal does not invent an A/V ratio
+not ok 3 - AVFILL-1 unentered normal does not invent an A/V ratio
+  ---
+  duration_ms: 5.527167
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/av-ratio-default/ui/tests/customSections.test.tsx:1:147280'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   {
+    +     code: 'CUSTOM_GRADE_A_V_RATIO',
+    +     value: '2-3'
+    +   }
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      code: 'CUSTOM_GRADE_A_V_RATIO'
+      value: '2-3'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/av-ratio-default/ui/tests/customSections.test.tsx:4511:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: AVFILL-1 blank control does not invent an A/V ratio
+not ok 4 - AVFILL-1 blank control does not invent an A/V ratio
+  ---
+  duration_ms: 1.557542
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/av-ratio-default/ui/tests/customSections.test.tsx:1:147280'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    '2-3' !== ''
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ''
+  actual: '2-3'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/av-ratio-default/ui/tests/customSections.test.tsx:4490:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: AVFILL-1 Fundus All Normal does not invent an A/V ratio
+not ok 5 - AVFILL-1 Fundus All Normal does not invent an A/V ratio
+  ---
+  duration_ms: 14.170917
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/av-ratio-default/ui/tests/customSections.test.tsx:1:147280'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   {
+    +     code: 'CUSTOM_GRADE_A_V_RATIO',
+    +     value: '2-3'
+    +   }
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      code: 'CUSTOM_GRADE_A_V_RATIO'
+      value: '2-3'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/av-ratio-default/ui/tests/customSections.test.tsx:4511:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 1
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 845.112958

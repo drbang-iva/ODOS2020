@@ -3186,7 +3186,7 @@ test("posterior seeded history renders honestly and zero-data eyes remain untouc
     assert.match(rendered, /Fundus All Normal/);
     assert.match(rendered, /Dot\/Blot Hemorrhage/);
     assert.equal(renderer.root.findAllByProps({ "aria-pressed": true }).length, 1);
-    assert.equal(renderer.root.findAllByProps({ value: "" }).length, 10);
+    assert.equal(renderer.root.findAllByProps({ value: "" }).length, 12);
   } finally {
     renderer?.unmount();
   }
@@ -3255,7 +3255,7 @@ test("posterior re-save stays pristine, round-trips selections, and preserves th
   }
 });
 
-test("Vessels defaults A/V ratio to 2:3, saves a per-eye grade, and does not POST again while pristine", async () => {
+test("AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine", async () => {
   const vessels = posteriorDefinitions().find((definition) => definition.display === "Vessels");
   assert.ok(vessels);
   const posts: string[] = [];
@@ -3281,14 +3281,15 @@ test("Vessels defaults A/V ratio to 2:3, saves a per-eye grade, and does not POS
     });
     const selects = renderer.root.findAllByType(OdosSelect);
     assert.equal(selects.length, 2);
-    assert.deepEqual(selects.map((select) => select.props.value), ["2-3", "2-3"]);
-    act(() => selects[0]!.props.onChange("1-2"));
+    const ratio = selects[0]!.props.options.find((option: { label: string }) => option.label === "2:3");
+    assert.equal(ratio.value, "2-3");
+    act(() => selects[0]!.props.onChange(ratio.value));
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health");
     assert.ok(saveButton);
     await act(async () => saveButton.props.onClick());
     assert.equal(posts.length, 1);
-    assert.match(posts[0]!, /CUSTOM_GRADE_A_V_RATIO/);
-    assert.match(posts[0]!, /1-2/);
+    assert.deepEqual(JSON.parse(posts[0]!).eyes.OD.customFields, [{ code: "CUSTOM_GRADE_A_V_RATIO", value: "2-3" }]);
+    assert.equal(JSON.parse(posts[0]!).eyes.OS, undefined);
     await act(async () => saveButton.props.onClick());
     assert.equal(posts.length, 1);
   } finally {
@@ -4457,5 +4458,81 @@ test("EXAM-1B in-flight edit remains unsaved after the older request completes",
     wait = false;
     await act(async () => { await button("Save Ocular Health").props.onClick(); });
     assert.deepEqual(saved, [[definition.stableKey]]);
+  } finally { renderer?.unmount(); }
+});
+
+for (const scenario of ["unentered normal", "blank control", "Fundus All Normal"] as const) {
+  test(`AVFILL-1 ${scenario} does not invent an A/V ratio`, async () => {
+    const definitions = posteriorDefinitions();
+    const vessels = definitions.find((definition) => definition.display === "Vessels")!;
+    const posts: string[] = [];
+    const fetchImpl = (async (_input, init) => {
+      if (init?.method === "POST") { posts.push(String(init.body)); return jsonResponse({}); }
+      return jsonResponse({ rows: scenario === "unentered normal"
+        ? [{ eye: "OD", state: "abnormal", values: [{ code: "CUSTOM_VESSELS_FINDINGS", value: ["av-nicking"] }] }]
+        : [] });
+    }) as typeof fetch;
+    let renderer!: ReactTestRenderer;
+    try {
+      await act(async () => {
+        renderer = create(<OcularHealthSection
+          definitions={scenario === "Fundus All Normal" ? definitions : [vessels]}
+          patientReference="Patient/avfill" encounterReference="Encounter/avfill"
+          onSaved={() => undefined} apiBase="http://test" fetchImpl={fetchImpl}
+        />);
+        await flushEffects();
+      });
+      const button = (label: string) => renderer.root.findAllByType("button").find((candidate) => candidate.children.join("") === label)!;
+      if (scenario === "blank control") {
+        const selects = renderer.root.findAllByType(OdosSelect);
+        assert.equal(selects.length, 2);
+        for (const select of selects) {
+          assert.equal(select.props.value, "");
+          assert.deepEqual(select.props.options[0], { value: "", label: "Select" });
+          assert.equal(select.props.options.find((option: { label: string }) => option.label === "2:3").value, "2-3");
+        }
+        assert.equal(posts.length, 0);
+        return;
+      }
+      if (scenario === "unentered normal") {
+        const od = renderer.root.findByProps({ "data-eye-panel": "OD" });
+        await act(async () => od.findAllByType(OdosChips)[0]!.props.onChange([]));
+      } else {
+        act(() => button("Fundus All Normal").props.onClick());
+      }
+      await act(async () => button("Save Ocular Health").props.onClick());
+      assert.equal(posts.length, scenario === "Fundus All Normal" ? 5 : 1);
+      for (const post of posts) {
+        const body = JSON.parse(post);
+        assert.deepEqual(Object.keys(body.eyes), scenario === "Fundus All Normal" ? ["OD", "OS"] : ["OD"]);
+        for (const eye of Object.keys(body.eyes)) {
+          assert.equal(body.eyes[eye].state, "normal");
+          if (scenario === "Fundus All Normal") assert.ok(body.eyes[eye].negativeAct.id);
+          assert.deepEqual(body.eyes[eye].customFields, []);
+        }
+      }
+    } finally { renderer?.unmount(); }
+  });
+}
+
+test("AVFILL-1 selecting then clearing an unsaved ratio leaves no clinical write", async () => {
+  const vessels = posteriorDefinitions().find((definition) => definition.display === "Vessels")!;
+  const posts: string[] = [];
+  const fetchImpl = (async (_input, init) => {
+    if (init?.method === "POST") { posts.push(String(init.body)); return jsonResponse({}); }
+    return jsonResponse({ rows: [] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection definitions={[vessels]} patientReference="Patient/avfill" encounterReference="Encounter/avfill" onSaved={() => undefined} apiBase="http://test" fetchImpl={fetchImpl} />);
+      await flushEffects();
+    });
+    const select = () => renderer.root.findAllByType(OdosSelect)[0]!;
+    act(() => select().props.onChange("2-3"));
+    act(() => select().props.onChange(""));
+    assert.equal(select().props.value, "");
+    await act(async () => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health")!.props.onClick());
+    assert.deepEqual(posts, []);
   } finally { renderer?.unmount(); }
 });

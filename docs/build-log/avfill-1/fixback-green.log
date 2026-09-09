@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: posterior seeded history renders honestly and zero-data eyes remain untouched
+ok 1 - posterior seeded history renders honestly and zero-data eyes remain untouched
+  ---
+  duration_ms: 19.446917
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine
+ok 2 - AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine
+  ---
+  duration_ms: 8.009084
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 unentered normal does not invent an A/V ratio
+ok 3 - AVFILL-1 unentered normal does not invent an A/V ratio
+  ---
+  duration_ms: 4.715958
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 blank control does not invent an A/V ratio
+ok 4 - AVFILL-1 blank control does not invent an A/V ratio
+  ---
+  duration_ms: 1.330958
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 Fundus All Normal does not invent an A/V ratio
+ok 5 - AVFILL-1 Fundus All Normal does not invent an A/V ratio
+  ---
+  duration_ms: 13.423583
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 selecting then clearing an unsaved ratio leaves no clinical write
+ok 6 - AVFILL-1 selecting then clearing an unsaved ratio leaves no clinical write
+  ---
+  duration_ms: 1.887875
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 768.642625

@@ -409,7 +409,7 @@ export function OcularHealthSection({
                   ? [{ code: field.localCode, value: capture.selections }]
                   : []),
                 ...(state === "deferred" ? [] : grades.flatMap((grade) => {
-                  const value = capture.grades?.[grade.localCode] ?? defaultGradeValue(grade);
+                  const value = capture.grades?.[grade.localCode] ?? "";
                   return value === "" ? [] : [{
                     code: grade.localCode,
                     value: grade.valueType === "number" ? Number(value) : value,
@@ -566,7 +566,11 @@ export function OcularHealthSection({
                     onDeferred={() => toggleDeferred(definition, eye)}
                     onSelections={(selections) => setSelections(definition, eye, selections)}
                     onFindingDetail={(optionCode, qualifierKey, value) => setFindingDetail(definition, eye, optionCode, qualifierKey, value)}
-                    onGrade={(localCode, value) => updateEye(definition.stableKey, eye, (current) => ({ ...current, grades: { ...current.grades, [localCode]: value } }))}
+                    onGrade={(localCode, value) => updateEye(definition.stableKey, eye, (current) => {
+                      const grades = { ...current.grades, [localCode]: value };
+                      if (localCode === "CUSTOM_GRADE_A_V_RATIO" && value === "") delete grades[localCode];
+                      return { ...current, grades };
+                    })}
                     onOther={(other) => {
                       updateEye(definition.stableKey, eye, (current) => ({
                         ...current,
@@ -723,9 +727,9 @@ function EyePanel({ eye, capture, prior, related, field, gradeFields, normalTemp
             {grade.unit && <span className="flex items-center border-l border-white/10 px-3 text-sm text-white/45">{grade.unit}</span>}
           </div>
         ) : <OdosSelect
-          value={String(capture.grades?.[grade.localCode] ?? defaultGradeValue(grade))}
+          value={String(capture.grades?.[grade.localCode] ?? "")}
           options={[
-            ...(defaultGradeValue(grade) === "" ? [{ value: "", label: "Select" }] : []),
+            { value: "", label: "Select" },
             ...(grade.options ?? [])
               .filter((option) => option.active)
               .map((option) => ({ value: option.code, label: option.display })),
@@ -1047,12 +1051,6 @@ function abnormalField(definition: CustomFindingDefinition): CustomFindingField 
 
 function gradeFields(definition: CustomFindingDefinition): CustomFindingField[] {
   return definition.customFields.filter((field) => field.active && (field.valueType === "select" || field.valueType === "number"));
-}
-
-function defaultGradeValue(field: CustomFindingField): string {
-  return field.localCode === "CUSTOM_GRADE_A_V_RATIO"
-    ? field.options?.find((option) => option.active)?.code ?? ""
-    : "";
 }
 
 function emptyCaptures(definitions: CustomFindingDefinition[]) {
