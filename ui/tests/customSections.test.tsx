@@ -23,7 +23,6 @@ import {
   changedDefinitions,
   copyEyeCapture,
   mirrorClockHourExtent,
-  pendingStateEyes,
 } from "../src/components/charting/OcularHealthSection";
 import { SpineNav } from "../src/components/charting/SpineNav";
 import { sectionStatus } from "../src/components/charting/types";
@@ -1085,12 +1084,13 @@ test("the ocular-health renderer exposes segment headers, accelerators, bilatera
   );
   assert.match(html, /Anterior All Normal/);
   assert.match(html, /Anterior Segment/);
-  assert.match(html, /Nothing defaults to normal/);
+  assert.match(html, /Record what is present/);
   assert.match(html, /Copy to OS/);
   assert.match(html, /Copy to OD/);
   assert.match(html, /Not performed \/ deferred/);
   assert.equal((html.match(/>Other</g) ?? []).length, 2);
-  assert.equal((html.match(/Choose an exam state before entering Other\./g) ?? []).length, 2);
+  assert.equal((html.match(/Choose an exam state before entering Other\./g) ?? []).length, 0);
+  assert.doesNotMatch(html, />Normal<|>Abnormal</);
 
   const fetchImpl = (async () => jsonResponse({
     rows: [{ eye: "OD", state: "abnormal", values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_02", value: ["demodex"] }] }],
@@ -1114,8 +1114,8 @@ test("the ocular-health renderer exposes segment headers, accelerators, bilatera
     assert.match(rendered, /Anterior Blepharitis/);
     assert.match(rendered, /Chalazion/);
     assert.doesNotMatch(rendered, /\"children\":\[\"chalazion\"\]/);
-    assert.equal(renderer.root.findByType("summary").children.join(""), "More findings (1)");
-    assert.ok(rendered.indexOf("Demodex") < rendered.indexOf('"type":"summary"'));
+    assert.equal(renderer.root.findAllByType("details").length, 0);
+    assert.ok(rendered.indexOf("Demodex") < rendered.indexOf("Ptosis"));
     const demodex = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Demodex");
     const collarettes = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Collarettes");
     assert.ok(demodex);
@@ -1131,6 +1131,214 @@ test("the ocular-health renderer exposes segment headers, accelerators, bilatera
       renderer.root.findAllByType("button").find((button) => button.children.join("") === "Collarettes")?.props["aria-pressed"],
       true,
     );
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("every active top-level ocular finding renders immediately in priority-first order", async () => {
+  const definition = syntheticDeferredOcularDefinition();
+  definition.customFields[0]!.options = [
+    { code: "priority-a", display: "Priority A", active: true, priority: true },
+    { code: "inactive", display: "Inactive", active: false, priority: true },
+    { code: "additional-a", display: "Additional A", active: true },
+    { code: "priority-b", display: "Priority B", active: true, priority: true },
+  ];
+  const activeOptions = definition.customFields[0]!.options.filter((option) => option.active && !option.parentCode);
+  const fetchImpl = (async () => jsonResponse({ rows: [] })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-visible-findings"
+        encounterReference="Encounter/e-visible-findings"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const findingControls = renderer.root.findByProps({ "data-eye-panel": "OD" }).findAllByType(OdosChips)
+      .filter((chips) => ["Priority ocular health findings", "Additional ocular health findings"].includes(chips.props.ariaLabel));
+    const renderedOptions = findingControls.flatMap((chips) => chips.props.options as Array<{ label: string }>);
+    assert.equal(renderedOptions.length, activeOptions.length);
+    assert.deepEqual(renderedOptions.map((option) => option.label), ["Priority A", "Priority B", "Additional A"]);
+    assert.equal(renderer.root.findAllByType("details").length, 0);
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("ocular-health save derives abnormal from findings and normal after they are cleared", async () => {
+  const definition = syntheticDeferredOcularDefinition();
+  const posts: Array<Record<string, any>> = [];
+  const fetchImpl = (async (_input, init) => {
+    if (init?.method === "POST") {
+      posts.push(JSON.parse(String(init.body)));
+      return jsonResponse({});
+    }
+    return jsonResponse({ rows: [] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-derived-state"
+        encounterReference="Encounter/e-derived-state"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const finding = () => renderer.root.findAllByType("button")
+      .find((button) => renderedText(button) === "Synthetic Finding")!;
+    const save = renderer.root.findAllByType("button")
+      .find((button) => renderedText(button) === "Save Ocular Health")!;
+
+    act(() => finding().props.onClick());
+    await act(async () => save.props.onClick());
+    assert.equal(posts[0]?.eyes.OD.state, "abnormal");
+    assert.deepEqual(posts[0]?.eyes.OD.customFields, [{
+      code: "CUSTOM_DEFERRED_FINDINGS",
+      value: ["synthetic-finding"],
+    }]);
+
+    act(() => finding().props.onClick());
+    await act(async () => save.props.onClick());
+    assert.equal(posts[1]?.eyes.OD.state, "normal");
+    assert.deepEqual(posts[1]?.eyes.OD.customFields, []);
+
+    const other = renderer.root.findByProps({ "data-eye-panel": "OD" }).findByType("textarea");
+    act(() => other.props.onChange({ target: { value: "Trace scar" } }));
+    await act(async () => save.props.onClick());
+    assert.equal(posts[2]?.eyes.OD.state, "abnormal");
+    assert.equal(posts[2]?.eyes.OD.other, "Trace scar");
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("ocular-health deferral controls come only from each definition's allowDeferred flag", () => {
+  const deferredDefinition = syntheticDeferredOcularDefinition();
+  const requiredDefinition = {
+    ...syntheticDeferredOcularDefinition(),
+    stableKey: "ocular-health:anterior:synthetic-required",
+    sectionKey: "ocular-health:anterior:synthetic-required",
+    display: "Synthetic Required",
+    allowDeferred: false,
+  };
+  const html = renderToStaticMarkup(<OcularHealthSection
+    definitions={[deferredDefinition, requiredDefinition]}
+    patientReference="Patient/p-deferred-scope"
+    encounterReference="Encounter/e-deferred-scope"
+    onSaved={() => undefined}
+  />);
+  assert.equal((html.match(/Not performed \/ deferred/g) ?? []).length, 2);
+});
+
+test("deferred and recorded ocular findings cannot coexist at the client-server boundary", async () => {
+  const definition = syntheticDeferredOcularDefinition();
+  const serverDefinition: ClinicalFindingDefinition = {
+    id: "finding-definition-synthetic-deferred",
+    stableKey: definition.stableKey,
+    display: definition.display,
+    sectionKey: definition.sectionKey,
+    valueSchema: {
+      type: "ocular-health-structure",
+      perEye: true,
+      fields: { CUSTOM_DEFERRED_FINDINGS: { ...definition.customFields[0]!, origin: "practice" } },
+    },
+    normalSemantics: { template: definition.normalTemplate, allowDeferred: true },
+    sourceStatus: "verified-seed",
+    notBillReady: true,
+    active: true,
+    provenance: {
+      source: "manual",
+      recordedAt: "2026-09-09T12:00:00.000Z",
+      actorReference: "Practitioner/test",
+    },
+  };
+  let created = 0;
+  const serverFhir = {
+    async create<T extends Observation | Provenance>(resource: T): Promise<T> {
+      created += 1;
+      return { ...resource, id: `${resource.resourceType.toLowerCase()}-${created}` } as T;
+    },
+    async search<T>(): Promise<Bundle<T>> {
+      return { resourceType: "Bundle", type: "searchset", entry: [] };
+    },
+  };
+  const attempts: Array<{ body: Record<string, any>; status: number; response: unknown }> = [];
+  const fetchImpl = (async (_input, init) => {
+    if (init?.method !== "POST") return jsonResponse({ rows: [] });
+    const body = JSON.parse(String(init.body));
+    const result = await handleCustomSectionCaptureRequest({
+      authenticate: async () => ({
+        staffReference: "Practitioner/test",
+        actorRole: "provider" as const,
+        fhir: serverFhir,
+      }),
+      findingDefinitions: () => [serverDefinition],
+      now: () => "2026-09-09T12:00:00.000Z",
+    }, {
+      authHeader: "Bearer test",
+      params: { stableKey: serverDefinition.stableKey },
+      body,
+    });
+    attempts.push({ body, status: result.status, response: result.body });
+    return jsonResponse(result.body, result.status);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-deferred-conflict"
+        encounterReference="Encounter/e-deferred-conflict"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const eye = renderer.root.findByProps({ "data-eye-panel": "OD" });
+    const deferred = () => eye.findAllByType("button")
+      .find((button) => renderedText(button) === "Not performed / deferred")!;
+    const finding = () => eye.findAllByType("button")
+      .find((button) => renderedText(button) === "Synthetic Finding")!;
+    const save = renderer.root.findAllByType("button")
+      .find((button) => renderedText(button) === "Save Ocular Health")!;
+
+    act(() => deferred().props.onClick());
+    assert.equal(deferred().props["aria-pressed"], true);
+    act(() => finding().props.onClick());
+    assert.equal(deferred().props["aria-pressed"], false);
+    assert.equal(finding().props["aria-pressed"], true);
+
+    act(() => deferred().props.onClick());
+    assert.equal(deferred().props["aria-pressed"], false);
+    assert.match(JSON.stringify(renderer.toJSON()), /Clear the selected findings before deferring/);
+    assert.equal(attempts.length, 0);
+
+    await act(async () => save.props.onClick());
+    assert.equal(attempts[0]?.status, 200, JSON.stringify(attempts[0]?.response));
+    assert.equal(attempts[0]?.body.eyes.OD.state, "abnormal");
+    assert.deepEqual(attempts[0]?.body.eyes.OD.customFields, [{
+      code: "CUSTOM_DEFERRED_FINDINGS",
+      value: ["synthetic-finding"],
+    }]);
+
+    act(() => finding().props.onClick());
+    act(() => deferred().props.onClick());
+    assert.equal(deferred().props["aria-pressed"], true);
+    act(() => eye.findByType("textarea").props.onChange({ target: { value: "trace scar" } }));
+    assert.equal(deferred().props["aria-pressed"], false);
+    act(() => deferred().props.onClick());
+    assert.equal(deferred().props["aria-pressed"], false);
+    assert.match(JSON.stringify(renderer.toJSON()), /Clear Other text before deferring/);
   } finally {
     renderer?.unmount();
   }
@@ -1205,10 +1413,7 @@ test("prior history never seeds current controls or changes the base POST body",
     await act(async () => saveButton.props.onClick());
     assert.equal(JSON.stringify(posts), "[]", "an untouched empty encounter must emit the same zero POST bodies as the base head");
 
-    const abnormal = renderer.root.findByProps({ "data-eye-panel": "OS" }).findAllByType("button")
-      .find((button) => button.children.join("") === "Abnormal")!;
-    act(() => abnormal.props.onClick());
-    const finding = renderer.root.findAllByType("button")
+    const finding = renderer.root.findByProps({ "data-eye-panel": "OS" }).findAllByType("button")
       .find((button) => button.children.join("") === "Synthetic Finding")!;
     act(() => finding.props.onClick());
     const grade = renderer.root.findAllByType(OdosChips)
@@ -1258,9 +1463,9 @@ test("unsaved ocular edits survive an asynchronously arriving encounter cutoff a
     });
     const odPanel = renderer.root.findByProps({ "data-eye-panel": "OD" });
     act(() => odPanel.findAllByType("button")
-      .find((button) => button.children.join("") === "Abnormal")!.props.onClick());
-    assert.match(odPanel.findAllByType("button")
-      .find((button) => button.children.join("") === "Abnormal")!.props.className, /bg-brand\/20/);
+      .find((button) => button.children.join("") === "Synthetic Finding")!.props.onClick());
+    assert.equal(odPanel.findAllByType("button")
+      .find((button) => button.children.join("") === "Synthetic Finding")!.props["aria-pressed"], true);
 
     await act(async () => {
       renderer.update(section("2026-08-04T12:00:00Z"));
@@ -1276,8 +1481,8 @@ test("unsaved ocular edits survive an asynchronously arriving encounter cutoff a
       await flushEffects();
     });
 
-    assert.match(renderer.root.findByProps({ "data-eye-panel": "OD" }).findAllByType("button")
-      .find((button) => button.children.join("") === "Abnormal")!.props.className, /bg-brand\/20/,
+    assert.equal(renderer.root.findByProps({ "data-eye-panel": "OD" }).findAllByType("button")
+      .find((button) => button.children.join("") === "Synthetic Finding")!.props["aria-pressed"], true,
     "the clinician's unsaved edit must survive cutoff and prior-history resolution");
     assert.equal(fetchesIssued, 2, "cutoff arrival must add only the patient-wide prior read");
   } finally {
@@ -1662,9 +1867,10 @@ test("reopened history hydrates structures but posts only the one modified struc
       />);
       await flushEffects();
     });
-    const abnormalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Abnormal");
-    assert.equal(abnormalButtons.length, 18);
-    act(() => abnormalButtons[8]!.props.onClick());
+    const tearFilmOd = renderer.root.findByProps({ id: "structure-ocular-health-anterior-tear-film" })
+      .findByProps({ "data-eye-panel": "OD" });
+    act(() => tearFilmOd.findAllByType("button")
+      .find((button) => button.children.join("") === "Finding")!.props.onClick());
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health");
     assert.ok(saveButton);
     await act(async () => saveButton.props.onClick());
@@ -1698,6 +1904,31 @@ function syntheticQualifiedOcularDefinition() {
           display: "Synthetic qualifier control",
           options: ["trace", "marked"],
         }],
+      }],
+      order: 0,
+      active: true,
+    }],
+  };
+}
+
+function syntheticDeferredOcularDefinition() {
+  return {
+    stableKey: "ocular-health:anterior:synthetic-deferred",
+    sectionKey: "ocular-health:anterior:synthetic-deferred",
+    display: "Synthetic Deferred",
+    active: true,
+    perEye: true,
+    normalTemplate: "Synthetic normal.",
+    allowDeferred: true,
+    customFields: [{
+      localCode: "CUSTOM_DEFERRED_FINDINGS",
+      display: "Abnormal findings",
+      valueType: "multi-select" as const,
+      options: [{
+        code: "synthetic-finding",
+        display: "Synthetic Finding",
+        active: true,
+        priority: true,
       }],
       order: 0,
       active: true,
@@ -1842,8 +2073,9 @@ test("ocular-health worksheet keeps four described findings in selection order a
     assert.deepEqual(rowCodes(), selections);
     const before = zoneAOptions();
     const mgdControls = renderer.root.findByProps({ "data-finding-controls": "synthetic-mgd" });
-    assert.ok(renderer.root.findByProps({ role: "group", "aria-label": "What is present" }));
-    assert.ok(renderer.root.findByProps({ role: "group", "aria-label": "Describe each" }));
+    const odPanel = renderer.root.findByProps({ "data-eye-panel": "OD" });
+    assert.ok(odPanel.findByProps({ role: "group", "aria-label": "What is present" }));
+    assert.ok(odPanel.findByProps({ role: "group", "aria-label": "Describe each" }));
     assert.equal(renderer.root.findAllByProps({ "data-finding-row": "synthetic-mgd" }).length, 1);
     assert.ok(mgdControls.findAllByType(OdosChips).some((chips) => chips.props.ariaLabel === "MGD grade"));
     assert.ok(mgdControls.findAllByType(OdosChips).some((chips) => chips.props.ariaLabel === "MGD type"));
@@ -2110,7 +2342,7 @@ test("described finding destruction is guarded from Zone A and the row remove pa
     assert.deepEqual(posts[0], {
       patientReference: "Patient/p-confirm-destroy",
       encounterReference: "Encounter/e-confirm-destroy",
-      eyes: { OD: { state: "abnormal", customFields: [] } },
+      eyes: { OD: { state: "normal", customFields: [] } },
     });
   } finally {
     renderer?.unmount();
@@ -2182,42 +2414,6 @@ test("removing a parent with selected child codes confirms before destroying the
     assert.equal(parent.props["aria-pressed"], true);
     assert.equal(renderer.root.findAllByType("button")
       .find((button) => button.children.join("") === "Synthetic Collarettes")!.props["aria-pressed"], true);
-  } finally {
-    renderer?.unmount();
-  }
-});
-
-test("changing away from abnormal confirms before destroying recorded finding details", async () => {
-  const definition = syntheticQualifiedOcularDefinition();
-  const prompts: string[] = [];
-  const fetchImpl = (async () => jsonResponse({ rows: [{
-    eye: "OD",
-    state: "abnormal",
-    values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
-    findingDetails: { "synthetic-finding": { grade: "trace" } },
-  }] })) as typeof fetch;
-  let renderer!: ReactTestRenderer;
-  try {
-    await act(async () => {
-      renderer = create(withConfirmation(<OcularHealthSection
-        definitions={[definition]}
-        patientReference="Patient/p-state-confirm"
-        encounterReference="Encounter/e-state-confirm"
-        onSaved={() => undefined}
-        apiBase="http://test"
-        fetchImpl={fetchImpl}
-      />));
-      await flushEffects();
-    });
-    const normal = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Normal")[0]!;
-    const pending = beginConfirmation(() => normal.props.onClick());
-    prompts.push(confirmationCopy(renderer));
-    await settleConfirmation(renderer, "Keep");
-    await act(async () => pending);
-    assert.equal(prompts.length, 1);
-    assert.match(prompts[0]!, /Synthetic Finding/);
-    const abnormal = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Abnormal")[0]!;
-    assert.match(abnormal.props.className, /bg-brand/);
   } finally {
     renderer?.unmount();
   }
@@ -2541,12 +2737,8 @@ test("the ocular-health runner derives finding count from capture selections", a
     });
     const cornea = renderer.root.findByProps({ id: "structure-ocular-health-anterior-cornea" });
     const od = cornea.findByProps({ "data-eye-panel": "OD" });
-    const abnormal = od.findAllByType("button").find((button) => renderedText(button) === "Abnormal");
-    assert.ok(abnormal);
-    act(() => abnormal.props.onClick());
     const rail = renderer.root.findByProps({ "data-testid": "ocular-health-structure-rail" });
     const railEntry = (stableKey: string) => rail.findAll((node) => node.props["data-structure-rail-key"] === stableKey)[0];
-    assert.equal(railEntry("ocular-health:anterior:cornea")?.props["data-structure-state"], "abnormal");
     const finding = od.findAllByType("button").find((button) => renderedText(button) === "Finding");
     assert.ok(finding);
     act(() => finding.props.onClick());
@@ -2556,11 +2748,6 @@ test("the ocular-health runner derives finding count from capture selections", a
     const corneaEntry = entries.find((entry) => entry.props["data-structure-rail-key"] === "ocular-health:anterior:cornea");
     assert.equal(corneaEntry?.props["data-structure-state"], "1 finding");
     assert.match(renderedText(corneaEntry!), /1 finding/);
-    const os = cornea.findByProps({ "data-eye-panel": "OS" });
-    const osAbnormal = os.findAllByType("button").find((button) => renderedText(button) === "Abnormal");
-    assert.ok(osAbnormal);
-    act(() => osAbnormal.props.onClick());
-    assert.equal(corneaEntry?.props["data-structure-state"], "1 finding · abnormal");
     assert.equal(
       entries.find((entry) => entry.props["data-structure-rail-key"] === "ocular-health:anterior:lens")
         ?.props["data-structure-state"],
@@ -2574,9 +2761,6 @@ test("the ocular-health runner derives finding count from capture selections", a
     act(() => deferred.props.onClick());
     assert.equal(railEntry("ocular-health:anterior:palpebral-conjunctiva")?.props["data-structure-state"], "deferred");
     const palpebralOd = palpebral.findByProps({ "data-eye-panel": "OD" });
-    const palpebralAbnormal = palpebralOd.findAllByType("button").find((button) => renderedText(button) === "Abnormal");
-    assert.ok(palpebralAbnormal);
-    act(() => palpebralAbnormal.props.onClick());
     const palpebralFinding = palpebralOd.findAllByType("button").find((button) => renderedText(button) === "Finding");
     assert.ok(palpebralFinding);
     act(() => palpebralFinding.props.onClick());
@@ -2704,7 +2888,6 @@ test("saved ocular-health findings expose real scoped diagnosis suggestions and 
       await flushEffects();
     });
     const eye = renderer.root.findByProps({ "data-eye-panel": "OD" });
-    act(() => eye.findAllByType("button").find((button) => renderedText(button) === "Abnormal")!.props.onClick());
     act(() => eye.findAllByType("button").find((button) => renderedText(button) === "Nuclear Sclerosis")!.props.onClick());
     assert.deepEqual(diagnosisWrites, [], "selecting the finding must not emit a diagnosis");
     assert.equal(renderer.root.findAllByProps({ "data-testid": "structure-diagnosis-rail" }).length, 0);
@@ -3053,8 +3236,9 @@ test("posterior re-save stays pristine, round-trips selections, and preserves th
       />);
       await flushEffects();
     });
-    const normalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Normal");
-    act(() => normalButtons[1]!.props.onClick());
+    const vitreousOd = renderer.root.findByProps({ id: "structure-ocular-health-posterior-vitreous" })
+      .findByProps({ "data-eye-panel": "OD" });
+    act(() => vitreousOd.findByType("textarea").props.onChange({ target: { value: "Stable floaters." } }));
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health");
     assert.ok(saveButton);
     await act(async () => saveButton.props.onClick());
@@ -3098,8 +3282,6 @@ test("Vessels defaults A/V ratio to 2:3, saves a per-eye grade, and does not POS
     const selects = renderer.root.findAllByType(OdosSelect);
     assert.equal(selects.length, 2);
     assert.deepEqual(selects.map((select) => select.props.value), ["2-3", "2-3"]);
-    const normalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Normal");
-    act(() => normalButtons[0]!.props.onClick());
     act(() => selects[0]!.props.onChange("1-2"));
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health");
     assert.ok(saveButton);
@@ -3150,8 +3332,6 @@ test("remaining anterior structure grades render blank, persist typed values, an
 
     act(() => numbers[0]!.props.onChange(6));
     act(() => selects[1]!.props.onChange("grade-2"));
-    const normalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Normal");
-    act(() => normalButtons[3]!.props.onClick());
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health");
     assert.ok(saveButton);
     await act(async () => saveButton.props.onClick());
@@ -3248,21 +3428,19 @@ test("ocular-health cleanup qualifiers render only for their selected finding", 
       />);
       await flushEffects();
     });
-    const abnormalButtons = renderer.root.findAllByType("button")
-      .filter((button) => button.children.join("") === "Abnormal");
-    act(() => abnormalButtons[0]!.props.onClick());
-    const priorityChips = () => renderer.root.findAllByType(OdosChips)
-      .filter((chips) => chips.props.ariaLabel === "Priority ocular health findings");
-    act(() => priorityChips()[0]!.findAllByType("button")
+    const priorityChips = (stableKey: string) => renderer.root.findByProps({ id: `structure-${stableKey.replaceAll(":", "-")}` })
+      .findByProps({ "data-eye-panel": "OD" })
+      .findAllByType(OdosChips)
+      .find((chips) => chips.props.ariaLabel === "Priority ocular health findings")!;
+    act(() => priorityChips(cornea.stableKey).findAllByType("button")
       .find((button) => button.children.join("") === "Guttata")!.props.onClick());
     assert.equal(renderer.root.findAllByProps({ "aria-label": "Corneal staining grade (grading scheme provisional)" }).length, 0);
     assert.equal(renderer.root.findAllByProps({ "aria-label": "Corneal staining zone (grading scheme provisional)" }).length, 0);
-    act(() => priorityChips()[0]!.findAllByType("button")
+    act(() => priorityChips(cornea.stableKey).findAllByType("button")
       .find((button) => button.children.join("") === "Superficial Punctate Keratitis (SPK)")!.props.onClick());
     assert.equal(renderer.root.findAllByProps({ "aria-label": "Corneal staining grade (grading scheme provisional)" }).length, 1);
     assert.equal(renderer.root.findAllByProps({ "aria-label": "Corneal staining zone (grading scheme provisional)" }).length, 1);
 
-    act(() => abnormalButtons[2]!.props.onClick());
     const lensCodes = [
       "nuclear-sclerosis",
       "cortical-cataract",
@@ -3270,7 +3448,7 @@ test("ocular-health cleanup qualifiers render only for their selected finding", 
       "posterior-capsular-opacification-pco",
       "mixed",
     ];
-    act(() => priorityChips()[1]!.props.onChange(lensCodes));
+    act(() => priorityChips(lens.stableKey).props.onChange(lensCodes));
     assert.deepEqual(
       renderer.root.findAll((row) => lensCodes.includes(row.props["data-finding-row"]))
         .map((row) => row.props["data-finding-row"]),
@@ -3278,8 +3456,7 @@ test("ocular-health cleanup qualifiers render only for their selected finding", 
     );
     assert.equal(renderer.root.findAllByProps({ "aria-label": "Grade" }).length, 5);
 
-    act(() => abnormalButtons[4]!.props.onClick());
-    act(() => priorityChips()[2]!.findAllByType("button")
+    act(() => priorityChips(periphery.stableKey).findAllByType("button")
       .find((button) => button.children.join("") === "Retinal Detachment")!.props.onClick());
     const macula = renderer.root.findAllByType(OdosChips)
       .find((chips) => chips.props.ariaLabel === "Macula")!;
@@ -3326,28 +3503,6 @@ test("all-normal skips touched structures and copy-to-eye produces an independen
   assert.deepEqual(source.selections, ["demodex", "demodex::collarettes"]);
   assert.equal(copied.state, "abnormal");
   assert.equal(copied.other, "trace");
-});
-
-test("pending-state eyes report touched notes without a state and ignore stated or untouched eyes", () => {
-  const pending = pendingStateEyes([
-    { stableKey: "ocular-health:anterior:cornea", display: "Cornea" },
-    { stableKey: "ocular-health:anterior:lens", display: "Lens" },
-  ], {
-    "ocular-health:anterior:cornea": {
-      OD: { state: "normal", selections: [], other: "clear" },
-      OS: { selections: [], other: "trace scar" },
-    },
-    "ocular-health:anterior:lens": {
-      OD: { selections: [], other: "" },
-      OS: { state: "abnormal", selections: ["cataract"], other: "mild" },
-    },
-  });
-
-  assert.deepEqual(pending, [{
-    stableKey: "ocular-health:anterior:cornea",
-    display: "Cornea",
-    eye: "OS",
-  }]);
 });
 
 test("hydrated state is pristine until a capture differs from its baseline", () => {

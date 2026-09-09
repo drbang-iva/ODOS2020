@@ -280,18 +280,24 @@ export function OcularHealthSection({
     }));
   }
 
-  async function setExamState(definition: CustomFindingDefinition, eye: Eye, state: ExamState) {
+  function toggleDeferred(definition: CustomFindingDefinition, eye: Eye) {
     const current = captures[definition.stableKey]?.[eye] ?? emptyEye();
-    if (current.state === "abnormal" && state !== "abnormal") {
-      const described = describedFindingNames(abnormalField(definition), current);
-      if (described.length > 0 && !await confirmDestroy(confirmDestructive, described, "Changing the exam state")) return;
+    if (current.state === "deferred") {
+      updateEye(definition.stableKey, eye, (capture) => ({ ...capture, state: undefined }));
+      setError(null);
+      return;
     }
-    updateEye(definition.stableKey, eye, (current) => ({
-      ...current,
-      state,
-      normalTemplate: undefined,
-      ...(state === "abnormal" ? {} : { selections: [], findingDetails: undefined }),
-    }));
+    const conflicts = [
+      ...(current.selections.length > 0 ? ["the selected findings"] : []),
+      ...(current.other.trim() ? ["Other text"] : []),
+    ];
+    if (conflicts.length > 0) {
+      setError(`${definition.display} (${eye}): Clear ${formatList(conflicts)} before deferring.`);
+      setMessage(null);
+      return;
+    }
+    updateEye(definition.stableKey, eye, (capture) => ({ ...capture, state: "deferred", normalTemplate: undefined }));
+    setError(null);
   }
 
   async function copyEye(definition: CustomFindingDefinition, from: Eye, to: Eye) {
@@ -310,9 +316,11 @@ export function OcularHealthSection({
     if (destroyed.length > 0 && !await confirmDestroy(confirmDestructive, destroyed, "Removing the finding")) return;
     updateEye(definition.stableKey, eye, (capture) => ({
       ...capture,
+      ...(capture.state === "deferred" && selections.length > 0 ? { state: undefined } : {}),
       selections,
       findingDetails: selectedFindingDetails(capture.findingDetails, selections),
     }));
+    setError(null);
   }
 
   function setFindingDetail(
@@ -337,12 +345,6 @@ export function OcularHealthSection({
 
   async function save() {
     const dirtyDefinitions = changedDefinitions(definitions, captures, pristine);
-    const pending = pendingStateEyes(dirtyDefinitions, captures);
-    if (pending.length) {
-      setError(pending.map(({ display, eye }) => `${display} (${eye}): choose Normal, Abnormal, or Deferred, or clear the note before saving.`).join(" "));
-      setMessage(null);
-      return;
-    }
     setSaving(true);
     setError(null);
     setMessage(null);
@@ -354,14 +356,16 @@ export function OcularHealthSection({
         const row = captures[definition.stableKey] ?? emptyRow();
         const eyes = Object.fromEntries(EYES.flatMap((eye) => {
           const capture = row[eye];
-          if (!capture.state) return [];
+          const original = pristine[definition.stableKey]?.[eye] ?? emptyEye();
+          if (!touched(capture) && !touched(original)) return [];
+          const state = derivedExamState(capture);
           return [[eye, {
-            state: capture.state,
+            state,
             customFields: [
-              ...(capture.state === "abnormal" && field && capture.selections.length
+              ...(field && capture.selections.length
                 ? [{ code: field.localCode, value: capture.selections }]
                 : []),
-              ...(capture.state === "deferred" ? [] : grades.flatMap((grade) => {
+              ...(state === "deferred" ? [] : grades.flatMap((grade) => {
                 const value = capture.grades?.[grade.localCode] ?? defaultGradeValue(grade);
                 return value === "" ? [] : [{
                   code: grade.localCode,
@@ -397,9 +401,12 @@ export function OcularHealthSection({
         }));
         const savedRow = Object.fromEntries(EYES.map((eye) => {
           const capture = row[eye] ?? emptyEye();
+          const original = pristine[definition.stableKey]?.[eye] ?? emptyEye();
+          const state = touched(capture) || touched(original) ? derivedExamState(capture) : capture.state;
           return [eye, {
             ...capture,
-            normalTemplate: capture.state === "normal" ? definition.normalTemplate : undefined,
+            state,
+            normalTemplate: state === "normal" ? definition.normalTemplate : undefined,
           }];
         })) as Record<Eye, EyeCapture>;
         setPristine((current) => ({ ...current, [definition.stableKey]: savedRow }));
@@ -430,10 +437,10 @@ export function OcularHealthSection({
     <section className="h-full overflow-y-auto p-6">
       <div className="mx-auto max-w-7xl">
         <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 bg-bg-deep/95 pb-4 backdrop-blur">
-          <div><div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Ocular Health</div><h2 className="mt-1 text-xl font-semibold text-white">Anterior &amp; Posterior Segments</h2><p className="mt-1 text-sm text-white/45">Choose an explicit state for each examined eye. Nothing defaults to normal.</p></div>
+          <div><div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Ocular Health</div><h2 className="mt-1 text-xl font-semibold text-white">Anterior &amp; Posterior Segments</h2><p className="mt-1 text-sm text-white/45">Record what is present. Unmarked structures save as normal when touched.</p></div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => allNormal(ANTERIOR_PREFIX, "Anterior All Normal")} disabled={loading} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-300/15 disabled:opacity-40">Anterior All Normal</button>
-            <button type="button" onClick={() => allNormal(POSTERIOR_PREFIX, "Fundus All Normal")} disabled={loading} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-300/15 disabled:opacity-40">Fundus All Normal</button>
+            <button type="button" onClick={() => allNormal(ANTERIOR_PREFIX, "Anterior All Normal")} disabled={loading} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Anterior All Normal</button>
+            <button type="button" onClick={() => allNormal(POSTERIOR_PREFIX, "Fundus All Normal")} disabled={loading} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Fundus All Normal</button>
             <ClearSectionButton
               encounterReference={encounterReference}
               sectionKey={definitions.map((definition) => definition.stableKey)}
@@ -485,11 +492,18 @@ export function OcularHealthSection({
                     gradeFields={grades}
                     normalTemplate={definition.normalTemplate}
                     allowDeferred={definition.allowDeferred === true}
-                    onState={(state) => setExamState(definition, eye, state)}
+                    onDeferred={() => toggleDeferred(definition, eye)}
                     onSelections={(selections) => setSelections(definition, eye, selections)}
                     onFindingDetail={(optionCode, qualifierKey, value) => setFindingDetail(definition, eye, optionCode, qualifierKey, value)}
                     onGrade={(localCode, value) => updateEye(definition.stableKey, eye, (current) => ({ ...current, grades: { ...current.grades, [localCode]: value } }))}
-                    onOther={(other) => updateEye(definition.stableKey, eye, (current) => ({ ...current, other }))}
+                    onOther={(other) => {
+                      updateEye(definition.stableKey, eye, (current) => ({
+                        ...current,
+                        ...(current.state === "deferred" && other.trim() ? { state: undefined } : {}),
+                        other,
+                      }));
+                      setError(null);
+                    }}
                     onCopy={() => copyEye(definition, eye, eye === "OD" ? "OS" : "OD")}
                   />
                 ))}</div>
@@ -573,7 +587,7 @@ function StructureRail({ groups, captures, focusedStableKey, onFocus }: {
   );
 }
 
-function EyePanel({ eye, capture, prior, related, field, gradeFields, normalTemplate, allowDeferred, onState, onSelections, onFindingDetail, onGrade, onOther, onCopy }: {
+function EyePanel({ eye, capture, prior, related, field, gradeFields, normalTemplate, allowDeferred, onDeferred, onSelections, onFindingDetail, onGrade, onOther, onCopy }: {
   eye: Eye;
   capture: EyeCapture;
   prior: PriorFindingReadings;
@@ -582,7 +596,7 @@ function EyePanel({ eye, capture, prior, related, field, gradeFields, normalTemp
   gradeFields: CustomFindingField[];
   normalTemplate?: string;
   allowDeferred: boolean;
-  onState(state: ExamState): void;
+  onDeferred(): void;
   onSelections(selections: string[]): void;
   onFindingDetail(optionCode: string, qualifierKey: string, value: FindingQualifierValue | undefined): void;
   onGrade(localCode: string, value: string): void;
@@ -603,11 +617,12 @@ function EyePanel({ eye, capture, prior, related, field, gradeFields, normalTemp
   return (
     <div data-eye-panel={eye} className="rounded border border-white/10 bg-bg-deep/60 p-4">
       <div className="flex items-center justify-between"><span className="text-sm font-semibold text-white">{eye}</span><EyeCopyButton eye={eye} onCopy={onCopy} /></div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <StateButton label="Normal" selected={capture.state === "normal"} onClick={() => onState("normal")} />
-        <StateButton label="Abnormal" selected={capture.state === "abnormal"} onClick={() => onState("abnormal")} />
-        {allowDeferred && <StateButton label="Not performed / deferred" selected={capture.state === "deferred"} onClick={() => onState("deferred")} />}
-      </div>
+      {allowDeferred && <div className="mt-3"><button
+        type="button"
+        aria-pressed={capture.state === "deferred"}
+        onClick={onDeferred}
+        className={capture.state === "deferred" ? "rounded border border-brand/70 bg-brand/20 px-3 py-1.5 text-xs font-semibold text-white" : "rounded border border-white/15 px-3 py-1.5 text-xs text-white/55 hover:border-white/30"}
+      >Not performed / deferred</button></div>}
       {displayedNormalTemplate && <p className="mt-3 text-sm text-white/45">{displayedNormalTemplate}</p>}
       {gradeFields.map((grade) => <label key={grade.localCode} className="mt-4 block">
         <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-white/45">{grade.display}</span>
@@ -641,12 +656,12 @@ function EyePanel({ eye, capture, prior, related, field, gradeFields, normalTemp
           ariaLabel={grade.display}
         />}
       </label>)}
-      {capture.state === "abnormal" && field && (
+      {field && (
         <div className="mt-4 space-y-4">
           <div role="group" aria-label="What is present" className="space-y-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">What is present</div>
             <OptionList ariaLabel="Priority ocular health findings" options={priority} allOptions={options} selected={capture.selections} prior={prior} related={related} onChange={onSelections} />
-            {additional.length > 0 && <details><summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">More findings ({additional.length})</summary><div className="mt-3"><OptionList ariaLabel="Additional ocular health findings" options={additional} allOptions={options} selected={capture.selections} prior={prior} related={related} onChange={onSelections} /></div></details>}
+            {additional.length > 0 && <OptionList ariaLabel="Additional ocular health findings" options={additional} allOptions={options} selected={capture.selections} prior={prior} related={related} onChange={onSelections} />}
           </div>
           {worksheetOptions.length > 0 && (
             <div role="group" aria-label="Describe each" className="space-y-3">
@@ -666,7 +681,7 @@ function EyePanel({ eye, capture, prior, related, field, gradeFields, normalTemp
           )}
         </div>
       )}
-      <label className="mt-4 block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Other</span><textarea value={capture.other} disabled={!capture.state} onChange={(event) => onOther(event.target.value)} rows={2} className="w-full rounded border border-white/15 bg-bg-deep p-2 text-sm text-white outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-45" />{!capture.state && <span className="mt-1 block text-xs text-amber-200/75">Choose an exam state before entering Other.</span>}</label>
+      <label className="mt-4 block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Other</span><textarea value={capture.other} onChange={(event) => onOther(event.target.value)} rows={2} className="w-full rounded border border-white/15 bg-bg-deep p-2 text-sm text-white outline-none focus:border-brand" /></label>
     </div>
   );
 }
@@ -751,10 +766,6 @@ function confirmDestroy(confirmDestructive: ReturnType<typeof useConfirmDestruct
     consequence: "",
     confirmLabel: "Continue",
   });
-}
-
-function StateButton({ label, selected, onClick }: { label: string; selected: boolean; onClick(): void }) {
-  return <button type="button" onClick={onClick} className={selected ? "rounded border border-brand/70 bg-brand/20 px-3 py-1.5 text-xs font-semibold text-white" : "rounded border border-white/15 px-3 py-1.5 text-xs text-white/55 hover:border-white/30"}>{label}</button>;
 }
 
 function captureFromRows(definition: CustomFindingDefinition, rows: HistoryRow[]): Record<Eye, EyeCapture> {
@@ -984,6 +995,15 @@ function touched(capture: EyeCapture): boolean {
   );
 }
 
+function derivedExamState(capture: EyeCapture): ExamState {
+  if (capture.state === "deferred") return "deferred";
+  return capture.selections.length > 0 || Boolean(capture.other.trim()) ? "abnormal" : "normal";
+}
+
+function formatList(values: string[]): string {
+  return values.length === 2 ? `${values[0]} and ${values[1]}` : values[0] ?? "recorded findings";
+}
+
 function structureRailState(row: Record<Eye, EyeCapture>): string {
   const touchedCaptures = EYES.map((eye) => row[eye]).filter(touched);
   if (touchedCaptures.length === 0) return "blank";
@@ -1026,18 +1046,6 @@ function sameGrades(left: Record<string, number | string> | undefined, right: Re
   const leftEntries = Object.entries(left ?? {});
   const rightEntries = Object.entries(right ?? {});
   return leftEntries.length === rightEntries.length && leftEntries.every(([code, value]) => right?.[code] === value);
-}
-
-export function pendingStateEyes(
-  definitions: Array<Pick<CustomFindingDefinition, "stableKey" | "display">>,
-  captures: Record<string, Record<Eye, EyeCapture>>,
-): Array<{ stableKey: string; display: string; eye: Eye }> {
-  return definitions.flatMap((definition) => {
-    const row = captures[definition.stableKey] ?? emptyRow();
-    return EYES.flatMap((eye) => touched(row[eye]) && !row[eye].state
-      ? [{ stableKey: definition.stableKey, display: definition.display, eye }]
-      : []);
-  });
 }
 
 export function copyEyeCapture(
