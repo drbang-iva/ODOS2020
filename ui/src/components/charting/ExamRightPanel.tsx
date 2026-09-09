@@ -1,10 +1,10 @@
 import type { KeyboardEvent, ReactNode } from "react";
 
-export type ExamRightPanelTab = "entry" | "images" | "engage";
+export type ExamRightPanelTab = "entry" | "images" | "imaging" | "engage";
 
 export interface ExamRightPanelState {
   activeTab: ExamRightPanelTab;
-  returnTab: "images" | "engage";
+  returnTab: "images" | "imaging" | "engage";
   summoned: boolean;
 }
 
@@ -18,6 +18,7 @@ export const EXAM_RIGHT_PANEL_IDS: Record<ExamRightPanelTab, string> = {
   entry: "exam-right-panel-entry",
   images: "exam-right-panel-images",
   engage: "exam-right-panel-engage",
+  imaging: "exam-right-panel-imaging",
 };
 
 export function examRightPanelEntryTitle(sectionId: string, defaultTitle: string): string {
@@ -32,7 +33,7 @@ export function openExamRightPanelEntry(
     activeTab: "entry",
     returnTab: entryAlreadyOpen
       ? state.returnTab
-      : state.activeTab === "engage" ? "engage" : "images",
+      : state.activeTab === "entry" ? "images" : state.activeTab,
     summoned: true,
   };
 }
@@ -48,7 +49,7 @@ export function finishExamRightPanelEntry(state: ExamRightPanelState): ExamRight
   return {
     activeTab: state.returnTab,
     returnTab: state.returnTab,
-    summoned: state.returnTab === "engage",
+    summoned: state.returnTab !== "images",
   };
 }
 
@@ -79,8 +80,8 @@ export function ExamRightPanelTabs({
   onSelect: (tab: ExamRightPanelTab) => void;
 }) {
   const tabs: ExamRightPanelTab[] = entryTitle
-    ? ["entry", "images", "engage"]
-    : ["images", "engage"];
+    ? ["entry", "images", "imaging", "engage"]
+    : ["images", "imaging", "engage"];
   const focusSelectedTab = (tab: ExamRightPanelTab) => {
     window.requestAnimationFrame(() => {
       document.querySelector<HTMLElement>(
@@ -134,8 +135,21 @@ export function ExamRightPanelTabs({
         onClick={() => selectTab("images")}
         onKeyDown={onTabKeyDown}
       >
-        <span>Images</span>
+        <span>Photos</span>
         {imageCount > 0 && <span className="odos-exam-right-panel-count-badge">{imageCount}</span>}
+      </button>
+      <button
+        id={`${instanceId}-imaging-tab`}
+        type="button"
+        role="tab"
+        aria-selected={activeTab === "imaging"}
+        aria-controls={EXAM_RIGHT_PANEL_IDS.imaging}
+        tabIndex={activeTab === "imaging" ? 0 : -1}
+        data-panel-tab="imaging"
+        onClick={() => selectTab("imaging")}
+        onKeyDown={onTabKeyDown}
+      >
+        Imaging
       </button>
       <button
         id={`${instanceId}-engage-tab`}
@@ -163,7 +177,7 @@ export function ExamRightPanelSurface({
   children,
 }: {
   active: boolean;
-  label: "Images" | "Engage";
+  label: "Photos" | "Imaging" | "Engage";
   panelId: string;
   labelledBy: string;
   tabs: ReactNode;

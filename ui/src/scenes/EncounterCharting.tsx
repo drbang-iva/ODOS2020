@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Condition, Encounter, Patient } from "@medplum/fhirtypes";
 import { ChartSidebar } from "../components/ChartSidebar";
+import { DiagnosisImagingRegion } from "../components/charting/DiagnosisImagingRegion";
 import { LongitudinalImagingCard } from "../components/LongitudinalImagingCard";
 import { EngageSheet, type EngageDiagnosis } from "../components/comms/EngageSheet";
 import { ReferralCompose } from "../components/referral/ReferralCompose";
@@ -791,7 +792,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
         ? "Encounter details unavailable — Visit & charges cannot be changed"
         : undefined);
   const visitChargesDisabled = currentEncounterLoadState.status !== "ready" || isMigratedEncounter(encounter);
-  const rightPanelAvailable = Boolean(activeExamOverviewProjection) && !boardEditorOpen;
+  const rightPanelAvailable = (Boolean(activeExamOverviewProjection) || chartView === "diagnosis") && !boardEditorOpen;
   const rightPanelForward = rightPanelAvailable && !visitChargesOpen;
   const entryTabTitle = entrySheetSection
     ? examRightPanelEntryTitle(entrySheetSection, EXAM_ENTRY_SHEET_CONFIG[entrySheetSection].title)
@@ -841,7 +842,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
       {rightPanelAvailable && (
         <div className="odos-exam-panel-launchers" aria-label="Exam panel shortcuts">
           <button type="button" onClick={() => setRightPanelState((current) => selectExamRightPanelTab(current, "images"))}>
-            Images{rightPanelImageCount > 0 ? ` · ${rightPanelImageCount}` : ""}
+            Photos{rightPanelImageCount > 0 ? ` · ${rightPanelImageCount}` : ""}
           </button>
           <button type="button" onClick={() => openEngage()}>Engage</button>
         </div>
@@ -1185,7 +1186,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
         {rightPanelForward && (
           <ExamRightPanelSurface
             active={rightPanelState.activeTab === "images"}
-            label="Images"
+            label="Photos"
             panelId={EXAM_RIGHT_PANEL_IDS.images}
             labelledBy="images-panel-images-tab"
             tabs={rightPanelTabs("images-panel")}
@@ -1194,6 +1195,17 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
               patientReference={patientReference}
               onCountChange={setRightPanelImageCount}
             />
+          </ExamRightPanelSurface>
+        )}
+        {rightPanelForward && (
+          <ExamRightPanelSurface
+            active={rightPanelState.activeTab === "imaging"}
+            label="Imaging"
+            panelId={EXAM_RIGHT_PANEL_IDS.imaging}
+            labelledBy="imaging-panel-imaging-tab"
+            tabs={rightPanelTabs("imaging-panel")}
+          >
+            <DiagnosisImagingRegion patientReference={patientReference} />
           </ExamRightPanelSurface>
         )}
         <VisitChargesSheet

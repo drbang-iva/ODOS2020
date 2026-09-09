@@ -245,7 +245,7 @@ test("a tall real editor has a vertical reachability path in the capped bottom s
   }
 });
 
-test("switching to Images parks an in-progress entry sheet and resumes its local state", { timeout: 30_000 }, async () => {
+test("switching to Photos parks an in-progress entry sheet and resumes its local state", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
   try {
@@ -254,7 +254,7 @@ test("switching to Images parks an in-progress entry sheet and resumes its local
     const value = page.getByRole("combobox", { name: "OD IOP value" });
     await value.fill("16");
 
-    await page.getByRole("tab", { name: /^Images/ }).click();
+    await page.getByRole("tab", { name: /^Photos/ }).click();
     assert.equal(await page.locator('[data-entry-sheet-section="iop"]').count(), 1, "parking must keep the entry sheet mounted");
     assert.equal(await page.getByRole("tab", { name: "Intraocular Pressure" }).getAttribute("data-parked"), "true");
 
@@ -288,7 +288,7 @@ test("the entry tab exists only while an entry sheet is open", { timeout: 30_000
   page.setDefaultTimeout(5_000);
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
-    assert.equal(await page.getByRole("tab", { name: /^Images/ }).count(), 1);
+    assert.equal(await page.getByRole("tab", { name: /^Photos/ }).count(), 1);
     assert.equal(await page.getByRole("tab", { name: "Engage" }).count(), 1);
     assert.equal(await page.locator(".odos-exam-right-panel-count-badge").first().textContent(), "2");
     assert.equal(await page.locator('[role="tab"][data-entry-tab="true"]').count(), 0);
@@ -300,7 +300,7 @@ test("the entry tab exists only while an entry sheet is open", { timeout: 30_000
 
     await page.getByRole("button", { name: "Back to exam overview from Intraocular Pressure" }).click();
     assert.equal(await page.locator('[role="tab"][data-entry-tab="true"]').count(), 0);
-    assert.equal(await page.getByRole("tab", { name: /^Images/ }).getAttribute("aria-selected"), "true");
+    assert.equal(await page.getByRole("tab", { name: /^Photos/ }).getAttribute("aria-selected"), "true");
   } finally {
     await page.close();
   }
@@ -323,14 +323,17 @@ test("the panel tabs expose associations and use roving arrow-key focus", { time
   page.setDefaultTimeout(5_000);
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
-    const imagesTab = page.getByRole("tab", { name: /^Images/ });
-    const imagesPanel = page.getByRole("tabpanel", { name: "Images" });
+    const imagesTab = page.getByRole("tab", { name: /^Photos/ });
+    const imagesPanel = page.getByRole("tabpanel", { name: "Photos" });
     assert.equal(await imagesTab.getAttribute("tabindex"), "0");
     assert.equal(await imagesTab.getAttribute("aria-controls"), "exam-right-panel-images");
     assert.equal(await imagesPanel.getAttribute("id"), "exam-right-panel-images");
     assert.equal(await imagesPanel.getAttribute("aria-labelledby"), await imagesTab.getAttribute("id"));
 
     await imagesTab.press("ArrowRight");
+    const imagingTab = page.getByRole("tab", { name: "Imaging", exact: true });
+    await page.getByRole("tabpanel", { name: "Imaging", exact: true }).waitFor();
+    await imagingTab.press("ArrowRight");
     const engageTab = page.getByRole("tab", { name: "Engage" });
     await page.getByRole("tabpanel", { name: "Engage" }).waitFor();
     await page.waitForFunction(() => document.activeElement?.getAttribute("data-panel-tab") === "engage");
@@ -338,9 +341,11 @@ test("the panel tabs expose associations and use roving arrow-key focus", { time
     assert.equal(await engageTab.evaluate((node) => node === document.activeElement), true);
 
     await engageTab.press("ArrowLeft");
+    await page.getByRole("tabpanel", { name: "Imaging", exact: true }).waitFor();
+    await page.getByRole("tab", { name: "Imaging", exact: true }).press("ArrowLeft");
     await imagesPanel.waitFor();
     await page.waitForFunction(() => document.activeElement?.getAttribute("data-panel-tab") === "images");
-    assert.equal(await page.getByRole("tab", { name: /^Images/ }).evaluate((node) => node === document.activeElement), true);
+    assert.equal(await page.getByRole("tab", { name: /^Photos/ }).evaluate((node) => node === document.activeElement), true);
   } finally {
     await page.close();
   }
@@ -947,10 +952,10 @@ test("the widest mapped shape uses a bottom sheet while retaining visible exam c
   page.setDefaultTimeout(3_000);
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
-    assert.equal(await page.getByRole("tabpanel", { name: "Images" }).count(), 0, "Images must not land forward on narrow viewports");
+    assert.equal(await page.getByRole("tabpanel", { name: "Photos" }).count(), 0, "Photos must not land forward on narrow viewports");
     await page.getByRole("button", { name: "Open Visual Acuity" }).click();
     await page.getByRole("tab", { name: "Visual Acuity" }).waitFor();
-    await page.getByRole("tab", { name: /^Images/ }).waitFor();
+    await page.getByRole("tab", { name: /^Photos/ }).waitFor();
     await page.getByRole("tab", { name: "Engage" }).waitFor();
     const geometry = await page.evaluate(() => {
       const context = document.querySelector<HTMLElement>("[data-testid=fixture-exam-context]")!.getBoundingClientRect();

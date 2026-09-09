@@ -3273,9 +3273,62 @@ function activeContextTab(root: ReactTestInstance) {
   return root.findAllByType(ExamRightPanelTabs)[0]?.props.activeTab;
 }
 
-async function selectContextTab(root: ReactTestInstance, tab: "images" | "engage") {
+async function selectContextTab(root: ReactTestInstance, tab: "images" | "imaging" | "engage") {
   await act(async () => root.findAllByType(ExamRightPanelTabs)[0].props.onSelect(tab));
 }
+
+test("DXIMAGING both datasets are reachable in distinct tabs", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    await act(async () => chartViewButton(harness.renderer.root, "By diagnosis").props.onClick());
+    await selectContextTab(harness.renderer.root, "images");
+    const photos = harness.renderer.root.findAllByType(ExamRightPanelSurface).find((node) => node.props.active)!;
+    assert.equal(photos.props.label, "Photos");
+    assert.match(textContent(photos), /Synthetic clinical photo/);
+    assert.doesNotMatch(textContent(photos), /Synthetic diagnostic study/);
+    await selectContextTab(harness.renderer.root, "imaging");
+    const imaging = harness.renderer.root.findAllByType(ExamRightPanelSurface).find((node) => node.props.active)!;
+    assert.equal(imaging.props.label, "Imaging");
+    assert.match(textContent(imaging), /Synthetic diagnostic study/);
+    assert.doesNotMatch(textContent(imaging), /Synthetic clinical photo/);
+  } finally { harness.restore(); }
+});
+
+test("DXIMAGING ordinary imaging survives a missing projection", async () => {
+  const harness = await renderEncounter(null, { captureOverviewErrors: true });
+  try {
+    await act(async () => chartViewButton(harness.renderer.root, "By diagnosis").props.onClick());
+    assert.ok(harness.renderer.root.findAllByType(ExamRightPanelTabs).length);
+    await selectContextTab(harness.renderer.root, "imaging");
+    const panel = harness.renderer.root.findAllByType(ExamRightPanelSurface).find((node) => node.props.active)!;
+    assert.match(textContent(panel), /Synthetic diagnostic study/);
+  } finally { harness.restore(); }
+});
+
+test("DXIMAGING diagnosis owns no imaging strip", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    await act(async () => chartViewButton(harness.renderer.root, "By diagnosis").props.onClick());
+    assert.equal(harness.renderer.root.findByType(DiagnosisWorkspace).findAll((node) => node.props.className?.includes?.("odos-diagnosis-imaging")).length, 0);
+  } finally { harness.restore(); }
+});
+
+test("DXIMAGING imaging preference survives stages with four tabs", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    await act(async () => editorControl(harness.renderer.root, "hpi").props.onClick());
+    const tabs = harness.renderer.root.findAllByType(ExamRightPanelTabs)[0];
+    assert.equal(tabs.findAllByProps({ role: "tab" }).length, 4);
+    await selectContextTab(harness.renderer.root, "imaging");
+    await act(async () => chartViewButton(harness.renderer.root, "By diagnosis").props.onClick());
+    assert.equal(activeContextTab(harness.renderer.root), "imaging");
+    await act(async () => chartViewButton(harness.renderer.root, "By structure").props.onClick());
+    assert.equal(activeContextTab(harness.renderer.root), "imaging");
+    await act(async () => editorControl(harness.renderer.root, "hpi").props.onClick());
+    await act(async () => chartViewButton(harness.renderer.root, "By diagnosis").props.onClick());
+    assert.equal(activeContextTab(harness.renderer.root), "imaging");
+  } finally { harness.restore(); }
+});
 
 test("C1 tab survives a stage change", async () => {
   const harness = await renderEncounter(PROJECTION);
@@ -3294,7 +3347,7 @@ test("C1 panel is available off the structure stage", async () => {
   try {
     await act(async () => chartViewButton(harness.renderer.root, "By diagnosis").props.onClick());
     const panels = harness.renderer.root.findAllByType(ExamRightPanelSurface);
-    assert.equal(panels.length, 1);
+    assert.equal(panels.length, 2);
     assert.equal(panels[0].props.active, true);
     assert.equal(harness.renderer.root.findByProps({ className: "odos-charting-stage" }).props["data-entry-sheet-open"], "true");
   } finally { harness.restore(); }
@@ -3303,7 +3356,7 @@ test("C1 panel is available off the structure stage", async () => {
 test("C1 modal editor still suppresses the panel", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
-    assert.equal(harness.renderer.root.findAllByType(ExamRightPanelSurface).length, 1);
+    assert.equal(harness.renderer.root.findAllByType(ExamRightPanelSurface).length, 2);
     await act(async () => editorControl(harness.renderer.root, "refraction").props.onClick());
     assert.equal(harness.renderer.root.findAllByType(RefractionSection).length, 1);
     assert.equal(harness.renderer.root.findAllByType(ExamRightPanelSurface).length, 0);
@@ -4075,8 +4128,11 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     if (url.includes("/clinical-graph/encounters/exam-1/previous-exams")) {
       return jsonResponse({ pageSize: 4, encounters: [] });
     }
+    if (url.includes("/clinical-graph/longitudinal-imaging?")) {
+      return jsonResponse({ images: [{ mediaReference: "Media/photo", title: "Synthetic clinical photo", createdAt: "2026-09-09", contentType: "image/png", contentState: "missing", structure: "Lid margin" }] });
+    }
     if (url.includes("/clinical-graph/imaging")) {
-      return jsonResponse({ images: [] });
+      return jsonResponse({ images: [{ id: "study", title: "Synthetic diagnostic study", date: "2026-09-09", contentType: "image/png", contentState: "missing" }] });
     }
     return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
   }) as typeof fetch;
