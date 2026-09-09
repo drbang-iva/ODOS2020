@@ -55,6 +55,8 @@ try {
   await page.goto('http://127.0.0.1:19521/tests/fixtures/entry-sheets.html?negativeAct=1');
   const button=page.getByRole('button',{name:'Anterior All Normal',exact:true});
   await button.waitFor();
+  await page.getByText("Loading ocular-health findings...", {exact:true}).waitFor({state:"hidden"});
+  await page.getByText("Cornea", {exact:true}).waitFor();
   await page.screenshot({path:'/tmp/exam-1b-evidence/browser-before.png',fullPage:true});
   await button.click();
   await page.getByRole('button',{name:'Save Ocular Health',exact:true}).click();
@@ -66,7 +68,7 @@ try {
   await page.screenshot({path:'/tmp/exam-1b-evidence/browser-partial-failure.png',fullPage:true});
   fail=false;
   await button.click();
-  await page.getByText('1/3 ocular-health structures saved',{exact:true}).waitFor();
+  await page.getByText('3/3 ocular-health structures saved',{exact:true}).waitFor();
   assert.equal(posts.length,4);
   assert.equal(posts[3].stableKey,'ocular-health:anterior:cornea');
   assert.deepEqual(posts[3].body.eyes,corneaPost.body.eyes);

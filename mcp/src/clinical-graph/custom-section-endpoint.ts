@@ -675,7 +675,17 @@ function staffMay(role: PracticeRoleId, action: "chart.read" | "chart.write"): b
 
 function observationNegativeAct(observation: Observation): NegativeAct | undefined {
   const stored = componentString(observation, "NEGATIVE_ACT");
-  return stored ? JSON.parse(stored) as NegativeAct : undefined;
+  if (stored === undefined) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(stored);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new Error();
+    const { actorReference, ...act } = parsed as Record<string, unknown>;
+    const validated = negativeActSchema.safeParse(act);
+    if (!validated.success || typeof actorReference !== "string" || !actorReference.trim()) throw new Error();
+    return { ...validated.data, actorReference };
+  } catch {
+    throw new Error("Invalid persisted negative act; history cannot safely represent this assertion.");
+  }
 }
 
 

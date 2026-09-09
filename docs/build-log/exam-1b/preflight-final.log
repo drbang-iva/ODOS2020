@@ -1,0 +1,99 @@
+
+> odos2020@0.0.1 preflight
+> tsx scripts/shipped-cpt-guard.ts && tsx scripts/fhir-read-grant-check.ts && tsx scripts/preflight-lint.ts
+
+Shipped CPT literal guard: clean.
+FHIR read grant check: PASS (46 literal/marked resourceTypes under mcp/src + ui/src)
+FHIR operation grant coverage: PASS (843 read/write operations)
+Included source extensions: .ts, .tsx
+Excluded source directories: __tests__
+Excluded source extensions: all except .ts, .tsx
+Service-identity resourceTypes seen and excluded:
+- CodeSystem — claim reason catalog maintenance through the explicit service client after claims.manage authentication
+- Project — service identity resolves the practice owner for owner-only permission administration
+- ProjectMembership — service identity authorization context
+- User — service identity account resolution
+Service-identity FHIR write call sites excluded (34):
+- mcp/src/authz/liveAudit.ts:459 client.create AuditEvent — Dedicated audit projection client.
+- mcp/src/clinical-graph/protocol-store.ts:139 this.fhir.delete Basic — ProtocolDefinitionStore is constructed with the process service client.
+- mcp/src/fax/inbound-fax.ts:328 this.fhir.create AuditEvent — Inbound fax triage service receives the explicit serviceFhir client.
+- mcp/src/fax/inbound-fax.ts:426 this.fhir.create AuditEvent — Inbound fax triage service receives the explicit serviceFhir client.
+- mcp/src/fax/inbound-fax.ts:446 this.fhir.create AuditEvent — Inbound fax triage service receives the explicit serviceFhir client.
+- mcp/src/fax/inbound-fax.ts:472 this.fhir.create AuditEvent — Inbound fax triage service receives the explicit serviceFhir client.
+- mcp/src/index.ts:3242 fhir.create VisionPrescription — MCP process service client.
+- mcp/src/index.ts:3624 fhir.create AllergyIntolerance — MCP process service client.
+- mcp/src/index.ts:3678 fhir.create CareTeam — MCP process service client.
+- mcp/src/index.ts:3827 fhir.create DeviceDefinition — MCP process service client.
+- mcp/src/index.ts:3855 fhir.create ConceptMap — MCP process service client.
+- mcp/src/index.ts:3878 fhir.create Substance — MCP process service client.
+- mcp/src/index.ts:4208 fhir.create AdverseEvent — MCP process service client.
+- mcp/src/index.ts:5309 fhir.create BodyStructure — MCP process service client.
+- mcp/src/index.ts:7779 fhir.patch AccessPolicy — Policy sync uses the MCP process service client.
+- mcp/src/legacy-import/appointment-encounter-import.ts:657 input.fhir.create Practitioner — Operator migration importer service identity.
+- mcp/src/legacy-import/appointment-encounter-import.ts:674 input.fhir.update Practitioner — Operator migration importer service identity.
+- mcp/src/legacy-import/ccda-import.ts:394 input.fhir.create ImportableResource — Operator legacy C-CDA importer service identity; generic resolves to the imported resource union.
+- mcp/src/payments/payment-credit-service.ts:312 fhir.update PaymentReconciliation — Payment lifecycle dependency is the MCP process service client.
+- mcp/src/referral/referral-endpoint.ts:329 deps.serviceFhir.create AuditEvent — Explicit referral service client.
+- mcp/src/referral/referral-endpoint.ts:358 deps.serviceFhir.create AuditEvent — Explicit referral service client.
+- mcp/src/referral/referral-endpoint.ts:566 deps.serviceFhir.create AuditEvent — Explicit referral service client.
+- mcp/src/referral/referral-endpoint.ts:574 deps.serviceFhir.create AuditEvent — Explicit referral service client.
+- mcp/src/scheduling/scheduling-resource-service.ts:125 fhir.update Schedule — Scheduling resource service receives the explicit serviceFhir client.
+- mcp/src/weno/weno-search-routes.ts:193 deps.serviceFhir.update MedicationRequest — WENO service client reserves the message id after authenticated Staff action; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:206 deps.serviceFhir.update MedicationRequest — WENO service client records an indeterminate external outcome; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:234 deps.serviceFhir.update MedicationRequest — WENO service client records the accepted electronic transmission; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:240 deps.serviceFhir.update MedicationRequest — WENO service client records a structured external error; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:306 deps.serviceFhir.update MedicationRequest — WENO service client reserves a CancelRx outcome before transport; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:319 deps.serviceFhir.update MedicationRequest — WENO service client records an indeterminate CancelRx outcome; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:347 deps.serviceFhir.update MedicationRequest — WENO service client records an accepted CancelRx response; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:358 deps.serviceFhir.update MedicationRequest — WENO service client records a structured CancelRx error; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:436 deps.serviceFhir.update MedicationRequest — WENO service client clears a verified indeterminate send reservation; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:507 deps.serviceFhir.update MedicationRequest — WENO service client clears a verified indeterminate CancelRx reservation; audit retains the Staff actor.
+SUSPECTED BROKEN FEATURE — known ungranted practice-role write call sites (0):
+Non-FHIR literal call sites excluded:
+- mcp/src/bulk-data/router.ts:141 router.delete("/bulk-export/status/:jobId") — Express route registration, not a FHIR delete.
+- mcp/src/clinical-graph/manual-procedure-charge-endpoint.ts:83 app.patch("/clinical-graph/protocols/encounters/:encounterId/procedure-charges/:proposalId") — Express route registration, not a FHIR patch.
+- mcp/src/desk/staff-permissions.ts:118 app.patch("/desk/staff/permissions/:membershipId") — Express route registration, not a FHIR patch.
+- mcp/src/index.ts:6829 app.patch("/clinical-graph/protocols/:id/draft") — Express route registration, not a FHIR patch.
+- mcp/src/referral/referral-routes.ts:128 app.patch("/referrals/patients/:patientId/:referralId") — Express route registration, not a FHIR patch.
+- mcp/src/smart/authorization-server.ts:573 router.delete("/grants/:grantId") — Express route registration, not a FHIR delete.
+- ui/src/scenes/ProtocolLibrary.tsx:916 url.searchParams.delete("protocol") — Browser URLSearchParams mutation, not a FHIR delete.
+Criteria-scoped resource types (29): Account, AdverseEvent, AllergyIntolerance, Basic, BodyStructure, CarePlan, CareTeam, ChargeItem, Communication, Condition, Coverage, Device, DeviceRequest, DiagnosticReport, DocumentReference, Encounter, EpisodeOfCare, Goal, Media, MedicationAdministration, MedicationRequest, MedicationStatement, Observation, Patient, Procedure, Provenance, QuestionnaireResponse, RelatedPerson, ServiceRequest
+Criteria-dependent operation scope coverage:
+- Account: 2 operations; 0 scope-verified; 2 NOT SCOPE-VERIFIED
+- AdverseEvent: 2 operations; 0 scope-verified; 2 NOT SCOPE-VERIFIED
+- AllergyIntolerance: 2 operations; 0 scope-verified; 2 NOT SCOPE-VERIFIED
+- Basic: 110 operations; 6 scope-verified; 104 NOT SCOPE-VERIFIED
+- BodyStructure: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- CarePlan: 5 operations; 0 scope-verified; 5 NOT SCOPE-VERIFIED
+- CareTeam: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- ChargeItem: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- Communication: 7 operations; 0 scope-verified; 7 NOT SCOPE-VERIFIED
+- Condition: 12 operations; 0 scope-verified; 12 NOT SCOPE-VERIFIED
+- Coverage: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- Device: 6 operations; 0 scope-verified; 6 NOT SCOPE-VERIFIED
+- DeviceRequest: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- DiagnosticReport: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- DocumentReference: 14 operations; 0 scope-verified; 14 NOT SCOPE-VERIFIED
+- Encounter: 9 operations; 0 scope-verified; 9 NOT SCOPE-VERIFIED
+- EpisodeOfCare: 5 operations; 0 scope-verified; 5 NOT SCOPE-VERIFIED
+- Goal: 2 operations; 0 scope-verified; 2 NOT SCOPE-VERIFIED
+- Media: 5 operations; 0 scope-verified; 5 NOT SCOPE-VERIFIED
+- MedicationAdministration: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- MedicationRequest: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- MedicationStatement: 6 operations; 0 scope-verified; 6 NOT SCOPE-VERIFIED
+- Observation: 21 operations; 0 scope-verified; 21 NOT SCOPE-VERIFIED
+- Patient: 5 operations; 0 scope-verified; 5 NOT SCOPE-VERIFIED
+- Procedure: 11 operations; 0 scope-verified; 11 NOT SCOPE-VERIFIED
+- Provenance: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- QuestionnaireResponse: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- RelatedPerson: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- ServiceRequest: 8 operations; 0 scope-verified; 8 NOT SCOPE-VERIFIED
+Limitations:
+- Computed read resourceTypes escape this scan.
+- Computed create resources require a generic resource type, an object-literal resourceType, or an fhir-scope-contract marker; other computed creates escape this scan.
+- Computed update, delete, and patch resourceTypes escape this scan.
+- A computed search is marker-checked only when its argument is named resourceType, resource_type, or .resourceType; other names escape because receiver-independent matching would misclassify non-FHIR search APIs.
+- Marked helper propagation follows named parameters; destructured or object-property resourceType forwarding escapes this scan.
+- Marked helper propagation is function-name based across scanned roots; an imported helper alias escapes unless its local name matches, and same-named non-FHIR helpers require the explicit call-site allowlist.
+- Type-level comparison does not prove criteria scope; criteria-dependent operations without an exact fhir-scope-contract are counted as NOT SCOPE-VERIFIED.
+ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md

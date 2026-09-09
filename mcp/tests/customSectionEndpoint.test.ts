@@ -3543,3 +3543,18 @@ test("EXAM-1B refuses invented negative codes, empty scope, wrong eye, and actor
   }
   assert.equal(fhir.observations.length, 0);
 });
+
+test("EXAM-1B malformed persisted scope fails closed instead of becoming derived normal", async () => {
+  const fhir = new MemoryFhir();
+  const definition = (await catalog(fhir)).find((row) => row.stableKey === "ocular-health:anterior:lens")!;
+  const deps = clinicalDeps("provider", fhir, [definition]);
+  await handleCustomSectionCaptureRequest(deps, { authHeader: AUTH, params: { stableKey: definition.stableKey }, body: {
+    patientReference: "Patient/malformed", encounterReference: "Encounter/malformed", eyes: { OD: { state: "normal", customFields: [] } },
+  } });
+  const component = { code: { coding: [{ code: "NEGATIVE_ACT" }] }, valueString: "{}" };
+  fhir.observations[0]!.component!.push(component);
+  for (const stored of ["{}", "{", JSON.stringify({ actorReference: "Practitioner/doc-1", optionCodes: "wrong-type" })]) {
+    component.valueString = stored;
+    await assert.rejects(() => handleCustomSectionHistoryRequest(deps, { authHeader: AUTH, params: { stableKey: definition.stableKey }, query: { patient: "Patient/malformed" } }), /Invalid persisted negative act/);
+  }
+});

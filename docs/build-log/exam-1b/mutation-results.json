@@ -45,7 +45,7 @@
       "--import",
       "tsx",
       "--test",
-      "--test-name-pattern=EXAM-1B.*(partial|browser)",
+      "--test-name-pattern=EXAM-1B.*(partial|browser|retry)",
       "tests/customSections.test.tsx",
       "tests/entrySheets.test.tsx"
     ],
@@ -61,6 +61,19 @@
       "--test",
       "--test-name-pattern=EXAM-1B identical",
       "tests/customSectionEndpoint.test.ts"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "demonstration": "6-parent",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B partial",
+      "tests/customSections.test.tsx"
     ],
     "redExit": 1,
     "greenExit": 0

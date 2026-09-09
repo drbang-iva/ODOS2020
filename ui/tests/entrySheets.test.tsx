@@ -1125,7 +1125,7 @@ test("EXAM-1B browser names partial failure and retries only the failed structur
     assert.equal((await page.locator("body").innerText()).includes("3/3 ocular-health structures saved"), false);
     fail = false;
     await allNormal.click();
-    await page.getByText("1/3 ocular-health structures saved", { exact: true }).waitFor();
+    await page.getByText("3/3 ocular-health structures saved", { exact: true }).waitFor();
     assert.equal(requests.length, 4);
     assert.equal(requests[3]!.key, definitions[1]!.stableKey);
     assert.equal(requests[3]!.eyes.OD!.negativeAct!.id, firstId);

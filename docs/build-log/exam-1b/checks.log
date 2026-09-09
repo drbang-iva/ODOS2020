@@ -1,43 +1,52 @@
 $ npm --prefix ui test
 Exit status: 0
+ok 1287 - P2 a late previous-encounter response cannot replace the new encounter's Wearing values
+  ---
+  duration_ms: 25.455125
   type: 'test'
   ...
-1..1285
-# tests 1290
+1..1287
+# tests 1292
 # suites 0
-# pass 1290
+# pass 1292
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 183883.406209
+# duration_ms 183970.784167
 
 $ ODOS_POSTGRES_URL=<isolated localhost:15932 database> npm --prefix mcp test
 Exit status: 1
+  ---
+  duration_ms: 0.507125
+  type: 'test'
   ...
-1..3835
-# tests 4370
+1..3836
+# tests 4371
 # suites 0
-# pass 4325
+# pass 4326
 # fail 0
 # cancelled 0
 # skipped 45
 # todo 0
-# duration_ms 90626.377084
+# duration_ms 86890.674084
 ⚠️  LIVE STACK NOT CONFIGURED — 41 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them.
 
 $ ODOS_ALLOW_UNGATED_MCP=1 ODOS_POSTGRES_URL=<isolated localhost:15932 database> npm --prefix mcp test
 Exit status: 0
+  ---
+  duration_ms: 0.545166
+  type: 'test'
   ...
-1..3835
-# tests 4370
+1..3836
+# tests 4371
 # suites 0
-# pass 4325
+# pass 4326
 # fail 0
 # cancelled 0
 # skipped 45
 # todo 0
-# duration_ms 82863.64675
+# duration_ms 89416.7025
 ⚠️  LIVE STACK NOT CONFIGURED — 41 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.
 
 $ cd ui && ./node_modules/.bin/tsc --noEmit --skipLibCheck
@@ -50,6 +59,9 @@ Exit status: 0
 
 $ npm run preflight
 Exit status: 0
+- Procedure: 11 operations; 0 scope-verified; 11 NOT SCOPE-VERIFIED
+- Provenance: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- QuestionnaireResponse: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
 - RelatedPerson: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
 - ServiceRequest: 8 operations; 0 scope-verified; 8 NOT SCOPE-VERIFIED
 Limitations:

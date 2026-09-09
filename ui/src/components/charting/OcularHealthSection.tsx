@@ -119,6 +119,7 @@ export function OcularHealthSection({
   const [savedDiagnosisObservations, setSavedDiagnosisObservations] = useState<Record<string, Partial<Record<Eye, string>>>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [failedKeys, setFailedKeys] = useState<string[]>([]);
+  const [pendingSavedKeys, setPendingSavedKeys] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);
   const { onCleared } = useEncounterEdit();
@@ -149,6 +150,7 @@ export function OcularHealthSection({
     setLoading(true);
     setError(null);
     setFailedKeys([]);
+    setPendingSavedKeys([]);
     setMessage(null);
     setCurrentHistory(null);
     setPriors({});
@@ -352,7 +354,11 @@ export function OcularHealthSection({
   }
 
   function allNormal(prefix: string, label: string) {
-    const retry = definitions.filter((definition) => failedKeys.includes(definition.stableKey) &&
+    const dirtyKeys = new Set(changedDefinitions(definitions, captures, pristine).map((definition) => definition.stableKey));
+    const currentFailures = failedKeys.filter((key) => dirtyKeys.has(key));
+    setFailedKeys(currentFailures);
+    if (!currentFailures.length) setError(null);
+    const retry = definitions.filter((definition) => currentFailures.includes(definition.stableKey) &&
       (definition.stableKey.startsWith(prefix) || (prefix === ANTERIOR_PREFIX && definition.stableKey === DRY_EYE_ANTERIOR_STABLE_KEY)));
     if (retry.length) return save(retry);
     const result = applySegmentAllNormal(definitions, captures, prefix);
@@ -364,12 +370,13 @@ export function OcularHealthSection({
   async function save(onlyDefinitions = definitions) {
     const dirtyDefinitions = changedDefinitions(onlyDefinitions, captures, pristine);
     const failures: string[] = [];
+    const successfulKeys: string[] = [];
     const failureNames: string[] = [];
     setSaving(true);
     setError(null);
     setMessage(null);
     try {
-      if (!dirtyDefinitions.length) throw new Error("Capture at least one ocular-health structure before saving.");
+      if (!dirtyDefinitions.length && !failedKeys.length && !pendingSavedKeys.length) throw new Error("Capture at least one ocular-health structure before saving.");
       for (const definition of dirtyDefinitions) {
         try {
           const field = abnormalField(definition);
@@ -447,24 +454,36 @@ export function OcularHealthSection({
               return [eye, sameCapture(capture, row[eye] ?? emptyEye()) ? savedRow[eye] : capture];
             })) as Record<Eye, EyeCapture>,
           }));
+          successfulKeys.push(definition.stableKey);
         } catch (caught) {
           failures.push(definition.stableKey);
           failureNames.push(`${definition.display} (${caught instanceof Error ? caught.message : String(caught)})`);
         }
       }
-      setFailedKeys((current) => [...current.filter((key) => !dirtyDefinitions.some((definition) => definition.stableKey === key)), ...failures]);
-      if (failures.length) {
-        setError(`Failed: ${failureNames.join("; ")}. ${dirtyDefinitions.length - failures.length} structures saved; retry only the failed structures with All Normal or Save.`);
+      const dirtyKeys = new Set(changedDefinitions(definitions, captures, pristine).map((definition) => definition.stableKey));
+      const unattemptedFailures = failedKeys.filter((key) => dirtyKeys.has(key) && !dirtyDefinitions.some((definition) => definition.stableKey === key));
+      const remainingFailures = [...unattemptedFailures, ...failures];
+      const remainingFailureNames = [...unattemptedFailures.map((key) => definitions.find((definition) => definition.stableKey === key)!.display), ...failureNames];
+      const allSavedKeys = [...new Set([...pendingSavedKeys, ...successfulKeys])];
+      setPendingSavedKeys(allSavedKeys);
+      setFailedKeys(remainingFailures);
+      if (remainingFailures.length) {
+        setError(`Failed: ${remainingFailureNames.join("; ")}. ${allSavedKeys.length} structures saved; retry only the failed structures with All Normal or Save.`);
+        return;
+      }
+      if (!allSavedKeys.length) {
+        setMessage("No unsaved changes.");
         return;
       }
       const status = {
         completed: true,
-        summary: `${dirtyDefinitions.length}/${definitions.length} ocular-health structures saved`,
+        summary: `${allSavedKeys.length}/${definitions.length} ocular-health structures saved`,
         savedAt: new Date().toISOString(),
         operator: "ODOS UI ocular health",
       };
       setMessage(status.summary);
-      onSaved(status, dirtyDefinitions.map((definition) => definition.stableKey));
+      onSaved(status, allSavedKeys);
+      setPendingSavedKeys([]);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {

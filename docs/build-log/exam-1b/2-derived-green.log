@@ -4,7 +4,7 @@ TAP version 13
 # Subtest: EXAM-1B freezes negative scope against an added seed option and distinguishes derived normal
 ok 1 - EXAM-1B freezes negative scope against an added seed option and distinguishes derived normal
   ---
-  duration_ms: 4.005667
+  duration_ms: 4.289792
   type: 'test'
   ...
 1..1
@@ -15,4 +15,4 @@ ok 1 - EXAM-1B freezes negative scope against an added seed option and distingui
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 202.987375
+# duration_ms 203.650542

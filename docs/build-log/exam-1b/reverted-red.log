@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: EXAM-1B reverted failed edit cannot trap All Normal in an empty retry
+not ok 1 - EXAM-1B reverted failed edit cannot trap All Normal in an empty retry
+  ---
+  duration_ms: 25.1875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/customSections.test.tsx:1:142260'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input was expected to not match the regular expression /Capture at least|Failed:/. Input:
+    
+    'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalClearAnterior SegmentPeriocular AdnexaODCopy to OS →Not performed / deferredNo explicit negative assertion recordedLive periocular-adnexa normal.What is presentFindingOtherOS← Copy to ODNot performed / deferredNo explicit negative assertion recordedLive periocular-adnexa normal.What is presentFindingOtherCapture at least one ocular-health structure before saving.Save Ocular Health'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalClearAnterior SegmentPeriocular AdnexaODCopy to OS →Not performed / deferredNo explicit negative assertion recordedLive periocular-adnexa normal.What is presentFindingOtherOS← Copy to ODNot performed / deferredNo explicit negative assertion recordedLive periocular-adnexa normal.What is presentFindingOtherCapture at least one ocular-health structure before saving.Save Ocular Health'
+  operator: 'doesNotMatch'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/customSections.test.tsx:4393:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 691.977292

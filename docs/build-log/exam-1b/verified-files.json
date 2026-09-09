@@ -1,8 +1,8 @@
 {
-  "mcp/src/clinical-graph/custom-section-endpoint.ts": "9b2e47ed559fd2c8643853f1a65a8d815046b41dec16673fe095e14f20889445",
-  "mcp/tests/customSectionEndpoint.test.ts": "9626e6e4313913fc5d491060110d35eb6067db7a741b14dec816db09b648ff60",
-  "ui/src/components/charting/OcularHealthSection.tsx": "cc8e991bfe91c29e8c4d6c981e635565134f9c9684c95111ce63d69092370302",
-  "ui/tests/customSections.test.tsx": "e86403c7c17e31e6076ceae40d899e0c835dc4afcef3aaaebbebde0ae17b865f",
-  "ui/tests/entrySheets.test.tsx": "7dea698f88fefb75e5450eaf4864ad4dc1be547b62f1a2880d5465b573b23f17",
+  "mcp/src/clinical-graph/custom-section-endpoint.ts": "132e416b0d5fb37fcdb2a2c05cd3814111d19a92d533f2beccd1e59165a25410",
+  "mcp/tests/customSectionEndpoint.test.ts": "15ac3a1537fa5bb7392f6120d86980439947e01d8c61606d5bb3ff44fc076638",
+  "ui/src/components/charting/OcularHealthSection.tsx": "d655e1df10752666638c889e21d30b34553cd3ba643ac60843882ff6c40ea7a3",
+  "ui/tests/customSections.test.tsx": "8a474b66269a1a75d85b8dc75a0ab8257f5eda161bfa0f6a216bc39f693ba6f7",
+  "ui/tests/entrySheets.test.tsx": "9f249fd636f7bd17e516b34a508580c19acd2c1a78456120eb64c293653f20b2",
   "ui/tests/fixtures/entry-sheets.tsx": "c0a9adcf7dc8f8c11f58673f9bdd71aaa02df03b5b4cab3428ca552a867277de"
 }

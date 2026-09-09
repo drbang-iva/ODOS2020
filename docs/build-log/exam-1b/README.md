@@ -24,9 +24,9 @@ The eye Observation stores a `NEGATIVE_ACT` component containing the explicit me
 
 [checks.log](checks.log) contains command output excerpts and each command's own exit status; [check-exits.json](check-exits.json) points to complete local logs.
 
-- UI: 1,290 passed, 0 failed, 0 skipped; exit 0.
-- MCP strict command: 4,325 passed, 0 failed, 45 skipped; **exit 1** because 41 required live-authorization cases were not configured.
-- MCP documented tests-only mode (`ODOS_ALLOW_UNGATED_MCP=1`): 4,325 passed, 0 failed, 45 skipped; exit 0. This is not authorization coverage.
+- UI: 1,292 passed, 0 failed, 0 skipped; exit 0.
+- MCP strict command: 4,326 passed, 0 failed, 45 skipped; **exit 1** because 41 required live-authorization cases were not configured.
+- MCP documented tests-only mode (`ODOS_ALLOW_UNGATED_MCP=1`): 4,326 passed, 0 failed, 45 skipped; exit 0. This is not authorization coverage.
 - UI and MCP typechecks: exit 0, no output.
 - Preflight: 0 warnings, 0 hard blocks; exit 0.
 - Proxy census: all 24 discovered backend families have entries in the 27-entry proxy table; reporting-only, exit 0.
@@ -41,6 +41,7 @@ Each RED and restored GREEN log is included; [mutation-results.json](mutation-re
 3-per-eye: RED exit 1; restored GREEN exit 0
 4-partial: RED exit 1; restored GREEN exit 0
 5-replay: RED exit 1; restored GREEN exit 0
+6-parent: RED exit 1; restored GREEN exit 0
 ```
 
 1. A synthetic definition is built from its seed, asserted, then rebuilt after a new seed option is added. The new code remains uncovered. Deriving coverage from current options makes the guard fail. [RED](1-frozen-red.log) / [GREEN](1-frozen-green.log).
@@ -48,6 +49,10 @@ Each RED and restored GREEN log is included; [mutation-results.json](mutation-re
 3. A touched OD stays untouched while OS is asserted. Reintroducing a whole-structure skip makes the guard fail. [RED](3-per-eye-red.log) / [GREEN](3-per-eye-green.log).
 4. React and Chromium checks require a named failure, no whole-segment success claim, and only the failed structure retried with its unchanged assertion ID. Replacing the error with a success message fails both checks. [RED](4-partial-red.log) / [GREEN](4-partial-green.log).
 5. Extra replay guard: removing conditional Observation creation produces a second assertion and fails. [RED](5-replay-red.log) / [GREEN](5-replay-green.log).
+
+6. Parent notification guard: discarding previously saved structure keys on retry fails. [RED](6-parent-red.log) / [GREEN](6-parent-green.log).
+
+Review fixbacks also reproduce a reverted failed edit and corrupt persisted assertion metadata before repair (both exit 1), then pass after repair. Failed keys are pruned when edits are reverted; other segment failures remain visible. Previously successful keys reach the parent on final retry. Persisted assertion metadata is validated and corruption explicitly refuses history instead of silently becoming derived normal. [UI GREEN](review-ui-green.log) / [MCP GREEN](review-mcp-green.log).
 
 Restored test output:
 
