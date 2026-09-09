@@ -471,6 +471,11 @@ export function OcularHealthSection({
         setError(`Failed: ${remainingFailureNames.join("; ")}. ${allSavedKeys.length} structures saved; retry only the failed structures with All Normal or Save.`);
         return;
       }
+      const unsavedDefinitions = definitions.filter((definition) => dirtyKeys.has(definition.stableKey) && !successfulKeys.includes(definition.stableKey));
+      if (unsavedDefinitions.length) {
+        setMessage(`Unsaved changes: ${unsavedDefinitions.map((definition) => definition.display).join("; ")}. Use Save Ocular Health to persist these edits.`);
+        return;
+      }
       if (!allSavedKeys.length) {
         setMessage("No unsaved changes.");
         return;

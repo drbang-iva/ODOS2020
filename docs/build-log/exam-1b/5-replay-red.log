@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: EXAM-1B identical replay after a Provenance failure creates one assertion and one Provenance
 not ok 1 - EXAM-1B identical replay after a Provenance failure creates one assertion and one Provenance
   ---
-  duration_ms: 20.747125
+  duration_ms: 18.656958
   type: 'test'
   location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/mcp/tests/customSectionEndpoint.test.ts:1:116352'
   failureType: 'testCodeFailure'
@@ -104,4 +104,4 @@ not ok 1 - EXAM-1B identical replay after a Provenance failure creates one asser
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 250.451084
+# duration_ms 211.967667

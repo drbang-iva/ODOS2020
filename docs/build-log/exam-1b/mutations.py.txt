@@ -12,6 +12,7 @@ mutations=[
  ('3-per-eye',ui,'    next[definition.stableKey] = { ...row };','    if (touched(row.OD) || touched(row.OS)) { skipped += 2; continue; }\n    next[definition.stableKey] = { ...row };','ui',['tests/customSections.test.tsx'],'EXAM-1B per-eye'),
  ('4-partial',ui,'setError(`Failed: ${remainingFailureNames.join("; ")}. ${allSavedKeys.length} structures saved; retry only the failed structures with All Normal or Save.`);','setMessage(`${dirtyDefinitions.length}/${definitions.length} ocular-health structures saved`);','ui',['tests/customSections.test.tsx','tests/entrySheets.test.tsx'],'EXAM-1B.*(partial|browser|retry)'),
  ('5-replay',server,'...(identifier ? { "If-None-Exist": `identifier=${encodeURIComponent(`${identifier.system}|${identifier.value}`)}` } : {}),','...{},','mcp',['tests/customSectionEndpoint.test.ts'],'EXAM-1B identical'),
+ ('7-re-edit',ui,'if (unsavedDefinitions.length) {','if (false && unsavedDefinitions.length) {','ui',['tests/customSections.test.tsx'],'EXAM-1B re-edit'),
  ('6-parent',ui,'onSaved(status, allSavedKeys);','onSaved(status, dirtyDefinitions.map((definition) => definition.stableKey));','ui',['tests/customSections.test.tsx'],'EXAM-1B partial'),
 ]
 results=[]

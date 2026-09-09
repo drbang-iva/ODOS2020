@@ -2,19 +2,19 @@ TAP version 13
 # Subtest: EXAM-1B partial failure names the structure and All Normal retries only that failure
 not ok 1 - EXAM-1B partial failure names the structure and All Normal retries only that failure
   ---
-  duration_ms: 30.627959
+  duration_ms: 31.480292
   type: 'test'
   location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/customSections.test.tsx:1:138886'
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /Failed: Lids & Lashes/. Input:
     
-    'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalAnterior SegmentPeriocular AdnexaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.672Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.672Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherLids & LashesODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.672Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive lids-lashes normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.672Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive lids-lashes normal.What is presentFindingOtherPalpebral ConjunctivaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.672Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive palpebral-conjunctiva normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.672Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive palpebral-conjunctiva normal.What is presentFindingOther3/3 ocular-health structures savedSave Ocular Health'
+    'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalAnterior SegmentPeriocular AdnexaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.166Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.166Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherLids & LashesODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.166Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive lids-lashes normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.166Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive lids-lashes normal.What is presentFindingOtherPalpebral ConjunctivaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.166Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive palpebral-conjunctiva normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.166Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive palpebral-conjunctiva normal.What is presentFindingOther3/3 ocular-health structures savedSave Ocular Health'
     
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
-  actual: 'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalAnterior SegmentPeriocular AdnexaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.672Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.672Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherLids & LashesODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.672Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive lids-lashes normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.672Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive lids-lashes normal.What is presentFindingOtherPalpebral ConjunctivaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.672Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive palpebral-conjunctiva normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.672Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive palpebral-conjunctiva normal.What is presentFindingOther3/3 ocular-health structures savedSave Ocular Health'
+  actual: 'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalAnterior SegmentPeriocular AdnexaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.166Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.166Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherLids & LashesODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.166Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive lids-lashes normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.166Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive lids-lashes normal.What is presentFindingOtherPalpebral ConjunctivaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.166Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive palpebral-conjunctiva normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.166Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive palpebral-conjunctiva normal.What is presentFindingOther3/3 ocular-health structures savedSave Ocular Health'
   operator: 'match'
   stack: |-
     TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/customSections.test.tsx:4334:12)
@@ -24,19 +24,19 @@ not ok 1 - EXAM-1B partial failure names the structure and All Normal retries on
 # Subtest: EXAM-1B retry keeps the other segment failure visible until it succeeds
 not ok 2 - EXAM-1B retry keeps the other segment failure visible until it succeeds
   ---
-  duration_ms: 9.000708
+  duration_ms: 11.128333
   type: 'test'
   location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/customSections.test.tsx:1:140717'
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /Failed: Vitreous/. Input:
     
-    'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalStructuresAnterior SegmentPeriocular AdnexanormalPosterior SegmentVitreousnormalPrevNextAnterior SegmentPeriocular AdnexaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.687Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.687Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherPosterior SegmentVitreousODCopy to OS →1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.688Z · pending saveAbsent: FloatersExcluded: NoneNot covered: NoneLive vitreous normal.What is presentFloatersOtherOS← Copy to OD1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.688Z · pending saveAbsent: FloatersExcluded: NoneNot covered: NoneLive vitreous normal.What is presentFloatersOther1/2 ocular-health structures savedSave Ocular Health'
+    'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalStructuresAnterior SegmentPeriocular AdnexanormalPosterior SegmentVitreousnormalPrevNextAnterior SegmentPeriocular AdnexaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.181Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.181Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherPosterior SegmentVitreousODCopy to OS →1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.182Z · pending saveAbsent: FloatersExcluded: NoneNot covered: NoneLive vitreous normal.What is presentFloatersOtherOS← Copy to OD1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.182Z · pending saveAbsent: FloatersExcluded: NoneNot covered: NoneLive vitreous normal.What is presentFloatersOther1/2 ocular-health structures savedSave Ocular Health'
     
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
-  actual: 'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalStructuresAnterior SegmentPeriocular AdnexanormalPosterior SegmentVitreousnormalPrevNextAnterior SegmentPeriocular AdnexaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.687Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.687Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherPosterior SegmentVitreousODCopy to OS →1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.688Z · pending saveAbsent: FloatersExcluded: NoneNot covered: NoneLive vitreous normal.What is presentFloatersOtherOS← Copy to OD1 findings explicitly asserted absent · pending save2026-09-09T07:45:14.688Z · pending saveAbsent: FloatersExcluded: NoneNot covered: NoneLive vitreous normal.What is presentFloatersOther1/2 ocular-health structures savedSave Ocular Health'
+  actual: 'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalStructuresAnterior SegmentPeriocular AdnexanormalPosterior SegmentVitreousnormalPrevNextAnterior SegmentPeriocular AdnexaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.181Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.181Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherPosterior SegmentVitreousODCopy to OS →1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.182Z · pending saveAbsent: FloatersExcluded: NoneNot covered: NoneLive vitreous normal.What is presentFloatersOtherOS← Copy to OD1 findings explicitly asserted absent · pending save2026-09-09T07:57:21.182Z · pending saveAbsent: FloatersExcluded: NoneNot covered: NoneLive vitreous normal.What is presentFloatersOther1/2 ocular-health structures savedSave Ocular Health'
   operator: 'match'
   stack: |-
     TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/customSections.test.tsx:4365:12)
@@ -46,7 +46,7 @@ not ok 2 - EXAM-1B retry keeps the other segment failure visible until it succee
 # Subtest: EXAM-1B reverted failed edit cannot trap All Normal in an empty retry
 not ok 3 - EXAM-1B reverted failed edit cannot trap All Normal in an empty retry
   ---
-  duration_ms: 4.447459
+  duration_ms: 2.575042
   type: 'test'
   location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/customSections.test.tsx:1:142260'
   failureType: 'testCodeFailure'
@@ -65,10 +65,16 @@ not ok 3 - EXAM-1B reverted failed edit cannot trap All Normal in an empty retry
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
-# Subtest: EXAM-1B browser names partial failure and retries only the failed structure
-not ok 4 - EXAM-1B browser names partial failure and retries only the failed structure
+# Subtest: EXAM-1B re-edit after partial save remains unsaved when another structure is retried
+ok 4 - EXAM-1B re-edit after partial save remains unsaved when another structure is retried
   ---
-  duration_ms: 32194.793708
+  duration_ms: 7.248708
+  type: 'test'
+  ...
+# Subtest: EXAM-1B browser names partial failure and retries only the failed structure
+not ok 5 - EXAM-1B browser names partial failure and retries only the failed structure
+  ---
+  duration_ms: 32147.940208
   type: 'test'
   location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/entrySheets.test.tsx:1:43507'
   failureType: 'testCodeFailure'
@@ -82,12 +88,12 @@ not ok 4 - EXAM-1B browser names partial failure and retries only the failed str
   stack: |-
     TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/entrySheets.test.tsx:1122:52)
   ...
-1..4
-# tests 4
+1..5
+# tests 5
 # suites 0
-# pass 0
+# pass 1
 # fail 4
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 33037.916416
+# duration_ms 32969.729084

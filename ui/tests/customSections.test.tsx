@@ -4396,3 +4396,35 @@ test("EXAM-1B reverted failed edit cannot trap All Normal in an empty retry", as
     assert.equal(posts, 1);
   } finally { renderer?.unmount(); }
 });
+
+test("EXAM-1B re-edit after partial save remains unsaved when another structure is retried", async () => {
+  const definitions = ocularDefinitions().slice(0, 2);
+  const posts: string[] = [];
+  const saved: string[][] = [];
+  let fail = true;
+  const fetchImpl = (async (input, init) => {
+    if (init?.method !== "POST") return jsonResponse({ rows: [] });
+    const key = decodeURIComponent(String(input).split("/").at(-1)!);
+    posts.push(key);
+    return fail && key === definitions[1]!.stableKey ? new Response(JSON.stringify({ error: "Synthetic failure" }), { status: 503 }) : jsonResponse({ eyes: {} });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection definitions={definitions} patientReference="Patient/re-edit" encounterReference="Encounter/re-edit" onSaved={(_status, keys) => saved.push(keys)} apiBase="http://test" fetchImpl={fetchImpl} />);
+      await flushEffects();
+    });
+    const button = (label: string) => renderer.root.findAllByType("button").find((node) => renderedText(node) === label)!;
+    act(() => { button("Anterior All Normal").props.onClick(); });
+    await act(async () => { await button("Save Ocular Health").props.onClick(); });
+    act(() => { renderer.root.findAllByType("textarea")[0]!.props.onChange({ target: { value: "New finding after partial save" } }); });
+    fail = false;
+    await act(async () => { await button("Anterior All Normal").props.onClick(); });
+    assert.equal(saved.length, 0, "retry must not report an unsubmitted later edit as saved");
+    assert.match(renderedText(renderer.root), new RegExp(`Unsaved changes: ${definitions[0]!.display}`));
+    assert.deepEqual(posts, [definitions[0]!.stableKey, definitions[1]!.stableKey, definitions[1]!.stableKey]);
+    await act(async () => { await button("Save Ocular Health").props.onClick(); });
+    assert.deepEqual(posts, [definitions[0]!.stableKey, definitions[1]!.stableKey, definitions[1]!.stableKey, definitions[0]!.stableKey]);
+    assert.deepEqual(saved.flat().sort(), definitions.map((definition) => definition.stableKey).sort());
+  } finally { renderer?.unmount(); }
+});
