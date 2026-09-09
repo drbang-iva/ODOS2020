@@ -1,0 +1,41 @@
+TAP version 13
+# Subtest: DEFER-1 guard 2: the complete seed has exactly one deferrable definition
+not ok 1 - DEFER-1 guard 2: the complete seed has exactly one deferrable definition
+  ---
+  duration_ms: 14.251667
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/defer-dilation/mcp/tests/findingDefinitionStore.test.ts:1:19519'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        'entrance:dilation',
+    +   'future:defer-probe'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'entrance:dilation'
+  actual:
+    0: 'entrance:dilation'
+    1: 'future:defer-probe'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/defer-dilation/mcp/tests/findingDefinitionStore.test.ts:576:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 213.950209

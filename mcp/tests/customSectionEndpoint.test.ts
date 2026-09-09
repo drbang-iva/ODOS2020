@@ -549,7 +549,7 @@ test("finding qualifiers round-trip all four kinds independently by finding and 
   assert.equal(invalidRows[0]?.findingDetails?.["finding-a"]?.span, undefined);
 });
 
-test("ocular-health saves round-trip normal and abnormal interpretations without interpreting deferred", async () => {
+test("ocular-health saves round-trip normal and abnormal interpretations and refuse deferred", async () => {
   const fhir = new MemoryFhir();
   const definitions = await catalog(fhir);
   const lids = definitions.find((definition) =>
@@ -594,7 +594,8 @@ test("ocular-health saves round-trip normal and abnormal interpretations without
       },
     },
   );
-  assert.equal(deferred.status, 200, JSON.stringify(deferred.body));
+  assert.equal(deferred.status, 400, JSON.stringify(deferred.body));
+  assert.equal(fhir.observations.length, 2);
 
   assert.deepEqual(fhir.observations[0]?.interpretation, [{
     coding: [{
@@ -610,10 +611,9 @@ test("ocular-health saves round-trip normal and abnormal interpretations without
       display: "Normal",
     }],
   }]);
-  assert.equal(fhir.observations[2]?.interpretation, undefined);
   assert.deepEqual(fhir.observations.map((observation) =>
     component(observation, "EXAM_STATE")?.valueString
-  ), ["abnormal", "normal", "deferred"]);
+  ), ["abnormal", "normal"]);
 
   const projection = buildExamOverviewProjection({
     encounterReference: "Encounter/exam-overview-interpretation",
@@ -631,11 +631,10 @@ test("ocular-health saves round-trip normal and abnormal interpretations without
   ]), [
     ["ocular-health:anterior:lids-lashes", "OD", "abnormal", "examined"],
     ["ocular-health:anterior:lids-lashes", "OS", "normal", "examined"],
-    ["ocular-health:anterior:palpebral-conjunctiva", "OD", "unknown", "deferred-with-reason"],
   ]);
 });
 
-test("OH-1 seeds nine editable structures and persists explicit normal, abnormal, nested, other, and deferred states", async () => {
+test("OH-1 seeds nine editable structures, persists findings, and refuses deferred states", async () => {
   const fhir = new MemoryFhir();
   const definitions = await catalog(fhir);
   const anterior = definitions.filter((definition) => definition.stableKey.startsWith("ocular-health:anterior:"));
@@ -740,8 +739,8 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
       },
     },
   });
-  assert.equal(deferred.status, 200, JSON.stringify(deferred.body));
-  assert.equal(component(fhir.observations[2], "EXAM_STATE")?.valueString, "deferred");
+  assert.equal(deferred.status, 400, JSON.stringify(deferred.body));
+  assert.equal(fhir.observations.length, 2);
 
   for (const definition of anterior.filter((candidate) => candidate !== lids && candidate !== palpebral)) {
     const result = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, anterior), {
@@ -758,7 +757,7 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
     });
     assert.equal(result.status, 200, `${definition.display}: ${JSON.stringify(result.body)}`);
   }
-  assert.equal(fhir.observations.length, 18);
+  assert.equal(fhir.observations.length, 16);
 
   const unknown = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, anterior), {
     authHeader: AUTH,
@@ -3557,4 +3556,41 @@ test("EXAM-1B malformed persisted scope fails closed instead of becoming derived
     component.valueString = stored;
     await assert.rejects(() => handleCustomSectionHistoryRequest(deps, { authHeader: AUTH, params: { stableKey: definition.stableKey }, query: { patient: "Patient/malformed" } }), /Invalid persisted negative act/);
   }
+});
+
+
+test("DEFER-1 guard 4: deferred Pupils save is refused without writes", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const response = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: "entrance:pupils" },
+    body: {
+      patientReference: "Patient/p1", encounterReference: "Encounter/e1",
+      eyes: { OD: { state: "deferred", customFields: [] } },
+    },
+  });
+  assert.equal(response.status, 400);
+  assert.deepEqual(response.body, { error: "Deferred is not enabled for this ocular-health structure." });
+  assert.equal(fhir.captureWrites.length, 0);
+});
+
+test("DEFER-1 guard 6: runtime grants refuse non-dilation and accept dilation", async () => {
+  const fhir = new MemoryFhir();
+  const denied = await handleFindingDefinitionMutationRequest(definitionDeps("admin", fhir, "unused000"), {
+    authHeader: AUTH,
+    params: { stableKey: "ocular-health:anterior:cornea" },
+    body: { action: "update-normal-template", template: "Normal cornea.", allowDeferred: true },
+  });
+  assert.equal(denied.status, 400);
+  assert.deepEqual(denied.body, { error: "Deferral is only permitted for dilation." });
+  assert.equal(fhir.basics.length, 0);
+  const accepted = await handleFindingDefinitionMutationRequest(definitionDeps("admin", fhir, "unused000"), {
+    authHeader: AUTH,
+    params: { stableKey: "entrance:dilation" },
+    body: { action: "update-normal-template", template: "Dilation", allowDeferred: true },
+  });
+  assert.equal(accepted.status, 200, JSON.stringify(accepted.body));
+  const saved = (await catalog(fhir)).find((definition) => definition.stableKey === "entrance:dilation");
+  assert.equal(saved?.normalSemantics?.allowDeferred, true);
 });

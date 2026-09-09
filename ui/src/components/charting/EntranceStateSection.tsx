@@ -199,9 +199,10 @@ export function EntranceStateSection({ definition, patientReference, encounterRe
             <div key={key} className="rounded border border-[color:var(--odos-line)] bg-bg-panel/65 p-4">
               <div className="text-sm font-semibold text-[color:var(--odos-text)]">{label}</div>
               <div className="mt-3 flex flex-wrap gap-2">
-                {(["normal", "abnormal", "deferred"] as ExamState[]).map((state) => (
+                {(["normal", "abnormal"] as ExamState[]).map((state) => (
                   <button key={state} type="button" onClick={() => update(state === "normal" ? normalStateUpdate(definition) : { state })} className={capture.state === state ? "rounded border border-brand/70 bg-brand/20 px-3 py-1.5 text-xs font-semibold capitalize text-[color:var(--odos-text)]" : "rounded border border-[color:var(--odos-line-2)] px-3 py-1.5 text-xs capitalize text-[color:var(--odos-muted)] hover:border-brand/60"}>{state}</button>
                 ))}
+                {definition.allowDeferred === true && <button type="button" onClick={() => update({ state: "deferred" })} className={capture.state === "deferred" ? "rounded border border-brand/70 bg-brand/20 px-3 py-1.5 text-xs font-semibold capitalize text-[color:var(--odos-text)]" : "rounded border border-[color:var(--odos-line-2)] px-3 py-1.5 text-xs capitalize text-[color:var(--odos-muted)] hover:border-brand/60"}>deferred</button>}
               </div>
               {capture.state && capture.state !== "deferred" && (
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">

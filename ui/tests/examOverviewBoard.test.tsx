@@ -1062,7 +1062,7 @@ test("EOM free-text notes preserve delimiter text as one atomic segment", async 
   );
 });
 
-test("custom state writer preserves other-only notes and uses OTHER once as a deferred reason", async () => {
+test("custom state writer preserves other-only notes for normal and abnormal findings", async () => {
   const abnormal = await renderedWriterStateSectionValue(
     "ocular-health:anterior:conjunctiva",
     "abnormal",
@@ -1073,22 +1073,14 @@ test("custom state writer preserves other-only notes and uses OTHER once as a de
     "normal",
     "Reliable responses throughout",
   );
-  const deferred = await renderedWriterStateSectionValue(
-    "entrance:stereo",
-    "deferred",
-    "Unable through language barrier",
-  );
   assert.deepEqual({
     abnormal: abnormal.value,
     normal: normal.value,
-    deferred: deferred.value,
   }, {
     abnormal: "OD Other Reports intermittent shimmer",
     normal: "Stereo present · Other Reliable responses throughout",
-    deferred: "deferred — Unable through language barrier",
   });
   assert.equal(abnormal.formattedValue, "Other Reports intermittent shimmer");
-  assert.equal(deferred.value.match(/Unable through language barrier/g)?.length, 1);
   assert.doesNotMatch(`${abnormal.value} ${normal.value}`, /Exam state|Normal template|entrance\.stereo/);
   assert.deepEqual(normal.componentCodes, ["entrance.stereo", "EXAM_STATE", "NORMAL_TEMPLATE", "OTHER"]);
 });
