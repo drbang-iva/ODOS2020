@@ -214,7 +214,7 @@ test("P5 Add complaint follows complaint articles and precedes the first History
 });
 
 for (const [surface, act, expectedText] of [
-  ["ocular", async (page: Page) => page.getByRole("button", { name: "Normal", exact: true }).first().click(), "Changing the exam state will discard recorded details for Synthetic Finding. Continue?"],
+  ["ocular", async (page: Page) => page.getByRole("button", { name: "Synthetic Finding", exact: true }).first().click(), "Removing the finding will discard recorded details for Synthetic Finding. Continue?"],
   ["prescription", async (page: Page) => page.getByRole("button", { name: "Cancel prescription", exact: true }).click(), "This prescription is already at the pharmacy. Cancelling it cannot be undone from ODOS. Continue?"],
 ] as const) {
   test(`close-out ${surface}: destructive action uses a responsive in-app confirmation`, { timeout: 30_000 }, async () => {
