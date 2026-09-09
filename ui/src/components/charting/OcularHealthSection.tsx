@@ -566,7 +566,11 @@ export function OcularHealthSection({
                     onDeferred={() => toggleDeferred(definition, eye)}
                     onSelections={(selections) => setSelections(definition, eye, selections)}
                     onFindingDetail={(optionCode, qualifierKey, value) => setFindingDetail(definition, eye, optionCode, qualifierKey, value)}
-                    onGrade={(localCode, value) => updateEye(definition.stableKey, eye, (current) => ({ ...current, grades: { ...current.grades, [localCode]: value } }))}
+                    onGrade={(localCode, value) => updateEye(definition.stableKey, eye, (current) => {
+                      const grades = { ...current.grades, [localCode]: value };
+                      if (localCode === "CUSTOM_GRADE_A_V_RATIO" && value === "") delete grades[localCode];
+                      return { ...current, grades };
+                    })}
                     onOther={(other) => {
                       updateEye(definition.stableKey, eye, (current) => ({
                         ...current,

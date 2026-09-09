@@ -4514,3 +4514,25 @@ for (const scenario of ["unentered normal", "blank control", "Fundus All Normal"
     } finally { renderer?.unmount(); }
   });
 }
+
+test("AVFILL-1 selecting then clearing an unsaved ratio leaves no clinical write", async () => {
+  const vessels = posteriorDefinitions().find((definition) => definition.display === "Vessels")!;
+  const posts: string[] = [];
+  const fetchImpl = (async (_input, init) => {
+    if (init?.method === "POST") { posts.push(String(init.body)); return jsonResponse({}); }
+    return jsonResponse({ rows: [] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection definitions={[vessels]} patientReference="Patient/avfill" encounterReference="Encounter/avfill" onSaved={() => undefined} apiBase="http://test" fetchImpl={fetchImpl} />);
+      await flushEffects();
+    });
+    const select = () => renderer.root.findAllByType(OdosSelect)[0]!;
+    act(() => select().props.onChange("2-3"));
+    act(() => select().props.onChange(""));
+    assert.equal(select().props.value, "");
+    await act(async () => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health")!.props.onClick());
+    assert.deepEqual(posts, []);
+  } finally { renderer?.unmount(); }
+});

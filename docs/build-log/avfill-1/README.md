@@ -2,7 +2,7 @@
 
 Base: `178791bdd61880dc093b5cff2d9eed6735ef5d24`. Branch: `drbang-iva/av-ratio-default`.
 
-Saving Vessels used to supply an unentered A/V ratio and the control displayed 2:3 without a blank choice. The fix deletes `defaultGradeValue` entirely: an unentered grade remains the empty string, every grade selector offers Select, and the existing save filter omits the empty value. An explicitly chosen 2:3 still emits `2-3`, its unchanged option code. No other grade behavior, option, definition, negative-act contract, or DONE-1 feature changes.
+Saving Vessels used to supply an unentered A/V ratio and the control displayed 2:3 without a blank choice. The fix deletes `defaultGradeValue` entirely: an unentered grade remains the empty string, every grade selector offers Select, and the existing save filter omits the empty value. An explicitly chosen 2:3 still emits `2-3`, its unchanged option code. Clearing the A/V selector removes its empty draft entry so reverting the only unsaved edit cannot create a normal Observation. This normalization is deliberately A/V-specific to preserve every other grade field. No other grade behavior, option, definition, negative-act contract, or DONE-1 feature changes.
 
 Files: `ui/src/components/charting/OcularHealthSection.tsx`, `ui/tests/customSections.test.tsx`, and this evidence directory. No new decision was made: the existing private canonical AVFILL-1 decision and user kickoff authorize this correction; no decisions/INDEX.md update. No medical terminology changes or Mandate 14 ledger rows.
 
@@ -32,6 +32,10 @@ The four requested demonstrations, using verbatim test result lines:
 4. Fundus All Normal: `not ok 5 - AVFILL-1 Fundus All Normal does not invent an A/V ratio` → `ok 5 - AVFILL-1 Fundus All Normal does not invent an A/V ratio`. Five requests, ten eyes, each normal with an explicit negative act and no custom grade values.
 
 The tests inspect actual component-generated requests at the fetch boundary, not a reimplemented save function. Additional Chrome proof invokes the real capture endpoint and checks the resulting Observation components with in-memory FHIR writes.
+
+## Bot-review fixback
+
+Greptile found that choosing a ratio then returning to Select left an empty-string grade key. `sameGrades` treated that as dirty and Save emitted a normal Observation after the only edit was reverted. A new UI regression reproduced the reported POST on `499f2222`: [verbatim RED](reverted-choice-red.log), exit 1, 1 test / 1 failure. The A/V-specific blank transition now removes that key. [Restored GREEN](fixback-green.log): exit 0, all six affected tests pass, including all four original guards. The Chrome proof also exercises choose → Select → Save and verifies zero requests and zero in-memory Observation writes. Other grade fields and equality rules are unchanged.
 
 ## Browser evidence
 
@@ -76,8 +80,8 @@ Read-only scan findings at the base SHA, left unchanged:
 
 | Command | Result | Output |
 |---|---|---|
-| `npm --prefix ui test` | exit 0; 1,308 tests, 1,308 pass, 0 fail, 0 skipped | [UI](ui-suite.log) |
-| `ODOS_POSTGRES_URL=<task-owned loopback PostgreSQL> ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test` | exit 0; 4,384 tests, 4,339 pass, 0 fail, 45 skipped | [MCP](mcp-suite-configured.log) |
+| `npm --prefix ui test` | exit 0; 1,309 tests, 1,309 pass, 0 fail, 0 skipped | [UI](ui-suite.log) |
+| `ODOS_POSTGRES_URL=<task-owned loopback PostgreSQL> ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test` | exit 0; 4,384 tests, 4,339 pass, 0 fail, 45 skipped (before UI-only fixback; MCP source unchanged) | [MCP](mcp-suite-configured.log) |
 | `cd ui && ./node_modules/.bin/tsc --noEmit --skipLibCheck` | exit 0; no diagnostics | [UI types](ui-typecheck.log) |
 | `cd mcp && ./node_modules/.bin/tsc --noEmit` | exit 0; no diagnostics | [MCP types](mcp-typecheck.log) |
 | `npm run typecheck:scripts` | exit 0; no diagnostics | [Script types](scripts-typecheck.log) |

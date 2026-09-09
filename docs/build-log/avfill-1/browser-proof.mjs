@@ -64,6 +64,17 @@ try {
       assert.equal(await page.getByRole('option', { name: 'Select', exact: true }).count(), state === 'before' ? 0 : 1);
       await page.keyboard.press('Escape');
       await vessel.screenshot({ path: resolve(import.meta.dirname, `${state}.png`) });
+      if (state === 'after') {
+        await ratios.first().click();
+        await page.getByRole('option', { name: '2:3', exact: true }).click();
+        await ratios.first().click();
+        await page.getByRole('option', { name: 'Select', exact: true }).click();
+        await page.getByRole('button', { name: 'Save Ocular Health', exact: true }).click();
+        await page.getByText('Capture at least one ocular-health structure before saving.', { exact: true }).waitFor();
+        assert.equal(posts.length, 0);
+        assert.equal(writes.length, 0);
+        console.log('after: select 2:3 then Select then Save emits zero requests and zero Observations');
+      }
       await page.getByRole('button', { name: 'Fundus All Normal', exact: true }).click();
       await page.getByRole('button', { name: 'Save Ocular Health', exact: true }).click();
       await page.getByText('5/5 ocular-health structures saved', { exact: true }).waitFor();

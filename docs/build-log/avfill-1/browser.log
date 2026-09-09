@@ -1,6 +1,7 @@
 before: owned Vite listener 15281, source /tmp/odos-avfill-before
 before: five structures / ten eyes saved; A/V components in requests = 2; untouched control = 2:3
 after: owned Vite listener 15282, source /Users/ericr.bang/GitHub/ODOS2020/.worktrees/av-ratio-default
+after: select 2:3 then Select then Save emits zero requests and zero Observations
 after: five structures / ten eyes saved; A/V components in requests = 0; untouched control = Select
 after: deliberate 2:3 emitted exactly one OD component with value 2-3; OS not rewritten
 PASS: real OcularHealthSection and production seed definitions in Chrome; real capture endpoint and Observation serialization with in-memory FHIR writes; not live persistence, AccessPolicy, or app-route proof
