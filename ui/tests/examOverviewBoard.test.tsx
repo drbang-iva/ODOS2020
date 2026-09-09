@@ -36,6 +36,7 @@ import { EntranceStateSection } from "../src/components/charting/EntranceStateSe
 import { EomSection } from "../src/components/charting/EomSection";
 import { EncounterHeader } from "../src/components/charting/EncounterHeader";
 import { EyeGrowthSection } from "../src/components/charting/EyeGrowthSection";
+import { ExamRightPanelSurface, ExamRightPanelTabs } from "../src/components/charting/ExamRightPanel";
 import { ExamEntrySheet } from "../src/components/charting/ExamEntrySheet";
 import type { EncounterUndoLedger } from "../src/lib/encounter-undo";
 import {
@@ -3267,6 +3268,98 @@ test("switching to the diagnosis view preserves the existing DiagnosisWorkspace 
     assert.equal(harness.renderer.root.findAllByType(DiagnosisWorkspace).length, 1);
   } finally {
     harness.restore();
+  }
+});
+
+function chartViewButton(root: ReactTestInstance, label: string) {
+  const button = root.findAllByType("button").find((node) => textContent(node) === label);
+  assert.ok(button, `Missing ${label} control`);
+  return button;
+}
+
+function activeContextTab(root: ReactTestInstance) {
+  return root.findAllByType(ExamRightPanelTabs)[0]?.props.activeTab;
+}
+
+async function selectContextTab(root: ReactTestInstance, tab: "images" | "engage") {
+  await act(async () => root.findAllByType(ExamRightPanelTabs)[0].props.onSelect(tab));
+}
+
+test("C1 tab survives a stage change", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    await selectContextTab(harness.renderer.root, "engage");
+    assert.equal(activeContextTab(harness.renderer.root), "engage");
+    await act(async () => chartViewButton(harness.renderer.root, "By diagnosis").props.onClick());
+    assert.equal(activeContextTab(harness.renderer.root), "engage");
+    await act(async () => chartViewButton(harness.renderer.root, "By structure").props.onClick());
+    assert.equal(activeContextTab(harness.renderer.root), "engage");
+  } finally { harness.restore(); }
+});
+
+test("C1 panel is available off the structure stage", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    await act(async () => chartViewButton(harness.renderer.root, "By diagnosis").props.onClick());
+    const panels = harness.renderer.root.findAllByType(ExamRightPanelSurface);
+    assert.equal(panels.length, 1);
+    assert.equal(panels[0].props.active, true);
+    assert.equal(harness.renderer.root.findByProps({ className: "odos-charting-stage" }).props["data-entry-sheet-open"], "true");
+  } finally { harness.restore(); }
+});
+
+test("C1 modal editor still suppresses the panel", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    assert.equal(harness.renderer.root.findAllByType(ExamRightPanelSurface).length, 1);
+    await act(async () => editorControl(harness.renderer.root, "refraction").props.onClick());
+    assert.equal(harness.renderer.root.findAllByType(RefractionSection).length, 1);
+    assert.equal(harness.renderer.root.findAllByType(ExamRightPanelSurface).length, 0);
+    assert.equal(harness.renderer.root.findByProps({ className: "odos-charting-stage" }).props["data-entry-sheet-open"], "false");
+  } finally { harness.restore(); }
+});
+
+test("C1 dirty-sheet stage transition prompts and retains edits until accepted", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    await act(async () => editorControl(harness.renderer.root, "hpi").props.onClick());
+    const sheet = harness.renderer.root.findAllByType(ExamEntrySheet).find((node) => node.props.sectionId === "hpi")!;
+    await act(async () => sheet.props.onDirty());
+    const transition = () => chartViewButton(harness.renderer.root, "By diagnosis").props.onClick();
+    const prompt = await answerDiscardInDialog(harness, transition, false);
+    assert.equal(prompt, "Discard unsaved changes in Chief Complaint & HPI and open By diagnosis?");
+    assert.equal(harness.renderer.root.findAllByType(HpiSection).length, 1);
+    assert.equal(chartViewButton(harness.renderer.root, "By structure").props["aria-pressed"], true);
+    await answerDiscardInDialog(harness, transition, true);
+    assert.equal(harness.renderer.root.findAllByType(HpiSection).length, 0);
+    assert.equal(chartViewButton(harness.renderer.root, "By diagnosis").props["aria-pressed"], true);
+  } finally { harness.restore(); }
+});
+
+test("C1 context survives entering and leaving a full-page board editor", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    await selectContextTab(harness.renderer.root, "engage");
+    await act(async () => editorControl(harness.renderer.root, "refraction").props.onClick());
+    await act(async () => chartViewButton(harness.renderer.root, "Back to exam overview").props.onClick());
+    assert.equal(activeContextTab(harness.renderer.root), "engage");
+  } finally { harness.restore(); }
+});
+
+test("C1 closing entry for a stage uses its return tab but preserves a selected context tab", async (t) => {
+  for (const context of [undefined, "images", "engage"] as const) {
+    await t.test(context ?? "entry", async () => {
+      const harness = await renderEncounter(PROJECTION);
+      try {
+        await selectContextTab(harness.renderer.root, "engage");
+        await act(async () => editorControl(harness.renderer.root, "hpi").props.onClick());
+        assert.equal(activeContextTab(harness.renderer.root), "entry");
+        if (context) await selectContextTab(harness.renderer.root, context);
+        await act(async () => chartViewButton(harness.renderer.root, "By diagnosis").props.onClick());
+        assert.equal(activeContextTab(harness.renderer.root), context ?? "engage");
+        assert.equal(harness.renderer.root.findAllByType(HpiSection).length, 0);
+      } finally { harness.restore(); }
+    });
   }
 });
 

@@ -40,6 +40,7 @@ import {
   examRightPanelEntryTitle,
   INITIAL_EXAM_RIGHT_PANEL_STATE,
   closeExamRightPanelEngage,
+  closeExamRightPanelEntry,
   finishExamRightPanelEntry,
   openExamRightPanelEntry,
   selectExamRightPanelTab,
@@ -188,7 +189,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
       if (view !== "structure") {
         setBoardEditorOpen(false);
         setEntrySheetSection(undefined);
-        setRightPanelState(INITIAL_EXAM_RIGHT_PANEL_STATE);
+        setRightPanelState(closeExamRightPanelEntry);
       }
       saveEncounterChartView(view);
     };
@@ -267,7 +268,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
         setBoardEditorOpen(false);
       } else {
         setEntrySheetSection(undefined);
-        setRightPanelState(INITIAL_EXAM_RIGHT_PANEL_STATE);
+        setRightPanelState(closeExamRightPanelEntry);
         setBoardEditorOpen(true);
       }
     };
@@ -282,7 +283,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   function returnToExamOverview() {
     setBoardEditorOpen(false);
     setEntrySheetSection(undefined);
-    setRightPanelState(INITIAL_EXAM_RIGHT_PANEL_STATE);
+    setRightPanelState(closeExamRightPanelEntry);
     refreshExamOverview();
   }
 
@@ -790,7 +791,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
         ? "Encounter details unavailable — Visit & charges cannot be changed"
         : undefined);
   const visitChargesDisabled = currentEncounterLoadState.status !== "ready" || isMigratedEncounter(encounter);
-  const rightPanelAvailable = chartView === "structure" && Boolean(activeExamOverviewProjection) && !boardEditorOpen;
+  const rightPanelAvailable = Boolean(activeExamOverviewProjection) && !boardEditorOpen;
   const rightPanelForward = rightPanelAvailable && !visitChargesOpen;
   const entryTabTitle = entrySheetSection
     ? examRightPanelEntryTitle(entrySheetSection, EXAM_ENTRY_SHEET_CONFIG[entrySheetSection].title)

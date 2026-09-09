@@ -52,6 +52,10 @@ export function finishExamRightPanelEntry(state: ExamRightPanelState): ExamRight
   };
 }
 
+export function closeExamRightPanelEntry(state: ExamRightPanelState): ExamRightPanelState {
+  return state.activeTab === "entry" ? finishExamRightPanelEntry(state) : state;
+}
+
 export function closeExamRightPanelEngage(
   state: ExamRightPanelState,
   entryOpen: boolean,
