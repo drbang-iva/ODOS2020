@@ -3199,7 +3199,7 @@ test("Fundus All Normal fills only the five posterior narratives and skips Cup D
     OS: { selections: [], other: "" },
   }]));
   const result = applyPosteriorAllNormal(definitions, captures);
-  assert.equal(result.filled, 5);
+  assert.equal(result.filled, 10);
   assert.equal(result.skipped, 0);
   assert.equal(definitions.some((definition) => definition.stableKey === "cup-disc"), false);
   for (const definition of posteriorDefinitions()) {
@@ -3469,7 +3469,7 @@ test("ocular-health cleanup qualifiers render only for their selected finding", 
   }
 });
 
-test("all-normal skips touched structures and copy-to-eye produces an independently editable clone", () => {
+test("EXAM-1B per-eye negative act leaves touched OD alone and asserts OS", () => {
   const captures = {
     "ocular-health:anterior:cornea": {
       OD: { state: "abnormal" as const, selections: ["staining"], other: "" },
@@ -3489,8 +3489,10 @@ test("all-normal skips touched structures and copy-to-eye produces an independen
     { stableKey: "ocular-health:anterior:lens" },
     { stableKey: "dry-eye:conjunctival-staining" },
   ], captures);
-  assert.equal(result.filled, 2);
+  assert.equal(result.filled, 5);
   assert.equal(result.skipped, 1);
+  assert.equal(result.captures["ocular-health:anterior:cornea"]?.OS.negativeAct?.eye, "OS");
+  assert.equal(result.captures["ocular-health:anterior:cornea"]?.OD.negativeAct, undefined);
   assert.equal(result.captures["ocular-health:anterior:cornea"]?.OD.state, "abnormal");
   assert.equal(result.captures["ocular-health:anterior:lens"]?.OD.state, "normal");
   assert.equal(result.captures["ocular-health:anterior:lens"]?.OS.state, "normal");
@@ -4305,3 +4307,155 @@ function deferred<T>() {
   });
   return { promise, resolve };
 }
+
+
+test("EXAM-1B partial failure names the structure and All Normal retries only that failure", async () => {
+  const definitions = ocularDefinitions().slice(0, 3);
+  const posts: string[] = [];
+  let fail = true;
+  const saved: Array<{ status: unknown; keys: string[] }> = [];
+  const fetchImpl = (async (input, init) => {
+    if (init?.method !== "POST") return jsonResponse({ rows: [] });
+    const key = decodeURIComponent(String(input).split("/").at(-1)!);
+    posts.push(key);
+    if (key === definitions[1]!.stableKey && fail) return new Response(JSON.stringify({ error: "Synthetic failure" }), { status: 503 });
+    return jsonResponse({ eyes: {} });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection definitions={definitions} patientReference="Patient/negative-test" encounterReference="Encounter/negative-test" onSaved={(status, keys) => saved.push({ status, keys })} apiBase="http://test" fetchImpl={fetchImpl} />);
+      await flushEffects();
+    });
+    const button = (label: string) => renderer.root.findAllByType("button").find((node) => renderedText(node) === label)!;
+    act(() => button("Anterior All Normal").props.onClick());
+    await act(async () => { await button("Save Ocular Health").props.onClick(); });
+    assert.deepEqual(posts, definitions.map((definition) => definition.stableKey));
+    assert.match(renderedText(renderer.root), new RegExp(`Failed: ${definitions[1]!.display}`));
+    assert.equal(saved.length, 0, "partial success must not complete the segment");
+    fail = false;
+    await act(async () => { await button("Anterior All Normal").props.onClick(); });
+    assert.deepEqual(posts, [...definitions.map((definition) => definition.stableKey), definitions[1]!.stableKey]);
+    assert.deepEqual(saved.flatMap((event) => event.keys).sort(), definitions.map((definition) => definition.stableKey).sort(), "parent receives all successful structures across partial attempts");
+    console.log("EXAM-1B PARTIAL: named failure; 3 initial writes, 1 retry, 0 successful structures reasserted");
+  } finally { renderer?.unmount(); }
+});
+
+test("EXAM-1B retry keeps the other segment failure visible until it succeeds", async () => {
+  const definitions = [ocularDefinitions()[0]!, posteriorDefinitions()[0]!];
+  const failed = new Set(definitions.map((definition) => definition.stableKey));
+  const saved: string[] = [];
+  const fetchImpl = (async (input, init) => {
+    if (init?.method !== "POST") return jsonResponse({ rows: [] });
+    const key = decodeURIComponent(String(input).split("/").at(-1)!);
+    return failed.has(key) ? new Response(JSON.stringify({ error: "Synthetic failure" }), { status: 503 }) : jsonResponse({ eyes: {} });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection definitions={definitions} patientReference="Patient/cross-segment" encounterReference="Encounter/cross-segment" onSaved={(_status, keys) => saved.push(...keys)} apiBase="http://test" fetchImpl={fetchImpl} />);
+      await flushEffects();
+    });
+    const button = (label: string) => renderer.root.findAllByType("button").find((node) => renderedText(node) === label)!;
+    act(() => { button("Anterior All Normal").props.onClick(); });
+    act(() => { button("Fundus All Normal").props.onClick(); });
+    await act(async () => { await button("Save Ocular Health").props.onClick(); });
+    failed.delete(definitions[0]!.stableKey);
+    await act(async () => { await button("Anterior All Normal").props.onClick(); });
+    assert.match(renderedText(renderer.root), /Failed: Vitreous/);
+    assert.equal(saved.length, 0);
+    failed.clear();
+    await act(async () => { await button("Fundus All Normal").props.onClick(); });
+    assert.deepEqual(saved.sort(), definitions.map((definition) => definition.stableKey).sort());
+  } finally { renderer?.unmount(); }
+});
+
+test("EXAM-1B reverted failed edit cannot trap All Normal in an empty retry", async () => {
+  const definition = ocularDefinitions()[0]!;
+  let posts = 0;
+  const fetchImpl = (async (_input, init) => {
+    if (init?.method !== "POST") return jsonResponse({ rows: ["OD", "OS"].map((eye) => ({ eye, state: "normal", values: [] })) });
+    posts += 1;
+    return new Response(JSON.stringify({ error: "Synthetic failure" }), { status: 503 });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection definitions={[definition]} patientReference="Patient/reverted" encounterReference="Encounter/reverted" onSaved={() => undefined} apiBase="http://test" fetchImpl={fetchImpl} />);
+      await flushEffects();
+    });
+    const button = (label: string) => renderer.root.findAllByType("button").find((node) => renderedText(node) === label)!;
+    act(() => { renderer.root.findAllByType("textarea")[0]!.props.onChange({ target: { value: "Temporary finding" } }); });
+    await act(async () => { await button("Save Ocular Health").props.onClick(); });
+    assert.match(renderedText(renderer.root), /Failed:/);
+    act(() => { renderer.root.findAllByType("textarea")[0]!.props.onChange({ target: { value: "" } }); });
+    await act(async () => { await button("Anterior All Normal").props.onClick(); });
+    assert.doesNotMatch(renderedText(renderer.root), /Capture at least|Failed:/);
+    await act(async () => { await button("Anterior All Normal").props.onClick(); });
+    assert.doesNotMatch(renderedText(renderer.root), /Capture at least|Failed:/);
+    assert.equal(posts, 1);
+  } finally { renderer?.unmount(); }
+});
+
+test("EXAM-1B re-edit after partial save remains unsaved when another structure is retried", async () => {
+  const definitions = ocularDefinitions().slice(0, 2);
+  const posts: string[] = [];
+  const saved: string[][] = [];
+  let fail = true;
+  const fetchImpl = (async (input, init) => {
+    if (init?.method !== "POST") return jsonResponse({ rows: [] });
+    const key = decodeURIComponent(String(input).split("/").at(-1)!);
+    posts.push(key);
+    return fail && key === definitions[1]!.stableKey ? new Response(JSON.stringify({ error: "Synthetic failure" }), { status: 503 }) : jsonResponse({ eyes: {} });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection definitions={definitions} patientReference="Patient/re-edit" encounterReference="Encounter/re-edit" onSaved={(_status, keys) => saved.push(keys)} apiBase="http://test" fetchImpl={fetchImpl} />);
+      await flushEffects();
+    });
+    const button = (label: string) => renderer.root.findAllByType("button").find((node) => renderedText(node) === label)!;
+    act(() => { button("Anterior All Normal").props.onClick(); });
+    await act(async () => { await button("Save Ocular Health").props.onClick(); });
+    act(() => { renderer.root.findAllByType("textarea")[0]!.props.onChange({ target: { value: "New finding after partial save" } }); });
+    fail = false;
+    await act(async () => { await button("Anterior All Normal").props.onClick(); });
+    assert.equal(saved.length, 0, "retry must not report an unsubmitted later edit as saved");
+    assert.match(renderedText(renderer.root), new RegExp(`Unsaved changes: ${definitions[0]!.display}`));
+    assert.deepEqual(posts, [definitions[0]!.stableKey, definitions[1]!.stableKey, definitions[1]!.stableKey]);
+    await act(async () => { await button("Save Ocular Health").props.onClick(); });
+    assert.deepEqual(posts, [definitions[0]!.stableKey, definitions[1]!.stableKey, definitions[1]!.stableKey, definitions[0]!.stableKey]);
+    assert.deepEqual(saved.flat().sort(), definitions.map((definition) => definition.stableKey).sort());
+  } finally { renderer?.unmount(); }
+});
+
+test("EXAM-1B in-flight edit remains unsaved after the older request completes", async () => {
+  const definition = ocularDefinitions()[0]!;
+  const saved: string[][] = [];
+  let release!: () => void;
+  let wait = true;
+  const fetchImpl = (async (_input, init) => {
+    if (init?.method !== "POST") return jsonResponse({ rows: [] });
+    if (wait) await new Promise<void>((resolve) => { release = resolve; });
+    return jsonResponse({ eyes: {} });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection definitions={[definition]} patientReference="Patient/in-flight" encounterReference="Encounter/in-flight" onSaved={(_status, keys) => saved.push(keys)} apiBase="http://test" fetchImpl={fetchImpl} />);
+      await flushEffects();
+    });
+    const button = (label: string) => renderer.root.findAllByType("button").find((node) => renderedText(node) === label)!;
+    act(() => { button("Anterior All Normal").props.onClick(); });
+    let pending!: Promise<void>;
+    act(() => { pending = button("Save Ocular Health").props.onClick(); });
+    act(() => { renderer.root.findAllByType("textarea")[0]!.props.onChange({ target: { value: "Finding entered during request" } }); });
+    await act(async () => { release(); await pending; });
+    assert.equal(saved.length, 0, "the response only persisted the older capture");
+    assert.match(renderedText(renderer.root), new RegExp(`Unsaved changes: ${definition.display}`));
+    assert.equal(renderer.root.findAllByType("textarea")[0]!.props.value, "Finding entered during request");
+    wait = false;
+    await act(async () => { await button("Save Ocular Health").props.onClick(); });
+    assert.deepEqual(saved, [[definition.stableKey]]);
+  } finally { renderer?.unmount(); }
+});

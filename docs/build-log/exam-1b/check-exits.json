@@ -1,0 +1,37 @@
+[
+  {
+    "command": "npm --prefix ui test",
+    "exitStatus": 0,
+    "fullLocalLog": "/tmp/exam-1b-evidence/ui-final.log"
+  },
+  {
+    "command": "ODOS_POSTGRES_URL=<isolated localhost:15932 database> npm --prefix mcp test",
+    "exitStatus": 1,
+    "fullLocalLog": "/tmp/exam-1b-evidence/mcp-final.log"
+  },
+  {
+    "command": "ODOS_ALLOW_UNGATED_MCP=1 ODOS_POSTGRES_URL=<isolated localhost:15932 database> npm --prefix mcp test",
+    "exitStatus": 0,
+    "fullLocalLog": "/tmp/exam-1b-evidence/mcp-executed-final.log"
+  },
+  {
+    "command": "cd ui && ./node_modules/.bin/tsc --noEmit --skipLibCheck",
+    "exitStatus": 0,
+    "fullLocalLog": "/tmp/exam-1b-evidence/ui-typecheck-final.log"
+  },
+  {
+    "command": "cd mcp && ./node_modules/.bin/tsc --noEmit",
+    "exitStatus": 0,
+    "fullLocalLog": "/tmp/exam-1b-evidence/mcp-typecheck-final.log"
+  },
+  {
+    "command": "npm run preflight",
+    "exitStatus": 0,
+    "fullLocalLog": "/tmp/exam-1b-evidence/preflight-final.log"
+  },
+  {
+    "command": "node .claude/skills/tier0-census/scripts/check-proxy-coverage.mjs",
+    "exitStatus": 0,
+    "fullLocalLog": "/tmp/exam-1b-evidence/proxy-census.log"
+  }
+]

@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: EXAM-1B re-edit after partial save remains unsaved when another structure is retried
+ok 1 - EXAM-1B re-edit after partial save remains unsaved when another structure is retried
+  ---
+  duration_ms: 28.31925
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 675.664542

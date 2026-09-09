@@ -133,6 +133,7 @@ const nativeFetch = window.fetch.bind(window);
 window.fetch = async (input, init) => {
   const url = String(input);
   const fixtureParams = new URLSearchParams(window.location.search);
+  if (fixtureParams.has("negativeAct") && url.includes("/clinical-graph/custom/")) return nativeFetch(input, init);
   if (init?.method === "POST") {
     (window as typeof window & { __odosFixtureWrites: Array<{ url: string; body: unknown }> }).__odosFixtureWrites.push({
       url,
@@ -512,6 +513,12 @@ function Fixture() {
 }
 
 function ConfirmSurfaceFixture() {
+  if (new URLSearchParams(window.location.search).has("negativeAct")) {
+    const fixture = (window as typeof window & { __odosNegativeFixture: { definitions: CustomFindingDefinition[]; patientReference: string; encounterReference: string } }).__odosNegativeFixture;
+    return <main className="h-screen overflow-auto bg-bg-deep text-white"><OcularHealthSection
+      {...fixture} onSaved={() => undefined} fetchImpl={window.fetch}
+    /></main>;
+  }
   const surface = new URLSearchParams(window.location.search).get("confirmSurface");
   if (surface === "ocular") {
     return <main className="h-screen overflow-auto bg-bg-deep text-white"><OcularHealthSection

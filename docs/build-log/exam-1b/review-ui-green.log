@@ -1,0 +1,35 @@
+TAP version 13
+# Subtest: EXAM-1B per-eye negative act leaves touched OD alone and asserts OS
+ok 1 - EXAM-1B per-eye negative act leaves touched OD alone and asserts OS
+  ---
+  duration_ms: 1.006958
+  type: 'test'
+  ...
+# EXAM-1B PARTIAL: named failure; 3 initial writes, 1 retry, 0 successful structures reasserted
+# Subtest: EXAM-1B partial failure names the structure and All Normal retries only that failure
+ok 2 - EXAM-1B partial failure names the structure and All Normal retries only that failure
+  ---
+  duration_ms: 26.727125
+  type: 'test'
+  ...
+# Subtest: EXAM-1B retry keeps the other segment failure visible until it succeeds
+ok 3 - EXAM-1B retry keeps the other segment failure visible until it succeeds
+  ---
+  duration_ms: 8.31025
+  type: 'test'
+  ...
+# Subtest: EXAM-1B reverted failed edit cannot trap All Normal in an empty retry
+ok 4 - EXAM-1B reverted failed edit cannot trap All Normal in an empty retry
+  ---
+  duration_ms: 2.294792
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 682.871167

@@ -3348,6 +3348,22 @@ class MemoryFhir {
     resource: T,
     headers?: Record<string, string>,
   ): Promise<T> {
+    const condition = headers?.["If-None-Exist"];
+    if (condition) {
+      const params = new URLSearchParams(condition);
+      const existing = this.captureWrites.find((write) => {
+        if (write.resourceType !== resource.resourceType) return false;
+        if (params.has("identifier") && write.resourceType === "Observation") {
+          return (write.resource as Observation).identifier?.some((item) => `${item.system}|${item.value}` === params.get("identifier"));
+        }
+        return params.has("target") && write.resourceType === "Provenance" &&
+          (write.resource as Provenance).target.some((target) => target.reference === params.get("target"));
+      });
+      if (existing) {
+        if (resource.id && resource.id !== existing.resource.id) throw new Error("Resource ID did not match resolved ID");
+        return existing.resource as T;
+      }
+    }
     const saved = { ...resource, id: resource.id ?? `${resource.resourceType.toLowerCase()}-${this.basics.length + this.observations.length + this.captureWrites.length + 1}` } as T;
     if (saved.resourceType === "Basic") this.basics.push(saved as Basic);
     if (saved.resourceType === "Observation") this.observations.push(saved as Observation);
@@ -3439,4 +3455,106 @@ test("guard 3: custom-section history hides voided (entered-in-error) rows so a 
   const rows = (history.body as { rows: Array<{ eye?: string; observationReference?: string }> }).rows;
   assert.deepEqual(rows.map((row) => row.eye), ["OD"], "the voided OS row must not be listed");
   assert.ok(rows.every((row) => row.observationReference !== osReference));
+});
+
+
+test("EXAM-1B freezes negative scope against an added seed option and distinguishes derived normal", async () => {
+  const fhir = new MemoryFhir();
+  const seed: StructureSeed = { key: "synthetic-negative", display: "Synthetic negative", normalTemplate: "Synthetic template", priority: ["Synthetic original option"], additional: [] };
+  const definitions = buildOcularHealthDefinitions([seed], "ocular-health:anterior:", SYNTHETIC_PROVENANCE);
+  const definition = definitions[0]!;
+  const fields = Object.values(definition.valueSchema.fields as Record<string, { valueType: string; options?: Array<{code: string; active: boolean; display: string}> }>);
+  const field = fields.find((row) => row.valueType === "multi-select")!;
+  const optionCodes = field.options!.filter((option) => option.active).map((option) => option.code);
+  const negativeAct = { id: "c095ff19-f203-4807-b54b-0c5d18de1696", definitionStableKey: definition.stableKey, eye: "OD", optionCodes, exclusions: [] as string[], assertedAt: NOW };
+  const deps = clinicalDeps("provider", fhir, definitions);
+  const result = await handleCustomSectionCaptureRequest(deps, {
+    authHeader: AUTH, params: { stableKey: definition.stableKey }, body: {
+      patientReference: "Patient/frozen", encounterReference: "Encounter/frozen",
+      eyes: { OD: { state: "normal", customFields: [], negativeAct }, OS: { state: "normal", customFields: [] } },
+    },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  seed.additional.push("Synthetic new option");
+  definitions[0] = buildOcularHealthDefinitions([seed], "ocular-health:anterior:", SYNTHETIC_PROVENANCE)[0]!;
+  const history = await handleCustomSectionHistoryRequest(deps, { authHeader: AUTH, params: { stableKey: definition.stableKey }, query: { patient: "Patient/frozen" } });
+  const rows = (history.body as { rows: Array<{ eye: string; state: string; negativeAct?: typeof negativeAct & { actorReference: string } }> }).rows;
+  assert.deepEqual(rows.find((row) => row.eye === "OD")?.negativeAct, { ...negativeAct, actorReference: "Practitioner/doc-1" });
+  assert.equal(rows.find((row) => row.eye === "OD")!.negativeAct!.optionCodes.includes("synthetic-new-option"), false);
+  assert.equal(rows.find((row) => row.eye === "OS")!.state, "normal");
+  assert.equal(rows.find((row) => row.eye === "OS")!.negativeAct, undefined);
+  console.log("EXAM-1B FROZEN: added synthetic seed option is NOT covered; original explicit codes preserved");
+  console.log("EXAM-1B DERIVED: empty normal has NO negative act; explicit negative has actor and frozen scope");
+});
+
+
+test("EXAM-1B identical replay after a Provenance failure creates one assertion and one Provenance", async () => {
+  const fhir = new MemoryFhir();
+  const definition = (await catalog(fhir)).find((row) => row.stableKey === "ocular-health:anterior:lens")!;
+  const field = Object.values(definition.valueSchema.fields as Record<string, { valueType: string; options?: Array<{code: string; active: boolean}> }>).find((row) => row.valueType === "multi-select")!;
+  const optionCodes = field.options!.filter((option) => option.active).map((option) => option.code);
+  const negativeAct = { id: "c095ff19-f203-4807-b54b-0c5d18de1696", definitionStableKey: definition.stableKey, eye: "OD", optionCodes, exclusions: [] as string[], assertedAt: NOW };
+  const input = { authHeader: AUTH, params: { stableKey: definition.stableKey }, body: {
+    patientReference: "Patient/replay", encounterReference: "Encounter/replay",
+    eyes: { OD: { state: "normal", customFields: [], negativeAct } },
+  } };
+  const originalCreate = fhir.create.bind(fhir);
+  let fail = true;
+  fhir.create = async (resource, headers) => {
+    if (resource.resourceType === "Provenance" && fail) throw new Error("Synthetic Provenance failure");
+    return originalCreate(resource, headers);
+  };
+  let clock = 0;
+  const deps = { ...clinicalDeps("provider", fhir, [definition]), now: () => new Date(Date.parse(NOW) + clock++).toISOString() };
+  await assert.rejects(() => handleCustomSectionCaptureRequest(deps, input), /Synthetic Provenance failure/);
+  fail = false;
+  const first = await handleCustomSectionCaptureRequest(deps, input);
+  const replay = await handleCustomSectionCaptureRequest(deps, input);
+  assert.equal(first.status, 200);
+  assert.deepEqual(replay.body, first.body);
+  assert.equal(fhir.observations.length, 1);
+  assert.equal(fhir.captureWrites.filter((row) => row.resourceType === "Provenance").length, 1);
+  console.log("EXAM-1B REPLAY: Provenance failure repaired; 1 Observation, 1 Provenance after 3 attempts");
+  await assert.rejects(() => handleCustomSectionCaptureRequest(deps, { ...input, body: { ...input.body, remarks: "Changed after assertion" } }), /conflicts/);
+  input.body.eyes.OD.negativeAct.exclusions = [optionCodes.pop()!];
+  await assert.rejects(() => handleCustomSectionCaptureRequest(deps, input), /conflicts/);
+  assert.equal(fhir.observations.length, 1, "conflicting scope must not overwrite the original");
+});
+
+
+test("EXAM-1B refuses invented negative codes, empty scope, wrong eye, and actor injection", async () => {
+  const fhir = new MemoryFhir();
+  const definition = (await catalog(fhir)).find((row) => row.stableKey === "ocular-health:anterior:lens")!;
+  const field = Object.values(definition.valueSchema.fields as Record<string, { valueType: string; options?: Array<{code: string; active: boolean}> }>).find((row) => row.valueType === "multi-select")!;
+  const optionCodes = field.options!.filter((option) => option.active).map((option) => option.code);
+  const base = { id: "c095ff19-f203-4807-b54b-0c5d18de1696", definitionStableKey: definition.stableKey, eye: "OD", optionCodes, exclusions: [], assertedAt: NOW };
+  for (const negativeAct of [
+    { ...base, optionCodes: ["invented-option"] }, { ...base, optionCodes: [] },
+    { ...base, eye: "OS" }, { ...base, actorReference: "Practitioner/imposter" },
+    { ...base, exclusions: [optionCodes[0]] }, { ...base, definitionStableKey: "ocular-health:anterior:cornea" },
+  ]) {
+    const result = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [definition]), {
+      authHeader: AUTH, params: { stableKey: definition.stableKey }, body: {
+        patientReference: "Patient/scope-validation", encounterReference: "Encounter/scope-validation",
+        eyes: { OD: { state: "normal", customFields: [], negativeAct } },
+      },
+    });
+    assert.equal(result.status, 400, JSON.stringify(negativeAct));
+  }
+  assert.equal(fhir.observations.length, 0);
+});
+
+test("EXAM-1B malformed persisted scope fails closed instead of becoming derived normal", async () => {
+  const fhir = new MemoryFhir();
+  const definition = (await catalog(fhir)).find((row) => row.stableKey === "ocular-health:anterior:lens")!;
+  const deps = clinicalDeps("provider", fhir, [definition]);
+  await handleCustomSectionCaptureRequest(deps, { authHeader: AUTH, params: { stableKey: definition.stableKey }, body: {
+    patientReference: "Patient/malformed", encounterReference: "Encounter/malformed", eyes: { OD: { state: "normal", customFields: [] } },
+  } });
+  const component = { code: { coding: [{ code: "NEGATIVE_ACT" }] }, valueString: "{}" };
+  fhir.observations[0]!.component!.push(component);
+  for (const stored of ["{}", "{", JSON.stringify({ actorReference: "Practitioner/doc-1", optionCodes: "wrong-type" })]) {
+    component.valueString = stored;
+    await assert.rejects(() => handleCustomSectionHistoryRequest(deps, { authHeader: AUTH, params: { stableKey: definition.stableKey }, query: { patient: "Patient/malformed" } }), /Invalid persisted negative act/);
+  }
 });

@@ -1,0 +1,36 @@
+TAP version 13
+# Subtest: EXAM-1B freezes negative scope against an added seed option and distinguishes derived normal
+not ok 1 - EXAM-1B freezes negative scope against an added seed option and distinguishes derived normal
+  ---
+  duration_ms: 7.755167
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/mcp/tests/customSectionEndpoint.test.ts:1:114271'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + {
+    +   inferred: true
+    + }
+    - undefined
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual:
+    inferred: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/mcp/tests/customSectionEndpoint.test.ts:3485:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 204.164042

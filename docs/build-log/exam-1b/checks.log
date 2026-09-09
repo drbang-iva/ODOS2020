@@ -1,0 +1,83 @@
+$ npm --prefix ui test
+Exit status: 0
+ok 1289 - P2 a late previous-encounter response cannot replace the new encounter's Wearing values
+  ---
+  duration_ms: 24.983834
+  type: 'test'
+  ...
+1..1289
+# tests 1294
+# suites 0
+# pass 1294
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 181324.770709
+
+$ ODOS_POSTGRES_URL=<isolated localhost:15932 database> npm --prefix mcp test
+Exit status: 1
+  ---
+  duration_ms: 0.507125
+  type: 'test'
+  ...
+1..3836
+# tests 4371
+# suites 0
+# pass 4326
+# fail 0
+# cancelled 0
+# skipped 45
+# todo 0
+# duration_ms 86890.674084
+⚠️  LIVE STACK NOT CONFIGURED — 41 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them.
+
+$ ODOS_ALLOW_UNGATED_MCP=1 ODOS_POSTGRES_URL=<isolated localhost:15932 database> npm --prefix mcp test
+Exit status: 0
+  ---
+  duration_ms: 0.545166
+  type: 'test'
+  ...
+1..3836
+# tests 4371
+# suites 0
+# pass 4326
+# fail 0
+# cancelled 0
+# skipped 45
+# todo 0
+# duration_ms 89416.7025
+⚠️  LIVE STACK NOT CONFIGURED — 41 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.
+
+$ cd ui && ./node_modules/.bin/tsc --noEmit --skipLibCheck
+Exit status: 0
+(no output)
+
+$ cd mcp && ./node_modules/.bin/tsc --noEmit
+Exit status: 0
+(no output)
+
+$ npm run preflight
+Exit status: 0
+- Procedure: 11 operations; 0 scope-verified; 11 NOT SCOPE-VERIFIED
+- Provenance: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- QuestionnaireResponse: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- RelatedPerson: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- ServiceRequest: 8 operations; 0 scope-verified; 8 NOT SCOPE-VERIFIED
+Limitations:
+- Computed read resourceTypes escape this scan.
+- Computed create resources require a generic resource type, an object-literal resourceType, or an fhir-scope-contract marker; other computed creates escape this scan.
+- Computed update, delete, and patch resourceTypes escape this scan.
+- A computed search is marker-checked only when its argument is named resourceType, resource_type, or .resourceType; other names escape because receiver-independent matching would misclassify non-FHIR search APIs.
+- Marked helper propagation follows named parameters; destructured or object-property resourceType forwarding escapes this scan.
+- Marked helper propagation is function-name based across scanned roots; an imported helper alias escapes unless its local name matches, and same-named non-FHIR helpers require the explicit call-site allowlist.
+- Type-level comparison does not prove criteria scope; criteria-dependent operations without an exact fhir-scope-contract are counted as NOT SCOPE-VERIFIED.
+ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md
+
+$ node .claude/skills/tier0-census/scripts/check-proxy-coverage.mjs
+Exit status: 0
+Proxy-coverage census — 24 backend route families discovered, 27 proxy table entries.
+
+Every backend route family has a proxy table entry.
+
+Reporting only — CI annotates findings, but this check never fails the build.

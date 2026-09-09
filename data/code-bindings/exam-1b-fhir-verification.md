@@ -1,0 +1,12 @@
+# EXAM-1B FHIR verification ledger
+
+Accessed 2026-09-09. No new medical terminology codes or clinical artifact URLs are introduced. The scope uses the existing definition's local option codes, stored literally; new metadata names and the `urn:odos:negative-act` business identifier are ODOS-local.
+
+| Contract | Primary source 1 | Primary source 2 | Agreement / implementation |
+|---|---|---|---|
+| An absent finding is a result, not a missing result | [R4 Observation definitions: dataAbsentReason](https://hl7.org/fhir/R4/observation-definitions.html#Observation.dataAbsentReason) | [R4 Observation guidance: code/value pairs](https://hl7.org/fhir/R4/observation.html#4.4) | dataAbsentReason explains a missing expected value. Finding presence/absence belongs in the result. Store explicit false-valued finding components plus frozen scope metadata; do not misuse missing-data semantics for a negative result. |
+| Components can carry findings with shared context; performer identifies the asserter | [R4 Observation definitions](https://hl7.org/fhir/R4/observation-definitions.html#Observation.component) | [R4 Observation component guidance](https://hl7.org/fhir/R4/observation.html#gr-comp) | Each eye's Observation carries its local finding components, authenticated performer, and recorded metadata. The act also retains its event timestamp independently of server receipt time. |
+| Conditional creation and identifier matching support replay | [R4 HTTP conditional create](https://hl7.org/fhir/R4/http.html#ccreate) | [R4 Bundle request.ifNoneExist](https://hl7.org/fhir/R4/bundle-definitions.html#Bundle.entry.request.ifNoneExist) | Conditional Observation creation matches a stable identifier. The identifier hash keys the request identity only; it never substitutes for the stored option list. |
+| Provenance can be searched by target | [R4 Provenance search parameters](https://hl7.org/fhir/R4/provenance.html#search) | [R4 Provenance target definition](https://hl7.org/fhir/R4/provenance-definitions.html#Provenance.target) | Conditional Provenance creation targets the persisted Observation. Real Medplum 5.1.30 replay and concurrent-submission checks verify one Observation and one Provenance. |
+
+This ledger is documentary, not runtime-enforced. Removing a row does not fail a test. Runtime behavior is exercised by the endpoint, UI, mutation, and disposable-Medplum checks in `docs/build-log/exam-1b/`.

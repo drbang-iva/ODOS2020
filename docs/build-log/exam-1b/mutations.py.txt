@@ -1,0 +1,35 @@
+from pathlib import Path
+import subprocess
+import json
+root=Path('/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b')
+logs=Path('/tmp/exam-1b-evidence')
+server=root/'mcp/src/clinical-graph/custom-section-endpoint.ts'
+ui=root/'ui/src/components/charting/OcularHealthSection.tsx'
+read='...(observationNegativeAct(observation) ? { negativeAct: observationNegativeAct(observation) } : {}),'
+mutations=[
+ ('1-frozen',server,read,'...(observationNegativeAct(observation) ? { negativeAct: { ...observationNegativeAct(observation), optionCodes: customFieldEntries(definition).filter((field) => field.valueType === "multi-select").flatMap((field) => (field.options ?? []).filter((option) => option.active).map((option) => option.code)) } } : {}),','mcp',['tests/customSectionEndpoint.test.ts'],'EXAM-1B freezes'),
+ ('2-derived',server,read,read+'\n      ...(componentString(observation, "EXAM_STATE") === "normal" && !observationNegativeAct(observation) ? { negativeAct: { inferred: true } } : {}),','mcp',['tests/customSectionEndpoint.test.ts'],'EXAM-1B freezes'),
+ ('3-per-eye',ui,'    next[definition.stableKey] = { ...row };','    if (touched(row.OD) || touched(row.OS)) { skipped += 2; continue; }\n    next[definition.stableKey] = { ...row };','ui',['tests/customSections.test.tsx'],'EXAM-1B per-eye'),
+ ('4-partial',ui,'setError(`Failed: ${remainingFailureNames.join("; ")}. ${allSavedKeys.length} structures saved; retry only the failed structures with All Normal or Save.`);','setMessage(`${dirtyDefinitions.length}/${definitions.length} ocular-health structures saved`);','ui',['tests/customSections.test.tsx','tests/entrySheets.test.tsx'],'EXAM-1B.*(partial|browser|retry)'),
+ ('5-replay',server,'...(identifier ? { "If-None-Exist": `identifier=${encodeURIComponent(`${identifier.system}|${identifier.value}`)}` } : {}),','...{},','mcp',['tests/customSectionEndpoint.test.ts'],'EXAM-1B identical'),
+ ('8-in-flight',ui,'changedDefinitions(definitions, currentCaptures.current, persistedCaptures)','changedDefinitions(definitions, captures, persistedCaptures)','ui',['tests/customSections.test.tsx'],'EXAM-1B in-flight'),
+ ('7-re-edit',ui,'if (unsavedDefinitions.length) {','if (false && unsavedDefinitions.length) {','ui',['tests/customSections.test.tsx'],'EXAM-1B re-edit'),
+ ('6-parent',ui,'onSaved(status, allSavedKeys);','onSaved(status, dirtyDefinitions.map((definition) => definition.stableKey));','ui',['tests/customSections.test.tsx'],'EXAM-1B partial'),
+]
+results=[]
+for label,path,old,new,cwd,files,pattern in mutations:
+ original=path.read_text()
+ assert original.count(old)==1,(label,original.count(old))
+ try:
+  path.write_text(original.replace(old,new))
+  command=['node','--import','tsx','--test','--test-name-pattern='+pattern,*files]
+  red=subprocess.run(command,cwd=root/cwd,capture_output=True,text=True)
+  (logs/(label+'-red.log')).write_text(red.stdout+red.stderr)
+  assert red.returncode!=0,label+' mutation survived'
+ finally: path.write_text(original)
+ green=subprocess.run(command,cwd=root/cwd,capture_output=True,text=True)
+ (logs/(label+'-green.log')).write_text(green.stdout+green.stderr)
+ assert green.returncode==0,label+' restoration failed'
+ results.append({'demonstration':label,'command':command,'redExit':red.returncode,'greenExit':green.returncode})
+ print(label+': RED exit '+str(red.returncode)+'; restored GREEN exit '+str(green.returncode),flush=True)
+(logs/'mutation-results.json').write_text(json.dumps(results,indent=2))

@@ -1,0 +1,17 @@
+/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/mcp/src/fhir-client.ts:316
+    const error = new Error(
+                  ^
+
+Error: FHIR POST /fhir/R4/Observation [Observation] 400 Bad Request: Resource ID did not match resolved ID [Observation.id]
+    at toError (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/mcp/src/fhir-client.ts:316:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/mcp/src/fhir-client.ts:806:19)
+    at async audited (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/mcp/src/fhir-client.ts:397:14)
+    at async persistCapture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/mcp/src/clinical-graph/custom-section-endpoint.ts:616:23)
+    at async handleCustomSectionCaptureRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/mcp/src/clinical-graph/custom-section-endpoint.ts:317:18)
+    at async Promise.all (index 0)
+    at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/.odos/exam-1b-live.ts:23:15) {
+  status: 400
+}
+
+Node.js v22.22.3

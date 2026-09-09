@@ -1,0 +1,83 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { createAuthenticatedFhirClient } from '../mcp/tests/integration-helpers.js';
+import { buildFindingDefinitionSeeds } from '../mcp/src/clinical-graph/finding-definition-store.js';
+import { customFieldEntries } from '../mcp/src/clinical-graph/custom-fields.js';
+import { handleCustomSectionCaptureRequest, handleCustomSectionHistoryRequest } from '../mcp/src/clinical-graph/custom-section-endpoint.js';
+const config=JSON.parse(readFileSync('.odos/exam-1b-medplum.json','utf8'));
+const baseUrl='http://localhost:19503';
+const {fhir,accessToken}=await createAuthenticatedFhirClient({baseUrl,email:config.defaultSuperAdminEmail,password:config.defaultSuperAdminPassword});
+const me=await (await fetch(`${baseUrl}/auth/me`,{headers:{Authorization:`Bearer ${accessToken}`}})).json() as any;
+const profile=me.profile ?? me.memberships?.[0]?.profile;
+const practitioner=profile?.reference ?? (profile?.id ? `${profile.resourceType}/${profile.id}` : undefined);
+assert.ok(practitioner,'Synthetic authenticated practitioner required');
+const patient=await fhir.create({resourceType:'Patient',name:[{family:'Synthetic EXAM-1B'}]} as const);
+const encounter=await fhir.create({resourceType:'Encounter',status:'in-progress',class:{code:'AMB'},subject:{reference:`Patient/${patient.id}`}} as const);
+const definitions=buildFindingDefinitionSeeds().filter(d=>['ocular-health:anterior:lens','ocular-health:anterior:cornea','ocular-health:anterior:iris'].includes(d.stableKey));
+const lens=definitions.find(d=>d.stableKey.endsWith(':lens'))!;
+const field=customFieldEntries(lens).find(f=>f.valueType==='multi-select')!;
+const realDeps={authenticate:async()=>({staffReference:practitioner,actorRole:'provider' as const,fhir}),findingDefinitions:()=>definitions};
+const patientReference=`Patient/${patient.id}`, encounterReference=`Encounter/${encounter.id}`;
+await handleCustomSectionCaptureRequest(realDeps,{authHeader:'synthetic',params:{stableKey:lens.stableKey},body:{patientReference,encounterReference,eyes:{OD:{state:'abnormal',customFields:[{code:field.localCode,value:[field.options!.find(o=>o.active)!.code]}]}}}});
+let fail=true;
+const failingFhir={...fhir,create:async(resource:any,headers?:Record<string,string>)=>{
+  if(fail && resource.resourceType==='Observation' && resource.code.coding?.some((c:any)=>c.code==='ocular-health:anterior:cornea') && resource.extension?.some((e:any)=>e.valueCodeableConcept?.coding?.some((c:any)=>c.code==='OS'))) throw new Error('Synthetic Cornea OS storage failure');
+  return fhir.create(resource,headers);
+}};
+const deps={...realDeps,authenticate:async()=>({staffReference:practitioner,actorRole:'provider' as const,fhir:failingFhir})};
+const {createServer}=await import('../ui/node_modules/vite/dist/node/index.js');
+const {chromium}=await import('../ui/node_modules/playwright-core/index.mjs');
+const root=process.cwd();
+process.chdir(`${root}/ui`);
+const server=await createServer({root:process.cwd(),logLevel:'silent',server:{host:'127.0.0.1',port:19521,strictPort:true}});
+await server.listen();
+const browser=await chromium.launch({channel:'chrome',headless:true});
+const page=await browser.newPage({viewport:{width:1440,height:1000}});
+const posts:any[]=[];
+try {
+  await page.addInitScript((fixture:any)=>{(window as any).__odosNegativeFixture=fixture;},{patientReference,encounterReference,definitions:definitions.map(d=>({stableKey:d.stableKey,sectionKey:d.sectionKey,display:d.display,active:d.active,perEye:true,customFields:customFieldEntries(d,true),normalTemplate:d.normalSemantics?.template}))});
+  await page.route('**/clinical-graph/custom/**',async route=>{
+    const req=route.request(),url=new URL(req.url());
+    const parts=url.pathname.split('/');
+    const stableKey=decodeURIComponent(parts[req.method()==='POST'?parts.length-1:parts.length-2]);
+    try {
+      if(req.method()==='POST') {
+        const body=req.postDataJSON(); posts.push({stableKey,body});
+        const result=await handleCustomSectionCaptureRequest(deps,{authHeader:'synthetic',params:{stableKey},body});
+        await route.fulfill({status:result.status,json:result.body});
+      } else {
+        const result=await handleCustomSectionHistoryRequest(deps,{authHeader:'synthetic',params:{stableKey},query:Object.fromEntries(url.searchParams)});
+        await route.fulfill({status:result.status,json:result.body});
+      }
+    } catch { await route.fulfill({status:503,json:{error:'Synthetic Cornea OS storage failure'}}); }
+  });
+  await page.goto('http://127.0.0.1:19521/tests/fixtures/entry-sheets.html?negativeAct=1');
+  const button=page.getByRole('button',{name:'Anterior All Normal',exact:true});
+  await button.waitFor();
+  await page.getByText("Loading ocular-health findings...", {exact:true}).waitFor({state:"hidden"});
+  await page.getByText("Cornea", {exact:true}).waitFor();
+  await page.screenshot({path:'/tmp/exam-1b-evidence/browser-before.png',fullPage:true});
+  await button.click();
+  await page.getByRole('button',{name:'Save Ocular Health',exact:true}).click();
+  await page.getByText(/Failed: Cornea/).waitFor();
+  assert.equal(posts.length,3);
+  const lensPost=posts.find(p=>p.stableKey===lens.stableKey);
+  assert.deepEqual(Object.keys(lensPost.body.eyes),['OS']);
+  const corneaPost=posts.find(p=>p.stableKey.endsWith(':cornea'));
+  await page.screenshot({path:'/tmp/exam-1b-evidence/browser-partial-failure.png',fullPage:true});
+  fail=false;
+  await button.click();
+  await page.getByText('3/3 ocular-health structures saved',{exact:true}).waitFor();
+  assert.equal(posts.length,4);
+  assert.equal(posts[3].stableKey,'ocular-health:anterior:cornea');
+  assert.deepEqual(posts[3].body.eyes,corneaPost.body.eyes);
+  const observations=await fhir.search('Observation',{subject:patientReference,encounter:encounterReference});
+  assert.equal(observations.entry?.length,6);
+  const negativeObservations=observations.entry!.filter(e=>e.resource?.component?.some(c=>c.code.coding?.some(k=>k.code==='NEGATIVE_ACT')));
+  assert.equal(negativeObservations.length,5);
+  await page.reload();
+  await page.getByText('17 findings explicitly asserted absent',{exact:true}).first().waitFor();
+  await page.screenshot({path:'/tmp/exam-1b-evidence/browser-after.png',fullPage:true});
+  console.log('LIVE BROWSER + MEDPLUM: touched Lens OD not posted; 3 structures attempted; Cornea OS failure named; only Cornea retried with identical IDs; 6 total Observations (1 original + 5 negative), no duplicate OD after partial structure failure; persisted assertions survive reload');
+} finally {await browser.close();await server.close();}

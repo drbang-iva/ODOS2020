@@ -1,0 +1,41 @@
+TAP version 13
+# Subtest: EXAM-1B partial failure names the structure and All Normal retries only that failure
+not ok 1 - EXAM-1B partial failure names the structure and All Normal retries only that failure
+  ---
+  duration_ms: 33.913834
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/customSections.test.tsx:1:138886'
+  failureType: 'testCodeFailure'
+  error: |-
+    parent receives all successful structures across partial attempts
+    + actual - expected
+    
+      [
+        'ocular-health:anterior:lids-lashes',
+    -   'ocular-health:anterior:palpebral-conjunctiva',
+    -   'ocular-health:anterior:periocular-adnexa'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'ocular-health:anterior:lids-lashes'
+    1: 'ocular-health:anterior:palpebral-conjunctiva'
+    2: 'ocular-health:anterior:periocular-adnexa'
+  actual:
+    0: 'ocular-health:anterior:lids-lashes'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/customSections.test.tsx:4339:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 684.190167

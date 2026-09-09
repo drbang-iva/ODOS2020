@@ -1,0 +1,107 @@
+[
+  {
+    "demonstration": "1-frozen",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B freezes",
+      "tests/customSectionEndpoint.test.ts"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "demonstration": "2-derived",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B freezes",
+      "tests/customSectionEndpoint.test.ts"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "demonstration": "3-per-eye",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B per-eye",
+      "tests/customSections.test.tsx"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "demonstration": "4-partial",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B.*(partial|browser|retry)",
+      "tests/customSections.test.tsx",
+      "tests/entrySheets.test.tsx"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "demonstration": "5-replay",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B identical",
+      "tests/customSectionEndpoint.test.ts"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "demonstration": "8-in-flight",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B in-flight",
+      "tests/customSections.test.tsx"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "demonstration": "7-re-edit",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B re-edit",
+      "tests/customSections.test.tsx"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "demonstration": "6-parent",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B partial",
+      "tests/customSections.test.tsx"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  }
+]
