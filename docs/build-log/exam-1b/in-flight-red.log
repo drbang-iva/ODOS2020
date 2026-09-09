@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: EXAM-1B in-flight edit remains unsaved after the older request completes
+not ok 1 - EXAM-1B in-flight edit remains unsaved after the older request completes
+  ---
+  duration_ms: 23.076834
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/customSections.test.tsx:1:145583'
+  failureType: 'testCodeFailure'
+  error: |-
+    the response only persisted the older capture
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/customSections.test.tsx:4454:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 680.601

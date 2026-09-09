@@ -4428,3 +4428,34 @@ test("EXAM-1B re-edit after partial save remains unsaved when another structure 
     assert.deepEqual(saved.flat().sort(), definitions.map((definition) => definition.stableKey).sort());
   } finally { renderer?.unmount(); }
 });
+
+test("EXAM-1B in-flight edit remains unsaved after the older request completes", async () => {
+  const definition = ocularDefinitions()[0]!;
+  const saved: string[][] = [];
+  let release!: () => void;
+  let wait = true;
+  const fetchImpl = (async (_input, init) => {
+    if (init?.method !== "POST") return jsonResponse({ rows: [] });
+    if (wait) await new Promise<void>((resolve) => { release = resolve; });
+    return jsonResponse({ eyes: {} });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection definitions={[definition]} patientReference="Patient/in-flight" encounterReference="Encounter/in-flight" onSaved={(_status, keys) => saved.push(keys)} apiBase="http://test" fetchImpl={fetchImpl} />);
+      await flushEffects();
+    });
+    const button = (label: string) => renderer.root.findAllByType("button").find((node) => renderedText(node) === label)!;
+    act(() => { button("Anterior All Normal").props.onClick(); });
+    let pending!: Promise<void>;
+    act(() => { pending = button("Save Ocular Health").props.onClick(); });
+    act(() => { renderer.root.findAllByType("textarea")[0]!.props.onChange({ target: { value: "Finding entered during request" } }); });
+    await act(async () => { release(); await pending; });
+    assert.equal(saved.length, 0, "the response only persisted the older capture");
+    assert.match(renderedText(renderer.root), new RegExp(`Unsaved changes: ${definition.display}`));
+    assert.equal(renderer.root.findAllByType("textarea")[0]!.props.value, "Finding entered during request");
+    wait = false;
+    await act(async () => { await button("Save Ocular Health").props.onClick(); });
+    assert.deepEqual(saved, [[definition.stableKey]]);
+  } finally { renderer?.unmount(); }
+});

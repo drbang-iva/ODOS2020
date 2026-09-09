@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { ClearSectionButton } from "./ClearControls";
 import { useEncounterEdit } from "./encounter-edit-context";
@@ -110,6 +110,12 @@ export function OcularHealthSection({
   fetchImpl = fetch,
 }: Props) {
   const [captures, setCaptures] = useState<Record<string, Record<Eye, EyeCapture>>>(() => emptyCaptures(definitions));
+  const currentCaptures = useRef(captures);
+  function replaceCaptures(update: typeof captures | ((current: typeof captures) => typeof captures)) {
+    const next = typeof update === "function" ? update(currentCaptures.current) : update;
+    currentCaptures.current = next;
+    setCaptures(next);
+  }
   const [pristine, setPristine] = useState<Record<string, Record<Eye, EyeCapture>>>(() => emptyCaptures(definitions));
   const [currentHistory, setCurrentHistory] = useState<CurrentHistory | null>(null);
   const [priors, setPriors] = useState<Record<string, PriorReadings>>({});
@@ -173,7 +179,7 @@ export function OcularHealthSection({
       .then((rows) => {
         if (controller.signal.aborted) return;
         const hydrated = Object.fromEntries(rows.map(([stableKey, , capture]) => [stableKey, capture]));
-        setCaptures(hydrated);
+        replaceCaptures(hydrated);
         setPristine(hydrated);
         setSavedDiagnosisObservations(Object.fromEntries(rows.map(([stableKey, , , references]) => [stableKey, references])));
         setCurrentHistory({
@@ -288,7 +294,7 @@ export function OcularHealthSection({
   }
 
   function updateEye(stableKey: string, eye: Eye, update: (capture: EyeCapture) => EyeCapture) {
-    setCaptures((current) => ({
+    replaceCaptures((current) => ({
       ...current,
       [stableKey]: {
         ...current[stableKey],
@@ -362,13 +368,14 @@ export function OcularHealthSection({
       (definition.stableKey.startsWith(prefix) || (prefix === ANTERIOR_PREFIX && definition.stableKey === DRY_EYE_ANTERIOR_STABLE_KEY)));
     if (retry.length) return save(retry);
     const result = applySegmentAllNormal(definitions, captures, prefix);
-    setCaptures(result.captures);
+    replaceCaptures(result.captures);
     const { filled, skipped } = result;
     setMessage(`${label}: recorded a negative act for ${filled} untouched ${filled === 1 ? "eye" : "eyes"} (pending save)${skipped ? `; skipped ${skipped} already touched` : ""}.`);
   }
 
   async function save(onlyDefinitions = definitions) {
     const dirtyDefinitions = changedDefinitions(onlyDefinitions, captures, pristine);
+    let persistedCaptures = pristine;
     const failures: string[] = [];
     const successfulKeys: string[] = [];
     const failureNames: string[] = [];
@@ -446,8 +453,9 @@ export function OcularHealthSection({
               normalTemplate: state === "normal" ? definition.normalTemplate : undefined,
             }];
           })) as Record<Eye, EyeCapture>;
-          setPristine((current) => ({ ...current, [definition.stableKey]: savedRow }));
-          setCaptures((current) => ({
+          persistedCaptures = { ...persistedCaptures, [definition.stableKey]: savedRow };
+          setPristine(persistedCaptures);
+          replaceCaptures((current) => ({
             ...current,
             [definition.stableKey]: Object.fromEntries(EYES.map((eye) => {
               const capture = current[definition.stableKey]?.[eye] ?? emptyEye();
@@ -460,7 +468,7 @@ export function OcularHealthSection({
           failureNames.push(`${definition.display} (${caught instanceof Error ? caught.message : String(caught)})`);
         }
       }
-      const dirtyKeys = new Set(changedDefinitions(definitions, captures, pristine).map((definition) => definition.stableKey));
+      const dirtyKeys = new Set(changedDefinitions(definitions, currentCaptures.current, persistedCaptures).map((definition) => definition.stableKey));
       const unattemptedFailures = failedKeys.filter((key) => dirtyKeys.has(key) && !dirtyDefinitions.some((definition) => definition.stableKey === key));
       const remainingFailures = [...unattemptedFailures, ...failures];
       const remainingFailureNames = [...unattemptedFailures.map((key) => definitions.find((definition) => definition.stableKey === key)!.display), ...failureNames];
@@ -471,7 +479,7 @@ export function OcularHealthSection({
         setError(`Failed: ${remainingFailureNames.join("; ")}. ${allSavedKeys.length} structures saved; retry only the failed structures with All Normal or Save.`);
         return;
       }
-      const unsavedDefinitions = definitions.filter((definition) => dirtyKeys.has(definition.stableKey) && !successfulKeys.includes(definition.stableKey));
+      const unsavedDefinitions = definitions.filter((definition) => dirtyKeys.has(definition.stableKey));
       if (unsavedDefinitions.length) {
         setMessage(`Unsaved changes: ${unsavedDefinitions.map((definition) => definition.display).join("; ")}. Use Save Ocular Health to persist these edits.`);
         return;

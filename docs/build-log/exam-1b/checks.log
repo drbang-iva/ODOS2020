@@ -1,19 +1,19 @@
 $ npm --prefix ui test
 Exit status: 0
-ok 1288 - P2 a late previous-encounter response cannot replace the new encounter's Wearing values
+ok 1289 - P2 a late previous-encounter response cannot replace the new encounter's Wearing values
   ---
-  duration_ms: 25.506833
+  duration_ms: 24.983834
   type: 'test'
   ...
-1..1288
-# tests 1293
+1..1289
+# tests 1294
 # suites 0
-# pass 1293
+# pass 1294
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 181146.297875
+# duration_ms 181324.770709
 
 $ ODOS_POSTGRES_URL=<isolated localhost:15932 database> npm --prefix mcp test
 Exit status: 1

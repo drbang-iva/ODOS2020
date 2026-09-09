@@ -66,6 +66,19 @@
     "greenExit": 0
   },
   {
+    "demonstration": "8-in-flight",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B in-flight",
+      "tests/customSections.test.tsx"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
     "demonstration": "7-re-edit",
     "command": [
       "node",
