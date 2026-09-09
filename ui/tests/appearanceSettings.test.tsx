@@ -134,6 +134,17 @@ test("Midnight × Teal is the default appearance", () => {
   assert.equal(defaults["--odos-accent-lo"], "#40bfac");
 });
 
+test("every selectable accent has a picker swatch rule", () => {
+  const practiceCss = readFileSync(new URL("../src/styles/practice-settings.css", import.meta.url), "utf8");
+  for (const accent of APPEARANCE_ACCENTS) {
+    assert.match(
+      practiceCss,
+      new RegExp(`\\.appearance-accent-swatch\\[data-accent-swatch="${accent}"\\]`),
+      `${accent} must have a swatch rule or its picker dot renders transparent`,
+    );
+  }
+});
+
 test("Gold stays selectable and resolves its own ramp, not the default", () => {
   assert.ok(APPEARANCE_ACCENTS.includes("gold"), "gold must remain a selectable accent");
   assert.match(appearanceCss, /:root\[data-accent="gold"\]/);

@@ -431,6 +431,7 @@
 }
 .appearance-scheme-options input { accent-color: var(--odos-accent); }
 .appearance-accent-swatch { width: 13px; height: 13px; border-radius: 50%; box-shadow: 0 0 0 3px var(--odos-line); }
+.appearance-accent-swatch[data-accent-swatch="teal"] { background: var(--odos-teal); }
 .appearance-accent-swatch[data-accent-swatch="gold"] { background: var(--odos-gold); }
 .appearance-accent-swatch[data-accent-swatch="sapphire"] { background: var(--odos-sapphire); }
 .appearance-accent-swatch[data-accent-swatch="emerald"] { background: var(--odos-emerald); }
