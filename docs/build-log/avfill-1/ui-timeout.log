@@ -1,0 +1,28 @@
+# Subtest: ROS browser: review-only History clear
+not ok 665 - ROS browser: review-only History clear
+  ---
+  duration_ms: 5569.145917
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/av-ratio-default/ui/tests/historyRosBrowser.test.tsx:1:825'
+  failureType: 'testCodeFailure'
+  error: |-
+    locator.waitFor: Timeout 5000ms exceeded.
+    Call log:
+    [2m  - waiting for getByTestId('history-review-of-systems') to be visible[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/av-ratio-default/ui/tests/historyRosBrowser.test.tsx:50:74)
+  ...
+
+
+1..1300
+# tests 1308
+# suites 0
+# pass 1307
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 196246.38625

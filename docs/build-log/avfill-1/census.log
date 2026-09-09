@@ -1,0 +1,7 @@
+BEGIN
+ current_rows | parseable_current_observations | deleted_observations | positive_any_component | positive_custom_component | positive_exact_sphere | av_observations | default_value_observations | negative_impossible 
+--------------+--------------------------------+----------------------+------------------------+---------------------------+-----------------------+-----------------+----------------------------+---------------------
+         6144 |                           6144 |                   10 |                     12 |                         0 |                     4 |               0 |                          0 |                   0
+(1 row)
+
+ROLLBACK
