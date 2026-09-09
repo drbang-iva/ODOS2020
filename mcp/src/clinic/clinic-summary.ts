@@ -25,6 +25,8 @@ import {
   visitTypeCode,
 } from "../fhir/schedulingVisitType.js";
 
+import { DEFAULT_VISIT_TYPE_CATEGORIES } from "../scheduling/visit-type-config.js";
+
 const FLOOR_STATE_URL = "https://odos2020.com/fhir/StructureDefinition/odos-floor-state";
 const CLINIC_SEARCH_LIMITS = { maxPages: 5, maxRows: 5_000 } as const;
 
@@ -337,9 +339,16 @@ export async function resolveVisitTypeCategoryForEncounter(
   appointment: Appointment | undefined,
   fhir: Pick<MedplumClient, "read" | "search">,
 ): Promise<string | undefined> {
-  // Missing or unresolvable Appointment links return undefined so sections stay gated;
+  // Direct-start encounters carry category IDs; scheduled encounters can carry catalog codes.
+  // Without a direct category, missing or unresolvable Appointment links keep sections gated;
   // operational FHIR failures throw so the chart explicitly fails open.
   try {
+    const directCategory = encounter?.type
+      ?.flatMap((concept) => concept.coding ?? [])
+      .find((coding) => coding.system === ODOS_VISIT_TYPE_SYSTEM &&
+        DEFAULT_VISIT_TYPE_CATEGORIES.some((category) => category.id === coding.code))
+      ?.code;
+    if (directCategory) return directCategory;
     let resolvedAppointment = appointment;
     if (!resolvedAppointment) {
       const reference = encounter?.appointment?.[0]?.reference;
