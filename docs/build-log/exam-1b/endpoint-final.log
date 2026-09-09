@@ -1,0 +1,31 @@
+TAP version 13
+# EXAM-1B FROZEN: added synthetic seed option is NOT covered; original explicit codes preserved
+# EXAM-1B DERIVED: empty normal has NO negative act; explicit negative has actor and frozen scope
+# EXAM-1B REPLAY: Provenance failure repaired; 1 Observation, 1 Provenance after 3 attempts
+# Subtest: EXAM-1B freezes negative scope against an added seed option and distinguishes derived normal
+ok 1 - EXAM-1B freezes negative scope against an added seed option and distinguishes derived normal
+  ---
+  duration_ms: 4.479791
+  type: 'test'
+  ...
+# Subtest: EXAM-1B identical replay after a Provenance failure creates one assertion and one Provenance
+ok 2 - EXAM-1B identical replay after a Provenance failure creates one assertion and one Provenance
+  ---
+  duration_ms: 14.075083
+  type: 'test'
+  ...
+# Subtest: EXAM-1B refuses invented negative codes, empty scope, wrong eye, and actor injection
+ok 3 - EXAM-1B refuses invented negative codes, empty scope, wrong eye, and actor injection
+  ---
+  duration_ms: 7.3105
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 263.938875

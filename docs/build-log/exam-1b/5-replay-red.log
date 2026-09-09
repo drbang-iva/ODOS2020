@@ -1,0 +1,107 @@
+TAP version 13
+# Subtest: EXAM-1B identical replay after a Provenance failure creates one assertion and one Provenance
+not ok 1 - EXAM-1B identical replay after a Provenance failure creates one assertion and one Provenance
+  ---
+  duration_ms: 19.313291
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/mcp/tests/customSectionEndpoint.test.ts:1:116352'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        eyes: {
+          OD: {
+            eye: 'OD',
+            negativeAct: {
+    ...
+            },
+    +       observationReference: 'Observation/observation-6',
+    +       provenanceReference: 'Provenance/provenance-8'
+    -       observationReference: 'Observation/observation-3',
+    -       provenanceReference: 'Provenance/provenance-5'
+          }
+        }
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    eyes:
+      OD:
+        eye: 'OD'
+        negativeAct:
+          id: 'c095ff19-f203-4807-b54b-0c5d18de1696'
+          definitionStableKey: 'ocular-health:anterior:lens'
+          eye: 'OD'
+          optionCodes:
+            0: 'nuclear-sclerosis'
+            1: 'cortical-cataract'
+            2: 'posterior-subcapsular-psc'
+            3: 'pseudophakia-pciol'
+            4: 'posterior-capsular-opacification-pco'
+            5: 'mixed'
+            6: 'anterior-polar'
+            7: 'posterior-polar'
+            8: 'anterior-subcapsular'
+            9: 'mature-cataract'
+            10: 'pseudophakia-aciol'
+            11: 'aphakia'
+            12: 'phacodonesis'
+            13: 'pseudoexfoliation'
+            14: 'dislocated-lens-iol'
+            15: 'iol-deposits'
+            16: 'polychromatic-christmas-tree'
+          exclusions:
+          assertedAt: '2026-07-10T18:00:00.000Z'
+          actorReference: 'Practitioner/doc-1'
+        observationReference: 'Observation/observation-3'
+        provenanceReference: 'Provenance/provenance-5'
+  actual:
+    eyes:
+      OD:
+        eye: 'OD'
+        negativeAct:
+          id: 'c095ff19-f203-4807-b54b-0c5d18de1696'
+          definitionStableKey: 'ocular-health:anterior:lens'
+          eye: 'OD'
+          optionCodes:
+            0: 'nuclear-sclerosis'
+            1: 'cortical-cataract'
+            2: 'posterior-subcapsular-psc'
+            3: 'pseudophakia-pciol'
+            4: 'posterior-capsular-opacification-pco'
+            5: 'mixed'
+            6: 'anterior-polar'
+            7: 'posterior-polar'
+            8: 'anterior-subcapsular'
+            9: 'mature-cataract'
+            10: 'pseudophakia-aciol'
+            11: 'aphakia'
+            12: 'phacodonesis'
+            13: 'pseudoexfoliation'
+            14: 'dislocated-lens-iol'
+            15: 'iol-deposits'
+            16: 'polychromatic-christmas-tree'
+          exclusions:
+          assertedAt: '2026-07-10T18:00:00.000Z'
+          actorReference: 'Practitioner/doc-1'
+        observationReference: 'Observation/observation-6'
+        provenanceReference: 'Provenance/provenance-8'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/mcp/tests/customSectionEndpoint.test.ts:3514:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 251.3585

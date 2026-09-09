@@ -1,0 +1,17 @@
+TAP version 13
+# EXAM-1B REPLAY: Provenance failure repaired; 1 Observation, 1 Provenance after 3 attempts
+# Subtest: EXAM-1B identical replay after a Provenance failure creates one assertion and one Provenance
+ok 1 - EXAM-1B identical replay after a Provenance failure creates one assertion and one Provenance
+  ---
+  duration_ms: 16.264708
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 217.39625

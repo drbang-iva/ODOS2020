@@ -1,0 +1,49 @@
+TAP version 13
+# Subtest: EXAM-1B partial failure names the structure and All Normal retries only that failure
+not ok 1 - EXAM-1B partial failure names the structure and All Normal retries only that failure
+  ---
+  duration_ms: 30.467792
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/customSections.test.tsx:1:138886'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Failed: Lids & Lashes/. Input:
+    
+    'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalAnterior SegmentPeriocular AdnexaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent2026-09-09T07:20:04.561Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent2026-09-09T07:20:04.561Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherLids & LashesODCopy to OS →Not performed / deferred1 findings explicitly asserted absent2026-09-09T07:20:04.561Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive lids-lashes normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent2026-09-09T07:20:04.561Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive lids-lashes normal.What is presentFindingOtherPalpebral ConjunctivaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent2026-09-09T07:20:04.561Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive palpebral-conjunctiva normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent2026-09-09T07:20:04.561Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive palpebral-conjunctiva normal.What is presentFindingOther3/3 ocular-health structures savedSave Ocular Health'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalAnterior SegmentPeriocular AdnexaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent2026-09-09T07:20:04.561Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent2026-09-09T07:20:04.561Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive periocular-adnexa normal.What is presentFindingOtherLids & LashesODCopy to OS →Not performed / deferred1 findings explicitly asserted absent2026-09-09T07:20:04.561Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive lids-lashes normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent2026-09-09T07:20:04.561Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive lids-lashes normal.What is presentFindingOtherPalpebral ConjunctivaODCopy to OS →Not performed / deferred1 findings explicitly asserted absent2026-09-09T07:20:04.561Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive palpebral-conjunctiva normal.What is presentFindingOtherOS← Copy to ODNot performed / deferred1 findings explicitly asserted absent2026-09-09T07:20:04.561Z · pending saveAbsent: FindingExcluded: NoneNot covered: NoneLive palpebral-conjunctiva normal.What is presentFindingOther3/3 ocular-health structures savedSave Ocular Health'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/customSections.test.tsx:4334:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: EXAM-1B browser names partial failure and retries only the failed structure
+not ok 2 - EXAM-1B browser names partial failure and retries only the failed structure
+  ---
+  duration_ms: 32247.132292
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/entrySheets.test.tsx:1:43507'
+  failureType: 'testCodeFailure'
+  error: |-
+    locator.waitFor: Timeout 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByText(/Failed: Synthetic Beta/) to be visible[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/exam-1b/ui/tests/entrySheets.test.tsx:1122:52)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 33140.476917
