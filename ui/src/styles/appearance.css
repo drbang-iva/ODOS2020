@@ -27,6 +27,7 @@
   --odos-chart-toggle-text: rgb(255 255 255 / .72);
   --odos-chart-scrim: rgb(3 6 14 / .42);
 
+  --odos-teal: #73d6c7;
   --odos-gold: #e0bc7e;
   --odos-emerald: #2fbf8f;
   --odos-amethyst: #9d71f0;
@@ -34,17 +35,17 @@
   --odos-amber: #e7a94c;
   --odos-alert: #e25c6a;
 
-  --odos-accent: #e0bc7e;
-  --odos-accent-hi: #f0d6a4;
-  --odos-accent-lo: #c79e5c;
-  --odos-accent-ink: #0b0e18;
-  --odos-accent-border: rgba(224, 188, 126, 0.55);
-  --odos-accent-ring: rgba(224, 188, 126, 0.08);
-  --odos-accent-glow: 0 8px 28px rgba(224, 188, 126, 0.22);
-  --odos-accent-glow-hover: 0 12px 34px rgba(224, 188, 126, 0.3);
-  --odos-accent-hairline: rgba(224, 188, 126, 0.35);
-  --odos-accent-tint-hi: rgba(224, 188, 126, 0.12);
-  --odos-accent-tint-lo: rgba(224, 188, 126, 0.05);
+  --odos-accent: #73d6c7;
+  --odos-accent-hi: #a0e3d9;
+  --odos-accent-lo: #40bfac;
+  --odos-accent-ink: #04231f;
+  --odos-accent-border: rgba(115, 214, 199, 0.55);
+  --odos-accent-ring: rgba(115, 214, 199, 0.10);
+  --odos-accent-glow: 0 8px 28px rgba(115, 214, 199, 0.24);
+  --odos-accent-glow-hover: 0 12px 34px rgba(115, 214, 199, 0.32);
+  --odos-accent-hairline: rgba(115, 214, 199, 0.4);
+  --odos-accent-tint-hi: rgba(115, 214, 199, 0.13);
+  --odos-accent-tint-lo: rgba(115, 214, 199, 0.05);
 }
 
 :root[data-surface="space-black"] {
@@ -94,6 +95,20 @@
   --odos-chart-toggle: rgba(255, 255, 255, 0.97);
   --odos-chart-toggle-text: rgba(26, 34, 51, 0.72);
   --odos-chart-scrim: rgba(26, 34, 51, 0.22);
+}
+
+:root[data-accent="gold"] {
+  --odos-accent: #e0bc7e;
+  --odos-accent-hi: #f0d6a4;
+  --odos-accent-lo: #c79e5c;
+  --odos-accent-ink: #0b0e18;
+  --odos-accent-border: rgba(224, 188, 126, 0.55);
+  --odos-accent-ring: rgba(224, 188, 126, 0.08);
+  --odos-accent-glow: 0 8px 28px rgba(224, 188, 126, 0.22);
+  --odos-accent-glow-hover: 0 12px 34px rgba(224, 188, 126, 0.3);
+  --odos-accent-hairline: rgba(224, 188, 126, 0.35);
+  --odos-accent-tint-hi: rgba(224, 188, 126, 0.12);
+  --odos-accent-tint-lo: rgba(224, 188, 126, 0.05);
 }
 
 :root[data-accent="emerald"] {
