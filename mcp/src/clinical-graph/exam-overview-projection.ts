@@ -665,7 +665,7 @@ function sheetFindingProjection(
           ? sheetQualifierLabel(component, qualifier)
           : translatedValue === undefined
             ? undefined
-            : sheetQualifierValueLabel(translatedValue);
+            : sheetQualifierValueLabel(translatedValue, qualifier);
         return label ? [label] : [];
       });
       return [{ display: option.display, qualifiers }];
@@ -677,7 +677,10 @@ function sheetFindingProjection(
   };
 }
 
-function sheetQualifierValueLabel(value: FindingQualifierValue): string {
+function sheetQualifierValueLabel(value: FindingQualifierValue, qualifier: QualifierSeed): string {
+  if (qualifier.kind === "enum") {
+    return qualifier.options.find((option) => option.code === String(value))?.display ?? String(value);
+  }
   if (typeof value === "number" || typeof value === "string") return String(value);
   return `${value.from}–${value.to} o'clock ${value.clockwise ? "clockwise" : "counterclockwise"}`;
 }

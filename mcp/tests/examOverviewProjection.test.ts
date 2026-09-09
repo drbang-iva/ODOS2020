@@ -10,6 +10,7 @@ import {
   observationSnapshot,
   type ClinicalSectionApplicabilityRegistry,
 } from "../src/clinical-graph/exam-overview-projection.js";
+import { customFieldEntries } from "../src/clinical-graph/custom-fields.js";
 import type { ClinicalFindingDefinition } from "../src/clinical-graph/glaucoma-suspect.js";
 import {
   buildAnteriorOcularHealthDefinitions,
@@ -269,6 +270,41 @@ test("historical Lens brunescent selections project through Overview with the sa
     }],
   ]);
   assert.deepEqual(sources, before);
+});
+
+test("translated enum qualifiers render their display and preserve unknown codes", () => {
+  const periphery = buildPosteriorOcularHealthDefinitions(PROVENANCE)
+    .find((row) => row.stableKey === "ocular-health:posterior:periphery");
+  assert.ok(periphery);
+  const field = customFieldEntries(periphery, true).find((row) => row.valueType === "multi-select");
+  assert.ok(field);
+  const source = observation("legacy-horseshoe", periphery.stableKey, {
+    extension: [{
+      url: "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+      valueCodeableConcept: { coding: [{ code: "OD" }] },
+    }],
+    interpretation: [{ coding: [{ code: "abnormal" }] }],
+    component: [booleanComponent(`OD_${field.localCode}::horseshoe-tear`, true)],
+  });
+  const before = structuredClone(source);
+  const project = (definition: ClinicalFindingDefinition) => buildExamOverviewProjection({
+    encounterReference: "Encounter/e1",
+    patientReference: "Patient/p1",
+    definitions: [definition],
+    currentObservations: [source],
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  }).findings[0]?.sheetFindings;
+
+  assert.deepEqual(project(periphery), [{ display: "retinal tear", qualifiers: ["Horseshoe (flap)"] }]);
+  const withoutOption = structuredClone(periphery);
+  const fields = Object.values(withoutOption.valueSchema.fields as Record<string, typeof field>);
+  const subtype = fields.find((row) => row.valueType === "multi-select")?.options
+    ?.find((option) => option.code === "retinal-tear")?.qualifiers?.find((qualifier) => qualifier.key === "subtype");
+  assert.ok(subtype?.kind === "enum");
+  subtype.options = subtype.options.filter((option) => option.code !== "horseshoe");
+  assert.deepEqual(project(withoutOption), [{ display: "retinal tear", qualifiers: ["horseshoe"] }]);
+  assert.deepEqual(source, before);
 });
 
 test("historical ambiguous macular-hole selections project as an ungraded macular hole without mutating the source", () => {
