@@ -1220,8 +1220,9 @@ function applySegmentAllNormal(
   let skipped = 0;
   let filled = 0;
   const segmentDefinitions = definitions.filter((definition) =>
-    definition.stableKey.startsWith(prefix) ||
-    (prefix === ANTERIOR_PREFIX && definition.stableKey === DRY_EYE_ANTERIOR_STABLE_KEY)
+    (definition.stableKey.startsWith(prefix) ||
+      (prefix === ANTERIOR_PREFIX && definition.stableKey === DRY_EYE_ANTERIOR_STABLE_KEY)) &&
+    definition.customFields?.some((field) => field.valueType === "multi-select")
   );
   const next = { ...captures };
   for (const definition of segmentDefinitions) {
