@@ -4,6 +4,7 @@ import { searchAll } from "./fhir-search";
 
 export const APPEARANCE_SURFACES = ["light", "midnight", "space-black"] as const;
 export const APPEARANCE_ACCENTS = [
+  "teal",
   "gold",
   "emerald",
   "sapphire",
@@ -25,10 +26,11 @@ export interface AppearanceConfig {
 
 export const DEFAULT_APPEARANCE: AppearanceConfig = {
   surface: "midnight",
-  accent: "gold",
+  accent: "teal",
 };
 
 export const SEMANTIC_VARIABLES = {
+  "--odos-teal": "#73d6c7",
   "--odos-gold": "#e0bc7e",
   "--odos-emerald": "#2fbf8f",
   "--odos-amethyst": "#9d71f0",
@@ -123,6 +125,19 @@ export const SURFACE_VARIABLES: Record<AppearanceSurface, Readonly<Record<string
 };
 
 export const ACCENT_VARIABLES: Record<AppearanceAccent, Readonly<Record<string, string>>> = {
+  teal: {
+    "--odos-accent": "#73d6c7",
+    "--odos-accent-hi": "#a0e3d9",
+    "--odos-accent-lo": "#40bfac",
+    "--odos-accent-ink": "#04231f",
+    "--odos-accent-border": "rgba(115, 214, 199, 0.55)",
+    "--odos-accent-ring": "rgba(115, 214, 199, 0.10)",
+    "--odos-accent-glow": "0 8px 28px rgba(115, 214, 199, 0.24)",
+    "--odos-accent-glow-hover": "0 12px 34px rgba(115, 214, 199, 0.32)",
+    "--odos-accent-hairline": "rgba(115, 214, 199, 0.4)",
+    "--odos-accent-tint-hi": "rgba(115, 214, 199, 0.13)",
+    "--odos-accent-tint-lo": "rgba(115, 214, 199, 0.05)",
+  },
   gold: {
     "--odos-accent": "#e0bc7e",
     "--odos-accent-hi": "#f0d6a4",
@@ -214,7 +229,7 @@ export function appearanceVariables(config: AppearanceConfig): Readonly<Record<s
     ...SURFACE_VARIABLES.midnight,
     ...SURFACE_VARIABLES[config.surface],
     ...SEMANTIC_VARIABLES,
-    ...ACCENT_VARIABLES.gold,
+    ...ACCENT_VARIABLES.teal,
     ...ACCENT_VARIABLES[config.accent],
   };
 }
@@ -304,7 +319,7 @@ function validateAppearanceConfig(value: unknown): asserts value is AppearanceCo
     throw new Error("Appearance surface must be light, midnight, or space-black.");
   }
   if (!APPEARANCE_ACCENTS.includes(config.accent as AppearanceAccent)) {
-    throw new Error("Appearance accent must be gold, emerald, sapphire, amethyst, deep-sapphire, or deep-amethyst.");
+    throw new Error("Appearance accent must be teal, gold, emerald, sapphire, amethyst, deep-sapphire, or deep-amethyst.");
   }
 }
 

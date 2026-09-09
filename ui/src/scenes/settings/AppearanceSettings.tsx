@@ -23,6 +23,7 @@ const SURFACE_LABELS: Record<AppearanceSurface, string> = {
 };
 
 const ACCENT_LABELS: Record<AppearanceAccent, string> = {
+  teal: "Teal",
   gold: "Gold",
   emerald: "Emerald",
   sapphire: "Sapphire",

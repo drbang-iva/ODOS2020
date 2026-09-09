@@ -53,7 +53,9 @@ function clientFixture(initial?: Basic) {
 const appearanceCss = readFileSync(new URL("../src/styles/appearance.css", import.meta.url), "utf8");
 
 function cssAccentVariables(accent: (typeof APPEARANCE_ACCENTS)[number]): Record<string, string> {
-  const selector = accent === "gold" ? ":root" : `:root[data-accent="${accent}"]`;
+  const selector = accent === DEFAULT_APPEARANCE.accent
+    ? ":root"
+    : `:root[data-accent="${accent}"]`;
   const blockStart = appearanceCss.indexOf(`${selector} {`);
   assert.notEqual(blockStart, -1, `${selector} must exist`);
   const blockEnd = appearanceCss.indexOf("}", blockStart);
@@ -80,19 +82,19 @@ function contrastRatio(first: string, second: string): number {
   return (lighter! + 0.05) / (darker! + 0.05);
 }
 
-test("all 18 Surface × Accent combinations resolve the approved variable values", () => {
+test("all 21 Surface × Accent combinations resolve the approved variable values", () => {
   const combinations: AppearanceConfig[] = [];
   for (const surface of APPEARANCE_SURFACES) {
     for (const accent of APPEARANCE_ACCENTS) combinations.push({ surface, accent });
   }
-  assert.equal(combinations.length, 18);
+  assert.equal(combinations.length, 21);
 
   for (const config of combinations) {
     const variables = appearanceVariables(config);
     for (const [name, value] of Object.entries({
       ...SURFACE_VARIABLES.midnight,
       ...SURFACE_VARIABLES[config.surface],
-      ...ACCENT_VARIABLES.gold,
+      ...ACCENT_VARIABLES.teal,
       ...ACCENT_VARIABLES[config.accent],
     })) {
       assert.equal(variables[name], value, `${config.surface} × ${config.accent} ${name}`);
@@ -117,7 +119,7 @@ test("every accent ink clears WCAG AA across all three gradient stops", () => {
   }
 });
 
-test("Midnight × Gold remains the default appearance", () => {
+test("Midnight × Teal is the default appearance", () => {
   assert.match(appearanceCss, /:root\s*\{/);
   assert.match(appearanceCss, /:root\[data-surface="space-black"\]/);
   assert.match(appearanceCss, /:root\[data-surface="light"\]/);
@@ -127,9 +129,23 @@ test("Midnight × Gold remains the default appearance", () => {
   assert.equal(defaults["--odos-surface"], "#121a2e");
   assert.equal(defaults["--odos-surface-2"], "#17203a");
   assert.equal(defaults["--odos-text"], "#e9edf6");
-  assert.equal(defaults["--odos-accent"], "#e0bc7e");
-  assert.equal(defaults["--odos-accent-hi"], "#f0d6a4");
-  assert.equal(defaults["--odos-accent-lo"], "#c79e5c");
+  assert.equal(defaults["--odos-accent"], "#73d6c7");
+  assert.equal(defaults["--odos-accent-hi"], "#a0e3d9");
+  assert.equal(defaults["--odos-accent-lo"], "#40bfac");
+});
+
+test("Gold stays selectable and resolves its own ramp, not the default", () => {
+  assert.ok(APPEARANCE_ACCENTS.includes("gold"), "gold must remain a selectable accent");
+  assert.match(appearanceCss, /:root\[data-accent="gold"\]/);
+
+  const gold = appearanceVariables({ surface: "midnight", accent: "gold" });
+  assert.equal(gold["--odos-accent"], "#e0bc7e");
+  assert.equal(gold["--odos-accent-hi"], "#f0d6a4");
+  assert.equal(gold["--odos-accent-lo"], "#c79e5c");
+  assert.equal(gold["--odos-accent-ink"], "#0b0e18");
+
+  const teal = appearanceVariables({ surface: "midnight", accent: "teal" });
+  assert.notEqual(gold["--odos-accent"], teal["--odos-accent"]);
 });
 
 test("semantic colors stay fixed when the Accent scheme changes", () => {
@@ -200,14 +216,14 @@ test("Appearance offers only the two ready surfaces and no custom color input", 
     <AppearanceSettingsReady config={DEFAULT_APPEARANCE} canWrite client={fixture.client} />,
   );
   const inputs = renderer.root.findAllByType("input");
-  assert.equal(inputs.length, 8);
+  assert.equal(inputs.length, 9);
   assert.ok(inputs.every((input) => input.props.type === "radio"));
   assert.deepEqual(inputs.map((input) => input.props.value), [
-    "midnight", "space-black", "gold", "emerald", "sapphire", "amethyst", "deep-sapphire", "deep-amethyst",
+    "midnight", "space-black", "teal", "gold", "emerald", "sapphire", "amethyst", "deep-sapphire", "deep-amethyst",
   ]);
   assert.deepEqual(
     renderer.root.findAllByType("label").map((label) => label.findAllByType("span").at(-1)?.children.join("")),
-    ["Midnight", "Space Black", "Gold", "Emerald", "Sapphire", "Amethyst", "Deep Sapphire", "Deep Amethyst"],
+    ["Midnight", "Space Black", "Teal", "Gold", "Emerald", "Sapphire", "Amethyst", "Deep Sapphire", "Deep Amethyst"],
   );
   assert.deepEqual(SELECTABLE_APPEARANCE_SURFACES, ["midnight", "space-black"]);
   assert.equal(inputs.some((input) => input.props.value === "light"), false);
