@@ -1,0 +1,68 @@
+[
+  {
+    "demonstration": "1-frozen",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B freezes",
+      "tests/customSectionEndpoint.test.ts"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "demonstration": "2-derived",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B freezes",
+      "tests/customSectionEndpoint.test.ts"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "demonstration": "3-per-eye",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B per-eye",
+      "tests/customSections.test.tsx"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "demonstration": "4-partial",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B.*(partial|browser)",
+      "tests/customSections.test.tsx",
+      "tests/entrySheets.test.tsx"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "demonstration": "5-replay",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=EXAM-1B identical",
+      "tests/customSectionEndpoint.test.ts"
+    ],
+    "redExit": 1,
+    "greenExit": 0
+  }
+]

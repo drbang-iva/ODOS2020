@@ -30,7 +30,18 @@ import { useConfirmDestructive } from "./ConfirmDestructive";
 export type Eye = "OD" | "OS";
 type ExamState = "normal" | "abnormal" | "deferred";
 
+export interface NegativeAct {
+  id: string;
+  definitionStableKey: string;
+  eye: Eye;
+  optionCodes: string[];
+  exclusions: string[];
+  assertedAt: string;
+  actorReference?: string;
+}
+
 export interface EyeCapture {
+  negativeAct?: NegativeAct;
   state?: ExamState;
   selections: string[];
   grades?: Record<string, number | string>;
@@ -40,6 +51,7 @@ export interface EyeCapture {
 }
 
 interface HistoryRow {
+  negativeAct?: NegativeAct;
   observationReference?: string;
   recordedAt: string;
   eye?: Eye;
@@ -104,8 +116,9 @@ export function OcularHealthSection({
   const [relatedReadings, setRelatedReadings] = useState<Record<string, RelatedFindingReadings>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [savedDiagnosisObservations, setSavedDiagnosisObservations] = useState<Record<string, string[]>>({});
+  const [savedDiagnosisObservations, setSavedDiagnosisObservations] = useState<Record<string, Partial<Record<Eye, string>>>>({});
   const [message, setMessage] = useState<string | null>(null);
+  const [failedKeys, setFailedKeys] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);
   const { onCleared } = useEncounterEdit();
@@ -135,6 +148,8 @@ export function OcularHealthSection({
     const controller = new AbortController();
     setLoading(true);
     setError(null);
+    setFailedKeys([]);
+    setMessage(null);
     setCurrentHistory(null);
     setPriors({});
     setSavedDiagnosisObservations({});
@@ -275,7 +290,7 @@ export function OcularHealthSection({
       ...current,
       [stableKey]: {
         ...current[stableKey],
-        [eye]: update(current[stableKey]?.[eye] ?? emptyEye()),
+        [eye]: { ...update(current[stableKey]?.[eye] ?? emptyEye()), negativeAct: undefined },
       },
     }));
   }
@@ -337,86 +352,110 @@ export function OcularHealthSection({
   }
 
   function allNormal(prefix: string, label: string) {
+    const retry = definitions.filter((definition) => failedKeys.includes(definition.stableKey) &&
+      (definition.stableKey.startsWith(prefix) || (prefix === ANTERIOR_PREFIX && definition.stableKey === DRY_EYE_ANTERIOR_STABLE_KEY)));
+    if (retry.length) return save(retry);
     const result = applySegmentAllNormal(definitions, captures, prefix);
     setCaptures(result.captures);
     const { filled, skipped } = result;
-    setMessage(`${label}: marked ${filled} untouched ${filled === 1 ? "structure" : "structures"} normal${skipped ? `; skipped ${skipped} already touched` : ""}.`);
+    setMessage(`${label}: recorded a negative act for ${filled} untouched ${filled === 1 ? "eye" : "eyes"} (pending save)${skipped ? `; skipped ${skipped} already touched` : ""}.`);
   }
 
-  async function save() {
-    const dirtyDefinitions = changedDefinitions(definitions, captures, pristine);
+  async function save(onlyDefinitions = definitions) {
+    const dirtyDefinitions = changedDefinitions(onlyDefinitions, captures, pristine);
+    const failures: string[] = [];
+    const failureNames: string[] = [];
     setSaving(true);
     setError(null);
     setMessage(null);
     try {
       if (!dirtyDefinitions.length) throw new Error("Capture at least one ocular-health structure before saving.");
       for (const definition of dirtyDefinitions) {
-        const field = abnormalField(definition);
-        const grades = gradeFields(definition);
-        const row = captures[definition.stableKey] ?? emptyRow();
-        const eyes = Object.fromEntries(EYES.flatMap((eye) => {
-          const capture = row[eye];
-          const original = pristine[definition.stableKey]?.[eye] ?? emptyEye();
-          if (!touched(capture) && !touched(original)) return [];
-          const state = derivedExamState(capture);
-          return [[eye, {
-            state,
-            customFields: [
-              ...(field && capture.selections.length
-                ? [{ code: field.localCode, value: capture.selections }]
-                : []),
-              ...(state === "deferred" ? [] : grades.flatMap((grade) => {
-                const value = capture.grades?.[grade.localCode] ?? defaultGradeValue(grade);
-                return value === "" ? [] : [{
-                  code: grade.localCode,
-                  value: grade.valueType === "number" ? Number(value) : value,
-                }];
-              })),
-            ],
-            ...(hasFindingDetails(capture.findingDetails)
-              ? { findingDetails: capture.findingDetails }
-              : {}),
-            ...(capture.other.trim() ? { other: capture.other.trim() } : {}),
-          }]];
-        }));
-        const response = await fetchImpl(
-          `${apiBase ?? clinicalGraphApiBase()}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}`,
-          {
-            method: "POST",
-            headers: { ...authHeaders(), "Content-Type": "application/json" },
-            body: JSON.stringify({ patientReference, encounterReference, eyes }),
-          },
-        );
-        const body = await response.json() as {
-          eyes?: Partial<Record<Eye, { observationReference?: string }>>;
-          error?: string;
-        };
-        if (!response.ok) throw new Error(body.error ?? `${definition.display} save failed: ${response.status}`);
-        setSavedDiagnosisObservations((current) => ({
-          ...current,
-          [definition.stableKey]: EYES.flatMap((eye) => {
-            const observationReference = body.eyes?.[eye]?.observationReference;
-            return row[eye]?.selections.length && observationReference ? [observationReference] : [];
-          }),
-        }));
-        const savedRow = Object.fromEntries(EYES.map((eye) => {
-          const capture = row[eye] ?? emptyEye();
-          const original = pristine[definition.stableKey]?.[eye] ?? emptyEye();
-          const state = touched(capture) || touched(original) ? derivedExamState(capture) : capture.state;
-          return [eye, {
-            ...capture,
-            state,
-            normalTemplate: state === "normal" ? definition.normalTemplate : undefined,
-          }];
-        })) as Record<Eye, EyeCapture>;
-        setPristine((current) => ({ ...current, [definition.stableKey]: savedRow }));
-        setCaptures((current) => ({
-          ...current,
-          [definition.stableKey]: Object.fromEntries(EYES.map((eye) => {
-            const capture = current[definition.stableKey]?.[eye] ?? emptyEye();
-            return [eye, sameCapture(capture, row[eye] ?? emptyEye()) ? savedRow[eye] : capture];
-          })) as Record<Eye, EyeCapture>,
-        }));
+        try {
+          const field = abnormalField(definition);
+          const grades = gradeFields(definition);
+          const row = captures[definition.stableKey] ?? emptyRow();
+          const eyes = Object.fromEntries(EYES.flatMap((eye) => {
+            const capture = row[eye];
+            const original = pristine[definition.stableKey]?.[eye] ?? emptyEye();
+            if (sameCapture(capture, original)) return [];
+            const state = derivedExamState(capture);
+            return [[eye, {
+              state,
+              ...(capture.negativeAct ? { negativeAct: {
+                id: capture.negativeAct.id,
+                definitionStableKey: capture.negativeAct.definitionStableKey,
+                eye: capture.negativeAct.eye,
+                optionCodes: capture.negativeAct.optionCodes,
+                exclusions: capture.negativeAct.exclusions,
+                assertedAt: capture.negativeAct.assertedAt,
+              } } : {}),
+              customFields: [
+                ...(field && capture.selections.length
+                  ? [{ code: field.localCode, value: capture.selections }]
+                  : []),
+                ...(state === "deferred" ? [] : grades.flatMap((grade) => {
+                  const value = capture.grades?.[grade.localCode] ?? defaultGradeValue(grade);
+                  return value === "" ? [] : [{
+                    code: grade.localCode,
+                    value: grade.valueType === "number" ? Number(value) : value,
+                  }];
+                })),
+              ],
+              ...(hasFindingDetails(capture.findingDetails)
+                ? { findingDetails: capture.findingDetails }
+                : {}),
+              ...(capture.other.trim() ? { other: capture.other.trim() } : {}),
+            }]];
+          }));
+          const response = await fetchImpl(
+            `${apiBase ?? clinicalGraphApiBase()}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}`,
+            {
+              method: "POST",
+              headers: { ...authHeaders(), "Content-Type": "application/json" },
+              body: JSON.stringify({ patientReference, encounterReference, eyes }),
+            },
+          );
+          const body = await response.json() as {
+            eyes?: Partial<Record<Eye, { observationReference?: string; negativeAct?: NegativeAct }>>;
+            error?: string;
+          };
+          if (!response.ok) throw new Error(body.error ?? `${definition.display} save failed: ${response.status}`);
+          setSavedDiagnosisObservations((current) => ({
+            ...current,
+            [definition.stableKey]: Object.fromEntries(EYES.flatMap((eye) => {
+              const observationReference = body.eyes?.[eye]?.observationReference ?? current[definition.stableKey]?.[eye];
+              return row[eye]?.selections.length && observationReference ? [[eye, observationReference]] : [];
+            })),
+          }));
+          const savedRow = Object.fromEntries(EYES.map((eye) => {
+            const capture = row[eye] ?? emptyEye();
+            const original = pristine[definition.stableKey]?.[eye] ?? emptyEye();
+            const state = touched(capture) || touched(original) ? derivedExamState(capture) : capture.state;
+            return [eye, {
+              ...capture,
+              ...(body.eyes?.[eye]?.negativeAct ? { negativeAct: body.eyes[eye]!.negativeAct } : {}),
+              state,
+              normalTemplate: state === "normal" ? definition.normalTemplate : undefined,
+            }];
+          })) as Record<Eye, EyeCapture>;
+          setPristine((current) => ({ ...current, [definition.stableKey]: savedRow }));
+          setCaptures((current) => ({
+            ...current,
+            [definition.stableKey]: Object.fromEntries(EYES.map((eye) => {
+              const capture = current[definition.stableKey]?.[eye] ?? emptyEye();
+              return [eye, sameCapture(capture, row[eye] ?? emptyEye()) ? savedRow[eye] : capture];
+            })) as Record<Eye, EyeCapture>,
+          }));
+        } catch (caught) {
+          failures.push(definition.stableKey);
+          failureNames.push(`${definition.display} (${caught instanceof Error ? caught.message : String(caught)})`);
+        }
+      }
+      setFailedKeys((current) => [...current.filter((key) => !dirtyDefinitions.some((definition) => definition.stableKey === key)), ...failures]);
+      if (failures.length) {
+        setError(`Failed: ${failureNames.join("; ")}. ${dirtyDefinitions.length - failures.length} structures saved; retry only the failed structures with All Normal or Save.`);
+        return;
       }
       const status = {
         completed: true,
@@ -439,8 +478,8 @@ export function OcularHealthSection({
         <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 bg-bg-deep/95 pb-4 backdrop-blur">
           <div><div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Ocular Health</div><h2 className="mt-1 text-xl font-semibold text-white">Anterior &amp; Posterior Segments</h2><p className="mt-1 text-sm text-white/45">Record what is present. Unmarked structures save as normal when touched.</p></div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => allNormal(ANTERIOR_PREFIX, "Anterior All Normal")} disabled={loading} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Anterior All Normal</button>
-            <button type="button" onClick={() => allNormal(POSTERIOR_PREFIX, "Fundus All Normal")} disabled={loading} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Fundus All Normal</button>
+            <button type="button" onClick={() => allNormal(ANTERIOR_PREFIX, "Anterior All Normal")} disabled={loading || saving} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Anterior All Normal</button>
+            <button type="button" onClick={() => allNormal(POSTERIOR_PREFIX, "Fundus All Normal")} disabled={loading || saving} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Fundus All Normal</button>
             <ClearSectionButton
               encounterReference={encounterReference}
               sectionKey={definitions.map((definition) => definition.stableKey)}
@@ -471,7 +510,7 @@ export function OcularHealthSection({
             const row = captures[definition.stableKey] ?? emptyRow();
             const prior = priors[definition.stableKey] ?? emptyPriorReadings();
             const related = relatedReadings[definition.stableKey] ?? emptyRelatedReadings();
-            const diagnosisObservations = savedDiagnosisObservations[definition.stableKey] ?? [];
+            const diagnosisObservations = Object.values(savedDiagnosisObservations[definition.stableKey] ?? {});
             const focused = runnerEnabled && definition.stableKey === highlightedStructureKey;
             return (
               <article
@@ -520,7 +559,7 @@ export function OcularHealthSection({
         </div>}
         <div className="sticky bottom-0 mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-bg-deep/95 py-4 backdrop-blur">
           <div className="min-h-6 text-sm">{error ? <span className="text-rose-200">{error}</span> : <span className="text-white/55">{message}</span>}</div>
-          <button type="button" onClick={save} disabled={saving || loading} className="rounded bg-brand px-5 py-2 text-sm font-semibold text-white disabled:opacity-45">{saving ? "Saving…" : "Save Ocular Health"}</button>
+          <button type="button" onClick={() => save()} disabled={saving || loading} className="rounded bg-brand px-5 py-2 text-sm font-semibold text-white disabled:opacity-45">{saving ? "Saving…" : "Save Ocular Health"}</button>
         </div>
       </div>
     </section>
@@ -623,6 +662,13 @@ function EyePanel({ eye, capture, prior, related, field, gradeFields, normalTemp
         onClick={onDeferred}
         className={capture.state === "deferred" ? "rounded border border-brand/70 bg-brand/20 px-3 py-1.5 text-xs font-semibold text-white" : "rounded border border-white/15 px-3 py-1.5 text-xs text-white/55 hover:border-white/30"}
       >Not performed / deferred</button></div>}
+      {capture.negativeAct ? <details className="mt-3 text-sm text-white/65" data-negative-act={capture.negativeAct.id}>
+        <summary>{capture.negativeAct.optionCodes.length} findings explicitly asserted absent{capture.negativeAct.actorReference ? "" : " · pending save"}</summary>
+        <p>{capture.negativeAct.assertedAt}{capture.negativeAct.actorReference ? ` · ${capture.negativeAct.actorReference}` : " · pending save"}</p>
+        <p>Absent: {capture.negativeAct.optionCodes.map((code) => options.find((option) => option.code === code)?.display ?? code).join(", ") || "None"}</p>
+        <p>Excluded: {capture.negativeAct.exclusions.join(", ") || "None"}</p>
+        <p>Not covered: {options.filter((option) => !capture.negativeAct!.optionCodes.includes(option.code)).map((option) => option.display).join(", ") || "None"}</p>
+      </details> : <p className="mt-3 text-xs text-white/45">No explicit negative assertion recorded</p>}
       {displayedNormalTemplate && <p className="mt-3 text-sm text-white/45">{displayedNormalTemplate}</p>}
       {gradeFields.map((grade) => <label key={grade.localCode} className="mt-4 block">
         <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-white/45">{grade.display}</span>
@@ -776,6 +822,7 @@ function captureFromRows(definition: CustomFindingDefinition, rows: HistoryRow[]
     const value = row?.values.find((candidate) => candidate.code === field?.localCode)?.value;
     return [eye, {
       ...(row?.state ? { state: row.state } : {}),
+      ...(row?.negativeAct ? { negativeAct: row.negativeAct } : {}),
       selections: Array.isArray(value) ? value : [],
       ...(hasFindingDetails(row?.findingDetails) ? { findingDetails: row.findingDetails } : {}),
       grades: Object.fromEntries(grades.reduce<Array<[string, number | string]>>((values, grade) => {
@@ -795,16 +842,16 @@ function captureFromRows(definition: CustomFindingDefinition, rows: HistoryRow[]
   })) as Record<Eye, EyeCapture>;
 }
 
-function diagnosisObservationReferences(definition: CustomFindingDefinition, rows: HistoryRow[]): string[] {
+function diagnosisObservationReferences(definition: CustomFindingDefinition, rows: HistoryRow[]): Partial<Record<Eye, string>> {
   const field = abnormalField(definition);
-  if (!field) return [];
-  return EYES.flatMap((eye) => {
+  if (!field) return {};
+  return Object.fromEntries(EYES.flatMap((eye) => {
     const row = rows.find((candidate) => candidate.eye === eye);
     const selections = row?.values.find((candidate) => candidate.code === field.localCode)?.value;
     return Array.isArray(selections) && selections.length > 0 && row?.observationReference
-      ? [row.observationReference]
+      ? [[eye, row.observationReference]]
       : [];
-  });
+  }));
 }
 
 function excludeCurrentEncounterRows(patientRows: HistoryRow[], currentRows: HistoryRow[]): HistoryRow[] {
@@ -878,7 +925,7 @@ function emptyPriorReadings(): PriorReadings {
 
 export function relatedDefinitionsForTargets(
   catalogDefinitions: CustomFindingDefinition[],
-  targetDefinitions: Array<Pick<CustomFindingDefinition, "stableKey">>,
+  targetDefinitions: Array<Pick<CustomFindingDefinition, "stableKey"> & Partial<Pick<CustomFindingDefinition, "customFields">>>,
 ): CustomFindingDefinition[] {
   const targetKeys = new Set(targetDefinitions.map((definition) => definition.stableKey));
   return catalogDefinitions.filter((definition) =>
@@ -887,7 +934,7 @@ export function relatedDefinitionsForTargets(
 }
 
 function relatedReadingsByTarget(
-  targetDefinitions: Array<Pick<CustomFindingDefinition, "stableKey">>,
+  targetDefinitions: Array<Pick<CustomFindingDefinition, "stableKey"> & Partial<Pick<CustomFindingDefinition, "customFields">>>,
   sources: Array<{
     definition: CustomFindingDefinition;
     currentRows: HistoryRow[];
@@ -1033,7 +1080,8 @@ export function changedDefinitions<T extends Pick<CustomFindingDefinition, "stab
 }
 
 function sameCapture(left: EyeCapture, right: EyeCapture): boolean {
-  return left.state === right.state &&
+  return JSON.stringify(left.negativeAct) === JSON.stringify(right.negativeAct) &&
+    left.state === right.state &&
     left.other === right.other &&
     left.normalTemplate === right.normalTemplate &&
     sameGrades(left.grades, right.grades) &&
@@ -1054,6 +1102,7 @@ export function copyEyeCapture(
 ): EyeCapture {
   return {
     ...source,
+    negativeAct: undefined,
     selections: [...source.selections],
     grades: { ...source.grades },
     ...(source.findingDetails
@@ -1120,25 +1169,26 @@ function updatedFindingDetails(
 }
 
 export function applyAnteriorAllNormal(
-  definitions: Array<Pick<CustomFindingDefinition, "stableKey">>,
+  definitions: Array<Pick<CustomFindingDefinition, "stableKey"> & Partial<Pick<CustomFindingDefinition, "customFields">>>,
   captures: Record<string, Record<Eye, EyeCapture>>,
 ): { captures: Record<string, Record<Eye, EyeCapture>>; filled: number; skipped: number } {
   return applySegmentAllNormal(definitions, captures, ANTERIOR_PREFIX);
 }
 
 export function applyPosteriorAllNormal(
-  definitions: Array<Pick<CustomFindingDefinition, "stableKey">>,
+  definitions: Array<Pick<CustomFindingDefinition, "stableKey"> & Partial<Pick<CustomFindingDefinition, "customFields">>>,
   captures: Record<string, Record<Eye, EyeCapture>>,
 ): { captures: Record<string, Record<Eye, EyeCapture>>; filled: number; skipped: number } {
   return applySegmentAllNormal(definitions, captures, POSTERIOR_PREFIX);
 }
 
 function applySegmentAllNormal(
-  definitions: Array<Pick<CustomFindingDefinition, "stableKey">>,
+  definitions: Array<Pick<CustomFindingDefinition, "stableKey"> & Partial<Pick<CustomFindingDefinition, "customFields">>>,
   captures: Record<string, Record<Eye, EyeCapture>>,
   prefix: string,
 ): { captures: Record<string, Record<Eye, EyeCapture>>; filled: number; skipped: number } {
   let skipped = 0;
+  let filled = 0;
   const segmentDefinitions = definitions.filter((definition) =>
     definition.stableKey.startsWith(prefix) ||
     (prefix === ANTERIOR_PREFIX && definition.stableKey === DRY_EYE_ANTERIOR_STABLE_KEY)
@@ -1146,17 +1196,19 @@ function applySegmentAllNormal(
   const next = { ...captures };
   for (const definition of segmentDefinitions) {
     const row = captures[definition.stableKey] ?? emptyRow();
-    if (touched(row.OD) || touched(row.OS)) {
-      skipped += 1;
-      next[definition.stableKey] = row;
-      continue;
+    next[definition.stableKey] = { ...row };
+    for (const eye of EYES) {
+      if (touched(row[eye])) { skipped += 1; continue; }
+      const optionCodes = (definition.customFields?.find((field) => field.valueType === "multi-select")?.options ?? [])
+        .filter((option) => option.active).map((option) => option.code);
+      next[definition.stableKey]![eye] = { ...row[eye], state: "normal", negativeAct: {
+        id: crypto.randomUUID(), definitionStableKey: definition.stableKey, eye,
+        optionCodes, exclusions: [], assertedAt: new Date().toISOString(),
+      } };
+      filled += 1;
     }
-    next[definition.stableKey] = {
-      OD: { ...row.OD, state: "normal" as const },
-      OS: { ...row.OS, state: "normal" as const },
-    };
   }
-  return { captures: next, filled: segmentDefinitions.length - skipped, skipped };
+  return { captures: next, filled, skipped };
 }
 
 function segmentGroups(definitions: CustomFindingDefinition[]) {

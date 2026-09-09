@@ -1088,3 +1088,47 @@ function chromeExecutable(): string {
   assert.ok(executable, "Chrome or Chromium is required for the entry-sheet behavior contract");
   return executable;
 }
+
+
+test("EXAM-1B browser names partial failure and retries only the failed structure", async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const definitions = ["Alpha", "Beta", "Gamma"].map((name) => ({
+    stableKey: `ocular-health:anterior:synthetic-${name.toLowerCase()}`, sectionKey: `ocular-health:anterior:synthetic-${name.toLowerCase()}`,
+    display: `Synthetic ${name}`, active: true, perEye: true,
+    customFields: [{ localCode: "CUSTOM_FINDINGS", display: "Findings", valueType: "multi-select", active: true, order: 0,
+      options: [{ code: "synthetic-finding", display: "Synthetic finding", active: true }] }],
+  }));
+  const requests: Array<{ key: string; eyes: Record<string, { negativeAct?: { id: string; eye: string; optionCodes: string[] } }> }> = [];
+  let fail = true;
+  try {
+    await page.addInitScript((fixture) => { (window as any).__odosNegativeFixture = fixture; }, {
+      definitions, patientReference: "Patient/synthetic", encounterReference: "Encounter/synthetic",
+    });
+    await page.route("**/clinical-graph/custom/**", async (route) => {
+      const request = route.request();
+      const key = decodeURIComponent(new URL(request.url()).pathname.split("/").at(-1)!);
+      if (request.method() !== "POST") {
+        await route.fulfill({ json: { rows: [] } }); return;
+      }
+      const body = request.postDataJSON();
+      requests.push({ key, eyes: body.eyes });
+      await route.fulfill({ status: key === definitions[1]!.stableKey && fail ? 503 : 200, json: key === definitions[1]!.stableKey && fail ? { error: "Synthetic write failure" } : { eyes: {} } });
+    });
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?negativeAct=1`);
+    const allNormal = page.getByRole("button", { name: "Anterior All Normal", exact: true });
+    await allNormal.waitFor();
+    await allNormal.click();
+    await page.getByRole("button", { name: "Save Ocular Health", exact: true }).click();
+    await page.getByText(/Failed: Synthetic Beta/).waitFor();
+    assert.equal(requests.length, 3);
+    const firstId = requests[1]!.eyes.OD!.negativeAct!.id;
+    assert.equal((await page.locator("body").innerText()).includes("3/3 ocular-health structures saved"), false);
+    fail = false;
+    await allNormal.click();
+    await page.getByText("1/3 ocular-health structures saved", { exact: true }).waitFor();
+    assert.equal(requests.length, 4);
+    assert.equal(requests[3]!.key, definitions[1]!.stableKey);
+    assert.equal(requests[3]!.eyes.OD!.negativeAct!.id, firstId);
+    console.log("EXAM-1B BROWSER: Failed: Synthetic Beta visible; only Beta retried with unchanged assertion ID");
+  } finally { await page.close(); }
+});

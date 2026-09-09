@@ -3199,7 +3199,7 @@ test("Fundus All Normal fills only the five posterior narratives and skips Cup D
     OS: { selections: [], other: "" },
   }]));
   const result = applyPosteriorAllNormal(definitions, captures);
-  assert.equal(result.filled, 5);
+  assert.equal(result.filled, 10);
   assert.equal(result.skipped, 0);
   assert.equal(definitions.some((definition) => definition.stableKey === "cup-disc"), false);
   for (const definition of posteriorDefinitions()) {
@@ -3469,7 +3469,7 @@ test("ocular-health cleanup qualifiers render only for their selected finding", 
   }
 });
 
-test("all-normal skips touched structures and copy-to-eye produces an independently editable clone", () => {
+test("EXAM-1B per-eye negative act leaves touched OD alone and asserts OS", () => {
   const captures = {
     "ocular-health:anterior:cornea": {
       OD: { state: "abnormal" as const, selections: ["staining"], other: "" },
@@ -3489,8 +3489,10 @@ test("all-normal skips touched structures and copy-to-eye produces an independen
     { stableKey: "ocular-health:anterior:lens" },
     { stableKey: "dry-eye:conjunctival-staining" },
   ], captures);
-  assert.equal(result.filled, 2);
+  assert.equal(result.filled, 5);
   assert.equal(result.skipped, 1);
+  assert.equal(result.captures["ocular-health:anterior:cornea"]?.OS.negativeAct?.eye, "OS");
+  assert.equal(result.captures["ocular-health:anterior:cornea"]?.OD.negativeAct, undefined);
   assert.equal(result.captures["ocular-health:anterior:cornea"]?.OD.state, "abnormal");
   assert.equal(result.captures["ocular-health:anterior:lens"]?.OD.state, "normal");
   assert.equal(result.captures["ocular-health:anterior:lens"]?.OS.state, "normal");
@@ -4305,3 +4307,35 @@ function deferred<T>() {
   });
   return { promise, resolve };
 }
+
+
+test("EXAM-1B partial failure names the structure and All Normal retries only that failure", async () => {
+  const definitions = ocularDefinitions().slice(0, 3);
+  const posts: string[] = [];
+  let fail = true;
+  const saved: unknown[] = [];
+  const fetchImpl = (async (input, init) => {
+    if (init?.method !== "POST") return jsonResponse({ rows: [] });
+    const key = decodeURIComponent(String(input).split("/").at(-1)!);
+    posts.push(key);
+    if (key === definitions[1]!.stableKey && fail) return new Response(JSON.stringify({ error: "Synthetic failure" }), { status: 503 });
+    return jsonResponse({ eyes: {} });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection definitions={definitions} patientReference="Patient/negative-test" encounterReference="Encounter/negative-test" onSaved={(status) => saved.push(status)} apiBase="http://test" fetchImpl={fetchImpl} />);
+      await flushEffects();
+    });
+    const button = (label: string) => renderer.root.findAllByType("button").find((node) => renderedText(node) === label)!;
+    act(() => button("Anterior All Normal").props.onClick());
+    await act(async () => { await button("Save Ocular Health").props.onClick(); });
+    assert.deepEqual(posts, definitions.map((definition) => definition.stableKey));
+    assert.match(renderedText(renderer.root), new RegExp(`Failed: ${definitions[1]!.display}`));
+    assert.equal(saved.length, 0, "partial success must not complete the segment");
+    fail = false;
+    await act(async () => { await button("Anterior All Normal").props.onClick(); });
+    assert.deepEqual(posts, [...definitions.map((definition) => definition.stableKey), definitions[1]!.stableKey]);
+    console.log("EXAM-1B PARTIAL: named failure; 3 initial writes, 1 retry, 0 successful structures reasserted");
+  } finally { renderer?.unmount(); }
+});

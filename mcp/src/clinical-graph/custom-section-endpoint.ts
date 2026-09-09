@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Bundle, Observation, ObservationComponent, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
@@ -75,7 +76,22 @@ const findingDetailsSchema = z.record(
   message: "Each finding supports at most 100 qualifier values.",
 });
 
+const negativeActSchema = z.object({
+  id: z.string().uuid(),
+  definitionStableKey: z.string().min(1).max(200),
+  eye: z.enum(["OD", "OS"]),
+  optionCodes: z.array(z.string().min(1).max(100)).min(1).max(300),
+  exclusions: z.array(z.string().min(1).max(100)).max(300),
+  assertedAt: z.string().datetime(),
+}).strict().refine((act) => new Set([...act.optionCodes, ...act.exclusions]).size === act.optionCodes.length + act.exclusions.length, {
+  message: "Negative scope and exclusions must be unique and disjoint.",
+});
+
+type NegativeAct = z.infer<typeof negativeActSchema> & { actorReference: string };
+const NEGATIVE_ACT_IDENTIFIER_SYSTEM = "urn:odos:negative-act";
+
 const eyePayloadSchema = z.object({
+  negativeAct: negativeActSchema.optional(),
   customFields: z.array(customFieldValueSchema).max(64),
   state: z.enum(["normal", "abnormal", "deferred"]).optional(),
   other: z.string().trim().max(2000).optional(),
@@ -131,6 +147,7 @@ export async function handleCustomSectionCaptureRequest(
         state: parsed.data.eyes[eye]!.state,
         other: parsed.data.eyes[eye]!.other,
         findingDetails: parsed.data.eyes[eye]!.findingDetails,
+        negativeAct: parsed.data.eyes[eye]!.negativeAct,
       }]
     : []);
   if (perEye && eyeRows.length === 0) {
@@ -144,6 +161,7 @@ export async function handleCustomSectionCaptureRequest(
         state: parsed.data.state,
         other: parsed.data.other,
         findingDetails: undefined,
+        negativeAct: undefined,
       }];
   if (definition.stableKey === "dry-eye:symptoms" && rows.some((row) => {
     const supplied = new Set(row.values.map((value) => value.code));
@@ -179,6 +197,27 @@ export async function handleCustomSectionCaptureRequest(
     return { status: 400, body: { error: "Enter at least one custom field or note before saving." } };
   }
   for (const row of rows) {
+    if (row.negativeAct && (!ocularHealth || row.state !== "normal" || row.other ||
+      row.negativeAct.definitionStableKey !== definition.stableKey || row.negativeAct.eye !== row.eye)) {
+      return { status: 400, body: { error: "Negative acts require a matching ocular-health definition and eye, normal state, and no Other finding." } };
+    }
+    if (row.negativeAct) {
+      const identifier = negativeIdentifier(row.negativeAct, parsed.data.patientReference, parsed.data.encounterReference, staff.staffReference);
+      const previous = await staff.fhir.search<Observation>("Observation", {
+        identifier: `${identifier.system}|${identifier.value}`,
+        subject: parsed.data.patientReference, encounter: parsed.data.encounterReference, _count: "2",
+      });
+      const existing = previous.entry?.map((entry) => entry.resource).find((observation) => observation?.identifier?.some((item) =>
+        item.system === identifier.system && item.value === identifier.value));
+      const activeCodes = new Set(customFieldEntries(definition).filter((field) => field.valueType === "multi-select")
+        .flatMap((field) => (field.options ?? []).filter((option) => option.active).map((option) => option.code)));
+      if (!existing && [...row.negativeAct.optionCodes, ...row.negativeAct.exclusions].some((code) => !activeCodes.has(code))) {
+        return { status: 400, body: { error: "Negative scope must use active finding option codes from this definition." } };
+      }
+      if (existing && !isLiveObservation(existing)) {
+        return { status: 409, body: { error: "This negative act has been voided; it cannot be replayed as current." } };
+      }
+    }
     const validationError = validateCustomFieldValues(row.values, definition, row.eye);
     if (validationError) return { status: 400, body: { error: validationError } };
     const findingDetailsError = validateFindingDetails(
@@ -267,6 +306,18 @@ export async function handleCustomSectionCaptureRequest(
       definition,
       perEye ? `${row.eye}_` : "",
     );
+    if (row.negativeAct) {
+      const negativeAct: NegativeAct = { ...row.negativeAct, actorReference: staff.staffReference };
+      coded.observation.identifier = [negativeIdentifier(negativeAct, parsed.data.patientReference, parsed.data.encounterReference, staff.staffReference)];
+      coded.observation.component = [...(coded.observation.component ?? []), {
+        code: odosConcept("NEGATIVE_ACT", "Explicit negative act"), valueString: JSON.stringify(negativeAct),
+      }, {
+        code: odosConcept("NEGATIVE_CAPTURE_INPUT", "Negative capture input"),
+        valueString: JSON.stringify({ values: [...row.values].sort((left, right) => left.code.localeCompare(right.code)), remarks: parsed.data.remarks ?? "" }),
+      }, ...negativeAct.optionCodes.map((code) => ({
+        code: odosConcept(`NEGATIVE_OPTION::${code}`, code), valueBoolean: false,
+      }))];
+    }
     results.push(await persistCapture(
       staff.fhir,
       coded,
@@ -328,6 +379,7 @@ export async function handleCustomSectionHistoryRequest(
       ...(perEye && (eye === "OD" || eye === "OS") ? { eye } : {}),
       values,
       ...(findingDetails ? { findingDetails } : {}),
+      ...(observationNegativeAct(observation) ? { negativeAct: observationNegativeAct(observation) } : {}),
       ...(componentString(observation, "EXAM_STATE") ? { state: componentString(observation, "EXAM_STATE") } : {}),
       ...(componentString(observation, "NORMAL_TEMPLATE") ? { normalTemplate: componentString(observation, "NORMAL_TEMPLATE") } : {}),
       ...(componentString(observation, "OTHER") ? { other: componentString(observation, "OTHER") } : {}),
@@ -563,17 +615,31 @@ async function persistCapture(
   eye: Eye | "UNKNOWN",
   patientReference: string,
 ) {
-  const observation = await fhir.create(captured.observation, WRITE_HEADERS);
+  const negativeAct = observationNegativeAct(captured.observation);
+  const identifier = captured.observation.identifier?.find((item) => item.system === NEGATIVE_ACT_IDENTIFIER_SYSTEM);
+  const observation = await fhir.create({ ...captured.observation, ...(negativeAct ? { id: undefined } : {}) }, {
+    ...WRITE_HEADERS,
+    ...(identifier ? { "If-None-Exist": `identifier=${encodeURIComponent(`${identifier.system}|${identifier.value}`)}` } : {}),
+  });
+  if (negativeAct && (JSON.stringify(observationNegativeAct(observation)) !== JSON.stringify(negativeAct) ||
+    componentString(observation, "NEGATIVE_CAPTURE_INPUT") !== componentString(captured.observation, "NEGATIVE_CAPTURE_INPUT"))) {
+    throw new Error("Negative act replay conflicts with its original frozen scope.");
+  }
   const observationReference = `Observation/${observation.id ?? captured.observation.id}`;
   const provenance = await fhir.create({
     ...captured.provenance,
+    ...(negativeAct ? { id: undefined } : {}),
     target: patientScopedProvenanceTargets(
       observationReference,
       patientReference,
     ),
-  }, WRITE_HEADERS);
+  }, {
+    ...WRITE_HEADERS,
+    ...(negativeAct ? { "If-None-Exist": `target=${encodeURIComponent(observationReference)}` } : {}),
+  });
   return {
     eye,
+    ...(negativeAct ? { negativeAct } : {}),
     observationReference,
     ...(provenance.id ? { provenanceReference: `Provenance/${provenance.id}` } : {}),
   };
@@ -604,4 +670,16 @@ function staffMay(role: PracticeRoleId, action: "chart.read" | "chart.write"): b
   } catch {
     return false;
   }
+}
+
+
+function observationNegativeAct(observation: Observation): NegativeAct | undefined {
+  const stored = componentString(observation, "NEGATIVE_ACT");
+  return stored ? JSON.parse(stored) as NegativeAct : undefined;
+}
+
+
+function negativeIdentifier(act: z.infer<typeof negativeActSchema>, patient: string, encounter: string, actor: string) {
+  return { system: NEGATIVE_ACT_IDENTIFIER_SYSTEM, value: createHash("sha256")
+    .update(JSON.stringify([patient, encounter, act.definitionStableKey, act.eye, actor, act.id])).digest("hex") };
 }
