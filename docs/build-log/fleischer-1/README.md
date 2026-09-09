@@ -24,9 +24,9 @@ Counts are computed from the imported, built `FINDING_DISPOSITION_ROWS` array, n
 
 The source-text trap was independently reproduced: before the change there were 2 textual awaiting-ruling matches and 18 descriptive matches; afterward there are 1 and 19. In each case the extra match is the type declaration, not a registry row.
 
-## Ratchet tradeoff
+## Guard 2 contract reference
 
-I agree with keeping zero awaiting-ruling rows as a hard CI ratchet. A genuine operator-blocked question should be visibly blocking. `pending` remains available for work that has not been classified, but should not be used to disguise an actual unresolved operator decision. Adding awaiting-ruling therefore deliberately creates a failing guard until the ruling lands or the operator explicitly revises this invariant. The guard is not softened to a ceiling or identity allowlist.
+The zero-row assertion implements the operator's kickoff: `performance-od/decisions/2026-09-09-odos-fleischers-ring-codex-kickoff.md`. Policy rationale remains in PerformanceOD; the requested author tradeoff assessment is supplied in the PR handoff.
 
 ## Mandate 17
 
