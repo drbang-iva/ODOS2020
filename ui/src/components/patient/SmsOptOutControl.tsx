@@ -43,6 +43,7 @@ export function SmsOptOutControl({
   const [identityVerification, setIdentityVerification] = useState<SmsOptOutIdentityVerification | "">("");
   const [clearing, setClearing] = useState(false);
   const [result, setResult] = useState<string>();
+  const operationGenerationRef = useRef(0);
   const suppressionChangeRef = useRef(onActiveLaneSuppressionChange);
   const stateChangeRef = useRef(onStateChange);
   const unavailableRef = useRef(onUnavailable);
@@ -52,6 +53,8 @@ export function SmsOptOutControl({
 
   useEffect(() => {
     let active = true;
+    operationGenerationRef.current += 1;
+    setClearing(false);
     setState(undefined);
     setError(undefined);
     setDenied(false);
@@ -80,7 +83,7 @@ export function SmsOptOutControl({
       setError(cause instanceof Error ? cause.message : "SMS preferences unavailable.");
       unavailableRef.current?.("error");
     });
-    return () => { active = false; };
+    return () => { active = false; operationGenerationRef.current += 1; };
   }, [activeLaneRole, patientReference]);
 
   if (denied) return null;
@@ -102,6 +105,8 @@ export function SmsOptOutControl({
     event.preventDefault();
     if ((!recording && clearNumber === undefined) || !reason.trim() || !identityVerification
       || (recording && recordScope === "per-number" && !recordNumber)) return;
+    const operationGeneration = operationGenerationRef.current;
+    const isCurrentOperation = () => operationGeneration === operationGenerationRef.current;
     setClearing(true);
     setError(undefined);
     setResult(undefined);
@@ -111,6 +116,7 @@ export function SmsOptOutControl({
           patientReference, reason: reason.trim(), identityVerification, scope: recordScope,
           ...(recordScope === "per-number" ? { number: recordNumber } : {}),
         });
+        if (!isCurrentOperation()) return;
         setState(nextState);
         stateChangeRef.current?.(nextState);
         if (activeLaneRole) {
@@ -128,6 +134,7 @@ export function SmsOptOutControl({
         identityVerification,
         ...(clearNumber ? { number: clearNumber } : {}),
       });
+      if (!isCurrentOperation()) return;
       const remainingOptOuts = response.remainingOptOuts
         ?? (clearNumber === null && !response.smsOptedOut ? { global: false, numbers: [] } : state.remainingOptOuts);
       setState({ ...state, smsOptedOut: response.smsOptedOut, remainingOptOuts });
@@ -150,9 +157,10 @@ export function SmsOptOutControl({
       }
       setClearNumber(undefined);
     } catch (cause) {
+      if (!isCurrentOperation()) return;
       setError(cause instanceof Error ? cause.message : "SMS preferences unavailable.");
     } finally {
-      setClearing(false);
+      if (isCurrentOperation()) setClearing(false);
     }
   };
 

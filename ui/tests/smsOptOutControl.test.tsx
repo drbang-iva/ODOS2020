@@ -424,3 +424,54 @@ test("record opt-out lets staff choose the configured lane and validates the res
     assert.match(JSON.stringify(renderer.toJSON()), /SMS preferences unavailable/);
   } finally { if (renderer) act(() => renderer.unmount()); globalThis.fetch = originalFetch; }
 });
+
+for (const outcome of ["success", "failure"] as const) {
+  test(`stale opt-out ${outcome} cannot update a new patient or finish its pending submission`, async () => {
+    const originalFetch = globalThis.fetch;
+    const callbacks: string[] = [];
+    const suppression: boolean[] = [];
+    const pending: Array<{ resolve: (response: Response) => void; reject: (error: Error) => void }> = [];
+    const state = (patientReference: string, global = false) => ({
+      patientReference, smsOptedOut: global, remainingOptOuts: { global, numbers: [] },
+      smsLanes: [{ label: "Front-desk texts", number: "+18645550100", roles: ["transactional-sms"] }],
+    });
+    globalThis.fetch = async (url, init) => {
+      if (init?.method === "POST") return new Promise<Response>((resolve, reject) => pending.push({ resolve, reject }));
+      return new Response(JSON.stringify(state(new URL(String(url), "http://localhost").searchParams.get("patient")!)));
+    };
+    let renderer!: ReturnType<typeof create>;
+    const renderPatient = (id: string) => <SmsOptOutControl patientReference={`Patient/${id}`} activeLaneRole="transactional-sms"
+      onStateChange={(value) => callbacks.push(value.patientReference)} onActiveLaneSuppressionChange={(value) => suppression.push(value)} />;
+    const submit = async () => {
+      act(() => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Record opt-out — patient asked…")!.props.onClick());
+      act(() => {
+        renderer.root.findByProps({ "aria-label": "Reason for opt-out" }).props.onChange({ target: { value: "No texts please" } });
+        renderer.root.findByProps({ "aria-label": "Identity verification" }).props.onChange({ target: { value: "in-person" } });
+      });
+      assert.equal(renderer.root.findByProps({ type: "submit" }).props.disabled, false);
+      await act(async () => { renderer.root.findByType("form").props.onSubmit({ preventDefault() {} }); });
+    };
+    try {
+      await act(async () => { renderer = create(renderPatient("first")); });
+      await submit();
+      await act(async () => { renderer.update(renderPatient("second")); });
+      await submit();
+      assert.equal(pending.length, 2);
+      callbacks.length = 0;
+      suppression.length = 0;
+      await act(async () => {
+        if (outcome === "success") pending[0]!.resolve(new Response(JSON.stringify(state("Patient/first", true))));
+        else pending[0]!.reject(new Error("Old patient request failed"));
+      });
+      assert.deepEqual(callbacks, []);
+      assert.deepEqual(suppression, []);
+      const button = renderer.root.findByProps({ type: "submit" });
+      assert.equal(button.props.disabled, true);
+      assert.equal(button.children.join(""), "Recording…");
+      assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /SMS preferences unavailable|All text messages are now blocked/);
+      await act(async () => { pending[1]!.resolve(new Response(JSON.stringify(state("Patient/second", true)))); });
+      assert.deepEqual(callbacks, ["Patient/second"]);
+      assert.deepEqual(suppression, [true]);
+    } finally { if (renderer) act(() => renderer.unmount()); globalThis.fetch = originalFetch; }
+  });
+}

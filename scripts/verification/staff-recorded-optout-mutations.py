@@ -2,6 +2,7 @@
 """Demonstrate B1-B6 against the route tests, restoring each mutation even on failure."""
 from pathlib import Path
 import subprocess
+import tempfile
 
 root = Path(__file__).resolve().parents[2]
 gate = root / "mcp/src/comms/suppression-gate.ts"
@@ -32,27 +33,38 @@ def mutate(tag, text):
     raise AssertionError(tag)
 
 
-for tag, path, pattern in [
-    ("B1", api, 'const reason = String'),
-    ("B2", gate, 'sms-staff'),
-    ("B3", gate, 'duplicate ? existing : [{'),
-    ("B4", gate, 'const duplicate = false'),
-    ("B5", roles, 'B5 mutation: staff opt-out action removed'),
-    ("B6", api, 'number: body.number as string'),
-]:
-    original = path.read_text()
-    command = ['node', '--import', './mcp/node_modules/tsx/dist/loader.mjs', '--test', f'--test-name-pattern={tag} ', 'mcp/tests/commsApi.test.ts']
-    try:
-        path.write_text(mutate(tag, original))
-        with open(f'/tmp/consent-{tag}-red.log', 'w') as log:
-            log.write(f'Mutation {tag}: {path.relative_to(root)}\n'); log.flush()
-            confirmed = subprocess.run(['rg', '-n', '-F', pattern, str(path)], cwd=root, stdout=log, stderr=log)
-            assert confirmed.returncode == 0
+def mutation_log(tag, phase):
+    log = tempfile.NamedTemporaryFile(mode="w", prefix=f"consent-{tag}-{phase}-", suffix=".log", delete=False)
+    print(f"{tag} {phase} log: {log.name}", flush=True)
+    return log
+
+
+def main():
+    for tag, path, pattern in [
+        ("B1", api, 'const reason = String'),
+        ("B2", gate, 'sms-staff'),
+        ("B3", gate, 'duplicate ? existing : [{'),
+        ("B4", gate, 'const duplicate = false'),
+        ("B5", roles, 'B5 mutation: staff opt-out action removed'),
+        ("B6", api, 'number: body.number as string'),
+    ]:
+        original = path.read_text()
+        command = ['node', '--import', './mcp/node_modules/tsx/dist/loader.mjs', '--test', f'--test-name-pattern={tag} ', 'mcp/tests/commsApi.test.ts']
+        try:
+            path.write_text(mutate(tag, original))
+            with mutation_log(tag, 'red') as log:
+                log.write(f'Mutation {tag}: {path.relative_to(root)}\n'); log.flush()
+                confirmed = subprocess.run(['rg', '-n', '-F', pattern, str(path)], cwd=root, stdout=log, stderr=log)
+                assert confirmed.returncode == 0
+                result = subprocess.run(command, cwd=root, stdout=log, stderr=log)
+            assert result.returncode != 0, f'{tag} mutation survived'
+        finally:
+            path.write_text(original)
+        with mutation_log(tag, 'green') as log:
             result = subprocess.run(command, cwd=root, stdout=log, stderr=log)
-        assert result.returncode != 0, f'{tag} mutation survived'
-    finally:
-        path.write_text(original)
-    with open(f'/tmp/consent-{tag}-green.log', 'w') as log:
-        result = subprocess.run(command, cwd=root, stdout=log, stderr=log)
-    assert result.returncode == 0, f'{tag} restoration failed'
-    print(f'{tag}: confirmed mutation RED; restored GREEN', flush=True)
+        assert result.returncode == 0, f'{tag} restoration failed'
+        print(f'{tag}: confirmed mutation RED; restored GREEN', flush=True)
+
+
+if __name__ == "__main__":
+    main()
