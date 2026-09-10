@@ -137,6 +137,7 @@ export interface ContactRecord {
  * optional so partial providers stay honest while future adapters share this stable contract.
  */
 export interface CommsProvider {
+  preflightSuppression?(request: SendEmailRequest | SendSmsRequest, channel: "email" | "sms"): Promise<Exclude<SendResult, { outcome: "sent" }> | undefined>;
   readonly name: string;
   readonly messageIdentifierSystem?: string;
   readonly capabilities: Readonly<CommsCapabilities>;

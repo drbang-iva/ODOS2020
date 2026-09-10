@@ -1465,3 +1465,33 @@ for (const operation of ["creation-key-repair", "outcome", "acknowledgement", "t
     });
   }
 }
+
+test("staff resume cannot claim a pending worker-bound sequence attempt", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    const response = await request(fixture.base, "/communications/education/enrollments", "POST", futureEnrollmentBody());
+    assert.equal(response.status, 201);
+    const { enrollment } = await response.json();
+    const attemptKey = "education-sequence-synthetic-worker-claim";
+    enrollment.immediateSends.push({ content: enrollment.scheduledSends[0].content, channel: "sms", lane: "clinical", idempotencyKey: attemptKey, state: "pending" });
+    enrollment.scheduledSends[0].attempts.push({ sendIndex: 0, attemptKey });
+    let claims = 0;
+    fixture.enrollmentStore.read = async () => structuredClone(enrollment);
+    fixture.enrollmentStore.applyLifecycle = async () => structuredClone(enrollment);
+    fixture.enrollmentStore.claimImmediateSend = async () => {
+      claims++;
+      enrollment.immediateSends[0].state = "in-flight";
+      return { claimed: true, enrollment: structuredClone(enrollment) };
+    };
+    fixture.enrollmentStore.recordImmediateSendOutcome = async (_id, _index, outcome) => {
+      enrollment.immediateSends[0].state = "resolved";
+      enrollment.immediateSends[0].outcome = outcome;
+      return structuredClone(enrollment);
+    };
+    const resumed = await request(fixture.base, `/communications/education/enrollments/${enrollment.id}/resume`, "POST", {});
+    assert.equal(resumed.status, 409);
+    assert.equal(claims, 0);
+    assert.equal(fixture.underlyingSends.length, 0);
+    assert.equal(enrollment.immediateSends[0].state, "pending");
+  } finally { await fixture.close(); }
+});

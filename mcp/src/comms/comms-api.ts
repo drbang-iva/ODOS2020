@@ -42,6 +42,7 @@ import {
   ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM,
   findStaffSmsSend,
   findStaffSend,
+  staffSmsTerminalResult,
   persistStaffSentSend,
   persistStaffSentSms,
   persistStaffTerminalOutcome,
@@ -57,7 +58,7 @@ import {
   type SmsOptOutManagementFhir,
 } from "./suppression-gate.js";
 
-type CommsStaff = Omit<AuthenticatedStaff, "actorRole" | "roles" | "fhir"> & {
+export type CommsStaff = Omit<AuthenticatedStaff, "actorRole" | "roles" | "fhir"> & {
   actorRole: PracticeRoleId;
   roles: readonly PracticeRoleId[];
   authorizationPolicyUrl?: string;
@@ -824,6 +825,10 @@ async function dispatchEnrollmentSend(
       "Education send outcome is pending reconciliation; do not resend with a new key.",
     );
   }
+  const scheduled = current.scheduledSends?.find((row) => row.attempts.some((attempt) => attempt.sendIndex === sendIndex && attempt.attemptKey === idempotencyKey));
+  if (send.state === "pending" && (scheduled || idempotencyKey.startsWith("education-sequence-"))) {
+    throw new CommsApiRefusalError("scheduled-attempt-requires-worker-claim");
+  }
   let reconcileOnly = true;
   if (send.state === "pending") {
     const claim = await store.claimImmediateSend(current.id, sendIndex);
@@ -846,6 +851,7 @@ async function dispatchEnrollmentSend(
     alsoUpdateChart: false,
     encounterReference: current.enteredFromEncounterReference,
     idempotencyKey,
+    ...(scheduled ? { recipientOverride: { reference: scheduled.recipientReference } } : {}),
   }, { reconcileOnly, senderReference: current.enrolledBy });
   return store.recordImmediateSendOutcome(current.id, sendIndex, outcome);
 }
@@ -904,13 +910,26 @@ async function persistEducationEnrollmentEventProvenances(
   }
 }
 
-async function dispatchEducation(
-  deps: CommsApiRouteDeps,
-  staff: CommsStaff,
-  patient: Patient,
-  body: EducationDispatchBody,
-  options: { reconcileOnly?: boolean; senderReference?: string } = {},
-): Promise<EducationEnrollmentSendOutcome> {
+export type EducationDispatchActor =
+  | { kind: "staff"; staff: CommsStaff }
+  | { kind: "system"; reference: string; onBehalfOf: string; fhir: MedplumClient; quietHoursExemption?: never };
+
+type EducationDispatchIdentity = { staffReference: string; fhir: MedplumClient; executingReference?: string };
+export interface PreparedEducationSequenceDispatch {
+  body: EducationDispatchBody;
+  item: EducationContentItem;
+  recipient: { reference: string; value: string; resource: Patient | RelatedPerson };
+  laneSelection: "default" | "overridden";
+  campaignId: string;
+}
+export type EducationSequencePreparation =
+  | { kind: "ready"; prepared: PreparedEducationSequenceDispatch }
+  | { kind: "held"; reason: "content-unavailable" | "no-recipient-channel" | "patient-opt-out" | "needs-acknowledgement" }
+  | { kind: "deferred"; notBefore: string };
+
+async function prepareEducationDispatch(
+  deps: CommsApiRouteDeps, fhir: MedplumClient, patient: Patient, body: EducationDispatchBody,
+): Promise<Omit<PreparedEducationSequenceDispatch, "body">> {
   const item = deps.educationCatalog.get(body.educationId, body.version);
   if (!item || item.audience !== "patient") {
     throw new CommsApiNotFoundError("Education content not found.");
@@ -924,15 +943,143 @@ async function dispatchEducation(
   ) {
     throw new CommsApiCapabilityError("Education dispatch is locked to the clinical lane for this practice.");
   }
-  await assertEducationClinicalReferences(staff.fhir, body);
+  await assertEducationClinicalReferences(fhir, body);
   if (item.consentClass === "marketing" && !hasRecordedMarketingConsent(patient)) {
     throw new CommsApiRefusalError("marketing-consent-absent");
   }
-  const recipient = await resolveEducationRecipient(staff.fhir, patient, body);
+  const recipient = await resolveEducationRecipient(fhir, patient, body);
   const defaultLane = item.laneHint === "retail" ? "frontdesk" : "clinical";
   const laneSelection = body.lane === defaultLane ? "default" : "overridden";
   const campaignId = `${item.id}@${item.version}`;
 
+  return { item, recipient, laneSelection, campaignId };
+}
+
+export async function prepareEducationSequenceDispatch(
+  deps: CommsApiRouteDeps, fhir: MedplumClient, patient: Patient, body: EducationDispatchBody,
+): Promise<EducationSequencePreparation> {
+  if (body.channel === "print") return { kind: "held", reason: "needs-acknowledgement" };
+  let prepared: Omit<PreparedEducationSequenceDispatch, "body">;
+  try {
+    prepared = await prepareEducationDispatch(deps, fhir, patient, body);
+  } catch (error) {
+    if (error instanceof CommsApiNotFoundError) return { kind: "held", reason: "content-unavailable" };
+    if (error instanceof CommsApiRefusalError) return { kind: "held", reason: "patient-opt-out" };
+    if (error instanceof CommsApiCapabilityError || error instanceof CommsApiValidationError) {
+      return { kind: "held", reason: /published/.test(error.message) ? "content-unavailable" : "no-recipient-channel" };
+    }
+    throw error;
+  }
+  const role = body.channel === "email" ? "email" : educationSmsRole(body.lane);
+  if (!isRoleConfigured(deps.dispatch, role, body.channel === "sms")) return { kind: "held", reason: "no-recipient-channel" };
+  const provider = adapterForRole(deps, role, fhir);
+  if ((body.channel === "email" && !provider.sendEmail) || (body.channel === "sms" && !provider.sendSms)) {
+    return { kind: "held", reason: "no-recipient-channel" };
+  }
+  const url = body.channel === "email" ? prepared.item.urls.email : prepared.item.urls.web;
+  if (!url) return { kind: "held", reason: "content-unavailable" };
+  if (body.channel === "sms") assertEducationPublicBaseUrl(deps.publicBaseUrl);
+  if (!provider.preflightSuppression) throw new CommsApiCapabilityError("Education sequence provider lacks a suppression preflight probe.");
+  const result = await provider.preflightSuppression({
+    patientReference: body.patientReference, body: url, subject: prepared.item.title,
+    campaignType: "clinical-education", campaignId: prepared.campaignId, messageId: body.idempotencyKey, suppression: {},
+  }, body.channel);
+  if (result?.outcome === "rescheduled") return { kind: "deferred", notBefore: result.rescheduledAt };
+  if (result?.outcome === "suppressed") return { kind: "held", reason: "patient-opt-out" };
+  return { kind: "ready", prepared: structuredClone({ body, ...prepared }) };
+}
+
+function educationDispatchIdentity(body: EducationDispatchBody, includeAttempt = true): string {
+  return JSON.stringify([
+    body.patientReference, body.educationId, body.version, body.channel, body.lane,
+    body.recipientOverride?.reference, body.recipientOverride?.phone, body.recipientOverride?.email,
+    body.alsoUpdateChart, body.encounterReference, body.conditionReference,
+    includeAttempt ? body.idempotencyKey : undefined,
+  ]);
+}
+
+interface FrozenEducationDispatch {
+  kind: "education-dispatch";
+  executingReference?: string;
+  body: EducationDispatchBody;
+  item: EducationContentItem;
+  recipientValue: string;
+  laneSelection: "default" | "overridden";
+  providerMessageIdentifierSystem: string;
+}
+
+export async function readEducationDispatchEvidence(fhir: MedplumClient, body: EducationDispatchBody, senderReference: string): Promise<{
+  outcome: EducationEnrollmentSendOutcome;
+  acceptedAt?: string;
+  providerInvoked: boolean | "unknown";
+  frozen: FrozenEducationDispatch;
+} | undefined> {
+  const communication = await findStaffSend(fhir, body.idempotencyKey);
+  if (!communication) return undefined;
+  if (communication.subject?.reference !== body.patientReference || communication.sender?.reference !== senderReference) {
+    throw new CommsApiCapabilityError("Education frozen reservation identity conflict.");
+  }
+  const serialized = communication.payload?.[1]?.contentString;
+  if (!serialized) return undefined;
+  const frozen = JSON.parse(serialized) as FrozenEducationDispatch;
+  if (frozen.kind !== "education-dispatch" || educationDispatchIdentity(frozen.body) !== educationDispatchIdentity(body)) {
+    throw new CommsApiCapabilityError("Education frozen reservation request conflict.");
+  }
+  const providerMessageId = communication.identifier?.find((identifier) => identifier.system === frozen.providerMessageIdentifierSystem)?.value;
+  if (providerMessageId) return { outcome: { outcome: "sent", providerMessageId }, acceptedAt: communication.sent, providerInvoked: true, frozen };
+  const outcome = staffSmsTerminalResult(communication);
+  return outcome ? { outcome, providerInvoked: outcome.outcome === "rescheduled" ? false : "unknown", frozen } : undefined;
+}
+
+async function dispatchEducation(
+  deps: CommsApiRouteDeps, staff: CommsStaff, patient: Patient, body: EducationDispatchBody,
+  options: { reconcileOnly?: boolean; senderReference?: string } = {},
+): Promise<EducationEnrollmentSendOutcome> {
+  return dispatchEducationAs({ kind: "staff", staff }, deps, patient, body, options);
+}
+
+export async function dispatchEducationAs(
+  actor: EducationDispatchActor,
+  deps: CommsApiRouteDeps,
+  patient: Patient | undefined,
+  body: EducationDispatchBody,
+  options: { reconcileOnly?: boolean; senderReference?: string; prepared?: PreparedEducationSequenceDispatch } = {},
+): Promise<EducationEnrollmentSendOutcome> {
+  if (actor.kind === "system" && "quietHoursExemption" in actor) {
+    throw new CommsApiRefusalError("system actor cannot carry a quiet-hours exemption");
+  }
+  if (actor.kind === "staff" && body.idempotencyKey.startsWith("education-sequence-") && !options.reconcileOnly) {
+    throw new CommsApiRefusalError("scheduled-attempt-requires-worker-claim");
+  }
+  const staff: EducationDispatchIdentity = actor.kind === "staff" ? actor.staff : {
+    staffReference: actor.onBehalfOf, fhir: actor.fhir, executingReference: actor.reference,
+  };
+  if (actor.kind === "system" && (body.alsoUpdateChart || body.channel === "print")) {
+    throw new CommsApiRefusalError("system education dispatch requires an electronic send without chart mutation");
+  }
+  const senderReference = actor.kind === "system" ? actor.onBehalfOf : options.senderReference ?? staff.staffReference;
+  if (options.reconcileOnly && (actor.kind === "system" || body.idempotencyKey.startsWith("education-sequence-"))) {
+    const evidence = await readEducationDispatchEvidence(staff.fhir, body, senderReference);
+    if (evidence) {
+      if (evidence.outcome.outcome === "sent") {
+        await persistEducationSendProvenance(staff.fhir, {
+          ...evidence.frozen, staff: evidence.frozen.executingReference ? { ...staff, staffReference: senderReference, executingReference: evidence.frozen.executingReference } : staff, now: deps.now?.() ?? new Date().toISOString(),
+        });
+      }
+      return evidence.outcome;
+    }
+    throw new PendingEducationReconciliationError("Education send outcome is pending reconciliation; do not resend with a new key.");
+  }
+  if (!patient) throw new CommsApiValidationError("Patient is required to prepare a new education send.");
+  if (options.prepared) {
+    if (educationDispatchIdentity(options.prepared.body, false) !== educationDispatchIdentity(body, false)) {
+      throw new CommsApiValidationError("Prepared education request does not match dispatch.");
+    }
+  }
+  const { item, recipient, laneSelection, campaignId } = options.prepared ?? await prepareEducationDispatch(deps, staff.fhir, patient, body);
+  const frozenContext = (providerMessageIdentifierSystem: string): string => JSON.stringify({
+    kind: "education-dispatch", executingReference: staff.executingReference, body, item, recipientValue: recipient.value, laneSelection, providerMessageIdentifierSystem,
+  } satisfies FrozenEducationDispatch);
   if (body.channel === "print") {
     const url = item.urls.print;
     if (!url) throw new CommsApiCapabilityError("Education print artifact is not published.");
@@ -970,7 +1117,7 @@ async function dispatchEducation(
       idempotencyKey: body.idempotencyKey,
       claimId: randomUUID(),
       patientReference: body.patientReference,
-      senderReference: options.senderReference ?? staff.staffReference,
+      senderReference,
       body: url,
       requestFingerprint: JSON.stringify({
         patientReference: body.patientReference,
@@ -986,6 +1133,7 @@ async function dispatchEducation(
       }),
       provider: provider.name,
       providerMessageIdentifierSystem,
+      frozenContext: frozenContext(providerMessageIdentifierSystem),
       medium: "Email",
       category: ODOS_PATIENT_EMAIL_CATEGORY,
       outboundCategory: ODOS_PATIENT_EMAIL_OUTBOUND_CATEGORY,
@@ -1086,7 +1234,7 @@ async function dispatchEducation(
     idempotencyKey: body.idempotencyKey,
     claimId: randomUUID(),
     patientReference: body.patientReference,
-    senderReference: options.senderReference ?? staff.staffReference,
+    senderReference,
     body: smsBody,
     requestFingerprint: JSON.stringify({
       patientReference: body.patientReference,
@@ -1102,6 +1250,7 @@ async function dispatchEducation(
     }),
     provider: provider.name,
     providerMessageIdentifierSystem,
+    frozenContext: frozenContext(providerMessageIdentifierSystem),
   });
   if (reservation.state === "conflict") {
     throw new CommsApiCapabilityError("Education idempotency key was already used for a different request.");
@@ -1140,7 +1289,7 @@ async function dispatchEducation(
     campaignType: "clinical-education",
     campaignId,
     messageId: body.idempotencyKey,
-    suppression: item.consentClass === "transactional"
+    suppression: actor.kind === "staff" && item.consentClass === "transactional"
       ? { quietHoursExemption: "staff-initiated-chart-education" }
       : {},
   });
@@ -1658,7 +1807,7 @@ function requiredInteger(value: unknown, label: string, min: number, max: number
   return value as number;
 }
 
-type EducationDispatchBody = {
+export type EducationDispatchBody = {
   patientReference: string;
   educationId: string;
   version: number;
@@ -2076,7 +2225,7 @@ async function updateEducationRecipient(
   fhir: MedplumClient,
   recipient: { reference: string; resource: Patient | RelatedPerson },
   body: EducationDispatchBody,
-  staff: CommsStaff,
+  staff: EducationDispatchIdentity,
 ): Promise<void> {
   const system = body.channel === "sms" ? "phone" : body.channel === "email" ? "email" : undefined;
   const value = system === "phone" ? body.recipientOverride?.phone : body.recipientOverride?.email;
@@ -2104,7 +2253,7 @@ async function persistEducationSendProvenance(
   input: {
     body: EducationDispatchBody;
     item: EducationContentItem;
-    staff: CommsStaff;
+    staff: EducationDispatchIdentity;
     recipientValue: string;
     laneSelection: "default" | "overridden";
     now: string;
@@ -2121,7 +2270,10 @@ async function persistEducationSendProvenance(
       recorded: input.now,
       activityCode: "CREATE",
       activityDisplay: "Dispatch patient education",
-      agents: [{ whoReference: input.staff.staffReference, typeCode: "author" }],
+      agents: [
+        { whoReference: input.staff.staffReference, typeCode: "author" },
+        ...(input.staff.executingReference ? [{ whoReference: input.staff.executingReference, typeCode: "performer" }] : []),
+      ],
       entityValues: [
         { role: "source", display: `Education content: ${input.item.id}@${input.item.version}` },
         { role: "source", display: `Channel: ${input.body.channel}` },

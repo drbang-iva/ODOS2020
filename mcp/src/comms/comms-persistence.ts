@@ -158,6 +158,7 @@ export async function reserveStaffSend(
     senderReference: string;
     body: string;
     requestFingerprint?: string;
+    frozenContext?: string;
     provider?: string;
     providerMessageIdentifierSystem?: string;
     medium?: "SMS" | "Email";
@@ -187,7 +188,7 @@ export async function reserveStaffSend(
     subject: { reference: input.patientReference },
     sender: { reference: input.senderReference },
     recipient: [{ reference: input.patientReference }],
-    payload: [{ contentString: input.body }],
+    payload: [{ contentString: input.body }, ...(input.frozenContext ? [{ contentString: input.frozenContext }] : [])],
   };
   const claimed = await fhir.create<Communication>(candidate, {
     "If-None-Exist": `identifier=${ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM}|${input.idempotencyKey}`,
@@ -204,6 +205,7 @@ export async function reserveStaffSmsSend(
     senderReference: string;
     body: string;
     requestFingerprint?: string;
+    frozenContext?: string;
     provider?: string;
     providerMessageIdentifierSystem?: string;
   },
@@ -334,7 +336,7 @@ function classifyStaffSendReservation(
     : { state: "pending", communication };
 }
 
-function staffSmsTerminalResult(
+export function staffSmsTerminalResult(
   communication: Communication,
 ): Exclude<SendResult, { outcome: "sent" }> | undefined {
   const value = (system: string) => communication.identifier?.find((identifier) =>

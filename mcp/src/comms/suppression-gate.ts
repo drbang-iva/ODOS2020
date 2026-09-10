@@ -271,6 +271,7 @@ export function createSuppressedCommsProvider(
 ): CommsProvider {
   return {
     name: provider.name,
+    preflightSuppression: (request, channel) => checkMessageSuppression(deps, request, channel).then((checked) => checked.result),
     ...(provider.messageIdentifierSystem
       ? { messageIdentifierSystem: provider.messageIdentifierSystem }
       : {}),
@@ -332,6 +333,15 @@ async function gatedSend(
   channel: "email" | "sms",
   send: (patient: Patient, now: Date) => Promise<SendResult>,
 ): Promise<SendResult> {
+  const checked = await checkMessageSuppression(deps, request, channel);
+  return checked.result ?? send(checked.patient, checked.now);
+}
+
+export async function checkMessageSuppression(
+  deps: SuppressionGateDeps,
+  request: SendEmailRequest | SendSmsRequest,
+  channel: "email" | "sms",
+): Promise<{ patient: Patient; now: Date; result?: Exclude<SendResult, { outcome: "sent" }> }> {
   const now = deps.now?.() ?? new Date();
   const patient = await readPatient(deps.fhir, request.patientReference);
   if (isOptedOut(
@@ -341,7 +351,7 @@ async function gatedSend(
     channel === "sms" ? deps.smsSenderNumber : undefined,
     deps.stopScope ?? "per-number",
   )) {
-    return { outcome: "suppressed", reason: "patient-opt-out" };
+    return { patient, now, result: { outcome: "suppressed", reason: "patient-opt-out" } };
   }
   if (
     request.suppression.frequencyCapDays !== undefined
@@ -354,7 +364,7 @@ async function gatedSend(
       request.messageId,
     )
   ) {
-    return { outcome: "suppressed", reason: "frequency-cap" };
+    return { patient, now, result: { outcome: "suppressed", reason: "frequency-cap" } };
   }
   const timeZone = patientTimeZone(patient, deps.practiceTimeZone);
   // Product judgment, not a settled legal conclusion: live staff chart education mirrors
@@ -364,13 +374,13 @@ async function gatedSend(
     request.suppression.quietHoursExemption !== "staff-initiated-chart-education"
     && !insideQuietHoursWindow(now, timeZone)
   ) {
-    return {
+    return { patient, now, result: {
       outcome: "rescheduled",
       reason: "quiet-hours",
       rescheduledAt: nextWindowOpen(now, timeZone),
-    };
+    } };
   }
-  return send(patient, now);
+  return { patient, now };
 }
 
 async function readPatient(fhir: Pick<MedplumClient, "read">, reference: string): Promise<Patient> {
