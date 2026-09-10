@@ -310,3 +310,53 @@ export async function sendSms(
   }
   return body;
 }
+
+export type EducationSequenceReviewAction = "skip" | "resume";
+export interface EducationSequenceWorkItem {
+  id: string;
+  enrollmentId: string;
+  rowId?: string;
+  reason: string;
+  patientReference?: string;
+  at: string;
+  state: "open" | "settled";
+  expectedVersion?: string;
+  disposition?: string;
+  holdReason?: string;
+  channel?: "sms" | "email" | "print";
+  encounterReference?: string;
+  allowedActions?: EducationSequenceReviewAction[];
+}
+
+export async function listEducationSequenceWork(fetchImpl: typeof fetch = fetch): Promise<EducationSequenceWorkItem[]> {
+  const response = await fetchImpl(`${clinicalGraphApiBase()}/communications/education/sequence-work`, { headers: authHeaders() });
+  const body = await response.json().catch(() => ({})) as unknown;
+  if (!response.ok) throw new CommunicationsResponseError(response.status, responseError(body) ?? dispatchRefusalReason(body) ?? "Education review list could not load.");
+  if (!isRecord(body) || !Array.isArray(body.items) || !body.items.every(isEducationSequenceWorkItem))
+    throw new CommunicationsResponseError(response.status, "Education review returned an unexpected response.");
+  return body.items;
+}
+
+export async function reviewEducationSequenceStep(
+  enrollmentId: string,
+  rowId: string,
+  input: { action: EducationSequenceReviewAction; reason: string; expectedVersion: string; reviewedEncounterReference?: string },
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const response = await fetchImpl(`${clinicalGraphApiBase()}/communications/education/enrollments/${encodeURIComponent(enrollmentId)}/scheduled-sends/${encodeURIComponent(rowId)}/review`, {
+    method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(input),
+  });
+  const body = await response.json().catch(() => ({})) as unknown;
+  if (!response.ok) throw new CommunicationsResponseError(response.status, responseError(body) ?? dispatchRefusalReason(body) ?? "Education review could not be recorded.");
+  if (!isRecord(body) || !isRecord(body.enrollment) || typeof body.expectedVersion !== "string")
+    throw new CommunicationsResponseError(response.status, "Education review returned an unexpected response. Refresh before trying again.");
+}
+
+function isEducationSequenceWorkItem(value: unknown): value is EducationSequenceWorkItem {
+  if (!isRecord(value) || !["id", "enrollmentId", "reason", "at"].every(key => typeof value[key] === "string")
+    || !["open", "settled"].includes(String(value.state))) return false;
+  for (const key of ["rowId", "patientReference", "expectedVersion", "disposition", "holdReason", "encounterReference"])
+    if (value[key] !== undefined && typeof value[key] !== "string") return false;
+  return (value.channel === undefined || ["sms", "email", "print"].includes(String(value.channel)))
+    && (value.allowedActions === undefined || (Array.isArray(value.allowedActions) && value.allowedActions.every(action => action === "skip" || action === "resume")));
+}

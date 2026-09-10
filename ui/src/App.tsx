@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { EncounterCharting } from "./scenes/EncounterCharting";
 import { ProcedureDefinitionsSettings } from "./scenes/settings/ProcedureDefinitionsSettings";
+import { EducationSequenceReview } from "./scenes/EducationSequenceReview";
 import { AuditLog } from "./scenes/AuditLog";
 import { PatientOverview } from "./scenes/PatientOverview";
 import { PatientPicker } from "./scenes/PatientPicker";
@@ -387,6 +388,8 @@ export function RouteSwitch({
   search = typeof window === "undefined" ? "" : window.location.search,
 }: RouteSwitchProps) {
   switch (path) {
+    case "/communications/education/review":
+      return <EducationSequenceReview canReview={roles.includes("provider")} />;
     case "/audit/log":
       return <AuditLog />;
     case "/admin/optical/catalog/frames":

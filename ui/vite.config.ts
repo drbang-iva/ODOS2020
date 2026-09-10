@@ -31,7 +31,14 @@ export default defineConfig(({ mode }) => {
         "/correspondence": { target: mcpTarget, changeOrigin: true },
         "/fax": { target: mcpTarget, changeOrigin: true },
         "/mcp": { target: mcpTarget, changeOrigin: true },
-        "/communications": { target: mcpTarget, changeOrigin: true },
+        "/communications": {
+          target: mcpTarget,
+          changeOrigin: true,
+          bypass(req) {
+            if (req.url?.split("?")[0] === "/communications/education/review" &&
+              (req.headers["sec-fetch-dest"] === "document" || (req.headers.accept || "").includes("text/html"))) return "/index.html";
+          },
+        },
         "/watchers": { target: mcpTarget, changeOrigin: true },
         "/inventory": { target: mcpTarget, changeOrigin: true },
         "/comms": { target: mcpTarget, changeOrigin: true },
