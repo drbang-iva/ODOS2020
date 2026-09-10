@@ -97,7 +97,7 @@ export function createEducationSequenceOperations(deps: {
   }
   async function assertResumable(fhir: EducationSequenceOperationsFhir, enrollment: EducationEnrollment, row: EducationScheduledSend, reviewedEncounterReference?: string): Promise<void> {
     if (row.disposition !== "held") throw new EducationSequenceAdmissionError("scheduled-row-not-held");
-    if (row.channel === "print" || Date.parse(deps.now?.() ?? new Date().toISOString()) > Date.parse(row.latestUsefulTime)) throw new EducationSequenceAdmissionError("scheduled-row-requires-skip");
+    if (row.channel === "print" || row.attempts.length >= 3 || Date.parse(deps.now?.() ?? new Date().toISOString()) > Date.parse(row.latestUsefulTime)) throw new EducationSequenceAdmissionError("scheduled-row-requires-skip");
     const last = row.attempts.at(-1);
     const send = last && enrollment.immediateSends[last.sendIndex];
     if (send && send.state !== "pending" && !(send.state === "resolved" && send.outcome?.outcome === "rescheduled")) throw new EducationSequenceAdmissionError("terminal-sequence-attempt-requires-skip");
@@ -126,7 +126,15 @@ export function createEducationSequenceOperations(deps: {
         ...(input.rowId ? { input: [{ type: { text: "row-id" }, valueString: input.rowId }] } : {}),
       };
       const stored = await deps.fhir.create<Task>(task, { "If-None-Exist": `identifier=${key}` });
-      if (!sameProject(stored)) throw new Error("Education sequence staff item returned a foreign practice resource.");
+      if (!stored.id) throw new Error("Education sequence staff item returned no Task id.");
+      const scopedTask = await resourceInPractice<Task>(deps.fhir, "Task", stored.id);
+      if (!scopedTask) throw new Error("Education sequence staff item returned a foreign practice resource.");
+      if (scopedTask.focus?.reference !== task.focus?.reference || scopedTask.for?.reference !== task.for?.reference ||
+        scopedTask.reasonCode?.text !== input.reason || taskInput(scopedTask, "row-id") !== input.rowId ||
+        !scopedTask.identifier?.some(identifier => identifier.value === key && !identifier.system) ||
+        !scopedTask.code?.coding?.some(code => code.code === REVIEW_CODE && !code.system)) {
+        throw new Error("Education sequence staff item Task identity conflict.");
+      }
     },
     async list() {
       const tasks = await searchProject<Task>(deps.fhir, "Task", { code: REVIEW_CODE, _count: "100" });

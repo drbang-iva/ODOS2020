@@ -298,3 +298,52 @@ for (const defect of ["key", "content", "channel", "lane", "acceptedAt", "provid
     assert.throws(() => validateStoredEducationSequences(admitted.enrollment), /attempt/);
   });
 }
+
+test("staff item verifies a scoped reload when create responses omit extended metadata", async () => {
+  const f = await fixture();
+  const create = f.fhir.create.bind(f.fhir);
+  f.fhir.create = async (...args: Parameters<typeof f.fhir.create>) => {
+    const result = await create(...args);
+    if (result.resourceType === "Task") delete result.meta?.project;
+    return result;
+  };
+  const item = { enrollmentId: f.enrollment.id, rowId: f.enrollment.scheduledSends![0].id, patientReference: "Patient/synthetic", reason: "content-unavailable", at };
+  await f.operations.staffItem(item);
+  await f.operations.staffItem(item);
+  assert.equal([...f.resources.values()].filter(resource => resource.resourceType === "Task").length, 1);
+  assert.equal((await f.operations.list()).length, 1);
+});
+
+test("staff item refuses a foreign or mismatched Task returned by the scoped reload", async () => {
+  for (const change of ["foreign", "identity"] as const) {
+    const f = await fixture();
+    const create = f.fhir.create.bind(f.fhir);
+    f.fhir.create = async (...args: Parameters<typeof f.fhir.create>) => {
+      const result = await create(...args);
+      if (result.resourceType === "Task") {
+        const saved = f.resources.get(`Task/${result.id}`) as Task;
+        if (change === "foreign") saved.meta!.project = "foreign";
+        else saved.focus = { reference: "Basic/different" };
+        delete result.meta?.project;
+      }
+      return result;
+    };
+    await assert.rejects(f.operations.staffItem({ enrollmentId: f.enrollment.id, reason: "content-unavailable", at }), /foreign practice|identity conflict/);
+  }
+});
+
+test("exhausted attempts offer skip and refuse a resume that would immediately hold again", async () => {
+  const f = await fixture();
+  const current = f.snapshot();
+  const row = current.enrollment.scheduledSends![0];
+  for (let index = 0; index < 3; index++) {
+    const attemptKey = `education-sequence-${randomUUID()}`;
+    row.attempts.push({ sendIndex: index, attemptKey, ...(index ? { predecessorAttemptKey: row.attempts[index - 1].attemptKey } : {}), ...(index < 2 ? { providerNeverInvoked: true as const } : {}) });
+    current.enrollment.immediateSends.push({ content: row.content, channel: row.channel, lane: row.lane, idempotencyKey: attemptKey, state: "resolved", outcome: { outcome: "rescheduled", reason: "quiet-hours", rescheduledAt: at } });
+  }
+  const { writeScheduledEnrollment } = await import("../src/comms/education-sequence-store.js");
+  await writeScheduledEnrollment(f.fhir, current);
+  const held = await holdRow(f, "needs-acknowledgement", "attempt-limit");
+  assert.deepEqual((await f.operations.list())[0].allowedActions, ["skip"]);
+  await assert.rejects(f.operations.review(f.enrollment.id, row.id, { action: "resume", reason: "Retry requested", expectedVersion: held.resource.meta!.versionId!, actorReference: "Practitioner/synthetic" }, f.fhir), /scheduled-row-requires-skip/);
+});

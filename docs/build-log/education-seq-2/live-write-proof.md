@@ -62,3 +62,45 @@ Actual route HTTP 409 stale-enrollment-version from real Medplum HTTP 412
 Opt-in disabled control: **0 pass / 0 fail / 1 skipped**, exit 0; no server access. `npm exec -- tsc --noEmit --pretty false` in `mcp/`: exit 0. The mutation target has zero diff from `cf3a4f0a` after restoration.
 
 Owned stack stopped using `docker-compose -p odos-seq2-live -f <private-compose-path> stop`. No volumes were deleted. Retained volumes contain only generated synthetic proof fixtures. No PR, push, merge, production deployment, or independent evaluation marker.
+
+## Staff queue follow-up: confirmed metadata response defect
+
+The operations commit `8dc2f369` was integrated into this isolated worktree as `a727a774`, then the same owned stack was restarted. No other stack was used. A new synthetic project `3f3a2cf3-0733-45bc-8d5b-ba32b83590a6` exercised the production operations service with a real held enrollment/Patient and a deliberately malformed Basic.
+
+The additional subtest calls `staffItem` twice with the same held-row intent and once with the malformed enrollment, then calls `list()` through the real `Task?code=odos-education-sequence-review` search.
+
+Observed:
+
+- **All three plain `fhir.create<Task>` responses omitted `meta.project`**, including the conditional-create replay. The service consequently threw `Education sequence staff item returned a foreign practice resource.` three times, despite successful writes.
+- Conditional deduplication worked: the two identical valid-row calls returned the same Task ID, and exactly **one** valid-row queue item existed.
+- Code-query enumeration worked: exactly **one** malformed-enrollment queue item also appeared.
+- The valid item was open, carried the verified patient reference, and allowed skip/resume. The malformed item had no patient reference or actions.
+- All four conditional-write subtests remained green.
+
+Exact command: the same explicit installed-Node command above. Result: **6 tests / 4 pass / 2 fail / 0 skipped**, exit 1. The two failures are the staff queue subtest and its enclosing parent. The failing assertion is that successful durable Task writes must not be reported as failures; its actual result contained the three false foreign-practice errors.
+
+Recommended correction for the author: preserve the fail-closed practice boundary, require the returned Task ID, and reload that Task through the existing project-scoped `resourceInPractice` helper before checking ownership. Do not infer a foreign project from absent extended metadata in a plain create response. The parent subsequently authorized the correction and the bounded attempt-limit fix recorded below.
+
+The owned stack was stopped again after this follow-up; synthetic volumes were retained. This is author-side live storage evidence, not an independent evaluation marker or proof of clinical AccessPolicy enforcement.
+
+
+## Authorized staff queue correction: RED to GREEN
+
+`staffItem` now requires the create/replay response to contain a Task ID, reloads that same ID using the existing project-scoped search helper, and verifies its identifier, focus, patient, reason, row binding and queue code. Missing extended metadata in the plain create response is no longer treated as a foreign resource. Missing or foreign scoped reloads still refuse; a mismatched Task identity also refuses. No caller scope or access policy was widened.
+
+A unit fixture strips `meta.project` from create responses while retaining it in project-scoped results. Before the fix: **0 pass / 1 fail**, with the same false foreign-practice exception observed live. After the fix, the operations suite including foreign-resource and mismatched-identity refusal checks passed.
+
+The parent also authorized refusing Resume once a row has three attempts. That row offers Skip only; no counter reset or fresh attempt is introduced. Removing that exact cap condition produced **0 pass / 1 fail** because the queue incorrectly offered `resume` alongside `skip`. Restoring the condition returned the suite to **25 pass / 0 fail / 0 skipped**, exit 0.
+
+Final real Medplum run after the fix: **6 tests / 6 pass / 0 fail / 0 skipped**, exit 0, duration 1143 ms. Synthetic project `b4f2b4c2-977c-423a-8939-e6ea5493d77c`.
+
+```text
+Task create responses: projectPresent=false on initial create, replay, and malformed item
+staffItem errors: []; valid queue items=1; malformed queue items=1
+Raw HTTP 412; fresh If-Match update succeeded; cancellation retained
+Admission + claim: real transport 412 -> stale-enrollment-version; cancellation histories retained
+Actual worker enumerated real FHIR; stop after read; transport 412; adapter calls=0
+Actual route HTTP 409 stale-enrollment-version from real Medplum HTTP 412
+```
+
+Operations command: `npm exec --no -- /Users/ericr.bang/.local/bin/node --import tsx --test mcp/tests/educationSequenceOperations.test.ts`. TypeScript check using the installed compiler: exit 0. The owned stack was stopped after the green live run; no shared containers or databases were changed.

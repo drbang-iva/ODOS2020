@@ -7,10 +7,11 @@ import express from "express";
 import type { Basic, Encounter, Patient, Practitioner } from "@medplum/fhirtypes";
 import { createMedplumClient } from "../src/fhir-client.js";
 import { createFhirEducationEnrollmentStore, type NewEducationEnrollment } from "../src/comms/education-enrollment.js";
-import { admitScheduledAttempt, claimScheduledAttempt, readScheduledEnrollment } from "../src/comms/education-sequence-store.js";
+import { admitScheduledAttempt, claimScheduledAttempt, readScheduledEnrollment, writeScheduledEnrollment } from "../src/comms/education-sequence-store.js";
 import { EducationSequenceAdmissionError } from "../src/comms/education-sequence.js";
 import { runOnce, type EducationSequenceWorkerDeps } from "../src/comms/education-sequence-worker.js";
 import { registerCommsApiRoutes, type CommsApiRouteDeps } from "../src/comms/comms-api.js";
+import { createEducationSequenceOperations } from "../src/comms/education-sequence-operations.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 
 test("isolated synthetic Medplum enforces scheduled enrollment conditional writes", { skip: process.env.ODOS_SEQUENCE_LIVE_WRITE !== "1", timeout: 90_000 }, async (t) => {
@@ -91,6 +92,44 @@ test("isolated synthetic Medplum enforces scheduled enrollment conditional write
     assert.equal(transportStatuses.at(-1), 412);
     assert.equal((await store.read(e.id))!.scheduledSends![0].disposition, "cancelled");
     t.diagnostic("Actual worker enumerated real FHIR; stop after read; transport 412; adapter calls=0");
+  });
+  await t.test("staff queue persists, deduplicates and lists valid and malformed enrollment items", async () => {
+    const enrollment = await store.create(make());
+    const snapshot = await readScheduledEnrollment(fhir, enrollment.id);
+    const row = snapshot.enrollment.scheduledSends![0];
+    row.disposition = "held";
+    row.holdReason = "content-unavailable";
+    row.events.push({ kind: "held", actor, at, reason: "content-unavailable" });
+    await writeScheduledEnrollment(fhir, snapshot);
+    const malformed = await fhir.create<Basic>({ resourceType: "Basic", code: { text: "Synthetic deliberately malformed enrollment" } });
+    const createObservations: { resourceType: string; projectPresent: boolean; id: string | undefined }[] = [];
+    const opsFhir = { ...fhir, create: async (...args: Parameters<typeof fhir.create>) => {
+      const created = await fhir.create(...args);
+      createObservations.push({ resourceType: created.resourceType, projectPresent: !!created.meta?.project, id: created.id });
+      return created;
+    } } as typeof fhir;
+    const operations = createEducationSequenceOperations({ fhir: opsFhir, practiceProjectId: projectId, now: () => at });
+    const errors: string[] = [];
+    for (const item of [
+      { enrollmentId: enrollment.id, rowId: row.id, patientReference, reason: "content-unavailable", at },
+      { enrollmentId: enrollment.id, rowId: row.id, patientReference, reason: "content-unavailable", at },
+      { enrollmentId: malformed.id!, reason: "malformed-enrollment", at },
+    ]) {
+      try { await operations.staffItem(item); } catch (error) { errors.push((error as Error).message); }
+    }
+    const queue = await operations.list();
+    const validItems = queue.filter(item => item.enrollmentId === enrollment.id);
+    const malformedItems = queue.filter(item => item.enrollmentId === malformed.id);
+    t.diagnostic(`Task create responses: ${JSON.stringify(createObservations)}`);
+    t.diagnostic(`staffItem errors: ${JSON.stringify(errors)}; valid queue items=${validItems.length}; malformed queue items=${malformedItems.length}`);
+    assert.equal(validItems.length, 1, "Two identical staffItem calls must create one queryable Task");
+    assert.equal(malformedItems.length, 1, "Malformed enrollment must stay visible in Task code query");
+    assert.equal(validItems[0].state, "open");
+    assert.equal(validItems[0].patientReference, patientReference);
+    assert.deepEqual(validItems[0].allowedActions, ["skip", "resume"]);
+    assert.equal(malformedItems[0].patientReference, undefined);
+    assert.deepEqual(malformedItems[0].allowedActions, []);
+    assert.deepEqual(errors, [], "Successful durable Task writes must not be reported as failures");
   });
   await t.test("actual HTTP stop route maps real 412 to typed 409", async () => {
     const e = await store.create(make());
