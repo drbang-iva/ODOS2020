@@ -2,7 +2,7 @@
 
 Base: `2047ace47bf31ba1a28759075af05157668f6081` (freshly fetched origin/main).
 Branch: `drbang-iva/sweep-value-only`.
-Canonical decision verified present in `/Users/ericr.bang/GitHub/performance-od/decisions/2026-09-09-odos-all-normal-rejects-surface-staining.md`; companion HEAD `ba928e8b02449b35d65ecdd125e973e510a27450` contains required ancestor `32a2089a`.
+Canonical decision verified present in `../performance-od/decisions/2026-09-09-odos-all-normal-rejects-surface-staining.md`; companion HEAD `ba928e8b02449b35d65ecdd125e973e510a27450` contains required ancestor `32a2089a`.
 
 ## Result and scope
 
