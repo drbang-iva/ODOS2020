@@ -567,5 +567,5 @@ export function PatientRoute({
     return <EncounterCharting key={encounterId} patient={patient} encounterId={encounterId ?? ""} />;
   }
 
-  return <PatientOverview patient={patient} />;
+  return <PatientOverview patient={patient} onPatientSaved={setPatient} />;
 }

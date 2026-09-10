@@ -145,7 +145,7 @@ test("urgent queue persists across Clinic views, dismisses globally, and reveals
 
   await act(async () => renderer.update(
     <ClinicOfficeShell initialMessages={[first, second]} officeApi={api} initialSummary={summary()}>
-      <ClinicShell><PatientOverview patient={patient} initialOverview={overviewFixture()} /></ClinicShell>
+      <ClinicShell><PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={overviewFixture()} /></ClinicShell>
     </ClinicOfficeShell>,
   ));
   assert.match(JSON.stringify(renderer.toJSON()), /Lab is holding/);
@@ -168,11 +168,11 @@ test("patient pin appears on the matching flow row and chart header, is ackable,
   assert.equal(otherRow?.findAllByType("details").length, 0);
 
   let overviewRenderer!: ReactTestRenderer;
-  await act(async () => { overviewRenderer = create(<ClinicOfficeShell location="Patient overview" initialMessages={[pinned]}><PatientOverview patient={patient} initialOverview={overviewFixture()} /></ClinicOfficeShell>); });
+  await act(async () => { overviewRenderer = create(<ClinicOfficeShell location="Patient overview" initialMessages={[pinned]}><PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={overviewFixture()} /></ClinicOfficeShell>); });
   assert.equal(overviewRenderer.root.findAllByProps({ "aria-label": "Pinned Office note from Hannah Desk: Insurance question" }).length, 1);
-  await act(async () => { overviewRenderer.update(<ClinicOfficeShell location="Patient overview" initialMessages={[pinned]}><PatientOverview patient={{ ...patient, id: "patient-2" }} initialOverview={overviewFixture()} /></ClinicOfficeShell>); });
+  await act(async () => { overviewRenderer.update(<ClinicOfficeShell location="Patient overview" initialMessages={[pinned]}><PatientOverview onPatientSaved={() => {}} patient={{ ...patient, id: "patient-2" }} initialOverview={overviewFixture()} /></ClinicOfficeShell>); });
   assert.equal(overviewRenderer.root.findAllByProps({ "aria-label": "Pinned Office note from Hannah Desk: Insurance question" }).length, 0);
-  await act(async () => { overviewRenderer.update(<ClinicOfficeShell key="seen" location="Patient overview" initialMessages={[seenPinned]}><PatientOverview patient={patient} initialOverview={overviewFixture()} /></ClinicOfficeShell>); });
+  await act(async () => { overviewRenderer.update(<ClinicOfficeShell key="seen" location="Patient overview" initialMessages={[seenPinned]}><PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={overviewFixture()} /></ClinicOfficeShell>); });
   assert.equal(overviewRenderer.root.findAllByProps({ className: "odos-office-pin-context is-seen is-band" }).length, 1);
   assert.match(JSON.stringify(overviewRenderer.toJSON()), /📌/);
   const bandPin = overviewRenderer.root.findByProps({ className: "odos-office-pin-context is-seen is-band" });
@@ -181,7 +181,7 @@ test("patient pin appears on the matching flow row and chart header, is ackable,
 
   let renderer!: ReactTestRenderer;
   await act(async () => {
-    renderer = create(<ClinicOfficeShell location="Patient overview" initialMessages={[pinned]} officeApi={{ list: async () => [pinned], acknowledge: async () => seenPinned }}><PatientOverview patient={patient} initialOverview={overviewFixture()} /></ClinicOfficeShell>);
+    renderer = create(<ClinicOfficeShell location="Patient overview" initialMessages={[pinned]} officeApi={{ list: async () => [pinned], acknowledge: async () => seenPinned }}><PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={overviewFixture()} /></ClinicOfficeShell>);
   });
   await act(async () => renderer.root.findByProps({ className: "odos-office-pin-context is-band" }).findByType("button").props.onClick());
   assert.equal(renderer.root.findAllByProps({ className: "odos-office-pin-context is-seen is-band" }).length, 1);

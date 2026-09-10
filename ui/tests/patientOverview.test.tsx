@@ -107,7 +107,7 @@ test("patient overview builds a concrete optical-order route from patient and ac
 });
 
 test("seeded overview renders real snapshot data, newest-first visits, and linked dx chips", () => {
-  const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={fixture()} />);
+  const html = renderToStaticMarkup(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} />);
   assert.match(html, /Howard Enwright/);
   assert.match(html, /Ocular condition/);
   assert.match(html, /One drop nightly/);
@@ -129,7 +129,7 @@ test("patient overview renders program enrollment and the CarePlan session desig
   overview.visits[0]!.program = "Dry eye";
   overview.visits[0]!.seriesDesignation = "IPL · session 2 of 4";
 
-  const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={overview} />);
+  const html = renderToStaticMarkup(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={overview} />);
 
   assert.match(html, /Dry eye · active/);
   assert.match(html, /IPL · session 2 of 4/);
@@ -163,7 +163,7 @@ test("billing weather is doctor-only and defaults uncertain or malformed coverag
   delete uncertain.billingWeather;
   let doctor!: ReactTestRenderer;
   act(() => {
-    doctor = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={uncertain} /></RoleProvider>);
+    doctor = create(<RoleProvider initialRole="doctor"><PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={uncertain} /></RoleProvider>);
   });
   assert.equal(doctor.root.findByProps({ "data-testid": "billing-weather" }).props.className, "odos-billing-weather is-unknown");
   assert.equal(doctor.root.findAllByProps({ "aria-label": "Billing weather: Coverage unknown" }).length, 1);
@@ -185,7 +185,7 @@ test("billing weather is doctor-only and defaults uncertain or malformed coverag
 
   let frontDesk!: ReactTestRenderer;
   act(() => {
-    frontDesk = create(<RoleProvider initialRole="front-desk"><PatientOverview patient={patient} initialOverview={{ ...fixture(), billingWeather: { state: "covered", deductibleRemainingCents: 0 } }} /></RoleProvider>);
+    frontDesk = create(<RoleProvider initialRole="front-desk"><PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={{ ...fixture(), billingWeather: { state: "covered", deductibleRemainingCents: 0 } }} /></RoleProvider>);
   });
   assert.equal(frontDesk.root.findAllByProps({ "data-testid": "billing-weather" }).length, 0);
   act(() => frontDesk.unmount());
@@ -194,11 +194,11 @@ test("billing weather is doctor-only and defaults uncertain or malformed coverag
 test("the header band contains one StartExam and keeps DOB and age in its identity row", () => {
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} /></RoleProvider>);
+    renderer = create(<RoleProvider initialRole="doctor"><PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} /></RoleProvider>);
   });
   const band = renderer.root.findByProps({ className: "odos-overview-band" });
   assert.equal(band.findAllByType(StartExam).length, 1);
-  const html = renderToStaticMarkup(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} /></RoleProvider>);
+  const html = renderToStaticMarkup(<RoleProvider initialRole="doctor"><PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} /></RoleProvider>);
   assert.match(html, /odos-overview-band[\s\S]*Howard Enwright[\s\S]*DOB[\s\S]*4\/9\/1950[\s\S]*Age[\s\S]*\d+/);
   assert.equal(renderer.root.findAllByType(StartExam).length, 1);
   act(() => renderer.unmount());
@@ -230,7 +230,7 @@ test("patient chart History renders a patient-scoped change line without field d
   };
   let renderer!: ReactTestRenderer;
   await act(async () => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api as never} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} api={api as never} />);
   });
 
   const historyTab = renderer.root.findByProps({ role: "tab", "aria-label": "Chart History" });
@@ -252,7 +252,7 @@ test("patient chart History renders a patient-scoped change line without field d
 test("doctor overview omits all commercial panels while front desk retains them", () => {
   let doctor!: ReactTestRenderer;
   act(() => {
-    doctor = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} /></RoleProvider>);
+    doctor = create(<RoleProvider initialRole="doctor"><PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} /></RoleProvider>);
   });
   assert.equal(doctor.root.findAllByType(BalanceChips).length, 0);
   assert.equal(doctor.root.findAllByType(SaleSheet).length, 0);
@@ -263,7 +263,7 @@ test("doctor overview omits all commercial panels while front desk retains them"
 
   let frontDesk!: ReactTestRenderer;
   act(() => {
-    frontDesk = create(<RoleProvider initialRole="front-desk"><PatientOverview patient={patient} initialOverview={fixture()} /></RoleProvider>);
+    frontDesk = create(<RoleProvider initialRole="front-desk"><PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} /></RoleProvider>);
   });
   assert.equal(frontDesk.root.findAllByType(BalanceChips).length, 1);
   const sell = frontDesk.root.findAllByType("button").find((button) => button.children.join("") === "Sell package");
@@ -280,14 +280,14 @@ test("doctor overview omits all commercial panels while front desk retains them"
 test("active-program empty language stays accurate when package status is visible", () => {
   let doctor!: ReactTestRenderer;
   act(() => {
-    doctor = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} api={{ seriesTracker: seriesTrackerApiStub }} /></RoleProvider>);
+    doctor = create(<RoleProvider initialRole="doctor"><PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} api={{ seriesTracker: seriesTrackerApiStub }} /></RoleProvider>);
   });
   assert.equal(doctor.root.findByType(SeriesTrackerPanel).props.emptyMessage, "No active programs");
   act(() => doctor.unmount());
 
   let frontDesk!: ReactTestRenderer;
   act(() => {
-    frontDesk = create(<RoleProvider initialRole="front-desk"><PatientOverview patient={patient} initialOverview={fixture()} api={{ seriesTracker: seriesTrackerApiStub }} /></RoleProvider>);
+    frontDesk = create(<RoleProvider initialRole="front-desk"><PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} api={{ seriesTracker: seriesTrackerApiStub }} /></RoleProvider>);
   });
   assert.equal(frontDesk.root.findByType(SeriesTrackerPanel).props.emptyMessage, "No active treatment series");
   act(() => frontDesk.unmount());
@@ -301,7 +301,7 @@ test("tier 1 overview panels stay present while empty tier 2 panels stay absent"
   empty.visits = [];
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={empty} /></RoleProvider>);
+    renderer = create(<RoleProvider initialRole="doctor"><PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={empty} /></RoleProvider>);
   });
   for (const testId of ["overview-patient-snapshot", "overview-problem-list", "overview-active-programs", "overview-visit-ledger"]) {
     assert.equal(renderer.root.findAllByProps({ "data-testid": testId }).length, 1);
@@ -317,7 +317,7 @@ test("a medication retrieval failure stays distinct from empty without rendering
   unavailable.snapshot.ophthalmicMedications = [];
   unavailable.snapshot.systemicMedications = [];
   unavailable.unavailable = { medicationOrders: "Medication orders are temporarily unavailable." };
-  const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={unavailable} />);
+  const html = renderToStaticMarkup(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={unavailable} />);
   assert.doesNotMatch(html, /data-testid="overview-medications"/);
   assert.match(html, /Medication orders are temporarily unavailable/);
   assert.doesNotMatch(html, /No active problems|No visits yet/);
@@ -327,7 +327,7 @@ test("a medication retrieval warning remains visible beside partial medication d
   const partial = fixture();
   partial.snapshot.systemicMedications = [];
   partial.unavailable = { medicationOrders: "Medication orders are temporarily unavailable." };
-  const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={partial} />);
+  const html = renderToStaticMarkup(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={partial} />);
   assert.match(html, /data-testid="overview-medications"/);
   assert.match(html, /One drop nightly/);
   assert.match(html, /Medication orders are temporarily unavailable/);
@@ -349,7 +349,7 @@ test("tier 2 medication and optical-order panels render when content exists", as
   };
   let renderer!: ReactTestRenderer;
   await act(async () => {
-    renderer = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} api={api} /></RoleProvider>);
+    renderer = create(<RoleProvider initialRole="doctor"><PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} api={api} /></RoleProvider>);
     await Promise.resolve();
   });
   assert.equal(renderer.root.findAllByProps({ "data-testid": "overview-medications" }).length, 1);
@@ -856,7 +856,7 @@ test("explicit Start correspondence shows the true empty state beside its trigge
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+      renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} api={api} />);
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -884,7 +884,7 @@ test("a migrated ledger row is visibly tagged and opens its encounter without re
   useViewState.setState({ view: { kind: "overview", patientId: "patient-1" } });
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={migrated} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={migrated} />);
   });
 
   const row = renderer.root.findAllByProps({ className: "odos-visit-row" })
@@ -936,7 +936,7 @@ test("visit rows lazy-load one accordion summary and drill horizontally with OCT
   };
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} api={api} />);
   });
   assert.equal(renderer.root.findAllByProps({ className: "odos-visit-explode" }).length, 0);
   assert.equal(renderer.root.findAllByProps({ className: "odos-visit-row" }).length, 2);
@@ -990,7 +990,7 @@ test("the hidden disclosure button stops row propagation and toggles Level 1", a
   };
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} api={api} />);
   });
   const row = renderer.root.findAll((node) => node.type === "article" && node.props.className === "odos-visit-row")[0]!;
   assert.equal(row.props.role, undefined);
@@ -1039,7 +1039,7 @@ test("an expanded migrated row with no diagnoses keeps the existing empty state 
   };
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={migrated} api={api} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={migrated} api={api} />);
   });
   const migratedRow = renderer.root.findAll((node) => node.type === "article" && node.props.className === "odos-visit-row")
     .find((row) => row.findAllByProps({ "data-testid": "visit-status-older" }).length === 1);
@@ -1071,7 +1071,7 @@ test("zero-data doctor overview renders quiet Tier 1 states and no empty Tier 2 
     await act(async () => {
       renderer = create(
         <RoleProvider initialRole="doctor">
-          <PatientOverview
+          <PatientOverview onPatientSaved={() => {}}
             patient={patient}
             initialOverview={empty}
             api={{
@@ -1111,7 +1111,7 @@ test("a sparse visit collapses absent metadata to one marker", () => {
   }];
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={sparse} api={{ seriesTracker: seriesTrackerApiStub }} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={sparse} api={{ seriesTracker: seriesTrackerApiStub }} />);
   });
   const head = renderer.root.findByProps({ className: "odos-visit-head" });
   assert.deepEqual(head.children[0].children, ["—"]);
@@ -1131,7 +1131,7 @@ test("a sparse visit preserves the metadata that is present", () => {
     status: "Final",
     diagnoses: [],
   }];
-  const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={sparse} />);
+  const html = renderToStaticMarkup(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={sparse} />);
   assert.match(html, /Dr\. Present/);
   assert.doesNotMatch(html, /Visit type not recorded|Provider not recorded|Facility not recorded/);
 });
@@ -1147,7 +1147,7 @@ test("an empty filtered ledger does not claim the patient has no visits yet", as
   };
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} api={api} />);
   });
   const eyeExams = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Eye exams");
   assert.ok(eyeExams);
@@ -1166,7 +1166,7 @@ test("the Conditions list caps pathological data at eight rows and expands to th
   }));
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={crowded} api={{ seriesTracker: seriesTrackerApiStub }} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={crowded} api={{ seriesTracker: seriesTrackerApiStub }} />);
   });
   const panel = renderer.root.findByProps({ "data-testid": "overview-problem-list" });
   assert.equal(panel.findAllByType("li").length, 8);
@@ -1212,7 +1212,7 @@ test("sticky note edit persists and history reveals the returned FHIR versions",
   };
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} api={api} />);
   });
 
   const editButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Edit");
@@ -1294,7 +1294,7 @@ test("initial overview loading skips patients without a FHIR id", () => {
   };
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={{ ...patient, id: undefined }} api={api} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={{ ...patient, id: undefined }} api={api} />);
   });
   assert.equal(fetchCalls, 0);
   const rendered = JSON.stringify(renderer.toJSON());
@@ -1311,13 +1311,13 @@ test("skipping active-Rx lookup clears a prior lookup error", async () => {
   };
   let renderer!: ReactTestRenderer;
   await act(async () => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} api={api} />);
     await Promise.resolve();
   });
   assert.equal(renderer.root.findAllByType("a").some((link) => link.children.join("") === "Start optical order"), false);
 
   await act(async () => {
-    renderer.update(<PatientOverview patient={{ ...patient, id: undefined }} initialOverview={fixture()} api={api} />);
+    renderer.update(<PatientOverview onPatientSaved={() => {}} patient={{ ...patient, id: undefined }} initialOverview={fixture()} api={api} />);
     await Promise.resolve();
   });
   assert.equal(renderer.root.findAllByType("a").some((link) => link.children.join("") === "Start optical order"), false);
@@ -1333,7 +1333,7 @@ test("rapid visit-filter requests cannot overwrite the latest result out of orde
   };
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} api={api} />);
   });
   const eyeButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Eye exams");
   const officeButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Office visits");
@@ -1373,7 +1373,7 @@ test("filter and history responses started before a sticky save cannot restore s
   };
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} api={api} />);
   });
 
   const eyeButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Eye exams");
@@ -1420,7 +1420,7 @@ test("a history failure invalidated by sticky save does not surface a stale erro
   };
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} api={api} />);
   });
   const historyButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "History");
   const editButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Edit");
@@ -1455,7 +1455,7 @@ test("an active history failure replaces the loading placeholder", async () => {
   };
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+    renderer = create(<PatientOverview onPatientSaved={() => {}} patient={patient} initialOverview={fixture()} api={api} />);
   });
   const historyButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "History");
   assert.ok(historyButton);
