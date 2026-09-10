@@ -1,0 +1,82 @@
+$ npm --prefix mcp test -- '--test-name-pattern=sequence HTTP lifecycle lost' tests/educationEnrollmentApi.test.ts
+Verified mutation diff:
+--- fixed
++++ mutant
+@@ -1029,12 +1029,7 @@
+   replaceEnrollmentState(resource, enrollment);
+   if ((enrollment.activations?.length ?? 0) > priorActivationCount)
+     assertEducationSequenceAdmissionBudget(enrollment, resource);
+-  try {
+-    return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, { "If-Match": `W/"${resource.meta.versionId}"` }));
+-  } catch (error) {
+-    if (isFhirConflict(error)) throw new EducationSequenceAdmissionError("stale-enrollment-version");
+-    throw error;
+-  }
++  return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, { "If-Match": `W/"${resource.meta.versionId}"` }));
+ }
+ function enrollmentCreateContext(input: NewEducationEnrollment): string {
+   return JSON.stringify([input.patientReference, input.journey, input.currentStageId, input.enteredFromEncounterReference, input.enrolledBy, input.status, input.immediateSends]);
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=sequence HTTP lifecycle lost tests/educationEnrollmentApi.test.ts
+
+TAP version 13
+# odos-mcp: patient communications route failed.
+# Subtest: sequence HTTP lifecycle lost 409 race returns typed 409 without retry
+not ok 1 - sequence HTTP lifecycle lost 409 race returns typed 409 without retry
+  ---
+  duration_ms: 32.518875
+  type: 'test'
+  location: '/private/tmp/odos-seq-1-fixback-2/mcp/tests/educationEnrollmentApi.test.ts:1:44340'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    502 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 502
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-seq-1-fixback-2/mcp/tests/educationEnrollmentApi.test.ts:1369:14)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: sequence HTTP lifecycle lost 412 race returns typed 409 without retry
+not ok 2 - sequence HTTP lifecycle lost 412 race returns typed 409 without retry
+  ---
+  duration_ms: 5.299333
+  type: 'test'
+  location: '/private/tmp/odos-seq-1-fixback-2/mcp/tests/educationEnrollmentApi.test.ts:1:44340'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    502 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 502
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-seq-1-fixback-2/mcp/tests/educationEnrollmentApi.test.ts:1369:14)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 391.648334
+
+Exit code: 1

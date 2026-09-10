@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import type { Basic, Bundle, Resource } from "@medplum/fhirtypes";
 import {
@@ -107,7 +108,7 @@ test("EducationEnrollment FHIR Basic round-trip preserves exact sends, outcomes,
       persisted = {
         ...(structuredClone(resource) as Basic),
         id: "fhir-enrollment-1",
-        meta: { versionId: "1", lastUpdated: "2026-09-01T14:00:00.000Z" },
+        meta: { versionId: randomUUID(), lastUpdated: "2026-09-01T14:00:00.000Z" },
       };
       return structuredClone(persisted) as T;
     },
@@ -117,13 +118,14 @@ test("EducationEnrollment FHIR Basic round-trip preserves exact sends, outcomes,
       assert.ok(persisted);
       return structuredClone(persisted) as T;
     },
-    async update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
+    async update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T, options?: Record<string, string>): Promise<T> {
+      if (options?.["If-Match"] !== `W/"${persisted?.meta?.versionId}"`) throw Object.assign(new Error("Stale version"), {status: 412});
       assert.equal(resourceType, "Basic");
       assert.equal(id, "fhir-enrollment-1");
       persisted = {
         ...(structuredClone(resource) as Basic),
         id,
-        meta: { versionId: "2", lastUpdated: "2026-09-01T14:01:00.000Z" },
+        meta: { versionId: randomUUID(), lastUpdated: "2026-09-01T14:01:00.000Z" },
       };
       return structuredClone(persisted) as T;
     },
@@ -181,7 +183,7 @@ test("EducationEnrollment FHIR terminal transition preserves prior truth and rem
       persisted = {
         ...(structuredClone(resource) as Basic),
         id: "fhir-terminal-enrollment",
-        meta: { versionId: "1", lastUpdated: "2026-09-01T14:00:00.000Z" },
+        meta: { versionId: randomUUID(), lastUpdated: "2026-09-01T14:00:00.000Z" },
       };
       return structuredClone(persisted) as T;
     },
@@ -200,12 +202,13 @@ test("EducationEnrollment FHIR terminal transition preserves prior truth and rem
       assert.equal(resourceType, "Basic");
       assert.equal(id, "fhir-terminal-enrollment");
       assert.ok(persisted);
+      if (options?.["If-Match"] !== `W/"${persisted.meta?.versionId}"`) throw Object.assign(new Error("Stale version"), {status: 412});
       ifMatches.push(options?.["If-Match"] ?? "");
       persisted = {
         ...(structuredClone(resource) as Basic),
         id,
         meta: {
-          versionId: String(Number(persisted.meta?.versionId ?? "0") + 1),
+          versionId: randomUUID(),
           lastUpdated: "2026-09-01T14:01:00.000Z",
         },
       };
@@ -244,13 +247,10 @@ test("EducationEnrollment FHIR terminal transition preserves prior truth and rem
 
   assert.equal(transitioned.immediateSends[1]?.idempotencyKey,
     "enrollment:fhir-terminal-enrollment:stage:complete:2");
-  assert.equal(transitioned.immediateSends[1]?.state, "pending");
+  assert.equal(transitioned.immediateSends[1]?.state, "resolved");
+  assert.deepEqual(transitioned.immediateSends[1]?.outcome, {outcome: "not-sent", reason: "clinician-action"});
   const terminalClaim = await store.claimImmediateSend(created.id, 1);
-  assert.equal(terminalClaim.claimed, true);
-  await store.recordImmediateSendOutcome(created.id, 1, {
-    outcome: "sent",
-    providerMessageId: "SM-terminal-stage",
-  });
+  assert.equal(terminalClaim.claimed, false);
   const cleared = await store.clearTerminalActiveIdentifier(created.id);
   assert.equal(persisted?.identifier?.some((identifier) =>
     identifier.system === "https://odos2020.com/fhir/NamingSystem/education-enrollment-active"), false);
@@ -262,16 +262,10 @@ test("EducationEnrollment FHIR terminal transition preserves prior truth and rem
     outcome: "sent",
     providerMessageId: "SM-stage-1",
   }, {
-    outcome: "sent",
-    providerMessageId: "SM-terminal-stage",
+    outcome: "not-sent",
+    reason: "clinician-action",
   }]);
-  assert.deepEqual(ifMatches, [
-    'W/"1"',
-    'W/"2"',
-    'W/"3"',
-    'W/"4"',
-    'W/"5"',
-    'W/"6"',
-    'W/"7"',
-  ]);
+  assert.equal(ifMatches.length, 5);
+  assert.equal(new Set(ifMatches).size, 5);
+  assert.ok(ifMatches.every(value => /^W\/"[0-9a-f-]{36}"$/.test(value)));
 });

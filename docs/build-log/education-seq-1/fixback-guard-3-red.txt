@@ -1,0 +1,348 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/educationSequence.test.ts tests/educationEnrollmentApi.test.ts
+
+TAP version 13
+# Subtest: EducationEnrollment creates stage 1, refuses a version-shifted duplicate, and persists opt-out suppression with zero provider sends
+ok 1 - EducationEnrollment creates stage 1, refuses a version-shifted duplicate, and persists opt-out suppression with zero provider sends
+  ---
+  duration_ms: 25.893125
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment rejects a cross-patient encounter before persistence, dispatch, or Provenance
+ok 2 - EducationEnrollment rejects a cross-patient encounter before persistence, dispatch, or Provenance
+  ---
+  duration_ms: 3.18325
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition appends history and actually dispatches a stage-2 send with an honest unique key
+ok 3 - EducationEnrollment transition appends history and actually dispatches a stage-2 send with an honest unique key
+  ---
+  duration_ms: 13.399334
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition refuses a stale from-stage without appending or dispatching
+ok 4 - EducationEnrollment transition refuses a stale from-stage without appending or dispatching
+  ---
+  duration_ms: 5.42825
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition refuses a non-active enrollment
+ok 5 - EducationEnrollment transition refuses a non-active enrollment
+  ---
+  duration_ms: 4.337959
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition rejects a missing or malformed target-stage shape
+ok 6 - EducationEnrollment transition rejects a missing or malformed target-stage shape
+  ---
+  duration_ms: 3.454875
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition requires a non-empty trigger
+ok 7 - EducationEnrollment transition requires a non-empty trigger
+  ---
+  duration_ms: 2.659666
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment terminal transition with a send preserves all history and outcomes, then permits re-enrollment
+ok 8 - EducationEnrollment terminal transition with a send preserves all history and outcomes, then permits re-enrollment
+  ---
+  duration_ms: 3.864458
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment terminal transition without sends completes and remains readable
+ok 9 - EducationEnrollment terminal transition without sends completes and remains readable
+  ---
+  duration_ms: 2.565542
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition persists opt-out suppression with zero provider sends
+ok 10 - EducationEnrollment transition persists opt-out suppression with zero provider sends
+  ---
+  duration_ms: 2.033541
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment create recovery is re-runnable after a mid-resume failure without another provider send
+ok 11 - EducationEnrollment create recovery is re-runnable after a mid-resume failure without another provider send
+  ---
+  duration_ms: 3.694458
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment resumes a create-Provenance failure after state commit and sends exactly once
+ok 12 - EducationEnrollment resumes a create-Provenance failure after state commit and sends exactly once
+  ---
+  duration_ms: 4.375333
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment transition failure is recoverable without re-dispatching its provider send
+ok 13 - EducationEnrollment transition failure is recoverable without re-dispatching its provider send
+  ---
+  duration_ms: 3.138417
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment resumes a mid-transition Provenance failure from committed pending state
+ok 14 - EducationEnrollment resumes a mid-transition Provenance failure from committed pending state
+  ---
+  duration_ms: 2.629
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment email uses the same durable reservation and resumes without another provider send
+ok 15 - EducationEnrollment email uses the same durable reservation and resumes without another provider send
+  ---
+  duration_ms: 1.972125
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment terminal cancellation retains an unresolved active lock until practitioner acknowledgement
+ok 16 - EducationEnrollment terminal cancellation retains an unresolved active lock until practitioner acknowledgement
+  ---
+  duration_ms: 2.051166
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment resume keeps an unresolved in-flight send in-flight unless explicitly acknowledged with a reason and Provenance
+ok 17 - EducationEnrollment resume keeps an unresolved in-flight send in-flight unless explicitly acknowledged with a reason and Provenance
+  ---
+  duration_ms: 3.328208
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition revalidates its Provenance encounter against the enrolled patient
+ok 18 - EducationEnrollment transition revalidates its Provenance encounter against the enrolled patient
+  ---
+  duration_ms: 1.585375
+  type: 'test'
+  ...
+# Subtest: one-shot education remains behaviorally intact beside EducationEnrollment
+ok 19 - one-shot education remains behaviorally intact beside EducationEnrollment
+  ---
+  duration_ms: 1.100792
+  type: 'test'
+  ...
+# Subtest: sequence API admits future-only education idempotently without attempting a message
+ok 20 - sequence API admits future-only education idempotently without attempting a message
+  ---
+  duration_ms: 2.25475
+  type: 'test'
+  ...
+# Subtest: sequence API refuses missing latest useful time and unpublished content before any enrollment write
+ok 21 - sequence API refuses missing latest useful time and unpublished content before any enrollment write
+  ---
+  duration_ms: 2.228459
+  type: 'test'
+  ...
+# Subtest: sequence API accepts print as a staff task and resume never sends scheduled work
+ok 22 - sequence API accepts print as a staff task and resume never sends scheduled work
+  ---
+  duration_ms: 1.662667
+  type: 'test'
+  ...
+# Subtest: sequence API refuses whole 65-step activation before writes even beside an immediate send
+ok 23 - sequence API refuses whole 65-step activation before writes even beside an immediate send
+  ---
+  duration_ms: 4.607167
+  type: 'test'
+  ...
+# Subtest: sequence API starts a second activation, stops only one, and atomically cancels the old stage on transition
+ok 24 - sequence API starts a second activation, stops only one, and atomically cancels the old stage on transition
+  ---
+  duration_ms: 7.501292
+  type: 'test'
+  ...
+# Subtest: sequence API refuses internal content and absent marketing consent before writes
+ok 25 - sequence API refuses internal content and absent marketing consent before writes
+  ---
+  duration_ms: 1.893125
+  type: 'test'
+  ...
+# Subtest: sequence row identity cannot be used to bypass admission through one-shot dispatch
+ok 26 - sequence row identity cannot be used to bypass admission through one-shot dispatch
+  ---
+  duration_ms: 1.809291
+  type: 'test'
+  ...
+# Subtest: sequence API records a new stage while an old attempt is unknown and only practitioner acknowledgement releases its hold
+ok 27 - sequence API records a new stage while an old attempt is unknown and only practitioner acknowledgement releases its hold
+  ---
+  duration_ms: 2.035584
+  type: 'test'
+  ...
+# Subtest: sequence API accepts a future-only stage without a redundant empty immediateSends array
+ok 28 - sequence API accepts a future-only stage without a redundant empty immediateSends array
+  ---
+  duration_ms: 0.949917
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: sequence HTTP admit lost 409 race returns typed 409 without retry
+not ok 29 - sequence HTTP admit lost 409 race returns typed 409 without retry
+  ---
+  duration_ms: 4.549542
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationEnrollmentApi.test.ts:1:42480'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    502 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 502
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationEnrollmentApi.test.ts:1313:16)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: sequence HTTP admit lost 412 race returns typed 409 without retry
+not ok 30 - sequence HTTP admit lost 412 race returns typed 409 without retry
+  ---
+  duration_ms: 2.534125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationEnrollmentApi.test.ts:1:42480'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    502 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 502
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationEnrollmentApi.test.ts:1313:16)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: sequence HTTP stop lost 409 race returns typed 409 without retry
+not ok 31 - sequence HTTP stop lost 409 race returns typed 409 without retry
+  ---
+  duration_ms: 2.04625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationEnrollmentApi.test.ts:1:42480'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    502 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 502
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationEnrollmentApi.test.ts:1313:16)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: sequence HTTP stop lost 412 race returns typed 409 without retry
+not ok 32 - sequence HTTP stop lost 412 race returns typed 409 without retry
+  ---
+  duration_ms: 2.106875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationEnrollmentApi.test.ts:1:42480'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    502 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 502
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationEnrollmentApi.test.ts:1313:16)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# 256-row admission budget bytes: 664371
+# Subtest: sequence admission retry binds identical rows and rejects changed intent
+ok 33 - sequence admission retry binds identical rows and rejects changed intent
+  ---
+  duration_ms: 10.882333
+  type: 'test'
+  ...
+# Subtest: activation ceiling refuses whole 65-delivery activation before write
+ok 34 - activation ceiling refuses whole 65-delivery activation before write
+  ---
+  duration_ms: 2.099333
+  type: 'test'
+  ...
+# Subtest: lifetime ceiling across four activations preserves rows and permits stop
+ok 35 - lifetime ceiling across four activations preserves rows and permits stop
+  ---
+  duration_ms: 15.427
+  type: 'test'
+  ...
+# Subtest: transition cancels old occurrence and restart never revives keys
+ok 36 - transition cancels old occurrence and restart never revives keys
+  ---
+  duration_ms: 0.741042
+  type: 'test'
+  ...
+# Subtest: scheduled identities never share immediate-send namespace
+ok 37 - scheduled identities never share immediate-send namespace
+  ---
+  duration_ms: 3.871958
+  type: 'test'
+  ...
+# Subtest: stopped activation remains cancelled while separately authorized activation survives
+ok 38 - stopped activation remains cancelled while separately authorized activation survives
+  ---
+  duration_ms: 0.352625
+  type: 'test'
+  ...
+# Subtest: transition retry uses original binding before stale-from-stage check
+ok 39 - transition retry uses original binding before stale-from-stage check
+  ---
+  duration_ms: 0.37525
+  type: 'test'
+  ...
+# Subtest: create retry refuses changed clinical context
+ok 40 - create retry refuses changed clinical context
+  ---
+  duration_ms: 0.453084
+  type: 'test'
+  ...
+# Subtest: reordered object keys replay without changing activation or rows
+ok 41 - reordered object keys replay without changing activation or rows
+  ---
+  duration_ms: 0.516042
+  type: 'test'
+  ...
+# Subtest: canonical fingerprint still refuses divergent content and reordered steps
+ok 42 - canonical fingerprint still refuses divergent content and reordered steps
+  ---
+  duration_ms: 0.601916
+  type: 'test'
+  ...
+1..42
+# tests 42
+# suites 0
+# pass 38
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 616.940458
+
+Exit code: 1

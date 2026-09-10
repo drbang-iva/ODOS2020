@@ -29,6 +29,7 @@ import {
   type EducationEnrollmentSendOutcome,
   type EducationEnrollmentStore,
 } from "./education-enrollment.js";
+import { EducationSequenceAdmissionError, validateEducationSequence, type EducationSequenceInput } from "./education-sequence.js";
 import { generateTrackedLink, type TrackedLinkStore } from "./tracked-links.js";
 import {
   ODOS_COMMS_CATEGORY_SYSTEM,
@@ -216,10 +217,13 @@ export function registerCommsApiRoutes(
           throw new CommsApiCapabilityError(`Education content is not published for ${send.channel}.`);
         }
       }
+      await validateSequenceAdmission(deps, staff, patient, body.targetStage.sequence);
       const sendStartIndex = existing.immediateSends.length;
       let enrollment: EducationEnrollment;
       try {
         enrollment = await store.transition(enrollmentId, {
+          requestId: body.requestId,
+          sequence: body.targetStage.sequence,
           fromStageId: body.fromStageId,
           targetStageId: body.targetStage.id,
           trigger: body.trigger,
@@ -238,6 +242,7 @@ export function registerCommsApiRoutes(
         }
         throw error;
       }
+      enrollment = await enforceEducationLifecycle(deps, staff, enrollment);
       // Fail closed: committed sends stay resumable; never replace their key or release a terminal lock early.
       await persistEducationEnrollmentTransitionProvenance(staff.fhir, {
         enrollment,
@@ -249,7 +254,7 @@ export function registerCommsApiRoutes(
       for (let sendIndex = sendStartIndex; sendIndex < enrollment.immediateSends.length; sendIndex += 1) {
         enrollment = await dispatchEnrollmentSend(deps, staff, patient, store, enrollment, sendIndex);
       }
-      if (body.status !== "active") {
+      if (body.status !== "active" && enrollment.immediateSends.every(send => send.state === "resolved" || send.state === "indeterminate" || send.outcome)) {
         // Fail closed: committed sends stay resumable; never replace their key or release a terminal lock early.
         enrollment = await store.clearTerminalActiveIdentifier(enrollment.id);
       }
@@ -277,10 +282,18 @@ export function registerCommsApiRoutes(
         enrollment.enteredFromEncounterReference,
         enrollment.patientReference,
       );
+      enrollment = await enforceEducationLifecycle(deps, staff, enrollment);
       await persistEducationEnrollmentEventProvenances(staff.fhir, enrollment, staff);
       for (let sendIndex = 0; sendIndex < enrollment.immediateSends.length; sendIndex += 1) {
         const send = enrollment.immediateSends[sendIndex]!;
         if (send.state === "resolved" || send.state === "indeterminate" || send.outcome) continue;
+        if (body.acknowledgeIndeterminate && send.state === "in-flight") {
+          enrollment = await acknowledgeOrRefuseIndeterminateSend(
+            staff.fhir, store, enrollment, sendIndex, body, staff,
+            deps.now?.() ?? new Date().toISOString(),
+          );
+          continue;
+        }
         if (!send.idempotencyKey) {
           enrollment = await acknowledgeOrRefuseIndeterminateSend(
             staff.fhir,
@@ -308,10 +321,48 @@ export function registerCommsApiRoutes(
           );
         }
       }
+      enrollment = await enforceEducationLifecycle(deps, staff, enrollment);
       if (enrollment.status !== "active") {
         // Fail closed: committed sends stay resumable; never replace their key or release a terminal lock early.
         enrollment = await store.clearTerminalActiveIdentifier(enrollment.id);
       }
+      return { status: 200, body: { enrollment } };
+    },
+  ));
+
+  app.post("/communications/education/enrollments/:enrollmentId/sequences", async (req, res) => withStaff(
+    req, res, deps, "communications.send", "Basic", "communications-education-sequence-admission", undefined,
+    async (staff) => {
+      const body = record(req.body);
+      const sequence = sequenceFromBody(body.sequence);
+      if (!sequence) throw new CommsApiValidationError("sequence is required.");
+      const store = enrollmentStore(deps);
+      const id = resourceKey(req.params.enrollmentId, "enrollment id");
+      const existing = await store.read(id);
+      if (!existing) throw new CommsApiNotFoundError("Education enrollment not found.");
+      const patient = await readPatient(staff.fhir, existing.patientReference);
+      await validateSequenceAdmission(deps, staff, patient, sequence);
+      const enrollment = await store.admitSequence(id, {
+        requestId: idempotencyKeyFromBody(body.requestId), sequence,
+        authorizedAt: deps.now?.() ?? new Date().toISOString(), authorizedBy: staff.staffReference,
+      });
+      return { status: 200, body: { enrollment } };
+    },
+  ));
+
+  app.post("/communications/education/enrollments/:enrollmentId/sequences/:activationId/stop", async (req, res) => withStaff(
+    req, res, deps, "communications.send", "Basic", "communications-education-sequence-stop", undefined,
+    async (staff) => {
+      const body = record(req.body);
+      const store = enrollmentStore(deps);
+      const id = resourceKey(req.params.enrollmentId, "enrollment id");
+      const existing = await store.read(id);
+      if (!existing) throw new CommsApiNotFoundError("Education enrollment not found.");
+      await readPatient(staff.fhir, existing.patientReference);
+      const enrollment = await store.stopSequence(id, {
+        activationId: requiredText(req.params.activationId, "activation id", 128),
+        actor: staff.staffReference, at: deps.now?.() ?? new Date().toISOString(), reason: requiredText(body.reason, "reason", 1000),
+      });
       return { status: 200, body: { enrollment } };
     },
   ));
@@ -342,14 +393,17 @@ export function registerCommsApiRoutes(
         }
       }
       const store = enrollmentStore(deps);
+      await validateSequenceAdmission(deps, staff, patient, body.initialStage.sequence);
       const duplicates = await store.listActiveForPatient(body.patientReference);
-      if (duplicates.some((enrollment) => enrollment.journey.id === body.journey.id)) {
+      if (!body.initialStage.sequence && duplicates.some((enrollment) => enrollment.journey.id === body.journey.id)) {
         throw new CommsApiRefusalError("duplicate-active-enrollment");
       }
       let enrollment: EducationEnrollment;
       try {
         const enrolledAt = deps.now?.() ?? new Date().toISOString();
         enrollment = await store.create({
+          requestId: body.requestId,
+          sequence: body.initialStage.sequence,
           patientReference: body.patientReference,
           journey: body.journey,
           currentStageId: body.initialStage.id,
@@ -378,6 +432,7 @@ export function registerCommsApiRoutes(
       if (enrollment.patientReference !== body.patientReference) {
         throw new Error("EducationEnrollment store returned a different patient.");
       }
+      enrollment = await enforceEducationLifecycle(deps, staff, enrollment);
       // Fail closed: committed sends stay resumable; never replace their key or release a terminal lock early.
       await persistEducationEnrollmentProvenance(staff.fhir, {
         enrollment,
@@ -422,6 +477,17 @@ export function registerCommsApiRoutes(
       const body = educationDispatchBody(req.body);
       const patientId = body.patientReference.slice("Patient/".length);
       const patient = await staff.fhir.read<Patient>("Patient", patientId);
+      if (body.idempotencyKey.startsWith("education-sequence-")) {
+        throw new CommsApiRefusalError(body.channel === "print" ? "print-sequence-electronic-dispatch-refused" : "sequence-dispatch-not-enabled");
+      }
+      const context = record(req.body);
+      if (context.enrollmentId !== undefined) {
+        const enrollment = await enrollmentStore(deps).read(resourceKey(requiredText(context.enrollmentId, "enrollment id", 64), "enrollment id"));
+        if (!enrollment || enrollment.patientReference !== body.patientReference) throw new CommsApiNotFoundError("Education enrollment not found.");
+        await enforceEducationLifecycle(deps, staff, enrollment);
+        throw new CommsApiRefusalError(body.channel === "print" ? "print-sequence-electronic-dispatch-refused" : "sequence-dispatch-not-enabled");
+      }
+      await enforceEducationLifecycle(deps, staff);
       return { status: 200, body: await dispatchEducation(deps, staff, patient, body) };
     },
   ));
@@ -705,6 +771,41 @@ export function registerCommsApiRoutes(
   ));
 }
 
+function sequenceFromBody(value: unknown): EducationSequenceInput | undefined {
+  if (value === undefined) return undefined;
+  const sequence = record(value) as unknown as EducationSequenceInput;
+  validateEducationSequence(sequence);
+  return structuredClone(sequence);
+}
+
+async function validateSequenceAdmission(
+  deps: CommsApiRouteDeps, staff: CommsStaff, patient: Patient, sequence?: EducationSequenceInput,
+): Promise<void> {
+  if (!sequence) return;
+  for (const step of sequence.steps) {
+    const item = deps.educationCatalog.get(step.content.id, step.content.version);
+    if (!item || item.audience !== "patient") throw new CommsApiNotFoundError("Education content not found.");
+    if (!item.channels.includes(step.channel)) throw new CommsApiCapabilityError(`Education content is not published for ${step.channel}.`);
+    if (item.consentClass === "marketing" && !hasRecordedMarketingConsent(patient)) throw new CommsApiRefusalError("marketing-consent-absent");
+    if (deps.chartDispatchLane === "locked_clinical" && step.lane !== "clinical") throw new CommsApiCapabilityError("Education dispatch is locked to the clinical lane for this practice.");
+    if (step.recipientReference.startsWith("Patient/")) {
+      if (step.recipientReference !== `Patient/${patient.id}`) throw new CommsApiValidationError("Sequence recipient must belong to the enrolled patient.");
+    } else {
+      const recipient = await staff.fhir.read<RelatedPerson>("RelatedPerson", step.recipientReference.split("/")[1]!);
+      if (recipient.patient.reference !== `Patient/${patient.id}`) throw new CommsApiValidationError("Sequence recipient must belong to the enrolled patient.");
+    }
+  }
+}
+
+async function enforceEducationLifecycle(deps: CommsApiRouteDeps, staff: CommsStaff, enrollment: EducationEnrollment): Promise<EducationEnrollment>;
+async function enforceEducationLifecycle(deps: CommsApiRouteDeps, staff: CommsStaff): Promise<undefined>;
+async function enforceEducationLifecycle(deps: CommsApiRouteDeps, staff: CommsStaff, enrollment?: EducationEnrollment): Promise<EducationEnrollment | undefined> {
+  if (!enrollment) return undefined;
+  return enrollmentStore(deps).applyLifecycle(enrollment.id, {
+    actor: staff.staffReference, at: deps.now?.() ?? new Date().toISOString(), reason: "lifecycle-reconciliation",
+  });
+}
+
 async function dispatchEnrollmentSend(
   deps: CommsApiRouteDeps,
   staff: CommsStaff,
@@ -713,7 +814,7 @@ async function dispatchEnrollmentSend(
   enrollment: EducationEnrollment,
   sendIndex: number,
 ): Promise<EducationEnrollment> {
-  let current = enrollment;
+  let current = await enforceEducationLifecycle(deps, staff, enrollment);
   let send = current.immediateSends[sendIndex];
   if (!send) throw new Error("EducationEnrollment immediate send index is invalid.");
   if (send.state === "resolved" || send.state === "indeterminate" || send.outcome) return current;
@@ -745,7 +846,7 @@ async function dispatchEnrollmentSend(
     alsoUpdateChart: false,
     encounterReference: current.enteredFromEncounterReference,
     idempotencyKey,
-  }, { reconcileOnly });
+  }, { reconcileOnly, senderReference: current.enrolledBy });
   return store.recordImmediateSendOutcome(current.id, sendIndex, outcome);
 }
 
@@ -761,6 +862,7 @@ async function acknowledgeOrRefuseIndeterminateSend(
   if (!body.acknowledgeIndeterminate) {
     throw new CommsApiRefusalError("pending-reconciliation");
   }
+  if (!staff.roles.includes("provider")) throw new CommsApiRefusalError("practitioner-acknowledgement-required");
   const acknowledgement = {
     reason: body.reason,
     acknowledgedAt: now,
@@ -807,7 +909,7 @@ async function dispatchEducation(
   staff: CommsStaff,
   patient: Patient,
   body: EducationDispatchBody,
-  options: { reconcileOnly?: boolean } = {},
+  options: { reconcileOnly?: boolean; senderReference?: string } = {},
 ): Promise<EducationEnrollmentSendOutcome> {
   const item = deps.educationCatalog.get(body.educationId, body.version);
   if (!item || item.audience !== "patient") {
@@ -868,7 +970,7 @@ async function dispatchEducation(
       idempotencyKey: body.idempotencyKey,
       claimId: randomUUID(),
       patientReference: body.patientReference,
-      senderReference: staff.staffReference,
+      senderReference: options.senderReference ?? staff.staffReference,
       body: url,
       requestFingerprint: JSON.stringify({
         patientReference: body.patientReference,
@@ -984,7 +1086,7 @@ async function dispatchEducation(
     idempotencyKey: body.idempotencyKey,
     claimId: randomUUID(),
     patientReference: body.patientReference,
-    senderReference: staff.staffReference,
+    senderReference: options.senderReference ?? staff.staffReference,
     body: smsBody,
     requestFingerprint: JSON.stringify({
       patientReference: body.patientReference,
@@ -1144,6 +1246,10 @@ async function withStaff(
     }
   } catch (error) {
     if (res.headersSent) return;
+    if (error instanceof EducationSequenceAdmissionError) {
+      res.status(409).json({ outcome: "refused", reason: error.message });
+      return;
+    }
     if (error instanceof CommsApiValidationError) {
       res.status(400).json({ error: error.message });
       return;
@@ -1571,10 +1677,12 @@ type EducationDispatchBody = {
 
 // Slice 5a limitation: the journey id/version pin is recorded but is not yet enforced against a definition store; the caller-supplied stage and sends are persisted as the execution truth.
 type EducationEnrollmentBody = {
+  requestId?: string;
   patientReference: string;
   encounterReference: string;
   journey: { id: string; version: number };
   initialStage: {
+    sequence?: EducationSequenceInput;
     id: string;
     immediateSends: Array<{
       educationId: string;
@@ -1586,8 +1694,10 @@ type EducationEnrollmentBody = {
 };
 
 type EducationEnrollmentTransitionBody = {
+  requestId?: string;
   fromStageId: string;
   targetStage: {
+    sequence?: EducationSequenceInput;
     id: string;
     immediateSends: Array<{
       educationId: string;
@@ -1608,8 +1718,10 @@ function educationEnrollmentBody(value: unknown): EducationEnrollmentBody {
   const body = record(value);
   const journey = record(body.journey);
   const initialStage = record(body.initialStage);
-  if (!Array.isArray(initialStage.immediateSends) || initialStage.immediateSends.length === 0) {
-    throw new CommsApiValidationError("initialStage.immediateSends must contain at least one send.");
+  const sequence = sequenceFromBody(initialStage.sequence);
+  const immediateSends = initialStage.immediateSends === undefined && sequence ? [] : initialStage.immediateSends;
+  if (!Array.isArray(immediateSends) || (immediateSends.length === 0 && !sequence?.steps.length)) {
+    throw new CommsApiValidationError("initialStage must contain at least one immediate send or one sequence step.");
   }
   return {
     patientReference: requiredPatientReference(body.patientReference),
@@ -1618,9 +1730,11 @@ function educationEnrollmentBody(value: unknown): EducationEnrollmentBody {
       id: definitionKey(journey.id, "journey.id"),
       version: requiredInteger(journey.version, "journey.version", 1, Number.MAX_SAFE_INTEGER),
     },
+    ...(sequence ? { requestId: idempotencyKeyFromBody(body.requestId) } : {}),
     initialStage: {
+      ...(sequence ? { sequence } : {}),
       id: definitionKey(initialStage.id, "initialStage.id"),
-      immediateSends: initialStage.immediateSends.map((value, index) => {
+      immediateSends: immediateSends.map((value, index) => {
         const send = record(value);
         const channel = send.channel;
         if (channel !== "sms" && channel !== "email" && channel !== "print") {
@@ -1656,7 +1770,9 @@ function educationEnrollmentBody(value: unknown): EducationEnrollmentBody {
 function educationEnrollmentTransitionBody(value: unknown): EducationEnrollmentTransitionBody {
   const body = record(value);
   const targetStage = record(body.targetStage);
-  if (!Array.isArray(targetStage.immediateSends)) {
+  const sequence = sequenceFromBody(targetStage.sequence);
+  const immediateSends = targetStage.immediateSends === undefined && sequence ? [] : targetStage.immediateSends;
+  if (!Array.isArray(immediateSends)) {
     throw new CommsApiValidationError("targetStage.immediateSends must be an array.");
   }
   const status = body.status;
@@ -1664,10 +1780,12 @@ function educationEnrollmentTransitionBody(value: unknown): EducationEnrollmentT
     throw new CommsApiValidationError("status must be active, completed, or cancelled.");
   }
   return {
+    ...(sequence ? { requestId: idempotencyKeyFromBody(body.requestId) } : {}),
     fromStageId: definitionKey(body.fromStageId, "fromStageId"),
     targetStage: {
+      ...(sequence ? { sequence } : {}),
       id: definitionKey(targetStage.id, "targetStage.id"),
-      immediateSends: targetStage.immediateSends.map((value, index) => {
+      immediateSends: immediateSends.map((value, index) => {
         const send = record(value);
         const channel = send.channel;
         if (channel !== "sms" && channel !== "email" && channel !== "print") {

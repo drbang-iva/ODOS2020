@@ -1,0 +1,42 @@
+$ npm --prefix mcp test -- '--test-name-pattern=sequence HTTP (admit|stop) lost' tests/educationEnrollmentApi.test.ts
+Restored SHA256: 9d1e6f6eef1bac9e5d10ccd785187cc60720727fbd25d95193d0916fb0c2e0e2
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=sequence HTTP (admit|stop) lost tests/educationEnrollmentApi.test.ts
+
+TAP version 13
+# Subtest: sequence HTTP admit lost 409 race returns typed 409 without retry
+ok 1 - sequence HTTP admit lost 409 race returns typed 409 without retry
+  ---
+  duration_ms: 32.961791
+  type: 'test'
+  ...
+# Subtest: sequence HTTP admit lost 412 race returns typed 409 without retry
+ok 2 - sequence HTTP admit lost 412 race returns typed 409 without retry
+  ---
+  duration_ms: 6.446625
+  type: 'test'
+  ...
+# Subtest: sequence HTTP stop lost 409 race returns typed 409 without retry
+ok 3 - sequence HTTP stop lost 409 race returns typed 409 without retry
+  ---
+  duration_ms: 5.0045
+  type: 'test'
+  ...
+# Subtest: sequence HTTP stop lost 412 race returns typed 409 without retry
+ok 4 - sequence HTTP stop lost 412 race returns typed 409 without retry
+  ---
+  duration_ms: 4.098375
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 349.066375
+
+Exit code: 0

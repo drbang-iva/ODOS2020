@@ -1,0 +1,483 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/educationSequence.test.ts tests/educationSequenceFhir.test.ts
+
+TAP version 13
+# 256-row admission budget bytes: 664371
+# Subtest: sequence admission retry binds identical rows and rejects changed intent
+not ok 1 - sequence admission retry binds identical rows and rejects changed intent
+  ---
+  duration_ms: 11.784333
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationSequence.test.ts:1:1250'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    4 !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 4
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationSequence.test.ts:9:425)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: activation ceiling refuses whole 65-delivery activation before write
+ok 2 - activation ceiling refuses whole 65-delivery activation before write
+  ---
+  duration_ms: 2.420791
+  type: 'test'
+  ...
+# Subtest: lifetime ceiling across four activations preserves rows and permits stop
+ok 3 - lifetime ceiling across four activations preserves rows and permits stop
+  ---
+  duration_ms: 16.411292
+  type: 'test'
+  ...
+# Subtest: transition cancels old occurrence and restart never revives keys
+ok 4 - transition cancels old occurrence and restart never revives keys
+  ---
+  duration_ms: 0.9595
+  type: 'test'
+  ...
+# Subtest: scheduled identities never share immediate-send namespace
+ok 5 - scheduled identities never share immediate-send namespace
+  ---
+  duration_ms: 3.918042
+  type: 'test'
+  ...
+# Subtest: stopped activation remains cancelled while separately authorized activation survives
+ok 6 - stopped activation remains cancelled while separately authorized activation survives
+  ---
+  duration_ms: 0.508584
+  type: 'test'
+  ...
+# Subtest: transition retry uses original binding before stale-from-stage check
+not ok 7 - transition retry uses original binding before stale-from-stage check
+  ---
+  duration_ms: 1.554375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationSequence.test.ts:1:5052'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+
+      {
+        activations: [
+          {
+            admissionContext: '["Patient/synthetic",{"id":"journey","version":1},"start","Encounter/synthetic","Practitioner/synthetic-provider","active",[]]',
+            authorizedAt: '2026-09-09T12:00:00.000Z',
+    ...
+          },
+    +     {
+    +       authorizedAt: '2026-09-09T12:00:00.000Z',
+    +       authorizedBy: 'Practitioner/synthetic-provider',
+    +       history: [
+    +         {
+    +           actor: 'Practitioner/synthetic-provider',
+    +           at: '2026-09-09T12:00:00.000Z',
+    +           kind: 'started',
+    +           reason: 'sequence-authorized'
+    +         }
+    +       ],
+    +       id: '87e179935407cd47b6159abf52676e98384e4b441256a75668be9917cda560b5',
+    +       requestFingerprint: '296dc9e9e3551c317c8e61052f239fbfb419025c367c93ed51fa24fbd3bf192f',
+    +       requestId: 'two',
+    +       sequence: {
+    +         id: 'sequence',
+    +         version: 1
+    +       },
+    +       stageHistorySequence: 2,
+    +       status: 'active'
+    +     }
+        ],
+        currentStageId: 'next',
+        enrolledBy: 'Practitioner/synthetic-provider',
+        enteredFromEncounterReference: 'Encounter/synthetic',
+        id: '24aa1d8b-5667-4bcd-bb33-27bf20d313fa',
+    ...
+          },
+    +     {
+    +       activationId: '87e179935407cd47b6159abf52676e98384e4b441256a75668be9917cda560b5',
+    +       anchor: 'stage-entry',
+    +       attempts: [],
+    +       blockedBySendIndices: [],
+    +       channel: 'sms',
+    +       content: {
+    +         id: 'content',
+    +         version: 1
+    +       },
+    +       dayInterpretation: 'calendar',
+    +       disposition: 'scheduled',
+    +       events: [
+    +         {
+    +           actor: 'Practitioner/synthetic-provider',
+    +           at: '2026-09-09T12:00:00.000Z',
+    +           kind: 'started',
+    +           reason: 'sequence-authorized'
+    +         }
+    +       ],
+    +       id: 'education-sequence-row:71c74dd2393e80470216a2b05186a122e7ae8c7f591b1374410a42976f469446',
+    +       lane: 'clinical',
+    +       latestUsefulTime: '2026-09-15T12:00:00.000Z',
+    +       notBefore: '2026-09-10T12:00:00.000Z',
+    +       offsetDays: 1,
+    +       plannedAt: '2026-09-10T12:00:00.000Z',
+    +       recipientReference: 'Patient/synthetic',
+    +       senderReference: 'Practitioner/synthetic-provider',
+    +       stepIndex: 0,
+    +       timezone: 'America/New_York'
+    +     }
+        ],
+        stageEnteredAt: '2026-09-09T12:00:00.000Z',
+        stageHistory: [
+          {
+            enteredAt: '2026-09-09T12:00:00.000Z',
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    patientReference: 'Patient/synthetic'
+    journey:
+      id: 'journey'
+      version: 1
+    currentStageId: 'next'
+    stageEnteredAt: '2026-09-09T12:00:00.000Z'
+    enteredFromEncounterReference: 'Encounter/synthetic'
+    enrolledBy: 'Practitioner/synthetic-provider'
+    status: 'active'
+    stageHistory:
+      0:
+        stageId: 'start'
+        enteredAt: '2026-09-09T12:00:00.000Z'
+        enteredBy: 'Practitioner/synthetic-provider'
+        reason: 'enrollment-recorded'
+      1:
+        stageId: 'next'
+        enteredAt: '2026-09-09T12:00:00.000Z'
+        enteredBy: 'Practitioner/synthetic-provider'
+        reason: 'clinician-action'
+    immediateSends:
+    id: '24aa1d8b-5667-4bcd-bb33-27bf20d313fa'
+    activations:
+      0:
+        id: '609002501874ba8160d7993ea20a2e40a09620983928fc3d4e47223d50af618a'
+        requestId: 'one'
+        requestFingerprint: '296dc9e9e3551c317c8e61052f239fbfb419025c367c93ed51fa24fbd3bf192f'
+        sequence:
+          id: 'sequence'
+          version: 1
+        authorizedBy: 'Practitioner/synthetic-provider'
+        authorizedAt: '2026-09-09T12:00:00.000Z'
+        stageHistorySequence: 1
+        status: 'stopped'
+        history:
+          0:
+            kind: 'started'
+            actor: 'Practitioner/synthetic-provider'
+            at: '2026-09-09T12:00:00.000Z'
+            reason: 'sequence-authorized'
+          1:
+            kind: 'stopped'
+            actor: 'Practitioner/synthetic-provider'
+            at: '2026-09-09T12:00:00.000Z'
+            reason: 'clinician-action'
+        admissionContext: '["Patient/synthetic",{"id":"journey","version":1},"start","Encounter/synthetic","Practitioner/synthetic-provider","active",[]]'
+      1:
+        id: '87e179935407cd47b6159abf52676e98384e4b441256a75668be9917cda560b5'
+        requestId: 'two'
+        requestFingerprint: '296dc9e9e3551c317c8e61052f239fbfb419025c367c93ed51fa24fbd3bf192f'
+        sequence:
+          id: 'sequence'
+          version: 1
+        authorizedBy: 'Practitioner/synthetic-provider'
+        authorizedAt: '2026-09-09T12:00:00.000Z'
+        stageHistorySequence: 2
+        status: 'active'
+        history:
+          0:
+            kind: 'started'
+            actor: 'Practitioner/synthetic-provider'
+            at: '2026-09-09T12:00:00.000Z'
+            reason: 'sequence-authorized'
+        admissionContext: '["start","next","clinician-action","Practitioner/synthetic-provider","active",[]]'
+    scheduledSends:
+      0:
+        stepIndex: 0
+        channel: 'sms'
+        lane: 'clinical'
+        content:
+          id: 'content'
+          version: 1
+        recipientReference: 'Patient/synthetic'
+        plannedAt: '2026-09-10T12:00:00.000Z'
+        notBefore: '2026-09-10T12:00:00.000Z'
+        latestUsefulTime: '2026-09-15T12:00:00.000Z'
+        anchor: 'stage-entry'
+        offsetDays: 1
+        dayInterpretation: 'calendar'
+        timezone: 'America/New_York'
+        id: 'education-sequence-row:8aa7f69b42b98823272c58e26a87e68ee862659b04db2d112a9000674b1a7366'
+        activationId: '609002501874ba8160d7993ea20a2e40a09620983928fc3d4e47223d50af618a'
+        senderReference: 'Practitioner/synthetic-provider'
+        disposition: 'cancelled'
+        blockedBySendIndices:
+        attempts:
+        events:
+          0:
+            kind: 'started'
+            actor: 'Practitioner/synthetic-provider'
+            at: '2026-09-09T12:00:00.000Z'
+            reason: 'sequence-authorized'
+          1:
+            kind: 'cancelled'
+            actor: 'Practitioner/synthetic-provider'
+            at: '2026-09-09T12:00:00.000Z'
+            reason: 'clinician-action'
+      1:
+        stepIndex: 0
+        channel: 'sms'
+        lane: 'clinical'
+        content:
+          id: 'content'
+          version: 1
+        recipientReference: 'Patient/synthetic'
+        plannedAt: '2026-09-10T12:00:00.000Z'
+        notBefore: '2026-09-10T12:00:00.000Z'
+        latestUsefulTime: '2026-09-15T12:00:00.000Z'
+        anchor: 'stage-entry'
+        offsetDays: 1
+        dayInterpretation: 'calendar'
+        timezone: 'America/New_York'
+        id: 'education-sequence-row:71c74dd2393e80470216a2b05186a122e7ae8c7f591b1374410a42976f469446'
+        activationId: '87e179935407cd47b6159abf52676e98384e4b441256a75668be9917cda560b5'
+        senderReference: 'Practitioner/synthetic-provider'
+        disposition: 'scheduled'
+        blockedBySendIndices:
+        attempts:
+        events:
+          0:
+            kind: 'started'
+            actor: 'Practitioner/synthetic-provider'
+            at: '2026-09-09T12:00:00.000Z'
+            reason: 'sequence-authorized'
+  actual:
+    patientReference: 'Patient/synthetic'
+    journey:
+      id: 'journey'
+      version: 1
+    currentStageId: 'next'
+    stageEnteredAt: '2026-09-09T12:00:00.000Z'
+    enteredFromEncounterReference: 'Encounter/synthetic'
+    enrolledBy: 'Practitioner/synthetic-provider'
+    status: 'active'
+    stageHistory:
+      0:
+        stageId: 'start'
+        enteredAt: '2026-09-09T12:00:00.000Z'
+        enteredBy: 'Practitioner/synthetic-provider'
+        reason: 'enrollment-recorded'
+      1:
+        stageId: 'next'
+        enteredAt: '2026-09-09T12:00:00.000Z'
+        enteredBy: 'Practitioner/synthetic-provider'
+        reason: 'clinician-action'
+    immediateSends:
+    id: '24aa1d8b-5667-4bcd-bb33-27bf20d313fa'
+    activations:
+      0:
+        id: '609002501874ba8160d7993ea20a2e40a09620983928fc3d4e47223d50af618a'
+        requestId: 'one'
+        requestFingerprint: '296dc9e9e3551c317c8e61052f239fbfb419025c367c93ed51fa24fbd3bf192f'
+        sequence:
+          id: 'sequence'
+          version: 1
+        authorizedBy: 'Practitioner/synthetic-provider'
+        authorizedAt: '2026-09-09T12:00:00.000Z'
+        stageHistorySequence: 1
+        status: 'stopped'
+        history:
+          0:
+            kind: 'started'
+            actor: 'Practitioner/synthetic-provider'
+            at: '2026-09-09T12:00:00.000Z'
+            reason: 'sequence-authorized'
+          1:
+            kind: 'stopped'
+            actor: 'Practitioner/synthetic-provider'
+            at: '2026-09-09T12:00:00.000Z'
+            reason: 'clinician-action'
+        admissionContext: '["Patient/synthetic",{"id":"journey","version":1},"start","Encounter/synthetic","Practitioner/synthetic-provider","active",[]]'
+      1:
+        id: '87e179935407cd47b6159abf52676e98384e4b441256a75668be9917cda560b5'
+        requestId: 'two'
+        requestFingerprint: '296dc9e9e3551c317c8e61052f239fbfb419025c367c93ed51fa24fbd3bf192f'
+        sequence:
+          id: 'sequence'
+          version: 1
+        authorizedBy: 'Practitioner/synthetic-provider'
+        authorizedAt: '2026-09-09T12:00:00.000Z'
+        stageHistorySequence: 2
+        status: 'active'
+        history:
+          0:
+            kind: 'started'
+            actor: 'Practitioner/synthetic-provider'
+            at: '2026-09-09T12:00:00.000Z'
+            reason: 'sequence-authorized'
+        admissionContext: '["start","next","clinician-action","Practitioner/synthetic-provider","active",[]]'
+      2:
+        id: '87e179935407cd47b6159abf52676e98384e4b441256a75668be9917cda560b5'
+        requestId: 'two'
+        requestFingerprint: '296dc9e9e3551c317c8e61052f239fbfb419025c367c93ed51fa24fbd3bf192f'
+        sequence:
+          id: 'sequence'
+          version: 1
+        authorizedBy: 'Practitioner/synthetic-provider'
+        authorizedAt: '2026-09-09T12:00:00.000Z'
+        stageHistorySequence: 2
+        status: 'active'
+        history:
+          0:
+            kind: 'started'
+            actor: 'Practitioner/synthetic-provider'
+            at: '2026-09-09T12:00:00.000Z'
+            reason: 'sequence-authorized'
+    scheduledSends:
+      0:
+        stepIndex: 0
+        channel: 'sms'
+        lane: 'clinical'
+        content:
+          id: 'content'
+          version: 1
+        recipientReference: 'Patient/synthetic'
+        plannedAt: '2026-09-10T12:00:00.000Z'
+        notBefore: '2026-09-10T12:00:00.000Z'
+        latestUsefulTime: '2026-09-15T12:00:00.000Z'
+        anchor: 'stage-entry'
+        offsetDays: 1
+        dayInterpretation: 'calendar'
+        timezone: 'America/New_York'
+        id: 'education-sequence-row:8aa7f69b42b98823272c58e26a87e68ee862659b04db2d112a9000674b1a7366'
+        activationId: '609002501874ba8160d7993ea20a2e40a09620983928fc3d4e47223d50af618a'
+        senderReference: 'Practitioner/synthetic-provider'
+        disposition: 'cancelled'
+        blockedBySendIndices:
+        attempts:
+        events:
+          0:
+            kind: 'started'
+            actor: 'Practitioner/synthetic-provider'
+            at: '2026-09-09T12:00:00.000Z'
+            reason: 'sequence-authorized'
+          1:
+            kind: 'cancelled'
+            actor: 'Practitioner/synthetic-provider'
+            at: '2026-09-09T12:00:00.000Z'
+            reason: 'clinician-action'
+      1:
+        stepIndex: 0
+        channel: 'sms'
+        lane: 'clinical'
+        content:
+          id: 'content'
+          version: 1
+        recipientReference: 'Patient/synthetic'
+        plannedAt: '2026-09-10T12:00:00.000Z'
+        notBefore: '2026-09-10T12:00:00.000Z'
+        latestUsefulTime: '2026-09-15T12:00:00.000Z'
+        anchor: 'stage-entry'
+        offsetDays: 1
+        dayInterpretation: 'calendar'
+        timezone: 'America/New_York'
+        id: 'education-sequence-row:71c74dd2393e80470216a2b05186a122e7ae8c7f591b1374410a42976f469446'
+        activationId: '87e179935407cd47b6159abf52676e98384e4b441256a75668be9917cda560b5'
+        senderReference: 'Practitioner/synthetic-provider'
+        disposition: 'scheduled'
+        blockedBySendIndices:
+        attempts:
+        events:
+          0:
+            kind: 'started'
+            actor: 'Practitioner/synthetic-provider'
+            at: '2026-09-09T12:00:00.000Z'
+            reason: 'sequence-authorized'
+      2:
+        stepIndex: 0
+        channel: 'sms'
+        lane: 'clinical'
+        content:
+          id: 'content'
+          version: 1
+        recipientReference: 'Patient/synthetic'
+        plannedAt: '2026-09-10T12:00:00.000Z'
+        notBefore: '2026-09-10T12:00:00.000Z'
+        latestUsefulTime: '2026-09-15T12:00:00.000Z'
+        anchor: 'stage-entry'
+        offsetDays: 1
+        dayInterpretation: 'calendar'
+        timezone: 'America/New_York'
+        id: 'education-sequence-row:71c74dd2393e80470216a2b05186a122e7ae8c7f591b1374410a42976f469446'
+        activationId: '87e179935407cd47b6159abf52676e98384e4b441256a75668be9917cda560b5'
+        senderReference: 'Practitioner/synthetic-provider'
+        disposition: 'scheduled'
+        blockedBySendIndices:
+        attempts:
+        events:
+          0:
+            kind: 'started'
+            actor: 'Practitioner/synthetic-provider'
+            at: '2026-09-09T12:00:00.000Z'
+            reason: 'sequence-authorized'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationSequence.test.ts:35:518)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: create retry refuses changed clinical context
+ok 8 - create retry refuses changed clinical context
+  ---
+  duration_ms: 0.440375
+  type: 'test'
+  ...
+# Subtest: FHIR activation round-trip and transition are one versioned Basic write; over-cap writes nothing
+ok 9 - FHIR activation round-trip and transition are one versioned Basic write; over-cap writes nothing
+  ---
+  duration_ms: 13.640542
+  type: 'test'
+  ...
+# Subtest: FHIR concurrent lifecycle writers refuse stale UUID If-Match, and missing version fails closed
+ok 10 - FHIR concurrent lifecycle writers refuse stale UUID If-Match, and missing version fails closed
+  ---
+  duration_ms: 1.092
+  type: 'test'
+  ...
+# Subtest: unresolved original attempt holds next stage until practitioner acknowledgement
+ok 11 - unresolved original attempt holds next stage until practitioner acknowledgement
+  ---
+  duration_ms: 1.627
+  type: 'test'
+  ...
+# Subtest: scheduling dispositions cannot inflate the persisted test-only sent-outcome query
+ok 12 - scheduling dispositions cannot inflate the persisted test-only sent-outcome query
+  ---
+  duration_ms: 0.878292
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 10
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 380.088916

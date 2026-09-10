@@ -1,0 +1,77 @@
+$ npm --prefix mcp test -- '--test-name-pattern=mutateEnrollment structurally' tests/educationSequenceFhir.test.ts
+Verified mutation diff:
+--- fixed
++++ mutant
+@@ -319,10 +319,20 @@
+       return parseEnrollment(persisted);
+     },
+     async admitSequence(id, admission) {
+-      return mutateEnrollment(fhir, id, row => admitEducationSequence(row, admission));
++      try {
++        return await mutateEnrollment(fhir, id, row => admitEducationSequence(row, admission));
++      } catch (error) {
++        if (isFhirConflict(error)) throw new EducationSequenceAdmissionError("stale-enrollment-version");
++        throw error;
++      }
+     },
+     async stopSequence(id, stop) {
+-      return mutateEnrollment(fhir, id, row => stopEducationSequence(row, stop));
++      try {
++        return await mutateEnrollment(fhir, id, row => stopEducationSequence(row, stop));
++      } catch (error) {
++        if (isFhirConflict(error)) throw new EducationSequenceAdmissionError("stale-enrollment-version");
++        throw error;
++      }
+     },
+     async applyLifecycle(id, context) { return mutateEnrollment(fhir, id, row => applyEducationEnrollmentLifecycle(row, context)); },
+     async read(id) {
+@@ -1029,12 +1039,7 @@
+   replaceEnrollmentState(resource, enrollment);
+   if ((enrollment.activations?.length ?? 0) > priorActivationCount)
+     assertEducationSequenceAdmissionBudget(enrollment, resource);
+-  try {
+-    return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, { "If-Match": `W/"${resource.meta.versionId}"` }));
+-  } catch (error) {
+-    if (isFhirConflict(error)) throw new EducationSequenceAdmissionError("stale-enrollment-version");
+-    throw error;
+-  }
++  return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, { "If-Match": `W/"${resource.meta.versionId}"` }));
+ }
+ function enrollmentCreateContext(input: NewEducationEnrollment): string {
+   return JSON.stringify([input.patientReference, input.journey, input.currentStageId, input.enteredFromEncounterReference, input.enrolledBy, input.status, input.immediateSends]);
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=mutateEnrollment structurally tests/educationSequenceFhir.test.ts
+
+TAP version 13
+# Subtest: mutateEnrollment structurally translates its awaited write for every caller
+not ok 1 - mutateEnrollment structurally translates its awaited write for every caller
+  ---
+  duration_ms: 19.565791
+  type: 'test'
+  location: '/private/tmp/odos-seq-1-fixback-2/mcp/tests/educationSequenceFhir.test.ts:1:6555'
+  failureType: 'testCodeFailure'
+  error: 'Shared write has no translating try; per-caller wrappers leave a bypass'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-seq-1-fixback-2/mcp/tests/educationSequenceFhir.test.ts:78:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 495.373791
+
+Exit code: 1

@@ -1,0 +1,7 @@
+$ npm --prefix mcp run build
+
+> odos-mcp@0.1.0 build
+> tsc
+
+
+Exit code: 0
