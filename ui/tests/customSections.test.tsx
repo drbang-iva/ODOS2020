@@ -1,3 +1,5 @@
+import { buildFindingDefinitionSeeds } from "../../mcp/src/clinical-graph/finding-definition-store.js";
+import { customFieldEntries } from "../../mcp/src/clinical-graph/custom-fields.js";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
@@ -3480,25 +3482,27 @@ test("EXAM-1B per-eye negative act leaves touched OD alone and asserts OS", () =
       OD: { selections: [], other: "" },
       OS: { selections: [], other: "" },
     },
-    "dry-eye:conjunctival-staining": {
-      OD: { selections: [], other: "" },
-      OS: { selections: [], other: "" },
-    },
   };
-  const result = applyAnteriorAllNormal([
-    { stableKey: "ocular-health:anterior:cornea" },
-    { stableKey: "ocular-health:anterior:lens" },
-    { stableKey: "dry-eye:conjunctival-staining" },
-  ], captures);
-  assert.equal(result.filled, 5);
+  const stableKeys = [
+    "ocular-health:anterior:cornea",
+    "ocular-health:anterior:lens",
+    "dry-eye:conjunctival-staining",
+  ];
+  const seeds = buildFindingDefinitionSeeds();
+  const definitions = stableKeys.map((stableKey) => {
+    const seed = seeds.find((definition) => definition.stableKey === stableKey);
+    assert.ok(seed);
+    return { stableKey, customFields: customFieldEntries(seed, true) };
+  });
+  const result = applyAnteriorAllNormal(definitions, captures);
+  assert.equal(result.filled, 3);
   assert.equal(result.skipped, 1);
   assert.equal(result.captures["ocular-health:anterior:cornea"]?.OS.negativeAct?.eye, "OS");
   assert.equal(result.captures["ocular-health:anterior:cornea"]?.OD.negativeAct, undefined);
   assert.equal(result.captures["ocular-health:anterior:cornea"]?.OD.state, "abnormal");
   assert.equal(result.captures["ocular-health:anterior:lens"]?.OD.state, "normal");
   assert.equal(result.captures["ocular-health:anterior:lens"]?.OS.state, "normal");
-  assert.equal(result.captures["dry-eye:conjunctival-staining"]?.OD.state, "normal");
-  assert.equal(result.captures["dry-eye:conjunctival-staining"]?.OS.state, "normal");
+  assert.equal(Object.hasOwn(result.captures, "dry-eye:conjunctival-staining"), false);
 
   const source = { state: "abnormal" as const, selections: ["demodex", "demodex::collarettes"], other: "trace" };
   const copied = copyEyeCapture(source, { customFields: [] });
