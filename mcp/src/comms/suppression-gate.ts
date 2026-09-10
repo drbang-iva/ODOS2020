@@ -502,7 +502,9 @@ function assertSmsOptOutTransaction(response: Bundle, expectedEntries: number): 
   }
   const failed = response.entry.find((entry) => !/^2\d\d/.test(entry.response?.status ?? ""));
   if (failed) {
-    throw new Error(`SMS opt-out failed with status ${failed.response?.status ?? "unknown"}.`);
+    throw Object.assign(new Error(`SMS opt-out failed with status ${failed.response?.status ?? "unknown"}.`), {
+      status: Number.parseInt(failed.response?.status ?? "", 10),
+    });
   }
 }
 

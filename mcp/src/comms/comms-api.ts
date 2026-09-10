@@ -1,3 +1,4 @@
+import { isFhirConflict } from "../clinical-graph/fhir-conflict.js";
 import type { Communication, Condition, Encounter, Patient, Provenance, RelatedPerson } from "@medplum/fhirtypes";
 import { randomUUID } from "node:crypto";
 import type { Application, Request, Response } from "express";
@@ -1470,6 +1471,10 @@ async function withStaff(
     }
     if (error instanceof CommsApiNotFoundError) {
       res.status(404).json({ error: error.message });
+      return;
+    }
+    if (isFhirConflict(error)) {
+      res.status(409).json({ error: "This patient's record changed while you were working. Reload and try again." });
       return;
     }
     console.error("odos-mcp: patient communications route failed.");

@@ -158,6 +158,27 @@ export function SmsOptOutControl({
       setClearNumber(undefined);
     } catch (cause) {
       if (!isCurrentOperation()) return;
+      if (cause instanceof CommunicationsResponseError && cause.status === 409) {
+        setRecording(false);
+        setClearNumber(undefined);
+        try {
+          const nextState = await readSmsOptOut(patientReference);
+          if (!isCurrentOperation()) return;
+          setState(nextState);
+          stateChangeRef.current?.(nextState);
+          if (activeLaneRole) {
+            const lane = nextState.smsLanes.find((candidate) => candidate.roles.includes(activeLaneRole));
+            suppressionChangeRef.current?.(Boolean(nextState.remainingOptOuts.global
+              || (lane ? nextState.remainingOptOuts.numbers.includes(lane.number) : nextState.remainingOptOuts.numbers.length > 0)));
+          }
+          setResult(cause.message);
+        } catch (refreshCause) {
+          if (!isCurrentOperation()) return;
+          setError(refreshCause instanceof Error ? refreshCause.message : "SMS preferences unavailable.");
+          unavailableRef.current?.("error");
+        }
+        return;
+      }
       setError(cause instanceof Error ? cause.message : "SMS preferences unavailable.");
     } finally {
       if (isCurrentOperation()) setClearing(false);

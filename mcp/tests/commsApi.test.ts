@@ -26,6 +26,7 @@ import type { EducationContentItem } from "../src/comms/education-catalog.js";
 import { checkMessageSuppression, updateInboundSuppression, ODOS_COMMS_OPT_OUT_EXTENSION_URL } from "../src/comms/suppression-gate.js";
 import { authenticateStaffRoute } from "../src/payments/payment-endpoint.js";
 import express from "express";
+import { createOperatorScriptFhirClient } from "../src/fhir-client.js";
 
 const PATIENT_REFERENCE = "Patient/synthetic-1";
 const OPT_OUT_CLEAR_BODY = {
@@ -1694,7 +1695,111 @@ test("call history applies the requested limit after filtering the provider wind
   }
 });
 
+const CONFLICT_MESSAGE = "This patient's record changed while you were working. Reload and try again.";
+
+async function fhirWriterError(status: 412 | 500, method: "POST" | "PUT" = "POST"): Promise<Error> {
+  const app = express();
+  app.use((_req, res) => res.status(status).send("Synthetic write failure"));
+  const server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const fhir = createOperatorScriptFhirClient({
+    baseUrl: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+    reason: "Synthetic conflict fixture through the real FHIR writer",
+  });
+  try {
+    let failure: unknown;
+    try {
+      if (method === "POST") await fhir.executeTransaction({ resourceType: "Bundle", type: "transaction", entry: [] });
+      else await fhir.update("Patient", "synthetic-1", { resourceType: "Patient", id: "synthetic-1" });
+    } catch (error) { failure = error; }
+    assert.ok(failure instanceof Error);
+    const path = method === "POST" ? "/fhir/R4 [Bundle]" : "/fhir/R4/Patient/:id [Patient]";
+    assert.equal(failure.message, `FHIR ${method} ${path} ${status} ${status === 412 ? "Precondition Failed" : "Internal Server Error"}: Synthetic write failure`);
+    assert.equal((failure as Error & { status: number }).status, status);
+    assert.doesNotMatch(failure.message, /FHIR (409|412)\b/);
+    return failure;
+  } finally { await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve())); }
+}
+
+for (const action of ["record", "clear"] as const) {
+  for (const shape of ["toError", "transaction-entry"] as const) {
+    test(`conflict mapping: ${action} ${shape} returns 409 without Patient or Provenance writes`, async () => {
+      const fixture = await startServer(shape === "toError"
+        ? { optOutTransactionError: await fhirWriterError(412) }
+        : { optOutTransactionResponse: {
+          resourceType: "Bundle", type: "transaction-response",
+          entry: [{ response: { status: "412 Precondition Failed" } }, { response: { status: "424 Failed Dependency" } }],
+        } });
+      if (action === "record") fixture.patients[0]!.extension = [];
+      const before = structuredClone(fixture.patients);
+      try {
+        const response = await request(fixture.base, `/communications/opt-out/${action}`, "POST",
+          action === "record" ? OPT_OUT_RECORD_BODY : OPT_OUT_CLEAR_BODY, "staff");
+        assert.equal(response.status, 409);
+        assert.deepEqual(await response.json(), { error: CONFLICT_MESSAGE });
+        assert.deepEqual(fixture.patients, before);
+        assert.deepEqual(fixture.provenances, []);
+        assert.equal(fixture.attributedActors.length, 1);
+      } finally { await fixture.close(); }
+    });
+  }
+}
+
+test("conflict mapping: toError 500 remains 502", async () => {
+  const fixture = await startServer({ optOutTransactionError: await fhirWriterError(500) });
+  fixture.patients[0]!.extension = [];
+  const before = structuredClone(fixture.patients);
+  try {
+    const response = await request(fixture.base, "/communications/opt-out/record", "POST", OPT_OUT_RECORD_BODY, "staff");
+    assert.equal(response.status, 502);
+    assert.deepEqual(await response.json(), { error: "Patient communications service failed." });
+    assert.deepEqual(fixture.patients, before);
+    assert.deepEqual(fixture.provenances, []);
+  } finally { await fixture.close(); }
+});
+
+for (const malformed of [
+  { resourceType: "Bundle", type: "batch-response", entry: [] },
+  { resourceType: "Bundle", type: "transaction-response", entry: [] },
+] as Bundle[]) {
+  test(`conflict mapping: malformed ${malformed.type} remains 502`, async () => {
+    const fixture = await startServer({ optOutTransactionResponse: malformed });
+    fixture.patients[0]!.extension = [];
+    const before = structuredClone(fixture.patients);
+    try {
+      const response = await request(fixture.base, "/communications/opt-out/record", "POST", OPT_OUT_RECORD_BODY, "staff");
+      assert.equal(response.status, 502);
+      assert.deepEqual(fixture.patients, before);
+      assert.deepEqual(fixture.provenances, []);
+    } finally { await fixture.close(); }
+  });
+}
+
+test("conflict mapping: education recipient If-Match returns 409", async () => {
+  const fixture = await startServer({
+    channelRoutes: { "clinical-sms": "twilio" },
+    senderNumbers: { "clinical-sms": "+18485550100" },
+    recipientUpdateError: await fhirWriterError(412, "PUT"),
+  });
+  const before = structuredClone(fixture.patients);
+  try {
+    const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+      patientReference: PATIENT_REFERENCE, educationId: "dry-eye-basics", version: 2,
+      channel: "sms", lane: "clinical", recipientOverride: { phone: "+18645550177" },
+      alsoUpdateChart: true, idempotencyKey: "education-recipient-conflict",
+    }, "staff");
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), { error: CONFLICT_MESSAGE });
+    assert.deepEqual(fixture.patients, before);
+    assert.deepEqual(fixture.recipientUpdates, []);
+    assert.equal(fixture.smsRequests.length, 1);
+  } finally { await fixture.close(); }
+});
+
 async function startServer(options: {
+  optOutTransactionError?: Error;
+  optOutTransactionResponse?: Bundle;
+  recipientUpdateError?: Error;
   recordingEnabled?: boolean;
   recordingVisible?: boolean;
   callVisible?: boolean;
@@ -1897,6 +2002,11 @@ async function startServer(options: {
       const index = patients.findIndex((candidate) => candidate.id === patientId);
       if (index < 0) throw new Error("Synthetic opt-out transaction Patient missing.");
       assert.equal(patientEntry?.request?.ifMatch, `W/"${patients[index]!.meta?.versionId}"`);
+      if (options.optOutTransactionError) throw options.optOutTransactionError;
+      if (options.optOutTransactionResponse) {
+        transactionOptions.validateResponse?.(options.optOutTransactionResponse);
+        return options.optOutTransactionResponse;
+      }
       patients[index] = {
         ...structuredClone(patient),
         meta: { ...patient.meta, versionId: String(Number(patients[index]!.meta?.versionId) + 1) },
@@ -2066,7 +2176,7 @@ async function startServer(options: {
           }
           return callerView(persisted);
         },
-        async update<T extends Resource>(_resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
+        async update<T extends Resource>(_resourceType: T["resourceType"], id: string, resource: T, headers: Record<string, string> = {}): Promise<T> {
           const index = persistedCommunications.findIndex((candidate) => candidate.id === id);
           if (
             resource.resourceType === "Communication"
@@ -2085,6 +2195,10 @@ async function startServer(options: {
           }
           const restored = structuredClone(resource);
           if (restored.resourceType === "Patient" || restored.resourceType === "RelatedPerson") {
+            if (options.recipientUpdateError) {
+              assert.equal(headers["If-Match"], `W/"${resource.meta?.versionId}"`);
+              throw options.recipientUpdateError;
+            }
             recipientUpdates.push(structuredClone(restored));
           }
           if (restored.resourceType === "Communication" && index >= 0) {
