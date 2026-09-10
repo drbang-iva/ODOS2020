@@ -1,3 +1,5 @@
+> ODOS override: use only the generic fetch/adjudicate/fix/re-poll procedure with CodeRabbit and PR-Agent. The upstream vendor-specific triggers, polling commands, filters, and 5/5 requirement below are inactive here. Do not execute them or wait for that vendor. Follow AGENTS.md and CONTRIBUTING.md for current signals and the no-bot exception.
+
 # GraphQL Queries Reference
 
 ## Fetch unresolved review threads (paginated)

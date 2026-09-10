@@ -125,7 +125,7 @@ if [[ "$bot_review_at_head" == true && "$ack_no_bot_review" == true ]]; then
   die "--ack-no-bot-review is invalid because $bot_review_head_source provided a $bot_review_head_evidence at $head_sha; omit the flag"
 fi
 if [[ "$bot_review_at_head" == false && "$ack_no_bot_review" == false ]]; then
-  die "no bot review exists at $head_sha -- neither a review submission nor a completed bot check run. Greptile takes 7-13 minutes; if it is still in_progress, wait and re-run. Otherwise pass --ack-no-bot-review to record a deliberate decision to proceed without one."
+  die "no recognised bot review signal exists at $head_sha -- neither a review submission nor a completed bot check run. If CodeRabbit or PR-Agent is still running, wait and re-run. CodeRabbit commit statuses are not read by this helper; its review submissions are recognised. Otherwise pass --ack-no-bot-review to record a deliberate decision to proceed without one."
 fi
 
 marker="Evaluated-by: $model — $verdict

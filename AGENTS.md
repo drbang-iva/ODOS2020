@@ -404,18 +404,14 @@ micro-decisions.
 the current head. Never propose the `evaluated` label as an unblock; that override
 is the operator's alone.**
 
-**Review bots: CODERABBIT + PR-AGENT. Greptile is NOT triggering** — its account was
-cancelled 2026-09-10 over an $812 overage bill (disputed). Do not wait for Greptile or
-note its absence.
+**Review bots: CODERABBIT + PR-AGENT. Greptile is NOT triggering** — do not wait for it
+or note its absence.
 
-**CodeRabbit was RECONNECTED 2026-09-10** and is the review bot again. This repository
-is public, so its reviews are free; its GitHub App was unsuspended and scoped to exactly
-ODOS2020 (public) and VisionForge (private, metered). **In this repo CodeRabbit
-auto-reviews every PR and re-reviews every push**, with
+**CodeRabbit reviews every PR here and re-reviews every push**, with
 `auto_pause_after_reviewed_commits: 0` in `.coderabbit.yaml` — that key defaults to `5`,
 which would silently stop reviewing after the fifth commit while the check still read
-green, so it is pinned. VisionForge is deliberately manual-trigger-only and must stay
-that way; do not copy this repo's config there.
+green, so it is pinned. Other repositories in this account may be configured
+manual-trigger-only; do not copy this repo's config to them.
 
 When no bot has a signal at the exact head, `--ack-no-bot-review` records the deliberate
 exception documented in CONTRIBUTING.md. (The prior selective-triggering policy, and the

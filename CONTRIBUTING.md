@@ -20,8 +20,7 @@ ODOS is built by a practicing optometrist and refined at his own practice. The r
 
 Every PR into `main` needs an independent Fable, Opus, or Codex evaluation. The review
 bots (CodeRabbit + PR-Agent) are a first-pass review, not the final evaluator.
-CodeRabbit was reconnected 2026-09-10; Greptile is not triggering after its account
-was cancelled that day. Do not wait for Greptile or note its absence. A well-formed final marker from
+Greptile is not triggering. Do not wait for it or note its absence. A well-formed final marker from
 Fable, Opus, or Codex passes from any GitHub account. Author != evaluator remains a
 procedural expectation stated in coding kickoffs, not a mechanically enforced
 login rule.
@@ -79,10 +78,14 @@ enforces and reports this bot-review acknowledgment without posting a marker.
 The check recognises CodeRabbit review submissions at the exact head through its
 existing `coderabbitai[bot]` and `coderabbitai` logins, and PR-Agent through completed
 check runs at that head. Historical Greptile entries remain recognised; they do not
-mean Greptile is expected to run. CodeRabbit check runs alone are not currently
-recognised by this helper. A bot with nothing to say posts no review submission, so the check-run
-signal is what distinguishes "ran clean" from "never ran". Adding a bot is two
-lines in `scripts/lib/bot-review-status.sh`.
+mean Greptile is expected to run. CodeRabbit signals via a commit status, which this
+helper does not read; its review submissions ARE recognised via `BOT_REVIEW_LOGINS`.
+For bots that publish check runs, a completed check run can distinguish "ran clean"
+from "never ran" when there is no review submission. Adding a bot that uses these
+supported signals means adding its login to `BOT_REVIEW_LOGINS` and/or its check-run
+app/name pair to `BOT_REVIEW_CHECKS` in `scripts/lib/bot-review-status.sh`. A status-based
+bot requires separate status-reading capability; adding a check-run entry cannot
+recognise a commit status.
 
 
 Only Fable, Opus, or Codex can issue the final evaluation verdict. Any new commit
