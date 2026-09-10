@@ -7,8 +7,12 @@ const reasonLabels: Record<string, string> = {
   "content-unavailable": "Education content is unavailable",
   "no-recipient-channel": "Recipient channel is unavailable",
   "needs-acknowledgement": "Outcome needs clinician acknowledgement",
-  "latest-useful-time": "The useful delivery time has passed",
-  "print-staff-task": "Staff handout task",
+  "latest-useful-time-exceeded": "The useful delivery time has passed",
+  "print-handout-due": "Staff handout task",
+  "predecessor-anchor-unavailable": "An earlier step needs review before pacing can continue",
+  "business-calendar-unavailable": "The pinned business calendar is unavailable",
+  "provider-outcome-unknown": "Earlier send outcome needs acknowledgement",
+  "attempt-limit": "This step has reached its attempt limit",
 };
 
 export function EducationSequenceReview({ canReview }: { canReview: boolean }) {
@@ -70,7 +74,7 @@ function ReviewItem({ item, canReview, disabled, onReview }: {
   const actions = canReview && item.state === "open" && item.rowId && item.expectedVersion ? item.allowedActions ?? [] : [];
   const seen = item.holdReason === "patient-seen";
   return <article className="grid gap-3 rounded-xl border border-white/20 bg-white/5 p-5" aria-label={`Education review ${item.id}`}>
-    <div className="flex flex-wrap justify-between gap-2"><h2 className="font-semibold">{item.channel === "print" ? "Staff handout task" : reasonLabels[item.reason] ?? item.reason.replaceAll("-", " ")}</h2><span className="text-sm text-white/60">{item.state === "settled" ? "Review settled" : "Needs review"}</span></div>
+    <div className="flex flex-wrap justify-between gap-2"><h2 className="font-semibold">{item.channel === "print" ? "Staff handout task" : seen ? reasonLabels["patient-seen"] : reasonLabels[item.reason] ?? item.reason.replaceAll("-", " ")}</h2><span className="text-sm text-white/60">{item.state === "settled" ? "Review settled" : "Needs review"}</span></div>
     <dl className="grid gap-1 text-sm text-white/70">
       {item.patientReference && <div><dt className="inline">Patient: </dt><dd className="inline">{item.patientReference}</dd></div>}
       <div><dt className="inline">Enrollment: </dt><dd className="inline">{item.enrollmentId}</dd></div>
@@ -78,7 +82,7 @@ function ReviewItem({ item, canReview, disabled, onReview }: {
       {item.channel && <div><dt className="inline">Channel: </dt><dd className="inline">{item.channel === "print" ? "Staff handout" : item.channel.toUpperCase()}</dd></div>}
     </dl>
     {item.channel === "print" && <p className="text-sm">Prepare the handout for staff delivery. This page does not send it electronically or mark it delivered.</p>}
-    {item.holdReason === "needs-acknowledgement" && <p className="text-sm text-amber-200">An earlier attempt may have reached the patient. Acknowledgement or skipping does not confirm delivery.</p>}
+    {["provider-outcome-unknown", "deferral-proof-unavailable", "acceptance-time-unavailable"].includes(item.reason) && <p className="text-sm text-amber-200">An earlier attempt may have reached the patient. Acknowledgement or skipping does not confirm delivery.</p>}
     {actions.length > 0 ? <div className="grid gap-3 border-t border-white/15 pt-3">
       <label className="grid gap-1 text-sm">Clinician reason<textarea aria-label="Clinician reason" className="rounded border border-white/30 bg-black/20 p-2" value={reason} onChange={event => setReason(event.target.value)} disabled={disabled} rows={2} /></label>
       {seen && actions.includes("resume") && (item.encounterReference ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={reviewedEncounter} disabled={disabled} onChange={event => setReviewedEncounter(event.target.checked)} />I reviewed {item.encounterReference} before resuming this step.</label> : <p className="text-sm">The visit reference is unavailable. Refresh the list before resuming.</p>)}

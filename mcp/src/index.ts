@@ -118,7 +118,10 @@ import {
 import { registerTwilioWebhookRoutes } from "./comms/twilio-routes.js";
 import { registerGhlWebhookRoutes } from "./comms/ghl-routes.js";
 import { persistInboundMessageEvent, persistTwilioWebhookEvent } from "./comms/comms-persistence.js";
-import { registerCommsApiRoutes } from "./comms/comms-api.js";
+import { registerCommsApiRoutes, type CommsApiRouteDeps } from "./comms/comms-api.js";
+import { startEducationSequenceWorker } from "./comms/education-sequence-worker.js";
+import { createEducationSequenceDispatchRuntime, educationSequenceRuntimeConfig } from "./comms/education-sequence-runtime.js";
+import { createEducationSequenceOperations } from "./comms/education-sequence-operations.js";
 import { createFhirEducationEnrollmentStore } from "./comms/education-enrollment.js";
 import { loadDefaultEducationCatalogReader } from "./comms/education-catalog.js";
 import {
@@ -5770,6 +5773,48 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
     });
   }
 
+  const sequenceOperations = createEducationSequenceOperations({ fhir, practiceProjectId: INSTALLATION_PROJECT.projectId });
+  let communicationsDeps: CommsApiRouteDeps | undefined;
+  function communicationsDependencies(): CommsApiRouteDeps {
+    return communicationsDeps ??= {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRoute,
+        fhir,
+        dispatch: commsDispatch,
+        educationCatalog: loadDefaultEducationCatalogReader(),
+        enrollmentStore: createFhirEducationEnrollmentStore(fhir),
+        trackedLinkStore: createFhirTrackedLinkStore(fhir),
+        publicBaseUrl: commsPublicBaseUrlFromEnv(process.env),
+        practiceName: process.env.ODOS_PRACTICE_NAME ?? "ODOS Practice",
+        chartDispatchLane: process.env.ODOS_CHART_DISPATCH_LANE === "locked_clinical"
+          ? "locked_clinical"
+          : "staff_switchable",
+        audit: auditRuntime,
+        sequenceOperations,
+      };
+  }
+  const educationSequenceConfig = educationSequenceRuntimeConfig(process.env);
+  if (educationSequenceConfig) {
+    const deps = communicationsDependencies();
+    startEducationSequenceWorker({
+      ...educationSequenceConfig,
+      fhir,
+      projectId: INSTALLATION_PROJECT.projectId,
+      authenticate: async () => {
+        await authenticateWithMedplum();
+        const actorId = educationSequenceConfig.actorReference.slice("Device/".length);
+        // search-contract: education-sequence.system-actor
+        const actor = await fhir.searchProject<Device>("Device", INSTALLATION_PROJECT.projectId, { _id: actorId });
+        if (!actor.entry?.some(entry => entry.resource?.id === actorId && entry.resource.meta?.project?.replace(/^Project\//, "") === INSTALLATION_PROJECT.projectId)) {
+          throw new Error("Education sequence system Device is unavailable in this practice.");
+        }
+      },
+      store: { recordImmediateSendOutcome: (...args) => deps.enrollmentStore!.recordImmediateSendOutcome(...args) },
+      ...createEducationSequenceDispatchRuntime(deps, fhir, educationSequenceConfig.actorReference, INSTALLATION_PROJECT.projectId),
+      staffItem: sequenceOperations.staffItem,
+    });
+  }
+
   switch (transportMode) {
     case "stdio": {
       const server = createServer();
@@ -5858,21 +5903,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }),
       );
 
-      registerCommsApiRoutes(app, {
-        authenticateService: authenticateWithMedplum,
-        authenticate: authenticateStaffRoute,
-        fhir,
-        dispatch: commsDispatch,
-        educationCatalog: loadDefaultEducationCatalogReader(),
-        enrollmentStore: createFhirEducationEnrollmentStore(fhir),
-        trackedLinkStore: createFhirTrackedLinkStore(fhir),
-        publicBaseUrl: commsPublicBaseUrlFromEnv(process.env),
-        practiceName: process.env.ODOS_PRACTICE_NAME ?? "ODOS Practice",
-        chartDispatchLane: process.env.ODOS_CHART_DISPATCH_LANE === "locked_clinical"
-          ? "locked_clinical"
-          : "staff_switchable",
-        audit: auditRuntime,
-      });
+      registerCommsApiRoutes(app, communicationsDependencies());
       app.get("/audit/events", createAuditEventsGetHandler({
         authenticate: authenticateStaffRoute,
         audit: auditRuntime,

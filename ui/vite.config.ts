@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => {
           target: mcpTarget,
           changeOrigin: true,
           bypass(req) {
-            if (req.url?.split("?")[0] === "/communications/education/review" &&
+            if (req.method === "GET" && req.url?.split("?")[0] === "/communications/education/review" &&
               (req.headers["sec-fetch-dest"] === "document" || (req.headers.accept || "").includes("text/html"))) return "/index.html";
           },
         },
