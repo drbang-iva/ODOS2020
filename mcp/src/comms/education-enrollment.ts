@@ -319,20 +319,10 @@ export function createFhirEducationEnrollmentStore(
       return parseEnrollment(persisted);
     },
     async admitSequence(id, admission) {
-      try {
-        return await mutateEnrollment(fhir, id, row => admitEducationSequence(row, admission));
-      } catch (error) {
-        if (isFhirConflict(error)) throw new EducationSequenceAdmissionError("stale-enrollment-version");
-        throw error;
-      }
+      return mutateEnrollment(fhir, id, row => admitEducationSequence(row, admission));
     },
     async stopSequence(id, stop) {
-      try {
-        return await mutateEnrollment(fhir, id, row => stopEducationSequence(row, stop));
-      } catch (error) {
-        if (isFhirConflict(error)) throw new EducationSequenceAdmissionError("stale-enrollment-version");
-        throw error;
-      }
+      return mutateEnrollment(fhir, id, row => stopEducationSequence(row, stop));
     },
     async applyLifecycle(id, context) { return mutateEnrollment(fhir, id, row => applyEducationEnrollmentLifecycle(row, context)); },
     async read(id) {
@@ -1039,7 +1029,12 @@ async function mutateEnrollment(fhir: EducationEnrollmentFhir, id: string, mutat
   replaceEnrollmentState(resource, enrollment);
   if ((enrollment.activations?.length ?? 0) > priorActivationCount)
     assertEducationSequenceAdmissionBudget(enrollment, resource);
-  return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, { "If-Match": `W/"${resource.meta.versionId}"` }));
+  try {
+    return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, { "If-Match": `W/"${resource.meta.versionId}"` }));
+  } catch (error) {
+    if (isFhirConflict(error)) throw new EducationSequenceAdmissionError("stale-enrollment-version");
+    throw error;
+  }
 }
 function enrollmentCreateContext(input: NewEducationEnrollment): string {
   return JSON.stringify([input.patientReference, input.journey, input.currentStageId, input.enteredFromEncounterReference, input.enrolledBy, input.status, input.immediateSends]);

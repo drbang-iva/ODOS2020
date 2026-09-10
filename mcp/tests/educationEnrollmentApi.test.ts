@@ -1319,3 +1319,68 @@ for (const operation of ["admit", "stop"] as const) {
     });
   }
 }
+
+for (const conflictStatus of [409, 412]) {
+  test(`sequence HTTP lifecycle lost ${conflictStatus} race returns typed 409 without retry`, async () => {
+      let persisted: Basic | undefined;
+      let race = false;
+      let attempts = 0;
+      const fhir = {
+        async search<T extends Resource>(): Promise<Bundle<T>> { return { resourceType: "Bundle", type: "searchset", entry: [] }; },
+        async read<T extends Resource>(): Promise<T> { return structuredClone(persisted) as T; },
+        async create<T extends Resource>(resource: T): Promise<T> {
+          persisted = { ...structuredClone(resource) as Basic, meta: { versionId: randomUUID() } };
+          return structuredClone(persisted) as T;
+        },
+        async update<T extends Resource>(_type: string, _id: string, resource: T, headers?: Record<string, string>): Promise<T> {
+          attempts++;
+          assert.equal(headers?.["If-Match"], `W/"${persisted!.meta!.versionId}"`);
+          if (race) persisted!.meta!.versionId = randomUUID();
+          if (headers?.["If-Match"] !== `W/"${persisted!.meta!.versionId}"`)
+            throw Object.assign(new Error("Stale enrollment version"), { status: conflictStatus });
+          persisted = { ...structuredClone(resource) as Basic, meta: { versionId: randomUUID() } };
+          return structuredClone(persisted) as T;
+        },
+      };
+    const store = createFhirEducationEnrollmentStore(fhir);
+    const fixture = await startEnrollmentServer({ enrollmentStore: store });
+    try {
+      const actor = "Practitioner/provider";
+      const at = "2026-09-01T14:00:00.000Z";
+      const created = await store.create({
+        patientReference: PATIENT_REFERENCE, journey: { id: "dry-eye-foundations", version: 1 },
+        currentStageId: "welcome", stageEnteredAt: at,
+        enteredFromEncounterReference: ENCOUNTER_REFERENCE, enrolledBy: actor, status: "active",
+        stageHistory: [{ stageId: "welcome", enteredAt: at, enteredBy: actor, reason: "enrollment-recorded" }],
+        immediateSends: [{ content: { id: "dry-eye-basics", version: 2 }, channel: "sms", lane: "clinical" }],
+      });
+      assert.equal((await store.claimImmediateSend(created.id, 0)).claimed, true);
+      const held = await store.admitSequence(created.id, {
+        requestId: "held-activation", sequence: sequenceBody() as never, authorizedBy: actor, authorizedAt: at,
+      });
+      assert.equal(held.scheduledSends![0].disposition, "held");
+      await store.markImmediateSendIndeterminate(created.id, 0, {
+        acknowledgedBy: actor, acknowledgedAt: at, reason: "Reviewed unknown attempt",
+      });
+      const before = structuredClone(persisted);
+      const beforeAttempts = attempts;
+      race = true;
+      const response = await request(fixture.base, `/communications/education/enrollments/${created.id}/resume`, "POST", {});
+      assert.equal(response.status, 409);
+      assert.deepEqual(await response.json(), { outcome: "refused", reason: "stale-enrollment-version" });
+      assert.equal(attempts, beforeAttempts + 1);
+      assert.deepEqual({ ...persisted, meta: before!.meta }, before);
+      assert.equal((await store.read(created.id))!.scheduledSends![0].disposition, "held");
+      assert.equal(fixture.provenances.length, 0);
+      assert.equal(fixture.underlyingSends.length, 0);
+      assert.equal(fixture.underlyingEmailSends.length, 0);
+      race = false;
+      const retry = await request(fixture.base, `/communications/education/enrollments/${created.id}/resume`, "POST", {});
+      assert.equal(retry.status, 200);
+      assert.equal((await retry.json()).enrollment.scheduledSends[0].disposition, "scheduled");
+      assert.equal(attempts, beforeAttempts + 2);
+      assert.equal(fixture.underlyingSends.length, 0);
+      assert.equal(fixture.underlyingEmailSends.length, 0);
+    } finally { await fixture.close(); }
+  });
+}

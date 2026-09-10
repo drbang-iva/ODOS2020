@@ -1,0 +1,30 @@
+$ npm --prefix mcp test -- '--test-name-pattern=sequence HTTP lifecycle lost' tests/educationEnrollmentApi.test.ts
+Restored SHA256: 9d1e6f6eef1bac9e5d10ccd785187cc60720727fbd25d95193d0916fb0c2e0e2
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=sequence HTTP lifecycle lost tests/educationEnrollmentApi.test.ts
+
+TAP version 13
+# Subtest: sequence HTTP lifecycle lost 409 race returns typed 409 without retry
+ok 1 - sequence HTTP lifecycle lost 409 race returns typed 409 without retry
+  ---
+  duration_ms: 33.511208
+  type: 'test'
+  ...
+# Subtest: sequence HTTP lifecycle lost 412 race returns typed 409 without retry
+ok 2 - sequence HTTP lifecycle lost 412 race returns typed 409 without retry
+  ---
+  duration_ms: 5.960584
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 357.77625
+
+Exit code: 0
