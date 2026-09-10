@@ -65,10 +65,12 @@ const defaultPatientOverviewApi: PatientOverviewApi = {
 export function PatientOverview({
   patient,
   initialOverview,
+  onPatientSaved,
   api = defaultPatientOverviewApi,
 }: {
   patient: Patient;
   initialOverview?: PatientOverviewPayload;
+  onPatientSaved?: (patient: Patient) => void;
   api?: PatientOverviewApi;
 }) {
   const setView = useViewState((state) => state.setView);
@@ -325,9 +327,9 @@ export function PatientOverview({
           <PatientDemographicsEditor
             patient={patient}
             onDiscard={() => setDemographicsEditorOpen(false)}
-            onSaved={() => {
+            onSaved={(savedPatient) => {
+              onPatientSaved?.(savedPatient);
               setDemographicsEditorOpen(false);
-              window.location.reload();
             }}
           />
         )}

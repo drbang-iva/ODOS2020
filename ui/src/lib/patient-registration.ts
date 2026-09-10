@@ -179,8 +179,11 @@ export function createPatientDemographicsActions(
   api: Pick<typeof fhir, "update"> = fhir,
 ) {
   return {
-    save: (draft: PatientDemographicsDraft) =>
-      api.update(buildPatientResource(draft, patient), "patient-demographics-update"),
+    save: (draft: PatientDemographicsDraft) => {
+      const versionId = patient.meta?.versionId;
+      if (!versionId) throw new Error("Patient version is unavailable. Reload before saving demographics.");
+      return api.update(buildPatientResource(draft, patient), "patient-demographics-update", versionId);
+    },
     discard: () => patientDemographicsFromPatient(patient),
   };
 }
