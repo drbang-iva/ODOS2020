@@ -50,9 +50,9 @@ test("unresolved original attempt holds next stage until practitioner acknowledg
 test("scheduling dispositions cannot inflate the persisted test-only sent-outcome query", async () => { const db = fake(); const store = createFhirEducationEnrollmentStore(db.fhir); const row = await store.create({ ...input(), sequence: sequence(5), immediateSends: [{ content: { id: "content", version: 1 }, channel: "sms", lane: "clinical" }] }); const send = db.persisted.extension!.find(e => e.url.endsWith("education-enrollment-immediate-send"))!; send.extension!.find(e => e.url === "state")!.valueCode = "resolved"; send.extension!.push({ url: "outcome", valueCode: "sent" }, { url: "provider-message-id", valueString: "historical-synthetic" }); const dispositions = ["waiting", "scheduled", "held", "cancelled", "closed"]; db.persisted.extension!.filter(e => e.url.endsWith("education-enrollment-scheduled-send")).forEach((extension, i) => { const scheduled = JSON.parse(extension.valueString!); scheduled.disposition = dispositions[i]; if (scheduled.disposition === "held")
   scheduled.holdReason = "patient-seen"; extension.valueString = JSON.stringify(scheduled); }); const persisted = (await store.read(row.id))!; const count = persisted.immediateSends.filter(send => send.outcome?.outcome === "sent").length; assert.equal(count, 1); assert.deepEqual(persisted.scheduledSends!.map(row => row.disposition), dispositions); });
 
-test("mutateEnrollment structurally translates its awaited write for every caller", () => {
+test("shared enrollment resource write translates conflicts for all seven callers", () => {
   const source = ts.createSourceFile("education-enrollment.ts", readFileSync(new URL("../src/comms/education-enrollment.ts", import.meta.url), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  const helper = source.statements.find((node): node is ts.FunctionDeclaration => ts.isFunctionDeclaration(node) && node.name?.text === "mutateEnrollment");
+  const helper = source.statements.find((node): node is ts.FunctionDeclaration => ts.isFunctionDeclaration(node) && node.name?.text === "updateEnrollmentResource");
   assert.ok(helper?.body);
   const writes: ts.CallExpression[] = [];
   const callers: string[] = [];
@@ -60,17 +60,17 @@ test("mutateEnrollment structurally translates its awaited write for every calle
     if (ts.isCallExpression(node)) {
       if (ts.isPropertyAccessExpression(node.expression) && node.expression.getText(source) === "fhir.update" && node.pos >= helper!.pos && node.end <= helper!.end)
         writes.push(node);
-      if (ts.isIdentifier(node.expression) && node.expression.text === "mutateEnrollment") {
+      if (ts.isIdentifier(node.expression) && node.expression.text === "updateEnrollmentResource") {
         let owner: ts.Node = node;
-        while (!ts.isMethodDeclaration(owner) && owner.parent) owner = owner.parent;
-        assert.ok(ts.isMethodDeclaration(owner), "Every helper caller must have an enumerated store method");
-        callers.push(owner.name.getText(source));
+        while (!ts.isMethodDeclaration(owner) && !ts.isFunctionDeclaration(owner) && owner.parent) owner = owner.parent;
+        assert.ok(ts.isMethodDeclaration(owner) || ts.isFunctionDeclaration(owner), "Every helper caller must be enumerated");
+        callers.push(owner.name!.getText(source));
       }
     }
     ts.forEachChild(node, visit);
   }
   visit(source);
-  assert.deepEqual(callers.sort(), ["admitSequence", "applyLifecycle", "stopSequence"]);
+  assert.deepEqual(callers.sort(), ["clearTerminalActiveIdentifier", "create", "markImmediateSendIndeterminate", "mutateEnrollment", "recordImmediateSendOutcome"]);
   assert.equal(writes.length, 1);
   assert.ok(ts.isAwaitExpression(writes[0].parent), "The update must be awaited inside the translating try");
   let enclosing: ts.Node = writes[0];

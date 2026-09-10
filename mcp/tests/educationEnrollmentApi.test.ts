@@ -1384,3 +1384,84 @@ for (const conflictStatus of [409, 412]) {
     } finally { await fixture.close(); }
   });
 }
+
+for (const operation of ["creation-key-repair", "outcome", "acknowledgement", "terminal-release"] as const) {
+  for (const conflictStatus of [409, 412]) {
+    test(`precondition HTTP ${operation} lost ${conflictStatus} race returns typed 409`, async () => {
+      let persisted: Basic | undefined;
+      let race = false;
+      let rejectedWrites = 0;
+      let beforeRejectedWrite: Basic | undefined;
+      const fhir = {
+        async search<T extends Resource>(): Promise<Bundle<T>> {
+          return { resourceType: "Bundle", type: "searchset", entry: [] };
+        },
+        async read<T extends Resource>(): Promise<T> { return structuredClone(persisted) as T; },
+        async create<T extends Resource>(resource: T): Promise<T> {
+          persisted = { ...structuredClone(resource) as Basic, id: "precondition-enrollment", meta: { versionId: randomUUID() } };
+          return structuredClone(persisted) as T;
+        },
+        async update<T extends Resource>(_type: string, id: string, resource: T, headers?: Record<string, string>): Promise<T> {
+          assert.equal(_type, "Basic");
+          assert.equal(id, persisted!.id);
+          assert.equal(headers?.["If-Match"], `W/"${persisted!.meta!.versionId}"`);
+          const recordsOutcome = (resource as Basic).extension?.some(e =>
+            e.url.endsWith("education-enrollment-immediate-send") && e.extension?.some(n => n.url === "outcome"));
+          if (race && (operation !== "outcome" || recordsOutcome)) {
+            beforeRejectedWrite = structuredClone(persisted);
+            persisted!.meta!.versionId = randomUUID();
+          }
+          if (headers?.["If-Match"] !== `W/"${persisted!.meta!.versionId}"`) {
+            rejectedWrites++;
+            throw Object.assign(new Error("Concurrent enrollment write"), { status: conflictStatus });
+          }
+          persisted = { ...structuredClone(resource) as Basic, meta: { versionId: randomUUID() } };
+          return structuredClone(persisted) as T;
+        },
+      };
+      const store = createFhirEducationEnrollmentStore(fhir);
+      const fixture = await startEnrollmentServer({ enrollmentStore: store });
+      try {
+        const at = "2026-09-01T14:00:00.000Z";
+        if (operation === "acknowledgement" || operation === "terminal-release") {
+          const created = await store.create({
+            patientReference: PATIENT_REFERENCE, journey: { id: "dry-eye-foundations", version: 1 },
+            currentStageId: "welcome", stageEnteredAt: at,
+            enteredFromEncounterReference: ENCOUNTER_REFERENCE, enrolledBy: "Practitioner/provider", status: "active",
+            stageHistory: [{ stageId: "welcome", enteredAt: at, enteredBy: "Practitioner/provider", reason: "enrollment-recorded" }],
+            immediateSends: operation === "acknowledgement"
+              ? [{ content: { id: "dry-eye-basics", version: 2 }, channel: "sms", lane: "clinical" }] : [],
+          });
+          if (operation === "acknowledgement") {
+            assert.equal((await store.claimImmediateSend(created.id, 0)).claimed, true);
+          } else {
+            await store.transition(created.id, {
+              fromStageId: "welcome", targetStageId: "complete", enteredAt: at, enteredBy: "Practitioner/provider",
+              trigger: "clinician-action", status: "completed", immediateSends: [],
+            });
+          }
+        }
+        race = true;
+        const resume = operation === "acknowledgement" || operation === "terminal-release";
+        const response = await request(fixture.base, resume
+          ? "/communications/education/enrollments/precondition-enrollment/resume"
+          : "/communications/education/enrollments", "POST", resume
+            ? operation === "acknowledgement" ? { acknowledgeIndeterminate: true, reason: "Reviewed unknown outcome" } : {}
+            : enrollmentBody());
+        assert.equal(response.status, 409);
+        assert.deepEqual(await response.json(), { outcome: "refused", reason: "stale-enrollment-version" });
+        assert.equal(rejectedWrites, 1);
+        assert.ok(beforeRejectedWrite);
+        assert.deepEqual({ ...persisted, meta: beforeRejectedWrite.meta }, beforeRejectedWrite);
+        assert.equal(fixture.underlyingSends.length, operation === "outcome" ? 1 : 0);
+        if (operation !== "creation-key-repair") {
+          race = false;
+          const retry = await request(fixture.base, "/communications/education/enrollments/precondition-enrollment/resume", "POST",
+            operation === "acknowledgement" ? { acknowledgeIndeterminate: true, reason: "Reviewed unknown outcome" } : {});
+          assert.equal(retry.status, 200);
+          assert.equal(fixture.underlyingSends.length, operation === "outcome" ? 1 : 0);
+        }
+      } finally { await fixture.close(); }
+    });
+  }
+}
