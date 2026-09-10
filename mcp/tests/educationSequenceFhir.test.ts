@@ -91,3 +91,12 @@ test("shared enrollment resource write translates conflicts for all seven caller
   assert.ok(rethrow && ts.isThrowStatement(rethrow));
   assert.equal(rethrow.expression?.getText(source), error);
 });
+
+test("stored worker timing metadata refuses invalid effective time and encounter references",async()=>{
+ for(const runtime of [{effectiveAt:"invalid"},{reviewedEncounterReferences:["Patient/wrong"]}]){
+  const db=fake();const store=createFhirEducationEnrollmentStore(db.fhir);const created=await store.create(input());
+  const extension=db.persisted.extension!.find(e=>e.url.endsWith("education-enrollment-scheduled-send"))!;
+  const row=JSON.parse(extension.valueString!);row.runtime=runtime;extension.valueString=JSON.stringify(row);
+  await assert.rejects(store.read(created.id),/invalid/);
+ }
+});

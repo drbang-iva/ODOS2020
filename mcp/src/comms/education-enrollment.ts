@@ -494,7 +494,7 @@ export function enrollmentResource(
   };
 }
 
-function parseEnrollment(resource: Basic): EducationEnrollment {
+export function parseEnrollment(resource: Basic): EducationEnrollment {
   if (!isEnrollmentResource(resource)) throw new Error("Basic is not an EducationEnrollment.");
   const id = resource.id ?? extensionStringIdentifier(resource, ENROLLMENT_IDENTIFIER_SYSTEM);
   const patientReference = resource.subject?.reference ?? "";
@@ -1002,7 +1002,7 @@ function initialSequenceAdmission(input: NewEducationEnrollment): EducationSeque
 function sequenceExtensions(enrollment: EducationEnrollment): Extension[] {
   return [...(enrollment.activations ?? []).map(a => ({ url: EDUCATION_ACTIVATION_EXTENSION, valueString: JSON.stringify(a) })), ...(enrollment.scheduledSends ?? []).map(row => ({ url: EDUCATION_SEQUENCE_EXTENSION, valueString: JSON.stringify(row) }))];
 }
-function replaceEnrollmentState(resource: Basic, enrollment: EducationEnrollment): void {
+export function replaceEnrollmentState(resource: Basic, enrollment: EducationEnrollment): void {
   const urls = new Set([CURRENT_STAGE_ID, STAGE_ENTERED_AT, ENROLLMENT_STATUS, STAGE_HISTORY, IMMEDIATE_SEND, EDUCATION_SEQUENCE_EXTENSION, EDUCATION_ACTIVATION_EXTENSION]);
   resource.extension = [...(resource.extension ?? []).filter(e => !urls.has(e.url)),
     { url: CURRENT_STAGE_ID, valueString: enrollment.currentStageId }, { url: STAGE_ENTERED_AT, valueInstant: enrollment.stageEnteredAt }, { url: ENROLLMENT_STATUS, valueCode: enrollment.status },
@@ -1023,7 +1023,7 @@ async function mutateEnrollment(fhir: EducationEnrollmentFhir, id: string, mutat
     assertEducationSequenceAdmissionBudget(enrollment, resource);
   return parseEnrollment(await updateEnrollmentResource(fhir, resource));
 }
-async function updateEnrollmentResource(fhir: EducationEnrollmentFhir, resource: Basic): Promise<Basic> {
+export async function updateEnrollmentResource(fhir: EducationEnrollmentFhir, resource: Basic): Promise<Basic> {
   try {
     return await fhir.update<Basic>("Basic", resource.id!, resource, enrollmentVersionHeaders(resource));
   } catch (error) {

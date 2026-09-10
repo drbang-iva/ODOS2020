@@ -75,7 +75,14 @@ export interface EducationScheduledSend extends EducationSequenceStep {
   attempts: {
     sendIndex: number;
     attemptKey: string;
+    predecessorAttemptKey?: string;
+    acceptedAt?: string;
+    providerNeverInvoked?: true;
   }[];
+  runtime?: {
+    effectiveAt?: string;
+    reviewedEncounterReferences?: string[];
+  };
   events: EducationSchedulingEvent[];
 }
 export interface EducationLifecycleContext {
@@ -215,7 +222,7 @@ export function applyEducationEnrollmentLifecycle(enrollment: EducationEnrollmen
         delete row.holdReason;
         row.events.push({ kind: "cancelled", actor: context.actor, at: context.at, reason: context.reason });
       }
-      if (row.disposition === "held" && row.holdReason === "needs-acknowledgement" && row.blockedBySendIndices.every(i => ["resolved", "indeterminate"].includes(enrollment.immediateSends[i]?.state ?? ""))) {
+      if (row.disposition === "held" && row.holdReason === "needs-acknowledgement" && row.blockedBySendIndices.length > 0 && row.blockedBySendIndices.every(i => ["resolved", "indeterminate"].includes(enrollment.immediateSends[i]?.state ?? ""))) {
         row.disposition = row.anchor === "predecessor-acceptance" ? "waiting" : "scheduled";
         delete row.holdReason;
         row.events.push({ kind: "released", actor: context.actor, at: context.at, reason: context.reason });
@@ -260,6 +267,15 @@ export function validateStoredEducationSequences(enrollment: EducationEnrollment
     if (!row || !ids.has(row.activationId) || rowIds.has(row.id) || row.id !== educationSequenceRowId(row.activationId, row.stepIndex, row.channel))
       throw new Error("Stored scheduled identity is invalid.");
     rowIds.add(row.id);
+    if (row.runtime) {
+      keys(row.runtime, ["effectiveAt", "reviewedEncounterReferences"], "stored-worker-runtime");
+      if (row.runtime.effectiveAt !== undefined && !Number.isFinite(Date.parse(row.runtime.effectiveAt)))
+        throw new Error("Stored worker effective time is invalid.");
+      if (row.runtime.reviewedEncounterReferences !== undefined) {
+        if (!Array.isArray(row.runtime.reviewedEncounterReferences)) throw new Error("Stored reviewed encounters are invalid.");
+        for (const encounter of row.runtime.reviewedEncounterReferences) reference(encounter, ["Encounter"], "stored-reviewed-encounter");
+      }
+    }
     if (!["waiting", "scheduled", "held", "cancelled", "closed"].includes(row.disposition))
       throw new Error("Stored scheduling disposition is invalid.");
     if (row.disposition === "held" && !["patient-opt-out", "patient-seen", "content-unavailable", "no-recipient-channel", "needs-acknowledgement"].includes(row.holdReason ?? ""))
@@ -278,7 +294,7 @@ export function validateStoredEducationSequences(enrollment: EducationEnrollment
       validateEvent(event);
   }
   for (const activation of enrollment.activations ?? []) {
-    const steps = (enrollment.scheduledSends ?? []).filter(row => row.activationId === activation.id).map(({ id, activationId, senderReference, disposition, holdReason, blockedBySendIndices, attempts, events, ...step }) => step);
+    const steps = (enrollment.scheduledSends ?? []).filter(row => row.activationId === activation.id).map(({ id, activationId, senderReference, disposition, holdReason, blockedBySendIndices, attempts, events, runtime, ...step }) => step);
     validateEducationSequence({ ...activation.sequence, steps });
   }
 }
