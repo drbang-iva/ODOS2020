@@ -1,12 +1,22 @@
+import { execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-const FIXTURES_DIRECTORY = resolve(dirname(fileURLToPath(import.meta.url)), "fixtures");
-const SYNTHETIC_NAMES = new Set(["ALEX", "EXAM", "EXAMPLEV"]);
-const SYNTHETIC_TEN_DIGIT_VALUES = new Set(["0123456789", "1999999984"]);
+const FIXTURES_DIRECTORY = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const SYNTHETIC_NAMES = new Set([
+  "ALEX", "EXAM", "EXAMPLEV",
+  "ODOS", "DR Drill", // Disposable DR drill account, not a person's name.
+  "TEST-Rivera, Alex", // Explicitly marked demo patient in the seed harness.
+  "ODOS DR Drill", // Disposable project name.
+  "longOffset", // Intl.DateTimeFormat timeZoneName option.
+  // Lens product names in bp-digital-lens-import-v1.json, not patient identities.
+  "Alpha Comfort", "Alpha Luxury", "Autograph III", "BP Digital SV", "Omnilux Custom", "Regular SV",
+]);
+// 1111111112 is the existing seed-demo provider placeholder and its receipt assertion.
+const SYNTHETIC_TEN_DIGIT_VALUES = new Set(["0123456789", "1999999984", "1111111112"]);
 const ENTITY_IDENTIFIER_LABELS = new Set([
   "Information Receiver",
   "Information Source",
@@ -20,10 +30,10 @@ const ENTITY_IDENTIFIER_LABELS = new Set([
 ]);
 
 function fixtureFiles(directory: string): string[] {
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(directory, entry.name);
-    return entry.isDirectory() ? fixtureFiles(path) : [path];
-  });
+  return execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], { cwd: directory, encoding: "utf8" })
+    .split("\0")
+    .filter((path) => /fixture|seed/i.test(path))
+    .map((path) => join(directory, path));
 }
 
 function inspectX12(value: string, path: string, violations: string[]): void {
