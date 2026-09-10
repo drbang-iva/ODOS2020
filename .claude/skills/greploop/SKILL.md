@@ -13,6 +13,9 @@ metadata:
 allowed-tools: Bash(gh:*) Bash(glab:*) Bash(git:*) Bash(p4:*)
 ---
 
+> ODOS override: use only the generic fetch/adjudicate/fix/re-poll procedure with CodeRabbit and PR-Agent. The upstream vendor-specific triggers, polling commands, filters, and 5/5 requirement below are inactive here. Do not execute them or wait for that vendor. Follow AGENTS.md and CONTRIBUTING.md for current signals and the no-bot exception.
+
+
 # Greploop
 
 Iteratively fix a PR/MR/CL until Greptile gives a perfect review: 5/5 confidence, zero unresolved comments.

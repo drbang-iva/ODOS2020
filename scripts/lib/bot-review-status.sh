@@ -5,11 +5,12 @@
 
 # Bot-review status for the evaluation gate.
 #
-# Recognises any configured review bot, not one vendor. CodeRabbit was retired
-# account-wide 2026-08-04; Greptile (+ PR-Agent) replaced it. Keying this gate on a
-# single vendor made it silently inert the moment that vendor went away — it reported
-# "no bot review" on every PR, forcing --ack-no-bot-review to become the boilerplate it
-# was explicitly designed not to be, while a real Greptile review sat on the PR unread.
+# Recognises any configured review bot, not one vendor. CodeRabbit + PR-Agent are
+# active. Greptile is not triggering; do not wait for it. Historical entries remain
+# recognised. CodeRabbit review submissions are accepted via BOT_REVIEW_LOGINS;
+# its commit status is not read by this helper. BOT_REVIEW_CHECKS matches check runs,
+# not commit statuses. A vendor change must not turn --ack-no-bot-review into
+# boilerplate while a recognised review sits on the PR unread.
 #
 # TWO SIGNALS, because one is not enough:
 #
@@ -17,11 +18,9 @@
 #      something to say.
 #   2. A completed CHECK RUN at the head from a known bot app — weaker but real: the bot
 #      ran and finished. A bot with nothing to add posts no review, so absence of (1)
-#      alone cannot distinguish "did not run" from "ran clean". Observed directly on
-#      visionforge PR #13, where Greptile's check passed at the final head while its last
-#      review submission sat two commits back.
+#      alone cannot distinguish "did not run" from "ran clean" for check-run bots.
 #
-# Either signal satisfies the gate. Neither means no bot looked at this exact head, and
+# Either signal satisfies the gate. Neither means no supported signal at this head, and
 # --ack-no-bot-review is then a deliberate, recorded decision rather than a rubber stamp.
 
 # Review-submission logins, lowercased. Add a bot here when it is adopted.

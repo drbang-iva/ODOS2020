@@ -1,3 +1,5 @@
+> Historical bot guidance below is superseded by AGENTS.md: poll CodeRabbit and PR-Agent at the final head; do not trigger or wait for the former bot. Adjudicate all existing findings.
+
 # Encounter Procedure Charges Design
 
 **Date:** 2026-08-11
