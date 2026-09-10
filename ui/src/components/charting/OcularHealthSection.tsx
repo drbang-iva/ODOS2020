@@ -1226,7 +1226,7 @@ function applySegmentAllNormal(
   const next = { ...captures };
   for (const definition of segmentDefinitions) {
     const field = definition.customFields?.find((field) =>
-      field.valueType === "multi-select" && field.options?.some((option) => option.active)
+      field.active && field.valueType === "multi-select" && field.options?.some((option) => option.active)
     );
     if (!field) continue;
     const optionCodes = (field.options ?? []).filter((option) => option.active).map((option) => option.code);

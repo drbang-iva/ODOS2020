@@ -39,6 +39,13 @@ for (const [segment, sweep] of [["anterior", applyAnteriorAllNormal], ["posterio
     assert.strictEqual(sweep([{ stableKey: seed.stableKey, customFields: [inactive] }], { [seed.stableKey]: existing }).captures[seed.stableKey], existing);
   });
 
+  test(`${segment}: inactive field with active options creates no negative act or capture`, () => {
+    assert.ok(field.options!.some((option) => option.active));
+    const result = sweep([{ stableKey: seed.stableKey, customFields: [{ ...field, active: false }] }], {});
+    assert.deepEqual(result.captures, {});
+    assert.equal(result.filled, 0);
+  });
+
   test(`${segment}: second multi-select supplies active codes when first is empty`, () => {
     const expected = field.options!.filter((option) => option.active).map((option) => option.code);
     assert.ok(expected.length > 0);
