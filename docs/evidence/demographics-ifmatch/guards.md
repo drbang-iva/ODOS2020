@@ -4,7 +4,7 @@ Base: `04ad0506a9706547d330fd8ca90f3317f5e13565`. Author-side checks only; indep
 
 ## A1
 
-From `ui/`: `node --import tsx --test --test-name-pattern=A1: tests/demographicsConcurrency.test.tsx`. Mutation was confirmed with `rg -n -F` before executing.
+From `ui/`: `node --import tsx --test --test-name-pattern=A1: tests/demographicsConcurrency.test.tsx`. Mutation confirmed with `rg -n -F` before execution.
 
 ```text
 MUTATION CONFIRMED
@@ -13,7 +13,7 @@ TAP version 13
 # Subtest: A1: a stale demographics PUT shows the concurrent-edit alert without retrying
 not ok 1 - A1: a stale demographics PUT shows the concurrent-edit alert without retrying
   ---
-  duration_ms: 18.487875
+  duration_ms: 16.866
   type: 'test'
   location: '$WORKTREE/ui/tests/demographicsConcurrency.test.tsx:1:1069'
   failureType: 'testCodeFailure'
@@ -42,30 +42,30 @@ not ok 1 - A1: a stale demographics PUT shows the concurrent-edit alert without 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 825.34475
+# duration_ms 823.304959
 
 ```
 
-Restored code: `node --import tsx --test tests/demographicsConcurrency.test.tsx`.
+Restored: `node --import tsx --test tests/demographicsConcurrency.test.tsx`.
 
 ```text
 TAP version 13
 # Subtest: A1: a stale demographics PUT shows the concurrent-edit alert without retrying
 ok 1 - A1: a stale demographics PUT shows the concurrent-edit alert without retrying
   ---
-  duration_ms: 17.907834
+  duration_ms: 16.633375
   type: 'test'
   ...
 # Subtest: A2: missing Patient version refuses before any network call
 ok 2 - A2: missing Patient version refuses before any network call
   ---
-  duration_ms: 0.313125
+  duration_ms: 0.3275
   type: 'test'
   ...
 # Subtest: A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
 ok 3 - A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
   ---
-  duration_ms: 12.184125
+  duration_ms: 11.74025
   type: 'test'
   ...
 1..3
@@ -76,13 +76,13 @@ ok 3 - A3: the actual PatientRoute keeps the returned Patient and the next save 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 828.667209
+# duration_ms 816.996042
 
 ```
 
 ## A2
 
-From `ui/`: `node --import tsx --test --test-name-pattern=A2: tests/demographicsConcurrency.test.tsx`. Mutation was confirmed with `rg -n -F` before executing.
+From `ui/`: `node --import tsx --test --test-name-pattern=A2: tests/demographicsConcurrency.test.tsx`. Mutation confirmed with `rg -n -F` before execution.
 
 ```text
 MUTATION CONFIRMED
@@ -91,7 +91,7 @@ TAP version 13
 # Subtest: A2: missing Patient version refuses before any network call
 not ok 1 - A2: missing Patient version refuses before any network call
   ---
-  duration_ms: 9.236375
+  duration_ms: 8.433875
   type: 'test'
   location: '$WORKTREE/ui/tests/demographicsConcurrency.test.tsx:1:1843'
   failureType: 'testCodeFailure'
@@ -113,30 +113,30 @@ not ok 1 - A2: missing Patient version refuses before any network call
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 812.206209
+# duration_ms 806.7325
 
 ```
 
-Restored code: `node --import tsx --test tests/demographicsConcurrency.test.tsx`.
+Restored: `node --import tsx --test tests/demographicsConcurrency.test.tsx`.
 
 ```text
 TAP version 13
 # Subtest: A1: a stale demographics PUT shows the concurrent-edit alert without retrying
 ok 1 - A1: a stale demographics PUT shows the concurrent-edit alert without retrying
   ---
-  duration_ms: 18.662333
+  duration_ms: 16.878042
   type: 'test'
   ...
 # Subtest: A2: missing Patient version refuses before any network call
 ok 2 - A2: missing Patient version refuses before any network call
   ---
-  duration_ms: 0.302084
+  duration_ms: 0.293459
   type: 'test'
   ...
 # Subtest: A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
 ok 3 - A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
   ---
-  duration_ms: 12.143792
+  duration_ms: 12.361958
   type: 'test'
   ...
 1..3
@@ -147,22 +147,22 @@ ok 3 - A3: the actual PatientRoute keeps the returned Patient and the next save 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 839.731375
+# duration_ms 815.504292
 
 ```
 
 ## A3
 
-From `ui/`: `node --import tsx --test --test-name-pattern=A3: tests/demographicsConcurrency.test.tsx`. Mutation was confirmed with `rg -n -F` before executing.
+From `ui/`: `node --import tsx --test --test-name-pattern=A3: tests/demographicsConcurrency.test.tsx`. Mutation confirmed with `rg -n -F` before execution.
 
 ```text
 MUTATION CONFIRMED
-331:              onPatientSaved?.(patient);
+331:              onPatientSaved(patient);
 TAP version 13
 # Subtest: A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
 not ok 1 - A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
   ---
-  duration_ms: 25.291
+  duration_ms: 23.25675
   type: 'test'
   location: '$WORKTREE/ui/tests/demographicsConcurrency.test.tsx:1:2300'
   failureType: 'testCodeFailure'
@@ -189,30 +189,30 @@ not ok 1 - A3: the actual PatientRoute keeps the returned Patient and the next s
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 844.584709
+# duration_ms 821.959041
 
 ```
 
-Restored code: `node --import tsx --test tests/demographicsConcurrency.test.tsx`.
+Restored: `node --import tsx --test tests/demographicsConcurrency.test.tsx`.
 
 ```text
 TAP version 13
 # Subtest: A1: a stale demographics PUT shows the concurrent-edit alert without retrying
 ok 1 - A1: a stale demographics PUT shows the concurrent-edit alert without retrying
   ---
-  duration_ms: 18.213417
+  duration_ms: 16.340417
   type: 'test'
   ...
 # Subtest: A2: missing Patient version refuses before any network call
 ok 2 - A2: missing Patient version refuses before any network call
   ---
-  duration_ms: 0.312208
+  duration_ms: 0.321708
   type: 'test'
   ...
 # Subtest: A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
 ok 3 - A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
   ---
-  duration_ms: 12.359417
+  duration_ms: 11.635917
   type: 'test'
   ...
 1..3
@@ -223,9 +223,13 @@ ok 3 - A3: the actual PatientRoute keeps the returned Patient and the next save 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 835.946125
+# duration_ms 812.165833
 
 ```
+
+## Required callback type contract
+
+CodeRabbit identified that an optional onPatientSaved prop would permit a new consumer to omit state propagation. The callback is now required; read-only view fixtures explicitly supply a no-op. A temporary compile probe assigned a Patient-only object to ComponentProps<typeof PatientOverview> with an expected-error annotation. Before the fix, `./ui/node_modules/.bin/tsc --project ui/tsconfig.json --noEmit` failed with `TS2578: Unused @ts-expect-error directive`; after requiring the callback the same probe compiled successfully (exit 0), proving omission is a type error. The temporary probe was removed. A1-A3 mutations above were rerun after this fix.
 
 ## Live browser proof
 

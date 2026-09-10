@@ -70,7 +70,7 @@ export function PatientOverview({
 }: {
   patient: Patient;
   initialOverview?: PatientOverviewPayload;
-  onPatientSaved?: (patient: Patient) => void;
+  onPatientSaved: (patient: Patient) => void;
   api?: PatientOverviewApi;
 }) {
   const setView = useViewState((state) => state.setView);
@@ -328,7 +328,7 @@ export function PatientOverview({
             patient={patient}
             onDiscard={() => setDemographicsEditorOpen(false)}
             onSaved={(savedPatient) => {
-              onPatientSaved?.(savedPatient);
+              onPatientSaved(savedPatient);
               setDemographicsEditorOpen(false);
             }}
           />
