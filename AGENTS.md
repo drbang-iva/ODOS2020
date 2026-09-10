@@ -58,8 +58,8 @@ from `origin/main` would evaluate the wrong code.
    hand over a PR below that.
 
    **Use `/greploop` (`.claude/skills/greploop/`) for its poll-and-fix loop ONLY — never its
-   trigger step.** Both bots auto-run on every PR here; as the pipeline section below states,
-   *there is no trigger to post and no allowance to budget*. The upstream skill assumes it must
+   trigger step.** CodeRabbit and PR-Agent auto-run on every PR here; CodeRabbit also
+   re-reviews every push. *Auto-review makes triggering unnecessary here*. The upstream skill assumes it must
    summon a review, and posting trigger comments in this repo is the PR #313 failure by name:
    eight triggers in sixteen minutes and zero reviews. Poll for the review that is already coming,
    fix what it raises, push, re-poll.
@@ -68,8 +68,8 @@ from `origin/main` would evaluate the wrong code.
    `--ack-no-bot-review`, recording a deliberate exception per `CONTRIBUTING.md`. That is the only
    sanctioned way past a missing review.
 
-   **Lockfile/dependency PRs are the opposite of exempt.** Both bots have been observed covering
-   zero lines on them — one reporting green anyway — so
+   **Lockfile/dependency PRs are the opposite of exempt.** The previous Greptile + PR-Agent
+   pairing was observed covering zero lines on them — one reporting green anyway — so
    `performance-od/decisions/2026-08-29-odos-dependency-prs-get-zero-bot-review.md` requires an
    **explicit supply-chain delta in the evaluation record**, precisely because no bot is supplying
    one. Less automated review means *more* hand-supplied evidence, never less.
@@ -404,19 +404,29 @@ micro-decisions.
 the current head. Never propose the `evaluated` label as an unblock; that override
 is the operator's alone.**
 
-**Review bots: GREPTILE + PR-AGENT. CodeRabbit is RETIRED** — suspended account-wide
-2026-08-04 for cost. Do not trigger it, wait for it, retry it, or note its absence.
-There is no trigger to post and no allowance to budget; both bots auto-run on every PR.
-When neither bot has a signal at the exact head, `--ack-no-bot-review` records the
-deliberate exception documented in CONTRIBUTING.md. (The prior selective-triggering
-policy, and the PR #313 incident where its wording produced eight triggers in sixteen
-minutes and zero reviews, are historical — the tool it governed is gone.)
+**Review bots: CODERABBIT + PR-AGENT. Greptile is NOT triggering** — its account was
+cancelled 2026-09-10 over an $812 overage bill (disputed). Do not wait for Greptile or
+note its absence.
+
+**CodeRabbit was RECONNECTED 2026-09-10** and is the review bot again. This repository
+is public, so its reviews are free; its GitHub App was unsuspended and scoped to exactly
+ODOS2020 (public) and VisionForge (private, metered). **In this repo CodeRabbit
+auto-reviews every PR and re-reviews every push**, with
+`auto_pause_after_reviewed_commits: 0` in `.coderabbit.yaml` — that key defaults to `5`,
+which would silently stop reviewing after the fifth commit while the check still read
+green, so it is pinned. VisionForge is deliberately manual-trigger-only and must stay
+that way; do not copy this repo's config there.
+
+When no bot has a signal at the exact head, `--ack-no-bot-review` records the deliberate
+exception documented in CONTRIBUTING.md. (The prior selective-triggering policy, and the
+PR #313 incident where its wording produced eight triggers in sixteen minutes and zero
+reviews, are historical — auto-review makes triggering unnecessary here.)
 
 The bots are a cheap first pass, never a substitute for the model-level eval and never
 the last word on correctness-critical code.
 
-**Re-poll at the FINAL head before declaring ready.** Greptile takes 7–13 minutes;
-PR-Agent ~1 minute. A bundle written before Greptile finishes will report "zero threads"
+**Re-poll at the FINAL head before declaring ready.** Wait for CodeRabbit and PR-Agent
+to finish at that head. A bundle written before the bots finish can report "zero threads"
 and a green check while a substantive review is still in flight — this happened on three
 separate PRs on 2026-08-04. **Zero threads on an `in_progress` check means *pending*, not
 *clean*.** Check `gh pr checks <N>` plus an unresolved-thread count, not the check

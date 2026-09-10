@@ -5,11 +5,12 @@
 
 # Bot-review status for the evaluation gate.
 #
-# Recognises any configured review bot, not one vendor. CodeRabbit was retired
-# account-wide 2026-08-04; Greptile (+ PR-Agent) replaced it. Keying this gate on a
-# single vendor made it silently inert the moment that vendor went away — it reported
-# "no bot review" on every PR, forcing --ack-no-bot-review to become the boilerplate it
-# was explicitly designed not to be, while a real Greptile review sat on the PR unread.
+# Recognises any configured review bot, not one vendor. CodeRabbit + PR-Agent are
+# active; CodeRabbit was reconnected 2026-09-10 and Greptile's account was cancelled
+# that day. Do not wait for Greptile. Its historical entries remain recognised.
+# CodeRabbit review submissions are already accepted by the login array below;
+# CodeRabbit check runs are not listed. A vendor change must not turn
+# --ack-no-bot-review into boilerplate while a recognised review sits on the PR unread.
 #
 # TWO SIGNALS, because one is not enough:
 #

@@ -19,8 +19,9 @@ ODOS is built by a practicing optometrist and refined at his own practice. The r
 ## Independent evaluation gate
 
 Every PR into `main` needs an independent Fable, Opus, or Codex evaluation. The review
-bots (Greptile + PR-Agent) are a first-pass review, not the final evaluator.
-CodeRabbit is retired — suspended account-wide 2026-08-04 for cost. A well-formed final marker from
+bots (CodeRabbit + PR-Agent) are a first-pass review, not the final evaluator.
+CodeRabbit was reconnected 2026-09-10; Greptile is not triggering after its account
+was cancelled that day. Do not wait for Greptile or note its absence. A well-formed final marker from
 Fable, Opus, or Codex passes from any GitHub account. Author != evaluator remains a
 procedural expectation stated in coding kickoffs, not a mechanically enforced
 login rule.
@@ -48,8 +49,9 @@ signal exists at the exact head, it records
 `Bot-review-at-head: <source> via <evidence>`.
 
 Once all other gates are green and the head is final, the PR author hands off for
-independent evaluation. **There is no bot trigger to post** — Greptile and PR-Agent
-auto-run on every PR. Greptile takes 7–13 minutes and PR-Agent about a minute, so
+independent evaluation. **There is no bot trigger to post** — CodeRabbit and PR-Agent
+auto-run on every PR here. CodeRabbit re-reviews every push, with
+`auto_pause_after_reviewed_commits: 0` pinned in `.coderabbit.yaml`, so
 **re-poll at the final head before handing off**: zero threads on a check still
 `in_progress` means pending, not clean. Reply to or resolve every existing thread
 first. See AGENTS.md "Author ≠ evaluator" for the full rule.
@@ -68,15 +70,17 @@ current-head count is zero, omit `--ack-comments`. Use `--dry-run` to inspect
 the count and marker without requiring inline-comment acknowledgment or posting
 anything.
 
-If neither recognised bot signal exists at the exact head, `eval-post-verdict.sh`
+If no recognised bot signal exists at the exact head, `eval-post-verdict.sh`
 blocks unless the evaluator passes `--ack-no-bot-review`. That flag instead records
 `Bot-review-at-head: NONE (acknowledged)` in the marker and is rejected when an
 exact-head bot signal does exist, so it cannot become boilerplate. `--dry-run`
 enforces and reports this bot-review acknowledgment without posting a marker.
 
-The check recognises any configured review bot — currently Greptile and PR-Agent
-— by either a review submission at the exact head or a completed bot check run at
-that head. A bot with nothing to say posts no review submission, so the check-run
+The check recognises CodeRabbit review submissions at the exact head through its
+existing `coderabbitai[bot]` and `coderabbitai` logins, and PR-Agent through completed
+check runs at that head. Historical Greptile entries remain recognised; they do not
+mean Greptile is expected to run. CodeRabbit check runs alone are not currently
+recognised by this helper. A bot with nothing to say posts no review submission, so the check-run
 signal is what distinguishes "ran clean" from "never ran". Adding a bot is two
 lines in `scripts/lib/bot-review-status.sh`.
 
