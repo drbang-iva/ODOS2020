@@ -29,11 +29,11 @@ Final command:
 npm --prefix mcp test -- tests/educationEnrollment.test.ts tests/educationSequence.test.ts tests/educationSequenceFhir.test.ts tests/educationEnrollmentApi.test.ts tests/educationCatalog.test.ts tests/commsApi.test.ts tests/commsConfig.test.ts tests/commsPersistence.test.ts tests/commsSuppression.test.ts tests/reminderEngine.test.ts
 ```
 
-Actual output: `tests 176`, `pass 176`, `fail 0`, `skipped 0`; exit 0. See `final-tests.log`.
+Actual output: `tests 176`, `pass 176`, `fail 0`, `skipped 0`; exit 0. See `final-tests.txt`.
 
-`npm --prefix mcp run build`: tsc, exit 0 (`final-build.log`).
+`npm --prefix mcp run build`: tsc, exit 0 (`final-build.txt`).
 
-`npm run preflight`: 0 warnings / 0 hard blocks, exit 0 (`final-preflight.log`). This static check does not prove live policy criteria; its output states that limitation.
+`npm run preflight`: 0 warnings / 0 hard blocks, exit 0 (`final-preflight.txt`). This static check does not prove live policy criteria; its output states that limitation.
 
 `node .claude/skills/tier0-census/scripts/check-proxy-coverage.mjs`: 24 backend route families, 27 proxy entries; every discovered family covered. Advisory only.
 
@@ -41,7 +41,7 @@ Actual output: `tests 176`, `pass 176`, `fail 0`, `skipped 0`; exit 0. See `fina
 
 ## Mandate 17
 
-Store mutation command: `npm --prefix mcp test -- tests/educationSequence.test.ts tests/educationSequenceFhir.test.ts`. Each mutation was isolated and restored. The `guard-*-red.log` and `guard-*-green.log` files retain actual output.
+Store mutation command: `npm --prefix mcp test -- tests/educationSequence.test.ts tests/educationSequenceFhir.test.ts`. Each mutation was isolated and restored. The `guard-*-red.txt` and `guard-*-green.txt` files retain actual output.
 
 | Guard | Deliberately broken result | Restored result |
 |---|---|---|

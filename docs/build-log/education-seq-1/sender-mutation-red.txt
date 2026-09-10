@@ -1,0 +1,206 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/educationEnrollmentApi.test.ts
+
+TAP version 13
+# Subtest: EducationEnrollment creates stage 1, refuses a version-shifted duplicate, and persists opt-out suppression with zero provider sends
+ok 1 - EducationEnrollment creates stage 1, refuses a version-shifted duplicate, and persists opt-out suppression with zero provider sends
+  ---
+  duration_ms: 26.976667
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment rejects a cross-patient encounter before persistence, dispatch, or Provenance
+ok 2 - EducationEnrollment rejects a cross-patient encounter before persistence, dispatch, or Provenance
+  ---
+  duration_ms: 3.359625
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition appends history and actually dispatches a stage-2 send with an honest unique key
+ok 3 - EducationEnrollment transition appends history and actually dispatches a stage-2 send with an honest unique key
+  ---
+  duration_ms: 14.222541
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition refuses a stale from-stage without appending or dispatching
+ok 4 - EducationEnrollment transition refuses a stale from-stage without appending or dispatching
+  ---
+  duration_ms: 4.820834
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition refuses a non-active enrollment
+ok 5 - EducationEnrollment transition refuses a non-active enrollment
+  ---
+  duration_ms: 4.485041
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition rejects a missing or malformed target-stage shape
+ok 6 - EducationEnrollment transition rejects a missing or malformed target-stage shape
+  ---
+  duration_ms: 3.566334
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition requires a non-empty trigger
+ok 7 - EducationEnrollment transition requires a non-empty trigger
+  ---
+  duration_ms: 3.347208
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment terminal transition with a send preserves all history and outcomes, then permits re-enrollment
+ok 8 - EducationEnrollment terminal transition with a send preserves all history and outcomes, then permits re-enrollment
+  ---
+  duration_ms: 4.148833
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment terminal transition without sends completes and remains readable
+ok 9 - EducationEnrollment terminal transition without sends completes and remains readable
+  ---
+  duration_ms: 2.586958
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition persists opt-out suppression with zero provider sends
+ok 10 - EducationEnrollment transition persists opt-out suppression with zero provider sends
+  ---
+  duration_ms: 2.610791
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment create recovery is re-runnable after a mid-resume failure without another provider send
+ok 11 - EducationEnrollment create recovery is re-runnable after a mid-resume failure without another provider send
+  ---
+  duration_ms: 5.758292
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment resumes a create-Provenance failure after state commit and sends exactly once
+ok 12 - EducationEnrollment resumes a create-Provenance failure after state commit and sends exactly once
+  ---
+  duration_ms: 2.870708
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment transition failure is recoverable without re-dispatching its provider send
+ok 13 - EducationEnrollment transition failure is recoverable without re-dispatching its provider send
+  ---
+  duration_ms: 3.049209
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment resumes a mid-transition Provenance failure from committed pending state
+ok 14 - EducationEnrollment resumes a mid-transition Provenance failure from committed pending state
+  ---
+  duration_ms: 2.724833
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment email uses the same durable reservation and resumes without another provider send
+not ok 15 - EducationEnrollment email uses the same durable reservation and resumes without another provider send
+  ---
+  duration_ms: 4.170125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationEnrollmentApi.test.ts:1:15355'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    409 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationEnrollmentApi.test.ts:531:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: EducationEnrollment terminal cancellation retains an unresolved active lock until practitioner acknowledgement
+ok 16 - EducationEnrollment terminal cancellation retains an unresolved active lock until practitioner acknowledgement
+  ---
+  duration_ms: 2.778958
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment resume keeps an unresolved in-flight send in-flight unless explicitly acknowledged with a reason and Provenance
+ok 17 - EducationEnrollment resume keeps an unresolved in-flight send in-flight unless explicitly acknowledged with a reason and Provenance
+  ---
+  duration_ms: 3.894875
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition revalidates its Provenance encounter against the enrolled patient
+ok 18 - EducationEnrollment transition revalidates its Provenance encounter against the enrolled patient
+  ---
+  duration_ms: 2.151333
+  type: 'test'
+  ...
+# Subtest: one-shot education remains behaviorally intact beside EducationEnrollment
+ok 19 - one-shot education remains behaviorally intact beside EducationEnrollment
+  ---
+  duration_ms: 1.461792
+  type: 'test'
+  ...
+# Subtest: sequence API admits future-only education idempotently without attempting a message
+ok 20 - sequence API admits future-only education idempotently without attempting a message
+  ---
+  duration_ms: 2.440542
+  type: 'test'
+  ...
+# Subtest: sequence API refuses missing latest useful time and unpublished content before any enrollment write
+ok 21 - sequence API refuses missing latest useful time and unpublished content before any enrollment write
+  ---
+  duration_ms: 2.359709
+  type: 'test'
+  ...
+# Subtest: sequence API accepts print as a staff task and resume never sends scheduled work
+ok 22 - sequence API accepts print as a staff task and resume never sends scheduled work
+  ---
+  duration_ms: 1.566625
+  type: 'test'
+  ...
+# Subtest: sequence API refuses whole 65-step activation before writes even beside an immediate send
+ok 23 - sequence API refuses whole 65-step activation before writes even beside an immediate send
+  ---
+  duration_ms: 6.140167
+  type: 'test'
+  ...
+# Subtest: sequence API starts a second activation, stops only one, and atomically cancels the old stage on transition
+ok 24 - sequence API starts a second activation, stops only one, and atomically cancels the old stage on transition
+  ---
+  duration_ms: 5.41125
+  type: 'test'
+  ...
+# Subtest: sequence API refuses internal content and absent marketing consent before writes
+ok 25 - sequence API refuses internal content and absent marketing consent before writes
+  ---
+  duration_ms: 1.865666
+  type: 'test'
+  ...
+# Subtest: sequence row identity cannot be used to bypass admission through one-shot dispatch
+ok 26 - sequence row identity cannot be used to bypass admission through one-shot dispatch
+  ---
+  duration_ms: 2.180458
+  type: 'test'
+  ...
+# Subtest: sequence API records a new stage while an old attempt is unknown and only practitioner acknowledgement releases its hold
+ok 27 - sequence API records a new stage while an old attempt is unknown and only practitioner acknowledgement releases its hold
+  ---
+  duration_ms: 2.3355
+  type: 'test'
+  ...
+# Subtest: sequence API accepts a future-only stage without a redundant empty immediateSends array
+ok 28 - sequence API accepts a future-only stage without a redundant empty immediateSends array
+  ---
+  duration_ms: 1.089542
+  type: 'test'
+  ...
+1..28
+# tests 28
+# suites 0
+# pass 27
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 456.05125

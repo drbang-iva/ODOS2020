@@ -1,0 +1,138 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/educationSequence.test.ts tests/educationSequenceFhir.test.ts
+
+TAP version 13
+# 256-row admission budget bytes: 664371
+# Subtest: sequence admission retry binds identical rows and rejects changed intent
+ok 1 - sequence admission retry binds identical rows and rejects changed intent
+  ---
+  duration_ms: 10.927458
+  type: 'test'
+  ...
+# Subtest: activation ceiling refuses whole 65-delivery activation before write
+ok 2 - activation ceiling refuses whole 65-delivery activation before write
+  ---
+  duration_ms: 1.8925
+  type: 'test'
+  ...
+# Subtest: lifetime ceiling across four activations preserves rows and permits stop
+ok 3 - lifetime ceiling across four activations preserves rows and permits stop
+  ---
+  duration_ms: 15.789334
+  type: 'test'
+  ...
+# Subtest: transition cancels old occurrence and restart never revives keys
+not ok 4 - transition cancels old occurrence and restart never revives keys
+  ---
+  duration_ms: 1.650833
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationSequence.test.ts:1:3080'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+    +   'scheduled',
+    +   'scheduled'
+    -   'cancelled',
+    -   'cancelled'
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'cancelled'
+    1: 'cancelled'
+  actual:
+    0: 'scheduled'
+    1: 'scheduled'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationSequence.test.ts:24:521)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: scheduled identities never share immediate-send namespace
+ok 5 - scheduled identities never share immediate-send namespace
+  ---
+  duration_ms: 4.087292
+  type: 'test'
+  ...
+# Subtest: stopped activation remains cancelled while separately authorized activation survives
+ok 6 - stopped activation remains cancelled while separately authorized activation survives
+  ---
+  duration_ms: 0.519625
+  type: 'test'
+  ...
+# Subtest: transition retry uses original binding before stale-from-stage check
+ok 7 - transition retry uses original binding before stale-from-stage check
+  ---
+  duration_ms: 0.381166
+  type: 'test'
+  ...
+# Subtest: create retry refuses changed clinical context
+ok 8 - create retry refuses changed clinical context
+  ---
+  duration_ms: 0.51825
+  type: 'test'
+  ...
+# Subtest: FHIR activation round-trip and transition are one versioned Basic write; over-cap writes nothing
+not ok 9 - FHIR activation round-trip and transition are one versioned Basic write; over-cap writes nothing
+  ---
+  duration_ms: 12.733875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationSequenceFhir.test.ts:1:2245'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+    -   'cancelled',
+        'scheduled',
+    +   'scheduled'
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'cancelled'
+    1: 'scheduled'
+  actual:
+    0: 'scheduled'
+    1: 'scheduled'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/education-seq-1/mcp/tests/educationSequenceFhir.test.ts:31:641)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: FHIR concurrent lifecycle writers refuse stale UUID If-Match, and missing version fails closed
+ok 10 - FHIR concurrent lifecycle writers refuse stale UUID If-Match, and missing version fails closed
+  ---
+  duration_ms: 1.629166
+  type: 'test'
+  ...
+# Subtest: unresolved original attempt holds next stage until practitioner acknowledgement
+ok 11 - unresolved original attempt holds next stage until practitioner acknowledgement
+  ---
+  duration_ms: 1.76975
+  type: 'test'
+  ...
+# Subtest: scheduling dispositions cannot inflate the persisted test-only sent-outcome query
+ok 12 - scheduling dispositions cannot inflate the persisted test-only sent-outcome query
+  ---
+  duration_ms: 0.980416
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 10
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 369.893459

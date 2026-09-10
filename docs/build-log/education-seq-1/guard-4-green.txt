@@ -1,0 +1,87 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/educationSequence.test.ts tests/educationSequenceFhir.test.ts
+
+TAP version 13
+# 256-row admission budget bytes: 664371
+# Subtest: sequence admission retry binds identical rows and rejects changed intent
+ok 1 - sequence admission retry binds identical rows and rejects changed intent
+  ---
+  duration_ms: 10.723834
+  type: 'test'
+  ...
+# Subtest: activation ceiling refuses whole 65-delivery activation before write
+ok 2 - activation ceiling refuses whole 65-delivery activation before write
+  ---
+  duration_ms: 1.96475
+  type: 'test'
+  ...
+# Subtest: lifetime ceiling across four activations preserves rows and permits stop
+ok 3 - lifetime ceiling across four activations preserves rows and permits stop
+  ---
+  duration_ms: 15.602792
+  type: 'test'
+  ...
+# Subtest: transition cancels old occurrence and restart never revives keys
+ok 4 - transition cancels old occurrence and restart never revives keys
+  ---
+  duration_ms: 0.856959
+  type: 'test'
+  ...
+# Subtest: scheduled identities never share immediate-send namespace
+ok 5 - scheduled identities never share immediate-send namespace
+  ---
+  duration_ms: 3.978292
+  type: 'test'
+  ...
+# Subtest: stopped activation remains cancelled while separately authorized activation survives
+ok 6 - stopped activation remains cancelled while separately authorized activation survives
+  ---
+  duration_ms: 0.435042
+  type: 'test'
+  ...
+# Subtest: transition retry uses original binding before stale-from-stage check
+ok 7 - transition retry uses original binding before stale-from-stage check
+  ---
+  duration_ms: 0.402083
+  type: 'test'
+  ...
+# Subtest: create retry refuses changed clinical context
+ok 8 - create retry refuses changed clinical context
+  ---
+  duration_ms: 0.466833
+  type: 'test'
+  ...
+# Subtest: FHIR activation round-trip and transition are one versioned Basic write; over-cap writes nothing
+ok 9 - FHIR activation round-trip and transition are one versioned Basic write; over-cap writes nothing
+  ---
+  duration_ms: 13.925541
+  type: 'test'
+  ...
+# Subtest: FHIR concurrent lifecycle writers refuse stale UUID If-Match, and missing version fails closed
+ok 10 - FHIR concurrent lifecycle writers refuse stale UUID If-Match, and missing version fails closed
+  ---
+  duration_ms: 1.190583
+  type: 'test'
+  ...
+# Subtest: unresolved original attempt holds next stage until practitioner acknowledgement
+ok 11 - unresolved original attempt holds next stage until practitioner acknowledgement
+  ---
+  duration_ms: 1.715542
+  type: 'test'
+  ...
+# Subtest: scheduling dispositions cannot inflate the persisted test-only sent-outcome query
+ok 12 - scheduling dispositions cannot inflate the persisted test-only sent-outcome query
+  ---
+  duration_ms: 1.091125
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 342.737708
