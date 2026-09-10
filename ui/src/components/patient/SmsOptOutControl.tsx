@@ -3,6 +3,7 @@ import {
   clearSmsOptOut,
   CommunicationsResponseError,
   readSmsOptOut,
+  recordSmsOptOut,
   type SmsOptOutIdentityVerification,
   type SmsLaneRole,
   type SmsOptOutState,
@@ -35,10 +36,14 @@ export function SmsOptOutControl({
   const [error, setError] = useState<string>();
   const [denied, setDenied] = useState(false);
   const [clearNumber, setClearNumber] = useState<string | null>();
+  const [recording, setRecording] = useState(false);
+  const [recordScope, setRecordScope] = useState<"global" | "per-number">("global");
+  const [recordNumber, setRecordNumber] = useState("");
   const [reason, setReason] = useState("");
   const [identityVerification, setIdentityVerification] = useState<SmsOptOutIdentityVerification | "">("");
   const [clearing, setClearing] = useState(false);
   const [result, setResult] = useState<string>();
+  const operationGenerationRef = useRef(0);
   const suppressionChangeRef = useRef(onActiveLaneSuppressionChange);
   const stateChangeRef = useRef(onStateChange);
   const unavailableRef = useRef(onUnavailable);
@@ -48,10 +53,13 @@ export function SmsOptOutControl({
 
   useEffect(() => {
     let active = true;
+    operationGenerationRef.current += 1;
+    setClearing(false);
     setState(undefined);
     setError(undefined);
     setDenied(false);
     setClearNumber(undefined);
+    setRecording(false);
     setResult(undefined);
     readSmsOptOut(patientReference).then((value) => {
       if (!active) return;
@@ -75,7 +83,7 @@ export function SmsOptOutControl({
       setError(cause instanceof Error ? cause.message : "SMS preferences unavailable.");
       unavailableRef.current?.("error");
     });
-    return () => { active = false; };
+    return () => { active = false; operationGenerationRef.current += 1; };
   }, [activeLaneRole, patientReference]);
 
   if (denied) return null;
@@ -86,6 +94,7 @@ export function SmsOptOutControl({
   const unmatchedOptOutNumbers = state.remainingOptOuts.numbers.filter((number) => !configuredNumbers.has(number));
 
   const chooseClear = (number: string | null) => {
+    setRecording(false);
     setClearNumber(number);
     setReason("");
     setIdentityVerification("");
@@ -94,17 +103,38 @@ export function SmsOptOutControl({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (clearNumber === undefined || !reason.trim() || !identityVerification) return;
+    if ((!recording && clearNumber === undefined) || !reason.trim() || !identityVerification
+      || (recording && recordScope === "per-number" && !recordNumber)) return;
+    const operationGeneration = operationGenerationRef.current;
+    const isCurrentOperation = () => operationGeneration === operationGenerationRef.current;
     setClearing(true);
     setError(undefined);
     setResult(undefined);
     try {
+      if (recording) {
+        const nextState = await recordSmsOptOut({
+          patientReference, reason: reason.trim(), identityVerification, scope: recordScope,
+          ...(recordScope === "per-number" ? { number: recordNumber } : {}),
+        });
+        if (!isCurrentOperation()) return;
+        setState(nextState);
+        stateChangeRef.current?.(nextState);
+        if (activeLaneRole) {
+          const lane = nextState.smsLanes.find((candidate) => candidate.roles.includes(activeLaneRole));
+          suppressionChangeRef.current?.(Boolean(nextState.remainingOptOuts.global
+            || (lane ? nextState.remainingOptOuts.numbers.includes(lane.number) : nextState.remainingOptOuts.numbers.length > 0)));
+        }
+        setRecording(false);
+        setResult(recordScope === "global" ? "All text messages are now blocked." : "This SMS lane is now blocked.");
+        return;
+      }
       const response = await clearSmsOptOut({
         patientReference,
         reason: reason.trim(),
         identityVerification,
         ...(clearNumber ? { number: clearNumber } : {}),
       });
+      if (!isCurrentOperation()) return;
       const remainingOptOuts = response.remainingOptOuts
         ?? (clearNumber === null && !response.smsOptedOut ? { global: false, numbers: [] } : state.remainingOptOuts);
       setState({ ...state, smsOptedOut: response.smsOptedOut, remainingOptOuts });
@@ -127,9 +157,10 @@ export function SmsOptOutControl({
       }
       setClearNumber(undefined);
     } catch (cause) {
+      if (!isCurrentOperation()) return;
       setError(cause instanceof Error ? cause.message : "SMS preferences unavailable.");
     } finally {
-      setClearing(false);
+      if (isCurrentOperation()) setClearing(false);
     }
   };
 
@@ -172,15 +203,43 @@ export function SmsOptOutControl({
           Clear all SMS opt-outs…
         </button>
       )}
-      {clearNumber !== undefined && (
+      {!state.remainingOptOuts.global && (
+        <button type="button" onClick={() => {
+          setClearNumber(undefined);
+          setRecording(true);
+          setRecordScope("global");
+          setRecordNumber(state.smsLanes.find((lane) => activeLaneRole && lane.roles.includes(activeLaneRole))?.number ?? state.smsLanes[0]?.number ?? "");
+          setReason("");
+          setIdentityVerification("");
+          setResult(undefined);
+        }} className="justify-self-start text-xs text-[color:var(--odos-accent)] underline">
+          Record opt-out — patient asked…
+        </button>
+      )}
+      {(recording || clearNumber !== undefined) && (
         <form onSubmit={(event) => void submit(event)} className="mt-2 grid gap-2 border-t border-[color:var(--odos-line)] pt-3">
           <strong className="text-sm text-[color:var(--odos-text)]">
-            {clearNumber ? "Re-enroll this SMS lane" : "Clear all SMS opt-outs"}
+            {recording ? "Record SMS opt-out" : clearNumber ? "Re-enroll this SMS lane" : "Clear all SMS opt-outs"}
           </strong>
+          {recording && <>
+            <label className="grid gap-1 text-xs text-[color:var(--odos-muted)]">
+              Scope
+              <select aria-label="Opt-out scope" value={recordScope} onChange={(event) => setRecordScope(event.target.value as "global" | "per-number")} className="scheduler-input">
+                <option value="global">All text messages</option>
+                <option value="per-number" disabled={state.smsLanes.length === 0}>This lane only</option>
+              </select>
+            </label>
+            {recordScope === "per-number" && <label className="grid gap-1 text-xs text-[color:var(--odos-muted)]">
+              SMS lane
+              <select aria-label="SMS lane" required value={recordNumber} onChange={(event) => setRecordNumber(event.target.value)} className="scheduler-input">
+                {state.smsLanes.map((lane) => <option key={lane.number} value={lane.number}>{lane.label}</option>)}
+              </select>
+            </label>}
+          </>}
           <label className="grid gap-1 text-xs text-[color:var(--odos-muted)]">
             Reason
             <textarea
-              aria-label="Reason for re-enrollment"
+              aria-label={recording ? "Reason for opt-out" : "Reason for re-enrollment"}
               required
               value={reason}
               onChange={(event) => setReason(event.target.value)}
@@ -203,11 +262,11 @@ export function SmsOptOutControl({
             </select>
           </label>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setClearNumber(undefined)} className="rounded border border-[color:var(--odos-line-2)] px-3 py-1 text-xs">
+            <button type="button" onClick={() => { setClearNumber(undefined); setRecording(false); }} className="rounded border border-[color:var(--odos-line-2)] px-3 py-1 text-xs">
               Cancel
             </button>
-            <button type="submit" disabled={clearing || !reason.trim() || !identityVerification} className="rounded bg-brand px-3 py-1 text-xs font-semibold text-[color:var(--odos-accent-ink)] disabled:opacity-50">
-              {clearing ? "Clearing…" : "Confirm re-enrollment"}
+            <button type="submit" disabled={clearing || !reason.trim() || !identityVerification || (recording && recordScope === "per-number" && !recordNumber)} className="rounded bg-brand px-3 py-1 text-xs font-semibold text-[color:var(--odos-accent-ink)] disabled:opacity-50">
+              {clearing ? (recording ? "Recording…" : "Clearing…") : recording ? "Confirm opt-out" : "Confirm re-enrollment"}
             </button>
           </div>
         </form>

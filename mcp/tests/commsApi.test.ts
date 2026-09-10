@@ -23,7 +23,7 @@ import {
   type CommsApiRouteDeps,
 } from "../src/comms/comms-api.js";
 import type { EducationContentItem } from "../src/comms/education-catalog.js";
-import { ODOS_COMMS_OPT_OUT_EXTENSION_URL } from "../src/comms/suppression-gate.js";
+import { checkMessageSuppression, updateInboundSuppression, ODOS_COMMS_OPT_OUT_EXTENSION_URL } from "../src/comms/suppression-gate.js";
 import { authenticateStaffRoute } from "../src/payments/payment-endpoint.js";
 import express from "express";
 
@@ -783,6 +783,124 @@ test("opt-out routes require one explicit Patient reference and expose no phone-
   } finally {
     await fixture.close();
   }
+});
+
+const OPT_OUT_RECORD_BODY = {
+  ...OPT_OUT_CLEAR_BODY,
+  reason: "Patient asked us to stop all texts",
+  scope: "global",
+} as const;
+
+test("B1 record rejects missing reason or identity without a Patient write", async () => {
+  const fixture = await startServer();
+  fixture.patients[0]!.extension = [];
+  const before = JSON.stringify(fixture.patients);
+  try {
+    for (const invalid of [
+      { reason: undefined }, { reason: "" }, { reason: "   " }, { reason: "x".repeat(2001) },
+      { identityVerification: undefined }, { identityVerification: true }, { identityVerification: "video-call" },
+    ]) {
+      const response = await request(fixture.base, "/communications/opt-out/record", "POST", { ...OPT_OUT_RECORD_BODY, ...invalid }, "staff");
+      assert.equal(response.status, 400, JSON.stringify(invalid));
+    }
+    assert.equal(JSON.stringify(fixture.patients), before);
+    assert.equal(fixture.attributedActors.length, 0);
+    assert.equal(fixture.provenances.length, 0);
+  } finally { await fixture.close(); }
+});
+
+test("B2 recorded global suppression blocks every SMS lane like STOP until clear", async () => {
+  const fixture = await startServer();
+  fixture.patients[0]!.extension = [];
+  try {
+    const response = await request(fixture.base, "/communications/opt-out/record", "POST", OPT_OUT_RECORD_BODY, "staff");
+    assert.equal(response.status, 200);
+    const gate = async (number: string) => checkMessageSuppression({
+      fhir: { read: async () => structuredClone(fixture.patients[0]!) } as never,
+      practiceTimeZone: "America/New_York", smsSenderNumber: number,
+      now: () => new Date("2026-09-10T16:00:00Z"),
+    }, { patientReference: PATIENT_REFERENCE, body: "Synthetic message", campaignType: "appointment-reminder", suppression: {} } as never, "sms");
+    for (const number of ["+18645550100", "+18485550100"]) {
+      assert.deepEqual((await gate(number)).result, { outcome: "suppressed", reason: "patient-opt-out" });
+    }
+    const provenance = fixture.provenances[0]!;
+    assert.equal(provenance.activity?.coding?.[0]?.code, "CREATE");
+    assert.equal(provenance.activity?.coding?.[0]?.display, "Record SMS opt-out (patient request)");
+    assert.equal(provenance.agent?.[0]?.who.reference, "Practitioner/staff");
+    assert.deepEqual(provenance.reason, [{ text: OPT_OUT_RECORD_BODY.reason }]);
+    assert.match(JSON.stringify(provenance.entity), /in-person/);
+    assert.match(JSON.stringify(provenance.entity), /global/);
+    const inboundPatient = structuredClone(fixture.patients[0]!);
+    inboundPatient.extension = [];
+    await updateInboundSuppression({
+      search: async () => ({ resourceType: "Bundle", type: "searchset", entry: [{ resource: inboundPatient }] }),
+      update: async (_type: string, _id: string, patient: Patient) => { inboundPatient.extension = patient.extension; return patient; },
+    } as never, { from: "+18645550199", to: "+18645550100", body: "STOP" });
+    assert.deepEqual(fixture.patients[0]!.extension?.[0], {
+      ...inboundPatient.extension![0], extension: inboundPatient.extension![0]!.extension!.filter((child) => child.url !== "number"),
+    });
+    assert.equal((await request(fixture.base, "/communications/opt-out/clear", "POST", OPT_OUT_CLEAR_BODY, "staff")).status, 200);
+    assert.equal((await gate("+18485550100")).result, undefined);
+  } finally { await fixture.close(); }
+});
+
+test("B3 global record widens and preserves every existing extension", async () => {
+  const fixture = await startServer();
+  fixture.patients[0]!.extension = [{ url: ODOS_COMMS_OPT_OUT_EXTENSION_URL, extension: [
+    { url: "channel", valueCode: "sms" }, { url: "number", valueString: "+18645550100" },
+  ] }];
+  const before = structuredClone(fixture.patients[0]!.extension);
+  try {
+    const response = await request(fixture.base, "/communications/opt-out/record", "POST", OPT_OUT_RECORD_BODY, "staff");
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json() as { remainingOptOuts: unknown }).remainingOptOuts, { global: true, numbers: ["+18645550100"] });
+    assert.deepEqual(fixture.patients[0]!.extension!.slice(0, before.length), before);
+    assert.equal(fixture.patients[0]!.extension!.length, before.length + 1);
+  } finally { await fixture.close(); }
+});
+
+test("B4 exact-scope repeats preserve bytes and write no second Provenance", async () => {
+  for (const scope of ["global", "per-number"]) {
+    const fixture = await startServer();
+    fixture.patients[0]!.extension = [];
+    try {
+      const body = { ...OPT_OUT_RECORD_BODY, scope, ...(scope === "per-number" ? { number: "+18645550100" } : {}) };
+      assert.equal((await request(fixture.base, "/communications/opt-out/record", "POST", body, "staff")).status, 200);
+      const before = JSON.stringify(fixture.patients[0]);
+      assert.equal((await request(fixture.base, "/communications/opt-out/record", "POST", body, "staff")).status, 200);
+      assert.equal(JSON.stringify(fixture.patients[0]), before);
+      assert.equal(fixture.provenances.length, 1);
+    } finally { await fixture.close(); }
+  }
+});
+
+test("B5 only action-holding staff can record an opt-out", async () => {
+  const fixture = await startServer();
+  fixture.patients[0]!.extension = [];
+  try {
+    for (const role of PRACTICE_ROLE_IDS) {
+      const response = await request(fixture.base, "/communications/opt-out/record", "POST", OPT_OUT_RECORD_BODY, role);
+      assert.equal(response.status, role === "staff" ? 200 : 403, role);
+    }
+    assert.equal(fixture.provenances.length, 1);
+  } finally { await fixture.close(); }
+});
+
+test("B6 record per-number requires E.164 and rejects ambiguous or unexpected fields", async () => {
+  const fixture = await startServer();
+  fixture.patients[0]!.extension = [];
+  try {
+    for (const invalid of [
+      { scope: "per-number" }, { scope: "per-number", number: "555-1234" },
+      { scope: "per-number", number: 123 }, { scope: "unknown" },
+      { scope: "global", number: "+18645550100" }, { unexpected: true }, { patientReference: "bad" },
+    ]) {
+      const response = await request(fixture.base, "/communications/opt-out/record", "POST", { ...OPT_OUT_RECORD_BODY, ...invalid }, "staff");
+      assert.equal(response.status, 400, JSON.stringify(invalid));
+    }
+    assert.equal(fixture.provenances.length, 0);
+    assert.deepEqual(fixture.patients[0]!.extension, []);
+  } finally { await fixture.close(); }
 });
 
 test("opt-out clear requires a non-empty reason and a named identity-verification method", async () => {

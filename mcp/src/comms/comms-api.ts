@@ -53,6 +53,7 @@ import {
 } from "./comms-persistence.js";
 import {
   clearPatientSmsOptOut,
+  recordPatientSmsOptOut,
   hasRecordedMarketingConsent,
   readPatientSmsOptOut,
   SMS_OPT_OUT_IDENTITY_VERIFICATION_METHODS,
@@ -535,6 +536,28 @@ export function registerCommsApiRoutes(
     async (staff) => {
       const patientReference = requiredPatientReference(queryString(req, "patient"));
       return { status: 200, body: await patientSmsOptOutState(staff.fhir, deps.dispatch, patientReference) };
+    },
+  ));
+
+  app.post("/communications/opt-out/record", async (req, res) => withStaff(
+    req, res, deps,
+    "communications.optout.manage", "Patient", "communications-opt-out-record",
+    patientReferenceFromBody(req.body),
+    async (staff) => {
+      const body = optOutRecordBody(req.body);
+      try {
+        const state = await recordPatientSmsOptOut(staff.fhir, body.patientReference, {
+          ...body,
+          actorReference: staff.staffReference,
+          actorRole: staff.actorRole,
+          policyUrl: staff.authorizationPolicyUrl,
+          recordedAt: deps.now?.() ?? new Date().toISOString(),
+        });
+        return { status: 200, body: { ...state, smsLanes: configuredSmsLanes(deps.dispatch) } };
+      } catch (error) {
+        if (isFhirNotFound(error)) throw new CommsApiNotFoundError("Patient not found.");
+        throw error;
+      }
     },
   ));
 
@@ -1781,6 +1804,23 @@ function requiredPatientReference(value: unknown): string {
     throw new CommsApiValidationError("patientReference must be Patient/<id>.");
   }
   return value;
+}
+
+function optOutRecordBody(value: unknown) {
+  const body = record(value);
+  if (body.scope !== "global" && body.scope !== "per-number") {
+    throw new CommsApiValidationError("scope must be global or per-number.");
+  }
+  const { scope, ...fields } = body;
+  const validated = optOutClearBody(fields);
+  if (scope === "global" && body.number !== undefined) {
+    throw new CommsApiValidationError("number is only accepted for per-number scope.");
+  }
+  return {
+    ...validated,
+    scope: scope as "global" | "per-number",
+    ...(scope === "per-number" ? { number: requiredE164(body.number, "number") } : {}),
+  };
 }
 
 function optOutClearBody(value: unknown): {
