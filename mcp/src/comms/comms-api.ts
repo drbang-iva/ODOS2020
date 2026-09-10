@@ -52,6 +52,7 @@ import {
 } from "./comms-persistence.js";
 import {
   clearPatientSmsOptOut,
+  hasRecordedMarketingConsent,
   readPatientSmsOptOut,
   SMS_OPT_OUT_IDENTITY_VERIFICATION_METHODS,
   type SmsOptOutIdentityVerification,
@@ -98,8 +99,7 @@ type CommsApiResult =
 const MAX_CALL_HISTORY_WINDOW = 1_000;
 const MAX_CONVERSATIONS_PER_PROVIDER = 100;
 const CONVERSATION_PROVIDER_TIMEOUT_MS = 10_000;
-export const ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL =
-  "https://odos2020.com/fhir/StructureDefinition/odos-comms-marketing-consent";
+export { ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL } from "./suppression-gate.js";
 const ODOS_COMMS_EDUCATION_SEND_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-education-send";
 const ODOS_COMMS_EDUCATION_ENROLLMENT_EVENT_IDENTIFIER_SYSTEM =
@@ -982,7 +982,8 @@ export async function prepareEducationSequenceDispatch(
   if (!provider.preflightSuppression) throw new CommsApiCapabilityError("Education sequence provider lacks a suppression preflight probe.");
   const result = await provider.preflightSuppression({
     patientReference: body.patientReference, body: url, subject: prepared.item.title,
-    campaignType: "clinical-education", campaignId: prepared.campaignId, messageId: body.idempotencyKey, suppression: {},
+    campaignType: "clinical-education", campaignId: prepared.campaignId, messageId: body.idempotencyKey,
+    suppression: prepared.item.consentClass === "marketing" ? { requiresMarketingConsent: true } : {},
   }, body.channel);
   if (result?.outcome === "rescheduled") return { kind: "deferred", notBefore: result.rescheduledAt };
   if (result?.outcome === "suppressed") return { kind: "held", reason: "patient-opt-out" };
@@ -1077,6 +1078,8 @@ export async function dispatchEducationAs(
     }
   }
   const { item, recipient, laneSelection, campaignId } = options.prepared ?? await prepareEducationDispatch(deps, staff.fhir, patient, body);
+  const requiredConsent = actor.kind === "system" && item.consentClass === "marketing"
+    ? { requiresMarketingConsent: true } : {};
   const frozenContext = (providerMessageIdentifierSystem: string): string => JSON.stringify({
     kind: "education-dispatch", executingReference: staff.executingReference, body, item, recipientValue: recipient.value, laneSelection, providerMessageIdentifierSystem,
   } satisfies FrozenEducationDispatch);
@@ -1174,7 +1177,7 @@ export async function dispatchEducationAs(
       campaignType: "clinical-education",
       campaignId,
       messageId: body.idempotencyKey,
-      suppression: {},
+      suppression: requiredConsent,
     });
     if (result.outcome === "sent") {
       await persistStaffSentSend(staff.fhir, {
@@ -1291,7 +1294,7 @@ export async function dispatchEducationAs(
     messageId: body.idempotencyKey,
     suppression: actor.kind === "staff" && item.consentClass === "transactional"
       ? { quietHoursExemption: "staff-initiated-chart-education" }
-      : {},
+      : requiredConsent,
   });
   if (result.outcome === "sent") {
     await persistStaffSentSms(staff.fhir, {
@@ -2418,15 +2421,6 @@ function requiredEmail(value: unknown, label: string): string {
     throw new CommsApiValidationError(`${label} must be a valid email address.`);
   }
   return value.trim();
-}
-
-function hasRecordedMarketingConsent(patient: Patient): boolean {
-  const consent = patient.extension?.find((extension) =>
-    extension.url === ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL);
-  if (!consent) return false;
-  const allowed = consent.extension?.find((part) => part.url === "consent")?.valueBoolean;
-  const recorded = consent.extension?.find((part) => part.url === "recorded")?.valueDateTime;
-  return allowed === true && typeof recorded === "string" && !Number.isNaN(Date.parse(recorded));
 }
 
 function numberFromQuery(req: Request, name: string, min: number, max: number): number | undefined {

@@ -11,6 +11,8 @@ import type {
 } from "./comms-provider.js";
 import type { InboundMessageEvent, InboundOptOutType } from "./inbound-receiver.js";
 
+export const ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-comms-marketing-consent";
 export const ODOS_COMMS_OPT_OUT_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out";
 export const ODOS_PATIENT_TIMEZONE_EXTENSION_URL =
@@ -344,7 +346,7 @@ export async function checkMessageSuppression(
 ): Promise<{ patient: Patient; now: Date; result?: Exclude<SendResult, { outcome: "sent" }> }> {
   const now = deps.now?.() ?? new Date();
   const patient = await readPatient(deps.fhir, request.patientReference);
-  if (isOptedOut(
+  if ((request.suppression.requiresMarketingConsent && !hasRecordedMarketingConsent(patient)) || isOptedOut(
     patient,
     channel,
     request.campaignType,
@@ -381,6 +383,15 @@ export async function checkMessageSuppression(
     } };
   }
   return { patient, now };
+}
+
+export function hasRecordedMarketingConsent(patient: Patient): boolean {
+  const consent = patient.extension?.find((extension) =>
+    extension.url === ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL);
+  if (!consent) return false;
+  const allowed = consent.extension?.find((part) => part.url === "consent")?.valueBoolean;
+  const recorded = consent.extension?.find((part) => part.url === "recorded")?.valueDateTime;
+  return allowed === true && typeof recorded === "string" && !Number.isNaN(Date.parse(recorded));
 }
 
 async function readPatient(fhir: Pick<MedplumClient, "read">, reference: string): Promise<Patient> {

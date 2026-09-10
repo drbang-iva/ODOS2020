@@ -8,6 +8,7 @@ export interface CommsCapabilities {
 }
 
 export interface SuppressionContext {
+  requiresMarketingConsent?: boolean;
   frequencyCapDays?: number;
   quietHoursExemption?: "staff-initiated-chart-education";
 }

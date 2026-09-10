@@ -252,3 +252,64 @@ TypeScript build exit 0. Regression exit 0:
 `git diff --check`: exit 0, no output.
 
 Existing staff route and suppression tests remain green. New fake Communication versions use opaque UUIDs and verify If-Match headers. These author tests do not prove real AccessPolicy enforcement or real FHIR concurrency. Parent worker admission/claim/live-FHIR evidence and independent Opus evaluation remain separate gates. No new medical codes, FHIR URLs, clinical decisions, or Mandate 14 ledger entries were introduced.
+
+## Author fixback — marketing consent revoked after preparation
+
+A reachable defect existed in the prepared system path: it reused the prepared item and skipped the original catalog/consent preparation. The suppression wrapper reread Patient for opt-out and quiet hours, but did not inspect recorded marketing consent. An email probe using a stale Patient and prepared snapshot, followed by removal of recorded consent from the live fake Patient, returned `sent` instead of the expected suppression. Initial test-first run: 10 tests, 9 pass, 1 fail.
+
+The existing consent predicate and extension constant now have one owner in `suppression-gate.ts`, with the old comms-api constant export retained for callers. System marketing requests carry `requiresMarketingConsent` to both preflight and final gate. The final gate checks that condition against the Patient it freshly reads and returns a durable patient-opt-out suppression before invoking the adapter. SMS and email tests prove the same boundary. Staff transactional SMS alone retains the staff quiet-hours exemption; staff marketing SMS and staff email retain their existing suppression context. No new code or artifact URL was introduced; the existing constant and predicate were moved unchanged.
+
+The receipt recovery probe sends with recorded consent, removes consent and the catalog, then makes Patient reads fail: the recorded receipt still reconciles with one total adapter invocation.
+
+Mutation: remove `(request.suppression.requiresMarketingConsent && !hasRecordedMarketingConsent(patient)) ||` from the shared final gate. The two revocation tests turn red with actual `sent` instead of expected `suppressed`.
+
+```sh
+npm --prefix mcp test -- tests/educationDispatchActor.test.ts
+```
+
+Broken exit 1:
+
+```text
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 10
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 355.971
+```
+
+Restored exit 0:
+
+```text
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 342.886875
+```
+
+Author regression command is the same six-file command recorded above; exit 0:
+
+```text
+  ...
+1..172
+# tests 172
+# suites 0
+# pass 172
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2068.919292
+```
+
+TypeScript build exit 0. This remains author verification, not an independent evaluation.

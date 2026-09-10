@@ -164,3 +164,68 @@ test("staff actor reconciles frozen system receipt with original executor and ca
   assert.ok(provenance.agent.some((agent: any) => agent.who.reference === f.actor.onBehalfOf));
   assert.equal(f.requests.length, 1);
 });
+
+for (const channel of ["email", "sms"] as const) {
+test(`final gate refuses prepared system marketing ${channel} after consent is revoked`, async () => {
+  const f = fixture();
+  f.item.consentClass = "marketing";
+  f.patient.extension = [{
+    url: api.ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL,
+    extension: [
+      { url: "consent", valueBoolean: true },
+      { url: "recorded", valueDateTime: "2026-09-10T14:00:00Z" },
+    ],
+  }];
+  f.body.channel = channel;
+  if (channel === "sms") {
+    f.item.channels = ["sms"];
+    f.item.urls.web = "https://example.invalid/education";
+    f.patient.telecom = [{ system: "phone", value: "+15555550100" }];
+    f.provider.sendSms = f.provider.sendEmail;
+    f.deps.publicBaseUrl = "https://example.invalid";
+    f.deps.practiceName = "Synthetic";
+    f.deps.trackedLinkStore = { create: async () => undefined };
+  }
+  const stalePatient = structuredClone(f.patient);
+  const provider = createSuppressedCommsProvider(f.provider, {
+    fhir: f.fhir, practiceTimeZone: "America/New_York", now: () => new Date("2026-09-10T15:00:00Z"),
+  });
+  f.deps.dispatch.getAdapterForRole = () => provider;
+  const preparation = await api.prepareEducationSequenceDispatch(f.deps, f.fhir, stalePatient, f.body);
+  assert.equal(preparation.kind, "ready");
+  if (preparation.kind !== "ready") throw Error("expected ready");
+  f.patient.extension = [];
+  const result = await api.dispatchEducationAs(f.actor, f.deps, stalePatient, f.body, { prepared: preparation.prepared });
+  assert.deepEqual(result, { outcome: "suppressed", reason: "patient-opt-out" });
+  assert.equal(f.requests.length, 0);
+  const evidence = await api.readEducationDispatchEvidence(f.fhir, f.body, f.actor.onBehalfOf);
+  assert.deepEqual(evidence?.outcome, result);
+  f.fhir.read = async () => { throw Error("frozen reconciliation must not recheck consent"); };
+  assert.deepEqual(await api.dispatchEducationAs(f.actor, f.deps, undefined, f.body, { reconcileOnly: true }), result);
+});
+
+}
+
+test("recorded system marketing receipt reconciles after consent and catalog are withdrawn", async () => {
+  const f = fixture();
+  f.item.consentClass = "marketing";
+  f.patient.extension = [{
+    url: api.ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL,
+    extension: [
+      { url: "consent", valueBoolean: true },
+      { url: "recorded", valueDateTime: "2026-09-10T14:00:00Z" },
+    ],
+  }];
+  const provider = createSuppressedCommsProvider(f.provider, {
+    fhir: f.fhir, practiceTimeZone: "America/New_York", now: () => new Date("2026-09-10T15:00:00Z"),
+  });
+  f.deps.dispatch.getAdapterForRole = () => provider;
+  const result = await api.dispatchEducationAs(f.actor, f.deps, f.patient, f.body);
+  assert.equal(result.outcome, "sent");
+  assert.deepEqual(f.requests[0].suppression, { requiresMarketingConsent: true });
+  f.patient.extension = [];
+  f.deps.educationCatalog.get = () => { throw Error("withdrawn catalog"); };
+  f.fhir.read = async () => { throw Error("mutable patient unavailable"); };
+  assert.deepEqual(await api.dispatchEducationAs(f.actor, f.deps, undefined, f.body, { reconcileOnly: true }), result);
+  assert.equal(f.requests.length, 1);
+});
