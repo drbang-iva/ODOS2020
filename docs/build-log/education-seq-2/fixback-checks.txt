@@ -1,0 +1,202 @@
+hold-red (actual test-output excerpts)
+not ok 234 - final opt-out suppression holds the claimed row without recording delivery or retrying
+  ---
+  duration_ms: 3.58025
+  type: 'test'
+  location: '/private/tmp/odos-seq2-fixback/mcp/tests/educationSequenceWorker.test.ts:1:6175'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'scheduled'
+    - 'held'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'held'
+  actual: 'scheduled'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-seq2-fixback/mcp/tests/educationSequenceWorker.test.ts:108:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+  ...
+1..260
+# tests 260
+# suites 0
+# pass 259
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4898.396875
+
+cascade-red (actual test-output excerpts)
+not ok 233 - preflight opt-out holds the due row and future same-channel rows while leaving email untouched
+  ---
+  duration_ms: 3.361042
+  type: 'test'
+  location: '/private/tmp/odos-seq2-fixback/mcp/tests/educationSequenceWorker.test.ts:1:5148'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'scheduled'
+    - 'held'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'held'
+  actual: 'scheduled'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-seq2-fixback/mcp/tests/educationSequenceWorker.test.ts:83:16)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+  ...
+1..260
+# tests 260
+# suites 0
+# pass 259
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4501.030834
+
+channel-red (actual test-output excerpts)
+not ok 233 - preflight opt-out holds the due row and future same-channel rows while leaving email untouched
+  ---
+  duration_ms: 3.668042
+  type: 'test'
+  location: '/private/tmp/odos-seq2-fixback/mcp/tests/educationSequenceWorker.test.ts:1:5148'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        activationId: '47a51f03ff07bd4772e6543004337ec4326a31f975fdd76ce27cff04e7b12bc0',
+        anchor: 'stage-entry',
+        attempts: [],
+        blockedBySendIndices: [],
+    ...
+        dayInterpretation: 'calendar',
+    +   disposition: 'held',
+    -   disposition: 'scheduled',
+        events: [
+          {
+            actor: 'Practitioner/synthetic',
+            at: '2026-09-07T14:00:00.000Z',
+            kind: 'started',
+            reason: 'sequence-authorized'
+          },
+    +     {
+    +       actor: 'Practitioner/synthetic',
+    +       at: '2026-09-10T14:00:00.000Z',
+    +       kind: 'held',
+    +       reason: 'patient-opt-out'
+    +     }
+        ],
+    +   holdReason: 'patient-opt-out',
+        id: 'education-sequence-row:e4c98c45f097362297ba97d19ff5e1851be033de16b716da3f92b04f88e35963',
+        lane: 'clinical',
+        latestUsefulTime: '2026-09-15T14:00:00.000Z',
+        notBefore: '2026-09-12T14:00:00.000Z',
+        offsetDays: 1,
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    stepIndex: 2
+    channel: 'email'
+    lane: 'clinical'
+    content:
+      id: 'content'
+      version: 1
+    recipientReference: 'Patient/one'
+    plannedAt: '2026-09-08T14:00:00.000Z'
+    notBefore: '2026-09-12T14:00:00.000Z'
+    latestUsefulTime: '2026-09-15T14:00:00.000Z'
+    anchor: 'stage-entry'
+    offsetDays: 1
+    dayInterpretation: 'calendar'
+    timezone: 'America/New_York'
+    id: 'education-sequence-row:e4c98c45f097362297ba97d19ff5e1851be033de16b716da3f92b04f88e35963'
+    activationId: '47a51f03ff07bd4772e6543004337ec4326a31f975fdd76ce27cff04e7b12bc0'
+    senderReference: 'Practitioner/synthetic'
+    disposition: 'scheduled'
+    blockedBySendIndices:
+    attempts:
+    events:
+      0:
+        kind: 'started'
+        actor: 'Practitioner/synthetic'
+        at: '2026-09-07T14:00:00.000Z'
+        reason: 'sequence-authorized'
+  actual:
+    stepIndex: 2
+    channel: 'email'
+    lane: 'clinical'
+    content:
+      id: 'content'
+      version: 1
+    recipientReference: 'Patient/one'
+    plannedAt: '2026-09-08T14:00:00.000Z'
+    notBefore: '2026-09-12T14:00:00.000Z'
+    latestUsefulTime: '2026-09-15T14:00:00.000Z'
+    anchor: 'stage-entry'
+    offsetDays: 1
+    dayInterpretation: 'calendar'
+    timezone: 'America/New_York'
+    id: 'education-sequence-row:e4c98c45f097362297ba97d19ff5e1851be033de16b716da3f92b04f88e35963'
+    activationId: '47a51f03ff07bd4772e6543004337ec4326a31f975fdd76ce27cff04e7b12bc0'
+    senderReference: 'Practitioner/synthetic'
+    disposition: 'held'
+    blockedBySendIndices:
+    attempts:
+    events:
+      0:
+        kind: 'started'
+        actor: 'Practitioner/synthetic'
+        at: '2026-09-07T14:00:00.000Z'
+        reason: 'sequence-authorized'
+      1:
+        kind: 'held'
+        actor: 'Practitioner/synthetic'
+        at: '2026-09-10T14:00:00.000Z'
+        reason: 'patient-opt-out'
+    holdReason: 'patient-opt-out'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-seq2-fixback/mcp/tests/educationSequenceWorker.test.ts:88:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+  ...
+1..260
+# tests 260
+# suites 0
+# pass 259
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4616.874709
+
+green (actual test-output excerpts)
+  ...
+1..260
+# tests 260
+# suites 0
+# pass 260
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4466.153459

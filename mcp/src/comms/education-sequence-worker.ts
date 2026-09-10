@@ -1,3 +1,9 @@
+/**
+ * Must not be enabled for a live practice until ODOS can read a per-patient
+ * Education communication permission. Eyefinity defaults Education to Mail only;
+ * sending without consulting that permission may use a channel the record does not permit.
+ * See performance-od/decisions/2026-09-10-eyefinity-communication-methods-matrix-is-the-consent-model.md.
+ */
 import type { Basic, Bundle, Encounter, Resource } from "@medplum/fhirtypes";
 import type { EducationEnrollment, EducationEnrollmentFhir, EducationEnrollmentSendOutcome, EducationEnrollmentStore } from "./education-enrollment.js";
 import type { EducationScheduledSend, EducationSchedulingHoldReason } from "./education-sequence.js";
@@ -177,6 +183,8 @@ async function reconcileRow(deps: EducationSequenceWorkerDeps, snapshot: Schedul
         await recordAcceptance(deps, snapshot, row, attempt.attemptKey, proof.acceptedAt);
     }
     else if (recorded.outcome?.outcome === "suppressed") {
+        // Known issue: the suppression gate also labels absent marketing consent patient-opt-out,
+        // unlike staff dispatch's marketing-consent-absent. Defer a sixth hold reason to the matrix slice.
         await hold(deps, snapshot, row, "patient-opt-out", "patient-opt-out", at);
     }
 }

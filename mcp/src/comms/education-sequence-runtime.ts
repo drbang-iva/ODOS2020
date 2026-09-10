@@ -12,6 +12,9 @@ export function educationSequenceRuntimeConfig(env: NodeJS.ProcessEnv): {
     spacingEnabled: boolean;
     resolveCalendar: EducationBusinessCalendarResolver;
 } | undefined {
+    // Must not enable for a live practice until ODOS can read per-patient Education communication permission.
+    // Eyefinity defaults Education to Mail only; other channels require the patient's permission.
+    // See performance-od/decisions/2026-09-10-eyefinity-communication-methods-matrix-is-the-consent-model.md.
     if (env.ODOS_EDUCATION_SEQUENCE_WORKER_ENABLED !== "true")
         return undefined;
     const actorReference = env.ODOS_EDUCATION_SEQUENCE_ACTOR_REFERENCE ?? "";

@@ -1,4 +1,48 @@
-# ODOS-SEQ-2 sealed author bundle
+# ODOS-SEQ-2 fixback author bundle
+
+Status: fixback implemented; PR publication follows this commit. Needs independent Claude Opus 5 (extra) evaluation at the final PR head. Do not merge or enable for a live practice.
+
+Branch: `drbang-iva/education-seq-2`; fixback base `cc3c5a41ddea8b2909a9a737cc7dd97cec38ec5c`; worktree `/private/tmp/odos-seq2-fixback`. Freshly fetched `origin/main`: `0ddc50c4208234e174640fec8677dc38b1b94f2d`.
+
+## Fixback result and files
+
+- `mcp/tests/educationSequenceWorker.test.ts`: final suppression-result test verifies a reachable scheduled → claimed/in-flight → resolved/suppressed → held path, exact `patient-opt-out` reason, no delivery/acceptance and no retry. Strengthened the existing preflight test using store-created SMS/SMS/email rows, with future rows not yet due: one prepare invocation, both SMS rows held without attempts, and the entire email row byte-equivalent as an object. These are two distinct production paths, not a claim that final-result reconciliation itself cascades future holds.
+- `mcp/src/comms/education-sequence-worker.ts`: module docblock records the live-practice Education permission prerequisite; comment at the suppressed-result hold records the deferred wording issue.
+- `mcp/src/comms/education-sequence-runtime.ts`: same prerequisite beside enable-flag validation.
+- This bundle and `fixback-checks.txt`: author verification evidence. Earlier evidence below is historical and has not been relabelled as freshly executed.
+
+No pre-existing marketing-consent behavior was removed. `git show 2047ace4:mcp/src/comms/comms-api.ts` with `rg -c 'marketing-consent-absent|hasRecordedMarketingConsent'` returns **3**. Both `comms-api.ts` and `suppression-gate.ts` are byte-identical to the fixback base. Production changes in this fixback are comments only.
+
+## Fresh checks and break/restore proof
+
+Full targeted command, from the task root:
+
+```sh
+npm --prefix mcp test -- tests/commsApi.test.ts tests/commsSuppression.test.ts tests/commsConfig.test.ts tests/commsPersistence.test.ts tests/educationEnrollmentApi.test.ts tests/educationDispatchActor.test.ts tests/educationEnrollment.test.ts tests/educationSequence.test.ts tests/educationSequenceFhir.test.ts tests/educationSequenceTiming.test.ts tests/educationSequenceWorker.test.ts tests/educationSequenceWorkerStore.test.ts tests/educationSequenceRuntime.test.ts tests/educationSequenceOperations.test.ts
+```
+
+| Deliberate mutation (one at a time, restored in finally) | Pass | Fail | Exit |
+| --- | ---: | ---: | ---: |
+| Delete final suppressed-result `await hold(...patient-opt-out...)` | 259 | 1 | 1 |
+| Disable future same-channel preflight cascade | 259 | 1 | 1 |
+| Remove channel equality from preflight cascade | 259 | 1 | 1 |
+| Restore original worker byte-for-byte | 260 | 0 | 0 |
+
+All four runs: 260 tests, zero cancelled, skipped or todo. Before mutations, worker-only test file: **24 pass / 0 fail / 0 skipped**, exit 0. Reachability assertions passed before mutation. Failures were the intended assertions: scheduled instead of held (first two), and an email row incorrectly changed to held (third). Actual failure excerpts and summary output: [fixback-checks.txt](fixback-checks.txt).
+
+`npm --prefix mcp run build`: `tsc`, exit 0. `npm run preflight`: **0 warning(s), 0 hard block(s)**, exit 0. `git diff --check`: exit 0. Installed dependency directories are shared via local symlinks; manifests and lockfiles are unchanged. No live stack or provider was used for this test/comment fixback.
+
+## Known issue, risks and handoff
+
+The worker suppression gate reports absent marketing consent as `patient-opt-out`; staff dispatch correctly reports `marketing-consent-absent`. The worker wording propagates to the append-only hold event log. A sixth hold-reason value is deliberately deferred to the Communication Methods matrix slice; no enum was added.
+
+The worker must not be enabled for a live practice until ODOS can read per-patient **Education** communication permission. The kickoff records Eyefinity's Education default as Mail only. This fixback documents the prerequisite; it does not implement or enforce the matrix. Disabled-by-default behavior is unchanged. Cross-repo follow-up: matrix slice and independent Claude Opus 5 (extra) evaluation. No new decisions or Mandate 14 artifacts: decisions/INDEX.md and code-binding ledgers require no additions for this fixback.
+
+No fields, renames, clock changes, stage transition path, FHIR resource types, AccessPolicy rows, or consent behavior changes were introduced by this fixback. Author checks are not an independent verdict. Historical live-proof limitations below still apply.
+
+---
+
+# Historical ODOS-SEQ-2 sealed author bundle
 
 Status: **implemented; needs independent Claude Opus 5 (EXTRA) evaluation**. No PR, push, merge or runtime enablement. Author is Codex; this is not an evaluation verdict.
 

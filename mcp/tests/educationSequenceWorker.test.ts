@@ -22,7 +22,7 @@ test("late acceptance after acknowledgement settles the row without rewriting ac
     assert.equal(result.scheduledSends![0].disposition, "closed");
     assert.equal(f.calls.length, 1);
 });
-async function fixture(patients = ["one", "two"], channel: "sms" | "print" = "sms") {
+async function fixture(patients = ["one", "two"], channel: "sms" | "print" | ("sms" | "email")[] = "sms") {
     const data = new Map<string, Basic>();
     const calls: string[] = [];
     const items: unknown[] = [];
@@ -38,7 +38,7 @@ async function fixture(patients = ["one", "two"], channel: "sms" | "print" = "sm
             throw Object.assign(new Error("stale"), { status: 412 }); const saved = { ...structuredClone(resource) as Basic, meta: { versionId: randomUUID(), project: "practice" } }; data.set(id, saved); return structuredClone(saved) as T; } };
     const store = createFhirEducationEnrollmentStore(fhir);
     for (const patient of patients) {
-        const input: NewEducationEnrollment = { patientReference: `Patient/${patient}`, journey: { id: "journey", version: 1 }, currentStageId: "start", stageEnteredAt: "2026-09-07T14:00:00.000Z", enteredFromEncounterReference: `Encounter/${patient}`, enrolledBy: "Practitioner/synthetic", status: "active", stageHistory: [{ stageId: "start", enteredAt: "2026-09-07T14:00:00.000Z", enteredBy: "Practitioner/synthetic", reason: "enrollment-recorded" }], immediateSends: [], requestId: patient, sequence: { id: "sequence", version: 1, steps: [0, 1].map(stepIndex => ({ stepIndex, channel, lane: "clinical", content: { id: "content", version: 1 }, recipientReference: `Patient/${patient}`, plannedAt: "2026-09-08T14:00:00.000Z", notBefore: "2026-09-08T14:00:00.000Z", latestUsefulTime: "2026-09-15T14:00:00.000Z", anchor: "stage-entry", offsetDays: 1, dayInterpretation: "calendar", timezone: "America/New_York" })) } };
+        const input: NewEducationEnrollment = { patientReference: `Patient/${patient}`, journey: { id: "journey", version: 1 }, currentStageId: "start", stageEnteredAt: "2026-09-07T14:00:00.000Z", enteredFromEncounterReference: `Encounter/${patient}`, enrolledBy: "Practitioner/synthetic", status: "active", stageHistory: [{ stageId: "start", enteredAt: "2026-09-07T14:00:00.000Z", enteredBy: "Practitioner/synthetic", reason: "enrollment-recorded" }], immediateSends: [], requestId: patient, sequence: { id: "sequence", version: 1, steps: (Array.isArray(channel) ? channel : [channel, channel]).map((channel, stepIndex) => ({ stepIndex, channel, lane: "clinical", content: { id: "content", version: 1 }, recipientReference: `Patient/${patient}`, plannedAt: "2026-09-08T14:00:00.000Z", notBefore: "2026-09-08T14:00:00.000Z", latestUsefulTime: "2026-09-15T14:00:00.000Z", anchor: "stage-entry", offsetDays: 1, dayInterpretation: "calendar", timezone: "America/New_York" })) } };
         await store.create(input);
     }
     const deps: EducationSequenceWorkerDeps = { fhir, projectId: "practice", authenticate: async () => { }, now: () => at, store,
@@ -67,14 +67,54 @@ test("worker starts immediately, unrefs its timer and contains sweep errors", as
     assert.throws(() => educationSequenceWorkerIntervalMs("14999"));
     assert.throws(() => educationSequenceWorkerIntervalMs("NaN"));
 });
-test("preflight opt-out persists holds on every future same-channel row", async () => {
-    const f = await fixture(["one"]);
-    f.deps.prepare = async () => ({ kind: "held", reason: "patient-opt-out" });
+test("preflight opt-out holds the due row and future same-channel rows while leaving email untouched", async () => {
+    const f = await fixture(["one"], ["sms", "sms", "email"]);
+    editRows(f, row => { if (row.stepIndex > 0) row.notBefore = "2026-09-12T14:00:00.000Z"; });
+    const id = [...f.data.keys()][0];
+    const before = (await f.store.read(id))!;
+    assert.equal(before.scheduledSends!.length, 3);
+    assert.ok(before.scheduledSends!.every(row => row.disposition === "scheduled"));
+    const prepared: string[] = [];
+    f.deps.prepare = async (_enrollment, row) => { prepared.push(row.id); return { kind: "held", reason: "patient-opt-out" }; };
     await runOnce(f.deps);
-    const e = (await f.store.read([...f.data.keys()][0]))!;
-    assert.ok(e.scheduledSends!.every(row => row.disposition === "held" && row.holdReason === "patient-opt-out"));
+    const e = (await f.store.read(id))!;
+    assert.deepEqual(prepared, [before.scheduledSends![0].id]);
+    for (const row of e.scheduledSends!.slice(0, 2)) {
+        assert.equal(row.disposition, "held");
+        assert.equal(row.holdReason, "patient-opt-out");
+        assert.equal(row.attempts.length, 0);
+        assert.equal(row.events.at(-1)?.reason, "patient-opt-out");
+    }
+    assert.deepEqual(e.scheduledSends![2], before.scheduledSends![2]);
     assert.equal(e.immediateSends.length, 0);
-    assert.ok(f.items.length > 0);
+    assert.equal(f.calls.length, 0);
+});
+test("final opt-out suppression holds the claimed row without recording delivery or retrying", async () => {
+    const f = await fixture(["one"]);
+    editRows(f, row => { if (row.stepIndex === 1) row.notBefore = "2026-09-12T14:00:00.000Z"; });
+    const id = [...f.data.keys()][0];
+    const before = (await f.store.read(id))!;
+    assert.equal(before.scheduledSends![0].disposition, "scheduled");
+    let gateCalls = 0;
+    f.deps.execute = async (enrollment, row) => {
+        assert.equal(enrollment.immediateSends[row.attempts.at(-1)!.sendIndex].state, "in-flight");
+        gateCalls++;
+        return { outcome: "suppressed", reason: "patient-opt-out" };
+    };
+    await runOnce(f.deps);
+    await runOnce(f.deps);
+    const e = (await f.store.read(id))!;
+    const row = e.scheduledSends![0];
+    assert.equal(row.disposition, "held");
+    assert.equal(row.holdReason, "patient-opt-out");
+    assert.equal(row.events.at(-1)?.reason, "patient-opt-out");
+    assert.equal(row.attempts.length, 1);
+    assert.equal(row.attempts[0].acceptedAt, undefined);
+    assert.equal(e.immediateSends.length, 1);
+    assert.equal(e.immediateSends[0].state, "resolved");
+    assert.deepEqual(e.immediateSends[0].outcome, { outcome: "suppressed", reason: "patient-opt-out" });
+    assert.equal(gateCalls, 1);
+    assert.equal(f.calls.length, 0);
 });
 test("print rows become staff tasks without preflight or electronic admission", async () => {
     const f = await fixture(["one"], "print");
