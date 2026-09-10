@@ -20,6 +20,7 @@ import {
   type CommsChannelRole,
 } from "./comms-config.js";
 import type { CommsProvider, ConversationSummary } from "./comms-provider.js";
+import type { EducationSequenceOperations } from "./education-sequence-operations.js";
 import type { EducationCatalogReader, EducationContentItem } from "./education-catalog.js";
 import {
   EducationEnrollmentDuplicateError,
@@ -73,6 +74,7 @@ export interface CommsApiRouteDeps {
   dispatch: CommsDispatch;
   educationCatalog: EducationCatalogReader;
   enrollmentStore?: EducationEnrollmentStore;
+  sequenceOperations?: EducationSequenceOperations;
   trackedLinkStore: TrackedLinkStore;
   publicBaseUrl: string;
   practiceName: string;
@@ -120,6 +122,35 @@ export function registerCommsApiRoutes(
   app: Pick<Application, "get" | "post">,
   deps: CommsApiRouteDeps,
 ): void {
+  app.get("/communications/education/sequence-work", async (req, res) => withStaff(
+    req, res, deps, "communications.read", "Task", "communications-education-sequence-work-list", undefined,
+    async (staff) => {
+      if (!deps.sequenceOperations) throw new CommsApiCapabilityError("Education sequence operations are not configured.");
+      const items = await deps.sequenceOperations.list();
+      return { status: 200, body: { items: staff.roles.includes("provider") ? items : items.map(item => ({ ...item, allowedActions: [] })) } };
+    },
+  ));
+  app.post("/communications/education/enrollments/:enrollmentId/scheduled-sends/:rowId/review", async (req, res) => withStaff(
+    req, res, deps, "communications.send", "Basic", "communications-education-sequence-review", undefined,
+    async (staff) => {
+      if (!deps.sequenceOperations) throw new CommsApiCapabilityError("Education sequence operations are not configured.");
+      if (!staff.roles.includes("provider")) throw new CommsApiRefusalError("practitioner-review-required");
+      const body = record(req.body);
+      if (body.action !== "skip" && body.action !== "resume") throw new CommsApiValidationError("Review action must be skip or resume.");
+      const result = await deps.sequenceOperations.review(
+        resourceKey(req.params.enrollmentId, "enrollment id"),
+        requiredText(req.params.rowId, "scheduled row id", 128),
+        {
+          action: body.action,
+          reason: requiredText(body.reason, "review reason", 1000),
+          expectedVersion: requiredText(body.expectedVersion, "enrollment version", 128),
+          actorReference: staff.staffReference,
+          ...(body.reviewedEncounterReference !== undefined ? { reviewedEncounterReference: requiredText(body.reviewedEncounterReference, "reviewed encounter", 128) } : {}),
+        }, staff.fhir,
+      );
+      return { status: 200, body: result };
+    },
+  ));
   app.get("/communications/education", async (req, res) => withStaff(
     req,
     res,
