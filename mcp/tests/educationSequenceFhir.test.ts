@@ -36,8 +36,8 @@ test("FHIR concurrent lifecycle writers refuse stale UUID If-Match, and missing 
   const results = await Promise.allSettled([store.stopSequence(row.id, { activationId: row.activations![0]!.id, actor, at, reason: "stop" }), store.admitSequence(row.id, { requestId: "second", sequence: sequence(), authorizedBy: actor, authorizedAt: at })]);
   assert.equal(results.filter(r => r.status === "fulfilled").length, 1);
   assert.equal(results.filter(r => r.status === "rejected" && (r.reason as {
-    status?: number;
-  }).status === 412).length, 1);
+    message?: string;
+  }).message === "stale-enrollment-version").length, 1);
   assert.equal((await store.read(row.id))!.scheduledSends![0]!.disposition, "cancelled");
   delete db.persisted.meta;
   const writes = db.writes;

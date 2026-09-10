@@ -90,6 +90,14 @@ export interface EducationSequenceStop extends EducationLifecycleContext {
 export class EducationSequenceAdmissionError extends Error {
   constructor(readonly reason: string) { super(reason); this.name = "EducationSequenceAdmissionError"; }
 }
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
+      .map(([key, item]) => [key, canonicalize(item)]));
+  }
+  return value;
+}
 function hash(value: unknown): string { return createHash("sha256").update(JSON.stringify(value)).digest("hex"); }
 export function educationSequenceRowId(activationId: string, stepIndex: number, channel: EducationSequenceStep["channel"]): string {
   return `education-sequence-row:${hash([activationId, stepIndex, channel])}`;
@@ -167,7 +175,7 @@ export function admitEducationSequence(enrollment: EducationEnrollment, admissio
   reference(admission.authorizedBy, ["Practitioner"], "authorizing-practitioner");
   if (!Number.isFinite(Date.parse(admission.authorizedAt)))
     throw new EducationSequenceAdmissionError("authorization-time-invalid");
-  const requestFingerprint = hash(admission.sequence);
+  const requestFingerprint = hash(canonicalize(admission.sequence));
   const existing = enrollment.activations?.find(a => a.requestId === admission.requestId);
   if (existing) {
     if (existing.requestFingerprint !== requestFingerprint)

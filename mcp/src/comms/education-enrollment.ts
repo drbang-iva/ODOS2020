@@ -318,8 +318,22 @@ export function createFhirEducationEnrollmentStore(
       }
       return parseEnrollment(persisted);
     },
-    async admitSequence(id, admission) { return mutateEnrollment(fhir, id, row => admitEducationSequence(row, admission)); },
-    async stopSequence(id, stop) { return mutateEnrollment(fhir, id, row => stopEducationSequence(row, stop)); },
+    async admitSequence(id, admission) {
+      try {
+        return await mutateEnrollment(fhir, id, row => admitEducationSequence(row, admission));
+      } catch (error) {
+        if (isFhirConflict(error)) throw new EducationSequenceAdmissionError("stale-enrollment-version");
+        throw error;
+      }
+    },
+    async stopSequence(id, stop) {
+      try {
+        return await mutateEnrollment(fhir, id, row => stopEducationSequence(row, stop));
+      } catch (error) {
+        if (isFhirConflict(error)) throw new EducationSequenceAdmissionError("stale-enrollment-version");
+        throw error;
+      }
+    },
     async applyLifecycle(id, context) { return mutateEnrollment(fhir, id, row => applyEducationEnrollmentLifecycle(row, context)); },
     async read(id) {
       try {

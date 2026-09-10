@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { test } from "node:test";
 import { createInMemoryEducationEnrollmentStore, type NewEducationEnrollment } from "../src/comms/education-enrollment.js";
 import { educationSequenceRowId, enrollmentAdmissionBytes, type EducationSequenceInput } from "../src/comms/education-sequence.js";
@@ -39,4 +40,38 @@ test("create retry refuses changed clinical context", async () => {
   await store.create(body);
   for (const patch of [{ currentStageId: "changed" }, { journey: { id: "journey", version: 2 } }, { immediateSends: [{ content: { id: "content", version: 1 }, channel: "sms" as const, lane: "clinical" as const }] }])
     await assert.rejects(store.create({ ...body, ...patch }), /request-id-conflict/);
+});
+
+function reverseObjectKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(reverseObjectKeys);
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).reverse().map(([key, item]) => [key, reverseObjectKeys(item)]));
+  return value;
+}
+
+test("reordered object keys replay without changing activation or rows", async () => {
+  const store = createInMemoryEducationEnrollmentStore();
+  const row = await store.create(input());
+  const admission = { requestId: "canonical-retry", sequence: sequence(2), authorizedAt: at, authorizedBy: actor };
+  const first = await store.admitSequence(row.id, admission);
+  const legacyId = createHash("sha256").update(JSON.stringify([row.id, admission.requestId])).digest("hex");
+  assert.equal(first.activations![0]!.id, legacyId);
+  const reordered = reverseObjectKeys(admission.sequence) as EducationSequenceInput;
+  assert.notEqual(JSON.stringify(reordered), JSON.stringify(admission.sequence));
+  const replay = await store.admitSequence(row.id, { ...admission, sequence: reordered });
+  assert.deepEqual(replay, first);
+  assert.equal(replay.activations!.length, 1);
+  assert.equal(replay.scheduledSends!.length, 2);
+});
+
+test("canonical fingerprint still refuses divergent content and reordered steps", async () => {
+  const store = createInMemoryEducationEnrollmentStore();
+  const row = await store.create(input());
+  const admission = { requestId: "divergent-retry", sequence: sequence(2), authorizedAt: at, authorizedBy: actor };
+  const first = await store.admitSequence(row.id, admission);
+  const changed = structuredClone(admission.sequence);
+  changed.steps[0]!.content.version = 2;
+  for (const divergent of [changed, { ...admission.sequence, steps: [...admission.sequence.steps].reverse() }]) {
+    await assert.rejects(store.admitSequence(row.id, { ...admission, sequence: divergent }), /request-id-conflict/);
+    assert.deepEqual(await store.read(row.id), first);
+  }
 });

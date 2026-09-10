@@ -1,0 +1,1131 @@
+$ npm --prefix mcp test -- tests/educationEnrollment.test.ts tests/educationSequence.test.ts tests/educationSequenceFhir.test.ts tests/educationEnrollmentApi.test.ts tests/educationCatalog.test.ts tests/commsApi.test.ts tests/commsConfig.test.ts tests/commsPersistence.test.ts tests/commsSuppression.test.ts tests/reminderEngine.test.ts
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/educationEnrollment.test.ts tests/educationSequence.test.ts tests/educationSequenceFhir.test.ts tests/educationEnrollmentApi.test.ts tests/educationCatalog.test.ts tests/commsApi.test.ts tests/commsConfig.test.ts tests/commsPersistence.test.ts tests/commsSuppression.test.ts tests/reminderEngine.test.ts
+
+TAP version 13
+# Subtest: communications RBAC gives front desk patient content without widening its FHIR scope
+ok 1 - communications RBAC gives front desk patient content without widening its FHIR scope
+  ---
+  duration_ms: 0.624584
+  type: 'test'
+  ...
+# Subtest: SMS opt-out management is held only by the front-desk staff role
+ok 2 - SMS opt-out management is held only by the front-desk staff role
+  ---
+  duration_ms: 0.252125
+  type: 'test'
+  ...
+# Subtest: a multi-role caller cannot attribute opt-out management to a held role that lacks the action
+ok 3 - a multi-role caller cannot attribute opt-out management to a held role that lacks the action
+  ---
+  duration_ms: 19.170334
+  type: 'test'
+  ...
+# Subtest: a membership-only communications grant cites the membership instead of an unrelated AccessPolicy
+ok 4 - a membership-only communications grant cites the membership instead of an unrelated AccessPolicy
+  ---
+  duration_ms: 3.683417
+  type: 'test'
+  ...
+# Subtest: FHIR policy construction preserves a declared hidden-field mask
+ok 5 - FHIR policy construction preserves a declared hidden-field mask
+  ---
+  duration_ms: 0.077583
+  type: 'test'
+  ...
+# Subtest: every communications endpoint rejects missing authentication and audits every authenticated wrong-role denial
+ok 6 - every communications endpoint rejects missing authentication and audits every authenticated wrong-role denial
+  ---
+  duration_ms: 14.015875
+  type: 'test'
+  ...
+# Subtest: education list filters by diagnosis and channel while excluding internal content
+ok 7 - education list filters by diagnosis and channel while excluding internal content
+  ---
+  duration_ms: 3.326125
+  type: 'test'
+  ...
+# Subtest: education list reports dispatchability from the same per-role configuration enforced at send time
+ok 8 - education list reports dispatchability from the same per-role configuration enforced at send time
+  ---
+  duration_ms: 1.120375
+  type: 'test'
+  ...
+# Subtest: education detail returns newest or exact pinned version and never exposes internal content
+ok 9 - education detail returns newest or exact pinned version and never exposes internal content
+  ---
+  duration_ms: 2.441625
+  type: 'test'
+  ...
+# Subtest: education dispatch refuses marketing content when recorded patient consent is absent
+ok 10 - education dispatch refuses marketing content when recorded patient consent is absent
+  ---
+  duration_ms: 2.034625
+  type: 'test'
+  ...
+# Subtest: only transactional staff chart education receives the quiet-hours exemption
+ok 11 - only transactional staff chart education receives the quiet-hours exemption
+  ---
+  duration_ms: 3.461875
+  type: 'test'
+  ...
+# Subtest: clinical education SMS uses the clinical lane, one tracked link, durable send state, and send provenance
+ok 12 - clinical education SMS uses the clinical lane, one tracked link, durable send state, and send provenance
+  ---
+  duration_ms: 2.772958
+  type: 'test'
+  ...
+# Subtest: education print returns the published print artifact without rendering a PDF and records provenance
+ok 13 - education print returns the published print artifact without rendering a PDF and records provenance
+  ---
+  duration_ms: 1.672708
+  type: 'test'
+  ...
+# Subtest: education email sends the published email artifact to the recorded address
+ok 14 - education email sends the published email artifact to the recorded address
+  ---
+  duration_ms: 1.488792
+  type: 'test'
+  ...
+# Subtest: education dispatch refuses an unconfigured lane and enforces the practice clinical lock
+ok 15 - education dispatch refuses an unconfigured lane and enforces the practice clinical lock
+  ---
+  duration_ms: 1.813584
+  type: 'test'
+  ...
+# Subtest: education SMS reports missing or non-HTTPS tracked-link setup as a 409 before minting a token
+ok 16 - education SMS reports missing or non-HTTPS tracked-link setup as a 409 before minting a token
+  ---
+  duration_ms: 3.052458
+  type: 'test'
+  ...
+# Subtest: a terminal SMS suppression is durable and retrying the same key returns the same outcome
+ok 17 - a terminal SMS suppression is durable and retrying the same key returns the same outcome
+  ---
+  duration_ms: 1.895875
+  type: 'test'
+  ...
+# Subtest: a quiet-hours reschedule is durable and retrying the same key returns the same outcome
+ok 18 - a quiet-hours reschedule is durable and retrying the same key returns the same outcome
+  ---
+  duration_ms: 1.830625
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: a failed education send leaves recipient telecom unchanged
+ok 19 - a failed education send leaves recipient telecom unchanged
+  ---
+  duration_ms: 1.05575
+  type: 'test'
+  ...
+# Subtest: education clinical references must belong to the selected patient
+ok 20 - education clinical references must belong to the selected patient
+  ---
+  duration_ms: 1.375542
+  type: 'test'
+  ...
+# Subtest: education recipient override stays send-scoped unless the explicit chart-update flag is set
+ok 21 - education recipient override stays send-scoped unless the explicit chart-update flag is set
+  ---
+  duration_ms: 1.989833
+  type: 'test'
+  ...
+# Subtest: opt-out routes require one explicit Patient reference and expose no phone-number clear
+ok 22 - opt-out routes require one explicit Patient reference and expose no phone-number clear
+  ---
+  duration_ms: 2.659791
+  type: 'test'
+  ...
+# Subtest: opt-out clear requires a non-empty reason and a named identity-verification method
+ok 23 - opt-out clear requires a non-empty reason and a named identity-verification method
+  ---
+  duration_ms: 2.462542
+  type: 'test'
+  ...
+# Subtest: opt-out routes return the existing not-found shape for an unknown named Patient
+ok 24 - opt-out routes return the existing not-found shape for an unknown named Patient
+  ---
+  duration_ms: 1.416209
+  type: 'test'
+  ...
+# Subtest: clearing one named patient on a shared handset leaves the other patient suppressed
+ok 25 - clearing one named patient on a shared handset leaves the other patient suppressed
+  ---
+  duration_ms: 1.383125
+  type: 'test'
+  ...
+# Subtest: number-scoped clear reports a surviving legacy opt-out without a second Patient query
+ok 26 - number-scoped clear reports a surviving legacy opt-out without a second Patient query
+  ---
+  duration_ms: 0.74925
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: opt-out clear uses the caller-bound FHIR client for the Patient write
+ok 27 - opt-out clear uses the caller-bound FHIR client for the Patient write
+  ---
+  duration_ms: 0.710792
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: opt-out state uses the caller-bound FHIR client for the Patient read
+ok 28 - opt-out state uses the caller-bound FHIR client for the Patient read
+  ---
+  duration_ms: 0.682875
+  type: 'test'
+  ...
+# Subtest: a bearer-authenticated staff membership reaches the opt-out clear through the real role resolver
+ok 29 - a bearer-authenticated staff membership reaches the opt-out clear through the real role resolver
+  ---
+  duration_ms: 1.366625
+  type: 'test'
+  ...
+# Subtest: a per-person revocation overrides the staff role on communications routes
+ok 30 - a per-person revocation overrides the staff role on communications routes
+  ---
+  duration_ms: 0.743666
+  type: 'test'
+  ...
+# Subtest: conversation reads use caller-bound FHIR and expose bodies to front desk and clinical content roles
+ok 31 - conversation reads use caller-bound FHIR and expose bodies to front desk and clinical content roles
+  ---
+  duration_ms: 1.314667
+  type: 'test'
+  ...
+# Subtest: a front-desk GHL thread read is on-demand and never runs for the conversation list
+ok 32 - a front-desk GHL thread read is on-demand and never runs for the conversation list
+  ---
+  duration_ms: 1.091292
+  type: 'test'
+  ...
+# Subtest: the API content gate strips previews and bodies and skips thread hydration without content.read
+ok 33 - the API content gate strips previews and bodies and skips thread hydration without content.read
+  ---
+  duration_ms: 0.807708
+  type: 'test'
+  ...
+# Subtest: conversation listing merges distinct routed providers, sorts globally, tags rows, and limits after merge
+ok 34 - conversation listing merges distinct routed providers, sorts globally, tags rows, and limits after merge
+  ---
+  duration_ms: 2.553458
+  type: 'test'
+  ...
+# Subtest: a failed provider degrades to non-PHI status while successful conversations remain
+ok 35 - a failed provider degrades to non-PHI status while successful conversations remain
+  ---
+  duration_ms: 2.263958
+  type: 'test'
+  ...
+# Subtest: a routed provider without conversation-list capability is skipped without an error
+ok 36 - a routed provider without conversation-list capability is skipped without an error
+  ---
+  duration_ms: 0.964959
+  type: 'test'
+  ...
+# Subtest: thread hydration resolves the owning provider before limiting and unresolvable ids return 404
+ok 37 - thread hydration resolves the owning provider before limiting and unresolvable ids return 404
+  ---
+  duration_ms: 1.2595
+  type: 'test'
+  ...
+# Subtest: an explicit provider query keeps conversation listing on that one provider
+ok 38 - an explicit provider query keeps conversation listing on that one provider
+  ---
+  duration_ms: 0.735959
+  type: 'test'
+  ...
+# Subtest: front-desk SMS succeeds and reaches a durable sent reservation
+ok 39 - front-desk SMS succeeds and reaches a durable sent reservation
+  ---
+  duration_ms: 2.991542
+  type: 'test'
+  ...
+# Subtest: staff SMS requires a stable idempotency key and retries never dispatch twice
+ok 40 - staff SMS requires a stable idempotency key and retries never dispatch twice
+  ---
+  duration_ms: 1.815917
+  type: 'test'
+  ...
+# Subtest: staff SMS persists the selected provider message identifier
+ok 41 - staff SMS persists the selected provider message identifier
+  ---
+  duration_ms: 0.870833
+  type: 'test'
+  ...
+# Subtest: new SMS uses transactional routing while a reply preserves its explicit thread provider
+ok 42 - new SMS uses transactional routing while a reply preserves its explicit thread provider
+  ---
+  duration_ms: 1.560167
+  type: 'test'
+  ...
+# Subtest: an explicit provider is rejected when it cannot identify one sender lane
+ok 43 - an explicit provider is rejected when it cannot identify one sender lane
+  ---
+  duration_ms: 0.825375
+  type: 'test'
+  ...
+# Subtest: an unassigned channel role is reported as unavailable without resolving an adapter
+ok 44 - an unassigned channel role is reported as unavailable without resolving an adapter
+  ---
+  duration_ms: 0.698834
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: a post-send FHIR failure leaves a durable unknown outcome and blocks duplicate dispatch
+ok 45 - a post-send FHIR failure leaves a durable unknown outcome and blocks duplicate dispatch
+  ---
+  duration_ms: 1.242333
+  type: 'test'
+  ...
+# Subtest: recording retrieval degrades cleanly when media authentication is not acknowledged
+ok 46 - recording retrieval degrades cleanly when media authentication is not acknowledged
+  ---
+  duration_ms: 0.613292
+  type: 'test'
+  ...
+# Subtest: recording retrieval requires a persisted call visible to the caller's FHIR policy
+ok 47 - recording retrieval requires a persisted call visible to the caller's FHIR policy
+  ---
+  duration_ms: 0.617084
+  type: 'test'
+  ...
+# Subtest: call history and detail require persisted calls visible to the caller's FHIR policy
+ok 48 - call history and detail require persisted calls visible to the caller's FHIR policy
+  ---
+  duration_ms: 1.039958
+  type: 'test'
+  ...
+# Subtest: call history applies the requested limit after filtering the provider window by visible calls
+ok 49 - call history applies the requested limit after filtering the provider window by visible calls
+  ---
+  duration_ms: 0.708458
+  type: 'test'
+  ...
+# odos-mcp: Twilio HIPAA posture DISABLED; international destinations and senders are permitted.
+# odos-mcp: Twilio HIPAA posture ENABLED; US-only destinations and senders are enforced.
+# Subtest: tracked-link public base config treats blank values as unset and warns only for the legacy fallback
+ok 50 - tracked-link public base config treats blank values as unset and warns only for the legacy fallback
+  ---
+  duration_ms: 0.498167
+  type: 'test'
+  ...
+# Subtest: communications dispatch is inert without practice config and reports a clear resolution error
+ok 51 - communications dispatch is inert without practice config and reports a clear resolution error
+  ---
+  duration_ms: 0.632959
+  type: 'test'
+  ...
+# Subtest: scalar communications provider config selects exactly one SMS provider and one Voice provider
+ok 52 - scalar communications provider config selects exactly one SMS provider and one Voice provider
+  ---
+  duration_ms: 24.028792
+  type: 'test'
+  ...
+# Subtest: legacy scalar SMS config aliases transactional, marketing, and clinical roles without requiring new number config
+ok 53 - legacy scalar SMS config aliases transactional, marketing, and clinical roles without requiring new number config
+  ---
+  duration_ms: 0.063416
+  type: 'test'
+  ...
+# Subtest: two-lane SMS config resolves independent providers and E.164 sender numbers
+ok 54 - two-lane SMS config resolves independent providers and E.164 sender numbers
+  ---
+  duration_ms: 0.65375
+  type: 'test'
+  ...
+# Subtest: a clinical provider override does not borrow the transactional sender number
+ok 55 - a clinical provider override does not borrow the transactional sender number
+  ---
+  duration_ms: 0.044709
+  type: 'test'
+  ...
+# Subtest: role-aware Twilio dispatch sends from each resolved lane number
+ok 56 - role-aware Twilio dispatch sends from each resolved lane number
+  ---
+  duration_ms: 9.365458
+  type: 'test'
+  ...
+# Subtest: clinical SMS routed to GHL degrades only that role while MCP startup continues
+ok 57 - clinical SMS routed to GHL degrades only that role while MCP startup continues
+  ---
+  duration_ms: 0.262375
+  type: 'test'
+  ...
+# Subtest: an inherited GHL SMS provider leaves clinical SMS unassigned without a refusal warning
+ok 58 - an inherited GHL SMS provider leaves clinical SMS unassigned without a refusal warning
+  ---
+  duration_ms: 0.2685
+  type: 'test'
+  ...
+# Subtest: Twilio Messaging Service and lane sender number conflict degrades only affected SMS roles without stopping MCP
+ok 59 - Twilio Messaging Service and lane sender number conflict degrades only affected SMS roles without stopping MCP
+  ---
+  duration_ms: 0.998875
+  type: 'test'
+  ...
+# Subtest: clinical-only GHL degradation does not require an unusable adapter registration
+ok 60 - clinical-only GHL degradation does not require an unusable adapter registration
+  ---
+  duration_ms: 0.133917
+  type: 'test'
+  ...
+# Subtest: communications stop scope accepts global and rejects unknown values
+ok 61 - communications stop scope accepts global and rejects unknown values
+  ---
+  duration_ms: 0.091166
+  type: 'test'
+  ...
+# Subtest: scalar SMS selection rejects a second simultaneous provider
+ok 62 - scalar SMS selection rejects a second simultaneous provider
+  ---
+  duration_ms: 0.065125
+  type: 'test'
+  ...
+# Subtest: legacy list-shaped communications config fails as an explicit breaking migration
+ok 63 - legacy list-shaped communications config fails as an explicit breaking migration
+  ---
+  duration_ms: 0.108208
+  type: 'test'
+  ...
+# Subtest: scalar communications routing leaves omitted channels unassigned
+ok 64 - scalar communications routing leaves omitted channels unassigned
+  ---
+  duration_ms: 0.030791
+  type: 'test'
+  ...
+# Subtest: communications routing isolates synchronous provider validation failures from MCP boot
+ok 65 - communications routing isolates synchronous provider validation failures from MCP boot
+  ---
+  duration_ms: 0.151542
+  type: 'test'
+  ...
+# Subtest: communications dispatch resolves the configured Google Workspace provider behind the suppression gate
+ok 66 - communications dispatch resolves the configured Google Workspace provider behind the suppression gate
+  ---
+  duration_ms: 0.088084
+  type: 'test'
+  ...
+# Subtest: communications dispatch resolves configured Google Workspace and Twilio providers
+ok 67 - communications dispatch resolves configured Google Workspace and Twilio providers
+  ---
+  duration_ms: 1.52775
+  type: 'test'
+  ...
+# Subtest: communications dispatch resolves a configured GHL provider behind ODOS suppression
+ok 68 - communications dispatch resolves a configured GHL provider behind ODOS suppression
+  ---
+  duration_ms: 0.148334
+  type: 'test'
+  ...
+# Subtest: Twilio Voice env configuration is all-or-nothing and stays disabled for the existing SMS-only shape
+ok 69 - Twilio Voice env configuration is all-or-nothing and stays disabled for the existing SMS-only shape
+  ---
+  duration_ms: 0.099291
+  type: 'test'
+  ...
+# Subtest: communications env config fails closed when selected provider credentials are partial
+ok 70 - communications env config fails closed when selected provider credentials are partial
+  ---
+  duration_ms: 0.194208
+  type: 'test'
+  ...
+# Subtest: communications env config trims Twilio single-line secrets
+ok 71 - communications env config trims Twilio single-line secrets
+  ---
+  duration_ms: 0.042292
+  type: 'test'
+  ...
+# Subtest: communications startup logs whether Twilio HIPAA mode is enabled or disabled
+ok 72 - communications startup logs whether Twilio HIPAA mode is enabled or disabled
+  ---
+  duration_ms: 0.126459
+  type: 'test'
+  ...
+# Subtest: MCP boot continues when Twilio pool verification fails while SMS stays fail-closed
+ok 73 - MCP boot continues when Twilio pool verification fails while SMS stays fail-closed
+  ---
+  duration_ms: 0.375291
+  type: 'test'
+  ...
+# Subtest: communications dispatch reuses one Google adapter token cache across resolved sends
+ok 74 - communications dispatch reuses one Google adapter token cache across resolved sends
+  ---
+  duration_ms: 23.888708
+  type: 'test'
+  ...
+# odos-mcp: Twilio inbound SMS suppression outcome=unchanged matchedPatients=1
+# odos-mcp: Twilio inbound SMS suppression outcome=unchanged matchedPatients=1
+# odos-mcp: Twilio inbound SMS suppression outcome=opted-out matchedPatients=1
+# odos-mcp: Twilio inbound SMS suppression outcome=no-patient-match matchedPatients=0
+# Subtest: duplicate inbound SMS delivery creates one patient-linked Communication
+ok 75 - duplicate inbound SMS delivery creates one patient-linked Communication
+  ---
+  duration_ms: 1.586583
+  type: 'test'
+  ...
+# Subtest: Twilio-originated STOP-equivalent inbound SMS blocks a subsequent Twilio send
+ok 76 - Twilio-originated STOP-equivalent inbound SMS blocks a subsequent Twilio send
+  ---
+  duration_ms: 0.622083
+  type: 'test'
+  ...
+# Subtest: Twilio shared-number STOP blocks subsequent sends to both matching patients
+ok 77 - Twilio shared-number STOP blocks subsequent sends to both matching patients
+  ---
+  duration_ms: 0.322958
+  type: 'test'
+  ...
+# Subtest: Twilio shared-number START cannot clear independent Patient opt-outs
+ok 78 - Twilio shared-number START cannot clear independent Patient opt-outs
+  ---
+  duration_ms: 0.270166
+  type: 'test'
+  ...
+# Subtest: Twilio START log reports the legacy global opt-out that prevented re-enrollment
+ok 79 - Twilio START log reports the legacy global opt-out that prevented re-enrollment
+  ---
+  duration_ms: 0.190125
+  type: 'test'
+  ...
+# Subtest: staff-sent SMS and its status callback converge into one patient-linked conversation entry
+ok 80 - staff-sent SMS and its status callback converge into one patient-linked conversation entry
+  ---
+  duration_ms: 0.601917
+  type: 'test'
+  ...
+# Subtest: a GHL staff send is completed when ODOS hands delivery state to the provider
+ok 81 - a GHL staff send is completed when ODOS hands delivery state to the provider
+  ---
+  duration_ms: 0.235917
+  type: 'test'
+  ...
+# Subtest: an idempotency key cannot be replayed through a different communications provider
+ok 82 - an idempotency key cannot be replayed through a different communications provider
+  ---
+  duration_ms: 0.113625
+  type: 'test'
+  ...
+# Subtest: a legacy reservation without a provider identifier remains bound to Twilio
+ok 83 - a legacy reservation without a provider identifier remains bound to Twilio
+  ---
+  duration_ms: 0.245042
+  type: 'test'
+  ...
+# Subtest: a status callback racing send completion is reconciled into one canonical history entry
+ok 84 - a status callback racing send completion is reconciled into one canonical history entry
+  ---
+  duration_ms: 0.649666
+  type: 'test'
+  ...
+# Subtest: a callback that conditionally creates after send reconciliation is folded into the staff intent
+ok 85 - a callback that conditionally creates after send reconciliation is folded into the staff intent
+  ---
+  duration_ms: 0.386125
+  type: 'test'
+  ...
+# Subtest: stale lifecycle callbacks cannot regress terminal message or call status
+ok 86 - stale lifecycle callbacks cannot regress terminal message or call status
+  ---
+  duration_ms: 0.499417
+  type: 'test'
+  ...
+# Subtest: a sent SMS remains in progress so a later delivery failure is retained
+ok 87 - a sent SMS remains in progress so a later delivery failure is retained
+  ---
+  duration_ms: 0.138583
+  type: 'test'
+  ...
+# odos-mcp: Twilio inbound SMS suppression outcome=no-patient-match matchedPatients=0
+# odos-mcp: Twilio inbound SMS suppression outcome=no-patient-match matchedPatients=0
+# odos-mcp: Twilio inbound SMS suppression outcome=no-patient-match matchedPatients=0
+# odos-mcp: Twilio inbound SMS suppression outcome=no-patient-match matchedPatients=0
+# Subtest: two signed deliveries of the same Twilio webhook remain one Communication
+ok 88 - two signed deliveries of the same Twilio webhook remain one Communication
+  ---
+  duration_ms: 20.595625
+  type: 'test'
+  ...
+# Subtest: unmatched inbound SMS is persisted with the raw sender number and no Patient reference
+ok 89 - unmatched inbound SMS is persisted with the raw sender number and no Patient reference
+  ---
+  duration_ms: 0.160792
+  type: 'test'
+  ...
+# Subtest: all six Twilio event kinds update deterministic Communications without retaining transcript or recording content
+ok 90 - all six Twilio event kinds update deterministic Communications without retaining transcript or recording content
+  ---
+  duration_ms: 0.621625
+  type: 'test'
+  ...
+# Subtest: multiple recordings on one call retain every recording identifier
+ok 91 - multiple recordings on one call retain every recording identifier
+  ---
+  duration_ms: 0.168542
+  type: 'test'
+  ...
+# Subtest: concurrent call status and recording callbacks converge without losing either event
+ok 92 - concurrent call status and recording callbacks converge without losing either event
+  ---
+  duration_ms: 0.167083
+  type: 'test'
+  ...
+# Subtest: a conditional-create loser re-reads and merges its event into the winning Communication
+ok 93 - a conditional-create loser re-reads and merges its event into the winning Communication
+  ---
+  duration_ms: 0.12375
+  type: 'test'
+  ...
+# Subtest: a version conflict re-reads and merges both cross-process call fragments
+ok 94 - a version conflict re-reads and merges both cross-process call fragments
+  ---
+  duration_ms: 0.146667
+  type: 'test'
+  ...
+# Subtest: Twilio listConversations reads persisted Communication history, groups locally, and never requires a live message-list API
+ok 95 - Twilio listConversations reads persisted Communication history, groups locally, and never requires a live message-list API
+  ---
+  duration_ms: 0.405375
+  type: 'test'
+  ...
+# Subtest: Twilio conversation fallback selects the message SID instead of identifier position zero
+ok 96 - Twilio conversation fallback selects the message SID instead of identifier position zero
+  ---
+  duration_ms: 0.111708
+  type: 'test'
+  ...
+# Subtest: inbound STOP follows Patient pagination and suppresses every shared-number match
+ok 97 - inbound STOP follows Patient pagination and suppresses every shared-number match
+  ---
+  duration_ms: 0.793
+  type: 'test'
+  ...
+# Subtest: per-number STOP suppresses its sender lane while leaving a different sender lane sendable
+ok 98 - per-number STOP suppresses its sender lane while leaving a different sender lane sendable
+  ---
+  duration_ms: 8.856666
+  type: 'test'
+  ...
+# Subtest: global STOP scope expands a number-specific opt-out across sender lanes
+ok 99 - global STOP scope expands a number-specific opt-out across sender lanes
+  ---
+  duration_ms: 0.100708
+  type: 'test'
+  ...
+# Subtest: inbound STOP without a campaign type blocks clinical education on the receiving sender lane
+ok 100 - inbound STOP without a campaign type blocks clinical education on the receiving sender lane
+  ---
+  duration_ms: 0.123667
+  type: 'test'
+  ...
+# Subtest: replayed inbound STOP uses If-Match once and skips an already-present SMS opt-out
+ok 101 - replayed inbound STOP uses If-Match once and skips an already-present SMS opt-out
+  ---
+  duration_ms: 0.227291
+  type: 'test'
+  ...
+# Subtest: inbound START reports no effect when a surviving legacy opt-out still suppresses the lane
+ok 102 - inbound START reports no effect when a surviving legacy opt-out still suppresses the lane
+  ---
+  duration_ms: 0.172334
+  type: 'test'
+  ...
+# Subtest: an explicit Patient clear removes only that patient's SMS opt-out with versioned Provenance
+ok 103 - an explicit Patient clear removes only that patient's SMS opt-out with versioned Provenance
+  ---
+  duration_ms: 0.462375
+  type: 'test'
+  ...
+# Subtest: scoped clear reports a surviving legacy global opt-out without claiming the lane was cleared
+ok 104 - scoped clear reports a surviving legacy global opt-out without claiming the lane was cleared
+  ---
+  duration_ms: 0.087333
+  type: 'test'
+  ...
+# Subtest: scoped clear removes only its numbered lane and reports the other numbered opt-out
+ok 105 - scoped clear removes only its numbered lane and reports the other numbered opt-out
+  ---
+  duration_ms: 0.338334
+  type: 'test'
+  ...
+# Subtest: PMS-side patient/channel opt-out suppresses before the provider call
+ok 106 - PMS-side patient/channel opt-out suppresses before the provider call
+  ---
+  duration_ms: 0.282459
+  type: 'test'
+  ...
+# Subtest: PMS-side SMS opt-out blocks a send before resolving or calling Twilio
+ok 107 - PMS-side SMS opt-out blocks a send before resolving or calling Twilio
+  ---
+  duration_ms: 0.103583
+  type: 'test'
+  ...
+# Subtest: allowed SMS resolves an active Patient.telecom phone before calling Twilio
+ok 108 - allowed SMS resolves an active Patient.telecom phone before calling Twilio
+  ---
+  duration_ms: 0.163709
+  type: 'test'
+  ...
+# Subtest: SMS-specific Patient.telecom takes precedence over mobile and other phones
+ok 109 - SMS-specific Patient.telecom takes precedence over mobile and other phones
+  ---
+  duration_ms: 0.133
+  type: 'test'
+  ...
+# Subtest: outside quiet hours reschedules to the next patient-local 8 AM rather than sending or dropping
+ok 110 - outside quiet hours reschedules to the next patient-local 8 AM rather than sending or dropping
+  ---
+  duration_ms: 0.504584
+  type: 'test'
+  ...
+# Subtest: live staff transactional chart education bypasses quiet hours
+ok 111 - live staff transactional chart education bypasses quiet hours
+  ---
+  duration_ms: 0.089083
+  type: 'test'
+  ...
+# Subtest: staff chart education quiet-hours exemption does not bypass opt-out or frequency caps
+ok 112 - staff chart education quiet-hours exemption does not bypass opt-out or frequency caps
+  ---
+  duration_ms: 0.241416
+  type: 'test'
+  ...
+# Subtest: a configured campaign frequency cap suppresses a repeat inside the lookback window
+ok 113 - a configured campaign frequency cap suppresses a repeat inside the lookback window
+  ---
+  duration_ms: 0.081292
+  type: 'test'
+  ...
+# Subtest: frequency-cap evaluation follows FHIR next links before allowing a send
+ok 114 - frequency-cap evaluation follows FHIR next links before allowing a send
+  ---
+  duration_ms: 0.086208
+  type: 'test'
+  ...
+# Subtest: concurrent in-progress claims elect exactly one deterministic frequency-cap winner
+ok 115 - concurrent in-progress claims elect exactly one deterministic frequency-cap winner
+  ---
+  duration_ms: 0.568333
+  type: 'test'
+  ...
+# Subtest: an allowed send resolves Patient.telecom email and reaches the provider
+ok 116 - an allowed send resolves Patient.telecom email and reaches the provider
+  ---
+  duration_ms: 0.121083
+  type: 'test'
+  ...
+# Subtest: email resolution skips a ContactPoint whose validity starts in the future
+ok 117 - email resolution skips a ContactPoint whose validity starts in the future
+  ---
+  duration_ms: 0.122958
+  type: 'test'
+  ...
+# Subtest: catalog rejects unknown manifest fields and duplicate id-version pairs
+ok 118 - catalog rejects unknown manifest fields and duplicate id-version pairs
+  ---
+  duration_ms: 2.124958
+  type: 'test'
+  ...
+# Subtest: catalog returns the newest version by default and the exact pinned version
+ok 119 - catalog returns the newest version by default and the exact pinned version
+  ---
+  duration_ms: 0.383833
+  type: 'test'
+  ...
+# Subtest: catalog rejects a plausible-looking seed URL instead of allowing a patient-sendable dead link
+ok 120 - catalog rejects a plausible-looking seed URL instead of allowing a patient-sendable dead link
+  ---
+  duration_ms: 0.123292
+  type: 'test'
+  ...
+# Subtest: catalog refuses unverified diagnosis codes when a JSON ledger entry is removed
+ok 121 - catalog refuses unverified diagnosis codes when a JSON ledger entry is removed
+  ---
+  duration_ms: 0.160458
+  type: 'test'
+  ...
+# Subtest: checked-in catalog is placeholder-only, includes a real internal leak sentinel, and loads against its ledger
+ok 122 - checked-in catalog is placeholder-only, includes a real internal leak sentinel, and loads against its ledger
+  ---
+  duration_ms: 0.5555
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment in-memory persistence records stage 1 truth and refuses the same active journey across versions
+ok 123 - EducationEnrollment in-memory persistence records stage 1 truth and refuses the same active journey across versions
+  ---
+  duration_ms: 1.286917
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment FHIR Basic round-trip preserves exact sends, outcomes, and repeated stage history
+ok 124 - EducationEnrollment FHIR Basic round-trip preserves exact sends, outcomes, and repeated stage history
+  ---
+  duration_ms: 1.427208
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment FHIR terminal transition preserves prior truth and removes only the active identifier with If-Match
+ok 125 - EducationEnrollment FHIR terminal transition preserves prior truth and removes only the active identifier with If-Match
+  ---
+  duration_ms: 0.953667
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment creates stage 1, refuses a version-shifted duplicate, and persists opt-out suppression with zero provider sends
+ok 126 - EducationEnrollment creates stage 1, refuses a version-shifted duplicate, and persists opt-out suppression with zero provider sends
+  ---
+  duration_ms: 25.744833
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment rejects a cross-patient encounter before persistence, dispatch, or Provenance
+ok 127 - EducationEnrollment rejects a cross-patient encounter before persistence, dispatch, or Provenance
+  ---
+  duration_ms: 3.500792
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition appends history and actually dispatches a stage-2 send with an honest unique key
+ok 128 - EducationEnrollment transition appends history and actually dispatches a stage-2 send with an honest unique key
+  ---
+  duration_ms: 14.070916
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition refuses a stale from-stage without appending or dispatching
+ok 129 - EducationEnrollment transition refuses a stale from-stage without appending or dispatching
+  ---
+  duration_ms: 5.097417
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition refuses a non-active enrollment
+ok 130 - EducationEnrollment transition refuses a non-active enrollment
+  ---
+  duration_ms: 4.387834
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition rejects a missing or malformed target-stage shape
+ok 131 - EducationEnrollment transition rejects a missing or malformed target-stage shape
+  ---
+  duration_ms: 3.946917
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition requires a non-empty trigger
+ok 132 - EducationEnrollment transition requires a non-empty trigger
+  ---
+  duration_ms: 3.749125
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment terminal transition with a send preserves all history and outcomes, then permits re-enrollment
+ok 133 - EducationEnrollment terminal transition with a send preserves all history and outcomes, then permits re-enrollment
+  ---
+  duration_ms: 5.776958
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment terminal transition without sends completes and remains readable
+ok 134 - EducationEnrollment terminal transition without sends completes and remains readable
+  ---
+  duration_ms: 3.8445
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition persists opt-out suppression with zero provider sends
+ok 135 - EducationEnrollment transition persists opt-out suppression with zero provider sends
+  ---
+  duration_ms: 3.29225
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment create recovery is re-runnable after a mid-resume failure without another provider send
+ok 136 - EducationEnrollment create recovery is re-runnable after a mid-resume failure without another provider send
+  ---
+  duration_ms: 3.953208
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment resumes a create-Provenance failure after state commit and sends exactly once
+ok 137 - EducationEnrollment resumes a create-Provenance failure after state commit and sends exactly once
+  ---
+  duration_ms: 2.994458
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment transition failure is recoverable without re-dispatching its provider send
+ok 138 - EducationEnrollment transition failure is recoverable without re-dispatching its provider send
+  ---
+  duration_ms: 5.0935
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment resumes a mid-transition Provenance failure from committed pending state
+ok 139 - EducationEnrollment resumes a mid-transition Provenance failure from committed pending state
+  ---
+  duration_ms: 3.084083
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment email uses the same durable reservation and resumes without another provider send
+ok 140 - EducationEnrollment email uses the same durable reservation and resumes without another provider send
+  ---
+  duration_ms: 2.397583
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment terminal cancellation retains an unresolved active lock until practitioner acknowledgement
+ok 141 - EducationEnrollment terminal cancellation retains an unresolved active lock until practitioner acknowledgement
+  ---
+  duration_ms: 2.539125
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: EducationEnrollment resume keeps an unresolved in-flight send in-flight unless explicitly acknowledged with a reason and Provenance
+ok 142 - EducationEnrollment resume keeps an unresolved in-flight send in-flight unless explicitly acknowledged with a reason and Provenance
+  ---
+  duration_ms: 4.012417
+  type: 'test'
+  ...
+# Subtest: EducationEnrollment transition revalidates its Provenance encounter against the enrolled patient
+ok 143 - EducationEnrollment transition revalidates its Provenance encounter against the enrolled patient
+  ---
+  duration_ms: 2.347792
+  type: 'test'
+  ...
+# Subtest: one-shot education remains behaviorally intact beside EducationEnrollment
+ok 144 - one-shot education remains behaviorally intact beside EducationEnrollment
+  ---
+  duration_ms: 1.66325
+  type: 'test'
+  ...
+# Subtest: sequence API admits future-only education idempotently without attempting a message
+ok 145 - sequence API admits future-only education idempotently without attempting a message
+  ---
+  duration_ms: 2.8705
+  type: 'test'
+  ...
+# Subtest: sequence API refuses missing latest useful time and unpublished content before any enrollment write
+ok 146 - sequence API refuses missing latest useful time and unpublished content before any enrollment write
+  ---
+  duration_ms: 2.405833
+  type: 'test'
+  ...
+# Subtest: sequence API accepts print as a staff task and resume never sends scheduled work
+ok 147 - sequence API accepts print as a staff task and resume never sends scheduled work
+  ---
+  duration_ms: 1.744541
+  type: 'test'
+  ...
+# Subtest: sequence API refuses whole 65-step activation before writes even beside an immediate send
+ok 148 - sequence API refuses whole 65-step activation before writes even beside an immediate send
+  ---
+  duration_ms: 4.897167
+  type: 'test'
+  ...
+# Subtest: sequence API starts a second activation, stops only one, and atomically cancels the old stage on transition
+ok 149 - sequence API starts a second activation, stops only one, and atomically cancels the old stage on transition
+  ---
+  duration_ms: 8.27175
+  type: 'test'
+  ...
+# Subtest: sequence API refuses internal content and absent marketing consent before writes
+ok 150 - sequence API refuses internal content and absent marketing consent before writes
+  ---
+  duration_ms: 2.089625
+  type: 'test'
+  ...
+# Subtest: sequence row identity cannot be used to bypass admission through one-shot dispatch
+ok 151 - sequence row identity cannot be used to bypass admission through one-shot dispatch
+  ---
+  duration_ms: 2.433167
+  type: 'test'
+  ...
+# Subtest: sequence API records a new stage while an old attempt is unknown and only practitioner acknowledgement releases its hold
+ok 152 - sequence API records a new stage while an old attempt is unknown and only practitioner acknowledgement releases its hold
+  ---
+  duration_ms: 2.991541
+  type: 'test'
+  ...
+# Subtest: sequence API accepts a future-only stage without a redundant empty immediateSends array
+ok 153 - sequence API accepts a future-only stage without a redundant empty immediateSends array
+  ---
+  duration_ms: 1.301458
+  type: 'test'
+  ...
+# Subtest: sequence HTTP admit lost 409 race returns typed 409 without retry
+ok 154 - sequence HTTP admit lost 409 race returns typed 409 without retry
+  ---
+  duration_ms: 3.368292
+  type: 'test'
+  ...
+# Subtest: sequence HTTP admit lost 412 race returns typed 409 without retry
+ok 155 - sequence HTTP admit lost 412 race returns typed 409 without retry
+  ---
+  duration_ms: 2.432
+  type: 'test'
+  ...
+# Subtest: sequence HTTP stop lost 409 race returns typed 409 without retry
+ok 156 - sequence HTTP stop lost 409 race returns typed 409 without retry
+  ---
+  duration_ms: 2.286416
+  type: 'test'
+  ...
+# Subtest: sequence HTTP stop lost 412 race returns typed 409 without retry
+ok 157 - sequence HTTP stop lost 412 race returns typed 409 without retry
+  ---
+  duration_ms: 1.929583
+  type: 'test'
+  ...
+# 256-row admission budget bytes: 664371
+# Subtest: sequence admission retry binds identical rows and rejects changed intent
+ok 158 - sequence admission retry binds identical rows and rejects changed intent
+  ---
+  duration_ms: 10.473083
+  type: 'test'
+  ...
+# Subtest: activation ceiling refuses whole 65-delivery activation before write
+ok 159 - activation ceiling refuses whole 65-delivery activation before write
+  ---
+  duration_ms: 2.070167
+  type: 'test'
+  ...
+# Subtest: lifetime ceiling across four activations preserves rows and permits stop
+ok 160 - lifetime ceiling across four activations preserves rows and permits stop
+  ---
+  duration_ms: 15.812625
+  type: 'test'
+  ...
+# Subtest: transition cancels old occurrence and restart never revives keys
+ok 161 - transition cancels old occurrence and restart never revives keys
+  ---
+  duration_ms: 0.7585
+  type: 'test'
+  ...
+# Subtest: scheduled identities never share immediate-send namespace
+ok 162 - scheduled identities never share immediate-send namespace
+  ---
+  duration_ms: 3.800833
+  type: 'test'
+  ...
+# Subtest: stopped activation remains cancelled while separately authorized activation survives
+ok 163 - stopped activation remains cancelled while separately authorized activation survives
+  ---
+  duration_ms: 0.479125
+  type: 'test'
+  ...
+# Subtest: transition retry uses original binding before stale-from-stage check
+ok 164 - transition retry uses original binding before stale-from-stage check
+  ---
+  duration_ms: 0.505167
+  type: 'test'
+  ...
+# Subtest: create retry refuses changed clinical context
+ok 165 - create retry refuses changed clinical context
+  ---
+  duration_ms: 0.457417
+  type: 'test'
+  ...
+# Subtest: reordered object keys replay without changing activation or rows
+ok 166 - reordered object keys replay without changing activation or rows
+  ---
+  duration_ms: 0.508166
+  type: 'test'
+  ...
+# Subtest: canonical fingerprint still refuses divergent content and reordered steps
+ok 167 - canonical fingerprint still refuses divergent content and reordered steps
+  ---
+  duration_ms: 0.630125
+  type: 'test'
+  ...
+# Subtest: FHIR activation round-trip and transition are one versioned Basic write; over-cap writes nothing
+ok 168 - FHIR activation round-trip and transition are one versioned Basic write; over-cap writes nothing
+  ---
+  duration_ms: 13.482
+  type: 'test'
+  ...
+# Subtest: FHIR concurrent lifecycle writers refuse stale UUID If-Match, and missing version fails closed
+ok 169 - FHIR concurrent lifecycle writers refuse stale UUID If-Match, and missing version fails closed
+  ---
+  duration_ms: 1.09575
+  type: 'test'
+  ...
+# Subtest: unresolved original attempt holds next stage until practitioner acknowledgement
+ok 170 - unresolved original attempt holds next stage until practitioner acknowledgement
+  ---
+  duration_ms: 1.535791
+  type: 'test'
+  ...
+# Subtest: scheduling dispositions cannot inflate the persisted test-only sent-outcome query
+ok 171 - scheduling dispositions cannot inflate the persisted test-only sent-outcome query
+  ---
+  duration_ms: 0.880292
+  type: 'test'
+  ...
+# Subtest: signed offset math supports reminders before and campaigns after independently configured anchor fields
+ok 172 - signed offset math supports reminders before and campaigns after independently configured anchor fields
+  ---
+  duration_ms: 1.273042
+  type: 'test'
+  ...
+# Subtest: practice reminder configuration supports email, SMS, or both channels
+ok 173 - practice reminder configuration supports email, SMS, or both channels
+  ---
+  duration_ms: 0.252042
+  type: 'test'
+  ...
+# Subtest: Appointment end anchors reject the non-standard end search parameter
+ok 174 - Appointment end anchors reject the non-standard end search parameter
+  ---
+  duration_ms: 8.165416
+  type: 'test'
+  ...
+# Subtest: a missed negative-offset reminder catches up while its Appointment is still upcoming
+ok 175 - a missed negative-offset reminder catches up while its Appointment is still upcoming
+  ---
+  duration_ms: 1.311042
+  type: 'test'
+  ...
+# Subtest: a due-anchor sweep follows FHIR next links so later Appointment pages are reachable
+ok 176 - a due-anchor sweep follows FHIR next links so later Appointment pages are reachable
+  ---
+  duration_ms: 0.733958
+  type: 'test'
+  ...
+# Subtest: engine reads Appointment anchors, dispatches both signed directions through the gate, persists Communication state, and is idempotent
+ok 177 - engine reads Appointment anchors, dispatches both signed directions through the gate, persists Communication state, and is idempotent
+  ---
+  duration_ms: 0.880667
+  type: 'test'
+  ...
+# Subtest: reminder engine dispatches an SMS campaign without duplicating its anchor and offset path
+ok 178 - reminder engine dispatches an SMS campaign without duplicating its anchor and offset path
+  ---
+  duration_ms: 0.381458
+  type: 'test'
+  ...
+# Subtest: an outside-hours Communication held by the gate is claimed and sent at the persisted next-window opening
+ok 179 - an outside-hours Communication held by the gate is claimed and sent at the persisted next-window opening
+  ---
+  duration_ms: 1.022834
+  type: 'test'
+  ...
+# Subtest: a held-send sweep follows FHIR next links after its positive-offset due window has passed
+ok 180 - a held-send sweep follows FHIR next links after its positive-offset due window has passed
+  ---
+  duration_ms: 1.098583
+  type: 'test'
+  ...
+# Subtest: a quiet-hours-held reminder is abandoned when its Appointment is cancelled before release
+ok 181 - a quiet-hours-held reminder is abandoned when its Appointment is cancelled before release
+  ---
+  duration_ms: 0.856708
+  type: 'test'
+  ...
+# Subtest: a held pre-appointment reminder is abandoned when the next quiet-hours opening is after the visit
+ok 182 - a held pre-appointment reminder is abandoned when the next quiet-hours opening is after the visit
+  ---
+  duration_ms: 0.779625
+  type: 'test'
+  ...
+1..182
+# tests 182
+# suites 0
+# pass 182
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2316.570375
+
+Exit code: 0

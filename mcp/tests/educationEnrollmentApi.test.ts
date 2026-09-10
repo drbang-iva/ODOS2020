@@ -3,14 +3,14 @@ import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import type { Bundle, Communication, Encounter, Patient, Provenance, Resource } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Communication, Encounter, Patient, Provenance, Resource } from "@medplum/fhirtypes";
 import express from "express";
 import {
   registerCommsApiRoutes,
   type CommsApiRouteDeps,
 } from "../src/comms/comms-api.js";
 import type { CommsProvider, SendEmailRequest, SendSmsRequest } from "../src/comms/comms-provider.js";
-import { createInMemoryEducationEnrollmentStore } from "../src/comms/education-enrollment.js";
+import { createFhirEducationEnrollmentStore, type EducationEnrollmentStore, createInMemoryEducationEnrollmentStore } from "../src/comms/education-enrollment.js";
 import {
   ODOS_COMMS_OPT_OUT_EXTENSION_URL,
   createSuppressedCommsProvider,
@@ -776,6 +776,7 @@ async function createEnrollment(base: string) {
 }
 
 async function startEnrollmentServer(options: {
+  enrollmentStore?: EducationEnrollmentStore;
   optedOut?: boolean;
   marketingContent?: boolean;
   unavailableContent?: boolean;
@@ -829,7 +830,7 @@ async function startEnrollmentServer(options: {
   }> = [];
   const auditReasons: string[] = [];
   let enrollmentSequence = 0;
-  const storedEnrollments = createInMemoryEducationEnrollmentStore({
+  const storedEnrollments = options.enrollmentStore ?? createInMemoryEducationEnrollmentStore({
     generateId: () => `enrollment-api-synthetic-${++enrollmentSequence}`,
   });
   const terminalClearProviderCounts: number[] = [];
@@ -1273,3 +1274,48 @@ test("sequence API accepts a future-only stage without a redundant empty immedia
     assert.equal(fixture.underlyingSends.length, 0);
   } finally { await fixture.close(); }
 });
+
+for (const operation of ["admit", "stop"] as const) {
+  for (const conflictStatus of [409, 412]) {
+    test(`sequence HTTP ${operation} lost ${conflictStatus} race returns typed 409 without retry`, async () => {
+      let persisted: Basic | undefined;
+      let race = false;
+      let attempts = 0;
+      const fhir = {
+        async search<T extends Resource>(): Promise<Bundle<T>> { return { resourceType: "Bundle", type: "searchset", entry: [] }; },
+        async read<T extends Resource>(): Promise<T> { return structuredClone(persisted) as T; },
+        async create<T extends Resource>(resource: T): Promise<T> {
+          persisted = { ...structuredClone(resource) as Basic, meta: { versionId: randomUUID() } };
+          return structuredClone(persisted) as T;
+        },
+        async update<T extends Resource>(_type: string, _id: string, resource: T, headers?: Record<string, string>): Promise<T> {
+          attempts++;
+          assert.equal(headers?.["If-Match"], `W/"${persisted!.meta!.versionId}"`);
+          if (race) persisted!.meta!.versionId = randomUUID();
+          if (headers?.["If-Match"] !== `W/"${persisted!.meta!.versionId}"`)
+            throw Object.assign(new Error("Stale enrollment version"), { status: conflictStatus });
+          persisted = { ...structuredClone(resource) as Basic, meta: { versionId: randomUUID() } };
+          return structuredClone(persisted) as T;
+        },
+      };
+      const store = createFhirEducationEnrollmentStore(fhir);
+      const fixture = await startEnrollmentServer({ enrollmentStore: store });
+      try {
+        const created = await request(fixture.base, "/communications/education/enrollments", "POST", futureEnrollmentBody());
+        assert.equal(created.status, 201);
+        const { enrollment } = await created.json();
+        const before = structuredClone(persisted);
+        const beforeAttempts = attempts;
+        race = true;
+        const path = `/communications/education/enrollments/${enrollment.id}/sequences`;
+        const response = await request(fixture.base, operation === "admit" ? path : `${path}/${enrollment.activations[0].id}/stop`, "POST",
+          operation === "admit" ? { requestId: "racing-activation", sequence: sequenceBody() } : { reason: "Clinician stop" });
+        assert.equal(response.status, 409);
+        assert.deepEqual(await response.json(), { outcome: "refused", reason: "stale-enrollment-version" });
+        assert.equal(attempts, beforeAttempts + 1);
+        assert.deepEqual(persisted!.extension, before!.extension);
+        assert.equal(fixture.underlyingSends.length, 0);
+      } finally { await fixture.close(); }
+    });
+  }
+}
