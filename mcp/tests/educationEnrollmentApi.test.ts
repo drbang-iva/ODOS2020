@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
@@ -281,8 +282,9 @@ test("EducationEnrollment terminal transition with a send preserves all history 
     assert.equal(completed.stageHistory.length, 2);
     assert.equal(completed.immediateSends.length, 2);
     assert.deepEqual(completed.immediateSends[0], initial.immediateSends[0]);
-    assert.equal(fixture.underlyingSends.length, 2);
-    assert.deepEqual(fixture.terminalClearProviderCounts, [2]);
+    assert.equal(fixture.underlyingSends.length, 1);
+    assert.equal((completed.immediateSends[1] as { outcome: { outcome: string } }).outcome.outcome, "not-sent");
+    assert.deepEqual(fixture.terminalClearProviderCounts, [1]);
 
     const fetched = await request(
       fixture.base,
@@ -300,7 +302,7 @@ test("EducationEnrollment terminal transition with a send preserves all history 
     );
     assert.equal(reEnrolled.status, 201);
     assert.equal((await reEnrolled.json() as { enrollment: { id: string } }).enrollment.id, "enrollment-api-synthetic-2");
-    assert.equal(fixture.underlyingSends.length, 3);
+    assert.equal(fixture.underlyingSends.length, 2);
   } finally {
     await fixture.close();
   }
@@ -502,7 +504,8 @@ test("EducationEnrollment resumes a mid-transition Provenance failure from commi
 });
 
 test("EducationEnrollment email uses the same durable reservation and resumes without another provider send", async () => {
-  const fixture = await startEnrollmentServer({ failRecordOutcomeCalls: [1] });
+  const options = { failRecordOutcomeCalls: [1], staffReference: "Practitioner/provider" };
+  const fixture = await startEnrollmentServer(options);
   try {
     const create = await request(
       fixture.base,
@@ -517,11 +520,13 @@ test("EducationEnrollment email uses the same durable reservation and resumes wi
       identifier.system === "https://odos2020.com/fhir/NamingSystem/comms-staff-send"
       && identifier.value === "enrollment:enrollment-api-synthetic-1:stage1:1"), true);
 
+    options.staffReference = "Practitioner/reconciling-provider";
     const resumed = await request(
       fixture.base,
       "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
       "POST",
       {},
+      { id: "reconciling-provider" },
     );
     assert.equal(resumed.status, 200);
     assert.equal(fixture.underlyingEmailSends.length, 1);
@@ -539,48 +544,29 @@ test("EducationEnrollment email uses the same durable reservation and resumes wi
   }
 });
 
-test("EducationEnrollment terminal failure retains its active lock until resume reconciles every send", async () => {
-  const fixture = await startEnrollmentServer({ failRecordOutcomeCalls: [2] });
+test("EducationEnrollment terminal cancellation retains an unresolved active lock until practitioner acknowledgement", async () => {
+  const fixture = await startEnrollmentServer();
   try {
-    await createEnrollment(fixture.base);
-    const transition = await request(
-      fixture.base,
-      "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
-      "POST",
-      terminalTransitionBody("completed", transitionBody().targetStage.immediateSends),
-    );
-    assert.equal(transition.status, 502);
-    assert.deepEqual(fixture.terminalClearProviderCounts, []);
-    assert.equal(fixture.underlyingSends.length, 2);
-
-    const blockedReEnrollment = await request(
-      fixture.base,
-      "/communications/education/enrollments",
-      "POST",
-      enrollmentBody(),
-    );
-    assert.equal(blockedReEnrollment.status, 409);
-
-    const resumed = await request(
-      fixture.base,
-      "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
-      "POST",
-      {},
-    );
-    assert.equal(resumed.status, 200);
-    assert.equal(fixture.underlyingSends.length, 2);
-    assert.deepEqual(fixture.terminalClearProviderCounts, [2]);
-
-    const reEnrollment = await request(
-      fixture.base,
-      "/communications/education/enrollments",
-      "POST",
-      enrollmentBody(),
-    );
-    assert.equal(reEnrollment.status, 201);
-  } finally {
-    await fixture.close();
-  }
+    const created = await fixture.enrollmentStore.create({
+      patientReference: PATIENT_REFERENCE, enteredFromEncounterReference: ENCOUNTER_REFERENCE,
+      enrolledBy: "Practitioner/provider", journey: { id: "dry-eye-foundations", version: 1 },
+      status: "active", currentStageId: "welcome", stageEnteredAt: "2026-09-01T14:00:00.000Z",
+      stageHistory: [{ stageId: "welcome", enteredAt: "2026-09-01T14:00:00.000Z", enteredBy: "Practitioner/provider", reason: "enrollment-recorded" }],
+      immediateSends: [{ content: { id: "dry-eye-basics", version: 2 }, channel: "sms", lane: "clinical" }],
+    });
+    // Seed the durable pre-existing attempt boundary without invoking an adapter.
+    await fixture.enrollmentStore.claimImmediateSend(created.id, 0);
+    const transition = await request(fixture.base, `/communications/education/enrollments/${created.id}/transitions`, "POST", terminalTransitionBody("cancelled", []));
+    assert.equal(transition.status, 200);
+    assert.equal((await transition.json()).enrollment.status, "cancelled");
+    const duplicate = await request(fixture.base, "/communications/education/enrollments", "POST", enrollmentBody());
+    assert.equal(duplicate.status, 409);
+    const resume = await request(fixture.base, `/communications/education/enrollments/${created.id}/resume`, "POST", { acknowledgeIndeterminate: true, reason: "Historical outcome remains unknown after practitioner review." });
+    assert.equal(resume.status, 200);
+    assert.equal((await resume.json()).enrollment.immediateSends[0].state, "indeterminate");
+    assert.equal(fixture.underlyingSends.length, 0);
+    assert.equal(fixture.underlyingEmailSends.length, 0);
+  } finally { await fixture.close(); }
 });
 
 test("EducationEnrollment resume keeps an unresolved in-flight send in-flight unless explicitly acknowledged with a reason and Provenance", async () => {
@@ -791,6 +777,11 @@ async function createEnrollment(base: string) {
 
 async function startEnrollmentServer(options: {
   optedOut?: boolean;
+  marketingContent?: boolean;
+  unavailableContent?: boolean;
+  internalContent?: boolean;
+  staffRole?: "provider" | "staff";
+  staffReference?: string;
   failRecordOutcomeCalls?: number[];
   failCommunicationUpdateCalls?: number[];
   failProvenanceCreateCalls?: number[];
@@ -907,7 +898,7 @@ async function startEnrollmentServer(options: {
       const persisted = {
         ...structuredClone(resource),
         id: `${resource.resourceType.toLowerCase()}-${communications.length + provenances.length + 1}`,
-        meta: { versionId: "1" },
+        meta: { versionId: randomUUID() },
       } as T;
       if (persisted.resourceType === "Communication") {
         communications.push(structuredClone(persisted as Communication));
@@ -917,7 +908,7 @@ async function startEnrollmentServer(options: {
       }
       return structuredClone(persisted);
     },
-    async update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
+    async update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {
       assert.equal(resourceType, "Communication");
       communicationUpdateCallCount += 1;
       if (options.failCommunicationUpdateCalls?.includes(communicationUpdateCallCount)) {
@@ -925,10 +916,13 @@ async function startEnrollmentServer(options: {
       }
       const index = communications.findIndex((entry) => entry.id === id);
       assert.notEqual(index, -1);
+      if (headers?.["If-Match"] !== `W/"${communications[index]?.meta?.versionId}"`) {
+        throw Object.assign(new Error("Stale Communication version"), { status: 412 });
+      }
       const persisted = {
         ...structuredClone(resource),
         id,
-        meta: { versionId: String(Number(communications[index]?.meta?.versionId ?? "0") + 1) },
+        meta: { versionId: randomUUID() },
       } as T;
       communications[index] = structuredClone(persisted as Communication);
       return structuredClone(persisted);
@@ -980,9 +974,9 @@ async function startEnrollmentServer(options: {
   const deps: CommsApiRouteDeps = {
     authenticateService: async () => undefined,
     authenticate: async (header) => header === "Bearer provider" ? {
-      staffReference: "Practitioner/provider",
-      actorRole: "provider",
-      roles: ["provider"],
+      staffReference: options.staffReference ?? "Practitioner/provider",
+      actorRole: options.staffRole ?? "provider",
+      roles: [options.staffRole ?? "provider"],
       fhir: callerFhir as never,
     } : null,
     fhir: callerFhir as never,
@@ -998,19 +992,20 @@ async function startEnrollmentServer(options: {
     },
     educationCatalog: {
       list: () => [],
-      get: (id, version) => id === "dry-eye-basics" && version === 2 ? {
+      get: (id, version) => !options.unavailableContent && id === "dry-eye-basics" && version === 2 ? {
         id,
         version,
         title: "Understanding dry eye",
         kind: "video",
-        audience: "patient",
+        audience: options.internalContent ? "internal" : "patient",
         dxCodes: [],
-        channels: ["sms", "email"],
+        channels: ["sms", "email", "print"],
         laneHint: "clinical",
-        consentClass: "transactional",
+        consentClass: options.marketingContent ? "marketing" : "transactional",
         urls: {
           web: "https://education.invalid/dry-eye-basics/v2",
           email: "https://education.invalid/dry-eye-basics/v2/email",
+          print: "https://education.invalid/dry-eye-basics/v2/print",
         },
       } : undefined,
     },
@@ -1053,15 +1048,228 @@ async function startEnrollmentServer(options: {
   };
 }
 
-function request(base: string, path: string, method: string, body?: unknown): Promise<Response> {
+function request(base: string, path: string, method: string, body?: unknown, actor: { id?: string; role?: string } = {}): Promise<Response> {
   return fetch(`${base}${path}`, {
     method,
     headers: {
       authorization: "Bearer provider",
-      "x-odos-actor-id": "provider",
-      "x-odos-actor-role": "provider",
+      "x-odos-actor-id": actor.id ?? "provider",
+      "x-odos-actor-role": actor.role ?? "provider",
       ...(body === undefined ? {} : { "content-type": "application/json" }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
+
+
+function sequenceBody() {
+  return {
+    id: "synthetic-sequence", version: 1,
+    steps: [{
+      stepIndex: 0, channel: "sms", lane: "clinical",
+      content: { id: "dry-eye-basics", version: 2 },
+      recipientReference: PATIENT_REFERENCE,
+      plannedAt: "2026-09-02T14:00:00.000Z", notBefore: "2026-09-02T14:00:00.000Z",
+      latestUsefulTime: "2026-09-08T14:00:00.000Z", anchor: "stage-entry", offsetDays: 1,
+      dayInterpretation: "calendar", timezone: "America/New_York",
+    }],
+  };
+}
+
+function futureEnrollmentBody() {
+  return { ...enrollmentBody(), requestId: "synthetic-admission-1",
+    initialStage: { id: "welcome", immediateSends: [], sequence: sequenceBody() } };
+}
+
+test("sequence API admits future-only education idempotently without attempting a message", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    const body = futureEnrollmentBody();
+    const first = await request(fixture.base, "/communications/education/enrollments", "POST", body);
+    assert.equal(first.status, 201);
+    const original = (await first.json()).enrollment;
+    const retry = await request(fixture.base, "/communications/education/enrollments", "POST", body);
+    assert.equal(retry.status, 201);
+    const repeated = (await retry.json()).enrollment;
+    assert.equal(repeated.id, original.id);
+    assert.equal(repeated.scheduledSends.length, 1);
+    assert.deepEqual(repeated.scheduledSends, original.scheduledSends);
+    assert.deepEqual(repeated.immediateSends, []);
+    assert.equal(fixture.underlyingSends.length, 0);
+    assert.equal(fixture.underlyingEmailSends.length, 0);
+    assert.equal(fixture.trackedLinks.length, 0);
+  } finally { await fixture.close(); }
+});
+
+test("sequence API refuses missing latest useful time and unpublished content before any enrollment write", async () => {
+  for (const change of [
+    (step: Record<string, unknown>) => { delete step.latestUsefulTime; },
+    (step: Record<string, unknown>) => { step.content = { id: "missing-item", version: 1 }; },
+    (step: Record<string, unknown>) => { step.recipientReference = "Patient/another-patient"; },
+  ]) {
+    const fixture = await startEnrollmentServer();
+    try {
+      const body = futureEnrollmentBody();
+      change(body.initialStage.sequence.steps[0]);
+      const response = await request(fixture.base, "/communications/education/enrollments", "POST", body);
+      assert.ok([400, 404, 409].includes(response.status));
+      assert.deepEqual(await fixture.enrollmentStore.listActiveForPatient(PATIENT_REFERENCE), []);
+      assert.equal(fixture.provenances.length, 0);
+      assert.equal(fixture.underlyingSends.length, 0);
+    } finally { await fixture.close(); }
+  }
+});
+
+test("sequence API accepts print as a staff task and resume never sends scheduled work", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    const body = futureEnrollmentBody();
+    body.initialStage.sequence.steps[0].channel = "print";
+    const response = await request(fixture.base, "/communications/education/enrollments", "POST", body);
+    assert.equal(response.status, 201);
+    const enrollment = (await response.json()).enrollment;
+    assert.equal(enrollment.scheduledSends[0].channel, "print");
+    const resume = await request(fixture.base, `/communications/education/enrollments/${enrollment.id}/resume`, "POST", {});
+    assert.equal(resume.status, 200);
+    assert.deepEqual((await resume.json()).enrollment.scheduledSends, enrollment.scheduledSends);
+    assert.equal(fixture.underlyingSends.length, 0);
+    assert.equal(fixture.underlyingEmailSends.length, 0);
+  } finally { await fixture.close(); }
+});
+
+test("sequence API refuses whole 65-step activation before writes even beside an immediate send", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    const body = futureEnrollmentBody();
+    body.initialStage.sequence.steps = Array.from({ length: 65 }, (_, stepIndex) => ({ ...sequenceBody().steps[0], stepIndex }));
+    const response = await request(fixture.base, "/communications/education/enrollments", "POST", {
+      ...body, initialStage: { ...body.initialStage, immediateSends: enrollmentBody().initialStage.immediateSends },
+    });
+    assert.equal(response.status, 409);
+    assert.deepEqual(await fixture.enrollmentStore.listActiveForPatient(PATIENT_REFERENCE), []);
+    assert.equal(fixture.provenances.length, 0);
+    assert.equal(fixture.underlyingSends.length, 0);
+  } finally { await fixture.close(); }
+});
+
+
+test("sequence API starts a second activation, stops only one, and atomically cancels the old stage on transition", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    const created = await request(fixture.base, "/communications/education/enrollments", "POST", futureEnrollmentBody());
+    assert.equal(created.status, 201);
+    const initial = (await created.json()).enrollment;
+    const start = await request(fixture.base, `/communications/education/enrollments/${initial.id}/sequences`, "POST", { requestId: "second-activation", sequence: sequenceBody() });
+    assert.equal(start.status, 200);
+    const two = (await start.json()).enrollment;
+    assert.equal(two.activations.length, 2);
+    const stop = await request(fixture.base, `/communications/education/enrollments/${initial.id}/sequences/${two.activations[0].id}/stop`, "POST", { reason: "Clinician stopped this sequence." });
+    assert.equal(stop.status, 200);
+    const stopped = (await stop.json()).enrollment;
+    assert.deepEqual(stopped.scheduledSends.map((row: { disposition: string }) => row.disposition), ["cancelled", "scheduled"]);
+    const resumed = await request(fixture.base, `/communications/education/enrollments/${initial.id}/resume`, "POST", {});
+    assert.equal(resumed.status, 200);
+    assert.deepEqual((await resumed.json()).enrollment.scheduledSends, stopped.scheduledSends);
+    const replayedCreate = await request(fixture.base, "/communications/education/enrollments", "POST", futureEnrollmentBody());
+    assert.equal(replayedCreate.status, 201);
+    assert.deepEqual((await replayedCreate.json()).enrollment.scheduledSends, stopped.scheduledSends);
+    const oneShot = await request(fixture.base, "/communications/education/dispatch", "POST", {
+      patientReference: PATIENT_REFERENCE, educationId: "dry-eye-basics", version: 2,
+      channel: "sms", lane: "clinical", idempotencyKey: "synthetic-context-dispatch",
+      enrollmentId: initial.id,
+    });
+    assert.equal(oneShot.status, 409);
+    assert.deepEqual((await fixture.enrollmentStore.read(initial.id))?.scheduledSends, stopped.scheduledSends);
+    const body = { ...transitionBody(), requestId: "new-stage-activation", targetStage: { id: "consult", immediateSends: [], sequence: sequenceBody() } };
+    const transition = await request(fixture.base, `/communications/education/enrollments/${initial.id}/transitions`, "POST", body);
+    assert.equal(transition.status, 200);
+    const moved = (await transition.json()).enrollment;
+    assert.equal(moved.currentStageId, "consult");
+    assert.deepEqual(moved.scheduledSends.map((row: { disposition: string }) => row.disposition), ["cancelled", "cancelled", "scheduled"]);
+    const retry = await request(fixture.base, `/communications/education/enrollments/${initial.id}/transitions`, "POST", body);
+    assert.equal(retry.status, 200);
+    assert.equal((await retry.json()).enrollment.scheduledSends.length, 3);
+    assert.equal(fixture.underlyingSends.length, 0);
+  } finally { await fixture.close(); }
+});
+
+
+test("sequence API refuses internal content and absent marketing consent before writes", async () => {
+  for (const options of [{ internalContent: true }, { marketingContent: true }]) {
+    const fixture = await startEnrollmentServer(options);
+    try {
+      const response = await request(fixture.base, "/communications/education/enrollments", "POST", futureEnrollmentBody());
+      assert.equal(response.status, options.internalContent ? 404 : 409);
+      assert.deepEqual(await fixture.enrollmentStore.listActiveForPatient(PATIENT_REFERENCE), []);
+      assert.equal(fixture.provenances.length, 0);
+      assert.equal(fixture.underlyingSends.length, 0);
+    } finally { await fixture.close(); }
+  }
+});
+
+test("sequence row identity cannot be used to bypass admission through one-shot dispatch", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    const created = await request(fixture.base, "/communications/education/enrollments", "POST", futureEnrollmentBody());
+    assert.equal(created.status, 201);
+    const enrollment = (await created.json()).enrollment;
+    for (const channel of ["sms", "print"]) {
+      const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+        patientReference: PATIENT_REFERENCE, educationId: "dry-eye-basics", version: 2,
+        channel, lane: "clinical", encounterReference: ENCOUNTER_REFERENCE,
+        idempotencyKey: enrollment.scheduledSends[0].id,
+      });
+      assert.equal(response.status, 409);
+      assert.equal((await response.json()).reason, channel === "print" ? "print-sequence-electronic-dispatch-refused" : "sequence-dispatch-not-enabled");
+    }
+    assert.equal(fixture.underlyingSends.length, 0);
+    assert.equal(fixture.underlyingEmailSends.length, 0);
+  } finally { await fixture.close(); }
+});
+
+
+test("sequence API records a new stage while an old attempt is unknown and only practitioner acknowledgement releases its hold", async () => {
+  for (const staffRole of ["provider", "staff"] as const) {
+    const fixture = await startEnrollmentServer({ staffRole, unavailableContent: true });
+    try {
+      const created = await fixture.enrollmentStore.create({
+        patientReference: PATIENT_REFERENCE, enteredFromEncounterReference: ENCOUNTER_REFERENCE,
+        enrolledBy: "Practitioner/provider", journey: { id: "dry-eye-foundations", version: 1 },
+        status: "active", currentStageId: "welcome", stageEnteredAt: "2026-09-01T14:00:00.000Z",
+        stageHistory: [{ stageId: "welcome", enteredAt: "2026-09-01T14:00:00.000Z", enteredBy: "Practitioner/provider", reason: "enrollment-recorded" }],
+        immediateSends: [{ content: { id: "dry-eye-basics", version: 2 }, channel: "sms", lane: "clinical" }],
+      });
+      await fixture.enrollmentStore.claimImmediateSend(created.id, 0);
+      const moved = await fixture.enrollmentStore.transition(created.id, {
+        fromStageId: "welcome", targetStageId: "consult", trigger: "clinician-action", enteredAt: "2026-09-01T14:00:00.000Z", enteredBy: "Practitioner/provider", status: "active", immediateSends: [],
+        requestId: "held-sequence-activation", sequence: sequenceBody() as never,
+      });
+      assert.equal(moved.currentStageId, "consult");
+      assert.equal(moved.scheduledSends?.[0].disposition, "held");
+      const resume = await request(fixture.base, `/communications/education/enrollments/${created.id}/resume`, "POST", { acknowledgeIndeterminate: true, reason: "Reviewed the unknown historical attempt." }, { role: staffRole });
+      if (staffRole === "provider") {
+        assert.equal(resume.status, 200);
+        assert.equal((await resume.json()).enrollment.scheduledSends[0].disposition, "scheduled");
+      } else {
+        assert.ok([403, 409].includes(resume.status));
+        assert.equal((await fixture.enrollmentStore.read(created.id))?.scheduledSends?.[0].disposition, "held");
+      }
+      assert.equal(fixture.underlyingSends.length, 0);
+      assert.equal(fixture.underlyingEmailSends.length, 0);
+    } finally { await fixture.close(); }
+  }
+});
+
+
+test("sequence API accepts a future-only stage without a redundant empty immediateSends array", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    const body = futureEnrollmentBody();
+    const response = await request(fixture.base, "/communications/education/enrollments", "POST", {
+      ...body, initialStage: { id: body.initialStage.id, sequence: body.initialStage.sequence },
+    });
+    assert.equal(response.status, 201);
+    assert.deepEqual((await response.json()).enrollment.immediateSends, []);
+    assert.equal(fixture.underlyingSends.length, 0);
+  } finally { await fixture.close(); }
+});

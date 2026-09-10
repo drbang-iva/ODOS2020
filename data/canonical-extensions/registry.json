@@ -879,6 +879,18 @@
       "sliceConsumer": "engage-slice-5a"
     },
     {
+      "url": "https://odos2020.com/fhir/StructureDefinition/education-enrollment-scheduled-send",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "education-sequence-1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/education-enrollment-sequence-activation",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "education-sequence-1"
+    },
+    {
       "url": "https://odos2020.com/fhir/StructureDefinition/correspondence-draft",
       "namespace": "correspondence",
       "status": "active",

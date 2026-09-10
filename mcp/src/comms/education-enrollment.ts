@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { Basic, Bundle, Extension, Resource } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
 import { searchBounded } from "../fhir-search.js";
+import { admitEducationSequence, EducationSequenceAdmissionError, assertEducationSequenceAdmissionBudget, validateStoredEducationSequences, applyEducationEnrollmentLifecycle, stopEducationSequence, EDUCATION_SEQUENCE_EXTENSION, EDUCATION_ACTIVATION_EXTENSION, type EducationSequenceInput, type EducationSequenceAdmission, type EducationLifecycleContext, type EducationSequenceStop, type EducationScheduledSend, type EducationSequenceActivation } from "./education-sequence.js";
 import type { SendResult } from "./comms-provider.js";
 
 const ENROLLMENT_IDENTIFIER_SYSTEM =
@@ -33,6 +34,9 @@ const IMMEDIATE_SEND =
 export type EducationEnrollmentStatus = "active" | "completed" | "cancelled";
 export type EducationEnrollmentSendState = "pending" | "in-flight" | "resolved" | "indeterminate";
 export type EducationEnrollmentSendOutcome = SendResult | {
+  outcome: "not-sent";
+  reason: string;
+} | {
   outcome: "print";
   url: string;
 };
@@ -79,10 +83,14 @@ export interface EducationEnrollment {
   status: EducationEnrollmentStatus;
   stageHistory: EducationEnrollmentStageEntry[];
   immediateSends: EducationEnrollmentImmediateSend[];
+  scheduledSends?: EducationScheduledSend[];
+  activations?: EducationSequenceActivation[];
 }
 
 export type NewEducationEnrollment = Omit<EducationEnrollment, "id" | "immediateSends"> & {
   immediateSends: EducationEnrollmentImmediateSendInput[];
+  sequence?: EducationSequenceInput;
+  requestId?: string;
 };
 
 export interface EducationEnrollmentTransition {
@@ -93,10 +101,15 @@ export interface EducationEnrollmentTransition {
   enteredBy: string;
   status: EducationEnrollmentStatus;
   immediateSends: EducationEnrollmentImmediateSendInput[];
+  sequence?: EducationSequenceInput;
+  requestId?: string;
 }
 
 export interface EducationEnrollmentStore {
   create(enrollment: NewEducationEnrollment): Promise<EducationEnrollment>;
+  admitSequence(id: string, admission: EducationSequenceAdmission): Promise<EducationEnrollment>;
+  stopSequence(id: string, stop: EducationSequenceStop): Promise<EducationEnrollment>;
+  applyLifecycle(id: string, context: EducationLifecycleContext): Promise<EducationEnrollment>;
   read(id: string): Promise<EducationEnrollment | undefined>;
   listActiveForPatient(patientReference: string): Promise<EducationEnrollment[]>;
   claimImmediateSend(
@@ -144,6 +157,14 @@ export function createInMemoryEducationEnrollmentStore(
       validateNewEnrollment(input);
       const activeIdentifier = activeEnrollmentIdentifier(input.patientReference, input.journey.id);
       if (activeIdentifiers.has(activeIdentifier)) {
+        const existing = [...rows.values()].find(row => row.status === "active" && activeEnrollmentIdentifier(row.patientReference, row.journey.id) === activeIdentifier);
+        if (input.sequence && input.requestId && existing?.activations?.some(a => a.requestId === input.requestId)) {
+          if (existing.activations!.find(a => a.requestId === input.requestId)!.admissionContext !== enrollmentCreateContext(input))
+            throw new EducationSequenceAdmissionError("request-id-conflict");
+          const candidate = structuredClone(existing);
+          admitEducationSequence(candidate, initialSequenceAdmission(input));
+          return candidate;
+        }
         throw new EducationEnrollmentDuplicateError();
       }
       const id = deps.generateId?.() ?? randomUUID();
@@ -156,9 +177,26 @@ export function createInMemoryEducationEnrollmentStore(
           state: "pending",
         })),
       };
+      delete (row as Partial<NewEducationEnrollment>).sequence;
+      delete (row as Partial<NewEducationEnrollment>).requestId;
+      if (input.sequence) { admitEducationSequence(row, initialSequenceAdmission(input)); row.activations!.at(-1)!.admissionContext = enrollmentCreateContext(input); }
+      applyEducationEnrollmentLifecycle(row, {actor: input.enrolledBy, at: input.stageEnteredAt, reason: "enrollment-created"});
+      if (input.sequence) assertEducationSequenceAdmissionBudget(row);
       rows.set(row.id, row);
       activeIdentifiers.add(activeIdentifier);
       return structuredClone(row);
+    },
+    async admitSequence(id, admission) {
+      const row = rows.get(id); if (!row) throw new Error("EducationEnrollment not found.");
+      const candidate = structuredClone(row); admitEducationSequence(candidate, admission); rows.set(id, candidate); return structuredClone(candidate);
+    },
+    async stopSequence(id, stop) {
+      const row = rows.get(id); if (!row) throw new Error("EducationEnrollment not found.");
+      const candidate = structuredClone(row); stopEducationSequence(candidate, stop); rows.set(id, candidate); return structuredClone(candidate);
+    },
+    async applyLifecycle(id, context) {
+      const row = rows.get(id); if (!row) throw new Error("EducationEnrollment not found.");
+      const candidate = structuredClone(row); applyEducationEnrollmentLifecycle(candidate, context); rows.set(id, candidate); return structuredClone(candidate);
     },
     async read(id) {
       const row = rows.get(id);
@@ -174,7 +212,8 @@ export function createInMemoryEducationEnrollmentStore(
       const row = rows.get(id);
       if (!row) throw new Error("EducationEnrollment not found.");
       const send = immediateSend(row, sendIndex);
-      if (send.state !== "pending") return { enrollment: structuredClone(row), claimed: false };
+      if (send.state !== "pending" || row.status !== "active" || row.immediateSends.slice(0, sendIndex).some(s => s.state === "in-flight"))
+        return { enrollment: structuredClone(row), claimed: false };
       send.state = "in-flight";
       return { enrollment: structuredClone(row), claimed: true };
     },
@@ -187,8 +226,10 @@ export function createInMemoryEducationEnrollmentStore(
     async transition(id, transition) {
       const row = rows.get(id);
       if (!row) throw new Error("EducationEnrollment not found.");
-      applyTransition(row, transition);
-      return structuredClone(row);
+      const candidate = structuredClone(row);
+      applyTransition(candidate, transition);
+      rows.set(id, candidate);
+      return structuredClone(candidate);
     },
     async markImmediateSendIndeterminate(id, sendIndex, acknowledgement) {
       const row = rows.get(id);
@@ -221,7 +262,14 @@ export function createFhirEducationEnrollmentStore(
     async create(input) {
       validateNewEnrollment(input);
       const activeIdentifier = activeEnrollmentIdentifier(input.patientReference, input.journey.id);
-      if ((await activeMatches(fhir, activeIdentifier)).length > 0) {
+      const matches = await activeMatches(fhir, activeIdentifier);
+      if (matches.length > 0) {
+        if (input.sequence && input.requestId && matches[0]?.activations?.some(a => a.requestId === input.requestId)) {
+          if (matches[0].activations!.find(a => a.requestId === input.requestId)!.admissionContext !== enrollmentCreateContext(input))
+            throw new EducationSequenceAdmissionError("request-id-conflict");
+          admitEducationSequence(matches[0], initialSequenceAdmission(input));
+          return matches[0];
+        }
         throw new EducationEnrollmentDuplicateError();
       }
       const requestId = randomUUID();
@@ -234,13 +282,28 @@ export function createFhirEducationEnrollmentStore(
           state: "pending",
         })),
       };
+      delete (enrollment as Partial<NewEducationEnrollment>).sequence;
+      delete (enrollment as Partial<NewEducationEnrollment>).requestId;
+      if (input.sequence) {
+        admitEducationSequence(enrollment, initialSequenceAdmission(input));
+        enrollment.activations!.at(-1)!.admissionContext = enrollmentCreateContext(input);
+      }
+      applyEducationEnrollmentLifecycle(enrollment, {actor: input.enrolledBy, at: input.stageEnteredAt, reason: "enrollment-created"});
+      if (input.sequence) assertEducationSequenceAdmissionBudget(enrollment);
       const resource = enrollmentResource(enrollment, activeIdentifier);
       let persisted = await fhir.create<Basic>(resource, {
         "If-None-Exist": `identifier=${ACTIVE_ENROLLMENT_IDENTIFIER_SYSTEM}|${activeIdentifier}`,
       });
       const requestWon = persisted.identifier?.some((identifier) =>
         identifier.system === ENROLLMENT_IDENTIFIER_SYSTEM && identifier.value === requestId);
-      if (!requestWon) throw new EducationEnrollmentDuplicateError();
+      if (!requestWon) {
+        const winner = parseEnrollment(persisted);
+        if (input.sequence && input.requestId && winner.activations?.some(a => a.requestId === input.requestId && a.admissionContext === enrollmentCreateContext(input))) {
+          admitEducationSequence(winner, initialSequenceAdmission(input));
+          return winner;
+        }
+        throw new EducationEnrollmentDuplicateError();
+      }
       if (persisted.id && persisted.id !== requestId) {
         for (const [index, sendExtension] of (persisted.extension ?? [])
           .filter((entry) => entry.url === IMMEDIATE_SEND).entries()) {
@@ -250,11 +313,14 @@ export function createFhirEducationEnrollmentStore(
           });
         }
         persisted = await fhir.update<Basic>("Basic", persisted.id, persisted, {
-          ...(persisted.meta?.versionId ? { "If-Match": `W/\"${persisted.meta.versionId}\"` } : {}),
+          ...enrollmentVersionHeaders(persisted),
         });
       }
       return parseEnrollment(persisted);
     },
+    async admitSequence(id, admission) { return mutateEnrollment(fhir, id, row => admitEducationSequence(row, admission)); },
+    async stopSequence(id, stop) { return mutateEnrollment(fhir, id, row => stopEducationSequence(row, stop)); },
+    async applyLifecycle(id, context) { return mutateEnrollment(fhir, id, row => applyEducationEnrollmentLifecycle(row, context)); },
     async read(id) {
       try {
         return parseEnrollment(await fhir.read<Basic>("Basic", resourceId(id, "enrollment id")));
@@ -278,14 +344,15 @@ export function createFhirEducationEnrollmentStore(
       const resource = await fhir.read<Basic>("Basic", resourceId(id, "enrollment id"));
       const enrollment = parseEnrollment(resource);
       const send = immediateSend(enrollment, sendIndex);
-      if (send.state !== "pending") return { enrollment, claimed: false };
+      if (send.state !== "pending" || enrollment.status !== "active" || enrollment.immediateSends.slice(0, sendIndex).some(s => s.state === "in-flight"))
+        return { enrollment, claimed: false };
       replaceNestedExtension(immediateSendResourceExtension(resource, sendIndex), "state", {
         url: "state",
         valueCode: "in-flight",
       });
       try {
         const updated = await fhir.update<Basic>("Basic", resource.id!, resource, {
-          ...(resource.meta?.versionId ? { "If-Match": `W/\"${resource.meta.versionId}\"` } : {}),
+          ...enrollmentVersionHeaders(resource),
         });
         return { enrollment: parseEnrollment(updated), claimed: true };
       } catch (error) {
@@ -316,7 +383,7 @@ export function createFhirEducationEnrollmentStore(
           .includes(entry.url));
       sendExtension.extension.push({ url: "state", valueCode: "resolved" }, ...outcomeExtensions(outcome));
       const updated = await fhir.update<Basic>("Basic", resource.id!, resource, {
-        ...(resource.meta?.versionId ? { "If-Match": `W/\"${resource.meta.versionId}\"` } : {}),
+        ...enrollmentVersionHeaders(resource),
       });
       return parseEnrollment(updated);
     },
@@ -324,21 +391,14 @@ export function createFhirEducationEnrollmentStore(
       validateTransition(transition);
       const resource = await fhir.read<Basic>("Basic", resourceId(id, "enrollment id"));
       const enrollment = parseEnrollment(resource);
+      const before = JSON.stringify(enrollment);
       applyTransition(enrollment, transition);
-      const appendedSends = enrollment.immediateSends.slice(
-        enrollment.immediateSends.length - transition.immediateSends.length,
-      );
-      replaceExtension(resource, CURRENT_STAGE_ID, { url: CURRENT_STAGE_ID, valueString: enrollment.currentStageId });
-      replaceExtension(resource, STAGE_ENTERED_AT, { url: STAGE_ENTERED_AT, valueInstant: enrollment.stageEnteredAt });
-      replaceExtension(resource, ENROLLMENT_STATUS, { url: ENROLLMENT_STATUS, valueCode: enrollment.status });
-      resource.extension = [
-        ...(resource.extension ?? []),
-        stageHistoryExtension(enrollment.stageHistory.at(-1)!),
-        ...appendedSends.map(immediateSendExtension),
-      ];
+      if (JSON.stringify(enrollment) === before) return enrollment;
+      replaceEnrollmentState(resource, enrollment);
+      if (transition.sequence && transition.status === "active") assertEducationSequenceAdmissionBudget(enrollment, resource);
       try {
         return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, {
-          ...(resource.meta?.versionId ? { "If-Match": `W/\"${resource.meta.versionId}\"` } : {}),
+          ...enrollmentVersionHeaders(resource),
         }));
       } catch (error) {
         if (isFhirConflict(error)) throw new EducationEnrollmentTransitionError("stale-from-stage");
@@ -368,7 +428,7 @@ export function createFhirEducationEnrollmentStore(
         { url: "acknowledged-by", valueReference: { reference: acknowledgement.acknowledgedBy } },
       ];
       return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, {
-        ...(resource.meta?.versionId ? { "If-Match": `W/\"${resource.meta.versionId}\"` } : {}),
+        ...enrollmentVersionHeaders(resource),
       }));
     },
     async clearTerminalActiveIdentifier(id) {
@@ -384,7 +444,7 @@ export function createFhirEducationEnrollmentStore(
       resource.identifier = resource.identifier.filter((identifier) =>
         identifier.system !== ACTIVE_ENROLLMENT_IDENTIFIER_SYSTEM);
       return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, {
-        ...(resource.meta?.versionId ? { "If-Match": `W/\"${resource.meta.versionId}\"` } : {}),
+        ...enrollmentVersionHeaders(resource),
       }));
     },
   };
@@ -404,7 +464,7 @@ async function activeMatches(
     .filter((row) => row.status === "active");
 }
 
-function enrollmentResource(
+export function enrollmentResource(
   enrollment: EducationEnrollment,
   activeIdentifier: string,
 ): Basic {
@@ -433,6 +493,7 @@ function enrollmentResource(
       { url: ENROLLMENT_STATUS, valueCode: enrollment.status },
       ...enrollment.stageHistory.map(stageHistoryExtension),
       ...enrollment.immediateSends.map(immediateSendExtension),
+      ...sequenceExtensions(enrollment),
     ],
   };
 }
@@ -471,6 +532,10 @@ function parseEnrollment(resource: Basic): EducationEnrollment {
       .filter((entry) => entry.url === IMMEDIATE_SEND)
       .map(parseImmediateSend),
   };
+  const scheduled = (resource.extension ?? []).filter(e => e.url === EDUCATION_SEQUENCE_EXTENSION);
+  const activations = (resource.extension ?? []).filter(e => e.url === EDUCATION_ACTIVATION_EXTENSION);
+  if (scheduled.length) enrollment.scheduledSends = scheduled.map(e => JSON.parse(e.valueString ?? "null"));
+  if (activations.length) enrollment.activations = activations.map(e => JSON.parse(e.valueString ?? "null"));
   validateEnrollment(enrollment);
   return enrollment;
 }
@@ -516,6 +581,7 @@ function outcomeExtensions(outcome: EducationEnrollmentSendOutcome): Extension[]
         ? [{ url: "provider-thread-id", valueString: outcome.providerThreadId }]
         : []),
     ] : []),
+    ...(outcome.outcome === "not-sent" ? [{ url: "reason", valueString: outcome.reason }] : []),
     ...(outcome.outcome === "suppressed" ? [{ url: "reason", valueCode: outcome.reason }] : []),
     ...(outcome.outcome === "rescheduled" ? [
       { url: "reason", valueCode: outcome.reason },
@@ -571,6 +637,7 @@ function parseImmediateSend(extension: Extension): EducationEnrollmentImmediateS
 }
 
 function parseOutcome(extension: Extension, code: string): EducationEnrollmentSendOutcome {
+  if (code === "not-sent") return { outcome: "not-sent", reason: nestedValue(extension, "reason", "valueString") };
   if (code === "sent") {
     return {
       outcome: "sent",
@@ -637,15 +704,22 @@ function applyTransition(
   transition: EducationEnrollmentTransition,
 ): void {
   validateTransition(transition);
+  if (transition.sequence && transition.requestId && enrollment.activations?.some(a => a.requestId === transition.requestId)) {
+    if (enrollment.activations!.find(a => a.requestId === transition.requestId)!.admissionContext !== enrollmentTransitionContext(transition))
+      throw new EducationSequenceAdmissionError("request-id-conflict");
+    admitEducationSequence(enrollment, { requestId: transition.requestId, sequence: transition.sequence, authorizedBy: transition.enteredBy, authorizedAt: transition.enteredAt });
+    return;
+  }
   if (enrollment.status !== "active") {
     throw new EducationEnrollmentTransitionError("enrollment-not-active");
   }
   if (enrollment.currentStageId !== transition.fromStageId) {
     throw new EducationEnrollmentTransitionError("stale-from-stage");
   }
-  if (enrollment.immediateSends.some((send) => !isReconciled(send))) {
+  if (!enrollment.activations?.length && !transition.sequence && transition.status === "active" && enrollment.immediateSends.some((send) => !isReconciled(send))) {
     throw new EducationEnrollmentTransitionError("pending-reconciliation");
   }
+  const priorImmediateSendCount = enrollment.immediateSends.length;
   enrollment.currentStageId = transition.targetStageId;
   enrollment.stageEnteredAt = transition.enteredAt;
   enrollment.status = transition.status;
@@ -655,6 +729,10 @@ function applyTransition(
     enteredBy: transition.enteredBy,
     reason: transition.trigger,
   });
+  applyEducationEnrollmentLifecycle(enrollment, {actor: transition.enteredBy, at: transition.enteredAt, reason: transition.trigger, priorImmediateSendCount});
+  if (transition.sequence && transition.status === "active")
+    admitEducationSequence(enrollment, { requestId: transition.requestId ?? "", sequence: transition.sequence, authorizedBy: transition.enteredBy, authorizedAt: transition.enteredAt });
+  if (transition.sequence && transition.status === "active") enrollment.activations!.at(-1)!.admissionContext = enrollmentTransitionContext(transition);
   const sendStartIndex = enrollment.immediateSends.length;
   enrollment.immediateSends.push(...transition.immediateSends.map((send, index) => ({
     ...structuredClone(send),
@@ -665,6 +743,8 @@ function applyTransition(
     ),
     state: "pending" as const,
   })));
+  applyEducationEnrollmentLifecycle(enrollment, {actor: transition.enteredBy, at: transition.enteredAt, reason: transition.trigger});
+  if (transition.sequence && transition.status === "active") assertEducationSequenceAdmissionBudget(enrollment);
 }
 
 function validateEnrollment(enrollment: EducationEnrollment): void {
@@ -689,6 +769,7 @@ function validateEnrollment(enrollment: EducationEnrollment): void {
     definitionId(entry.reason, "stage history reason");
   }
   for (const send of enrollment.immediateSends) validateImmediateSend(send);
+  validateStoredEducationSequences(enrollment);
 }
 
 function validateImmediateSend(send: EducationEnrollmentImmediateSend): void {
@@ -917,4 +998,43 @@ function httpsUrl(value: string): string {
   }
   if (url.protocol !== "https:") throw new Error("Stored EducationEnrollment print URL is invalid.");
   return value;
+}
+
+function initialSequenceAdmission(input: NewEducationEnrollment): EducationSequenceAdmission {
+  return { requestId: input.requestId ?? "", sequence: input.sequence!, authorizedBy: input.enrolledBy, authorizedAt: input.stageEnteredAt };
+}
+function sequenceExtensions(enrollment: EducationEnrollment): Extension[] {
+  return [...(enrollment.activations ?? []).map(a => ({ url: EDUCATION_ACTIVATION_EXTENSION, valueString: JSON.stringify(a) })), ...(enrollment.scheduledSends ?? []).map(row => ({ url: EDUCATION_SEQUENCE_EXTENSION, valueString: JSON.stringify(row) }))];
+}
+function replaceEnrollmentState(resource: Basic, enrollment: EducationEnrollment): void {
+  const urls = new Set([CURRENT_STAGE_ID, STAGE_ENTERED_AT, ENROLLMENT_STATUS, STAGE_HISTORY, IMMEDIATE_SEND, EDUCATION_SEQUENCE_EXTENSION, EDUCATION_ACTIVATION_EXTENSION]);
+  resource.extension = [...(resource.extension ?? []).filter(e => !urls.has(e.url)),
+    { url: CURRENT_STAGE_ID, valueString: enrollment.currentStageId }, { url: STAGE_ENTERED_AT, valueInstant: enrollment.stageEnteredAt }, { url: ENROLLMENT_STATUS, valueCode: enrollment.status },
+    ...enrollment.stageHistory.map(stageHistoryExtension), ...enrollment.immediateSends.map(immediateSendExtension), ...sequenceExtensions(enrollment)];
+}
+async function mutateEnrollment(fhir: EducationEnrollmentFhir, id: string, mutate: (row: EducationEnrollment) => void): Promise<EducationEnrollment> {
+  const resource = await fhir.read<Basic>("Basic", resourceId(id, "enrollment id"));
+  const enrollment = parseEnrollment(resource);
+  const before = JSON.stringify(enrollment);
+  const priorActivationCount = enrollment.activations?.length ?? 0;
+  mutate(enrollment);
+  if (JSON.stringify(enrollment) === before)
+    return enrollment;
+  if (!resource.meta?.versionId)
+    throw new Error("EducationEnrollment version is required.");
+  replaceEnrollmentState(resource, enrollment);
+  if ((enrollment.activations?.length ?? 0) > priorActivationCount)
+    assertEducationSequenceAdmissionBudget(enrollment, resource);
+  return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, { "If-Match": `W/"${resource.meta.versionId}"` }));
+}
+function enrollmentCreateContext(input: NewEducationEnrollment): string {
+  return JSON.stringify([input.patientReference, input.journey, input.currentStageId, input.enteredFromEncounterReference, input.enrolledBy, input.status, input.immediateSends]);
+}
+function enrollmentTransitionContext(input: EducationEnrollmentTransition): string {
+  return JSON.stringify([input.fromStageId, input.targetStageId, input.trigger, input.enteredBy, input.status, input.immediateSends]);
+}
+function enrollmentVersionHeaders(resource: Basic): Record<string, string> {
+  if (!resource.meta?.versionId)
+    throw new Error("EducationEnrollment version is required.");
+  return { "If-Match": `W/"${resource.meta.versionId}"` };
 }
