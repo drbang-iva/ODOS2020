@@ -35,7 +35,7 @@ All three guards are reachable and guard existing production surfaces. None was 
 | Divergent body still conflicts: fingerprint ignores content | 40 pass / 2 fail; missing expected rejection | 42 pass / 0 fail |
 | HTTP race: remove typed conversion from both sequence mutations | 38 pass / 4 fail; HTTP 502 instead of 409 for admit/stop, upstream 409/412 | 42 pass / 0 fail |
 
-Mutation command: `npm --prefix mcp test -- tests/educationSequence.test.ts tests/educationEnrollmentApi.test.ts`. Each red exits 1; each restored run exits 0. Full raw outputs are `fixback-guard-{1,2,3}-{red,green}.txt`.
+Mutation command: `npm --prefix mcp test -- tests/educationSequence.test.ts tests/educationEnrollmentApi.test.ts`. Each red exits 1; each restored run exits 0. Outputs (trailing whitespace normalized in the guard 3 red log) are `fixback-guard-{1,2,3}-{red,green}.txt`.
 
 ## Scope and risks
 

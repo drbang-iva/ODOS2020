@@ -188,9 +188,9 @@ not ok 29 - sequence HTTP admit lost 409 race returns typed 409 without retry
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     502 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -212,9 +212,9 @@ not ok 30 - sequence HTTP admit lost 412 race returns typed 409 without retry
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     502 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -236,9 +236,9 @@ not ok 31 - sequence HTTP stop lost 409 race returns typed 409 without retry
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     502 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -260,9 +260,9 @@ not ok 32 - sequence HTTP stop lost 412 race returns typed 409 without retry
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     502 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
