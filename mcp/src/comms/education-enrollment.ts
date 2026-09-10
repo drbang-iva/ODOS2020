@@ -312,9 +312,7 @@ export function createFhirEducationEnrollmentStore(
             valueString: enrollmentSendIdempotencyKey(persisted.id, index),
           });
         }
-        persisted = await fhir.update<Basic>("Basic", persisted.id, persisted, {
-          ...enrollmentVersionHeaders(persisted),
-        });
+        persisted = await updateEnrollmentResource(fhir, persisted);
       }
       return parseEnrollment(persisted);
     },
@@ -386,9 +384,7 @@ export function createFhirEducationEnrollmentStore(
         !["state", "outcome", "provider-message-id", "provider-thread-id", "reason", "rescheduled-at", "url"]
           .includes(entry.url));
       sendExtension.extension.push({ url: "state", valueCode: "resolved" }, ...outcomeExtensions(outcome));
-      const updated = await fhir.update<Basic>("Basic", resource.id!, resource, {
-        ...enrollmentVersionHeaders(resource),
-      });
+      const updated = await updateEnrollmentResource(fhir, resource);
       return parseEnrollment(updated);
     },
     async transition(id, transition) {
@@ -431,9 +427,7 @@ export function createFhirEducationEnrollmentStore(
         { url: "acknowledged-at", valueInstant: acknowledgement.acknowledgedAt },
         { url: "acknowledged-by", valueReference: { reference: acknowledgement.acknowledgedBy } },
       ];
-      return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, {
-        ...enrollmentVersionHeaders(resource),
-      }));
+      return parseEnrollment(await updateEnrollmentResource(fhir, resource));
     },
     async clearTerminalActiveIdentifier(id) {
       const resource = await fhir.read<Basic>("Basic", resourceId(id, "enrollment id"));
@@ -447,9 +441,7 @@ export function createFhirEducationEnrollmentStore(
       }
       resource.identifier = resource.identifier.filter((identifier) =>
         identifier.system !== ACTIVE_ENROLLMENT_IDENTIFIER_SYSTEM);
-      return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, {
-        ...enrollmentVersionHeaders(resource),
-      }));
+      return parseEnrollment(await updateEnrollmentResource(fhir, resource));
     },
   };
 }
@@ -502,7 +494,7 @@ export function enrollmentResource(
   };
 }
 
-function parseEnrollment(resource: Basic): EducationEnrollment {
+export function parseEnrollment(resource: Basic): EducationEnrollment {
   if (!isEnrollmentResource(resource)) throw new Error("Basic is not an EducationEnrollment.");
   const id = resource.id ?? extensionStringIdentifier(resource, ENROLLMENT_IDENTIFIER_SYSTEM);
   const patientReference = resource.subject?.reference ?? "";
@@ -1010,7 +1002,7 @@ function initialSequenceAdmission(input: NewEducationEnrollment): EducationSeque
 function sequenceExtensions(enrollment: EducationEnrollment): Extension[] {
   return [...(enrollment.activations ?? []).map(a => ({ url: EDUCATION_ACTIVATION_EXTENSION, valueString: JSON.stringify(a) })), ...(enrollment.scheduledSends ?? []).map(row => ({ url: EDUCATION_SEQUENCE_EXTENSION, valueString: JSON.stringify(row) }))];
 }
-function replaceEnrollmentState(resource: Basic, enrollment: EducationEnrollment): void {
+export function replaceEnrollmentState(resource: Basic, enrollment: EducationEnrollment): void {
   const urls = new Set([CURRENT_STAGE_ID, STAGE_ENTERED_AT, ENROLLMENT_STATUS, STAGE_HISTORY, IMMEDIATE_SEND, EDUCATION_SEQUENCE_EXTENSION, EDUCATION_ACTIVATION_EXTENSION]);
   resource.extension = [...(resource.extension ?? []).filter(e => !urls.has(e.url)),
     { url: CURRENT_STAGE_ID, valueString: enrollment.currentStageId }, { url: STAGE_ENTERED_AT, valueInstant: enrollment.stageEnteredAt }, { url: ENROLLMENT_STATUS, valueCode: enrollment.status },
@@ -1029,8 +1021,11 @@ async function mutateEnrollment(fhir: EducationEnrollmentFhir, id: string, mutat
   replaceEnrollmentState(resource, enrollment);
   if ((enrollment.activations?.length ?? 0) > priorActivationCount)
     assertEducationSequenceAdmissionBudget(enrollment, resource);
+  return parseEnrollment(await updateEnrollmentResource(fhir, resource));
+}
+export async function updateEnrollmentResource(fhir: EducationEnrollmentFhir, resource: Basic): Promise<Basic> {
   try {
-    return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, { "If-Match": `W/"${resource.meta.versionId}"` }));
+    return await fhir.update<Basic>("Basic", resource.id!, resource, enrollmentVersionHeaders(resource));
   } catch (error) {
     if (isFhirConflict(error)) throw new EducationSequenceAdmissionError("stale-enrollment-version");
     throw error;

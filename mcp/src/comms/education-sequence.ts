@@ -75,7 +75,15 @@ export interface EducationScheduledSend extends EducationSequenceStep {
   attempts: {
     sendIndex: number;
     attemptKey: string;
+    predecessorAttemptKey?: string;
+    acceptedAt?: string;
+    providerNeverInvoked?: true;
   }[];
+  runtime?: {
+    effectiveAt?: string;
+    reviewedEncounterReferences?: string[];
+    clinicianSkip?: { at: string; by: string; reason: string };
+  };
   events: EducationSchedulingEvent[];
 }
 export interface EducationLifecycleContext {
@@ -215,7 +223,7 @@ export function applyEducationEnrollmentLifecycle(enrollment: EducationEnrollmen
         delete row.holdReason;
         row.events.push({ kind: "cancelled", actor: context.actor, at: context.at, reason: context.reason });
       }
-      if (row.disposition === "held" && row.holdReason === "needs-acknowledgement" && row.blockedBySendIndices.every(i => ["resolved", "indeterminate"].includes(enrollment.immediateSends[i]?.state ?? ""))) {
+      if (row.disposition === "held" && row.holdReason === "needs-acknowledgement" && row.blockedBySendIndices.length > 0 && row.blockedBySendIndices.every(i => ["resolved", "indeterminate"].includes(enrollment.immediateSends[i]?.state ?? ""))) {
         row.disposition = row.anchor === "predecessor-acceptance" ? "waiting" : "scheduled";
         delete row.holdReason;
         row.events.push({ kind: "released", actor: context.actor, at: context.at, reason: context.reason });
@@ -256,10 +264,27 @@ export function validateStoredEducationSequences(enrollment: EducationEnrollment
       validateEvent(event);
   }
   const rowIds = new Set<string>();
+  const boundIndices = new Set<number>();
+  const boundKeys = new Set<string>();
   for (const row of enrollment.scheduledSends ?? []) {
     if (!row || !ids.has(row.activationId) || rowIds.has(row.id) || row.id !== educationSequenceRowId(row.activationId, row.stepIndex, row.channel))
       throw new Error("Stored scheduled identity is invalid.");
     rowIds.add(row.id);
+    if (row.runtime) {
+      keys(row.runtime, ["effectiveAt", "reviewedEncounterReferences", "clinicianSkip"], "stored-worker-runtime");
+      if (row.runtime.effectiveAt !== undefined && !Number.isFinite(Date.parse(row.runtime.effectiveAt)))
+        throw new Error("Stored worker effective time is invalid.");
+      if (row.runtime.clinicianSkip !== undefined) {
+        keys(row.runtime.clinicianSkip, ["at", "by", "reason"], "stored-clinician-skip");
+        reference(row.runtime.clinicianSkip.by, ["Practitioner"], "stored-skip-clinician");
+        text(row.runtime.clinicianSkip.reason, "stored-skip-reason");
+        if (typeof row.runtime.clinicianSkip.at !== "string" || !/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(row.runtime.clinicianSkip.at) || !Number.isFinite(Date.parse(row.runtime.clinicianSkip.at)) || row.disposition !== "closed") throw new Error("Stored clinician skip is invalid.");
+      }
+      if (row.runtime.reviewedEncounterReferences !== undefined) {
+        if (!Array.isArray(row.runtime.reviewedEncounterReferences)) throw new Error("Stored reviewed encounters are invalid.");
+        for (const encounter of row.runtime.reviewedEncounterReferences) reference(encounter, ["Encounter"], "stored-reviewed-encounter");
+      }
+    }
     if (!["waiting", "scheduled", "held", "cancelled", "closed"].includes(row.disposition))
       throw new Error("Stored scheduling disposition is invalid.");
     if (row.disposition === "held" && !["patient-opt-out", "patient-seen", "content-unavailable", "no-recipient-channel", "needs-acknowledgement"].includes(row.holdReason ?? ""))
@@ -269,16 +294,30 @@ export function validateStoredEducationSequences(enrollment: EducationEnrollment
     for (const index of row.blockedBySendIndices)
       if (!Number.isSafeInteger(index) || !enrollment.immediateSends[index])
         throw new Error("Stored scheduled blocker is invalid.");
+    const earlierAttemptKeys = new Set<string>();
     for (const attempt of row.attempts) {
       if (!Number.isSafeInteger(attempt.sendIndex) || !enrollment.immediateSends[attempt.sendIndex])
         throw new Error("Stored scheduled attempt is invalid.");
       text(attempt.attemptKey, "stored-attempt-key");
+      const send = enrollment.immediateSends[attempt.sendIndex];
+      if (boundIndices.has(attempt.sendIndex) || boundKeys.has(attempt.attemptKey) || send.idempotencyKey !== attempt.attemptKey
+        || send.content.id !== row.content.id || send.content.version !== row.content.version || send.channel !== row.channel || send.lane !== row.lane)
+        throw new Error("Stored scheduled attempt binding is invalid.");
+      if (attempt.predecessorAttemptKey !== undefined && !earlierAttemptKeys.has(attempt.predecessorAttemptKey))
+        throw new Error("Stored scheduled attempt predecessor is invalid.");
+      if (attempt.acceptedAt !== undefined && (typeof attempt.acceptedAt !== "string" || !/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(attempt.acceptedAt) || !Number.isFinite(Date.parse(attempt.acceptedAt))))
+        throw new Error("Stored scheduled attempt acceptance is invalid.");
+      if (attempt.providerNeverInvoked !== undefined && (attempt.providerNeverInvoked !== true || attempt.acceptedAt !== undefined))
+        throw new Error("Stored scheduled attempt provider proof is invalid.");
+      boundIndices.add(attempt.sendIndex);
+      boundKeys.add(attempt.attemptKey);
+      earlierAttemptKeys.add(attempt.attemptKey);
     }
     for (const event of row.events)
       validateEvent(event);
   }
   for (const activation of enrollment.activations ?? []) {
-    const steps = (enrollment.scheduledSends ?? []).filter(row => row.activationId === activation.id).map(({ id, activationId, senderReference, disposition, holdReason, blockedBySendIndices, attempts, events, ...step }) => step);
+    const steps = (enrollment.scheduledSends ?? []).filter(row => row.activationId === activation.id).map(({ id, activationId, senderReference, disposition, holdReason, blockedBySendIndices, attempts, events, runtime, ...step }) => step);
     validateEducationSequence({ ...activation.sequence, steps });
   }
 }

@@ -25,6 +25,7 @@ const BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   [CLINIC_PATH]: [{ label: "Clinic" }],
   "/clinic/patients": [{ label: "Clinic", href: CLINIC_PATH }, { label: "Patients" }],
   "/clinic/protocols": [{ label: "Clinic", href: CLINIC_PATH }, { label: "Protocol Library" }],
+  "/communications/education/review": [{ label: "Communications" }, { label: "Education review" }],
   "/audit/log": [{ label: "Audit log" }],
   "/admin/optical/catalog/frames": [{ label: "Catalog & pricing" }, { label: "Frames" }],
   "/admin/optical/inventory/frames": [{ label: "Inventory" }, { label: "Frames" }],
@@ -169,6 +170,7 @@ function SectionsDrawer({ open, roles, onClose }: { open: boolean; roles: readon
         <h2>Sections</h2>
         <p>Every working surface, one slide away.</p>
         <DrawerGroup label="Every day">
+          <DrawerLink icon="▤" title="Education review" detail="held steps and staff handouts" href="/communications/education/review" onClick={route} />
           <DrawerLink icon="▦" title="Schedule" detail="day grid, all providers" href="/schedule/day" onClick={route} />
           <DrawerLink icon="⌂" title="Front desk" detail="schedule and floor" href="/frontdesk" onClick={route} />
           <DrawerLink icon="⇄" title="Work" detail="reason-grouped billing work" href="/billing/claims/worklist" onClick={route} />

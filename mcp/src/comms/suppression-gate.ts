@@ -11,6 +11,8 @@ import type {
 } from "./comms-provider.js";
 import type { InboundMessageEvent, InboundOptOutType } from "./inbound-receiver.js";
 
+export const ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-comms-marketing-consent";
 export const ODOS_COMMS_OPT_OUT_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out";
 export const ODOS_PATIENT_TIMEZONE_EXTENSION_URL =
@@ -271,6 +273,7 @@ export function createSuppressedCommsProvider(
 ): CommsProvider {
   return {
     name: provider.name,
+    preflightSuppression: (request, channel) => checkMessageSuppression(deps, request, channel).then((checked) => checked.result),
     ...(provider.messageIdentifierSystem
       ? { messageIdentifierSystem: provider.messageIdentifierSystem }
       : {}),
@@ -332,16 +335,25 @@ async function gatedSend(
   channel: "email" | "sms",
   send: (patient: Patient, now: Date) => Promise<SendResult>,
 ): Promise<SendResult> {
+  const checked = await checkMessageSuppression(deps, request, channel);
+  return checked.result ?? send(checked.patient, checked.now);
+}
+
+export async function checkMessageSuppression(
+  deps: SuppressionGateDeps,
+  request: SendEmailRequest | SendSmsRequest,
+  channel: "email" | "sms",
+): Promise<{ patient: Patient; now: Date; result?: Exclude<SendResult, { outcome: "sent" }> }> {
   const now = deps.now?.() ?? new Date();
   const patient = await readPatient(deps.fhir, request.patientReference);
-  if (isOptedOut(
+  if ((request.suppression.requiresMarketingConsent && !hasRecordedMarketingConsent(patient)) || isOptedOut(
     patient,
     channel,
     request.campaignType,
     channel === "sms" ? deps.smsSenderNumber : undefined,
     deps.stopScope ?? "per-number",
   )) {
-    return { outcome: "suppressed", reason: "patient-opt-out" };
+    return { patient, now, result: { outcome: "suppressed", reason: "patient-opt-out" } };
   }
   if (
     request.suppression.frequencyCapDays !== undefined
@@ -354,7 +366,7 @@ async function gatedSend(
       request.messageId,
     )
   ) {
-    return { outcome: "suppressed", reason: "frequency-cap" };
+    return { patient, now, result: { outcome: "suppressed", reason: "frequency-cap" } };
   }
   const timeZone = patientTimeZone(patient, deps.practiceTimeZone);
   // Product judgment, not a settled legal conclusion: live staff chart education mirrors
@@ -364,13 +376,22 @@ async function gatedSend(
     request.suppression.quietHoursExemption !== "staff-initiated-chart-education"
     && !insideQuietHoursWindow(now, timeZone)
   ) {
-    return {
+    return { patient, now, result: {
       outcome: "rescheduled",
       reason: "quiet-hours",
       rescheduledAt: nextWindowOpen(now, timeZone),
-    };
+    } };
   }
-  return send(patient, now);
+  return { patient, now };
+}
+
+export function hasRecordedMarketingConsent(patient: Patient): boolean {
+  const consent = patient.extension?.find((extension) =>
+    extension.url === ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL);
+  if (!consent) return false;
+  const allowed = consent.extension?.find((part) => part.url === "consent")?.valueBoolean;
+  const recorded = consent.extension?.find((part) => part.url === "recorded")?.valueDateTime;
+  return allowed === true && typeof recorded === "string" && !Number.isNaN(Date.parse(recorded));
 }
 
 async function readPatient(fhir: Pick<MedplumClient, "read">, reference: string): Promise<Patient> {
