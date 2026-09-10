@@ -83,6 +83,72 @@ export async function readPatientSmsOptOut(
   };
 }
 
+export async function recordPatientSmsOptOut(
+  fhir: SmsOptOutManagementFhir,
+  patientReference: string,
+  input: {
+    actorReference: string;
+    actorRole: PracticeRoleId;
+    policyUrl?: string;
+    recordedAt: string;
+    reason: string;
+    identityVerification: SmsOptOutIdentityVerification;
+    scope: SmsStopScope;
+    number?: string;
+  },
+): Promise<PatientSmsOptOutState> {
+  const patient = await readPatient(fhir, patientReference);
+  const existing = patient.extension ?? [];
+  const number = input.scope === "per-number" ? e164(input.number ?? "", "SMS opt-out record number") : undefined;
+  const duplicate = existing.some((extension) => isOwnedSmsOptOut(extension) && smsOptOutNumber(extension) === number);
+  const nextExtensions = duplicate ? existing : [...existing, {
+    url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+    extension: [
+      { url: "channel", valueCode: "sms" },
+      ...(number ? [{ url: "number", valueString: number }] : []),
+    ],
+  }];
+  if (!duplicate) {
+    if (!patient.id || !patient.meta?.versionId) {
+      throw new Error("SMS opt-out record requires the Patient to have an id and version.");
+    }
+    const provenance: Provenance = {
+      ...buildProvenance({
+        targetReferences: [patientReference],
+        recorded: input.recordedAt,
+        activityCode: "CREATE",
+        activityDisplay: "Record SMS opt-out (patient request)",
+        agents: [{ whoReference: input.actorReference, typeCode: "author" }],
+        entityValues: [
+          { role: "source", display: `Patient identity verification: ${input.identityVerification}` },
+          { role: "source", display: `SMS opt-out scope: ${input.scope}${number ? ` (${number})` : ""}` },
+        ],
+      }),
+      reason: [{ text: input.reason }],
+    };
+    const transaction: Bundle = {
+      resourceType: "Bundle",
+      type: "transaction",
+      entry: [
+        { resource: { ...patient, extension: nextExtensions }, request: {
+          method: "PUT", url: patientReference, ifMatch: `W/"${patient.meta.versionId}"`,
+        } },
+        { resource: provenance, request: { method: "POST", url: "Provenance" } },
+      ],
+    };
+    await fhir.executeTransactionAsActor(transaction, {
+      actorReference: input.actorReference,
+      actorRole: input.actorRole,
+      ...(input.policyUrl ? { policyUrl: input.policyUrl } : {}),
+      actionReason: "communications.optout.manage record SMS opt-out",
+    }, { "X-ODOS-Source": "mcp/comms-opt-out-record" }, {
+      validateResponse: (response) => assertSmsOptOutTransaction(response, transaction.entry!.length),
+    });
+  }
+  const remainingOptOuts = summarizeSmsOptOuts(nextExtensions);
+  return { patientReference, smsOptedOut: remainingOptOuts.global || remainingOptOuts.numbers.length > 0, remainingOptOuts };
+}
+
 export async function clearPatientSmsOptOut(
   fhir: SmsOptOutManagementFhir,
   patientReference: string,
@@ -160,7 +226,7 @@ export async function clearPatientSmsOptOut(
       actionReason: "communications.optout.manage clear SMS opt-out",
     },
     { "X-ODOS-Source": "mcp/comms-opt-out-clear" },
-    { validateResponse: (response) => assertSmsOptOutClearTransaction(response, transaction.entry!.length) },
+    { validateResponse: (response) => assertSmsOptOutTransaction(response, transaction.entry!.length) },
   );
   return number === undefined
     ? { patientReference, smsOptedOut: false, cleared: true }
@@ -427,16 +493,16 @@ function summarizeSmsOptOuts(extensions: NonNullable<Patient["extension"]>): {
   };
 }
 
-function assertSmsOptOutClearTransaction(response: Bundle, expectedEntries: number): void {
+function assertSmsOptOutTransaction(response: Bundle, expectedEntries: number): void {
   if (response.resourceType !== "Bundle" || response.type !== "transaction-response") {
-    throw new Error("SMS opt-out clear did not return a transaction-response Bundle.");
+    throw new Error("SMS opt-out did not return a transaction-response Bundle.");
   }
   if (response.entry?.length !== expectedEntries) {
-    throw new Error("SMS opt-out clear returned an incomplete transaction response.");
+    throw new Error("SMS opt-out returned an incomplete transaction response.");
   }
   const failed = response.entry.find((entry) => !/^2\d\d/.test(entry.response?.status ?? ""));
   if (failed) {
-    throw new Error(`SMS opt-out clear failed with status ${failed.response?.status ?? "unknown"}.`);
+    throw new Error(`SMS opt-out failed with status ${failed.response?.status ?? "unknown"}.`);
   }
 }
 

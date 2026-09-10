@@ -353,3 +353,74 @@ test("the SMS preferences error boundary keeps its host surface mounted after a 
     console.error = originalError;
   }
 });
+
+test("record opt-out widens an existing lane and re-renders the returned global state", async () => {
+  const originalFetch = globalThis.fetch;
+  const state = {
+    patientReference: "Patient/synthetic-1", smsOptedOut: true,
+    remainingOptOuts: { global: false, numbers: ["+18645550100"] },
+    smsLanes: [{ label: "Front-desk texts", number: "+18645550100", roles: ["transactional-sms"] }],
+  };
+  let recordedBody: unknown;
+  let notified: unknown;
+  globalThis.fetch = async (url, init) => {
+    if (init?.method === "POST") {
+      assert.match(String(url), /\/communications\/opt-out\/record$/);
+      recordedBody = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ ...state, remainingOptOuts: { ...state.remainingOptOuts, global: true } }));
+    }
+    return new Response(JSON.stringify(state));
+  };
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => { renderer = create(<SmsOptOutControl patientReference={state.patientReference} onStateChange={(value) => { notified = value; }} />); });
+    const record = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Record opt-out — patient asked…");
+    assert.ok(record);
+    act(() => record.props.onClick());
+    assert.equal(renderer.root.findByProps({ type: "submit" }).props.disabled, true);
+    act(() => {
+      renderer.root.findByProps({ "aria-label": "Reason for opt-out" }).props.onChange({ target: { value: "Please stop texting" } });
+      renderer.root.findByProps({ "aria-label": "Identity verification" }).props.onChange({ target: { value: "in-person" } });
+    });
+    await act(async () => { await renderer.root.findByType("form").props.onSubmit({ preventDefault() {} }); });
+    assert.deepEqual(recordedBody, { patientReference: state.patientReference, reason: "Please stop texting", identityVerification: "in-person", scope: "global" });
+    assert.equal((notified as typeof state).remainingOptOuts.global, true);
+    assert.equal(renderer.root.findAllByType("button").some((button) => button.children.join("") === "Record opt-out — patient asked…"), false);
+  } finally { if (renderer) act(() => renderer.unmount()); globalThis.fetch = originalFetch; }
+});
+
+test("record opt-out lets staff choose the configured lane and validates the response", async () => {
+  const originalFetch = globalThis.fetch;
+  let recordedBody: unknown;
+  const state = {
+    patientReference: "Patient/synthetic-1", smsOptedOut: false,
+    remainingOptOuts: { global: false, numbers: [] },
+    smsLanes: [
+      { label: "Front-desk texts", number: "+18645550100", roles: ["transactional-sms"] },
+      { label: "Clinical texts", number: "+18485550100", roles: ["clinical-sms"] },
+    ],
+  };
+  globalThis.fetch = async (_url, init) => {
+    if (init?.method === "POST") {
+      recordedBody = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ unexpected: true }));
+    }
+    return new Response(JSON.stringify(state));
+  };
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => { renderer = create(<SmsOptOutControl patientReference={state.patientReference} />); });
+    const button = renderer.root.findAllByType("button").find((candidate) => candidate.children.join("") === "Record opt-out — patient asked…");
+    assert.ok(button);
+    act(() => button.props.onClick());
+    act(() => renderer.root.findByProps({ "aria-label": "Opt-out scope" }).props.onChange({ target: { value: "per-number" } }));
+    act(() => {
+      renderer.root.findByProps({ "aria-label": "SMS lane" }).props.onChange({ target: { value: "+18485550100" } });
+      renderer.root.findByProps({ "aria-label": "Reason for opt-out" }).props.onChange({ target: { value: "No more texts" } });
+      renderer.root.findByProps({ "aria-label": "Identity verification" }).props.onChange({ target: { value: "phone-verified" } });
+    });
+    await act(async () => { await renderer.root.findByType("form").props.onSubmit({ preventDefault() {} }); });
+    assert.deepEqual(recordedBody, { patientReference: state.patientReference, reason: "No more texts", identityVerification: "phone-verified", scope: "per-number", number: "+18485550100" });
+    assert.match(JSON.stringify(renderer.toJSON()), /SMS preferences unavailable/);
+  } finally { if (renderer) act(() => renderer.unmount()); globalThis.fetch = originalFetch; }
+});

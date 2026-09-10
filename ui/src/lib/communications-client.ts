@@ -119,6 +119,34 @@ export async function readSmsOptOut(
   return body;
 }
 
+export async function recordSmsOptOut(
+  input: {
+    patientReference: string;
+    reason: string;
+    identityVerification: SmsOptOutIdentityVerification;
+    scope: "global" | "per-number";
+    number?: string;
+  },
+  fetchImpl: typeof fetch = fetch,
+): Promise<SmsOptOutState> {
+  const response = await fetchImpl(`${clinicalGraphApiBase()}/communications/opt-out/record`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const body = await response.json().catch(() => ({})) as unknown;
+  if (!response.ok) {
+    throw new CommunicationsResponseError(
+      response.status,
+      responseError(body) ?? `SMS opt-out record failed (${response.status}).`,
+    );
+  }
+  if (!isSmsOptOutState(body)) {
+    throw new CommunicationsResponseError(response.status, "SMS opt-out record returned an unexpected response.");
+  }
+  return body;
+}
+
 export async function clearSmsOptOut(
   input: {
     patientReference: string;

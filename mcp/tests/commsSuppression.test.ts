@@ -12,6 +12,7 @@ import {
   clearPatientSmsOptOut,
   createSuppressedCommsProvider,
   readPatientSmsOptOut,
+  recordPatientSmsOptOut,
   updateInboundSuppression,
 } from "../src/comms/suppression-gate.js";
 
@@ -950,4 +951,40 @@ test("email resolution skips a ContactPoint whose validity starts in the future"
   await sendEmail(provider, baseRequest());
 
   assert.equal(sent[0].toAddress, "active@example.test");
+});
+
+const RECORD_INPUT = {
+  actorReference: "Practitioner/staff", actorRole: "staff", recordedAt: "2026-09-10T16:00:00Z",
+  reason: "Patient asked for no texts", identityVerification: "in-person", scope: "global",
+} as const;
+
+test("record requires a fresh Patient version before writing", async () => {
+  let writes = 0;
+  await assert.rejects(recordPatientSmsOptOut({
+    read: async () => patient(),
+    executeTransactionAsActor: async () => { writes++; throw new Error("Unexpected write"); },
+  } as never, "Patient/synthetic-1", RECORD_INPUT), /requires the Patient to have an id and version/);
+  assert.equal(writes, 0);
+});
+
+test("record refuses failed or incomplete transaction responses and propagates conflicts", async () => {
+  for (const response of [
+    { resourceType: "Bundle", type: "searchset", entry: [] },
+    { resourceType: "Bundle", type: "transaction-response", entry: [{ response: { status: "200 OK" } }] },
+    { resourceType: "Bundle", type: "transaction-response", entry: [{ response: { status: "200 OK" } }, { response: { status: "403 Forbidden" } }] },
+  ] as Bundle[]) {
+    await assert.rejects(recordPatientSmsOptOut({
+      read: async () => patient({ meta: { versionId: "8" } }),
+      executeTransactionAsActor: async (_request: Bundle, _actor: unknown, headers: unknown, options: { validateResponse: (bundle: Bundle) => void }) => {
+        assert.deepEqual(headers, { "X-ODOS-Source": "mcp/comms-opt-out-record" });
+        options.validateResponse(response);
+        return response;
+      },
+    } as never, "Patient/synthetic-1", RECORD_INPUT), /SMS opt-out/);
+  }
+  const conflict = Object.assign(new Error("Concurrent Patient edit"), { status: 412 });
+  await assert.rejects(recordPatientSmsOptOut({
+    read: async () => patient({ meta: { versionId: "8" } }),
+    executeTransactionAsActor: async () => { throw conflict; },
+  } as never, "Patient/synthetic-1", RECORD_INPUT), (error) => error === conflict);
 });
