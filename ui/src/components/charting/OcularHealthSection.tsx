@@ -1220,17 +1220,20 @@ function applySegmentAllNormal(
   let skipped = 0;
   let filled = 0;
   const segmentDefinitions = definitions.filter((definition) =>
-    definition.stableKey.startsWith(prefix) ||
-    (prefix === ANTERIOR_PREFIX && definition.stableKey === DRY_EYE_ANTERIOR_STABLE_KEY)
+    (definition.stableKey.startsWith(prefix) ||
+      (prefix === ANTERIOR_PREFIX && definition.stableKey === DRY_EYE_ANTERIOR_STABLE_KEY))
   );
   const next = { ...captures };
   for (const definition of segmentDefinitions) {
+    const field = definition.customFields?.find((field) =>
+      field.active && field.valueType === "multi-select" && field.options?.some((option) => option.active)
+    );
+    if (!field) continue;
+    const optionCodes = (field.options ?? []).filter((option) => option.active).map((option) => option.code);
     const row = captures[definition.stableKey] ?? emptyRow();
     next[definition.stableKey] = { ...row };
     for (const eye of EYES) {
       if (touched(row[eye])) { skipped += 1; continue; }
-      const optionCodes = (definition.customFields?.find((field) => field.valueType === "multi-select")?.options ?? [])
-        .filter((option) => option.active).map((option) => option.code);
       next[definition.stableKey]![eye] = { ...row[eye], state: "normal", negativeAct: {
         id: crypto.randomUUID(), definitionStableKey: definition.stableKey, eye,
         optionCodes, exclusions: [], assertedAt: new Date().toISOString(),
