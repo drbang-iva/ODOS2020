@@ -761,3 +761,15 @@ test("chart contact conflict is sent success and clears pending using real dispa
     globalThis.fetch = originalFetch;
   }
 });
+
+test("education dispatch client rejects malformed chart update metadata", async () => {
+  const input: EducationDispatchInput = {
+    patientReference: "Patient/patient-1", educationId: "dry-eye-basics", version: 2,
+    channel: "email", lane: "clinical", alsoUpdateChart: true, idempotencyKey: "metadata-validation",
+  };
+  for (const chartUpdate of ["unexpected", true, null]) {
+    await assert.rejects(dispatchEducation(input, async () => new Response(JSON.stringify({
+      outcome: "sent", providerMessageId: "synthetic-receipt", chartUpdate,
+    }))), /unexpected response/);
+  }
+});

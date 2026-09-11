@@ -34,7 +34,8 @@ System refusal test: `system actor cannot request a chart update or produce char
 | `npm --prefix mcp test` (initial; no PostgreSQL configured) | 4,465 passed, 6 setup failures, 58 skipped | 1 |
 | `ODOS_POSTGRES_URL=<task-owned disposable PostgreSQL> npm --prefix mcp test` | 4,484 passed, 0 failed, 46 skipped; 4,530 total | **1** |
 | `npm --prefix ui test` (initial) | 1,339 passed, 1 browser timeout, 0 skipped | 1 |
-| `npm --prefix ui test` (final) | 1,340 passed, 0 failed, 0 skipped | 0 |
+| `npm --prefix ui test` (before parser follow-up) | 1,340 passed, 0 failed, 0 skipped | 0 |
+| `npm --prefix ui test` (final, with parser follow-up) | 1,341 passed, 0 failed, 0 skipped | 0 |
 | `npm --prefix mcp run build` | TypeScript completed | 0 |
 | `npm --prefix ui run build` | TypeScript and Vite completed; existing chunk-size warning | 0 |
 | `node .claude/skills/tier0-census/scripts/check-proxy-coverage.mjs` | 24 families / 27 proxy entries; all covered, advisory | 0 |
@@ -439,3 +440,11 @@ The first C-guard attempts encountered intermittent unrelated `fetch failed` err
 No terminology, registry, ledger, dependency, policy, enrollment serialization, or worker changes. No new decision was made; decision-index and Mandate 14 additions are not applicable.
 
 Status: author verification; stop at PR #576 for independent evaluation. No merge, label, or author evaluation marker.
+
+## Automated review follow-up
+
+The review at `bd65784c82f5b8079f3dc7e71183ab28b3659c76` identified an out-of-diff runtime guard omission: `chartUpdate` could contain an invalid value while narrowing to the dispatch type. The sent-response guard now requires absence or `conflict`. A new client test checks an unknown string, boolean, and null; existing missing-field and valid-conflict cases remain covered.
+
+`cd ui && node --import tsx --test tests/engageSheet.test.tsx`: before the guard, 16 passed / 1 failed, exit 1 (`Missing expected rejection`); after, 17 passed / 0 failed, exit 0. The runtime check is at `ui/src/lib/communications-client.ts:296`. No server, enrollment, worker, or existing test expectation changed in this follow-up. The generic docstring coverage warning is not adopted: repository style defaults to no comments unless the reason is non-obvious.
+
+Final parser mutation: removed the metadata condition, confirmed by `rg -n` at line 296 (`parser guard mutation: metadata unchecked`). The client test failed with `Missing expected rejection`: 16 passed / 1 failed, exit 1. Restored byte-identically: 17 passed / 0 failed, exit 0. Final full UI suite: 1,341 passed / 0 failed / 0 skipped, exit 0; UI build exit 0. MCP code remains byte-identical to the full-suite-tested fixback commit.

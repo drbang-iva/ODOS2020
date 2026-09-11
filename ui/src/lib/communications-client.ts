@@ -291,7 +291,10 @@ function isEducationContentItem(value: unknown): value is EducationContentItem {
 
 function isEducationDispatchResult(value: unknown): value is EducationDispatchResult {
   if (!isRecord(value) || typeof value.outcome !== "string") return false;
-  if (value.outcome === "sent") return typeof value.providerMessageId === "string";
+  if (value.outcome === "sent") {
+    return typeof value.providerMessageId === "string"
+      && (value.chartUpdate === undefined || value.chartUpdate === "conflict");
+  }
   if (value.outcome === "print") return typeof value.url === "string";
   if (value.outcome === "suppressed") {
     return value.reason === "patient-opt-out" || value.reason === "frequency-cap";
