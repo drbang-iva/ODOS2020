@@ -1,0 +1,12 @@
+Command: npm --prefix ui test
+Exit: 0
+  ...
+1..1401
+# tests 1414
+# suites 0
+# pass 1414
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 213972.991167

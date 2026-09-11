@@ -1,0 +1,3 @@
+Captured rg verification of the applied mutation:
+190:                {false ? <span aria-disabled="true" title={STOP_TOOLTIP} className="rounded-full px-2 py-1 text-xs font-bold" style={{ background: "var(--odos-amber, #f5b942)", color: "#2a1d00", cursor: "not-allowed" }}>STOP</span>
+rg exit: 0

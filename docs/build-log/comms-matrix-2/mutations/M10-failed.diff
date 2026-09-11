@@ -1,0 +1,11 @@
+--- a/ui/src/components/comms/EngageSheet.tsx
++++ b/ui/src/components/comms/EngageSheet.tsx
+@@ -248,7 +248,7 @@
+       } else if (rescheduled) {
+         setStatus(`Not sent — try after ${rescheduled.rescheduledAt}.`);
+       } else {
+-        const preferenceFailed = results.some(result => result.outcome === "sent" && result.preferenceUpdate === "failed");
++        const preferenceFailed = results.some(result => result.outcome === "sent" && false);
+         const chartConflict = results.some(result => result.outcome === "sent" && result.chartUpdate === "conflict");
+         const sentMessage = preferenceFailed
+           ? "Education sent, but their education email setting couldn't be switched on. Update it in Edit demographics."

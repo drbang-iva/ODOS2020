@@ -1,0 +1,11 @@
+--- a/ui/src/lib/communications-client.ts
++++ b/ui/src/lib/communications-client.ts
+@@ -441,7 +441,7 @@
+ 
+ function nonemptyString(value: unknown): value is string { return typeof value === "string" && value.length > 0; }
+ export function isPatientVersion(value: unknown): value is PatientVersion {
+-  return isRecord(value) && nonemptyString(value.writtenAgainst) && nonemptyString(value.current);
++  return isRecord(value);
+ }
+ function optionalPatientVersion(value: Record<string, unknown>): boolean {
+   return !("patientVersion" in value) || isPatientVersion(value.patientVersion);

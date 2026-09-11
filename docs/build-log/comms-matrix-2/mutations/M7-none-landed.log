@@ -1,0 +1,3 @@
+Captured rg verification of the applied mutation:
+36:    cells: draft.confirmedVia ? []
+rg exit: 0

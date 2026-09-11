@@ -1,0 +1,2 @@
+Captured rg verification of the applied mutation:
+251:        const preferenceFailed = results.some(result => result.outcome === "sent" && false);

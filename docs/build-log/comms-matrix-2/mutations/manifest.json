@@ -1,0 +1,439 @@
+{
+  "authorEvidence": true,
+  "patchCheckedAgainstHead": "df6aba8470064a34d074354961c083df8feaa39d",
+  "historicalCounts": true,
+  "guards": [
+    {
+      "guard": "M1",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/communicationPreferencesControl.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 15,
+        "pass": 11,
+        "fail": 4,
+        "exit": 1
+      },
+      "green": {
+        "tests": 15,
+        "pass": 15,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M2",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test --test-concurrency=1 tests/communicationPreferencesConcurrency.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 9,
+        "pass": 5,
+        "fail": 4,
+        "exit": 1
+      },
+      "green": {
+        "tests": 9,
+        "pass": 9,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M3",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test --test-concurrency=1 tests/communicationPreferencesConcurrency.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 9,
+        "pass": 8,
+        "fail": 1,
+        "exit": 1
+      },
+      "green": {
+        "tests": 9,
+        "pass": 9,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M4",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test --test-concurrency=1 tests/communicationPreferencesConcurrency.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 9,
+        "pass": 8,
+        "fail": 1,
+        "exit": 1
+      },
+      "green": {
+        "tests": 9,
+        "pass": 9,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M5a",
+      "workingDirectory": ".",
+      "command": "npm --prefix mcp test -- tests/commsPreferencesRoutes.test.ts tests/commsApi.test.ts",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 111,
+        "pass": 102,
+        "fail": 9,
+        "exit": 1
+      },
+      "green": {
+        "tests": 111,
+        "pass": 111,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M5b",
+      "workingDirectory": ".",
+      "command": "npm --prefix mcp test -- tests/commsPreferencesRoutes.test.ts tests/commsApi.test.ts",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 111,
+        "pass": 108,
+        "fail": 3,
+        "exit": 1
+      },
+      "green": {
+        "tests": 111,
+        "pass": 111,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M6",
+      "workingDirectory": ".",
+      "command": "npm --prefix mcp test -- tests/commsPreferencesRoutes.test.ts",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 20,
+        "pass": 19,
+        "fail": 1,
+        "exit": 1
+      },
+      "green": {
+        "tests": 20,
+        "pass": 20,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M7-all",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/communicationPreferencesControl.test.tsx tests/registrationCommunicationPreferences.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 22,
+        "pass": 17,
+        "fail": 5,
+        "exit": 1
+      },
+      "green": {
+        "tests": 22,
+        "pass": 22,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M7-none",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/communicationPreferencesControl.test.tsx tests/registrationCommunicationPreferences.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 22,
+        "pass": 18,
+        "fail": 4,
+        "exit": 1
+      },
+      "green": {
+        "tests": 22,
+        "pass": 22,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M8",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/engageCommunicationPreferences.test.tsx tests/engageSheet.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 31,
+        "pass": 28,
+        "fail": 3,
+        "exit": 1
+      },
+      "green": {
+        "tests": 31,
+        "pass": 31,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M9-email",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/engageCommunicationPreferences.test.tsx tests/engageSheet.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 31,
+        "pass": 30,
+        "fail": 1,
+        "exit": 1
+      },
+      "green": {
+        "tests": 31,
+        "pass": 31,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M9-note",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/engageCommunicationPreferences.test.tsx tests/engageSheet.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 31,
+        "pass": 30,
+        "fail": 1,
+        "exit": 1
+      },
+      "green": {
+        "tests": 31,
+        "pass": 31,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M9-text",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/engageCommunicationPreferences.test.tsx tests/engageSheet.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 31,
+        "pass": 30,
+        "fail": 1,
+        "exit": 1
+      },
+      "green": {
+        "tests": 31,
+        "pass": 31,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M10-failed",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/engageCommunicationPreferences.test.tsx tests/engageSheet.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 31,
+        "pass": 29,
+        "fail": 2,
+        "exit": 1
+      },
+      "green": {
+        "tests": 31,
+        "pass": 31,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M10-success",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/engageCommunicationPreferences.test.tsx tests/engageSheet.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 31,
+        "pass": 30,
+        "fail": 1,
+        "exit": 1
+      },
+      "green": {
+        "tests": 31,
+        "pass": 31,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M10-withheld",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/engageCommunicationPreferences.test.tsx tests/engageSheet.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 31,
+        "pass": 27,
+        "fail": 4,
+        "exit": 1
+      },
+      "green": {
+        "tests": 31,
+        "pass": 31,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M11-evidenceStatus",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/communicationPreferencesClient.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 13,
+        "pass": 12,
+        "fail": 1,
+        "exit": 1
+      },
+      "green": {
+        "tests": 13,
+        "pass": 13,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M11-patientVersion",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/communicationPreferencesClient.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 13,
+        "pass": 11,
+        "fail": 2,
+        "exit": 1
+      },
+      "green": {
+        "tests": 13,
+        "pass": 13,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M11-source",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/communicationPreferencesClient.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 13,
+        "pass": 11,
+        "fail": 2,
+        "exit": 1
+      },
+      "green": {
+        "tests": 13,
+        "pass": 13,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M12-banner",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test --test-name-pattern=M12 tests/consentEvidence.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "exit": 1
+      },
+      "green": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M12-cursor",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test --test-name-pattern=M12 tests/consentEvidence.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "exit": 1
+      },
+      "green": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M13",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/communicationTextingChip.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 4,
+        "pass": 3,
+        "fail": 1,
+        "exit": 1
+      },
+      "green": {
+        "tests": 4,
+        "pass": 4,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M14",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test tests/communicationPreferencesControl.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 15,
+        "pass": 14,
+        "fail": 1,
+        "exit": 1
+      },
+      "green": {
+        "tests": 15,
+        "pass": 15,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "guard": "M15",
+      "workingDirectory": "ui",
+      "command": "node --import tsx --test --test-concurrency=1 tests/communicationPreferencesConcurrency.test.tsx",
+      "patchApplyCheckExit": 0,
+      "red": {
+        "tests": 9,
+        "pass": 8,
+        "fail": 1,
+        "exit": 1
+      },
+      "green": {
+        "tests": 9,
+        "pass": 9,
+        "fail": 0,
+        "exit": 0
+      }
+    }
+  ]
+}

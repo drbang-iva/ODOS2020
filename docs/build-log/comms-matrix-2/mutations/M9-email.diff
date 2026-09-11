@@ -1,0 +1,11 @@
+--- a/ui/src/components/comms/EngageSheet.tsx
++++ b/ui/src/components/comms/EngageSheet.tsx
+@@ -123,7 +123,7 @@
+   const preferenceBlocked = (item: EducationContentItem, channel: PendingSend["channel"]) => {
+     if (channel === "print") return false;
+     const cell = preferenceCell(item, channel);
+-    return preferenceAvailability === "loading" || cell?.source === "suppression"
++    return (channel === "email" && cell?.value === false) || preferenceAvailability === "loading" || cell?.source === "suppression"
+       || (cell?.value === false && (channel === "sms" || item.consentClass === "marketing"));
+   };
+   const educationEmailWithheld = (item: EducationContentItem) => item.consentClass !== "marketing"

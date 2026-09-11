@@ -1,0 +1,77 @@
+Working directory: ui
+Command: node --import tsx --test --test-name-pattern=M12 tests/consentEvidence.test.tsx
+Captured process exit: 1
+TAP version 13
+# Warning: Encountered two children with the same key, `Patient/synthetic-one/marketing-promo/sms/gap`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+#     at tbody
+#     at table
+#     at div
+#     at main
+#     at ConsentEvidence (ui/src/scenes/ConsentEvidence.tsx:11:35)
+#     at RouteSwitch (ui/src/App.tsx:386:3)
+#     at div
+#     at AppShell (ui/src/components/AppShell.tsx:71:3)
+# Warning: Encountered two children with the same key, `Patient/synthetic-stop/marketing-promo/sms/suppressed`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+#     at tbody
+#     at table
+#     at div
+#     at main
+#     at ConsentEvidence (ui/src/scenes/ConsentEvidence.tsx:11:35)
+#     at RouteSwitch (ui/src/App.tsx:386:3)
+#     at div
+#     at AppShell (ui/src/components/AppShell.tsx:71:3)
+# Warning: Encountered two children with the same key, `Patient/synthetic-one/marketing-promo/sms/gap`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+#     at tbody
+#     at table
+#     at div
+#     at main
+#     at ConsentEvidence (ui/src/scenes/ConsentEvidence.tsx:11:35)
+#     at RouteSwitch (ui/src/App.tsx:386:3)
+#     at div
+#     at AppShell (ui/src/components/AppShell.tsx:71:3)
+# Warning: Encountered two children with the same key, `Patient/synthetic-stop/marketing-promo/sms/suppressed`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+#     at tbody
+#     at table
+#     at div
+#     at main
+#     at ConsentEvidence (ui/src/scenes/ConsentEvidence.tsx:11:35)
+#     at RouteSwitch (ui/src/App.tsx:386:3)
+#     at div
+#     at AppShell (ui/src/components/AppShell.tsx:71:3)
+# Subtest: M12 truncated banner and cursor Load more append patients and counts
+not ok 1 - M12 truncated banner and cursor Load more append patients and counts
+  ---
+  duration_ms: 16.901792
+  type: 'test'
+  location: 'ui/tests/consentEvidence.test.tsx:1:2397'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + null
+    - 'synthetic_cursor'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'synthetic_cursor'
+  actual: ~
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (ui/tests/consentEvidence.test.tsx:42:12)
+    async mount (ui/tests/consentEvidence.test.tsx:22:238)
+    async TestContext.<anonymous> (ui/tests/consentEvidence.test.tsx:36:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1256.805709
+
+Exit: 1

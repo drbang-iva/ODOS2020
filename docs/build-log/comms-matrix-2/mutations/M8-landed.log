@@ -1,0 +1,2 @@
+Captured rg verification of the applied mutation:
+124:    const marketingBlocked = item.consentClass === "marketing" && !patient.extension?.some(extension => extension.url === "https://odos2020.com/fhir/StructureDefinition/odos-comms-marketing-consent" && extension.extension?.some(part => part.url === "consent" && part.valueBoolean === true));

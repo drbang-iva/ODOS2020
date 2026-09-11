@@ -1,0 +1,2 @@
+Captured rg verification of the applied mutation:
+127:      || (cell?.value === false && item.consentClass === "marketing");

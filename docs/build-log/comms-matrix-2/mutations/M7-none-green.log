@@ -1,0 +1,145 @@
+Working directory: ui
+Command: node --import tsx --test tests/communicationPreferencesControl.test.tsx tests/registrationCommunicationPreferences.test.tsx
+Captured process exit: 0
+TAP version 13
+# Subtest: M1 STOP cells are locked amber labels, never checkboxes; default and legacy states remain distinct
+ok 1 - M1 STOP cells are locked amber labels, never checkboxes; default and legacy states remain distinct
+  ---
+  duration_ms: 17.333583
+  type: 'test'
+  ...
+# Subtest: M7 unconfirmed patient save sends only changed cells and reports the server version
+ok 2 - M7 unconfirmed patient save sends only changed cells and reports the server version
+  ---
+  duration_ms: 5.1475
+  type: 'test'
+  ...
+# Subtest: M7 patient paper confirmation sends all twenty cells and evidence fields
+ok 3 - M7 patient paper confirmation sends all twenty cells and evidence fields
+  ---
+  duration_ms: 4.775208
+  type: 'test'
+  ...
+# Subtest: patient paper confirmation with no date refuses to send
+ok 4 - patient paper confirmation with no date refuses to send
+  ---
+  duration_ms: 2.122667
+  type: 'test'
+  ...
+# Subtest: 403 leaves the loaded grid read-only with the permission message
+ok 5 - 403 leaves the loaded grid read-only with the permission message
+  ---
+  duration_ms: 2.587042
+  type: 'test'
+  ...
+# Subtest: 409 rereads the grid, discards stale changes, and never calls the successful-write callback
+ok 6 - 409 rereads the grid, discards stale changes, and never calls the successful-write callback
+  ---
+  duration_ms: 4.032625
+  type: 'test'
+  ...
+# Subtest: M14 a preferences GET 5xx renders the malformed-record message and no grid
+ok 7 - M14 a preferences GET 5xx renders the malformed-record message and no grid
+  ---
+  duration_ms: 0.813458
+  type: 'test'
+  ...
+# Subtest: registration reads server defaults and D2 sends only changes unless the grid is confirmed
+ok 8 - registration reads server defaults and D2 sends only changes unless the grid is confirmed
+  ---
+  duration_ms: 1.639292
+  type: 'test'
+  ...
+# Subtest: registration paper confirmation includes the date and twenty cells
+ok 9 - registration paper confirmation includes the date and twenty cells
+  ---
+  duration_ms: 1.4955
+  type: 'test'
+  ...
+# Subtest: external refresh preserves unsaved changes while new STOP state locks the cell
+ok 10 - external refresh preserves unsaved changes while new STOP state locks the cell
+  ---
+  duration_ms: 1.995042
+  type: 'test'
+  ...
+# Subtest: evidence warning amber is reserved for uncovered marketing Text and last setter is shown
+ok 11 - evidence warning amber is reserved for uncovered marketing Text and last setter is shown
+  ---
+  duration_ms: 0.951542
+  type: 'test'
+  ...
+# Subtest: M14 failed refresh removes a previously loaded grid instead of leaving editable stale preferences
+ok 12 - M14 failed refresh removes a previously loaded grid instead of leaving editable stale preferences
+  ---
+  duration_ms: 1.544791
+  type: 'test'
+  ...
+# Subtest: bulk selection never changes a suppressed cell in an unconfirmed write
+ok 13 - bulk selection never changes a suppressed cell in an unconfirmed write
+  ---
+  duration_ms: 1.780708
+  type: 'test'
+  ...
+# Subtest: a late rejected 409 reread cannot hide a different patient's freshly loaded grid
+ok 14 - a late rejected 409 reread cannot hide a different patient's freshly loaded grid
+  ---
+  duration_ms: 2.330334
+  type: 'test'
+  ...
+# Subtest: evidence without capture metadata uses a neutral label instead of inventing an in-person confirmation
+ok 15 - evidence without capture metadata uses a neutral label instead of inventing an in-person confirmation
+  ---
+  duration_ms: 0.794458
+  type: 'test'
+  ...
+# Subtest: M7 New Patient unconfirmed registration sends only changed cells and grid makes no separate writes
+ok 16 - M7 New Patient unconfirmed registration sends only changed cells and grid makes no separate writes
+  ---
+  duration_ms: 27.693
+  type: 'test'
+  ...
+# Subtest: M7 New Patient paper confirmation sends all twenty cells and carries them through Create anyway
+ok 17 - M7 New Patient paper confirmation sends all twenty cells and carries them through Create anyway
+  ---
+  duration_ms: 10.072959
+  type: 'test'
+  ...
+# Subtest: unchanged and unconfirmed registration leaves defaults implicit
+ok 18 - unchanged and unconfirmed registration leaves defaults implicit
+  ---
+  duration_ms: 4.191666
+  type: 'test'
+  ...
+# Subtest: registration preference denial shows a specific message
+ok 19 - registration preference denial shows a specific message
+  ---
+  duration_ms: 5.837875
+  type: 'test'
+  ...
+# Subtest: failed server defaults remain visible and prevent registration without a loaded grid
+ok 20 - failed server defaults remain visible and prevent registration without a loaded grid
+  ---
+  duration_ms: 1.331625
+  type: 'test'
+  ...
+# Subtest: paper confirmation requires a valid date before registration
+ok 21 - paper confirmation requires a valid date before registration
+  ---
+  duration_ms: 3.235083
+  type: 'test'
+  ...
+# Subtest: both registration client entry points omit an empty optional preference payload
+ok 22 - both registration client entry points omit an empty optional preference payload
+  ---
+  duration_ms: 0.379083
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 597.049667

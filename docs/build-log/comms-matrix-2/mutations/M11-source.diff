@@ -1,0 +1,11 @@
+--- a/ui/src/lib/communications-client.ts
++++ b/ui/src/lib/communications-client.ts
+@@ -447,7 +447,7 @@
+   return !("patientVersion" in value) || isPatientVersion(value.patientVersion);
+ }
+ function isPreferenceSource(value: unknown): value is CommunicationPreferenceSource {
+-  return value === "default" || value === "explicit" || value === "legacy-marketing-consent" || value === "suppression";
++  return typeof value === "string";
+ }
+ function isPreferenceSurface(value: unknown): value is CommunicationPreferenceSurface {
+   return value === "staff-demographics" || value === "staff-registration" || value === "staff-manual-send" || value === "inbound-start";

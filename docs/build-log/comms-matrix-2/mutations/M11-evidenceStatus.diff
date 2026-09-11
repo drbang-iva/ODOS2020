@@ -1,0 +1,11 @@
+--- a/ui/src/lib/communications-client.ts
++++ b/ui/src/lib/communications-client.ts
+@@ -476,7 +476,7 @@
+     && Array.isArray(value.evidenceSummary) && value.evidenceSummary.every(isEvidenceSummary)
+     && (value.lastSet === null || (isRecord(value.lastSet) && nonemptyString(value.lastSet.recordedAt)
+       && isReference(value.lastSet.setBy) && isPreferenceSurface(value.lastSet.surface)))
+-    && ["not-applicable", "suppressed", "gap", "recorded", "not-required"].some(status => status === value.evidenceStatus);
++    && typeof value.evidenceStatus === "string";
+ }
+ function isFullMatrix(value: unknown, cellParser: (cell: unknown) => boolean): boolean {
+   return isRecord(value) && Object.keys(value).length === COMMS_PURPOSES.length && COMMS_PURPOSES.every(purpose => {

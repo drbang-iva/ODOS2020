@@ -1,0 +1,2 @@
+Captured rg verification of the applied mutation:
+126:    return (channel === "email" && cell?.value === false) || preferenceAvailability === "loading" || cell?.source === "suppression"

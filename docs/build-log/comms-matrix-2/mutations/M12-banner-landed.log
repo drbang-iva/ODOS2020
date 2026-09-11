@@ -1,0 +1,2 @@
+Captured rg verification of the applied mutation:
+80:    {false && <section role="status" className="flex items-center justify-between gap-4 rounded border border-[var(--odos-amber)] p-4"><p>This report is truncated. More patients remain; counts cover the loaded results.</p><button type="button" className="odos-pill" disabled={loading} onClick={() => void loadMore()}>Load more</button></section>}

@@ -1,0 +1,11 @@
+--- a/ui/src/components/comms/EngageSheet.tsx
++++ b/ui/src/components/comms/EngageSheet.tsx
+@@ -121,6 +121,8 @@
+   const preferenceCell = (item: EducationContentItem, channel: "sms" | "email") =>
+     preferences?.matrix[item.consentClass === "marketing" ? "marketing-promo" : "education"][channel];
+   const preferenceBlocked = (item: EducationContentItem, channel: PendingSend["channel"]) => {
++    const marketingBlocked = item.consentClass === "marketing" && !patient.extension?.some(extension => extension.url === "https://odos2020.com/fhir/StructureDefinition/odos-comms-marketing-consent" && extension.extension?.some(part => part.url === "consent" && part.valueBoolean === true));
++    if (marketingBlocked) return true;
+     if (channel === "print") return false;
+     const cell = preferenceCell(item, channel);
+     return preferenceAvailability === "loading" || cell?.source === "suppression"

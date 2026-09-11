@@ -1,0 +1,2 @@
+Captured rg verification of the applied mutation:
+538:    async () => ({ status: 200, body: { version: COMMS_PREFERENCE_DEFAULTS_VERSION, defaults: { ...COMMS_PREFERENCE_DEFAULTS, education: { ...COMMS_PREFERENCE_DEFAULTS.education, email: false } } } }),

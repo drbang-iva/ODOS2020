@@ -1,0 +1,11 @@
+--- a/ui/src/components/patient/CommunicationPreferencesControl.tsx
++++ b/ui/src/components/patient/CommunicationPreferencesControl.tsx
+@@ -151,7 +151,7 @@
+       } else setMessage("Communication preferences could not be saved. Please try again.");
+     } finally { if (generation.current === operation) setSaving(false); }
+   }
+-  if (unavailable) return <div><p role="status">{message}</p><button type="button" onClick={() => setReload(value => value + 1)}>Retry preferences</button></div>;
++  if (unavailable && !draft) return <div><p role="status">{message}</p><button type="button" onClick={() => setReload(value => value + 1)}>Retry preferences</button></div>;
+   if (!draft) return <p role="status">Loading communication preferences…</p>;
+   const latest = response?.rows.flatMap(row => row.lastSet ? [row.lastSet] : [])
+     .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt))[0];

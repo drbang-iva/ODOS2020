@@ -1,0 +1,11 @@
+--- a/ui/src/scenes/ConsentEvidence.tsx
++++ b/ui/src/scenes/ConsentEvidence.tsx
+@@ -36,7 +36,7 @@
+     const operation = generation.current;
+     setLoading(true); setError(undefined);
+     try {
+-      const next = await listEvidenceGaps({ ...filters, cursor: report.cursor });
++      const next = await listEvidenceGaps({ ...filters, cursor: undefined });
+       if (generation.current !== operation) return;
+       setReport({ ...next, rows: [...report.rows, ...next.rows], suppressed: [...report.suppressed, ...next.suppressed], counts: {
+         "1": report.counts["1"] + next.counts["1"], "2": report.counts["2"] + next.counts["2"], "3": report.counts["3"] + next.counts["3"],

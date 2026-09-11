@@ -1,0 +1,12 @@
+--- a/ui/src/components/comms/EngageSheet.tsx
++++ b/ui/src/components/comms/EngageSheet.tsx
+@@ -241,8 +241,7 @@
+         setError(refusal.reason);
+       } else if (suppression?.reason === "patient-opt-out") {
+         setError("Texting is blocked — this patient opted out.");
+-      } else if (suppression?.reason === "preference-withheld") {
+-        setError(preferenceWithheldMessage(pending.item, pending.channel));
++
+       } else if (suppression) {
+         setError("Texting is blocked by the communication frequency limit.");
+       } else if (rescheduled) {

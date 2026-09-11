@@ -1,0 +1,12 @@
+Command: npm --prefix mcp test
+Exit: 1
+  ...
+1..4057
+# tests 4640
+# suites 0
+# pass 4627
+# fail 8
+# cancelled 0
+# skipped 5
+# todo 0
+# duration_ms 296931.107541

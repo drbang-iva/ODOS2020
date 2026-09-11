@@ -1,0 +1,2 @@
+Captured rg verification of the applied mutation:
+450:  return typeof value === "string";
