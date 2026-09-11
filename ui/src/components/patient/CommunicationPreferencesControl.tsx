@@ -189,6 +189,8 @@ export function CommunicationPreferencesControl(props: Props) {
           const amber = purpose === "marketing-promo" && shownValue(draft, purpose, "sms") && !sms?.evidenceSummary.length;
           const gap = electronic.some(row => row.evidenceStatus === "gap") || (!response && (shownValue(draft, purpose, "sms") || shownValue(draft, purpose, "email")));
           const evidence = records[0];
+          const evidenceChannels = electronic.filter(row => row.evidenceSummary.includes(evidence)).map(row => COMMUNICATION_CHANNEL_LABELS[row.channel]);
+          const gapChannels = electronic.filter(row => row.evidenceStatus === "gap" || (amber && row.channel === "sms")).map(row => COMMUNICATION_CHANNEL_LABELS[row.channel]);
           const method = evidence?.capture?.extension?.find(part => part.url === "method")?.valueCode;
           const label = method === "paper-form" ? "Form on file" : method === "in-person" ? "Patient stated in person" : "Consent on file";
           return <tr key={purpose}>
@@ -214,7 +216,7 @@ export function CommunicationPreferencesControl(props: Props) {
               </td>;
             })}
             <td className="border-b px-2 py-3 text-left text-xs" data-evidence-tone={amber ? "amber" : "neutral"} style={{ color: amber ? "var(--odos-amber, #b7791f)" : "var(--odos-faint)" }}>
-              {evidence && <span>{`✓ ${label}${evidence.dateTime ? ` · ${evidence.dateTime.slice(0, 10)}` : ""}`}{(amber || gap) ? " · " : ""}</span>}{amber || gap ? "⚠ No evidence" : !evidence ? "— No evidence needed" : null}
+              {evidence && <span>{`✓ ${label}${gap ? ` (${evidenceChannels.join(", ")})` : ""}${evidence.dateTime ? ` · ${evidence.dateTime.slice(0, 10)}` : ""}`}{(amber || gap) ? " · " : ""}</span>}{amber || gap ? `⚠ No evidence${evidence && gapChannels.length ? ` for ${gapChannels.join(", ")}` : ""}` : !evidence ? "— No evidence needed" : null}
             </td>
           </tr>;
         })}</tbody>

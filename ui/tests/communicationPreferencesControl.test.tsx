@@ -241,3 +241,16 @@ for (const confirmedVia of ["in-person", "paper-form"]) test(`F1 ${confirmedVia}
     assert.equal(payloads[0].confirmedVia, confirmedVia);
   });
 });
+
+for (const [recorded, gap] of [["email", "sms"], ["sms", "email"]] as const) test(`mixed evidence names ${recorded} evidence and the ${gap} gap`, async () => {
+  const initial = response();
+  const row = initial.rows.find(row => row.purpose === "education" && row.channel === recorded)!;
+  row.evidenceStatus = "recorded";
+  row.evidenceSummary = [{ reference: "Consent/synthetic-paper", capture: { url: "capture", extension: [{ url: "method", valueCode: "paper-form" }] } }];
+  await mount(async () => body(initial), <CommunicationPreferencesControl {...patientProps} />, async renderer => {
+    const educationRow = renderer.root.findAllByType("tr").find(node => node.findAllByType("th").some(th => th.children.includes("Education")))!;
+    const badge = educationRow.findByProps({ "data-evidence-tone": "neutral" });
+    const content = badge.children.map(child => typeof child === "string" ? child : child.children.join("")).join("");
+    assert.equal(content, recorded === "email" ? "✓ Form on file (Email) · ⚠ No evidence for Text" : "✓ Form on file (Text) · ⚠ No evidence for Email");
+  });
+});

@@ -335,7 +335,7 @@ export function EngageSheet({
                   <span className="text-xs uppercase text-[color:var(--odos-muted)]">{item.kind}</span>
                 </div>
                 {preferenceCell(item, "sms")?.value === false && preferenceCell(item, "sms")?.source !== "suppression" && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">{preferenceWithheldMessage(item, "sms")}</p>}
-                {item.consentClass === "marketing" && preferenceCell(item, "email")?.value === false && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Marketing email are off for this patient.</p>}
+                {item.consentClass === "marketing" && preferenceCell(item, "email")?.value === false && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Marketing email is off for this patient.</p>}
                 {educationEmailWithheld(item) && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Their education email setting is off. Sending will switch it on.</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <ChannelButton label="Text" channel="sms" item={item} disabled={!recipients.length || preferenceBlocked(item, "sms") || !item.channels.includes("sms") || !defaultSmsLaneConfigured || smsAvailability === "loading" || isSmsLaneSuppressed(smsState, defaultSmsLane)} onClick={beginSend} />
@@ -413,7 +413,7 @@ function ChannelButton({ label, channel, item, disabled, onClick }: {
   disabled: boolean;
   onClick: (item: EducationContentItem, channel: PendingSend["channel"]) => void;
 }) {
-  return <button type="button" aria-label={`${label} ${item.title}`} disabled={disabled} onClick={() => onClick(item, channel)}>{label}</button>;
+  return <button type="button" aria-label={`${label} ${item.title}`} className="rounded border border-[color:var(--odos-line)] px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40" disabled={disabled} onClick={() => onClick(item, channel)}>{label}</button>;
 }
 
 function isSmsLaneConfigured(
@@ -486,7 +486,7 @@ function isPrimaryGuardian(person: RelatedPerson): boolean {
 }
 
 function preferenceWithheldMessage(item: EducationContentItem, channel: PendingSend["channel"]): string {
-  if (item.consentClass === "marketing") return `Marketing ${channel === "sms" ? "texts" : "email"} are off for this patient.`;
+  if (item.consentClass === "marketing") return channel === "sms" ? "Marketing texts are off for this patient." : "Marketing email is off for this patient.";
   return channel === "email" ? "Education by email is switched off in this patient's communication preferences."
     : "Education by text is switched off in this patient's communication preferences.";
 }

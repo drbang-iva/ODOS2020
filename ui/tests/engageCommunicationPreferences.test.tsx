@@ -50,7 +50,7 @@ for (const legacy of [false, true]) test(`M8 withheld marketing email and Text s
   const f = await fixture({ view, legacy }); try {
     assert.equal(f.button("Email Marketing guide").props.disabled, true); assert.equal(f.button("Text Marketing guide").props.disabled, true);
     assert.equal(f.button("Print Marketing guide").props.disabled, false);
-    assert.match(text(f.renderer), /Marketing texts are off for this patient\./); assert.match(text(f.renderer), /Marketing email are off for this patient\./);
+    assert.match(text(f.renderer), /Marketing texts are off for this patient\./); assert.match(text(f.renderer), /Marketing email is off for this patient\./);
   } finally { f.close(); }
 });
 test("M9 education Text withheld disables; education Email remains enabled with override note", async () => {
@@ -73,7 +73,7 @@ test("STOP still disables Text for both item purposes; email suppression cannot 
 for (const item of [education, marketing]) for (const channel of ["sms", "email"] as const) test(`M10 preference-withheld result names ${item.consentClass} ${channel}`, async () => {
   const f = await fixture({ result: { outcome: "suppressed", reason: "preference-withheld" } }); try {
     await f.send(`${channel === "sms" ? "Text" : "Email"} ${item.title}`);
-    const expected = item.consentClass === "marketing" ? `Marketing ${channel === "sms" ? "texts" : "email"} are off for this patient.` : `Education by ${channel === "sms" ? "text" : "email"} is switched off in this patient's communication preferences.`;
+    const expected = item.consentClass === "marketing" ? (channel === "sms" ? "Marketing texts are off for this patient." : "Marketing email is off for this patient.") : `Education by ${channel === "sms" ? "text" : "email"} is switched off in this patient's communication preferences.`;
     assert.ok(text(f.renderer).includes(expected)); assert.equal(f.sends.length, 1);
   } finally { f.close(); }
 });
