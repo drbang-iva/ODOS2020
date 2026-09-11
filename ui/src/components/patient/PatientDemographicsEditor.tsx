@@ -60,7 +60,7 @@ export function PatientDemographicsFields({
         <CatalogFieldKit fields={CONTACT_FIELDS} values={{ ...draft }} errors={errors} onChange={set} />
         <LabeledInput label="Email" type="email" value={draft.email} error={errors.email} onChange={(value) => set("email", value)} />
       </fieldset>
-      {communicationPreferences && <fieldset className="grid gap-4 rounded-lg border border-white/10 bg-black/10 p-4 lg:col-span-2">
+      {communicationPreferences && <fieldset className="grid gap-4 rounded-lg border border-[var(--odos-line)] bg-[var(--odos-context-surface)] p-4 lg:col-span-2">
         <legend className="px-2 text-sm font-semibold text-blue-200">Communication preferences</legend>
         {communicationPreferences}
       </fieldset>}
