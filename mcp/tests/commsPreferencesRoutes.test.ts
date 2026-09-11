@@ -6,7 +6,7 @@ import express from "express";
 import type { Bundle, Consent, Patient } from "@medplum/fhirtypes";
 import { getRoleDeclaration, type BusinessAction } from "../src/authz/roles.js";
 import { registerCommsApiRoutes, type CommsApiRouteDeps } from "../src/comms/comms-api.js";
-import { COMMS_PURPOSES, COMMS_PREFERENCE_CHANNELS, ODOS_COMMS_OPT_OUT_EXTENSION_URL, readCommsPreferenceCells } from "../src/comms/suppression-gate.js";
+import { COMMS_PREFERENCE_DEFAULTS, COMMS_PREFERENCE_DEFAULTS_VERSION, COMMS_PURPOSES, COMMS_PREFERENCE_CHANNELS, ODOS_COMMS_OPT_OUT_EXTENSION_URL, readCommsPreferenceCells } from "../src/comms/suppression-gate.js";
 
 const pair = { purpose: "education", channel: "email", allowed: true };
 const patientReference = "Patient/synthetic-matrix";
@@ -173,3 +173,18 @@ for (const route of ["preferences", "consent-evidence"] as const) {
     });
   }
 }
+
+test("M6 defaults route returns imported server defaults with communications read access", async () => {
+  const f = await fixture({ businessActions: ["communications.read"] });
+  try {
+    const response = await f.request("/communications/preferences/defaults");
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { version: COMMS_PREFERENCE_DEFAULTS_VERSION, defaults: COMMS_PREFERENCE_DEFAULTS });
+    assert.equal(f.transactions.length, 0);
+  } finally { await f.close(); }
+});
+test("defaults route requires communications read access", async () => {
+  const f = await fixture({ businessActions: ["communications.preferences.manage"] });
+  try { assert.equal((await f.request("/communications/preferences/defaults")).status, 403); }
+  finally { await f.close(); }
+});

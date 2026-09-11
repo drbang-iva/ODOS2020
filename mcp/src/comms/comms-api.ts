@@ -1,3 +1,4 @@
+import { COMMS_PREFERENCE_DEFAULTS, COMMS_PREFERENCE_DEFAULTS_VERSION } from "./suppression-gate.js";
 import type { PatientWriteVersion } from "./patient-version.js";
 import { resolvePractitionerReference } from "../authz/practitioner-reference.js";
 import { writeCommsPreferences, parsePreferenceWriteInput, parseConsentEvidenceInput, parseEvidenceGapFilters,
@@ -530,6 +531,11 @@ export function registerCommsApiRoutes(
       await enforceEducationLifecycle(deps, staff);
       return { status: 200, body: await dispatchEducation(deps, staff, patient, body) };
     },
+  ));
+
+  app.get("/communications/preferences/defaults", async (req, res) => withStaff(
+    req, res, deps, "communications.read", "Patient", "communications-preferences-defaults", undefined,
+    async () => ({ status: 200, body: { version: COMMS_PREFERENCE_DEFAULTS_VERSION, defaults: COMMS_PREFERENCE_DEFAULTS } }),
   ));
 
   app.get("/communications/preferences", async (req, res) => withStaff(
