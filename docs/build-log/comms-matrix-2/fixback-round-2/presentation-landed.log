@@ -1,0 +1,3 @@
+ui/src/components/patient/CommunicationPreferencesControl.tsx:219:              {evidence && <span>{`✓ ${label}${evidence.dateTime ? ` · ${evidence.dateTime.slice(0, 10)}` : ""}`}{(amber || gap) ? " · " : ""}</span>}{amber || gap ? `⚠ No evidence` : !evidence ? "— No evidence needed" : null}
+ui/src/components/comms/EngageSheet.tsx:338:                {item.consentClass === "marketing" && preferenceCell(item, "email")?.value === false && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Marketing email are off for this patient.</p>}
+ui/src/components/comms/EngageSheet.tsx:489:  if (item.consentClass === "marketing") return channel === "sms" ? "Marketing texts are off for this patient." : "Marketing email are off for this patient.";

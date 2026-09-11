@@ -1,0 +1,11 @@
+--- a/mcp/src/comms/patient-version.ts
++++ b/mcp/src/comms/patient-version.ts
+@@ -10,7 +10,7 @@
+   let locationVersion: string | undefined;
+   for (const entry of response.entry ?? []) {
+     const resource = entry.resource;
+-    if (resource?.resourceType === "Patient" && `Patient/${resource.id}` === patientReference
++    if (resource?.resourceType === "Patient"
+       && typeof resource.meta?.versionId === "string" && resource.meta.versionId.length > 0) {
+       resourceVersion = resource.meta.versionId;
+     }

@@ -1,0 +1,3 @@
+13:    if (resource?.resourceType === "Patient"
+14-      && typeof resource.meta?.versionId === "string" && resource.meta.versionId.length > 0) {
+15-      resourceVersion = resource.meta.versionId;

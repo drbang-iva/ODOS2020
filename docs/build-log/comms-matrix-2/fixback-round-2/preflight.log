@@ -1,0 +1,3 @@
+Command: npm run preflight
+Exit: 0
+ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md

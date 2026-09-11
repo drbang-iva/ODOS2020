@@ -1,0 +1,4 @@
+36:    cells: draft.confirmedVia ? COMMS_PURPOSES.flatMap(purpose => COMMS_PREFERENCE_CHANNELS
+37-      .map(channel => ({ purpose, channel, allowed: shownValue(draft, purpose, channel) })))
+38-      : draft.changes.filter(change => draft.baseline[change.purpose][change.channel].source !== "suppression"),
+39-    ...(draft.confirmedVia ? { confirmedVia: draft.confirmedVia } : {}),

@@ -163,5 +163,19 @@
       "ifMatch": "W/\"opaque-after\""
     }
   ],
+  "disabledVisuals": [
+    {
+      "scenario": "engage",
+      "disabled": 2,
+      "opacity": "0.4",
+      "cursor": "not-allowed"
+    },
+    {
+      "scenario": "engage-marketing-off",
+      "disabled": 3,
+      "opacity": "0.4",
+      "cursor": "not-allowed"
+    }
+  ],
   "passed": true
 }

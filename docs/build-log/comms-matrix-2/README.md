@@ -1,5 +1,7 @@
 # MATRIX-2 sealed author bundle
 
+**Current handoff: [Fixback round 2](fixback-round-2/README.md).** The material below records the original implementation at its stated source head. Round 2 supersedes the confirmed-save rule: suppression-locked cells are excluded, leaving stored preferences and Consent scope untouched for those cells. Original mutation logs remain historical evidence, not newly executed round-2 checks.
+
 Communication preferences now appear in Edit demographics and New Patient, drive Engage channel choices, show the chart STOP chip, and expose a role-gated Consent evidence report with CSV export. In-dialog writes report opaque Patient versions so the editor can preserve unsaved demographics while adopting only its own confirmed write.
 
 Branch: `drbang-iva/comms-matrix-2`. Base: `87e8e5b8a4649f73dfe84a9ddab3b98419b16325` (#577). All verified premises held at this base. Final implementation source: `4f99d7aa38378733a9920b778589baf3e085a467`. The evidence-only commit containing this bundle does not change application source. The PR URL and final publication SHA are sealed in the PR description and handoff.

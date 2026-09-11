@@ -1,0 +1,19 @@
+{
+  "base": "87e8e5b8a4649f73dfe84a9ddab3b98419b16325",
+  "branchSource": "832a694322531092d45c0261c73245691ae2f6fa",
+  "ui": {
+    "baseFailures": [],
+    "branchFailures": [],
+    "branchOnly": [],
+    "baseOnly": [],
+    "baseEvidence": "../checks/base-ui-summary.log",
+    "baseRun": "Previously captured clean-base full run; unchanged base verified again"
+  },
+  "focusedMcp": {
+    "baseFailures": [],
+    "branchFailures": [],
+    "branchOnly": [],
+    "baseOnly": [],
+    "baseRun": "Rerun this round with the same command"
+  }
+}

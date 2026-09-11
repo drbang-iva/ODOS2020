@@ -15,6 +15,7 @@ const reference = 'Patient/synthetic-matrix';
 const actor = { actorReference: 'Practitioner/synthetic-staff', actorRole: 'staff' as const, recordedAt: '2026-09-11T12:00:00Z', surface: 'staff-demographics' as const };
 const original: Patient = { resourceType: 'Patient', id: 'synthetic-matrix', active: true, meta: { versionId: 'opaque-before' }, name: [{ given: ['Synthetic'], family: 'Patient' }], birthDate: '1980-01-02', gender: 'unknown', telecom: [{ system: 'phone', value: '+15555550101' }, { system: 'email', value: 'synthetic@example.test' }] };
 let patient = structuredClone(original), scenario = '', consents: Consent[] = [], savedDemographics = 0;
+const disabledVisuals: Array<{ scenario: string; disabled: number; opacity: string; cursor: string }> = [];
 const requests: Array<{ scenario: string; method: string; path: string; ifMatch?: string }> = [];
 const lanes = [{ label: 'Practice texts', number: '+15555550100', roles: ['clinical-sms', 'transactional-sms', 'marketing-sms'] }];
 let stopped = false;
@@ -102,9 +103,15 @@ browser = await chromium.launch({ channel: 'chrome', args: process.platform === 
         assert.equal(savedDemographics, 1); assert.equal(patient.name?.[0].given?.[0], 'Edited draft');
       }
     }
+    if (surface === 'engage') {
+      const styles = await page.locator('section[aria-label="Education content"] button:disabled').evaluateAll(buttons => buttons.map(button => ({ opacity: getComputedStyle(button).opacity, cursor: getComputedStyle(button).cursor })));
+      assert.ok(styles.length > 0);
+      assert.ok(styles.every(style => Number(style.opacity) < 1 && style.cursor === 'not-allowed'));
+      disabledVisuals.push({ scenario: state, disabled: styles.length, ...styles[0] });
+    }
     await page.screenshot({ path: resolve(output, `${state}.png`), fullPage: true, animations: 'disabled' });
     await page.close();
   }
-  await writeFile(resolve(output, 'browser-proof.json'), JSON.stringify({ fixture: 'Synthetic HTTP responses; actual components and clients; server resolver supplies matrix and defaults', requests, passed: true }, null, 2));
+  await writeFile(resolve(output, 'browser-proof.json'), JSON.stringify({ fixture: 'Synthetic HTTP responses; actual components and clients; server resolver supplies matrix and defaults', requests, disabledVisuals, passed: true }, null, 2));
   console.log('Captured 12 synthetic screens and confirmed the real editor save sequence.');
 } finally { await browser?.close(); await server?.close(); if (upstream.listening) await new Promise<void>(done => upstream.close(() => done())); }
