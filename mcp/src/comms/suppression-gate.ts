@@ -82,7 +82,7 @@ export function readCommsPreferenceCells(patient: Patient): ExplicitCommsPrefere
       const part = parts.find(p => p.url === name);
       if (!part) return undefined;
       if (part.extension || Object.keys(part).filter(k => k.startsWith("value")).some(k => k !== key)) fail();
-      return (part as Record<string, unknown>)[key];
+      return (part as unknown as Record<string, unknown>)[key];
     };
     const purpose = value("purpose", "valueCode") as CommsPurpose;
     const channel = value("channel", "valueCode") as CommsPreferenceChannel;
@@ -206,6 +206,13 @@ export async function readPatientSmsOptOut(
   };
 }
 
+export function buildCommsOptOutExtension(channel: CommsPreferenceChannel | "all", number?: string): NonNullable<Patient["extension"]>[number] {
+  return { url: ODOS_COMMS_OPT_OUT_EXTENSION_URL, extension: [
+    { url: "channel", valueCode: channel },
+    ...(number ? [{ url: "number", valueString: number }] : []),
+  ] };
+}
+
 export async function recordPatientSmsOptOut(
   fhir: SmsOptOutManagementFhir,
   patientReference: string,
@@ -224,13 +231,7 @@ export async function recordPatientSmsOptOut(
   const existing = patient.extension ?? [];
   const number = input.scope === "per-number" ? e164(input.number ?? "", "SMS opt-out record number") : undefined;
   const duplicate = existing.some((extension) => isOwnedSmsOptOut(extension) && smsOptOutNumber(extension) === number);
-  const nextExtensions = duplicate ? existing : [...existing, {
-    url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
-    extension: [
-      { url: "channel", valueCode: "sms" },
-      ...(number ? [{ url: "number", valueString: number }] : []),
-    ],
-  }];
+  const nextExtensions = duplicate ? existing : [...existing, buildCommsOptOutExtension("sms", number)];
   if (!duplicate) {
     if (!patient.id || !patient.meta?.versionId) {
       throw new Error("SMS opt-out record requires the Patient to have an id and version.");
@@ -535,7 +536,7 @@ export async function checkMessageSuppression(
 ): Promise<{ patient: Patient; now: Date; result?: Exclude<SendResult, { outcome: "sent" }> }> {
   const now = deps.now?.() ?? new Date();
   const patient = await readPatient(deps.fhir, request.patientReference);
-  if ((request.suppression.requiresMarketingConsent && !hasRecordedMarketingConsent(patient)) || isOptedOut(
+  if (isOptedOut(
     patient,
     channel,
     request.campaignType,
@@ -543,6 +544,14 @@ export async function checkMessageSuppression(
     deps.stopScope ?? "per-number",
   )) {
     return { patient, now, result: { outcome: "suppressed", reason: "patient-opt-out" } };
+  }
+  if (channel === "sms" && request.suppression.requiresMarketingConsent && !hasRecordedMarketingConsent(patient)) {
+    return { patient, now, result: { outcome: "suppressed", reason: "preference-withheld" } };
+  }
+  const purpose = communicationPurpose(request.campaignType, request.suppression.consentClass);
+  if (purpose && !effectiveCommsPreferences(patient, deps)[purpose][channel].value
+    && !(request.suppression.staffEducationOverride && channel === "email" && purpose === "education")) {
+    return { patient, now, result: { outcome: "suppressed", reason: "preference-withheld" } };
   }
   if (
     request.suppression.frequencyCapDays !== undefined

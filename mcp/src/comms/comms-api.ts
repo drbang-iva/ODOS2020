@@ -842,7 +842,7 @@ async function validateSequenceAdmission(
     const item = deps.educationCatalog.get(step.content.id, step.content.version);
     if (!item || item.audience !== "patient") throw new CommsApiNotFoundError("Education content not found.");
     if (!item.channels.includes(step.channel)) throw new CommsApiCapabilityError(`Education content is not published for ${step.channel}.`);
-    if (item.consentClass === "marketing" && !hasRecordedMarketingConsent(patient)) throw new CommsApiRefusalError("marketing-consent-absent");
+    if (step.channel === "sms" && item.consentClass === "marketing" && !hasRecordedMarketingConsent(patient)) throw new CommsApiRefusalError("marketing-consent-absent");
     if (deps.chartDispatchLane === "locked_clinical" && step.lane !== "clinical") throw new CommsApiCapabilityError("Education dispatch is locked to the clinical lane for this practice.");
     if (step.recipientReference.startsWith("Patient/")) {
       if (step.recipientReference !== `Patient/${patient.id}`) throw new CommsApiValidationError("Sequence recipient must belong to the enrolled patient.");
@@ -999,7 +999,7 @@ async function prepareEducationDispatch(
     throw new CommsApiCapabilityError("Education dispatch is locked to the clinical lane for this practice.");
   }
   await assertEducationClinicalReferences(fhir, body);
-  if (item.consentClass === "marketing" && !hasRecordedMarketingConsent(patient)) {
+  if (body.channel === "sms" && item.consentClass === "marketing" && !hasRecordedMarketingConsent(patient)) {
     throw new CommsApiRefusalError("marketing-consent-absent");
   }
   const recipient = await resolveEducationRecipient(fhir, patient, body);
