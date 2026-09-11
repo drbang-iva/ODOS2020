@@ -188,3 +188,37 @@ test("bulk selection never changes a suppressed cell in an unconfirmed write", a
     assert.equal(renderer.root.findAllByProps({ "aria-label": "Education Text" }).length, 0);
   });
 });
+
+test("a late rejected 409 reread cannot hide a different patient's freshly loaded grid", async () => {
+  let oldReads = 0;
+  let rejectOld!: (cause: Error) => void;
+  const pending = new Promise<Response>((_resolve, reject) => { rejectOld = reject; });
+  const next = { ...response(), patientReference: "Patient/synthetic-other" };
+  await mount(async (input, init) => {
+    if (init?.method === "PUT") return body({ error: "conflict" }, 409);
+    if (new URL(String(input), "http://localhost").searchParams.get("patient") === next.patientReference) return body(next);
+    return ++oldReads === 1 ? body(response()) : pending;
+  }, <CommunicationPreferencesControl {...patientProps} />, async renderer => {
+    await act(async () => button(renderer, "Clear all").props.onClick());
+    await act(async () => button(renderer, "Save preferences").props.onClick());
+    assert.equal(oldReads, 2);
+    await act(async () => renderer.update(<CommunicationPreferencesControl {...patientProps} patientReference={next.patientReference} />));
+    assert.equal(renderer.root.findAllByType("table").length, 1);
+    await act(async () => rejectOld(new Error("Old patient read failed")));
+    assert.equal(renderer.root.findAllByType("table").length, 1);
+    assert.doesNotMatch(text(renderer), /can't be read/);
+    assert.equal(renderer.root.findByProps({ "aria-label": "Education Text" }).props.disabled, false);
+  });
+});
+
+test("evidence without capture metadata uses a neutral label instead of inventing an in-person confirmation", async () => {
+  const initial = response();
+  const row = initial.rows.find(row => row.purpose === "education" && row.channel === "email")!;
+  row.evidenceSummary = [{ reference: "Consent/synthetic-evidence", dateTime: "2026-09-10" }]; row.evidenceStatus = "recorded";
+  await mount(async () => body(initial), <CommunicationPreferencesControl {...patientProps} />, async renderer => {
+    const education = renderer.root.findAllByType("tr").find(row => row.findAllByType("th").some(header => header.children.includes("Education")))!;
+    const badge = education.findAllByType("td").at(-1)!;
+    const badgeText = badge.findAll(() => true).flatMap(node => node.children.filter(child => typeof child === "string")).join(" ");
+    assert.match(badgeText, /Consent on file/); assert.doesNotMatch(badgeText, /Patient stated in person/);
+  });
+});

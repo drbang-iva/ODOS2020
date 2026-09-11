@@ -147,7 +147,7 @@ export function CommunicationPreferencesControl(props: Props) {
           const fresh = await readCommunicationPreferences(props.patientReference);
           if (generation.current !== operation) return;
           setResponse(fresh); setPatientDraft({ baseline: fresh.matrix, changes: [], confirmedVia: null, formDate: "" });
-        } catch { setUnavailable(true); setMessage(READ_FAILURE); }
+        } catch { if (generation.current === operation) { setUnavailable(true); setMessage(READ_FAILURE); } }
       } else setMessage("Communication preferences could not be saved. Please try again.");
     } finally { if (generation.current === operation) setSaving(false); }
   }
@@ -178,7 +178,7 @@ export function CommunicationPreferencesControl(props: Props) {
           const gap = electronic.some(row => row.evidenceStatus === "gap") || (!response && (shownValue(draft, purpose, "sms") || shownValue(draft, purpose, "email")));
           const evidence = records[0];
           const method = evidence?.capture?.extension?.find(part => part.url === "method")?.valueCode;
-          const label = method === "paper-form" ? "Form on file" : "Patient stated in person";
+          const label = method === "paper-form" ? "Form on file" : method === "in-person" ? "Patient stated in person" : "Consent on file";
           return <tr key={purpose}>
             <th scope="row" className="border-b px-2 py-3 text-left font-medium whitespace-nowrap">{COMMUNICATION_PURPOSE_LABELS[purpose]}</th>
             {COMMS_PREFERENCE_CHANNELS.map(channel => {
