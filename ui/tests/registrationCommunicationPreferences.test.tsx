@@ -95,13 +95,33 @@ test("registration preference denial shows a specific message", async () => {
   });
 });
 
-test("failed server defaults remain visible and prevent registration without a loaded grid", async () => {
-  const methods: string[] = [];
-  await mounted(async (_input, init) => { methods.push(init?.method ?? "GET"); return reply({ error: "unavailable" }, 500); }, async renderer => {
-    assert.match(text(renderer), /Communication preferences can't be read/);
+test("failed defaults permit registration with implicit server defaults and retain Retry", async () => {
+  let payload: any;
+  await mounted(async (input, init) => {
+    if (String(input).includes("preferences/defaults")) return reply({ error: "unavailable" }, 500);
+    payload = JSON.parse(String(init?.body)); return reply(created, 201);
+  }, async renderer => {
+    assert.match(text(renderer), /server defaults will apply/);
     assert.equal(renderer.root.findAllByType("table").length, 0);
+    assert.equal(button(renderer, "Create patient").props.disabled, false);
+    assert.ok(button(renderer, "Retry preferences"));
+    await fillDemographics(renderer);
+    await act(async () => button(renderer, "Create patient").props.onClick());
+    assert.ok(payload); assert.equal(Object.hasOwn(payload, "communicationPreferences"), false);
+  });
+});
+
+test("pending defaults disable registration and Retry can recover the editable grid", async () => {
+  let finish!: (response: Response) => void;
+  let reads = 0;
+  await mounted(async () => ++reads === 1 ? new Promise<Response>(resolve => { finish = resolve; }) : reply(defaults()), async renderer => {
     assert.equal(button(renderer, "Create patient").props.disabled, true);
-    assert.deepEqual(methods, ["GET"]);
+    await act(async () => { finish(reply({ error: "unavailable" }, 500)); });
+    assert.equal(button(renderer, "Create patient").props.disabled, false);
+    await act(async () => button(renderer, "Retry preferences").props.onClick());
+    assert.equal(renderer.root.findAllByType("table").length, 1);
+    assert.equal(button(renderer, "Create patient").props.disabled, false);
+    assert.doesNotMatch(text(renderer), /server defaults will apply/);
   });
 });
 

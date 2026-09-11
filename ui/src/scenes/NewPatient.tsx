@@ -28,6 +28,7 @@ export function NewPatient() {
     emptySelfResponsibleParty("self"),
   ]);
   const [preferences, setPreferences] = useState<CommunicationPreferencesDraft>();
+  const [preferenceAvailability, setPreferenceAvailability] = useState<"loading" | "available" | "unavailable">("loading");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [duplicates, setDuplicates] = useState<Patient[]>([]);
   const [saving, setSaving] = useState(false);
@@ -46,7 +47,8 @@ export function NewPatient() {
   };
 
   const registrationOptions = (): PatientRegistrationOptions => {
-    if (!preferences) throw new Error("Communication preference defaults are unavailable. Wait for the grid to load or retry preferences.");
+    if (!preferences && preferenceAvailability === "unavailable") return { responsibleParties, today };
+    if (!preferences) throw new Error("Wait for communication preference defaults to load.");
     const communicationPreferences = communicationPreferencesInput(preferences);
     return { responsibleParties, today, ...(communicationPreferences.cells.length ? { communicationPreferences } : {}) };
   };
@@ -107,7 +109,7 @@ export function NewPatient() {
         </header>
         {saveError && <div role="alert" className="mb-4 rounded border border-red-400/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">{saveError}</div>}
         <PatientDemographicsFields draft={draft} errors={errors} onChange={(next) => { setDraft(next); setDuplicates([]); }}
-          communicationPreferences={<CommunicationPreferencesControl mode="registration" value={preferences} onChange={setPreferences} canEdit={!saving} />} />
+          communicationPreferences={<CommunicationPreferencesControl mode="registration" value={preferences} onChange={setPreferences} onAvailabilityChange={setPreferenceAvailability} canEdit={!saving} />} />
         <ResponsiblePartiesEditor
           parties={responsibleParties}
           errors={errors}
@@ -119,7 +121,7 @@ export function NewPatient() {
           }}
         />
         <div className="mt-6 flex justify-end">
-          <button type="button" disabled={saving || !preferences} onClick={() => void submit()} className="rounded bg-blue-500 px-5 py-2.5 text-sm font-semibold disabled:opacity-50">{saving ? "Checking…" : "Create patient"}</button>
+          <button type="button" disabled={saving || preferenceAvailability === "loading"} onClick={() => void submit()} className="rounded bg-blue-500 px-5 py-2.5 text-sm font-semibold disabled:opacity-50">{saving ? "Checking…" : "Create patient"}</button>
         </div>
       </section>
 

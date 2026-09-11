@@ -52,6 +52,7 @@ interface RegistrationProps {
   mode: "registration";
   value: CommunicationPreferencesDraft | undefined;
   onChange: (value: CommunicationPreferencesDraft) => void;
+  onAvailabilityChange?: (availability: "loading" | "available" | "unavailable") => void;
   canEdit?: boolean;
 }
 type Props = PatientProps | RegistrationProps;
@@ -81,6 +82,7 @@ export function CommunicationPreferencesControl(props: Props) {
     previousIdentity.current = identity;
     setLoading(true); setSaving(false); setUnavailable(false); setMessage(undefined);
     if (changedPatient) { setResponse(undefined); setPatientDraft(undefined); setDenied(false); }
+    if (props.mode === "registration") props.onAvailabilityChange?.(props.value ? "available" : "loading");
     if (props.mode === "registration" && props.value) { setLoading(false); return; }
     const read = props.mode === "patient" ? readCommunicationPreferences(props.patientReference) : readCommunicationPreferenceDefaults();
     read.then(value => {
@@ -91,11 +93,20 @@ export function CommunicationPreferencesControl(props: Props) {
           confirmedVia: changedPatient ? null : previous?.confirmedVia ?? null, formDate: changedPatient ? "" : previous?.formDate ?? "" }));
       } else {
         const current = callbacks.current;
-        if (current.mode === "registration" && !current.value) current.onChange(createCommunicationPreferencesDraft(value));
+        if (current.mode === "registration") {
+          if (!current.value) current.onChange(createCommunicationPreferencesDraft(value));
+          current.onAvailabilityChange?.("available");
+        }
       }
     }).catch(cause => {
       if (!active || generation.current !== operation) return;
       setUnavailable(true);
+      const current = callbacks.current;
+      if (current.mode === "registration") {
+        current.onAvailabilityChange?.("unavailable");
+        setMessage("Communication preference defaults could not be loaded. You can create the patient without setting preferences; server defaults will apply.");
+        return;
+      }
       if (cause instanceof CommunicationsResponseError && cause.status === 403) { setDenied(true); setMessage(PERMISSION_FAILURE); }
       else setMessage(READ_FAILURE);
     }).finally(() => { if (active && generation.current === operation) setLoading(false); });
