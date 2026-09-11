@@ -217,7 +217,7 @@ export function CommunicationPreferencesControl(props: Props) {
         </select>
       </label>
       {draft.confirmedVia === "paper-form" && <label className="flex flex-col gap-1">Form date<input className="scheduler-input" type="date" aria-label="Form date" value={draft.formDate} max={new Date().toISOString().slice(0, 10)} disabled={!editable} onChange={event => update({ ...draft, formDate: event.target.value })} /></label>}
-      {props.mode === "patient" && <button type="button" disabled={!editable || !dirty} className="rounded bg-[color:var(--odos-accent)] px-3 py-2 text-white" onClick={() => void save()}>{saving ? "Saving preferences…" : "Save preferences"}</button>}
+      {props.mode === "patient" && <button type="button" disabled={!editable || !dirty} className="rounded bg-[color:var(--odos-accent)] px-3 py-2 text-[color:var(--odos-accent-ink)]" onClick={() => void save()}>{saving ? "Saving preferences…" : "Save preferences"}</button>}
     </div>
     {message && <p role="status">{message}</p>}
   </section>;
