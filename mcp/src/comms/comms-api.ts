@@ -1,3 +1,4 @@
+import type { PatientWriteVersion } from "./patient-version.js";
 import { resolvePractitionerReference } from "../authz/practitioner-reference.js";
 import { writeCommsPreferences, parsePreferenceWriteInput, parseConsentEvidenceInput, parseEvidenceGapFilters,
   attachCommsConsentEvidence, readCommsPreferences, reportCommsEvidenceGaps, evidenceGapCsv } from "./comms-preferences.js";
@@ -544,11 +545,12 @@ export function registerCommsApiRoutes(
       const now = deps.now?.() ?? new Date().toISOString();
       const input = validatedPreferenceInput(() => parsePreferenceWriteInput(req.body, now));
       const actorReference = await preferencePractitioner(staff);
+      let patientVersion: PatientWriteVersion | undefined;
       await preferenceAccess(() => writeCommsPreferences(staff.fhir, input.patientReference, input.cells, {
         actorReference, actorRole: staff.actorRole, policyUrl: staff.authorizationPolicyUrl,
         recordedAt: now, surface: "staff-demographics",
-      }, input));
-      return { status: 200, body: await preferenceAccess(() => readCommsPreferences(staff.fhir, input.patientReference)) };
+      }, input, version => { patientVersion = version; }));
+      return { status: 200, body: { ...await preferenceAccess(() => readCommsPreferences(staff.fhir, input.patientReference)), ...(patientVersion ? { patientVersion } : {}) } };
     },
   ));
   app.post("/communications/consent-evidence", async (req, res) => withStaff(
@@ -557,11 +559,12 @@ export function registerCommsApiRoutes(
       const now = deps.now?.() ?? new Date().toISOString();
       const input = validatedPreferenceInput(() => parseConsentEvidenceInput(req.body, now));
       const actorReference = await preferencePractitioner(staff);
+      let patientVersion: PatientWriteVersion | undefined;
       await preferenceAccess(() => attachCommsConsentEvidence(staff.fhir, input, {
         actorReference, actorRole: staff.actorRole, policyUrl: staff.authorizationPolicyUrl,
         recordedAt: now, surface: "staff-demographics",
-      }));
-      return { status: 200, body: await preferenceAccess(() => readCommsPreferences(staff.fhir, input.patientReference)) };
+      }, version => { patientVersion = version; }));
+      return { status: 200, body: { ...await preferenceAccess(() => readCommsPreferences(staff.fhir, input.patientReference)), ...(patientVersion ? { patientVersion } : {}) } };
     },
   ));
   app.get("/communications/preferences/evidence-gaps", async (req, res) => withStaff(
@@ -597,14 +600,15 @@ export function registerCommsApiRoutes(
     async (staff) => {
       const body = optOutRecordBody(req.body);
       try {
+        let patientVersion: PatientWriteVersion | undefined;
         const state = await recordPatientSmsOptOut(staff.fhir, body.patientReference, {
           ...body,
           actorReference: staff.staffReference,
           actorRole: staff.actorRole,
           policyUrl: staff.authorizationPolicyUrl,
           recordedAt: deps.now?.() ?? new Date().toISOString(),
-        });
-        return { status: 200, body: { ...state, smsLanes: configuredSmsLanes(deps.dispatch) } };
+        }, version => { patientVersion = version; });
+        return { status: 200, body: { ...state, ...(patientVersion ? { patientVersion } : {}), smsLanes: configuredSmsLanes(deps.dispatch) } };
       } catch (error) {
         if (isFhirNotFound(error)) throw new CommsApiNotFoundError("Patient not found.");
         throw error;
@@ -1698,7 +1702,8 @@ async function clearNamedPatientSmsOptOut(
   staff: CommsStaff,
 ) {
   try {
-    return await clearPatientSmsOptOut(fhir, body.patientReference, {
+    let patientVersion: PatientWriteVersion | undefined;
+    const state = await clearPatientSmsOptOut(fhir, body.patientReference, {
       actorReference: staff.staffReference,
       actorRole: staff.actorRole,
       policyUrl: staff.authorizationPolicyUrl,
@@ -1706,7 +1711,8 @@ async function clearNamedPatientSmsOptOut(
       reason: body.reason,
       identityVerification: body.identityVerification,
       number: body.number,
-    });
+    }, version => { patientVersion = version; });
+    return { ...state, ...(patientVersion ? { patientVersion } : {}) };
   } catch (error) {
     if (isFhirNotFound(error)) throw new CommsApiNotFoundError("Patient not found.");
     throw error;
