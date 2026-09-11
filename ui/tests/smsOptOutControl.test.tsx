@@ -475,3 +475,45 @@ for (const outcome of ["success", "failure"] as const) {
     } finally { if (renderer) act(() => renderer.unmount()); globalThis.fetch = originalFetch; }
   });
 }
+
+for (const action of ["record", "clear"] as const) {
+  test(`conflict mapping: ${action} 409 closes the form and re-reads SMS state`, async () => {
+    const originalFetch = globalThis.fetch;
+    const message = "This patient's record changed while you were working. Reload and try again.";
+    const initial = {
+      patientReference: "Patient/synthetic-1", smsOptedOut: action === "clear",
+      remainingOptOuts: { global: action === "clear", numbers: [] },
+      smsLanes: [{ label: "Front-desk texts", number: "+18645550100", roles: ["transactional-sms"] }],
+    };
+    const refreshed = { ...initial, smsOptedOut: true, remainingOptOuts: { global: false, numbers: ["+18645550100"] } };
+    const requests: string[] = [];
+    let notified: unknown;
+    let suppressed: boolean | undefined;
+    globalThis.fetch = async (url, init) => {
+      requests.push(`${init?.method ?? "GET"} ${String(url).split("?")[0]}`);
+      if (init?.method === "POST") return new Response(JSON.stringify({ error: message }), { status: 409 });
+      return new Response(JSON.stringify(requests.length === 1 ? initial : refreshed));
+    };
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => { renderer = create(<SmsOptOutControl patientReference={initial.patientReference}
+        activeLaneRole="transactional-sms" onStateChange={(value) => { notified = value; }}
+        onActiveLaneSuppressionChange={(value) => { suppressed = value; }} />); });
+      act(() => renderer.root.findAllByType("button").find((button) => button.children.join("") ===
+        (action === "record" ? "Record opt-out — patient asked…" : "Clear all SMS opt-outs…"))!.props.onClick());
+      act(() => {
+        renderer.root.findByProps({ "aria-label": action === "record" ? "Reason for opt-out" : "Reason for re-enrollment" }).props.onChange({ target: { value: "Patient requested this change" } });
+        renderer.root.findByProps({ "aria-label": "Identity verification" }).props.onChange({ target: { value: "in-person" } });
+      });
+      await act(async () => { renderer.root.findByType("form").props.onSubmit({ preventDefault() {} }); });
+      assert.deepEqual(requests, ["GET /communications/opt-out", `POST /communications/opt-out/${action}`, "GET /communications/opt-out"]);
+      assert.equal(renderer.root.findAllByType("form").length, 0);
+      assert.deepEqual(notified, refreshed);
+      assert.equal(suppressed, true);
+      const text = JSON.stringify(renderer.toJSON());
+      assert.ok(text.includes(message));
+      assert.match(text, /opted out \(STOP\)/);
+      assert.doesNotMatch(text, /General SMS opt-out|SMS preferences unavailable|Texting restored/);
+    } finally { if (renderer) act(() => renderer.unmount()); globalThis.fetch = originalFetch; }
+  });
+}
