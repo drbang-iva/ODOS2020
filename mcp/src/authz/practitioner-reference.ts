@@ -17,4 +17,3 @@ export async function resolvePractitionerReference(
     ? role.practitioner?.reference
     : undefined;
 }
-

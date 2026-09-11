@@ -126,7 +126,7 @@ interface ListedProviderConversations {
 }
 
 export function registerCommsApiRoutes(
-  app: Pick<Application, "get" | "post">,
+  app: Pick<Application, "get" | "post" | "put">,
   deps: CommsApiRouteDeps,
 ): void {
   app.get("/communications/education/sequence-work", async (req, res) => withStaff(
@@ -567,7 +567,7 @@ export function registerCommsApiRoutes(
   app.get("/communications/preferences/evidence-gaps", async (req, res) => withStaff(
     req, res, deps, "communications.preferences.manage", "Consent", "communications-evidence-gaps", undefined,
     async staff => {
-      const filters = validatedPreferenceInput(() => parseEvidenceGapFilters(req.query));
+      const filters = validatedPreferenceInput(() => parseEvidenceGapFilters(req.query, staff.fhir.baseUrl));
       const report = await preferenceAccess(() => reportCommsEvidenceGaps(staff.fhir, filters));
       return filters.format === "csv" ? {
         status: 200, media: { contentType: "text/csv", bytes: Buffer.from(evidenceGapCsv(report)) },

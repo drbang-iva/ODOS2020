@@ -16,9 +16,11 @@ async function fixture(options: { conflict?: boolean; businessActions?: readonly
   const initial = structuredClone(patient);
   const transactions: Bundle[] = [], consents: Consent[] = [];
   const fhir = {
+    baseUrl: "https://fhir.invalid",
+    searchUrl: (url: string): Promise<unknown> => fhir.search("Patient", Object.fromEntries(new URL(url).searchParams)),
     read: async () => structuredClone(patient),
     search: async (type: string, params: Record<string, string>) => ({ resourceType: "Bundle", type: "searchset",
-      ...(options.manyPatients && type === "Patient" ? { total: 20000 } : {}),
+      ...(options.manyPatients && type === "Patient" ? { total: 20000, link: [{ relation: "next", url: `https://fhir.invalid/fhir/R4/Patient?_offset=${Number(params._offset ?? "0") + 100}` }] } : {}),
       entry: type === "Consent" ? consents.map(resource => ({ resource })) : options.manyPatients
         ? Array.from({ length: 100 }, (_, i) => ({ resource: { resourceType: "Patient", id: `synthetic-${params._offset}-${i}`, active: true } }))
         : [{ resource: structuredClone(patient) }] }),
@@ -122,6 +124,8 @@ test("evidence gaps routes provide JSON and CSV and reject arbitrary URL cursor"
     assert.equal(csv.status, 200); assert.match(csv.headers.get("content-type")!, /text\/csv/);
     assert.match(await csv.text(), /patientReference,purpose,channel/);
     assert.equal((await f.request("/communications/preferences/evidence-gaps?cursor=https://synthetic.invalid")).status, 400);
+    const foreignCursor = Buffer.from("https://foreign.invalid/fhir/R4/Patient?_offset=100").toString("base64url");
+    assert.equal((await f.request(`/communications/preferences/evidence-gaps?cursor=${foreignCursor}`)).status, 400);
   } finally { await f.close(); }
 });
 test("CSV evidence report exposes truncation and continuation even with zero rows", async () => {
@@ -129,7 +133,7 @@ test("CSV evidence report exposes truncation and continuation even with zero row
     const response = await f.request("/communications/preferences/evidence-gaps?tier=1&format=csv");
     assert.equal(response.status, 200);
     assert.equal(response.headers.get("X-ODOS-Truncated"), "true");
-    assert.equal(response.headers.get("X-ODOS-Cursor"), "offset:10000");
+    assert.equal(new URL(Buffer.from(response.headers.get("X-ODOS-Cursor")!, "base64url").toString()).searchParams.get("_offset"), "10000");
     assert.equal((await response.text()).split("\r\n").length, 1);
   } finally { await f.close(); }
 });

@@ -8,10 +8,11 @@ import { registerCommsApiRoutes, type CommsApiRouteDeps } from "../src/comms/com
 import { buildCommsConsent } from "../src/comms/comms-preferences.js";
 import { TEST_FHIR_AUDIT_RECORDER, TEST_FHIR_AUDIT_CONTEXT } from "./fhirAuditTestStub.js";
 import { test, type TestContext } from "node:test";
-import type { Consent, Patient, Practitioner, Resource } from "@medplum/fhirtypes";
+import type { Consent, Patient, Practitioner, Provenance, Resource } from "@medplum/fhirtypes";
 import { buildMedplumAccessPolicy, getRoleDeclaration, PRACTICE_ROLE_IDS } from "../src/authz/roles.js";
+import { searchAll } from "../src/fhir-search.js";
 import { createAuthenticatedFhirClient } from "./integration-helpers.js";
-import { createRoleClient, fhirRequest } from "./liveRoleClient.js";
+import { cleanupReferences, createRoleClient, fhirRequest } from "./liveRoleClient.js";
 
 async function liveConsentProof(t: TestContext, routeOnly: boolean) {
   if (process.env.ODOS_MATRIX_LIVE !== "1") { t.skip("Dedicated synthetic matrix live lane only"); return; }
@@ -19,10 +20,23 @@ async function liveConsentProof(t: TestContext, routeOnly: boolean) {
   assert.match(baseUrl, /^http:\/\/(localhost|127\.0\.0\.1):\d+\/?$/);
   const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email: process.env.MEDPLUM_ADMIN_EMAIL!, password: process.env.MEDPLUM_ADMIN_PASSWORD! });
   const projectId = await fhir.getActiveProjectId();
-  const patient = await fhir.create<Patient>({ resourceType: "Patient", active: true, name: [{ family: "TEST-MatrixConsent" }] });
-  const practitioner = await fhir.create<Practitioner>({ resourceType: "Practitioner", active: true });
+  const cleanup: string[] = [];
+  const track = <T extends Resource>(resource: T): T => {
+    assert.ok(resource.id);
+    cleanup.push(`${resource.resourceType}/${resource.id}`);
+    return resource;
+  };
+  const patient = track(await fhir.create<Patient>({ resourceType: "Patient", active: true, name: [{ family: "TEST-MatrixConsent" }] }));
+  t.after(async () => {
+    try {
+      for (const resource of await searchAll<Consent>(fhir, "Consent", { patient: `Patient/${patient.id}` })) track(resource);
+      for (const resource of await searchAll<Provenance>(fhir, "Provenance", { target: `Patient/${patient.id}` })) track(resource);
+    } finally {
+      await cleanupReferences(baseUrl, accessToken, [...new Set(cleanup)]);
+    }
+  });
+  const practitioner = track(await fhir.create<Practitioner>({ resourceType: "Practitioner", active: true }));
   const patientReference = `Patient/${patient.id}`;
-  const track = <T extends Resource>(resource: T): T => resource;
   const sample = buildCommsConsent(patientReference, [{ purpose: "education", channel: "email" }], "in-person", {
     actorReference: `Practitioner/${practitioner.id}`, actorRole: "staff", recordedAt: new Date().toISOString(), surface: "staff-demographics",
   });
@@ -31,13 +45,13 @@ async function liveConsentProof(t: TestContext, routeOnly: boolean) {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
     // Bind the synthetic patient's compartment explicitly, including Admin clients.
     policy.resource = policy.resource!.map((rule) => ({ ...rule, ...(rule.criteria ? { criteria: rule.criteria.replaceAll("%patient_compartment", patientReference) } : {}) }));
-    const savedPolicy = await fhir.create(policy);
+    const savedPolicy = track(await fhir.create(policy));
     const client = await createRoleClient({ baseUrl, roleId, policyReference: `AccessPolicy/${savedPolicy.id}`, patientReference, practitionerReference: `Practitioner/${practitioner.id}`, projectId, runId: randomUUID(), adminToken: accessToken, track });
     if (!routeOnly) {
     const created = await fhirRequest<Consent>(baseUrl, client.token, "POST", "Consent", sample);
     assert.equal(created.status, 201, `${roleId} valid Consent create: ${created.summary}`);
     assert.ok(created.body?.id);
-    const current = created.body!;
+    const current = track(created.body!);
     const updated = await fhirRequest<Consent>(baseUrl, client.token, "PUT", `Consent/${current.id}`, { ...current, status: "inactive" });
     assert.equal(updated.status, 200, `${roleId} status-only update: ${updated.summary}`);
     const changed = structuredClone(updated.body!);
@@ -45,7 +59,7 @@ async function liveConsentProof(t: TestContext, routeOnly: boolean) {
     const deniedChange = await fhirRequest(baseUrl, client.token, "PUT", `Consent/${current.id}`, changed);
     assert.equal(deniedChange.status, 403, `${roleId} evidence content immutable: ${deniedChange.summary}`);
     }
-    const deniedPolicy = await fhir.create({ ...policy, resource: policy.resource!.filter((rule) => rule.resourceType !== "Consent") });
+    const deniedPolicy = track(await fhir.create({ ...policy, resource: policy.resource!.filter((rule) => rule.resourceType !== "Consent") }));
     const deniedClient = await createRoleClient({ baseUrl, roleId, policyReference: `AccessPolicy/${deniedPolicy.id}`, patientReference, practitionerReference: `Practitioner/${practitioner.id}`, projectId, runId: randomUUID(), adminToken: accessToken, track });
     if (!routeOnly) {
     const denied = await fhirRequest(baseUrl, deniedClient.token, "POST", "Consent", sample);

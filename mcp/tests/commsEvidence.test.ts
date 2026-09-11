@@ -75,25 +75,26 @@ test("report stops at its row bound and resumes without skipping patients", asyn
   const offsets: string[] = [];
   const search = async (type: string, params: Record<string, string>) => {
     if (type === "Consent") return { resourceType: "Bundle", entry: [] };
-    offsets.push(params._offset);
-    const offset = Number(params._offset);
-    return { resourceType: "Bundle", total: 2000, entry: Array.from({ length: 100 }, (_, i) => ({ resource: { resourceType: "Patient", id: `p${offset + i}`, active: true } })) };
+    offsets.push(params._offset ?? "0");
+    const offset = Number(params._offset ?? "0");
+    return { resourceType: "Bundle", total: 2000, ...(offset + 100 < 2000 ? { link: [{ relation: "next", url: `https://fhir.invalid/fhir/R4/Patient?_offset=${offset + 100}` }] } : {}), entry: Array.from({ length: 100 }, (_, i) => ({ resource: { resourceType: "Patient", id: `p${offset + i}`, active: true } })) };
   };
-  const first = await reportCommsEvidenceGaps({ search } as never);
+  const fhir = { search, baseUrl: "https://fhir.invalid", searchUrl: (url: string) => search("Patient", Object.fromEntries(new URL(url).searchParams)) };
+  const first = await reportCommsEvidenceGaps(fhir as never);
   assert.equal(first.truncated, true); assert.ok(first.rows.length <= 10000);
   const lastId = Number(first.rows.at(-1)!.patientReference.slice("Patient/p".length));
-  assert.equal(first.cursor, `offset:${lastId + 1}`);
-  const second = await reportCommsEvidenceGaps({ search } as never, { cursor: first.cursor, channel: "email" });
+  assert.equal(new URL(Buffer.from(first.cursor!, "base64url").toString()).searchParams.get("_offset"), String(lastId + 1));
+  const second = await reportCommsEvidenceGaps(fhir as never, { cursor: first.cursor, channel: "email" });
   assert.equal(second.rows[0].patientReference, `Patient/p${lastId + 1}`);
   assert.ok(offsets.length <= 100);
 });
 test("report stops at 100 Patient pages even when a filter yields no rows", async () => {
   let pages = 0;
   const search = async (type: string) => type === "Consent" ? { resourceType: "Bundle", entry: [] }
-    : { resourceType: "Bundle", total: 20000, entry: Array.from({ length: 100 }, (_, i) => ({ resource: { resourceType: "Patient", id: `p${pages++}-${i}`, active: true } })) };
-  const result = await reportCommsEvidenceGaps({ search } as never, { tier: "1" });
+    : { resourceType: "Bundle", total: 20000, link: [{ relation: "next", url: `https://fhir.invalid/fhir/R4/Patient?_offset=${pages + 100}` }], entry: Array.from({ length: 100 }, (_, i) => ({ resource: { resourceType: "Patient", id: `p${pages++}-${i}`, active: true } })) };
+  const result = await reportCommsEvidenceGaps({ search, baseUrl: "https://fhir.invalid", searchUrl: () => search("Patient") } as never, { tier: "1" });
   assert.equal(pages, 10000); assert.equal(result.rows.length, 0);
-  assert.equal(result.truncated, true); assert.equal(result.cursor, "offset:10000");
+  assert.equal(result.truncated, true); assert.equal(new URL(Buffer.from(result.cursor!, "base64url").toString()).searchParams.get("_offset"), "10000");
 });
 test("preference transaction failure preserves status for optimistic race mapping", async () => {
   const fhir = { read: async () => ({ resourceType: "Patient", id: "p", meta: { versionId: "4" } }),

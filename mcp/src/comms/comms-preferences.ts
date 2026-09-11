@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { Bundle, Consent, Patient } from "@medplum/fhirtypes";
 import type { PracticeRoleId } from "../authz/roles.js";
-import type { MedplumClient } from "../fhir-client.js";
+import { fhirSearchNextPath, type MedplumClient } from "../fhir-client.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { COMMS_PURPOSES, COMMS_PREFERENCE_CHANNELS, effectiveCommsPreferences, readCommsPreferenceCells, replaceCommsPreferenceCells, type CommsPreferenceInput, type CommsPreferenceSurface } from "./suppression-gate.js";
 
@@ -137,6 +137,11 @@ export async function attachCommsConsentEvidence(fhir: Pick<MedplumClient, "read
   return fhir.read<Patient>("Patient", patient.id);
 }
 
+const MAX_EVIDENCE_REPORT_PAGES = 100;
+const MAX_EVIDENCE_REPORT_ROWS = 10_000;
+const EVIDENCE_PATIENT_PAGE_SIZE = 100;
+const MAX_AUTOMATED_CELLS_PER_PATIENT = COMMS_PURPOSES.length * 2;
+
 type ResolverOptions = Parameters<typeof effectiveCommsPreferences>[1];
 export function commsPreferencesWithEvidence(patient: Patient, consents: Consent[], options: ResolverOptions = {}) {
   const matrix = effectiveCommsPreferences(patient, options);
@@ -159,7 +164,7 @@ export function commsPreferencesWithEvidence(patient: Patient, consents: Consent
 }
 async function searchCommsConsents(fhir: Pick<MedplumClient, "search">, ids: string[]): Promise<Consent[]> {
   const bundle = await fhir.search<Consent>("Consent", { patient: ids.map(id => `Patient/${id}`).join(","),
-    category: `${COMMS_CONSENT_CATEGORY_SYSTEM}|comms-consent`, status: "active", _count: "10000" });
+    category: `${COMMS_CONSENT_CATEGORY_SYSTEM}|comms-consent`, status: "active", _count: String(MAX_EVIDENCE_REPORT_ROWS) });
   const resources = (bundle.entry ?? []).flatMap(entry => entry.resource?.resourceType === "Consent" ? [entry.resource] : []);
   if (bundle.link?.some(link => link.relation === "next") || (bundle.total !== undefined && bundle.total > resources.length)) {
     throw new Error("Consent evidence search is incomplete; evidence gaps cannot be determined.");
@@ -172,25 +177,42 @@ export async function readCommsPreferences(fhir: Pick<MedplumClient, "read" | "s
   return commsPreferencesWithEvidence(patient, await searchCommsConsents(fhir, [patientReference.slice(8)]), options);
 }
 const gapFilterSchema = z.object({ tier: z.enum(["1", "2", "3"]).optional(), purpose: z.enum(COMMS_PURPOSES).optional(),
-  channel: z.enum(["sms", "email"]).optional(), cursor: z.string().regex(/^offset:(0|[1-9]\d{0,8})$/).optional(),
+  channel: z.enum(["sms", "email"]).optional(), cursor: z.string().max(4096).regex(/^[A-Za-z0-9_-]+$/).optional(),
   format: z.enum(["json", "csv"]).optional() }).strict();
 export type EvidenceGapFilters = z.infer<typeof gapFilterSchema>;
-export function parseEvidenceGapFilters(value: unknown): EvidenceGapFilters { return gapFilterSchema.parse(value); }
-export async function reportCommsEvidenceGaps(fhir: Pick<MedplumClient, "search">, filters: EvidenceGapFilters = {}, options: ResolverOptions = {}) {
+export function parseEvidenceGapFilters(value: unknown, baseUrl?: string): EvidenceGapFilters {
+  const filters = gapFilterSchema.parse(value);
+  if (filters.cursor && baseUrl) reportPageUrl(Buffer.from(filters.cursor, "base64url").toString("utf8"), baseUrl);
+  return filters;
+}
+function reportPageUrl(value: string, baseUrl: string): string {
+  const path = fhirSearchNextPath(value, baseUrl, "Patient");
+  if (!path) throw new Error("Invalid evidence report cursor.");
+  const url = new URL(path, baseUrl);
+  const keys = [...url.searchParams.keys()];
+  if (keys.some(key => !["active", "_count", "_sort", "_offset", "_cursor"].includes(key))
+    || keys.some(key => url.searchParams.getAll(key).length !== 1)
+    || (url.searchParams.has("_offset") && !/^\d{1,9}$/.test(url.searchParams.get("_offset")!))) throw new Error("Invalid evidence report cursor.");
+  url.searchParams.set("active", "true");
+  url.searchParams.set("_count", String(EVIDENCE_PATIENT_PAGE_SIZE));
+  url.searchParams.set("_sort", "_id");
+  return url.toString();
+}
+export async function reportCommsEvidenceGaps(fhir: Pick<MedplumClient, "search" | "searchUrl" | "baseUrl">, filters: EvidenceGapFilters = {}, options: ResolverOptions = {}) {
   gapFilterSchema.parse(filters);
   type Row = { patientReference: string; purpose: CommsPreferenceInput["purpose"]; channel: "sms" | "email"; tier: number; source: string };
   const rows: Row[] = [], suppressed: Row[] = [];
   const counts = { "1": 0, "2": 0, "3": 0 };
-  let offset = Number(filters.cursor?.slice(7) ?? "0");
+  let nextUrl = filters.cursor ? reportPageUrl(Buffer.from(filters.cursor, "base64url").toString("utf8"), fhir.baseUrl) : undefined;
   let truncated = false;
-  for (let page = 0; page < 100; page++) {
-    const bundle = await fhir.search<Patient>("Patient", { active: "true", _count: "100", _offset: String(offset), _sort: "_id" });
+  for (let page = 0; page < MAX_EVIDENCE_REPORT_PAGES; page++) {
+    if (nextUrl && !fhir.searchUrl) throw new Error("Evidence report paging is unavailable.");
+    const bundle: Bundle<Patient> = nextUrl ? await fhir.searchUrl!<Patient>(nextUrl, "Patient")
+      : await fhir.search<Patient>("Patient", { active: "true", _count: String(EVIDENCE_PATIENT_PAGE_SIZE), _sort: "_id" });
     const patients = (bundle.entry ?? []).flatMap(entry => entry.resource?.resourceType === "Patient" && entry.resource.active === true && entry.resource.id ? [entry.resource] : []);
     if (!patients.length) break;
     const consents = await searchCommsConsents(fhir, patients.map(patient => patient.id!));
-    let processed = 0;
     for (const patient of patients) {
-      if (rows.length + suppressed.length > 9990) { truncated = true; break; }
       const view = commsPreferencesWithEvidence(patient, consents, options);
       for (const cell of view.rows) {
         if (cell.channel !== "sms" && cell.channel !== "email") continue;
@@ -201,16 +223,16 @@ export async function reportCommsEvidenceGaps(fhir: Pick<MedplumClient, "search"
         if (cell.evidenceStatus === "gap") { rows.push(row); counts[String(tier) as keyof typeof counts]++; }
         else if (cell.evidenceStatus === "suppressed") suppressed.push(row);
       }
-      processed++;
-      if (rows.length + suppressed.length >= 10000) { truncated = true; break; }
     }
-    offset += processed;
-    if (truncated) break;
-    const hasNext = bundle.link?.some(link => link.relation === "next") || (bundle.total !== undefined ? offset < bundle.total : patients.length === 100);
-    if (!hasNext) break;
-    if (page === 99) truncated = true;
+    const next = bundle.link?.find(link => link.relation === "next")?.url;
+    nextUrl = next ? reportPageUrl(next, fhir.baseUrl) : undefined;
+    if (!nextUrl) break;
+    if (page === MAX_EVIDENCE_REPORT_PAGES - 1 || rows.length + suppressed.length > MAX_EVIDENCE_REPORT_ROWS - EVIDENCE_PATIENT_PAGE_SIZE * MAX_AUTOMATED_CELLS_PER_PATIENT) {
+      truncated = true;
+      break;
+    }
   }
-  return { rows, suppressed, counts, truncated, ...(truncated ? { cursor: `offset:${offset}` } : {}) };
+  return { rows, suppressed, counts, truncated, ...(truncated ? { cursor: Buffer.from(nextUrl!).toString("base64url") } : {}) };
 }
 export function evidenceGapCsv(report: Awaited<ReturnType<typeof reportCommsEvidenceGaps>>): string {
   const escape = (value: string | number | boolean) => `"${String(value).replace(/"/g, '""')}"`;
