@@ -1,3 +1,4 @@
+import type { CommunicationPreferencesInput } from "./communications-client";
 import type { Patient } from "@medplum/fhirtypes";
 import { fhir } from "./fhir";
 import { emptySubscriber, subscriberFromPatient } from "./patient-insurance";
@@ -41,6 +42,7 @@ export type CreatedPatientRegistrationResult = Extract<PatientRegistrationResult
 export interface PatientRegistrationOptions {
   responsibleParties?: readonly ResponsiblePartyDraft[];
   today?: string;
+  communicationPreferences?: CommunicationPreferencesInput;
 }
 
 export function emptyPatientDemographics(): PatientDemographicsDraft {
@@ -206,11 +208,15 @@ async function requestPatientRegistration(
       demographics: draft,
       responsibleParties: registrationResponsibleParties(options),
       confirmDuplicate,
+      ...(options.communicationPreferences?.cells.length ? { communicationPreferences: options.communicationPreferences } : {}),
     }),
   });
   const body = await readRegistrationResponse(response);
   if (isDuplicateResult(body) && response.status === 409) return body;
   if (!response.ok) {
+    if (response.status === 403 && isErrorResponse(body) && body.error.includes("communications.preferences.manage")) {
+      throw new Error("You don't have permission to change communication preferences during registration. Ask a practice administrator.");
+    }
     throw new Error(
       isErrorResponse(body)
         ? body.error
