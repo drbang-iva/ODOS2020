@@ -170,7 +170,7 @@ test("staff actor reconciles frozen system receipt with original executor and ca
 });
 
 for (const channel of ["email", "sms"] as const) {
-test(`final gate refuses prepared system marketing ${channel} after consent is revoked`, async () => {
+test(`final gate rechecks prepared system marketing ${channel} after consent is revoked`, async () => {
   const f = fixture();
   f.item.consentClass = "marketing";
   f.patient.extension = [{
