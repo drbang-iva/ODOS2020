@@ -43,7 +43,8 @@ export const COMMS_PREFERENCE_DEFAULTS: Record<CommsPurpose, Record<CommsPrefere
 export function communicationPurpose(campaignType: string, consentClass?: "transactional" | "marketing"): CommsPurpose | undefined {
   if (consentClass === "marketing") return "marketing-promo";
   if ((MATRIX_EXEMPT_CAMPAIGN_TYPES as readonly string[]).includes(campaignType)) return undefined;
-  const purpose = (PURPOSE_BY_CAMPAIGN_TYPE as Record<string, CommsPurpose>)[campaignType];
+  const purpose = Object.hasOwn(PURPOSE_BY_CAMPAIGN_TYPE, campaignType)
+    ? (PURPOSE_BY_CAMPAIGN_TYPE as Record<string, CommsPurpose>)[campaignType] : undefined;
   if (purpose) return purpose;
   throw new Error(`Communications campaignType "${campaignType}" has no communication purpose; register it in PURPOSE_BY_CAMPAIGN_TYPE.`);
 }

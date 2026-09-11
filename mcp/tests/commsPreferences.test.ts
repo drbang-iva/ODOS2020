@@ -21,7 +21,7 @@ test("malformed and duplicate preference extensions refuse resolution", () => {
 const deps = (p: Patient) => ({ fhir: { read: async () => p } as any, practiceTimeZone: "UTC", now: () => new Date("2026-09-11T15:00:00Z") });
 const request = (suppression = {}) => ({ patientReference: "Patient/synthetic", campaignType: "clinical-education", body: "Education", suppression });
 test("G4 and manual campaign types fail closed", async () => {
-  for (const campaignType of ["manual", "unknown"]) await assert.rejects(gate.checkMessageSuppression(deps(patient), { ...request(), campaignType }, "sms"), /has no communication purpose/);
+  for (const campaignType of ["manual", "unknown", "toString", "__proto__"]) await assert.rejects(gate.checkMessageSuppression(deps(patient), { ...request(), campaignType }, "sms"), /has no communication purpose/);
   assert.equal((await gate.checkMessageSuppression(deps(patient), { ...request(), campaignType: "appointment-reminder" }, "sms")).result, undefined);
 });
 test("G16 marketing email is default ON while legacy marketing SMS remains withheld", async () => {
