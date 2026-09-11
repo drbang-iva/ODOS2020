@@ -22,7 +22,7 @@
     "@aws-sdk/client-sqs": "3.1121.0",
     "@medplum/fhirtypes": "^4.0.0",
     "@modelcontextprotocol/sdk": "^1.0.4",
-    "csv-parse": "^7.0.1",
+    "csv-parse": "^7.0.2",
     "express": "^4.21.1",
     "fast-xml-parser": "^5.3.8",
     "fflate": "^0.8.3",
