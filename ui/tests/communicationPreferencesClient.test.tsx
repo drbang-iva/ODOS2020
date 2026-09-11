@@ -88,3 +88,12 @@ test("evidence report requests omit undefined optional filters in JSON and CSV",
     return new Response("patientReference,purpose");
   });
 });
+
+for (const operation of ["read", "save"] as const) test(`preferences ${operation} rejects another patient's response and accepts the requested patient`, async () => {
+  const run = (body: unknown) => operation === "read"
+    ? readCommunicationPreferences("Patient/synthetic", respond(body))
+    : saveCommunicationPreferences({ patientReference: "Patient/synthetic", cells: [{ purpose: "education", channel: "email", allowed: true }] }, respond(body));
+  await assert.rejects(run({ ...preferences(), patientReference: "Patient/other" }), CommunicationsResponseError);
+  const valid = { ...preferences(), patientVersion: version };
+  assert.deepEqual(await run(valid), valid);
+});

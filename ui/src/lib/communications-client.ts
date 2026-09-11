@@ -519,10 +519,12 @@ async function preferenceRequest<T>(path: string, parser: (value: unknown) => va
   return body;
 }
 export function readCommunicationPreferences(patientReference: string, fetchImpl: typeof fetch = fetch): Promise<CommunicationPreferencesResponse> {
-  return preferenceRequest(`?patient=${encodeURIComponent(patientReference)}`, isCommunicationPreferencesResponse, fetchImpl);
+  return preferenceRequest(`?patient=${encodeURIComponent(patientReference)}`,
+    (value): value is CommunicationPreferencesResponse => isCommunicationPreferencesResponse(value) && value.patientReference === patientReference, fetchImpl);
 }
 export function saveCommunicationPreferences(input: CommunicationPreferencesInput & { patientReference: string }, fetchImpl: typeof fetch = fetch): Promise<CommunicationPreferencesResponse> {
-  return preferenceRequest("", isCommunicationPreferencesResponse, fetchImpl, input);
+  return preferenceRequest("",
+    (value): value is CommunicationPreferencesResponse => isCommunicationPreferencesResponse(value) && value.patientReference === input.patientReference, fetchImpl, input);
 }
 export function readCommunicationPreferenceDefaults(fetchImpl: typeof fetch = fetch): Promise<CommunicationPreferenceDefaultsResponse> {
   return preferenceRequest("/defaults", isCommunicationPreferenceDefaultsResponse, fetchImpl);
