@@ -15,6 +15,7 @@ async function fixture(options: { conflict?: boolean; businessActions?: readonly
     ...(options.stop ? { extension: [{ url: ODOS_COMMS_OPT_OUT_EXTENSION_URL, extension: [{ url: "channel", valueCode: "sms" }, { url: "scope", valueCode: "global" }] }] } : {}) };
   const initial = structuredClone(patient);
   const transactions: Bundle[] = [], consents: Consent[] = [];
+  const auditRows: { patientId?: string }[] = [];
   const fhir = {
     baseUrl: "https://fhir.invalid",
     searchUrl: (url: string): Promise<unknown> => fhir.search("Patient", Object.fromEntries(new URL(url).searchParams)),
@@ -44,11 +45,11 @@ async function fixture(options: { conflict?: boolean; businessActions?: readonly
     dispatch: { providerFor: () => undefined, senderNumberFor: () => undefined, providers: () => [], initialize: async () => {} },
     educationCatalog: { list: () => [], get: () => undefined }, trackedLinkStore: {},
     publicBaseUrl: "https://synthetic.invalid", practiceName: "Synthetic", now: () => "2026-09-11T12:00:00Z",
-    audit: { record: async (_row: unknown, operation: () => Promise<unknown>) => operation(), recordDenied: async () => {} },
+    audit: { record: async (row: { patientId?: string }, operation: () => Promise<unknown>) => { auditRows.push(row); return operation(); }, recordDenied: async () => {} },
   } as unknown as CommsApiRouteDeps);
   const server = app.listen(0, "127.0.0.1"); await once(server, "listening");
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  return { transactions, initial, get patient() { return patient; },
+  return { transactions, initial, auditRows, get patient() { return patient; },
     request: (path: string, method = "GET", body?: unknown) => fetch(base + path, { method, headers: { "content-type": "application/json" }, ...(body ? { body: JSON.stringify(body) } : {}) }),
     close: () => new Promise<void>((resolve, reject) => { server.close(error => error ? reject(error) : resolve()); server.closeAllConnections(); }),
   };
@@ -135,5 +136,14 @@ test("CSV evidence report exposes truncation and continuation even with zero row
     assert.equal(response.headers.get("X-ODOS-Truncated"), "true");
     assert.equal(new URL(Buffer.from(response.headers.get("X-ODOS-Cursor")!, "base64url").toString()).searchParams.get("_offset"), "10000");
     assert.equal((await response.text()).split("\r\n").length, 1);
+  } finally { await f.close(); }
+});
+
+test("preferences GET audit identifies the queried patient", async () => {
+  const f = await fixture(); try {
+    const response = await f.request(`/communications/preferences?patient=${patientReference}`);
+    assert.equal(response.status, 200);
+    assert.equal(f.auditRows.length, 1);
+    assert.equal(f.auditRows[0].patientId, "synthetic-matrix");
   } finally { await f.close(); }
 });

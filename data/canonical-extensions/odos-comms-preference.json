@@ -71,7 +71,11 @@
           {
             "code": "code"
           }
-        ]
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://odos2020.com/fhir/ValueSet/comms-purpose|2026-09-10"
+        }
       },
       {
         "id": "Extension.extension:channel",
@@ -99,7 +103,11 @@
           {
             "code": "code"
           }
-        ]
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://odos2020.com/fhir/ValueSet/comms-channel|2026-09-10"
+        }
       },
       {
         "id": "Extension.extension:allowed",
@@ -216,7 +224,11 @@
           {
             "code": "code"
           }
-        ]
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://odos2020.com/fhir/ValueSet/comms-preference-surface|2026-09-10"
+        }
       },
       {
         "id": "Extension.extension:evidence",

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Patient, Bundle } from "@medplum/fhirtypes";
-import { updateInboundSuppression, readCommsPreferenceCells, replaceCommsPreferenceCells, recordPatientSmsOptOut } from "../src/comms/suppression-gate.js";
+import { updateInboundSuppression, readCommsPreferenceCells, replaceCommsPreferenceCells, recordPatientSmsOptOut, checkMessageSuppression, ODOS_COMMS_OPT_OUT_EXTENSION_URL } from "../src/comms/suppression-gate.js";
 const from = "+15555550199", to = "+15555550100";
 function fixture(count = 1) {
   const patients: Patient[] = Array.from({ length: count }, (_, i) => ({ resourceType: "Patient", id: `synthetic-${i}`, meta: { versionId: "1" }, telecom: [{ system: "phone", value: from }] }));
@@ -55,3 +55,30 @@ test("G14 shared-number and broader-opt-out STARTs write no preference cells", a
   assert.equal(readCommsPreferenceCells(f.patients[0]).length, 0);
   assert.equal(f.writes(), 1);
 });
+
+for (const corruption of ["missing-allowed", "duplicate-cell"] as const) {
+  test(`START preserves ${corruption} preferences while removing its matching opt-out and later sends fail closed`, async () => {
+    const f = fixture();
+    f.patients[0] = replaceCommsPreferenceCells(f.patients[0], [{ purpose: "education", channel: "sms", allowed: false }], {
+      setBy: { reference: "Practitioner/staff" }, surface: "staff-demographics", recordedAt: "2026-09-11T15:00:00Z",
+    });
+    if (corruption === "missing-allowed") {
+      f.patients[0].extension![0].extension = f.patients[0].extension![0].extension!.filter(part => part.url !== "allowed");
+    } else {
+      f.patients[0].extension!.push(structuredClone(f.patients[0].extension![0]));
+    }
+    const preferences = structuredClone(f.patients[0].extension);
+    await updateInboundSuppression(f.fhir, { from, to, body: "STOP" });
+    assert.equal(f.patients[0].extension!.filter(extension => extension.url === ODOS_COMMS_OPT_OUT_EXTENSION_URL).length, 1);
+    const result = await updateInboundSuppression(f.fhir, { from, to, body: "START" });
+    assert.equal(result.outcome, "opted-in");
+    assert.deepEqual(f.patients[0].extension, preferences);
+    assert.equal(f.writes(), 2);
+    await assert.rejects(checkMessageSuppression({ fhir: f.fhir, practiceTimeZone: "UTC", smsSenderNumber: to }, {
+      patientReference: "Patient/synthetic-0", campaignType: "clinical-education", body: "Synthetic education", suppression: {},
+    }, "sms"), /Malformed or duplicate communication preference extension/);
+    await updateInboundSuppression(f.fhir, { from, to, body: "START" });
+    assert.deepEqual(f.patients[0].extension, preferences);
+    assert.equal(f.writes(), 2);
+  });
+}

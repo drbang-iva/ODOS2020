@@ -1,0 +1,70 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/commsStartPreferences.test.ts
+
+TAP version 13
+# Subtest: G13 START atomically restores four explicit text cells without marketing and is idempotent
+ok 1 - G13 START atomically restores four explicit text cells without marketing and is idempotent
+  ---
+  duration_ms: 2.220166
+  type: 'test'
+  ...
+# Subtest: START without an opt-out still replaces withheld text cells
+ok 2 - START without an opt-out still replaces withheld text cells
+  ---
+  duration_ms: 0.280916
+  type: 'test'
+  ...
+# Subtest: G14 shared-number and broader-opt-out STARTs write no preference cells
+ok 3 - G14 shared-number and broader-opt-out STARTs write no preference cells
+  ---
+  duration_ms: 0.425041
+  type: 'test'
+  ...
+# Subtest: START preserves missing-allowed preferences while removing its matching opt-out and later sends fail closed
+not ok 4 - START preserves missing-allowed preferences while removing its matching opt-out and later sends fail closed
+  ---
+  duration_ms: 0.293542
+  type: 'test'
+  location: 'mcp/tests/commsStartPreferences.test.ts:1:3710'
+  failureType: 'testCodeFailure'
+  error: 'Malformed or duplicate communication preference extension.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    fail (mcp/src/comms/suppression-gate.ts:78:39)
+    <anonymous> (mcp/src/comms/suppression-gate.ts:81:62)
+    Array.map (<anonymous>)
+    readCommsPreferenceCells (mcp/src/comms/suppression-gate.ts:75:85)
+    updateInboundSuppression (mcp/src/comms/suppression-gate.ts:406:26)
+    async TestContext.<anonymous> (mcp/tests/commsStartPreferences.test.ts:73:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: START preserves duplicate-cell preferences while removing its matching opt-out and later sends fail closed
+not ok 5 - START preserves duplicate-cell preferences while removing its matching opt-out and later sends fail closed
+  ---
+  duration_ms: 0.2085
+  type: 'test'
+  location: 'mcp/tests/commsStartPreferences.test.ts:1:3710'
+  failureType: 'testCodeFailure'
+  error: 'Malformed or duplicate communication preference extension.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    fail (mcp/src/comms/suppression-gate.ts:78:39)
+    <anonymous> (mcp/src/comms/suppression-gate.ts:101:25)
+    Array.map (<anonymous>)
+    readCommsPreferenceCells (mcp/src/comms/suppression-gate.ts:75:85)
+    updateInboundSuppression (mcp/src/comms/suppression-gate.ts:406:26)
+    async TestContext.<anonymous> (mcp/tests/commsStartPreferences.test.ts:73:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 3
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 213.290084

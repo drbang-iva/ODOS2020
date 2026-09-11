@@ -10,7 +10,10 @@ The base worktree is detached at `78a8ef6f7691ccffad2a752231f818ae2d9668bd`, wit
 | Clean base, first run | 4578 | 4565 | 8 | 5 | 1 |
 | Clean base, repeated command | 4578 | 4565 | 8 | 5 | 1 |
 | Branch before quota isolation at 2d4eae38 | 4626 | 4604 | 17 | 5 | 1 |
-| Final branch at ee6f1bb1 | 4626 | 4613 | 8 | 5 | 1 |
+| Pre-review branch at ee6f1bb1 | 4626 | 4613 | 8 | 5 | 1 |
+| Review corrections, ValueSets initially in profiles | 4638 | 4617 | 16 | 5 | 1 |
+| Clean base after review corrections | 4578 | 4565 | 8 | 5 | 1 |
+| Final review corrections, ValueSets in terminology | 4638 | 4625 | 8 | 5 | 1 |
 
 All 23 initial failures are listed below. “Pass” in the base column means that test was not in its failure list.
 
@@ -47,3 +50,11 @@ Both clean-base runs had the same eight failures. The first corrected branch run
 The base profile fixture took about twenty seconds to initialize; the shared-server branch fixture encountered the active FHIR rate limit immediately. The existing authentication helper retries login throttling, while ordinary FHIR requests report 429. The new live proof had added authentication traffic to that same server, affecting the timing of those independent quotas. This was not treated as an acceptable branch-only failure.
 
 Commit `ee6f1bb1` moves the new proof to explicitly configured independent Medplum and Redis instances. It refuses the ordinary suite's server, including loopback hostname aliases. The ordinary suite still uses the original synthetic server and unchanged environment; the new matrix-only variables are unused by base code. Live policy proof remains enabled and executed, not skipped. Its isolated run passed 2/2 and left zero owned resources. Final full-suite result after isolation: 4,613 passed, 8 failed, 5 skipped, exit 1. The failure-name sets are identical to both clean-base runs: zero branch-only failures and zero base-only failures. All nine additional throttle failures are gone. No existing test, scanner, shared retry behavior, or rate-limit setting was changed.
+
+## Review correction verification
+
+The intermediate review run had eight additional profile-validation failures from one shared setup promise: a StructureDefinition search received HTTP 429 with 283 ms until quota reset. The clean base was rerun unchanged and again produced the same eight baseline failures. These captured summaries are retained: [intermediate branch](review-intermediate-summary.log), [base recheck](base-recheck-summary.log).
+
+The four new ValueSets were moved from `data/profiles` into `data/terminology`, alongside their CodeSystems. The existing installer handles both directories. This removes eight additional search/create requests from the existing profile integration fixture without modifying that test, the installer, shared retry behavior, or rate limits. Local quota timing remains an environment limitation.
+
+Final repeat after the terminology relocation: **4,638 total, 4,625 passed, 8 failed, 5 skipped, exit 1**. Failure-name sets match the fresh clean-base recheck exactly: zero branch-only and zero base-only failures. All eight profile cases pass. [Captured exact totals and failure list](review-final-summary.log). The intermediate failing result is retained rather than omitted.

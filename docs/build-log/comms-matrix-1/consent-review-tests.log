@@ -1,0 +1,362 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/commsConsentRegistrationGrant.test.ts tests/commsConsentPolicy.test.ts tests/roleGrants.test.ts tests/threeRoleModel.test.ts
+
+TAP version 13
+# Subtest: preference management is grantable and held by every practice role
+ok 1 - preference management is grantable and held by every practice role
+  ---
+  duration_ms: 0.304667
+  type: 'test'
+  ...
+# Subtest: provider Consent access is scoped and permits only create, read, search and guarded update
+ok 2 - provider Consent access is scoped and permits only create, read, search and guarded update
+  ---
+  duration_ms: 113.164125
+  type: 'test'
+  ...
+# Subtest: staff Consent access is scoped and permits only create, read, search and guarded update
+ok 3 - staff Consent access is scoped and permits only create, read, search and guarded update
+  ---
+  duration_ms: 60.73775
+  type: 'test'
+  ...
+# Subtest: admin Consent access is scoped and permits only create, read, search and guarded update
+ok 4 - admin Consent access is scoped and permits only create, read, search and guarded update
+  ---
+  duration_ms: 58.905
+  type: 'test'
+  ...
+# Subtest: composite Consent update retains its write constraint
+ok 5 - composite Consent update retains its write constraint
+  ---
+  duration_ms: 7.44075
+  type: 'test'
+  ...
+# Subtest: registration binds only the newly created Patient for standalone admin Consent
+ok 6 - registration binds only the newly created Patient for standalone admin Consent
+  ---
+  duration_ms: 1.050667
+  type: 'test'
+  ...
+# Subtest: registration binds only the newly created Patient for composite admin Consent
+ok 7 - registration binds only the newly created Patient for composite admin Consent
+  ---
+  duration_ms: 8.150042
+  type: 'test'
+  ...
+# Subtest: grantPracticeRoles binds one composite policy, preserves parameters, and clears legacy accessPolicy
+ok 8 - grantPracticeRoles binds one composite policy, preserves parameters, and clears legacy accessPolicy
+  ---
+  duration_ms: 6.639917
+  type: 'test'
+  ...
+# Subtest: composite compilation preserves disjoint Provider and Staff patient grants
+ok 9 - composite compilation preserves disjoint Provider and Staff patient grants
+  ---
+  duration_ms: 8.776958
+  type: 'test'
+  ...
+# Subtest: incremental Admin grant recompiles an existing Provider and Staff composite
+ok 10 - incremental Admin grant recompiles an existing Provider and Staff composite
+  ---
+  duration_ms: 8.001792
+  type: 'test'
+  ...
+# Subtest: finished Encounter capability is identical for Provider to Staff and Staff to Provider access order
+ok 11 - finished Encounter capability is identical for Provider to Staff and Staff to Provider access order
+  ---
+  duration_ms: 1.30325
+  type: 'test'
+  ...
+# Subtest: reconcileMembershipAccess preserves distinct parameterized patient grants after ordered bare roles
+ok 12 - reconcileMembershipAccess preserves distinct parameterized patient grants after ordered bare roles
+  ---
+  duration_ms: 0.211667
+  type: 'test'
+  ...
+# Subtest: grantPracticeRoles is a zero-write no-op when membership access is already exact
+ok 13 - grantPracticeRoles is a zero-write no-op when membership access is already exact
+  ---
+  duration_ms: 0.107584
+  type: 'test'
+  ...
+# Subtest: grantPracticeRoles rejects a policy owned by a different project
+ok 14 - grantPracticeRoles rejects a policy owned by a different project
+  ---
+  duration_ms: 0.278833
+  type: 'test'
+  ...
+# Subtest: grantPracticeRoles rejects an unscoped composite policy before membership mutation
+ok 15 - grantPracticeRoles rejects an unscoped composite policy before membership mutation
+  ---
+  duration_ms: 2.278625
+  type: 'test'
+  ...
+# Subtest: project composite resolver creates target-owned policy and reconciles rule drift
+ok 16 - project composite resolver creates target-owned policy and reconciles rule drift
+  ---
+  duration_ms: 2.956125
+  type: 'test'
+  ...
+# Subtest: grantPracticeRoles refuses the configured service identity unless explicitly overridden
+ok 17 - grantPracticeRoles refuses the configured service identity unless explicitly overridden
+  ---
+  duration_ms: 0.487542
+  type: 'test'
+  ...
+# Subtest: the owner's membership rejects every toggle mutation before audit or patch
+ok 18 - the owner's membership rejects every toggle mutation before audit or patch
+  ---
+  duration_ms: 0.237666
+  type: 'test'
+  ...
+# Subtest: a non-owner toggle change patches the ODOS extension through the audited membership path
+ok 19 - a non-owner toggle change patches the ODOS extension through the audited membership path
+  ---
+  duration_ms: 0.142834
+  type: 'test'
+  ...
+# Subtest: compiled policy and grant-removal mutation: IOP Timeline target editor — Save an existing target
+ok 20 - compiled policy and grant-removal mutation: IOP Timeline target editor — Save an existing target
+  ---
+  duration_ms: 3.960208
+  type: 'test'
+  ...
+# Subtest: compiled policy and grant-removal mutation: IOP Timeline target editor — Save a new target
+ok 21 - compiled policy and grant-removal mutation: IOP Timeline target editor — Save a new target
+  ---
+  duration_ms: 0.230125
+  type: 'test'
+  ...
+# Subtest: compiled policy and grant-removal mutation: Prescriptions — Send to pharmacy (reserve WENO message id)
+ok 22 - compiled policy and grant-removal mutation: Prescriptions — Send to pharmacy (reserve WENO message id)
+  ---
+  duration_ms: 0.251792
+  type: 'test'
+  ...
+# Subtest: compiled policy and grant-removal mutation: Prescriptions — Send to pharmacy (record indeterminate outcome)
+ok 23 - compiled policy and grant-removal mutation: Prescriptions — Send to pharmacy (record indeterminate outcome)
+  ---
+  duration_ms: 0.222042
+  type: 'test'
+  ...
+# Subtest: compiled policy and grant-removal mutation: Prescriptions — Send to pharmacy (record successful transmission)
+ok 24 - compiled policy and grant-removal mutation: Prescriptions — Send to pharmacy (record successful transmission)
+  ---
+  duration_ms: 0.151208
+  type: 'test'
+  ...
+# Subtest: compiled policy and grant-removal mutation: Prescriptions — Send to pharmacy (record WENO error)
+ok 25 - compiled policy and grant-removal mutation: Prescriptions — Send to pharmacy (record WENO error)
+  ---
+  duration_ms: 0.267333
+  type: 'test'
+  ...
+# Subtest: compiled policy and grant-removal mutation: Prescriptions — Pharmacy verified not received — clear reservation
+ok 26 - compiled policy and grant-removal mutation: Prescriptions — Pharmacy verified not received — clear reservation
+  ---
+  duration_ms: 0.192584
+  type: 'test'
+  ...
+# Subtest: compiled policy and grant-removal mutation: Dry Eye > Adverse Event — Capture
+ok 27 - compiled policy and grant-removal mutation: Dry Eye > Adverse Event — Capture
+  ---
+  duration_ms: 0.12575
+  type: 'test'
+  ...
+# Subtest: compiled policy and grant-removal mutation: Ortho-K > Adverse Event — Capture
+ok 28 - compiled policy and grant-removal mutation: Ortho-K > Adverse Event — Capture
+  ---
+  duration_ms: 0.280584
+  type: 'test'
+  ...
+# Subtest: compiled policy and grant-removal mutation: Prescriptions — Add prescription
+ok 29 - compiled policy and grant-removal mutation: Prescriptions — Add prescription
+  ---
+  duration_ms: 0.431
+  type: 'test'
+  ...
+# Subtest: compiled policy and grant-removal mutation: Chart sidebar > Allergies — Mark no known allergies
+ok 30 - compiled policy and grant-removal mutation: Chart sidebar > Allergies — Mark no known allergies
+  ---
+  duration_ms: 0.194959
+  type: 'test'
+  ...
+# Subtest: compiled policy and grant-removal mutation: Chart sidebar > Allergies — Add allergy
+ok 31 - compiled policy and grant-removal mutation: Chart sidebar > Allergies — Add allergy
+  ---
+  duration_ms: 0.114667
+  type: 'test'
+  ...
+# Subtest: compiled policy and grant-removal mutation: Chart sidebar > Care Team — Add team member
+ok 32 - compiled policy and grant-removal mutation: Chart sidebar > Care Team — Add team member
+  ---
+  duration_ms: 0.11425
+  type: 'test'
+  ...
+# Subtest: compiled policy and grant-removal mutation: Diagnosis workspace/assessment — add an eye-specific diagnosis or save diagnosis laterality
+ok 33 - compiled policy and grant-removal mutation: Diagnosis workspace/assessment — add an eye-specific diagnosis or save diagnosis laterality
+  ---
+  duration_ms: 0.081042
+  type: 'test'
+  ...
+# Subtest: Staff MedicationRequest edits stop after electronic transmission while requester and recorder stay pinned
+ok 34 - Staff MedicationRequest edits stop after electronic transmission while requester and recorder stay pinned
+  ---
+  duration_ms: 17.534209
+  type: 'test'
+  ...
+# Subtest: no practice role can create AuditEvent or read AdverseEvent speculatively
+ok 35 - no practice role can create AuditEvent or read AdverseEvent speculatively
+  ---
+  duration_ms: 0.098042
+  type: 'test'
+  ...
+# Subtest: the active practice-role catalog contains only Provider, Staff, and Admin
+ok 36 - the active practice-role catalog contains only Provider, Staff, and Admin
+  ---
+  duration_ms: 0.357375
+  type: 'test'
+  ...
+# Subtest: correction authority stays clinical for Provider and financial or inventory for Admin
+ok 37 - correction authority stays clinical for Provider and financial or inventory for Admin
+  ---
+  duration_ms: 0.187917
+  type: 'test'
+  ...
+# Subtest: all roles read operational records at practice scope while Staff writes stay constrained
+ok 38 - all roles read operational records at practice scope while Staff writes stay constrained
+  ---
+  duration_ms: 0.23
+  type: 'test'
+  ...
+# Subtest: compiled three-role policies grant chart sidebar and protocol reads at practice scope
+ok 39 - compiled three-role policies grant chart sidebar and protocol reads at practice scope
+  ---
+  duration_ms: 0.19825
+  type: 'test'
+  ...
+# Subtest: diagnosis pick tallies stay profile-fenced with read and write grants split by chart authority
+ok 40 - diagnosis pick tallies stay profile-fenced with read and write grants split by chart authority
+  ---
+  duration_ms: 0.064208
+  type: 'test'
+  ...
+# Subtest: Provider clinical Basic grants cover chart records and procedure charge authoring
+ok 41 - Provider clinical Basic grants cover chart records and procedure charge authoring
+  ---
+  duration_ms: 0.143375
+  type: 'test'
+  ...
+# Subtest: Staff clinical Basic grants cover chart records and protocol runtime records
+ok 42 - Staff clinical Basic grants cover chart records and protocol runtime records
+  ---
+  duration_ms: 0.182209
+  type: 'test'
+  ...
+# Subtest: Admin clinical Basic grants cover configuration and procedure charge authoring
+ok 43 - Admin clinical Basic grants cover configuration and procedure charge authoring
+  ---
+  duration_ms: 0.086917
+  type: 'test'
+  ...
+# Subtest: clinical Basic grants remain criteria-fenced to their approved role tier
+ok 44 - clinical Basic grants remain criteria-fenced to their approved role tier
+  ---
+  duration_ms: 0.092292
+  type: 'test'
+  ...
+# Subtest: Door 1 actor gating leaves Provider, Staff, and Admin Appointment reads practice-wide
+ok 45 - Door 1 actor gating leaves Provider, Staff, and Admin Appointment reads practice-wide
+  ---
+  duration_ms: 0.06125
+  type: 'test'
+  ...
+# Subtest: three-role policies allow only Admin to write HealthcareService without wildcard or delete
+ok 46 - three-role policies allow only Admin to write HealthcareService without wildcard or delete
+  ---
+  duration_ms: 0.09075
+  type: 'test'
+  ...
+# Subtest: three-role policies allow only Admin to write the visit-type category singleton
+ok 47 - three-role policies allow only Admin to write the visit-type category singleton
+  ---
+  duration_ms: 0.066833
+  type: 'test'
+  ...
+# Subtest: compiled three-role policies grant ChargeItemDefinition reads and reserve writes for Admin
+ok 48 - compiled three-role policies grant ChargeItemDefinition reads and reserve writes for Admin
+  ---
+  duration_ms: 0.102625
+  type: 'test'
+  ...
+# Subtest: compiled Provider and Staff policies create Provenance at practice scope without widening clinical writes
+ok 49 - compiled Provider and Staff policies create Provenance at practice scope without widening clinical writes
+  ---
+  duration_ms: 0.079958
+  type: 'test'
+  ...
+# Subtest: three-role policies allow only Admin to read AccessPolicy at practice scope without write access or wildcard
+ok 50 - three-role policies allow only Admin to read AccessPolicy at practice scope without write access or wildcard
+  ---
+  duration_ms: 0.128667
+  type: 'test'
+  ...
+# Subtest: Staff Encounter writes allow unfinished work but reject finalization and reopening
+ok 51 - Staff Encounter writes allow unfinished work but reject finalization and reopening
+  ---
+  duration_ms: 2.515875
+  type: 'test'
+  ...
+# Subtest: real Provider and Staff Observation writeConstraints permit voiding a preliminary finding
+ok 52 - real Provider and Staff Observation writeConstraints permit voiding a preliminary finding
+  ---
+  duration_ms: 1.948792
+  type: 'test'
+  ...
+# Subtest: the Observation restore edge does not widen DiagnosticReport writes for either role
+ok 53 - the Observation restore edge does not widen DiagnosticReport writes for either role
+  ---
+  duration_ms: 7.118792
+  type: 'test'
+  ...
+# Subtest: real Provider and Staff Observation writeConstraints allow exactly the status machine's transitions and nothing more
+ok 54 - real Provider and Staff Observation writeConstraints allow exactly the status machine's transitions and nothing more
+  ---
+  duration_ms: 28.597667
+  type: 'test'
+  ...
+# Subtest: Provider and Staff compile to one order-independent policy without changing clinical compartment criteria
+ok 55 - Provider and Staff compile to one order-independent policy without changing clinical compartment criteria
+  ---
+  duration_ms: 3.414834
+  type: 'test'
+  ...
+# Subtest: Admin and Provider composites preserve Provider amendment and Admin-only capabilities
+ok 56 - Admin and Provider composites preserve Provider amendment and Admin-only capabilities
+  ---
+  duration_ms: 1.810792
+  type: 'test'
+  ...
+# Subtest: Admin has no wildcard write bypass and Staff inventory writes cannot correct counts or prices
+ok 57 - Admin has no wildcard write bypass and Staff inventory writes cannot correct counts or prices
+  ---
+  duration_ms: 0.150417
+  type: 'test'
+  ...
+# Subtest: aesthetics license and procedure scope is a Provider membership parameter
+ok 58 - aesthetics license and procedure scope is a Provider membership parameter
+  ---
+  duration_ms: 0.184125
+  type: 'test'
+  ...
+1..58
+# tests 58
+# suites 0
+# pass 58
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1185.472583

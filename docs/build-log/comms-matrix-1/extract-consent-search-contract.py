@@ -12,7 +12,8 @@ contract = pathlib.Path("mcp/tests/search-param-contract.ts")
 source = contract.read_text()
 expected = re.search(r'integrity: "([^"]+)"', source).group(1)
 actual = "sha512-" + base64.b64encode(hashlib.sha512(archive.read_bytes()).digest()).decode()
-assert actual == expected, "Pinned package integrity mismatch"
+if actual != expected:
+    raise RuntimeError("Pinned package integrity mismatch")
 files = ["search-parameters.json", "search-parameters-medplum.json", "search-parameters-uscore.json"]
 codes = set()
 with tarfile.open(archive) as package:

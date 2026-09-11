@@ -55,14 +55,22 @@ async function liveConsentProof(t: TestContext, routeOnly: boolean) {
   for (const roleId of PRACTICE_ROLE_IDS) {
     if (routeOnly && roleId !== "staff") continue;
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
-    // Bind the synthetic patient's compartment explicitly, including Admin clients.
-    policy.resource = policy.resource!.map((rule) => ({ ...rule, ...(rule.criteria ? { criteria: rule.criteria.replaceAll("%patient_compartment", patientReference) } : {}) }));
+    // The client helper's staff mode binds patient_compartment; Admin uses the same parameter shape.
+    const membershipRole = roleId === "admin" ? "staff" : roleId;
     const savedPolicy = track(await fhir.create(policy));
-    const client = await createRoleClient({ baseUrl, roleId, policyReference: `AccessPolicy/${savedPolicy.id}`, patientReference, practitionerReference: `Practitioner/${practitioner.id}`, projectId, runId: randomUUID(), adminToken: accessToken, track });
+    const client = await createRoleClient({ baseUrl, roleId: membershipRole, policyReference: `AccessPolicy/${savedPolicy.id}`, patientReference, practitionerReference: `Practitioner/${practitioner.id}`, projectId, runId: randomUUID(), adminToken: accessToken, track });
     if (!routeOnly) {
     const created = await fhirRequest<Consent>(baseUrl, client.token, "POST", "Consent", sample);
     assert.equal(created.status, 201, `${roleId} valid Consent create: ${created.summary}`);
     assert.ok(created.body?.id);
+    for (const field of ["category", "scope"] as const) {
+      const unrelated = { ...sample, [field]: field === "category" ? [{ text: "Unrelated consent" }] : { text: "Unrelated scope" } };
+      const rejected = await fhirRequest(baseUrl, client.token, "POST", "Consent", unrelated);
+      assert.equal(rejected.status, 403, `${roleId} unrelated ${field} create denied`);
+      const seeded = track(await fhir.create(unrelated));
+      const changedStatus = await fhirRequest(baseUrl, client.token, "PUT", `Consent/${seeded.id}`, { ...seeded, status: "inactive" });
+      assert.equal(changedStatus.status, 404, `${roleId} unrelated ${field} is outside readable scope`);
+    }
     const current = track(created.body!);
     const updated = await fhirRequest<Consent>(baseUrl, client.token, "PUT", `Consent/${current.id}`, { ...current, status: "inactive" });
     assert.equal(updated.status, 200, `${roleId} status-only update: ${updated.summary}`);
@@ -72,7 +80,7 @@ async function liveConsentProof(t: TestContext, routeOnly: boolean) {
     assert.equal(deniedChange.status, 403, `${roleId} evidence content immutable: ${deniedChange.summary}`);
     }
     const deniedPolicy = track(await fhir.create({ ...policy, resource: policy.resource!.filter((rule) => rule.resourceType !== "Consent") }));
-    const deniedClient = await createRoleClient({ baseUrl, roleId, policyReference: `AccessPolicy/${deniedPolicy.id}`, patientReference, practitionerReference: `Practitioner/${practitioner.id}`, projectId, runId: randomUUID(), adminToken: accessToken, track });
+    const deniedClient = await createRoleClient({ baseUrl, roleId: membershipRole, policyReference: `AccessPolicy/${deniedPolicy.id}`, patientReference, practitionerReference: `Practitioner/${practitioner.id}`, projectId, runId: randomUUID(), adminToken: accessToken, track });
     if (!routeOnly) {
     const denied = await fhirRequest(baseUrl, deniedClient.token, "POST", "Consent", sample);
     assert.equal(denied.status, 403, `${roleId} removed Consent grant denies create: ${denied.summary}`);

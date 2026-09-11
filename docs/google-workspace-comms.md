@@ -1,13 +1,13 @@
 # Google Workspace communications setup
 
-ODOS sends reminder email from the practice's own paid Google Workspace domain. The adapter is
+ODOS sends reminder email from the practice's own Google Workspace domain. The adapter is
 disabled unless the practice explicitly selects `google-workspace`; the reminder worker has a
 second explicit enable flag. ODOS does not hold a shared account, phone home, or copy patient data
-to PerformanceOD.
+to a shared service.
 
 ## Operator prerequisites
 
-1. Confirm the account is paid Google Workspace, not personal Gmail.
+1. Confirm the account uses Google Workspace, not personal Gmail.
 2. From a Workspace Super Admin account, review and accept Google's BAA under **Account settings →
    Legal and compliance**. The Gmail API cannot confirm BAA acceptance, so this remains a manual
    operator responsibility.

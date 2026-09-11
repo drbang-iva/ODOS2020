@@ -533,7 +533,7 @@ export function registerCommsApiRoutes(
 
   app.get("/communications/preferences", async (req, res) => withStaff(
     req, res, deps, "communications.read", "Patient", "communications-preferences-read",
-    patientReferenceForAudit(req), async staff => {
+    optOutPatientReferenceForAudit(req), async staff => {
       const patientReference = requiredPatientReference(queryString(req, "patient"));
       return { status: 200, body: await preferenceAccess(() => readCommsPreferences(staff.fhir, patientReference)) };
     },

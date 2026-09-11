@@ -18,7 +18,7 @@ No production writer of a legacy marketing-consent extension or opt-out campaign
 
 ## Verification
 
-[Full-suite failure comparison](failure-comparison.md) records the base and branch runs, all 23 initial failures, and their disposition. Final branch command `npm --prefix mcp test`: 4,626 total, 4,613 passed, 8 failed, 5 skipped, exit 1. Both clean-base runs: 4,578 total, 4,565 passed, 8 failed, 5 skipped, exit 1. Failure-name sets match exactly; zero branch-only failures. The new live proof executes on its own server rather than consuming the ordinary suite’s quotas. UI full command `npm --prefix ui test`: 1,341 tests, 1,341 passed, zero failed/skipped, exit 0. MCP and UI production builds each exited 0 after adding PUT to the route registrar's type interface.
+[Full-suite failure comparison](failure-comparison.md) records the base and branch runs, all 23 initial failures, and their disposition. Final branch command `npm --prefix mcp test`: 4,638 total, 4,625 passed, 8 failed, 5 skipped, exit 1. All three clean-base runs: 4,578 total, 4,565 passed, 8 failed, 5 skipped, exit 1. Failure-name sets match exactly; zero branch-only failures. The new live proof executes on its own server rather than consuming the ordinary suite’s quotas. UI full command `npm --prefix ui test`: 1,341 tests, 1,341 passed, zero failed/skipped, exit 0. MCP and UI production builds each exited 0 after adding PUT to the route registrar's type interface.
 
 [Mutation evidence: G1–G21 plus G19b](mutations/README.md). G1b injects an unsafe explicit-ON return before suppression; a return after suppression cannot defeat an already-returned STOP refusal. Every mutation is restored.
 
@@ -30,9 +30,11 @@ The dedicated local synthetic Medplum 5.1.30 proof accepted the production Conse
 
 [Live fixture cleanup](live-fixture-cleanup.md) records the corrected teardown and earlier owned-policy cleanup. [Actual next-link capture](live-next-link.log) verifies two real Patient pages.
 
-The synthetic policy explicitly binds the test patient's compartment, including admin; this does not prove every deployed membership has correct compartment parameters. No real patient or shared deployment was used. Tests with in-memory FHIR clients alone do not prove AccessPolicy enforcement.
+The final synthetic proof uses unchanged generated policies and actual patient-compartment membership parameters, including admin. New regressions prove standalone and composite admin registration bindings. Existing Patients still require bounded membership grants; this does not prove every deployed membership has them. No real patient or shared deployment was used. Tests with in-memory FHIR clients alone do not prove AccessPolicy enforcement.
 
 Medplum documents `%before` in [Access policies](https://www2.medplum.com/docs/access/access-policies); [server source at v5.1.30](https://github.com/medplum/medplum/blob/v5.1.30/packages/server/src/fhir/repo.ts) supplies the previous resource to write-constraint evaluation. Accessed 2026-09-11. Exact constraints compare all Consent content with presence guards while permitting only status and server-managed version metadata changes. Local FHIRPath tests exercise the unchanged and changed fields. The live proof demonstrates enforcement rather than only expression evaluation.
+
+[First-review corrections and guard evidence](review-fixbacks.md) include code bindings, narrower Consent access, membership proof, audit attribution, and malformed-preference START handling.
 
 ## Approved existing-test changes
 

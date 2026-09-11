@@ -2,7 +2,6 @@
  * Must not be enabled for a live practice until ODOS can read a per-patient
  * Education communication permission. Eyefinity defaults Education to Mail only;
  * sending without consulting that permission may use a channel the record does not permit.
- * See performance-od/decisions/2026-09-10-eyefinity-communication-methods-matrix-is-the-consent-model.md.
  */
 import type { Basic, Bundle, Encounter, Resource } from "@medplum/fhirtypes";
 import type { EducationEnrollment, EducationEnrollmentFhir, EducationEnrollmentSendOutcome, EducationEnrollmentStore } from "./education-enrollment.js";

@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AccessPolicyResource, Consent } from "@medplum/fhirtypes";
+import { buildCommsConsent } from "../src/comms/comms-preferences.js";
 import fhirpath from "fhirpath";
 import r4Model from "fhirpath/fhir-context/r4/index.js";
 import { BUSINESS_ACTIONS, GRANTABLE_BUSINESS_ACTIONS, PRACTICE_ROLE_IDS, buildMedplumAccessPolicy, buildMedplumCompositeAccessPolicy, getRoleDeclaration } from "../src/authz/roles.js";
 
 function consent(): Consent {
-  return { resourceType: "Consent", id: "evidence", status: "active", scope: { text: "Consent scope" }, category: [{ text: "Consent evidence" }], patient: { reference: "Patient/example" }, policyRule: { text: "Recorded preferences" } };
+  return { ...buildCommsConsent("Patient/example", [{ purpose: "education", channel: "email" }], "in-person", { actorReference: "Practitioner/staff", actorRole: "staff", recordedAt: "2026-09-11T00:00:00Z", surface: "staff-demographics" }), id: "evidence" };
 }
 
 function writable(rule: AccessPolicyResource, before: Consent | undefined, after: Consent): boolean {
@@ -27,17 +28,19 @@ for (const role of PRACTICE_ROLE_IDS) {
     const rules = buildMedplumAccessPolicy(getRoleDeclaration(role)).resource!.filter((rule) => rule.resourceType === "Consent");
     assert.ok(rules.length > 0);
     assert.deepEqual([...new Set(rules.flatMap((rule) => rule.interaction ?? []))].sort(), ["create", "read", "search", "update"]);
-    for (const rule of rules) assert.equal(rule.criteria, "Consent?_compartment=%patient_compartment");
+    for (const rule of rules) assert.equal(rule.criteria, "Consent?_compartment=%patient_compartment&category=https://odos2020.com/fhir/CodeSystem/consent-category|comms-consent&scope=http://terminology.hl7.org/CodeSystem/consentscope|patient-privacy");
     const rule = rules.find((entry) => entry.interaction?.includes("update"))!;
     assert.ok(rule.writeConstraint?.length);
     assert.equal(writable(rule, undefined, consent()), true);
+    assert.equal(writable(rule, undefined, { ...consent(), category: [{ text: "Other consent" }] }), false);
+    assert.equal(writable(rule, undefined, { ...consent(), scope: { text: "Other scope" } }), false);
     assert.equal(writable(rule, consent(), { ...consent(), status: "inactive" }), true);
     assert.equal(writable(rule, consent(), { ...consent(), meta: { versionId: "2", lastUpdated: "2026-09-11T00:00:00Z" } }), true);
     const changes: Record<string, unknown> = {
       id: "different", implicitRules: "urn:rules", language: "en", text: { status: "generated", div: "<div xmlns=\"http://www.w3.org/1999/xhtml\">Evidence</div>" },
       contained: [{ resourceType: "Patient", id: "contained" }], extension: [{ url: "urn:scope", valueString: "different" }], modifierExtension: [{ url: "urn:modifier", valueBoolean: true }], identifier: [{ value: "different" }],
-      scope: { text: "different" }, category: [{ text: "different" }], patient: { reference: "Patient/other" }, dateTime: "2026-09-11T00:00:00Z", performer: [{ reference: "Practitioner/staff" }], organization: [{ reference: "Organization/practice" }],
-      sourceAttachment: { title: "form" }, sourceReference: { reference: "DocumentReference/form" }, policy: [{ uri: "urn:policy" }], policyRule: { text: "different" }, verification: [{ verified: true }], provision: { type: "permit" },
+      scope: { text: "different" }, category: [{ text: "different" }], patient: { reference: "Patient/other" }, dateTime: "2026-09-12T00:00:00Z", performer: [{ reference: "Practitioner/staff" }], organization: [{ reference: "Organization/practice" }],
+      sourceAttachment: { title: "form" }, sourceReference: { reference: "DocumentReference/form" }, policy: [{ uri: "urn:policy" }], policyRule: { text: "different" }, verification: [{ verified: true }], provision: { type: "deny" },
     };
     for (const [field, value] of Object.entries(changes)) {
       const changed = { ...consent(), [field]: value } as Consent;
@@ -53,7 +56,7 @@ for (const role of PRACTICE_ROLE_IDS) {
     const changedNested = structuredClone(nested);
     changedNested.extension[0].extension[0].valueString = "changed";
     assert.equal(writable(rule, nested, changedNested), false);
-    const caseChange = { ...consent(), policyRule: { text: "recorded preferences" } };
+    const caseChange = { ...consent(), policy: [{ uri: consent().policy![0].uri!.toUpperCase() }] };
     assert.equal(writable(rule, consent(), caseChange), false);
   });
 }
