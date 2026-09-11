@@ -384,7 +384,7 @@ export async function updateInboundSuppression(
       throw new Error("Inbound SMS suppression requires every matched Patient to have an id and version.");
     }
     const existing = patient.extension ?? [];
-    const nextExtensions = optOutType === "STOP"
+    let nextExtensions = optOutType === "STOP"
       ? existing.some((extension) =>
           isOwnedSmsOptOut(extension)
           && (smsOptOutNumber(extension) === undefined || smsOptOutNumber(extension) === event.to))
@@ -398,7 +398,18 @@ export async function updateInboundSuppression(
           }]
       : existing.filter((extension) =>
           !isOwnedSmsOptOut(extension) || smsOptOutNumber(extension) !== event.to);
-    if (optOutType === "START") remainingOptOuts = summarizeSmsOptOuts(nextExtensions);
+    if (optOutType === "START") {
+      remainingOptOuts = summarizeSmsOptOuts(nextExtensions);
+      if (!remainingOptOuts.global) {
+        const purposes: CommsPurpose[] = ["recalls", "appointment", "product-pickup", "education"];
+        const explicit = readCommsPreferenceCells(patient);
+        if (!purposes.every(purpose => explicit.some(cell => cell.purpose === purpose && cell.channel === "sms" && cell.allowed))) {
+          nextExtensions = replaceCommsPreferenceCells({ ...patient, extension: nextExtensions }, purposes.map(purpose => ({ purpose, channel: "sms", allowed: true })), {
+            setBy: { reference: `Patient/${patient.id}` }, surface: "inbound-start", recordedAt: new Date().toISOString(),
+          }).extension!;
+        }
+      }
+    }
     if (nextExtensions.length === existing.length && nextExtensions.every((entry, index) => entry === existing[index])) {
       continue;
     }
