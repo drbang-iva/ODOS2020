@@ -10,7 +10,7 @@ import { COMMS_PREFERENCE_DEFAULTS, COMMS_PREFERENCE_DEFAULTS_VERSION, COMMS_PUR
 
 const pair = { purpose: "education", channel: "email", allowed: true };
 const patientReference = "Patient/synthetic-matrix";
-async function fixture(options: { conflict?: boolean; businessActions?: readonly BusinessAction[]; stop?: boolean; manyPatients?: boolean; patientLocation?: string } = {}) {
+async function fixture(options: { conflict?: boolean; businessActions?: readonly BusinessAction[]; stop?: boolean; manyPatients?: boolean; patientLocation?: string; omitPatientResource?: boolean; returnedVersion?: string } = {}) {
   let patient: Patient = { resourceType: "Patient", id: "synthetic-matrix", active: true, meta: { versionId: "3" },
     ...(options.stop ? { extension: [{ url: ODOS_COMMS_OPT_OUT_EXTENSION_URL, extension: [{ url: "channel", valueCode: "sms" }, { url: "scope", valueCode: "global" }] }] } : {}) };
   const initial = structuredClone(patient);
@@ -27,7 +27,10 @@ async function fixture(options: { conflict?: boolean; businessActions?: readonly
         : [{ resource: structuredClone(patient) }] }),
     executeTransactionAsActor: async (bundle: Bundle, _actor: unknown, _headers: unknown, validation: { validateResponse?: (response: Bundle) => void } = {}) => {
       transactions.push(structuredClone(bundle));
-      const response: Bundle = { resourceType: "Bundle", type: "transaction-response", entry: bundle.entry!.map(entry => ({ response: { status: options.conflict ? "412 Precondition Failed" : "200 OK", ...(options.patientLocation && entry.resource?.resourceType === "Patient" ? { location: options.patientLocation } : {}) } })) };
+      const response: Bundle = { resourceType: "Bundle", type: "transaction-response", entry: bundle.entry!.map(entry => ({
+        ...(!options.omitPatientResource && entry.resource?.resourceType === "Patient" ? { resource: { ...entry.resource, meta: { versionId: options.returnedVersion ?? "opaque-next" } } } : {}),
+        response: { status: options.conflict ? "412 Precondition Failed" : "200 OK", ...(entry.resource?.resourceType === "Patient" ? { location: options.patientLocation ?? patientReference } : {}) },
+      })) };
       validation.validateResponse?.(response);
       for (const entry of bundle.entry!) {
         if (entry.resource?.resourceType === "Patient") patient = structuredClone(entry.resource);
@@ -150,7 +153,7 @@ test("preferences GET audit identifies the queried patient", async () => {
 
 for (const route of ["preferences", "consent-evidence"] as const) {
   test(`M5 ${route} reports opaque versions from the Patient transaction entry`, async () => {
-    const f = await fixture({ patientLocation: "Patient/synthetic-matrix/_history/opaque-next" });
+    const f = await fixture();
     try {
       const response = await f.request(`/communications/${route}`, route === "preferences" ? "PUT" : "POST",
         route === "preferences" ? { patientReference, cells: [pair] } : { patientReference, scope: [pair].map(({ purpose, channel }) => ({ purpose, channel })), method: "in-person" });
@@ -163,7 +166,7 @@ for (const route of ["preferences", "consent-evidence"] as const) {
 for (const route of ["preferences", "consent-evidence"] as const) {
   for (const patientLocation of [undefined, "Patient/other/_history/opaque-next", "Patient/synthetic-matrix/_history/"]) {
     test(`M5 ${route} omits unknown version ${patientLocation}`, async () => {
-      const f = await fixture({ patientLocation });
+      const f = await fixture({ patientLocation, omitPatientResource: true });
       try {
         const response = await f.request(`/communications/${route}`, route === "preferences" ? "PUT" : "POST",
           route === "preferences" ? { patientReference, cells: [pair] } : { patientReference, scope: [{ purpose: "education", channel: "email" }], method: "in-person" });
@@ -188,3 +191,15 @@ test("defaults route requires communications read access", async () => {
   try { assert.equal((await f.request("/communications/preferences/defaults")).status, 403); }
   finally { await f.close(); }
 });
+
+for (const route of ["preferences", "consent-evidence"] as const) {
+  for (const disagreement of [false, true]) test(`M5 ${route} ${disagreement ? "disagreement omits report" : "history fallback"}`, async () => {
+    const f = await fixture({ patientLocation: `${patientReference}/_history/history-version`, omitPatientResource: !disagreement });
+    try {
+      const response = await f.request(`/communications/${route}`, route === "preferences" ? "PUT" : "POST",
+        route === "preferences" ? { patientReference, cells: [pair] } : { patientReference, scope: [{ purpose: "education", channel: "email" }], method: "in-person" });
+      assert.equal(response.status, 200);
+      assert.deepEqual((await response.json()).patientVersion, disagreement ? undefined : { writtenAgainst: "3", current: "history-version" });
+    } finally { await f.close(); }
+  });
+}

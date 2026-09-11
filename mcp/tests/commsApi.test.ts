@@ -2084,7 +2084,7 @@ async function startServer(options: {
         resourceType: "Bundle",
         type: "transaction-response",
         entry: [
-          { response: { status: "200 OK", location: `Patient/${patientId}/_history/${patients[index]!.meta?.versionId}` } },
+          { resource: structuredClone(patients[index]), response: { status: "200 OK", location: `Patient/${patientId}` } },
           { response: { status: "201 Created", location: `Provenance/${provenances.at(-1)!.id}/_history/1` } },
         ],
       };
@@ -2517,7 +2517,7 @@ for (const action of ["record", "clear"] as const) {
   test(`M5 opt-out ${action} reports the transaction Patient version`, async () => {
     const fixture = await startServer({ optOutTransactionResponse: {
       resourceType: "Bundle", type: "transaction-response", entry: [
-        { response: { status: "200 OK", location: `${PATIENT_REFERENCE}/_history/opaque-next` } },
+        { resource: { resourceType: "Patient", id: PATIENT_REFERENCE.slice(8), meta: { versionId: "opaque-next" } }, response: { status: "200 OK", location: PATIENT_REFERENCE } },
         { response: { status: "201 Created", location: "Provenance/example/_history/other" } },
       ],
     } });
@@ -2561,3 +2561,15 @@ for (const action of ["record", "clear"] as const) {
     });
   }
 }
+
+for (const disagreement of [false, true]) test(`M5 opt-out ${disagreement ? "disagreement omits report" : "history fallback"}`, async () => {
+  const fixture = await startServer({ optOutTransactionResponse: { resourceType: "Bundle", type: "transaction-response", entry: [
+    { ...(disagreement ? { resource: { resourceType: "Patient" as const, id: PATIENT_REFERENCE.slice(8), meta: { versionId: "resource-version" } } } : {}), response: { status: "200 OK", location: `${PATIENT_REFERENCE}/_history/history-version` } },
+    { response: { status: "201 Created" } },
+  ] } });
+  try {
+    const response = await request(fixture.base, "/communications/opt-out/clear", "POST", OPT_OUT_CLEAR_BODY, "staff");
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json()).patientVersion, disagreement ? undefined : { writtenAgainst: "1", current: "history-version" });
+  } finally { await fixture.close(); }
+});
