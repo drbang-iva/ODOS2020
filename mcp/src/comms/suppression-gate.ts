@@ -1,4 +1,4 @@
-import type { Bundle, Communication, Patient, Provenance, Resource } from "@medplum/fhirtypes";
+import type { Bundle, Communication, Patient, Provenance, Reference, Resource } from "@medplum/fhirtypes";
 import type { PracticeRoleId } from "../authz/roles.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import type { MedplumClient } from "../fhir-client.js";
@@ -46,6 +46,103 @@ export function communicationPurpose(campaignType: string, consentClass?: "trans
   const purpose = (PURPOSE_BY_CAMPAIGN_TYPE as Record<string, CommsPurpose>)[campaignType];
   if (purpose) return purpose;
   throw new Error(`Communications campaignType "${campaignType}" has no communication purpose; register it in PURPOSE_BY_CAMPAIGN_TYPE.`);
+}
+
+export const ODOS_COMMS_PREFERENCE_URL = "https://odos2020.com/fhir/StructureDefinition/odos-comms-preference";
+export const COMMS_PREFERENCE_SURFACES = ["staff-demographics", "staff-registration", "staff-manual-send", "inbound-start"] as const;
+export type CommsPreferenceSurface = typeof COMMS_PREFERENCE_SURFACES[number];
+export interface CommsPreferenceInput {
+  purpose: CommsPurpose;
+  channel: CommsPreferenceChannel;
+  allowed: boolean;
+  evidence?: Reference;
+}
+export interface CommsPreferenceMetadata {
+  recordedAt: string;
+  setBy: Reference;
+  surface: CommsPreferenceSurface;
+}
+export interface EffectiveCell extends Partial<CommsPreferenceMetadata> {
+  value: boolean;
+  source: "suppression" | "explicit" | "legacy-marketing-consent" | "default";
+  evidence?: Reference;
+}
+export type ExplicitCommsPreference = CommsPreferenceInput & CommsPreferenceMetadata;
+
+export function readCommsPreferenceCells(patient: Patient): ExplicitCommsPreference[] {
+  const seen = new Set<string>();
+  return (patient.extension ?? []).filter(e => e.url === ODOS_COMMS_PREFERENCE_URL).map(e => {
+    const parts = e.extension ?? [];
+    const required = ["purpose", "channel", "allowed", "recordedAt", "setBy", "surface"];
+    const fail = (): never => { throw new Error("Malformed or duplicate communication preference extension."); };
+    if (Object.keys(e).some(k => k.startsWith("value")) || parts.some(p => ![...required, "evidence"].includes(p.url))
+      || required.some(name => parts.filter(p => p.url === name).length !== 1)
+      || parts.filter(p => p.url === "evidence").length > 1) fail();
+    const value = (name: string, key: string): unknown => {
+      const part = parts.find(p => p.url === name);
+      if (!part) return undefined;
+      if (part.extension || Object.keys(part).filter(k => k.startsWith("value")).some(k => k !== key)) fail();
+      return (part as Record<string, unknown>)[key];
+    };
+    const purpose = value("purpose", "valueCode") as CommsPurpose;
+    const channel = value("channel", "valueCode") as CommsPreferenceChannel;
+    const allowed = value("allowed", "valueBoolean") as boolean;
+    const recordedAt = value("recordedAt", "valueDateTime") as string;
+    const setBy = value("setBy", "valueReference") as Reference;
+    const surface = value("surface", "valueCode") as CommsPreferenceSurface;
+    const evidence = value("evidence", "valueReference") as Reference | undefined;
+    if (!COMMS_PURPOSES.includes(purpose) || !COMMS_PREFERENCE_CHANNELS.includes(channel)
+      || typeof allowed !== "boolean" || typeof recordedAt !== "string" || Number.isNaN(Date.parse(recordedAt))
+      || !/^(Practitioner|Patient|RelatedPerson)\/[A-Za-z0-9.-]{1,64}$/.test(setBy?.reference ?? "")
+      || !COMMS_PREFERENCE_SURFACES.includes(surface)
+      || (parts.some(p => p.url === "evidence") && !/^(Consent\/[A-Za-z0-9.-]{1,64}|urn:uuid:[A-Za-z0-9-]+)$/.test(evidence?.reference ?? ""))) fail();
+    const pair = `${purpose}/${channel}`;
+    if (seen.has(pair)) fail();
+    seen.add(pair);
+    return { purpose, channel, allowed, recordedAt, setBy, surface, ...(evidence ? { evidence } : {}) };
+  });
+}
+
+export function replaceCommsPreferenceCells(patient: Patient, cells: CommsPreferenceInput[], metadata: CommsPreferenceMetadata): Patient {
+  readCommsPreferenceCells(patient);
+  const extensions: NonNullable<Patient["extension"]> = cells.map(cell => ({
+    url: ODOS_COMMS_PREFERENCE_URL,
+    extension: [
+      { url: "purpose", valueCode: cell.purpose }, { url: "channel", valueCode: cell.channel },
+      { url: "allowed", valueBoolean: cell.allowed }, { url: "recordedAt", valueDateTime: metadata.recordedAt },
+      { url: "setBy", valueReference: metadata.setBy }, { url: "surface", valueCode: metadata.surface },
+      ...(cell.evidence ? [{ url: "evidence", valueReference: cell.evidence }] : []),
+    ],
+  }));
+  readCommsPreferenceCells({ resourceType: "Patient", extension: extensions });
+  const next = { ...patient, extension: [
+    ...(patient.extension ?? []).filter(e => e.url !== ODOS_COMMS_PREFERENCE_URL || !cells.some(cell =>
+      e.extension?.some(p => p.url === "purpose" && p.valueCode === cell.purpose)
+      && e.extension?.some(p => p.url === "channel" && p.valueCode === cell.channel))),
+    ...extensions,
+  ] };
+  return next;
+}
+
+export function effectiveCommsPreferences(patient: Patient, options: { smsSenderNumber?: string; stopScope?: SmsStopScope }): Record<CommsPurpose, Record<CommsPreferenceChannel, EffectiveCell>> {
+  const explicit = readCommsPreferenceCells(patient);
+  return Object.fromEntries(COMMS_PURPOSES.map(purpose => [purpose, Object.fromEntries(COMMS_PREFERENCE_CHANNELS.map(channel => {
+    let cell: EffectiveCell;
+    if (isOptedOut(patient, channel, "", channel === "sms" ? options.smsSenderNumber : undefined, options.stopScope ?? "per-number")) {
+      cell = { value: false, source: "suppression" };
+    } else {
+      const stored = explicit.find(c => c.purpose === purpose && c.channel === channel);
+      if (stored) {
+        const { allowed, purpose: _purpose, channel: _channel, ...metadata } = stored;
+        cell = { value: allowed, source: "explicit", ...metadata };
+      } else if (purpose === "marketing-promo" && channel === "sms" && hasRecordedMarketingConsent(patient)) {
+        cell = { value: true, source: "legacy-marketing-consent" };
+      } else {
+        cell = { value: COMMS_PREFERENCE_DEFAULTS[purpose][channel], source: "default" };
+      }
+    }
+    return [channel, cell];
+  }))])) as Record<CommsPurpose, Record<CommsPreferenceChannel, EffectiveCell>>;
 }
 
 export type SuppressionFhir = Pick<MedplumClient, "baseUrl" | "read" | "search" | "searchUrl">;
