@@ -33,8 +33,9 @@ export function communicationPreferencesInput(draft: CommunicationPreferencesDra
     || !Number.isFinite(Date.parse(draft.formDate)) || new Date(draft.formDate).toISOString().slice(0, 10) !== draft.formDate
     || draft.formDate > new Date().toISOString().slice(0, 10))) throw new Error("Enter a valid form date that is not in the future.");
   return {
-    cells: draft.confirmedVia ? COMMS_PURPOSES.flatMap(purpose => COMMS_PREFERENCE_CHANNELS.map(channel =>
-      ({ purpose, channel, allowed: shownValue(draft, purpose, channel) })))
+    cells: draft.confirmedVia ? COMMS_PURPOSES.flatMap(purpose => COMMS_PREFERENCE_CHANNELS
+      .filter(channel => draft.baseline[purpose][channel].source !== "suppression")
+      .map(channel => ({ purpose, channel, allowed: shownValue(draft, purpose, channel) })))
       : draft.changes.filter(change => draft.baseline[change.purpose][change.channel].source !== "suppression"),
     ...(draft.confirmedVia ? { confirmedVia: draft.confirmedVia } : {}),
     ...(draft.confirmedVia === "paper-form" ? { formDate: draft.formDate } : {}),

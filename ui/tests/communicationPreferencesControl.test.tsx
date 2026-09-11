@@ -222,3 +222,22 @@ test("evidence without capture metadata uses a neutral label instead of inventin
     assert.match(badgeText, /Consent on file/); assert.doesNotMatch(badgeText, /Patient stated in person/);
   });
 });
+
+for (const confirmedVia of ["in-person", "paper-form"]) test(`F1 ${confirmedVia} confirmation excludes the STOP-locked Text column`, async () => {
+  const initial = response();
+  for (const purpose of COMMS_PURPOSES) initial.matrix[purpose].sms = { value: false, source: "suppression" };
+  const payloads: Array<{ cells: Array<{ channel: string }>; confirmedVia: string }> = [];
+  await mount(async (_input, init) => {
+    if (init?.method === "PUT") payloads.push(JSON.parse(String(init.body)));
+    return body(initial);
+  }, <CommunicationPreferencesControl {...patientProps} />, async renderer => {
+    assert.equal(renderer.root.findAllByProps({ "aria-disabled": "true" }).length, 5);
+    await act(async () => renderer.root.findByProps({ "aria-label": "Confirmed via" }).props.onChange({ target: { value: confirmedVia } }));
+    if (confirmedVia === "paper-form") await act(async () => renderer.root.findByProps({ "aria-label": "Form date" }).props.onChange({ target: { value: "2026-09-10" } }));
+    await act(async () => button(renderer, "Save preferences").props.onClick());
+    assert.equal(payloads.length, 1);
+    assert.equal(payloads[0].cells.length, 15);
+    assert.equal(payloads[0].cells.some(cell => cell.channel === "sms"), false);
+    assert.equal(payloads[0].confirmedVia, confirmedVia);
+  });
+});

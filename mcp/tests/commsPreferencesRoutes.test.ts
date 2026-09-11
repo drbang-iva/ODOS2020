@@ -8,6 +8,9 @@ import { getRoleDeclaration, type BusinessAction } from "../src/authz/roles.js";
 import { registerCommsApiRoutes, type CommsApiRouteDeps } from "../src/comms/comms-api.js";
 import { COMMS_PREFERENCE_DEFAULTS, COMMS_PREFERENCE_DEFAULTS_VERSION, COMMS_PURPOSES, COMMS_PREFERENCE_CHANNELS, ODOS_COMMS_OPT_OUT_EXTENSION_URL, readCommsPreferenceCells } from "../src/comms/suppression-gate.js";
 
+import { patientWriteVersion } from "../src/comms/patient-version.js";
+import { COMMS_CONSENT_SCOPE_URL } from "../src/comms/comms-preferences.js";
+
 const pair = { purpose: "education", channel: "email", allowed: true };
 const patientReference = "Patient/synthetic-matrix";
 async function fixture(options: { conflict?: boolean; businessActions?: readonly BusinessAction[]; stop?: boolean; manyPatients?: boolean; patientLocation?: string; omitPatientResource?: boolean; returnedVersion?: string } = {}) {
@@ -203,3 +206,36 @@ for (const route of ["preferences", "consent-evidence"] as const) {
     } finally { await f.close(); }
   });
 }
+
+test("F1 confirmed non-Text preferences preserve stored Text ON after STOP is cleared and exclude Text evidence", async () => {
+  const f = await fixture();
+  try {
+    assert.equal((await f.request("/communications/preferences", "PUT", { patientReference, cells: [{ purpose: "education", channel: "sms", allowed: true }] })).status, 200);
+    const stored = readCommsPreferenceCells(f.patient).find(cell => cell.purpose === "education" && cell.channel === "sms");
+    assert.equal(stored?.allowed, true);
+    const identity = { patientReference, reason: "Synthetic patient request", identityVerification: "in-person" };
+    assert.equal((await f.request("/communications/opt-out/record", "POST", { ...identity, scope: "global" })).status, 200);
+    const stopped = await (await f.request(`/communications/preferences?patient=${patientReference}`)).json();
+    assert.equal(stopped.matrix.education.sms.source, "suppression");
+    const cells = COMMS_PURPOSES.flatMap(purpose => COMMS_PREFERENCE_CHANNELS.filter(channel => channel !== "sms").map(channel => ({ purpose, channel, allowed: stopped.matrix[purpose][channel].value })));
+    assert.equal((await f.request("/communications/preferences", "PUT", { patientReference, cells, confirmedVia: "in-person" })).status, 200);
+    assert.deepEqual(readCommsPreferenceCells(f.patient).find(cell => cell.purpose === "education" && cell.channel === "sms"), stored);
+    const consent = f.transactions.at(-1)!.entry!.find(entry => entry.resource?.resourceType === "Consent")!.resource as Consent;
+    const scope = consent.extension!.filter(extension => extension.url === COMMS_CONSENT_SCOPE_URL);
+    assert.equal(scope.length, 15);
+    assert.equal(scope.some(extension => extension.extension?.some(part => part.url === "channel" && part.valueCode === "sms")), false);
+    assert.equal((await f.request("/communications/opt-out/clear", "POST", identity)).status, 200);
+    const cleared = await (await f.request(`/communications/preferences?patient=${patientReference}`)).json();
+    assert.equal(cleared.matrix.education.sms.value, true);
+    assert.equal(cleared.matrix.education.sms.source, "explicit");
+    assert.equal(cleared.rows.find((row: { purpose: string; channel: string }) => row.purpose === "education" && row.channel === "sms").evidenceSummary.length, 0);
+  } finally { await f.close(); }
+});
+
+test("X12 a returned Patient with a different id yields no patientVersion", () => {
+  const response: Bundle = { resourceType: "Bundle", type: "transaction-response", entry: [{
+    resource: { resourceType: "Patient", id: "different-patient", meta: { versionId: "opaque-other" } },
+    response: { status: "200 OK", location: patientReference },
+  }] };
+  assert.equal(patientWriteVersion(response, patientReference, "opaque-before"), undefined);
+});
