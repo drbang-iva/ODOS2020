@@ -212,11 +212,11 @@ export function CommunicationPreferencesControl(props: Props) {
     <p className="text-xs text-[color:var(--odos-muted)]">{latest ? `Last set by ${latest.setBy.display ?? latest.setBy.reference ?? "staff"} via ${latest.surface === "staff-registration" ? "registration" : latest.surface === "inbound-start" ? "START reply" : latest.surface === "staff-manual-send" ? "staff send" : "staff entry"}, ${latest.recordedAt.replace("T", " ").slice(0, 16)}` : "No preferences set yet — showing practice defaults."}</p>
     <div className="flex flex-wrap items-end gap-3">
       <label className="flex flex-col gap-1">Confirmed via
-        <select aria-label="Confirmed via" disabled={!editable} value={draft.confirmedVia ?? ""} onChange={event => update({ ...draft, confirmedVia: (event.target.value || null) as CommunicationPreferencesDraft["confirmedVia"], formDate: "" })}>
+        <select className="scheduler-input" aria-label="Confirmed via" disabled={!editable} value={draft.confirmedVia ?? ""} onChange={event => update({ ...draft, confirmedVia: (event.target.value || null) as CommunicationPreferencesDraft["confirmedVia"], formDate: "" })}>
           <option value="">Not confirmed</option><option value="in-person">Patient stated in person</option><option value="paper-form">Paper form on file</option>
         </select>
       </label>
-      {draft.confirmedVia === "paper-form" && <label className="flex flex-col gap-1">Form date<input type="date" aria-label="Form date" value={draft.formDate} max={new Date().toISOString().slice(0, 10)} disabled={!editable} onChange={event => update({ ...draft, formDate: event.target.value })} /></label>}
+      {draft.confirmedVia === "paper-form" && <label className="flex flex-col gap-1">Form date<input className="scheduler-input" type="date" aria-label="Form date" value={draft.formDate} max={new Date().toISOString().slice(0, 10)} disabled={!editable} onChange={event => update({ ...draft, formDate: event.target.value })} /></label>}
       {props.mode === "patient" && <button type="button" disabled={!editable || !dirty} className="rounded bg-[color:var(--odos-accent)] px-3 py-2 text-white" onClick={() => void save()}>{saving ? "Saving preferences…" : "Save preferences"}</button>}
     </div>
     {message && <p role="status">{message}</p>}
