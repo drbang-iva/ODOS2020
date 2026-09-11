@@ -163,8 +163,8 @@ export function PatientDemographicsEditor({
           <h2 id="demographics-title" className="text-xl font-semibold">Edit demographics</h2>
         </div>
         {saveError && <div role="alert" className="mb-4 rounded border border-red-400/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">{saveError}</div>}
-        {versionNotice && <p role="status" className="mb-4 text-sm text-amber-200">{versionNotice}</p>}
-        {preferenceWarning && <p role="status" className="mb-4 text-sm text-amber-200">{preferenceWarning}</p>}
+        {versionNotice && <p role="status" className="mb-4 text-sm text-[color:var(--odos-amber)]">{versionNotice}</p>}
+        {preferenceWarning && <p role="status" className="mb-4 text-sm text-[color:var(--odos-amber)]">{preferenceWarning}</p>}
         <PatientDemographicsFields
           draft={draft}
           errors={errors}
