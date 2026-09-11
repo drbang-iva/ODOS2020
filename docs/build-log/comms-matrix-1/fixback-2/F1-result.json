@@ -1,0 +1,8 @@
+{
+  "guard": "F1",
+  "command": "npm --prefix mcp test -- tests/commsApi.test.ts",
+  "red_exit": 1,
+  "green_exit": 0,
+  "restored_byte_identical": true,
+  "git_apply_check": 0
+}

@@ -1,0 +1,43 @@
+{
+  "resourceType": "ValueSet",
+  "id": "comms-purpose",
+  "url": "https://odos2020.com/fhir/ValueSet/comms-purpose",
+  "version": "2026-09-10",
+  "name": "ODOSCommsPurposeValueSet",
+  "title": "ODOS Comms Purpose Value Set",
+  "status": "active",
+  "experimental": false,
+  "date": "2026-09-11",
+  "publisher": "ODOS",
+  "description": "Allowed values from the existing local communication vocabulary.",
+  "compose": {
+    "include": [
+      {
+        "system": "https://odos2020.com/fhir/CodeSystem/comms-purpose",
+        "version": "2026-09-10",
+        "concept": [
+          {
+            "code": "recalls",
+            "display": "Recalls"
+          },
+          {
+            "code": "appointment",
+            "display": "Appointment"
+          },
+          {
+            "code": "product-pickup",
+            "display": "Product pickup"
+          },
+          {
+            "code": "marketing-promo",
+            "display": "Marketing promo"
+          },
+          {
+            "code": "education",
+            "display": "Education"
+          }
+        ]
+      }
+    ]
+  }
+}

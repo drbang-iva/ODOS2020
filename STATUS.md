@@ -4,7 +4,7 @@
 **Current odos tag:** `v0.6a` at commit `ce6e94f` (main has since shipped Tier-2 cash dispensary #19–#21, the v0.6c payments kernel + card path #22–#23, the ODOS scheduler #24–#30, and the scheduler Pass-2 follow-ons #31–#34, #36, #38 — all currently untagged; v0.6c tags at slice close)
 **Branch:** `main` at `ccc097e`
 
-This is the operator-facing dashboard: what works end-to-end, what's verified, what's not production-ready, what's next. Full per-milestone build narrative is in [`docs/build-log/`](docs/build-log/). Architectural rationale lives in the companion private business repo at [`performance-od`](https://github.com/drbang-iva/performance-od).
+This is the operator-facing dashboard: what works end-to-end, what's verified, what's not production-ready, what's next. Full per-milestone build narrative is in [`docs/build-log/`](docs/build-log/).
 
 For the architectural overview + working-directory conventions, see [`AGENTS.md`](AGENTS.md). For the distilled current-state operator view (one-pager), see [`docs/operator-dashboard.md`](docs/operator-dashboard.md).
 
@@ -56,7 +56,7 @@ For the architectural overview + working-directory conventions, see [`AGENTS.md`
 
 ### v0.6c payments kernel + card path (SHIPPED to main 2026-07-05, PRs #22–#23; v0.6c closes after Stripe test-mode + live front-desk walkthrough)
 
-- Invoice↔PaymentReconciliation seam — Invoice = the bill; PaymentReconciliation = the settling processor payment (`detail[0].request → Invoice`); manual cash/check keeps the Invoice tender extension and emits no PR (seam spec, performance-od 2026-07-05)
+- Invoice↔PaymentReconciliation seam — Invoice = the bill; PaymentReconciliation = the settling processor payment (`detail[0].request → Invoice`); manual cash/check keeps the Invoice tender extension and emits no PR
 - Vendor-neutral `PaymentProcessorAdapter` (charge/refund/void/settle/status) + manual-cash adapter + Clover REST Pay Display adapter (cloud, doc-verified shapes; OAuth token never persisted)
 - Unified `POST /payments/charge` on odos-core — the processor secret lives server-side only; 9 new `payment.*` audit event types
 - Payments authorization model — caller-token PR writes governed by Medplum AccessPolicy; front-desk dispensary RBAC grants at practice scope (also fixes the latent gap that made the cash order flow admin-only); identity-derived role gate via the `practice-role` `meta.tag` on AccessPolicy (no client role header)
@@ -64,7 +64,7 @@ For the architectural overview + working-directory conventions, see [`AGENTS.md`
 
 ### ODOS scheduler — unified, modular, FHIR-native (SHIPPED to main 2026-07-06, PRs #24–#30; untagged)
 
-Front-desk-first scheduler serving three clinic modes (eyecare-only / aesthetics-only / both-combined) selected by practice config; design brief in performance-od 2026-07-06. Built one slice per PR, each through a multi-agent close audit + fix round (~48 confirmed findings caught-and-fixed across the series, zero broken merges).
+Front-desk-first scheduler serving three clinic modes (eyecare-only / aesthetics-only / both-combined) selected by practice config. Built one slice per PR, each through a multi-agent close audit + fix round (~48 confirmed findings caught-and-fixed across the series, zero broken merges).
 
 - **Data model + service layer** (#24) — clinic-mode axis (discipline visibility filtering); visit-type catalog as `HealthcareService` (duration/color/eligible-resources via `odos-*` extensions, new types are DATA); resources as `Schedule` actors (Practitioner/Location/Device); `Appointment` builder on the Eyefinity model — serviceType, vision+medical coverage extensions, two status axes (Appointment Status ↔ R4 `appointment-status`; Confirmation Status extension), urgent/follow-up; availability → `Slot` from operating hours + blocked time. Service layer has zero UI coupling.
 - **Day-view resource grid** (#25) — columns = mode-filtered resources, color-by-type blocks with billing-context-on-block, free/busy/blocked shading, v8 dark palette; live clinic-mode selector.
@@ -178,7 +178,7 @@ Plus the operational lessons that carry forward into v0.6b: see [`docs/operator-
 
 Shipped since the #24–#30 core (all 2026-07-07): Pass-2 foundation (#31), out-of-hours rendering (#32), demo-seed (#33), per-office booking increment (#34), vertical zoom (#36), short-block density (#38) — see the shipped subsection above.
 
-**Front-desk cockpit design (Fable, 2026-07-07).** The design-forward work is now a committed spec: `performance-od/decisions/2026-07-07-odos-frontdesk-cockpit-design.md` — a host+guest-layers cockpit (swappable Schedule/Floor center + phone-width comms panels behind an iOS-badge dock), covering the disclosure ladder, the floor board (auto-location trust rules, typed waits, pinned staff jobs), the comms organs with a GHL-first `CommsProvider` seam, and a `ScheduleProvider` seam (native default; Foxfire adapter open). Phase 1 (short-block density) shipped as #38; Phases 2–8 are mechanical builds off the locked spec.
+**Front-desk cockpit design (Fable, 2026-07-07).** The committed design specifies a host+guest-layers cockpit (swappable Schedule/Floor center + phone-width comms panels behind an iOS-badge dock), covering the disclosure ladder, the floor board (auto-location trust rules, typed waits, pinned staff jobs), the comms organs with a GHL-first `CommsProvider` seam, and a `ScheduleProvider` seam (native default; Foxfire adapter open). Phase 1 (short-block density) shipped as #38; Phases 2–8 are mechanical builds off the locked spec.
 
 - [ ] **Cockpit Phase 2 — shell** — `/frontdesk` route: swappable center stage (Schedule ⇄ Floor), badge dock, guest-panel mechanics (slide-over, drag-to-float, per-workstation memory).
 - [ ] **Cockpit Phases 3–8** — floor board + auto-location + typed waits/jobs (floor track); GHL `CommsProvider` + Messages/Calls/Requests/Call Pop + Team Chat + Reviews (comms track). See design doc §8.
@@ -262,12 +262,12 @@ Inside this repo:
 - [`docs/build-log/`](docs/build-log/) — full per-slice build evidence
 - [`data/code-bindings/`](data/code-bindings/) — verification ledger files
 
-Companion **private** business repo ([`performance-od`](https://github.com/drbang-iva/performance-od) — maintainer-only):
 
-- Master build sheet, mandates, per-slice decisions, four-wave triangulation research files, first-pilot-milestone decision + bet, episodic memory.
 
 ---
 
 ## License
 
 AGPL-3.0 application code. Apache-2.0 dependencies underneath. Derivative works must share source — practitioner-owned, practitioner-shared.
+
+- Communication matrix server slice: suppression-first preferences, consent evidence routes and bounded evidence-gap export implemented on the task branch; independent evaluation and preference screens remain pending.

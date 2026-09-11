@@ -1,0 +1,96 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/commsStartPreferences.test.ts
+
+TAP version 13
+# odos-mcp: START preference restoration failed; existing preference cells retained.
+# odos-mcp: START preference restoration failed; existing preference cells retained.
+# odos-mcp: START preference restoration failed; existing preference cells retained.
+# odos-mcp: START preference restoration failed; existing preference cells retained.
+# Subtest: G13 START atomically restores four explicit text cells without marketing and is idempotent
+not ok 1 - G13 START atomically restores four explicit text cells without marketing and is idempotent
+  ---
+  duration_ms: 3.6435
+  type: 'test'
+  location: 'mcp/tests/commsStartPreferences.test.ts:1:1661'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+        'appointment',
+        'education',
+    +   'marketing-promo',
+        'product-pickup',
+        'recalls'
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'appointment'
+    1: 'education'
+    2: 'product-pickup'
+    3: 'recalls'
+  actual:
+    0: 'appointment'
+    1: 'education'
+    2: 'marketing-promo'
+    3: 'product-pickup'
+    4: 'recalls'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/commsStartPreferences.test.ts:34:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: START without an opt-out still replaces withheld text cells
+not ok 2 - START without an opt-out still replaces withheld text cells
+  ---
+  duration_ms: 0.448916
+  type: 'test'
+  location: 'mcp/tests/commsStartPreferences.test.ts:1:2365'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    5 !== 4
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 4
+  actual: 5
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/commsStartPreferences.test.ts:44:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: G14 shared-number and broader-opt-out STARTs write no preference cells
+ok 3 - G14 shared-number and broader-opt-out STARTs write no preference cells
+  ---
+  duration_ms: 0.458375
+  type: 'test'
+  ...
+# Subtest: START preserves missing-allowed preferences while removing its matching opt-out and later sends fail closed
+ok 4 - START preserves missing-allowed preferences while removing its matching opt-out and later sends fail closed
+  ---
+  duration_ms: 0.999625
+  type: 'test'
+  ...
+# Subtest: START preserves duplicate-cell preferences while removing its matching opt-out and later sends fail closed
+ok 5 - START preserves duplicate-cell preferences while removing its matching opt-out and later sends fail closed
+  ---
+  duration_ms: 0.407625
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 3
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 234.01625

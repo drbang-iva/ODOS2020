@@ -1,0 +1,17 @@
+Source commit: b655287aca9b8a0fdcd7ae3f0f2c9c2340b1461c
+Command: npm --prefix mcp test
+Exit: 1
+Exact failure-name sets match the clean base: 8 common, 0 branch-only, 0 base-only.
+not ok 251 - SMART registration refuses a session project mismatch before POSTing a client
+not ok 252 - SMART registration checks auth/me before creating a client in the configured project
+not ok 758 - synced practice policies enforce all repaired clinical writes on running Medplum
+not ok 1664 - a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+not ok 2076 - local Medplum seeds 5001 patient answers, paginates reviews, and excludes ROS in the index
+not ok 2566 - update_patient MCP write tool integrates with Medplum
+not ok 3839 - audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available
+not ok 3840 - v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)
+# tests 4640
+# pass 4627
+# fail 8
+# skipped 5
+# duration_ms 289264.947792

@@ -1,0 +1,31 @@
+Mutation applied and source verified byte-for-byte.
+--- a/mcp/src/comms/comms-api.ts
++++ b/mcp/src/comms/comms-api.ts
+@@ -1311,2 +1311,13 @@
+     if (result.outcome === "sent") {
++      if (withheldEducationEmail && actor.kind === "staff") {
++        try {
++          await writeCommsPreferences(actor.staff.fhir, body.patientReference, [{ purpose: "education", channel: "email", allowed: true }], {
++            actorReference: await preferencePractitioner(actor.staff), actorRole: actor.staff.actorRole,
++            policyUrl: actor.staff.authorizationPolicyUrl, recordedAt: deps.now?.() ?? new Date().toISOString(), surface: "staff-manual-send",
++          });
++        } catch {
++          onPreferenceFailure?.();
++          console.error("odos-mcp: education email sent; preference update failed.");
++        }
++      }
+       await persistAfterSend(() => persistStaffSentSend(staff.fhir, {
+@@ -1325,13 +1336,2 @@
+           body = { ...body, alsoUpdateChart: false };
+-        }
+-      }
+-      if (withheldEducationEmail && actor.kind === "staff") {
+-        try {
+-          await writeCommsPreferences(actor.staff.fhir, body.patientReference, [{ purpose: "education", channel: "email", allowed: true }], {
+-            actorReference: await preferencePractitioner(actor.staff), actorRole: actor.staff.actorRole,
+-            policyUrl: actor.staff.authorizationPolicyUrl, recordedAt: deps.now?.() ?? new Date().toISOString(), surface: "staff-manual-send",
+-          });
+-        } catch {
+-          onPreferenceFailure?.();
+-          console.error("odos-mcp: education email sent; preference update failed.");
+         }

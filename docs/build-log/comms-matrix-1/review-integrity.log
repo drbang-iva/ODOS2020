@@ -1,0 +1,4 @@
+Command: python3 -O docs/build-log/comms-matrix-1/extract-consent-search-contract.py bad.tgz
+Synthetic invalid archive; copied contract in disposable directory.
+RuntimeError: Pinned package integrity mismatch
+Exit: 1 (expected refusal before extraction or write)

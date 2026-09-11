@@ -1,0 +1,92 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/commsPreferencesRoutes.test.ts
+
+TAP version 13
+# Subtest: preferences GET returns effective matrix and evidence rows
+ok 1 - preferences GET returns effective matrix and evidence rows
+  ---
+  duration_ms: 20.882083
+  type: 'test'
+  ...
+# Subtest: G2 preferences PUT all twenty ON leaves STOP extensions unchanged
+ok 2 - G2 preferences PUT all twenty ON leaves STOP extensions unchanged
+  ---
+  duration_ms: 12.45925
+  type: 'test'
+  ...
+# Subtest: G6 preferences PUT requires actual preferences business action
+ok 3 - G6 preferences PUT requires actual preferences business action
+  ---
+  duration_ms: 2.59275
+  type: 'test'
+  ...
+# Subtest: G6 removing preferences action from staff declaration refuses PUT
+ok 4 - G6 removing preferences action from staff declaration refuses PUT
+  ---
+  duration_ms: 1.826334
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: G21 preference PUT optimistic conflict returns 409
+not ok 5 - G21 preference PUT optimistic conflict returns 409
+  ---
+  duration_ms: 3.621625
+  type: 'test'
+  location: 'mcp/tests/commsPreferencesRoutes.test.ts:1:5815'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    502 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 502
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/commsPreferencesRoutes.test.ts:94:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: evidence POST uses an atomic Patient Consent Provenance transaction and preserves cells
+ok 6 - evidence POST uses an atomic Patient Consent Provenance transaction and preserves cells
+  ---
+  duration_ms: 4.479792
+  type: 'test'
+  ...
+# Subtest: preferences routes reject invalid enums duplicates dates and phone keys
+ok 7 - preferences routes reject invalid enums duplicates dates and phone keys
+  ---
+  duration_ms: 9.92475
+  type: 'test'
+  ...
+# Subtest: evidence gaps routes provide JSON and CSV and reject arbitrary URL cursor
+ok 8 - evidence gaps routes provide JSON and CSV and reject arbitrary URL cursor
+  ---
+  duration_ms: 4.376584
+  type: 'test'
+  ...
+# Subtest: CSV evidence report exposes truncation and continuation even with zero rows
+ok 9 - CSV evidence report exposes truncation and continuation even with zero rows
+  ---
+  duration_ms: 90.338208
+  type: 'test'
+  ...
+# Subtest: preferences GET audit identifies the queried patient
+ok 10 - preferences GET audit identifies the queried patient
+  ---
+  duration_ms: 1.816083
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 9
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 523.624959

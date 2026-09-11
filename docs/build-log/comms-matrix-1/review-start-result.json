@@ -1,0 +1,10 @@
+{
+  "red": {
+    "command": "npm --prefix mcp test -- tests/commsStartPreferences.test.ts",
+    "exit": 1
+  },
+  "green": {
+    "command": "npm --prefix mcp test -- tests/commsStartPreferences.test.ts tests/commsPreferences.test.ts tests/commsSuppression.test.ts",
+    "exit": 0
+  }
+}

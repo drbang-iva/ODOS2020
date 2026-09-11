@@ -1,0 +1,7 @@
+--- a/mcp/src/comms/comms-preferences.ts
++++ b/mcp/src/comms/comms-preferences.ts
+@@ -57,3 +57,3 @@
+   if (failed) throw Object.assign(new Error(`Preference write failed with status ${failed.response?.status ?? "unknown"}.`), {
+-    status: Number.parseInt(failed.response?.status ?? "", 10),
++    statusRemoved: Number.parseInt(failed.response?.status ?? "", 10),
+   });

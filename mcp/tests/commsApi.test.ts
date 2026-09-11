@@ -420,8 +420,8 @@ test("only transactional staff chart education receives the quiet-hours exemptio
     }
 
     assert.deepEqual(fixture.smsRequests.map(({ suppression }) => suppression), [
-      { quietHoursExemption: "staff-initiated-chart-education" },
-      {},
+      { quietHoursExemption: "staff-initiated-chart-education", consentClass: "transactional" },
+      { consentClass: "marketing" },
     ]);
   } finally {
     await fixture.close();
@@ -2260,6 +2260,12 @@ async function startServer(options: {
           }
           if (options.completionError && resource.resourceType === "Communication"
             && (smsRequests.length + emailRequests.length) > 0) throw options.completionError;
+          if (resource.resourceType === "Patient") {
+            const current = patients.find((candidate) => candidate.id === id);
+            if (headers["If-Match"] !== `W/"${current?.meta?.versionId}"`) {
+              throw await fhirWriterError(412, "PUT");
+            }
+          }
           const restored = structuredClone(resource);
           if (restored.resourceType === "Patient" || restored.resourceType === "RelatedPerson") {
             if (options.recipientUpdateError) {
@@ -2277,10 +2283,13 @@ async function startServer(options: {
               }
             }
           }
+          const currentVersion = resource.resourceType === "Patient"
+            ? patients.find((patient) => patient.id === id)?.meta?.versionId
+            : persistedCommunications[index]?.meta?.versionId;
           const persisted = {
             ...restored,
             id,
-            meta: { ...resource.meta, versionId: String(Number(persistedCommunications[index]?.meta?.versionId ?? "0") + 1) },
+            meta: { ...resource.meta, versionId: String(Number(currentVersion ?? "0") + 1) },
           } as T;
           if (persisted.resourceType === "Patient") {
             const patientIndex = patients.findIndex((patient) => patient.id === persisted.id);
@@ -2434,5 +2443,69 @@ function request(base: string, path: string, method: string, body?: unknown, rol
       } : {}),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+}
+
+for (const failure of [undefined, new Error("Synthetic preference write failure"), Object.assign(new Error("Synthetic preference conflict"), { status: 412 })]) {
+  test(failure ? `G19${"status" in failure ? "b" : ""} sent email survives preference flip failure` : "G12 staff email flips withheld Education email ON with staff provenance", async () => {
+    const { replaceCommsPreferenceCells, readCommsPreferenceCells } = await import("../src/comms/suppression-gate.js");
+    const fixture = await startServer({ optOutTransactionError: failure });
+    try {
+      fixture.patients[0] = replaceCommsPreferenceCells(fixture.patients[0], [{ purpose: "education", channel: "email", allowed: false }], {
+        setBy: { reference: "Practitioner/staff" }, surface: "staff-demographics", recordedAt: "2026-08-01T15:00:00Z",
+      });
+      const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+        patientReference: PATIENT_REFERENCE, educationId: "dry-eye-basics", version: 2, channel: "email", lane: "clinical", idempotencyKey: "education-preference-flip",
+      }, "staff");
+      assert.equal(response.status, 200);
+      const body = await response.json() as any;
+      assert.equal(body.outcome, "sent");
+      assert.equal(fixture.emailRequests.length, 1);
+      assert.equal(fixture.emailRequests[0].suppression.staffEducationOverride, true);
+      if (failure) {
+        assert.equal(body.preferenceUpdate, "failed");
+        assert.equal(readCommsPreferenceCells(fixture.patients[0])[0].allowed, false);
+      } else {
+        const cell = readCommsPreferenceCells(fixture.patients[0])[0];
+        assert.equal(cell.allowed, true);
+        assert.equal(cell.surface, "staff-manual-send");
+        assert.equal(cell.setBy.reference, "Practitioner/staff");
+        assert.equal(fixture.attributedActors.length, 1);
+      }
+    } finally { await fixture.close(); }
+  });
+}
+
+for (const withheld of [true, false]) {
+  test(`F1 staff email saves contact before preference flip (withheld=${withheld})`, async () => {
+    const { replaceCommsPreferenceCells, readCommsPreferenceCells } = await import("../src/comms/suppression-gate.js");
+    const fixture = await startServer();
+    try {
+      fixture.patients[0] = replaceCommsPreferenceCells(fixture.patients[0], [{ purpose: "education", channel: "email", allowed: !withheld }], {
+        setBy: { reference: "Practitioner/staff" }, surface: "staff-demographics", recordedAt: "2026-08-01T15:00:00Z",
+      });
+      const before = readCommsPreferenceCells(fixture.patients[0])[0];
+      const address = "updated-recipient@example.test";
+      const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+        patientReference: PATIENT_REFERENCE, educationId: "dry-eye-basics", version: 2, channel: "email", lane: "clinical",
+        recipientOverride: { email: address }, alsoUpdateChart: true, idempotencyKey: `education-contact-flip-${withheld}`,
+      }, "staff");
+      assert.equal(response.status, 200);
+      const body = await response.json() as Record<string, unknown>;
+      assert.equal(body.outcome, "sent");
+      assert.equal(body.chartUpdate, undefined);
+      assert.equal(Object.hasOwn(body, "chartUpdate"), false);
+      assert.equal(Object.hasOwn(body, "preferenceUpdate"), false);
+      assert.equal(fixture.emailRequests.length, 1);
+      assert.equal(fixture.emailRequests[0].toAddress, address);
+      assert.equal(fixture.recipientUpdates.length, 1);
+      assert.equal(fixture.patients[0].meta?.versionId, withheld ? "3" : "2");
+      assert.equal(fixture.patients[0].telecom?.find(point => point.system === "email" && point.use !== "old")?.value, address);
+      const cell = readCommsPreferenceCells(fixture.patients[0])[0];
+      assert.equal(cell.allowed, true);
+      assert.equal(fixture.attributedActors.length, withheld ? 1 : 0);
+      if (withheld) assert.equal(cell.surface, "staff-manual-send");
+      else assert.deepEqual(cell, before);
+    } finally { await fixture.close(); }
   });
 }

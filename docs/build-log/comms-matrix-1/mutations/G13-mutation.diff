@@ -1,0 +1,7 @@
+--- a/mcp/src/comms/suppression-gate.ts
++++ b/mcp/src/comms/suppression-gate.ts
+@@ -405,3 +405,3 @@
+         try {
+-          const purposes: CommsPurpose[] = ["recalls", "appointment", "product-pickup", "education"];
++          const purposes: CommsPurpose[] = ["recalls", "appointment", "product-pickup", "education", "marketing-promo"];
+           const explicit = readCommsPreferenceCells(patient);

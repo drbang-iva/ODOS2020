@@ -1,0 +1,80 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/commsProfileBindings.test.ts
+
+TAP version 13
+# Subtest: odos-comms-preference code slices require the exact local vocabulary
+not ok 1 - odos-comms-preference code slices require the exact local vocabulary
+  ---
+  duration_ms: 1.635375
+  type: 'test'
+  location: 'mcp/tests/commsProfileBindings.test.ts:1:671'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + undefined
+    - {
+    -   strength: 'required',
+    -   valueSet: 'https://odos2020.com/fhir/ValueSet/comms-purpose|2026-09-10'
+    - }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    strength: 'required'
+    valueSet: 'https://odos2020.com/fhir/ValueSet/comms-purpose|2026-09-10'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/commsProfileBindings.test.ts:23:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: odos-comms-consent-scope code slices require the exact local vocabulary
+ok 2 - odos-comms-consent-scope code slices require the exact local vocabulary
+  ---
+  duration_ms: 0.206458
+  type: 'test'
+  ...
+# Subtest: odos-comms-consent-capture code slices require the exact local vocabulary
+ok 3 - odos-comms-consent-capture code slices require the exact local vocabulary
+  ---
+  duration_ms: 0.218708
+  type: 'test'
+  ...
+# Subtest: comms-purpose ValueSet contains only the existing versioned codes
+ok 4 - comms-purpose ValueSet contains only the existing versioned codes
+  ---
+  duration_ms: 0.371666
+  type: 'test'
+  ...
+# Subtest: comms-channel ValueSet contains only the existing versioned codes
+ok 5 - comms-channel ValueSet contains only the existing versioned codes
+  ---
+  duration_ms: 0.264583
+  type: 'test'
+  ...
+# Subtest: comms-preference-surface ValueSet contains only the existing versioned codes
+ok 6 - comms-preference-surface ValueSet contains only the existing versioned codes
+  ---
+  duration_ms: 0.263709
+  type: 'test'
+  ...
+# Subtest: comms-consent-capture-method ValueSet contains only the existing versioned codes
+ok 7 - comms-consent-capture-method ValueSet contains only the existing versioned codes
+  ---
+  duration_ms: 0.207917
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 6
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 162.932584

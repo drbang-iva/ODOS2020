@@ -1,0 +1,64 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/commsStartPreferences.test.ts
+
+TAP version 13
+# odos-mcp: START preference restoration failed; existing preference cells retained.
+# odos-mcp: START preference restoration failed; existing preference cells retained.
+# odos-mcp: START preference restoration failed; existing preference cells retained.
+# odos-mcp: START preference restoration failed; existing preference cells retained.
+# Subtest: G13 START atomically restores four explicit text cells without marketing and is idempotent
+ok 1 - G13 START atomically restores four explicit text cells without marketing and is idempotent
+  ---
+  duration_ms: 2.310458
+  type: 'test'
+  ...
+# Subtest: START without an opt-out still replaces withheld text cells
+ok 2 - START without an opt-out still replaces withheld text cells
+  ---
+  duration_ms: 0.339208
+  type: 'test'
+  ...
+# Subtest: G14 shared-number and broader-opt-out STARTs write no preference cells
+not ok 3 - G14 shared-number and broader-opt-out STARTs write no preference cells
+  ---
+  duration_ms: 1.522
+  type: 'test'
+  location: 'mcp/tests/commsStartPreferences.test.ts:1:2848'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    4 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 4
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/commsStartPreferences.test.ts:55:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: START preserves missing-allowed preferences while removing its matching opt-out and later sends fail closed
+ok 4 - START preserves missing-allowed preferences while removing its matching opt-out and later sends fail closed
+  ---
+  duration_ms: 0.985958
+  type: 'test'
+  ...
+# Subtest: START preserves duplicate-cell preferences while removing its matching opt-out and later sends fail closed
+ok 5 - START preserves duplicate-cell preferences while removing its matching opt-out and later sends fail closed
+  ---
+  duration_ms: 0.414708
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 4
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 224.100958

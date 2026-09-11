@@ -1,0 +1,48 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/commsStartPreferences.test.ts
+
+TAP version 13
+# odos-mcp: START preference restoration failed; existing preference cells retained.
+# odos-mcp: START preference restoration failed; existing preference cells retained.
+# odos-mcp: START preference restoration failed; existing preference cells retained.
+# odos-mcp: START preference restoration failed; existing preference cells retained.
+# Subtest: G13 START atomically restores four explicit text cells without marketing and is idempotent
+ok 1 - G13 START atomically restores four explicit text cells without marketing and is idempotent
+  ---
+  duration_ms: 2.513917
+  type: 'test'
+  ...
+# Subtest: START without an opt-out still replaces withheld text cells
+ok 2 - START without an opt-out still replaces withheld text cells
+  ---
+  duration_ms: 0.294375
+  type: 'test'
+  ...
+# Subtest: G14 shared-number and broader-opt-out STARTs write no preference cells
+ok 3 - G14 shared-number and broader-opt-out STARTs write no preference cells
+  ---
+  duration_ms: 0.455667
+  type: 'test'
+  ...
+# Subtest: START preserves missing-allowed preferences while removing its matching opt-out and later sends fail closed
+ok 4 - START preserves missing-allowed preferences while removing its matching opt-out and later sends fail closed
+  ---
+  duration_ms: 0.971666
+  type: 'test'
+  ...
+# Subtest: START preserves duplicate-cell preferences while removing its matching opt-out and later sends fail closed
+ok 5 - START preserves duplicate-cell preferences while removing its matching opt-out and later sends fail closed
+  ---
+  duration_ms: 0.410791
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 186.198084

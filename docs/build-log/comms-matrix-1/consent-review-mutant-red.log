@@ -1,0 +1,106 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/commsConsentPolicy.test.ts
+
+TAP version 13
+# Subtest: preference management is grantable and held by every practice role
+ok 1 - preference management is grantable and held by every practice role
+  ---
+  duration_ms: 0.343
+  type: 'test'
+  ...
+# Subtest: provider Consent access is scoped and permits only create, read, search and guarded update
+not ok 2 - provider Consent access is scoped and permits only create, read, search and guarded update
+  ---
+  duration_ms: 27.28975
+  type: 'test'
+  location: 'mcp/tests/commsConsentPolicy.test.ts:1:1438'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    true !== false
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/commsConsentPolicy.test.ts:35:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: staff Consent access is scoped and permits only create, read, search and guarded update
+not ok 3 - staff Consent access is scoped and permits only create, read, search and guarded update
+  ---
+  duration_ms: 7.209833
+  type: 'test'
+  location: 'mcp/tests/commsConsentPolicy.test.ts:1:1438'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    true !== false
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/commsConsentPolicy.test.ts:35:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: admin Consent access is scoped and permits only create, read, search and guarded update
+not ok 4 - admin Consent access is scoped and permits only create, read, search and guarded update
+  ---
+  duration_ms: 4.313959
+  type: 'test'
+  location: 'mcp/tests/commsConsentPolicy.test.ts:1:1438'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    true !== false
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/commsConsentPolicy.test.ts:35:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: composite Consent update retains its write constraint
+ok 5 - composite Consent update retains its write constraint
+  ---
+  duration_ms: 14.693542
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 2
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 375.398125
+
+Exit:1

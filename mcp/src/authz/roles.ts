@@ -56,6 +56,7 @@ export const BUSINESS_ACTIONS = [
   "communications.send",
   "communications.call",
   "communications.optout.manage",
+  "communications.preferences.manage",
   "patient.inactivate",
   "patient.merge",
 ] as const;
@@ -137,7 +138,7 @@ export interface OdosResourceRule {
 
 export type ResourceScope =
   | { kind: "practice" }
-  | { kind: "patient-compartment"; parameterName: "patient_compartment" }
+  | { kind: "patient-compartment"; parameterName: "patient_compartment"; criteria?: string }
   | { kind: "provider-assigned-patient"; parameterName: "provider_profile" }
   | { kind: "self-profile"; parameterName: "provider_profile" }
   | { kind: "audit-only" }
@@ -571,6 +572,28 @@ const OFFICE_CHANNEL_RESOURCE_RULES: OdosResourceRule[] = [
   },
 ];
 
+const COMMS_CONSENT_IMMUTABLE_FIELDS = [
+  "id", "implicitRules", "language", "text", "contained", "extension", "modifierExtension",
+  "identifier", "scope", "category", "patient", "dateTime", "performer", "organization",
+  "sourceAttachment", "sourceReference", "policy", "policyRule", "verification", "provision",
+  "meta.id", "meta.extension", "meta.source", "meta.profile", "meta.security", "meta.tag",
+];
+
+const PATIENT_COMMS_CONSENT_RULE: OdosResourceRule = {
+  resourceType: "Consent",
+  interactions: ["create", "read", "search", "update"],
+  scope: { kind: "patient-compartment", parameterName: "patient_compartment", criteria: "category=https://odos2020.com/fhir/CodeSystem/consent-category|comms-consent&scope=http://terminology.hl7.org/CodeSystem/consentscope|patient-privacy" },
+  writeConstraint: [{
+    description: "Only communication preference evidence may be created.",
+    expression: "%before.exists().not() implies (category.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/consent-category' and code = 'comms-consent').exists() and scope.coding.where(system = 'http://terminology.hl7.org/CodeSystem/consentscope' and code = 'patient-privacy').exists())",
+  }, {
+    description: "Recorded consent evidence is immutable except for status; server-managed metadata may advance.",
+    expression: `%before.exists() implies (${COMMS_CONSENT_IMMUTABLE_FIELDS.map(
+      (field) => `(${field}.exists() = %before.${field}.exists() and (${field}.empty() or ${field} = %before.${field}))`,
+    ).join(" and ")})`,
+  }],
+};
+
 const PATIENT_COMMUNICATION_COMPARTMENT_RULE: OdosResourceRule = {
   resourceType: "Communication",
   interactions: CREATE_UPDATE_INTERACTIONS,
@@ -928,6 +951,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       "communications.content.read",
       "communications.send",
       "communications.call",
+      "communications.preferences.manage",
     ],
     membershipParameters: [
       {
@@ -963,6 +987,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       ...FINDING_CONFIGURATION_BASIC_READ_RESOURCE_RULES,
       ...OFFICE_CHANNEL_RESOURCE_RULES,
       PATIENT_COMMUNICATION_COMPARTMENT_RULE,
+      PATIENT_COMMS_CONSENT_RULE,
       ...PROTOCOL_MODULE_RESOURCE_RULES,
       ...PROCEDURE_CHARGE_RULE_BASIC_RESOURCE_RULES,
       APPEARANCE_CONFIG_READ_RULE,
@@ -988,6 +1013,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       "communications.content.read",
       "communications.send",
       "communications.call",
+      "communications.preferences.manage",
       "communications.optout.manage",
     ],
     membershipParameters: [
@@ -1015,6 +1041,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       ...PROTOCOL_RUNTIME_RESOURCE_RULES,
       ...OFFICE_CHANNEL_RESOURCE_RULES,
       FRONT_DESK_PATIENT_COMMUNICATION_RULE,
+      PATIENT_COMMS_CONSENT_RULE,
     ],
   },
   admin: {
@@ -1044,7 +1071,12 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       "communications.content.read",
       "communications.send",
       "communications.call",
+      "communications.preferences.manage",
     ],
+    membershipParameters: [{
+      name: "patient_compartment", kind: "string",
+      description: "Patient/<id> compartment reference granted for communication evidence.",
+    }],
     resourceRules: [
       ...PRACTICE_READ_RESOURCE_RULES,
       ...DISPENSARY_READ_RESOURCE_RULES,
@@ -1063,6 +1095,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       ...PROTOCOL_MODULE_RESOURCE_RULES,
       ...PROCEDURE_CHARGE_RULE_BASIC_RESOURCE_RULES,
       PATIENT_COMMUNICATION_COMPARTMENT_RULE,
+      PATIENT_COMMS_CONSENT_RULE,
       APPEARANCE_CONFIG_READ_RULE,
     ],
   },
@@ -1406,7 +1439,7 @@ function criteriaForRule(rule: OdosResourceRule): string | undefined {
     case "audit-only":
       return undefined;
     case "patient-compartment":
-      return `${rule.resourceType}?_compartment=%${rule.scope.parameterName}`;
+      return `${rule.resourceType}?_compartment=%${rule.scope.parameterName}${rule.scope.criteria ? `&${rule.scope.criteria}` : ""}`;
     case "provider-assigned-patient":
       return `${rule.resourceType}?general-practitioner=%${rule.scope.parameterName}`;
     case "self-profile":

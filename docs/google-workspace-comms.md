@@ -1,13 +1,13 @@
 # Google Workspace communications setup
 
-ODOS sends reminder email from the practice's own paid Google Workspace domain. The adapter is
+ODOS sends reminder email from the practice's own Google Workspace domain. The adapter is
 disabled unless the practice explicitly selects `google-workspace`; the reminder worker has a
 second explicit enable flag. ODOS does not hold a shared account, phone home, or copy patient data
-to PerformanceOD.
+to a shared service.
 
 ## Operator prerequisites
 
-1. Confirm the account is paid Google Workspace, not personal Gmail.
+1. Confirm the account uses Google Workspace, not personal Gmail.
 2. From a Workspace Super Admin account, review and accept Google's BAA under **Account settings →
    Legal and compliance**. The Gmail API cannot confirm BAA acceptance, so this remains a manual
    operator responsibility.
@@ -76,3 +76,7 @@ Primary references, accessed 2026-07-30:
 - [Workspace Gmail sending limits](https://knowledge.workspace.google.com/admin/gmail/gmail-sending-limits-in-google-workspace)
 - [Gmail API usage limits](https://developers.google.com/workspace/gmail/api/reference/quota)
 - [Google Workspace HIPAA compliance and BAA acceptance](https://knowledge.workspace.google.com/admin/compliance/hipaa-compliance-with-google-workspace-and-cloud-identity)
+
+## Communication preferences
+
+The server applies patient suppression before the purpose/channel preference matrix, then frequency caps and quiet hours. An explicit preference cannot undo STOP or an email opt-out. Accepted START restores the four nonmarketing text preferences in the same Patient update. Marketing SMS retains the legacy recorded-consent requirement; marketing email defaults ON while email opt-outs still block. A deliberate staff transactional education email can override a withheld Education × Email preference and records that cell ON after sending; a failed preference write reports `preferenceUpdate: "failed"` without reversing the sent result. Preference and consent-evidence routes use versioned Patient transactions; the evidence-gap report tracks missing evidence without gating sends. Call and mail preferences are recorded but have no automated sender. The preference screens are a separate delivery slice.

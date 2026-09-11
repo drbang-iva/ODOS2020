@@ -2,7 +2,6 @@
  * Must not be enabled for a live practice until ODOS can read a per-patient
  * Education communication permission. Eyefinity defaults Education to Mail only;
  * sending without consulting that permission may use a channel the record does not permit.
- * See performance-od/decisions/2026-09-10-eyefinity-communication-methods-matrix-is-the-consent-model.md.
  */
 import type { Basic, Bundle, Encounter, Resource } from "@medplum/fhirtypes";
 import type { EducationEnrollment, EducationEnrollmentFhir, EducationEnrollmentSendOutcome, EducationEnrollmentStore } from "./education-enrollment.js";
@@ -183,9 +182,8 @@ async function reconcileRow(deps: EducationSequenceWorkerDeps, snapshot: Schedul
         await recordAcceptance(deps, snapshot, row, attempt.attemptKey, proof.acceptedAt);
     }
     else if (recorded.outcome?.outcome === "suppressed") {
-        // Known issue: the suppression gate also labels absent marketing consent patient-opt-out,
-        // unlike staff dispatch's marketing-consent-absent. Defer a sixth hold reason to the matrix slice.
-        await hold(deps, snapshot, row, "patient-opt-out", "patient-opt-out", at);
+        const reason = recorded.outcome.reason === "preference-withheld" ? "preference-withheld" : "patient-opt-out";
+        await hold(deps, snapshot, row, reason, reason, at);
     }
 }
 async function recordAcceptance(deps: EducationSequenceWorkerDeps, snapshot: ScheduledEnrollmentSnapshot, row: EducationScheduledSend, key: string, acceptedAt: string): Promise<void> {
@@ -261,12 +259,12 @@ export async function runOnce(deps: EducationSequenceWorkerDeps): Promise<void> 
                     }
                     const prepared = await deps.prepare(snapshot.enrollment, row);
                     if (prepared.kind === "held") {
-                        if (prepared.reason === "patient-opt-out")
+                        if (prepared.reason === "patient-opt-out" || prepared.reason === "preference-withheld")
                             for (const future of snapshot.enrollment.scheduledSends ?? [])
                                 if (future.id !== row.id && future.channel === row.channel && ["waiting", "scheduled"].includes(future.disposition)) {
                                     future.disposition = "held";
-                                    future.holdReason = "patient-opt-out";
-                                    future.events.push({ kind: "held", actor: future.senderReference, at, reason: "patient-opt-out" });
+                                    future.holdReason = prepared.reason;
+                                    future.events.push({ kind: "held", actor: future.senderReference, at, reason: prepared.reason });
                                 }
                         await hold(deps, snapshot, row, prepared.reason, prepared.reason, at);
                         continue;

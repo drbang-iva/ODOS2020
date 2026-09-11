@@ -1,0 +1,39 @@
+{
+  "resourceType": "ValueSet",
+  "id": "comms-channel",
+  "url": "https://odos2020.com/fhir/ValueSet/comms-channel",
+  "version": "2026-09-10",
+  "name": "ODOSCommsChannelValueSet",
+  "title": "ODOS Comms Channel Value Set",
+  "status": "active",
+  "experimental": false,
+  "date": "2026-09-11",
+  "publisher": "ODOS",
+  "description": "Allowed values from the existing local communication vocabulary.",
+  "compose": {
+    "include": [
+      {
+        "system": "https://odos2020.com/fhir/CodeSystem/comms-channel",
+        "version": "2026-09-10",
+        "concept": [
+          {
+            "code": "sms",
+            "display": "Sms"
+          },
+          {
+            "code": "call",
+            "display": "Call"
+          },
+          {
+            "code": "email",
+            "display": "Email"
+          },
+          {
+            "code": "mail",
+            "display": "Mail"
+          }
+        ]
+      }
+    ]
+  }
+}
