@@ -2260,6 +2260,12 @@ async function startServer(options: {
           }
           if (options.completionError && resource.resourceType === "Communication"
             && (smsRequests.length + emailRequests.length) > 0) throw options.completionError;
+          if (resource.resourceType === "Patient") {
+            const current = patients.find((candidate) => candidate.id === id);
+            if (headers["If-Match"] !== `W/"${current?.meta?.versionId}"`) {
+              throw await fhirWriterError(412, "PUT");
+            }
+          }
           const restored = structuredClone(resource);
           if (restored.resourceType === "Patient" || restored.resourceType === "RelatedPerson") {
             if (options.recipientUpdateError) {
@@ -2463,6 +2469,39 @@ for (const failure of [undefined, new Error("Synthetic preference write failure"
         assert.equal(cell.setBy.reference, "Practitioner/staff");
         assert.equal(fixture.attributedActors.length, 1);
       }
+    } finally { await fixture.close(); }
+  });
+}
+
+for (const withheld of [true, false]) {
+  test(`F1 staff email saves contact before preference flip (withheld=${withheld})`, async () => {
+    const { replaceCommsPreferenceCells, readCommsPreferenceCells } = await import("../src/comms/suppression-gate.js");
+    const fixture = await startServer();
+    try {
+      fixture.patients[0] = replaceCommsPreferenceCells(fixture.patients[0], [{ purpose: "education", channel: "email", allowed: !withheld }], {
+        setBy: { reference: "Practitioner/staff" }, surface: "staff-demographics", recordedAt: "2026-08-01T15:00:00Z",
+      });
+      const before = readCommsPreferenceCells(fixture.patients[0])[0];
+      const address = "updated-recipient@example.test";
+      const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+        patientReference: PATIENT_REFERENCE, educationId: "dry-eye-basics", version: 2, channel: "email", lane: "clinical",
+        recipientOverride: { email: address }, alsoUpdateChart: true, idempotencyKey: `education-contact-flip-${withheld}`,
+      }, "staff");
+      assert.equal(response.status, 200);
+      const body = await response.json() as Record<string, unknown>;
+      assert.equal(body.outcome, "sent");
+      assert.equal(body.chartUpdate, undefined);
+      assert.equal(Object.hasOwn(body, "chartUpdate"), false);
+      assert.equal(Object.hasOwn(body, "preferenceUpdate"), false);
+      assert.equal(fixture.emailRequests.length, 1);
+      assert.equal(fixture.emailRequests[0].toAddress, address);
+      assert.equal(fixture.recipientUpdates.length, 1);
+      assert.equal(fixture.patients[0].telecom?.find(point => point.system === "email" && point.use !== "old")?.value, address);
+      const cell = readCommsPreferenceCells(fixture.patients[0])[0];
+      assert.equal(cell.allowed, true);
+      assert.equal(fixture.attributedActors.length, withheld ? 1 : 0);
+      if (withheld) assert.equal(cell.surface, "staff-manual-send");
+      else assert.deepEqual(cell, before);
     } finally { await fixture.close(); }
   });
 }

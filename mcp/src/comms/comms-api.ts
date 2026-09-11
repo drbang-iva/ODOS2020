@@ -1309,17 +1309,6 @@ async function dispatchEducationInternal(
       suppression: { ...requiredConsent, ...(staffEducationOverride ? { staffEducationOverride: true as const } : {}) },
     });
     if (result.outcome === "sent") {
-      if (withheldEducationEmail && actor.kind === "staff") {
-        try {
-          await writeCommsPreferences(actor.staff.fhir, body.patientReference, [{ purpose: "education", channel: "email", allowed: true }], {
-            actorReference: await preferencePractitioner(actor.staff), actorRole: actor.staff.actorRole,
-            policyUrl: actor.staff.authorizationPolicyUrl, recordedAt: deps.now?.() ?? new Date().toISOString(), surface: "staff-manual-send",
-          });
-        } catch {
-          onPreferenceFailure?.();
-          console.error("odos-mcp: education email sent; preference update failed.");
-        }
-      }
       await persistAfterSend(() => persistStaffSentSend(staff.fhir, {
         communication: reservation.communication,
         idempotencyKey: body.idempotencyKey,
@@ -1334,6 +1323,17 @@ async function dispatchEducationInternal(
         if (!updated) {
           onRecipientConflict?.();
           body = { ...body, alsoUpdateChart: false };
+        }
+      }
+      if (withheldEducationEmail && actor.kind === "staff") {
+        try {
+          await writeCommsPreferences(actor.staff.fhir, body.patientReference, [{ purpose: "education", channel: "email", allowed: true }], {
+            actorReference: await preferencePractitioner(actor.staff), actorRole: actor.staff.actorRole,
+            policyUrl: actor.staff.authorizationPolicyUrl, recordedAt: deps.now?.() ?? new Date().toISOString(), surface: "staff-manual-send",
+          });
+        } catch {
+          onPreferenceFailure?.();
+          console.error("odos-mcp: education email sent; preference update failed.");
         }
       }
       await persistAfterSend(() => persistEducationSendProvenance(staff.fhir, {
