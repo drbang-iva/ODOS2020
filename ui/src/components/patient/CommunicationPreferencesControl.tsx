@@ -191,7 +191,7 @@ export function CommunicationPreferencesControl(props: Props) {
                   : <label className="relative inline-flex items-center gap-1" title={source === "default" ? "Practice default — not yet confirmed with the patient" : "Set explicitly"}>
                     <input type="checkbox" aria-label={`${COMMUNICATION_PURPOSE_LABELS[purpose]} ${COMMUNICATION_CHANNEL_LABELS[channel]}`} checked={value} disabled={!editable}
                       className="peer absolute h-6 w-6 cursor-pointer opacity-0" onChange={event => changeCells([{ purpose, channel, allowed: event.target.checked }])} />
-                    <span aria-hidden="true" className="inline-grid h-6 w-6 place-items-center rounded border-2 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-400" style={{
+                    <span aria-hidden="true" className="inline-grid h-6 w-6 place-items-center rounded border-2 peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--odos-accent)]" style={{
                       borderColor: source === "default" ? "rgba(147,197,253,.65)" : "var(--odos-accent, #3b82f6)",
                       borderStyle: source === "default" && !value ? "dashed" : "solid",
                       background: source === "default" ? "rgba(191,219,254,.10)" : value ? "var(--odos-accent, #3b82f6)" : "transparent",
