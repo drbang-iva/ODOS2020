@@ -16,9 +16,21 @@ import { cleanupReferences, createRoleClient, fhirRequest } from "./liveRoleClie
 
 async function liveConsentProof(t: TestContext, routeOnly: boolean) {
   if (process.env.ODOS_MATRIX_LIVE !== "1") { t.skip("Dedicated synthetic matrix live lane only"); return; }
-  const baseUrl = process.env.MEDPLUM_BASE_URL!;
+  const baseUrl = process.env.ODOS_MATRIX_BASE_URL;
+  const email = process.env.ODOS_MATRIX_ADMIN_EMAIL;
+  const password = process.env.ODOS_MATRIX_ADMIN_PASSWORD;
+  assert.ok(baseUrl && email && password, "Dedicated matrix URL and credentials are required for its live lane");
+  if (process.env.MEDPLUM_BASE_URL) {
+    const shared = new URL(process.env.MEDPLUM_BASE_URL);
+    const dedicated = new URL(baseUrl);
+    const loopback = new Set(["localhost", "127.0.0.1", "[::1]"]);
+    assert.notEqual(dedicated.origin, shared.origin, "Matrix proof must use a separate server from the shared live suite");
+    if (loopback.has(shared.hostname) && loopback.has(dedicated.hostname)) {
+      assert.notEqual(dedicated.port || "80", shared.port || (shared.protocol === "https:" ? "443" : "80"), "Matrix proof must use a separate loopback port");
+    }
+  }
   assert.match(baseUrl, /^http:\/\/(localhost|127\.0\.0\.1):\d+\/?$/);
-  const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email: process.env.MEDPLUM_ADMIN_EMAIL!, password: process.env.MEDPLUM_ADMIN_PASSWORD! });
+  const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
   const projectId = await fhir.getActiveProjectId();
   const cleanup: string[] = [];
   const track = <T extends Resource>(resource: T): T => {
