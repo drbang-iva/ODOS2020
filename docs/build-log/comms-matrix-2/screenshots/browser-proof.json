@@ -82,6 +82,11 @@
       "path": "/communications/preferences/defaults"
     },
     {
+      "scenario": "new-defaults-unavailable",
+      "method": "GET",
+      "path": "/communications/preferences/defaults"
+    },
+    {
       "scenario": "engage",
       "method": "GET",
       "path": "/communications/opt-out"

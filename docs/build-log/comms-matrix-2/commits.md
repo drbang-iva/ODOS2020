@@ -16,3 +16,13 @@ Original step commits were preserved through the approved S1 resumption. Each pr
 - `df6aba84` Show consent evidence gaps and CSV export
 - `f4694add` U2: keep confirmation controls readable
 - `4f4c3f87` U7: keep evidence filters readable
+
+Review follow-ups, each isolated by spec step:
+
+- `504ea635` Bind preference responses to the requested patient
+- `415fb32d` U2: use the shared focus color token
+- `5b1a9a91` U3: use the shared notice color token
+- `18683679` U2: use theme contrast for preference saves
+- `ab2518a6` U3: use theme surfaces for communication preferences
+- `56490038` Close consent evidence test servers when browser launch fails
+- `4f99d7aa` Allow registration when communication defaults are unavailable

@@ -36,3 +36,23 @@ Absolute checkout prefixes and trailing whitespace have been removed from log ou
 | M13 | 3/4, exit 1 | 4/4, exit 0 | [diff](M13.diff) · [landed](M13-landed.log) · [red](M13-red.log) · [restored](M13-green.log) |
 | M14 | 14/15, exit 1 | 15/15, exit 0 | [diff](M14.diff) · [landed](M14-landed.log) · [red](M14-red.log) · [restored](M14-green.log) |
 | M15 | 8/9, exit 1 | 9/9, exit 0 | [diff](M15.diff) · [landed](M15-landed.log) · [red](M15-red.log) · [restored](M15-green.log) |
+
+## Supplementary response identity guard
+
+The response-binding correction rejects a preferences response for a different Patient on both reads and writes. Its separately captured mutation removes those equality predicates: 14/16 passed, exit 1; exact restoration: 16/16 passed, exit 0.
+
+[Diff](response-binding.diff) · [Landed](response-binding-landed.log) · [Red](response-binding-red.log) · [Restored](response-binding-green.log)
+
+## Supplementary registration fallback guard
+
+When server defaults cannot be read, normal registration remains available without a preference payload and explains that server defaults apply. The mutation restores the missing-grid block: 21/23 passed, exit 1; byte-identical restoration: 23/23 passed, exit 0.
+
+[Diff](registration-fallback.diff) · [Landed](registration-fallback-landed.log) · [Red](registration-fallback-red.log) · [Restored](registration-fallback-green.log)
+
+## Browser resource cleanup proof
+
+This is a deliberate launch-failure cleanup check, **not** a conventional red/green exit-zero case. Both versions report the intended synthetic browser-launch error. The original version remained alive and required termination after 8.01 seconds (reported exit 1 after termination); the corrected version exited naturally with exit 1 in 1.19 seconds. The ordinary browser suite separately completed 8/8 tests, exit 0. A temporary test copy substituted only the browser launch rejection; it was removed after the experiment.
+
+The exact commands and process outcomes are recorded in the manifest. [Original launch failure](browser-cleanup/before-launch-rejection.log) · [Corrected launch failure](browser-cleanup/after-launch-rejection.log) · [Process outcomes](browser-cleanup/launch-rejection-results.json) · [Ordinary suite](browser-cleanup/focused.log)
+
+All 26 packet patches were checked again against `4f99d7aa38378733a9920b778589baf3e085a467`. They apply without regenerating context. This is a final-source applicability check, not a claim that older guards were re-executed or that their historical test counts changed. No source or tests were modified during packaging.

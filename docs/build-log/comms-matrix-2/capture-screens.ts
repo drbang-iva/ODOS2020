@@ -39,6 +39,7 @@ const upstream = httpServer(async (req, res) => {
   const send = (value: unknown, status = 200) => { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(value)); };
   const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk));
   const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : {};
+  if (url.pathname === '/communications/preferences/defaults' && scenario === 'new-defaults-unavailable') return send({ error: 'Synthetic defaults unavailable' }, 500);
   if (url.pathname === '/communications/preferences/defaults') return send({ version: COMMS_PREFERENCE_DEFAULTS_VERSION, defaults: COMMS_PREFERENCE_DEFAULTS });
   if (url.pathname === '/communications/preferences') {
     if (scenario === 'malformed') return send({ error: 'Malformed preferences' }, 500);
@@ -63,34 +64,41 @@ const upstream = httpServer(async (req, res) => {
   if (url.pathname.startsWith('/fhir/')) return send({ resourceType: 'Bundle', type: 'searchset', entry: [] });
   return send({ error: 'No synthetic fixture response' }, 403);
 });
+let server: Awaited<ReturnType<typeof createServer>> | undefined;
+let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+try {
 await new Promise<void>(done => upstream.listen(0, '127.0.0.1', done));
 const address = upstream.address(); assert.ok(address && typeof address !== 'string');
 const target = `http://127.0.0.1:${address.port}`;
 const moduleSource = `import React from 'react'; import {createRoot} from 'react-dom/client'; import {PatientDemographicsEditor} from '/src/components/patient/PatientDemographicsEditor.tsx'; import {NewPatient} from '/src/scenes/NewPatient.tsx'; import {EngageSheet} from '/src/components/comms/EngageSheet.tsx'; import {PatientOverview} from '/src/scenes/PatientOverview.tsx'; import '/src/styles/globals.css'; const patient=${JSON.stringify(original)}; const surface=new URLSearchParams(location.search).get('surface'); const props={patient,onSaved:()=>{},onDiscard:()=>{},onPatientSaved:()=>{}}; const element=surface==='new'?React.createElement(NewPatient):surface==='engage'?React.createElement(EngageSheet,{open:true,patient,onClose:()=>{}}):surface==='chart'?React.createElement(PatientOverview,props):React.createElement(PatientDemographicsEditor,props);createRoot(document.getElementById('root')).render(element);`;
-const server = await createServer({ root: resolve(import.meta.dirname, '../../../ui'), logLevel: 'silent', server: { host: '127.0.0.1', port: 0, proxy: { '/communications': { target }, '/fhir': { target } } }, plugins: [{ name: 'matrix-screen-proof', configResolved(config) { for (const proxy of Object.values(config.server.proxy ?? {})) if (typeof proxy === 'object') proxy.target = target; }, transformIndexHtml(html) { return html.replace('/src/main.tsx', '/matrix-proof.js'); }, resolveId(id) { if (id === '/matrix-proof.js') return id; }, load(id) { if (id === '/matrix-proof.js') return moduleSource; } }] });
+server = await createServer({ root: resolve(import.meta.dirname, '../../../ui'), logLevel: 'silent', server: { host: '127.0.0.1', port: 0, proxy: { '/communications': { target }, '/fhir': { target } } }, plugins: [{ name: 'matrix-screen-proof', configResolved(config) { for (const proxy of Object.values(config.server.proxy ?? {})) if (typeof proxy === 'object') proxy.target = target; }, transformIndexHtml(html) { return html.replace('/src/main.tsx', '/matrix-proof.js'); }, resolveId(id) { if (id === '/matrix-proof.js') return id; }, load(id) { if (id === '/matrix-proof.js') return moduleSource; } }] });
 await server.listen(); const web = server.httpServer!.address(); assert.ok(web && typeof web !== 'string');
-const browser = await chromium.launch({ channel: 'chrome', args: process.platform === 'linux' ? ['--no-sandbox'] : [] });
-try {
-  for (const [state, surface] of [['mixed','edit'],['stop','edit'],['paper','edit'],['denied','edit'],['malformed','edit'],['outside','edit'],['new','new'],['engage','engage'],['engage-marketing-off','engage'],['chip','chart'],['sync','edit']]) {
+browser = await chromium.launch({ channel: 'chrome', args: process.platform === 'linux' ? ['--no-sandbox'] : [] });
+  for (const [state, surface] of [['mixed','edit'],['stop','edit'],['paper','edit'],['denied','edit'],['malformed','edit'],['outside','edit'],['new','new'],['new-defaults-unavailable','new'],['engage','engage'],['engage-marketing-off','engage'],['chip','chart'],['sync','edit']]) {
     reset(state);
     const page = await browser.newPage({ viewport: { width: 1440, height: 1600 } });
     await page.goto(`http://127.0.0.1:${web.port}/matrix-2-proof?surface=${surface}`);
     if (surface === 'engage') await page.getByText('Their education email setting is off. Sending will switch it on.').waitFor();
     else if (surface === 'chart') { await page.getByText('Demographic detail', { exact: true }).click(); await page.getByText('Texting blocked (STOP)', { exact: true }).first().waitFor(); }
+    else if (state === 'new-defaults-unavailable') { await page.getByText(/server defaults will apply/).waitFor(); assert.equal(await page.getByRole('button', { name: 'Create patient', exact: true }).isEnabled(), true); }
     else if (state === 'malformed') await page.getByText("Communication preferences can't be read for this patient. Ask a practice administrator.").waitFor();
     else await page.getByRole('table', { name: 'Communication preferences grid' }).waitFor();
     if (state === 'paper') { await page.getByLabel('Confirmed via', { exact: true }).selectOption('paper-form'); await page.getByLabel('Form date', { exact: true }).fill('2026-09-10'); }
     if (state === 'denied' || state === 'outside' || state === 'sync') {
       if (state === 'sync') await page.locator('input').first().fill('Edited draft');
       await page.getByLabel('Education Email', { exact: true }).uncheck();
+      const freshRead = state === 'sync' ? page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === '/fhir/R4/Patient/synthetic-matrix') : undefined;
       await page.getByRole('button', { name: 'Save preferences', exact: true }).click();
       if (state === 'denied') { await page.getByText("You don't have permission to change communication preferences.").waitFor(); assert.equal(await page.getByLabel('Education Email', { exact: true }).isDisabled(), true); }
       else if (state === 'outside') await page.getByText("This patient's record also changed elsewhere. Reload before saving demographics.").waitFor();
       else {
-        await page.waitForFunction(() => !document.body.textContent?.includes('You have unsaved communication preferences.'));
-        await page.waitForTimeout(300);
-        await page.getByRole('button', { name: 'Save demographics', exact: true }).click();
-        await page.waitForTimeout(100);
+        await (await freshRead!).finished();
+        await page.waitForFunction(() => Array.from(document.querySelectorAll('button')).some(button => button.textContent === 'Save demographics' && !button.disabled));
+        const [saved] = await Promise.all([
+          page.waitForResponse(response => response.request().method() === 'PUT' && new URL(response.url()).pathname === '/fhir/R4/Patient/synthetic-matrix'),
+          page.getByRole('button', { name: 'Save demographics', exact: true }).click(),
+        ]);
+        assert.equal(saved.status(), 200); await saved.finished();
         assert.equal(savedDemographics, 1); assert.equal(patient.name?.[0].given?.[0], 'Edited draft');
       }
     }
@@ -98,5 +106,5 @@ try {
     await page.close();
   }
   await writeFile(resolve(output, 'browser-proof.json'), JSON.stringify({ fixture: 'Synthetic HTTP responses; actual components and clients; server resolver supplies matrix and defaults', requests, passed: true }, null, 2));
-  console.log('Captured 11 synthetic screens and confirmed the real editor save sequence.');
-} finally { await browser.close(); await server.close(); await new Promise<void>(done => upstream.close(() => done())); }
+  console.log('Captured 12 synthetic screens and confirmed the real editor save sequence.');
+} finally { await browser?.close(); await server?.close(); if (upstream.listening) await new Promise<void>(done => upstream.close(() => done())); }

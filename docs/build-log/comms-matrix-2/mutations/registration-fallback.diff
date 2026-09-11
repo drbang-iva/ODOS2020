@@ -1,0 +1,19 @@
+--- a/ui/src/scenes/NewPatient.tsx
++++ b/ui/src/scenes/NewPatient.tsx
+@@ -47,7 +47,6 @@
+   };
+
+   const registrationOptions = (): PatientRegistrationOptions => {
+-    if (!preferences && preferenceAvailability === "unavailable") return { responsibleParties, today };
+     if (!preferences) throw new Error("Wait for communication preference defaults to load.");
+     const communicationPreferences = communicationPreferencesInput(preferences);
+     return { responsibleParties, today, ...(communicationPreferences.cells.length ? { communicationPreferences } : {}) };
+@@ -121,7 +120,7 @@
+           }}
+         />
+         <div className="mt-6 flex justify-end">
+-          <button type="button" disabled={saving || preferenceAvailability === "loading"} onClick={() => void submit()} className="rounded bg-blue-500 px-5 py-2.5 text-sm font-semibold disabled:opacity-50">{saving ? "Checking…" : "Create patient"}</button>
++          <button type="button" disabled={saving || !preferences} onClick={() => void submit()} className="rounded bg-blue-500 px-5 py-2.5 text-sm font-semibold disabled:opacity-50">{saving ? "Checking…" : "Create patient"}</button>
+         </div>
+       </section>
+

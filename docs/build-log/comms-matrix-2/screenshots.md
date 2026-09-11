@@ -14,6 +14,7 @@ The editor before/after uses the same synthetic identity, component entry, and 1
 | GET 5xx, no editable grid | [Malformed record](screenshots/malformed.png) |
 | D1 outside-write notice | [Version notice](screenshots/outside.png) |
 | New Patient server defaults | [New Patient](screenshots/new.png) |
+| New Patient defaults unavailable; registration remains available | [Defaults unavailable](screenshots/new-defaults-unavailable.png) |
 | Education Text withheld, Email override, Marketing Email ON without legacy record | [Engage](screenshots/engage.png) |
 | Marketing Email OFF | [Engage withheld](screenshots/engage-marketing-off.png) |
 | Per-number STOP chip, expanded demographic detail | [Chart chip](screenshots/chip.png) |
@@ -28,7 +29,7 @@ Reproduce the branch screens from the repository root:
 node --import ./mcp/node_modules/tsx/dist/loader.mjs docs/build-log/comms-matrix-2/capture-screens.ts
 ```
 
-Exit 0: eleven screens and the editor save sequence. [Request evidence](screenshots/browser-proof.json) records the demographics PUT using `W/"opaque-after"`; the harness asserts one save and the edited draft name. This is a synthetic conditional-write check, separate from the real server source proof.
+Exit 0: twelve screens and the editor save sequence. [Request evidence](screenshots/browser-proof.json) records the demographics PUT using `W/"opaque-after"`; the harness asserts one save and the edited draft name. The harness waits for the fresh Patient response, enabled save control, and completed save response. This is a synthetic conditional-write check, separate from the real server source proof.
 
 For the evidence page, set `CONSENT_EVIDENCE_CAPTURE` to the desired output PNG, then run from `ui`:
 

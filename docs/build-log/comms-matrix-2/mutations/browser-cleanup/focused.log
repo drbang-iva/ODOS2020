@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: consent evidence actual route and drawer are available to staff
+ok 1 - consent evidence actual route and drawer are available to staff
+  ---
+  duration_ms: 13.017
+  type: 'test'
+  ...
+# Subtest: consent evidence actual route and drawer are available to provider
+ok 2 - consent evidence actual route and drawer are available to provider
+  ---
+  duration_ms: 2.762875
+  type: 'test'
+  ...
+# Subtest: consent evidence actual route and drawer are available to admin
+ok 3 - consent evidence actual route and drawer are available to admin
+  ---
+  duration_ms: 2.284125
+  type: 'test'
+  ...
+# Subtest: M12 truncated banner and cursor Load more append patients and counts
+ok 4 - M12 truncated banner and cursor Load more append patients and counts
+  ---
+  duration_ms: 3.804667
+  type: 'test'
+  ...
+# Subtest: filters restart the report without a cursor and unset values are omitted
+ok 5 - filters restart the report without a cursor and unset values are omitted
+  ---
+  duration_ms: 6.816916
+  type: 'test'
+  ...
+# Subtest: unknown roles get an access message, no report request, and no drawer entry
+ok 6 - unknown roles get an access message, no report request, and no drawer entry
+  ---
+  duration_ms: 1.275709
+  type: 'test'
+  ...
+# Subtest: server 403 hides the report and export controls with an access message
+ok 7 - server 403 hides the report and export controls with an access message
+  ---
+  duration_ms: 1.865666
+  type: 'test'
+  ...
+# Subtest: consent evidence direct navigation keeps exact document bypass and CSV downloads through the real client
+ok 8 - consent evidence direct navigation keeps exact document bypass and CSV downloads through the real client
+  ---
+  duration_ms: 3707.543666
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4933.666125

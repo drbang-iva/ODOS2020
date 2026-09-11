@@ -1,12 +1,9 @@
 Command: npm --prefix ui test
+Source: 4f99d7aa38378733a9920b778589baf3e085a467
 Exit: 0
-  ...
-1..1401
-# tests 1414
-# suites 0
-# pass 1414
+# tests 1417
+# pass 1417
 # fail 0
 # cancelled 0
 # skipped 0
-# todo 0
-# duration_ms 213972.991167
+# duration_ms 217692.112792
