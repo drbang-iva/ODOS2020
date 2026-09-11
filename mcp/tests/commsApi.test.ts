@@ -2283,10 +2283,13 @@ async function startServer(options: {
               }
             }
           }
+          const currentVersion = resource.resourceType === "Patient"
+            ? patients.find((patient) => patient.id === id)?.meta?.versionId
+            : persistedCommunications[index]?.meta?.versionId;
           const persisted = {
             ...restored,
             id,
-            meta: { ...resource.meta, versionId: String(Number(persistedCommunications[index]?.meta?.versionId ?? "0") + 1) },
+            meta: { ...resource.meta, versionId: String(Number(currentVersion ?? "0") + 1) },
           } as T;
           if (persisted.resourceType === "Patient") {
             const patientIndex = patients.findIndex((patient) => patient.id === persisted.id);
@@ -2496,6 +2499,7 @@ for (const withheld of [true, false]) {
       assert.equal(fixture.emailRequests.length, 1);
       assert.equal(fixture.emailRequests[0].toAddress, address);
       assert.equal(fixture.recipientUpdates.length, 1);
+      assert.equal(fixture.patients[0].meta?.versionId, withheld ? "3" : "2");
       assert.equal(fixture.patients[0].telecom?.find(point => point.system === "email" && point.use !== "old")?.value, address);
       const cell = readCommsPreferenceCells(fixture.patients[0])[0];
       assert.equal(cell.allowed, true);
