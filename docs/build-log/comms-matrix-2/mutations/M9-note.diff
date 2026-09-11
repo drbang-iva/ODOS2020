@@ -1,0 +1,11 @@
+--- a/ui/src/components/comms/EngageSheet.tsx
++++ b/ui/src/components/comms/EngageSheet.tsx
+@@ -336,7 +336,7 @@
+                 </div>
+                 {preferenceCell(item, "sms")?.value === false && preferenceCell(item, "sms")?.source !== "suppression" && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">{preferenceWithheldMessage(item, "sms")}</p>}
+                 {item.consentClass === "marketing" && preferenceCell(item, "email")?.value === false && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Marketing email are off for this patient.</p>}
+-                {educationEmailWithheld(item) && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Their education email setting is off. Sending will switch it on.</p>}
++                {educationEmailWithheld(item) && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Education email is available.</p>}
+                 <div className="mt-3 flex flex-wrap gap-2">
+                   <ChannelButton label="Text" channel="sms" item={item} disabled={!recipients.length || preferenceBlocked(item, "sms") || !item.channels.includes("sms") || !defaultSmsLaneConfigured || smsAvailability === "loading" || isSmsLaneSuppressed(smsState, defaultSmsLane)} onClick={beginSend} />
+                   <ChannelButton label="Email" channel="email" item={item} disabled={!recipients.length || preferenceBlocked(item, "email") || !item.channels.includes("email") || !availableChannels.email} onClick={beginSend} />

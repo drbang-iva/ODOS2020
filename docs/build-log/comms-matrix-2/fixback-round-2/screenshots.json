@@ -1,0 +1,20 @@
+{
+  "sourceHead": "832a694322531092d45c0261c73245691ae2f6fa",
+  "syntheticOnly": true,
+  "captureExit": 0,
+  "inspected": [
+    "stop",
+    "mixed",
+    "engage",
+    "engage-marketing-off"
+  ],
+  "sha256": {
+    "stop": "dc6b7ba102a95d2b8ad54abfe785e9c50fb6aff7f109a37bdabe445d3a95b5d4",
+    "mixed": "b76cbd702e4059e21f64ec21d0cb247ff77cbe88ce34de0b002d3fc57f6d3d27",
+    "engage": "e756d32bec8965dd1706de4907060fc3507e9766d988b20c199edaaa2867bee0",
+    "engage-marketing-off": "c567a402000b7a349f621862fe14c79b8fa1cfb23d6441756174b8535639879b"
+  },
+  "stopBytesUnchanged": true,
+  "disabledOpacity": "0.4",
+  "disabledCursor": "not-allowed"
+}

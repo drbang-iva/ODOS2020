@@ -1,0 +1,160 @@
+TAP version 13
+# Subtest: M1 STOP cells are locked amber labels, never checkboxes; default and legacy states remain distinct
+ok 1 - M1 STOP cells are locked amber labels, never checkboxes; default and legacy states remain distinct
+  ---
+  duration_ms: 16.914333
+  type: 'test'
+  ...
+# Subtest: M7 unconfirmed patient save sends only changed cells and reports the server version
+ok 2 - M7 unconfirmed patient save sends only changed cells and reports the server version
+  ---
+  duration_ms: 5.221875
+  type: 'test'
+  ...
+# Subtest: M7 patient paper confirmation sends all twenty cells and evidence fields
+ok 3 - M7 patient paper confirmation sends all twenty cells and evidence fields
+  ---
+  duration_ms: 4.182
+  type: 'test'
+  ...
+# Subtest: patient paper confirmation with no date refuses to send
+ok 4 - patient paper confirmation with no date refuses to send
+  ---
+  duration_ms: 2.416917
+  type: 'test'
+  ...
+# Subtest: 403 leaves the loaded grid read-only with the permission message
+ok 5 - 403 leaves the loaded grid read-only with the permission message
+  ---
+  duration_ms: 2.755208
+  type: 'test'
+  ...
+# Subtest: 409 rereads the grid, discards stale changes, and never calls the successful-write callback
+ok 6 - 409 rereads the grid, discards stale changes, and never calls the successful-write callback
+  ---
+  duration_ms: 3.134333
+  type: 'test'
+  ...
+# Subtest: M14 a preferences GET 5xx renders the malformed-record message and no grid
+ok 7 - M14 a preferences GET 5xx renders the malformed-record message and no grid
+  ---
+  duration_ms: 0.645208
+  type: 'test'
+  ...
+# Subtest: registration reads server defaults and D2 sends only changes unless the grid is confirmed
+ok 8 - registration reads server defaults and D2 sends only changes unless the grid is confirmed
+  ---
+  duration_ms: 1.767042
+  type: 'test'
+  ...
+# Subtest: registration paper confirmation includes the date and twenty cells
+ok 9 - registration paper confirmation includes the date and twenty cells
+  ---
+  duration_ms: 1.4605
+  type: 'test'
+  ...
+# Subtest: external refresh preserves unsaved changes while new STOP state locks the cell
+ok 10 - external refresh preserves unsaved changes while new STOP state locks the cell
+  ---
+  duration_ms: 2.0715
+  type: 'test'
+  ...
+# Subtest: evidence warning amber is reserved for uncovered marketing Text and last setter is shown
+ok 11 - evidence warning amber is reserved for uncovered marketing Text and last setter is shown
+  ---
+  duration_ms: 1.073833
+  type: 'test'
+  ...
+# Subtest: M14 failed refresh removes a previously loaded grid instead of leaving editable stale preferences
+ok 12 - M14 failed refresh removes a previously loaded grid instead of leaving editable stale preferences
+  ---
+  duration_ms: 2.258834
+  type: 'test'
+  ...
+# Subtest: bulk selection never changes a suppressed cell in an unconfirmed write
+ok 13 - bulk selection never changes a suppressed cell in an unconfirmed write
+  ---
+  duration_ms: 1.937708
+  type: 'test'
+  ...
+# Subtest: a late rejected 409 reread cannot hide a different patient's freshly loaded grid
+ok 14 - a late rejected 409 reread cannot hide a different patient's freshly loaded grid
+  ---
+  duration_ms: 2.093125
+  type: 'test'
+  ...
+# Subtest: evidence without capture metadata uses a neutral label instead of inventing an in-person confirmation
+ok 15 - evidence without capture metadata uses a neutral label instead of inventing an in-person confirmation
+  ---
+  duration_ms: 0.717
+  type: 'test'
+  ...
+# Subtest: F1 in-person confirmation excludes the STOP-locked Text column
+not ok 16 - F1 in-person confirmation excludes the STOP-locked Text column
+  ---
+  duration_ms: 3.125375
+  type: 'test'
+  location: 'ui/tests/communicationPreferencesControl.test.tsx:1:15256'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    20 !== 15
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 15
+  actual: 20
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (ui/tests/communicationPreferencesControl.test.tsx:239:12)
+    async mount (ui/tests/communicationPreferencesControl.test.tsx:25:65)
+    async TestContext.<anonymous> (ui/tests/communicationPreferencesControl.test.tsx:230:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: F1 paper-form confirmation excludes the STOP-locked Text column
+not ok 17 - F1 paper-form confirmation excludes the STOP-locked Text column
+  ---
+  duration_ms: 2.078792
+  type: 'test'
+  location: 'ui/tests/communicationPreferencesControl.test.tsx:1:15256'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    20 !== 15
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 15
+  actual: 20
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (ui/tests/communicationPreferencesControl.test.tsx:239:12)
+    async mount (ui/tests/communicationPreferencesControl.test.tsx:25:65)
+    async TestContext.<anonymous> (ui/tests/communicationPreferencesControl.test.tsx:230:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: mixed evidence names email evidence and the sms gap
+ok 18 - mixed evidence names email evidence and the sms gap
+  ---
+  duration_ms: 1.183875
+  type: 'test'
+  ...
+# Subtest: mixed evidence names sms evidence and the email gap
+ok 19 - mixed evidence names sms evidence and the email gap
+  ---
+  duration_ms: 0.672125
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 17
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 424.575458

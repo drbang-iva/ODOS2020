@@ -1,0 +1,11 @@
+--- a/ui/src/scenes/PatientOverview.tsx
++++ b/ui/src/scenes/PatientOverview.tsx
+@@ -828,7 +828,7 @@
+     let active = true;
+     setTextingBlocked(false);
+     if (patient.id) void readSmsOptOut(`Patient/${patient.id}`).then(state => {
+-      if (active) setTextingBlocked(state.remainingOptOuts.global || state.remainingOptOuts.numbers.length > 0);
++      if (active) setTextingBlocked(state.remainingOptOuts.global);
+     }).catch(() => { if (active) setTextingBlocked(false); });
+     return () => { active = false; };
+   }, [patient.id, patient.meta?.versionId]);

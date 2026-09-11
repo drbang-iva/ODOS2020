@@ -120,9 +120,9 @@ test("diagnosis Engage prefilters content, names guardian recipients, blocks mar
     assert.match(text, /For: Dry eye syndrome \(H04\.123\)/);
     assert.match(text, /Sarah Jenkins · mother/);
     assert.match(text, /Alex Jenkins · father/);
-    assert.match(text, /Marketing consent not on file/);
+    assert.match(text, /Communication preferences could not be read; dispatch will enforce them/);
     const marketingSms = renderer.root.findByProps({ "aria-label": "Text Dry eye treatment options" });
-    assert.equal(marketingSms.props.disabled, true);
+    assert.equal(marketingSms.props.disabled, false);
 
     act(() => renderer.root.findByProps({ "aria-label": "Text Understanding dry eye" }).props.onClick());
     const lane = renderer.root.findByProps({ "aria-label": "Send via lane" });
@@ -155,6 +155,28 @@ test("diagnosis Engage prefilters content, names guardian recipients, blocks mar
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("marketing companion: a withheld cell disables despite no legacy record", async () => {
+  const originalFetch = globalThis.fetch;
+  const purposes = ["recalls", "appointment", "product-pickup", "marketing-promo", "education"];
+  const channels = ["sms", "call", "email", "mail"];
+  const rows = purposes.flatMap(purpose => channels.map(channel => ({ purpose, channel, value: false, source: "explicit",
+    evidenceSummary: [], lastSet: null, evidenceStatus: "not-required" })));
+  const matrix = Object.fromEntries(purposes.map(purpose => [purpose, Object.fromEntries(channels.map(channel => [channel, { value: false, source: "explicit" }]))]));
+  globalThis.fetch = async input => {
+    const url = String(input);
+    if (url.includes("/communications/preferences")) return new Response(JSON.stringify({ patientReference: "Patient/patient-1", matrix, rows }));
+    if (url.includes("/communications/education")) return new Response(JSON.stringify(educationList([ITEMS[1]!])));
+    return unsuppressedSmsFetch();
+  };
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => { renderer = create(<EngageSheet open patient={{ ...PATIENT, birthDate: "1980-04-03" }} onClose={() => undefined} />); });
+    assert.equal(renderer.root.findByProps({ "aria-label": "Text Dry eye treatment options" }).props.disabled, true);
+    assert.equal(renderer.root.findByProps({ "aria-label": "Email Dry eye treatment options" }).props.disabled, true);
+    assert.match(renderedText(renderer), /Marketing texts are off for this patient/);
+  } finally { if (renderer) act(() => renderer.unmount()); globalThis.fetch = originalFetch; }
 });
 
 test("toolbar Engage stays unfiltered and a locked practice pins retail content to clinical without a toggle", async () => {

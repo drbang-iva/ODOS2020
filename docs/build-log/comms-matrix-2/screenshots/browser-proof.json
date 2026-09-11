@@ -1,0 +1,181 @@
+{
+  "fixture": "Synthetic HTTP responses; actual components and clients; server resolver supplies matrix and defaults",
+  "requests": [
+    {
+      "scenario": "mixed",
+      "method": "GET",
+      "path": "/communications/opt-out"
+    },
+    {
+      "scenario": "mixed",
+      "method": "GET",
+      "path": "/communications/preferences"
+    },
+    {
+      "scenario": "stop",
+      "method": "GET",
+      "path": "/communications/opt-out"
+    },
+    {
+      "scenario": "stop",
+      "method": "GET",
+      "path": "/communications/preferences"
+    },
+    {
+      "scenario": "paper",
+      "method": "GET",
+      "path": "/communications/opt-out"
+    },
+    {
+      "scenario": "paper",
+      "method": "GET",
+      "path": "/communications/preferences"
+    },
+    {
+      "scenario": "denied",
+      "method": "GET",
+      "path": "/communications/opt-out"
+    },
+    {
+      "scenario": "denied",
+      "method": "GET",
+      "path": "/communications/preferences"
+    },
+    {
+      "scenario": "denied",
+      "method": "PUT",
+      "path": "/communications/preferences"
+    },
+    {
+      "scenario": "malformed",
+      "method": "GET",
+      "path": "/communications/opt-out"
+    },
+    {
+      "scenario": "malformed",
+      "method": "GET",
+      "path": "/communications/preferences"
+    },
+    {
+      "scenario": "outside",
+      "method": "GET",
+      "path": "/communications/opt-out"
+    },
+    {
+      "scenario": "outside",
+      "method": "GET",
+      "path": "/communications/preferences"
+    },
+    {
+      "scenario": "outside",
+      "method": "PUT",
+      "path": "/communications/preferences"
+    },
+    {
+      "scenario": "outside",
+      "method": "GET",
+      "path": "/communications/preferences"
+    },
+    {
+      "scenario": "new",
+      "method": "GET",
+      "path": "/communications/preferences/defaults"
+    },
+    {
+      "scenario": "new-defaults-unavailable",
+      "method": "GET",
+      "path": "/communications/preferences/defaults"
+    },
+    {
+      "scenario": "engage",
+      "method": "GET",
+      "path": "/communications/opt-out"
+    },
+    {
+      "scenario": "engage",
+      "method": "GET",
+      "path": "/communications/preferences"
+    },
+    {
+      "scenario": "engage",
+      "method": "GET",
+      "path": "/communications/education"
+    },
+    {
+      "scenario": "engage-marketing-off",
+      "method": "GET",
+      "path": "/communications/opt-out"
+    },
+    {
+      "scenario": "engage-marketing-off",
+      "method": "GET",
+      "path": "/communications/preferences"
+    },
+    {
+      "scenario": "engage-marketing-off",
+      "method": "GET",
+      "path": "/communications/education"
+    },
+    {
+      "scenario": "chip",
+      "method": "GET",
+      "path": "/communications/opt-out"
+    },
+    {
+      "scenario": "chip",
+      "method": "GET",
+      "path": "/clinic/patients/synthetic-matrix/overview"
+    },
+    {
+      "scenario": "chip",
+      "method": "GET",
+      "path": "/fhir/R4/VisionPrescription"
+    },
+    {
+      "scenario": "sync",
+      "method": "GET",
+      "path": "/communications/opt-out"
+    },
+    {
+      "scenario": "sync",
+      "method": "GET",
+      "path": "/communications/preferences"
+    },
+    {
+      "scenario": "sync",
+      "method": "PUT",
+      "path": "/communications/preferences"
+    },
+    {
+      "scenario": "sync",
+      "method": "GET",
+      "path": "/fhir/R4/Patient/synthetic-matrix"
+    },
+    {
+      "scenario": "sync",
+      "method": "GET",
+      "path": "/communications/preferences"
+    },
+    {
+      "scenario": "sync",
+      "method": "PUT",
+      "path": "/fhir/R4/Patient/synthetic-matrix",
+      "ifMatch": "W/\"opaque-after\""
+    }
+  ],
+  "disabledVisuals": [
+    {
+      "scenario": "engage",
+      "disabled": 2,
+      "opacity": "0.4",
+      "cursor": "not-allowed"
+    },
+    {
+      "scenario": "engage-marketing-off",
+      "disabled": 3,
+      "opacity": "0.4",
+      "cursor": "not-allowed"
+    }
+  ],
+  "passed": true
+}

@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: consent evidence direct navigation keeps exact document bypass and CSV downloads through the real client
+not ok 1 - consent evidence direct navigation keeps exact document bypass and CSV downloads through the real client
+  ---
+  duration_ms: 32.651958
+  type: 'test'
+  location: 'ui/tests/.consentEvidence-launch-failure.test.tsx:1:4790'
+  failureType: 'testCodeFailure'
+  error: 'Synthetic browser launch rejection'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    TestContext.<anonymous> (ui/tests/.consentEvidence-launch-failure.test.tsx:82:40)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...

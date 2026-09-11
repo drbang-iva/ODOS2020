@@ -1,0 +1,39 @@
+Working directory: ui
+Command: node --import tsx --test --test-name-pattern=M12 tests/consentEvidence.test.tsx
+Captured process exit: 1
+TAP version 13
+# Subtest: M12 truncated banner and cursor Load more append patients and counts
+not ok 1 - M12 truncated banner and cursor Load more append patients and counts
+  ---
+  duration_ms: 12.128958
+  type: 'test'
+  location: 'ui/tests/consentEvidence.test.tsx:1:2397'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /This report is truncated/. Input:
+
+    'ODOS  20/20 Communications › Consent evidence Find a patient  Schedule ▦ ＋ New… Sections 🔔 S synthetic@example.test Roles Staff Logout Consent evidence Communication preference gaps by tier. Suppressed channels are listed separately from gaps. Export CSV Tier  1  ·  Marketing texts 1 Tier  2  ·  Other texts 0 Tier  3  ·  Email 0 Tier All tiers 1  ·  Marketing texts 2  ·  Other texts 3  ·  Email Purpose All purposes Recalls Appointment Product Pick Up Marketing Promo Education Channel All channels Text Email Patient Purpose Channel Tier Status Patient/synthetic-one Marketing Promo Text 1 gap Patient/synthetic-stop Marketing Promo Text 1 suppressed × Sections Every working surface, one slide away. Every day ✓ Consent evidence preference gaps by tier ▤ Education review held steps and staff handouts ▦ Schedule day grid, all providers ⌂ Front desk schedule and floor ⇄ Work reason-grouped billing work ◫ Reports / A-R production and aging ▤ Statements patient statement runs ◇ Lab orders optical orders in flight Catalog & operations ⌗ Catalog & pricing frames catalog and pricing ▥ Inventory frames inventory ⚭ Integrations Frames Data Practice ≡ Audit log every access and change ◉ Clinic Clinic home and patients'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'ODOS  20/20 Communications › Consent evidence Find a patient  Schedule ▦ ＋ New… Sections 🔔 S synthetic@example.test Roles Staff Logout Consent evidence Communication preference gaps by tier. Suppressed channels are listed separately from gaps. Export CSV Tier  1  ·  Marketing texts 1 Tier  2  ·  Other texts 0 Tier  3  ·  Email 0 Tier All tiers 1  ·  Marketing texts 2  ·  Other texts 3  ·  Email Purpose All purposes Recalls Appointment Product Pick Up Marketing Promo Education Channel All channels Text Email Patient Purpose Channel Tier Status Patient/synthetic-one Marketing Promo Text 1 gap Patient/synthetic-stop Marketing Promo Text 1 suppressed × Sections Every working surface, one slide away. Every day ✓ Consent evidence preference gaps by tier ▤ Education review held steps and staff handouts ▦ Schedule day grid, all providers ⌂ Front desk schedule and floor ⇄ Work reason-grouped billing work ◫ Reports / A-R production and aging ▤ Statements patient statement runs ◇ Lab orders optical orders in flight Catalog & operations ⌗ Catalog & pricing frames catalog and pricing ▥ Inventory frames inventory ⚭ Integrations Frames Data Practice ≡ Audit log every access and change ◉ Clinic Clinic home and patients'
+  operator: 'match'
+  stack: |-
+    <anonymous> (ui/tests/consentEvidence.test.tsx:40:12)
+    mount (ui/tests/consentEvidence.test.tsx:22:244)
+    async TestContext.<anonymous> (ui/tests/consentEvidence.test.tsx:36:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1188.800542
+
+Exit: 1

@@ -1,0 +1,111 @@
+Working directory: ui
+Command: node --import tsx --test tests/communicationPreferencesClient.test.tsx
+Captured process exit: 1
+TAP version 13
+# Subtest: preferences client reads twenty cells and saves the exact payload with opaque versions
+ok 1 - preferences client reads twenty cells and saves the exact payload with opaque versions
+  ---
+  duration_ms: 9.22575
+  type: 'test'
+  ...
+# Subtest: M11 preferences client rejects malformed source
+ok 2 - M11 preferences client rejects malformed source
+  ---
+  duration_ms: 0.429792
+  type: 'test'
+  ...
+# Subtest: M11 preferences client rejects malformed evidenceStatus
+ok 3 - M11 preferences client rejects malformed evidenceStatus
+  ---
+  duration_ms: 0.174459
+  type: 'test'
+  ...
+# Subtest: M11 preferences client rejects malformed patientVersion
+not ok 4 - M11 preferences client rejects malformed patientVersion
+  ---
+  duration_ms: 1.008625
+  type: 'test'
+  location: 'ui/tests/communicationPreferencesClient.test.tsx:1:2247'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection (CommunicationsResponseError).'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (ui/tests/communicationPreferencesClient.test.tsx:31:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: M11 preferences client rejects malformed matrix
+ok 5 - M11 preferences client rejects malformed matrix
+  ---
+  duration_ms: 0.200458
+  type: 'test'
+  ...
+# Subtest: M11 preferences client rejects malformed rows
+ok 6 - M11 preferences client rejects malformed rows
+  ---
+  duration_ms: 0.19025
+  type: 'test'
+  ...
+# Subtest: M11 preferences client rejects malformed metadata
+ok 7 - M11 preferences client rejects malformed metadata
+  ---
+  duration_ms: 0.289833
+  type: 'test'
+  ...
+# Subtest: M11 preferences client rejects malformed evidence
+ok 8 - M11 preferences client rejects malformed evidence
+  ---
+  duration_ms: 0.830208
+  type: 'test'
+  ...
+# Subtest: defaults parser requires every server boolean and version
+ok 9 - defaults parser requires every server boolean and version
+  ---
+  duration_ms: 0.581
+  type: 'test'
+  ...
+# Subtest: opt-out parsers retain optional opaque versions and reject malformed present shapes
+not ok 10 - opt-out parsers retain optional opaque versions and reject malformed present shapes
+  ---
+  duration_ms: 1.068833
+  type: 'test'
+  location: 'ui/tests/communicationPreferencesClient.test.tsx:1:3596'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection (CommunicationsResponseError).'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (ui/tests/communicationPreferencesClient.test.tsx:47:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: evidence client preserves filters, cursor, suppressed rows and CSV metadata
+ok 11 - evidence client preserves filters, cursor, suppressed rows and CSV metadata
+  ---
+  duration_ms: 0.973166
+  type: 'test'
+  ...
+# Subtest: education sent parser surfaces only the supported preference failure flag
+ok 12 - education sent parser surfaces only the supported preference failure flag
+  ---
+  duration_ms: 0.239042
+  type: 'test'
+  ...
+# Subtest: preference and CSV failures preserve HTTP status for recovery
+ok 13 - preference and CSV failures preserve HTTP status for recovery
+  ---
+  duration_ms: 0.31875
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 11
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 368.149541
+
+Exit: 1

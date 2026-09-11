@@ -1,0 +1,1 @@
+123:          <button type="button" disabled={saving || !preferences} onClick={() => void submit()} className="rounded bg-blue-500 px-5 py-2.5 text-sm font-semibold disabled:opacity-50">{saving ? "Checking…" : "Create patient"}</button>

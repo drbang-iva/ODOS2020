@@ -1,0 +1,11 @@
+--- a/ui/src/components/patient/SmsOptOutControl.tsx
++++ b/ui/src/components/patient/SmsOptOutControl.tsx
+@@ -122,7 +122,7 @@
+           ...(recordScope === "per-number" ? { number: recordNumber } : {}),
+         });
+         if (!isCurrentOperation()) return;
+-        patientWrittenRef.current?.(nextState.patientVersion);
++        void nextState.patientVersion;
+         setState(nextState);
+         stateChangeRef.current?.(nextState);
+         if (activeLaneRole) {

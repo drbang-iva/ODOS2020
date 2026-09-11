@@ -1,0 +1,11 @@
+--- a/ui/src/components/patient/PatientDemographicsEditor.tsx
++++ b/ui/src/components/patient/PatientDemographicsEditor.tsx
+@@ -96,7 +96,7 @@
+     const before = heldPatientRef.current;
+     const notice = "This patient's record also changed elsewhere. Reload before saving demographics.";
+     setPreferenceRefresh(value => value + 1);
+-    if (!version || version.writtenAgainst !== before.meta?.versionId || !before.id) {
++    if (!version || !before.id) {
+       setVersionNotice(notice);
+       refreshingRef.current = false;
+       setRefreshing(false);

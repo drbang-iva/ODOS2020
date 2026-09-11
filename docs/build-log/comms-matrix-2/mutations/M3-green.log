@@ -1,0 +1,67 @@
+Working directory: ui
+Command: node --import tsx --test --test-concurrency=1 tests/communicationPreferencesConcurrency.test.tsx
+Captured process exit: 0
+TAP version 13
+# Subtest: M2 preferences save adopts the post-write version while keeping the demographic draft
+ok 1 - M2 preferences save adopts the post-write version while keeping the demographic draft
+  ---
+  duration_ms: 32.357375
+  type: 'test'
+  ...
+# Subtest: M4 intervening write refuses adoption and leaves demographics conditional save stale
+ok 2 - M4 intervening write refuses adoption and leaves demographics conditional save stale
+  ---
+  duration_ms: 7.82975
+  type: 'test'
+  ...
+# Subtest: unknown version refuses adoption and leaves demographics conditional save stale
+ok 3 - unknown version refuses adoption and leaves demographics conditional save stale
+  ---
+  duration_ms: 5.067584
+  type: 'test'
+  ...
+# Subtest: fresh read version mismatch refuses adoption and leaves demographics conditional save stale
+ok 4 - fresh read version mismatch refuses adoption and leaves demographics conditional save stale
+  ---
+  duration_ms: 6.374458
+  type: 'test'
+  ...
+# Subtest: M15 dirty preferences warn and stay available until saved before demographics
+ok 5 - M15 dirty preferences warn and stay available until saved before demographics
+  ---
+  duration_ms: 5.554041
+  type: 'test'
+  ...
+# Subtest: M3 record opt-out adopts before saving demographics
+ok 6 - M3 record opt-out adopts before saving demographics
+  ---
+  duration_ms: 4.604042
+  type: 'test'
+  ...
+# Subtest: M3 clear opt-out adopts before saving demographics
+ok 7 - M3 clear opt-out adopts before saving demographics
+  ---
+  duration_ms: 4.274834
+  type: 'test'
+  ...
+# Subtest: opt-out record 409 recovery never reports an owned write
+ok 8 - opt-out record 409 recovery never reports an owned write
+  ---
+  duration_ms: 2.14525
+  type: 'test'
+  ...
+# Subtest: opt-out clear 409 recovery never reports an owned write
+ok 9 - opt-out clear 409 recovery never reports an owned write
+  ---
+  duration_ms: 3.197916
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 472.089708

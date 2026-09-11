@@ -1,0 +1,131 @@
+Working directory: ui
+Command: node --import tsx --test --test-concurrency=1 tests/communicationPreferencesConcurrency.test.tsx
+Captured process exit: 1
+TAP version 13
+# Subtest: M2 preferences save adopts the post-write version while keeping the demographic draft
+not ok 1 - M2 preferences save adopts the post-write version while keeping the demographic draft
+  ---
+  duration_ms: 32.850458
+  type: 'test'
+  location: 'ui/tests/communicationPreferencesConcurrency.test.tsx:1:3337'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (ui/tests/communicationPreferencesConcurrency.test.tsx:48:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: M4 intervening write refuses adoption and leaves demographics conditional save stale
+ok 2 - M4 intervening write refuses adoption and leaves demographics conditional save stale
+  ---
+  duration_ms: 7.916917
+  type: 'test'
+  ...
+# Subtest: unknown version refuses adoption and leaves demographics conditional save stale
+ok 3 - unknown version refuses adoption and leaves demographics conditional save stale
+  ---
+  duration_ms: 5.201416
+  type: 'test'
+  ...
+# Subtest: fresh read version mismatch refuses adoption and leaves demographics conditional save stale
+ok 4 - fresh read version mismatch refuses adoption and leaves demographics conditional save stale
+  ---
+  duration_ms: 6.645042
+  type: 'test'
+  ...
+# Subtest: M15 dirty preferences warn and stay available until saved before demographics
+not ok 5 - M15 dirty preferences warn and stay available until saved before demographics
+  ---
+  duration_ms: 5.547875
+  type: 'test'
+  location: 'ui/tests/communicationPreferencesConcurrency.test.tsx:1:4534'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (ui/tests/communicationPreferencesConcurrency.test.tsx:69:83)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: M3 record opt-out adopts before saving demographics
+not ok 6 - M3 record opt-out adopts before saving demographics
+  ---
+  duration_ms: 4.149667
+  type: 'test'
+  location: 'ui/tests/communicationPreferencesConcurrency.test.tsx:1:5608'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (ui/tests/communicationPreferencesConcurrency.test.tsx:81:49)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: M3 clear opt-out adopts before saving demographics
+not ok 7 - M3 clear opt-out adopts before saving demographics
+  ---
+  duration_ms: 3.7245
+  type: 'test'
+  location: 'ui/tests/communicationPreferencesConcurrency.test.tsx:1:5608'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (ui/tests/communicationPreferencesConcurrency.test.tsx:81:49)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: opt-out record 409 recovery never reports an owned write
+ok 8 - opt-out record 409 recovery never reports an owned write
+  ---
+  duration_ms: 2.339209
+  type: 'test'
+  ...
+# Subtest: opt-out clear 409 recovery never reports an owned write
+ok 9 - opt-out clear 409 recovery never reports an owned write
+  ---
+  duration_ms: 2.594084
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 5
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 480.288458

@@ -1,0 +1,13 @@
+--- a/ui/src/components/patient/PatientDemographicsEditor.tsx
++++ b/ui/src/components/patient/PatientDemographicsEditor.tsx
+@@ -111,8 +111,8 @@
+         setVersionNotice(notice);
+         return;
+       }
+-      heldPatientRef.current = fresh;
+-      setHeldPatient(fresh);
++      heldPatientRef.current = before;
++      setHeldPatient(before);
+       setVersionNotice(undefined);
+       onPatientRefreshed?.(fresh);
+     } catch {

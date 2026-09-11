@@ -1,3 +1,4 @@
+import { canViewConsentEvidence } from "../scenes/ConsentEvidence";
 import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import type { Practitioner } from "@medplum/fhirtypes";
 import { fhir } from "../lib/fhir";
@@ -25,6 +26,7 @@ const BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   [CLINIC_PATH]: [{ label: "Clinic" }],
   "/clinic/patients": [{ label: "Clinic", href: CLINIC_PATH }, { label: "Patients" }],
   "/clinic/protocols": [{ label: "Clinic", href: CLINIC_PATH }, { label: "Protocol Library" }],
+  "/communications/consent-evidence": [{ label: "Communications" }, { label: "Consent evidence" }],
   "/communications/education/review": [{ label: "Communications" }, { label: "Education review" }],
   "/audit/log": [{ label: "Audit log" }],
   "/admin/optical/catalog/frames": [{ label: "Catalog & pricing" }, { label: "Frames" }],
@@ -170,6 +172,7 @@ function SectionsDrawer({ open, roles, onClose }: { open: boolean; roles: readon
         <h2>Sections</h2>
         <p>Every working surface, one slide away.</p>
         <DrawerGroup label="Every day">
+          {canViewConsentEvidence(roles) && <DrawerLink icon="✓" title="Consent evidence" detail="preference gaps by tier" href="/communications/consent-evidence" onClick={route} />}
           <DrawerLink icon="▤" title="Education review" detail="held steps and staff handouts" href="/communications/education/review" onClick={route} />
           <DrawerLink icon="▦" title="Schedule" detail="day grid, all providers" href="/schedule/day" onClick={route} />
           <DrawerLink icon="⌂" title="Front desk" detail="schedule and floor" href="/frontdesk" onClick={route} />

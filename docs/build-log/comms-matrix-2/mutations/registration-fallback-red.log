@@ -1,0 +1,186 @@
+TAP version 13
+# Subtest: M1 STOP cells are locked amber labels, never checkboxes; default and legacy states remain distinct
+ok 1 - M1 STOP cells are locked amber labels, never checkboxes; default and legacy states remain distinct
+  ---
+  duration_ms: 15.969709
+  type: 'test'
+  ...
+# Subtest: M7 unconfirmed patient save sends only changed cells and reports the server version
+ok 2 - M7 unconfirmed patient save sends only changed cells and reports the server version
+  ---
+  duration_ms: 5.577792
+  type: 'test'
+  ...
+# Subtest: M7 patient paper confirmation sends all twenty cells and evidence fields
+ok 3 - M7 patient paper confirmation sends all twenty cells and evidence fields
+  ---
+  duration_ms: 4.549
+  type: 'test'
+  ...
+# Subtest: patient paper confirmation with no date refuses to send
+ok 4 - patient paper confirmation with no date refuses to send
+  ---
+  duration_ms: 2.265708
+  type: 'test'
+  ...
+# Subtest: 403 leaves the loaded grid read-only with the permission message
+ok 5 - 403 leaves the loaded grid read-only with the permission message
+  ---
+  duration_ms: 3.208417
+  type: 'test'
+  ...
+# Subtest: 409 rereads the grid, discards stale changes, and never calls the successful-write callback
+ok 6 - 409 rereads the grid, discards stale changes, and never calls the successful-write callback
+  ---
+  duration_ms: 3.596625
+  type: 'test'
+  ...
+# Subtest: M14 a preferences GET 5xx renders the malformed-record message and no grid
+ok 7 - M14 a preferences GET 5xx renders the malformed-record message and no grid
+  ---
+  duration_ms: 0.80175
+  type: 'test'
+  ...
+# Subtest: registration reads server defaults and D2 sends only changes unless the grid is confirmed
+ok 8 - registration reads server defaults and D2 sends only changes unless the grid is confirmed
+  ---
+  duration_ms: 1.973084
+  type: 'test'
+  ...
+# Subtest: registration paper confirmation includes the date and twenty cells
+ok 9 - registration paper confirmation includes the date and twenty cells
+  ---
+  duration_ms: 1.992125
+  type: 'test'
+  ...
+# Subtest: external refresh preserves unsaved changes while new STOP state locks the cell
+ok 10 - external refresh preserves unsaved changes while new STOP state locks the cell
+  ---
+  duration_ms: 2.399917
+  type: 'test'
+  ...
+# Subtest: evidence warning amber is reserved for uncovered marketing Text and last setter is shown
+ok 11 - evidence warning amber is reserved for uncovered marketing Text and last setter is shown
+  ---
+  duration_ms: 1.22075
+  type: 'test'
+  ...
+# Subtest: M14 failed refresh removes a previously loaded grid instead of leaving editable stale preferences
+ok 12 - M14 failed refresh removes a previously loaded grid instead of leaving editable stale preferences
+  ---
+  duration_ms: 2.134125
+  type: 'test'
+  ...
+# Subtest: bulk selection never changes a suppressed cell in an unconfirmed write
+ok 13 - bulk selection never changes a suppressed cell in an unconfirmed write
+  ---
+  duration_ms: 3.136583
+  type: 'test'
+  ...
+# Subtest: a late rejected 409 reread cannot hide a different patient's freshly loaded grid
+ok 14 - a late rejected 409 reread cannot hide a different patient's freshly loaded grid
+  ---
+  duration_ms: 2.637791
+  type: 'test'
+  ...
+# Subtest: evidence without capture metadata uses a neutral label instead of inventing an in-person confirmation
+ok 15 - evidence without capture metadata uses a neutral label instead of inventing an in-person confirmation
+  ---
+  duration_ms: 0.830875
+  type: 'test'
+  ...
+# Subtest: M7 New Patient unconfirmed registration sends only changed cells and grid makes no separate writes
+ok 16 - M7 New Patient unconfirmed registration sends only changed cells and grid makes no separate writes
+  ---
+  duration_ms: 27.621125
+  type: 'test'
+  ...
+# Subtest: M7 New Patient paper confirmation sends all twenty cells and carries them through Create anyway
+ok 17 - M7 New Patient paper confirmation sends all twenty cells and carries them through Create anyway
+  ---
+  duration_ms: 9.936083
+  type: 'test'
+  ...
+# Subtest: unchanged and unconfirmed registration leaves defaults implicit
+ok 18 - unchanged and unconfirmed registration leaves defaults implicit
+  ---
+  duration_ms: 4.836792
+  type: 'test'
+  ...
+# Subtest: registration preference denial shows a specific message
+ok 19 - registration preference denial shows a specific message
+  ---
+  duration_ms: 6.119
+  type: 'test'
+  ...
+# Subtest: failed defaults permit registration with implicit server defaults and retain Retry
+not ok 20 - failed defaults permit registration with implicit server defaults and retain Retry
+  ---
+  duration_ms: 2.801042
+  type: 'test'
+  location: 'ui/tests/registrationCommunicationPreferences.test.tsx:1:6238'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    true !== false
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (ui/tests/registrationCommunicationPreferences.test.tsx:106:12)
+    mounted (ui/tests/registrationCommunicationPreferences.test.tsx:33:78)
+    async TestContext.<anonymous> (ui/tests/registrationCommunicationPreferences.test.tsx:100:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: pending defaults disable registration and Retry can recover the editable grid
+not ok 21 - pending defaults disable registration and Retry can recover the editable grid
+  ---
+  duration_ms: 3.092542
+  type: 'test'
+  location: 'ui/tests/registrationCommunicationPreferences.test.tsx:1:6988'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    true !== false
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (ui/tests/registrationCommunicationPreferences.test.tsx:120:12)
+    async mounted (ui/tests/registrationCommunicationPreferences.test.tsx:33:72)
+    async TestContext.<anonymous> (ui/tests/registrationCommunicationPreferences.test.tsx:117:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: paper confirmation requires a valid date before registration
+ok 22 - paper confirmation requires a valid date before registration
+  ---
+  duration_ms: 4.260083
+  type: 'test'
+  ...
+# Subtest: both registration client entry points omit an empty optional preference payload
+ok 23 - both registration client entry points omit an empty optional preference payload
+  ---
+  duration_ms: 0.460208
+  type: 'test'
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 21
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 603.745333
+
+Exit: 1

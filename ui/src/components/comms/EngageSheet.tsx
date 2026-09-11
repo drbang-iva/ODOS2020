@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Patient, RelatedPerson } from "@medplum/fhirtypes";
 import {
   dispatchEducation,
+  readCommunicationPreferences,
+  type CommunicationPreferencesResponse,
   listEducation,
   type EducationCatalogResult,
   type EducationChannelAvailability,
@@ -19,9 +21,6 @@ import {
 import { ExamEntrySheet } from "../charting/ExamEntrySheet";
 import { SmsOptOutControl } from "../patient/SmsOptOutControl";
 import { SmsOptOutErrorBoundary } from "../patient/SmsOptOutErrorBoundary";
-
-const MARKETING_CONSENT_EXTENSION_URL =
-  "https://odos2020.com/fhir/StructureDefinition/odos-comms-marketing-consent";
 
 const UNAVAILABLE_CHANNELS: EducationChannelAvailability = {
   clinicalSms: false,
@@ -46,6 +45,7 @@ interface PendingSend {
   item: EducationContentItem;
   channel: "sms" | "email" | "print";
   idempotencyKeys: Record<string, string>;
+  educationEmailWithheld: boolean;
 }
 
 const defaultApi: EngageSheetApi = {
@@ -103,7 +103,31 @@ export function EngageSheet({
   const [printUrl, setPrintUrl] = useState<string>();
   const [sending, setSending] = useState(false);
   const minor = patient.birthDate ? isMinorOn(patient.birthDate, today()) : false;
-  const marketingConsent = hasMarketingConsent(patient);
+  const [preferences, setPreferences] = useState<CommunicationPreferencesResponse>();
+  const [preferenceAvailability, setPreferenceAvailability] = useState<"loading" | "available" | "unavailable">("loading");
+  const [preferenceRevision, setPreferenceRevision] = useState(0);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    setPreferences(undefined);
+    setPreferenceAvailability("loading");
+    readCommunicationPreferences(patientReference).then(value => {
+      if (active) { setPreferences(value); setPreferenceAvailability("available"); }
+    }).catch(() => { if (active) setPreferenceAvailability("unavailable"); });
+    return () => { active = false; };
+  }, [open, patientReference, preferenceRevision]);
+
+  const preferenceCell = (item: EducationContentItem, channel: "sms" | "email") =>
+    preferences?.matrix[item.consentClass === "marketing" ? "marketing-promo" : "education"][channel];
+  const preferenceBlocked = (item: EducationContentItem, channel: PendingSend["channel"]) => {
+    if (channel === "print") return false;
+    const cell = preferenceCell(item, channel);
+    return preferenceAvailability === "loading" || cell?.source === "suppression"
+      || (cell?.value === false && (channel === "sms" || item.consentClass === "marketing"));
+  };
+  const educationEmailWithheld = (item: EducationContentItem) => item.consentClass !== "marketing"
+    && preferenceCell(item, "email")?.source === "explicit" && preferenceCell(item, "email")?.value === false;
 
   useEffect(() => {
     if (!open) return;
@@ -137,7 +161,7 @@ export function EngageSheet({
   }, [guardians, minor, patient]);
 
   const beginSend = (item: EducationContentItem, channel: PendingSend["channel"]) => {
-    setPending({ item, channel, idempotencyKeys: {} });
+    setPending({ item, channel, idempotencyKeys: {}, educationEmailWithheld: channel === "email" && educationEmailWithheld(item) });
     setLane(chartDispatchLane === "locked_clinical"
       ? "clinical"
       : item.laneHint === "retail" ? "frontdesk" : "clinical");
@@ -217,14 +241,21 @@ export function EngageSheet({
         setError(refusal.reason);
       } else if (suppression?.reason === "patient-opt-out") {
         setError("Texting is blocked — this patient opted out.");
+      } else if (suppression?.reason === "preference-withheld") {
+        setError(preferenceWithheldMessage(pending.item, pending.channel));
       } else if (suppression) {
         setError("Texting is blocked by the communication frequency limit.");
       } else if (rescheduled) {
         setStatus(`Not sent — try after ${rescheduled.rescheduledAt}.`);
-      } else if (results.some((result) => result.outcome === "sent" && result.chartUpdate === "conflict")) {
-        setStatus("Education sent. The chart's contact wasn't updated because the record changed — update it from Edit demographics.");
       } else {
-        setStatus(results.length > 1 ? `Education sent to ${results.length} recipients.` : "Education sent.");
+        const preferenceFailed = results.some(result => result.outcome === "sent" && result.preferenceUpdate === "failed");
+        const chartConflict = results.some(result => result.outcome === "sent" && result.chartUpdate === "conflict");
+        const sentMessage = preferenceFailed
+          ? "Education sent, but their education email setting couldn't be switched on. Update it in Edit demographics."
+          : pending.educationEmailWithheld ? "Education sent. Their education email setting is now on."
+            : results.length > 1 ? `Education sent to ${results.length} recipients.` : "Education sent.";
+        setStatus(`${sentMessage}${chartConflict ? " The chart's contact wasn't updated because the record changed — update it from Edit demographics." : ""}`);
+        if (pending.educationEmailWithheld && !preferenceFailed) setPreferenceRevision(current => current + 1);
       }
       setPending(undefined);
     } catch (cause) {
@@ -279,17 +310,19 @@ export function EngageSheet({
                 setSmsAvailability("available");
               }}
               onUnavailable={() => setSmsAvailability("unavailable")}
+              onPatientWritten={() => setPreferenceRevision(current => current + 1)}
             />
           </SmsOptOutErrorBoundary>
         </section>
 
+        {preferenceAvailability === "unavailable" && <p className="text-sm text-[color:var(--odos-muted)]">Communication preferences could not be read; dispatch will enforce them.</p>}
+        {preferenceAvailability === "loading" && <p className="text-sm text-[color:var(--odos-muted)]">Checking communication preferences…</p>}
         {error && <p role="alert" className="text-sm text-[color:var(--odos-alert)]">{error}</p>}
         {status && <p role="status" className="text-sm text-[color:var(--odos-emerald)]">{status}</p>}
         {printUrl && <a aria-label="Open print artifact" href={printUrl} target="_blank" rel="noreferrer">Open print artifact</a>}
 
         <section className="grid gap-3" aria-label="Education content">
           {items.map((item) => {
-            const marketingBlocked = item.consentClass === "marketing" && !marketingConsent;
             const defaultSmsLane = chartDispatchLane === "locked_clinical"
               ? "clinical"
               : item.laneHint === "retail" ? "frontdesk" : "clinical";
@@ -301,17 +334,19 @@ export function EngageSheet({
                   <h3 className="font-semibold">{item.title}</h3>
                   <span className="text-xs uppercase text-[color:var(--odos-muted)]">{item.kind}</span>
                 </div>
-                {marketingBlocked && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Marketing consent not on file</p>}
+                {preferenceCell(item, "sms")?.value === false && preferenceCell(item, "sms")?.source !== "suppression" && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">{preferenceWithheldMessage(item, "sms")}</p>}
+                {item.consentClass === "marketing" && preferenceCell(item, "email")?.value === false && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Marketing email is off for this patient.</p>}
+                {educationEmailWithheld(item) && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Their education email setting is off. Sending will switch it on.</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <ChannelButton label="Text" channel="sms" item={item} disabled={!recipients.length || marketingBlocked || !item.channels.includes("sms") || !defaultSmsLaneConfigured || smsAvailability === "loading" || isSmsLaneSuppressed(smsState, defaultSmsLane)} onClick={beginSend} />
-                  <ChannelButton label="Email" channel="email" item={item} disabled={!recipients.length || marketingBlocked || !item.channels.includes("email") || !availableChannels.email} onClick={beginSend} />
-                  <ChannelButton label="Print" channel="print" item={item} disabled={!recipients.length || marketingBlocked || !item.channels.includes("print") || !availableChannels.print} onClick={beginSend} />
+                  <ChannelButton label="Text" channel="sms" item={item} disabled={!recipients.length || preferenceBlocked(item, "sms") || !item.channels.includes("sms") || !defaultSmsLaneConfigured || smsAvailability === "loading" || isSmsLaneSuppressed(smsState, defaultSmsLane)} onClick={beginSend} />
+                  <ChannelButton label="Email" channel="email" item={item} disabled={!recipients.length || preferenceBlocked(item, "email") || !item.channels.includes("email") || !availableChannels.email} onClick={beginSend} />
+                  <ChannelButton label="Print" channel="print" item={item} disabled={!recipients.length || !item.channels.includes("print") || !availableChannels.print} onClick={beginSend} />
                 </div>
                 {item.channels.includes("email") && !availableChannels.email && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Email is not configured for this practice.</p>}
                 {item.channels.includes("sms") && defaultSmsLaneUnavailableReason && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">{defaultSmsLaneUnavailableReason}</p>}
                 {smsAvailability === "loading" && item.channels.includes("sms") && <p className="mt-2 text-sm text-[color:var(--odos-muted)]">Checking SMS availability…</p>}
                 {smsAvailability === "unavailable" && item.channels.includes("sms") && <p className="mt-2 text-sm text-[color:var(--odos-muted)]">SMS preferences could not be read; dispatch will enforce opt-outs.</p>}
-                {isSmsLaneSuppressed(smsState, defaultSmsLane) && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Texting is suppressed on this item’s default lane. Re-enroll above to send.</p>}
+                {(isSmsLaneSuppressed(smsState, defaultSmsLane) || preferenceCell(item, "sms")?.source === "suppression") && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Texting is suppressed on this item’s default lane. Re-enroll above to send.</p>}
               </article>
             );
           })}
@@ -360,7 +395,7 @@ export function EngageSheet({
             )}
             <div className="flex gap-2">
               <button type="button" onClick={() => setPending(undefined)}>Cancel</button>
-              <button type="button" aria-label="Confirm education send" disabled={sending || (overrideMode && !overrideValue.trim()) || (pending.channel === "sms" && (!isSmsLaneConfigured(availableChannels, lane) || isSmsLaneSuppressed(smsState, lane)))} onClick={() => void confirmSend()}>
+              <button type="button" aria-label="Confirm education send" disabled={sending || preferenceBlocked(pending.item, pending.channel) || (overrideMode && !overrideValue.trim()) || (pending.channel === "sms" && (!isSmsLaneConfigured(availableChannels, lane) || isSmsLaneSuppressed(smsState, lane)))} onClick={() => void confirmSend()}>
                 {sending ? "Sending…" : pending.channel === "print" ? "Open print artifact" : "Send"}
               </button>
             </div>
@@ -378,7 +413,7 @@ function ChannelButton({ label, channel, item, disabled, onClick }: {
   disabled: boolean;
   onClick: (item: EducationContentItem, channel: PendingSend["channel"]) => void;
 }) {
-  return <button type="button" aria-label={`${label} ${item.title}`} disabled={disabled} onClick={() => onClick(item, channel)}>{label}</button>;
+  return <button type="button" aria-label={`${label} ${item.title}`} className="rounded border border-[color:var(--odos-line)] px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40" disabled={disabled} onClick={() => onClick(item, channel)}>{label}</button>;
 }
 
 function isSmsLaneConfigured(
@@ -450,12 +485,10 @@ function isPrimaryGuardian(person: RelatedPerson): boolean {
     extension.url === RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL && extension.valueBoolean === true) === true;
 }
 
-function hasMarketingConsent(patient: Patient): boolean {
-  const extension = patient.extension?.find((candidate) => candidate.url === MARKETING_CONSENT_EXTENSION_URL);
-  if (!extension) return false;
-  const consent = extension.extension?.find((candidate) => candidate.url === "consent")?.valueBoolean;
-  const recorded = extension.extension?.find((candidate) => candidate.url === "recorded")?.valueDateTime;
-  return consent === true && typeof recorded === "string" && !Number.isNaN(Date.parse(recorded));
+function preferenceWithheldMessage(item: EducationContentItem, channel: PendingSend["channel"]): string {
+  if (item.consentClass === "marketing") return channel === "sms" ? "Marketing texts are off for this patient." : "Marketing email is off for this patient.";
+  return channel === "email" ? "Education by email is switched off in this patient's communication preferences."
+    : "Education by text is switched off in this patient's communication preferences.";
 }
 
 function isSmsLaneSuppressed(state: SmsOptOutState | undefined, lane: "clinical" | "frontdesk"): boolean {

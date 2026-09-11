@@ -1,0 +1,187 @@
+not ok 251 - SMART registration refuses a session project mismatch before POSTing a client
+  ---
+  duration_ms: 0.595959
+  type: 'test'
+  location: 'tests/setup-wizard/smart-app-registry-adapter.test.ts:1:549'
+  failureType: 'testCodeFailure'
+  error: 'Explicit Project/practice-target differs from MEDPLUM_PROJECT_ID Project/672cc4b0-16e5-41ee-8c22-ada25ede3647. Intentional foreign-project work requires --allow-foreign-project.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    resolveConfiguredInstallationProject (scripts/installation-project.ts:80:11)
+    createMedplumSmartAppRegistryAdapter (data/medplum-adapters/smart-app-registry-adapter.ts:62:18)
+    TestContext.<anonymous> (tests/setup-wizard/smart-app-registry-adapter.test.ts:30:21)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+
+not ok 252 - SMART registration checks auth/me before creating a client in the configured project
+  ---
+  duration_ms: 0.103
+  type: 'test'
+  location: 'tests/setup-wizard/smart-app-registry-adapter.test.ts:1:1336'
+  failureType: 'testCodeFailure'
+  error: 'Explicit Project/practice-target differs from MEDPLUM_PROJECT_ID Project/672cc4b0-16e5-41ee-8c22-ada25ede3647. Intentional foreign-project work requires --allow-foreign-project.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    resolveConfiguredInstallationProject (scripts/installation-project.ts:80:11)
+    createMedplumSmartAppRegistryAdapter (data/medplum-adapters/smart-app-registry-adapter.ts:62:18)
+    TestContext.<anonymous> (tests/setup-wizard/smart-app-registry-adapter.test.ts:63:21)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+
+not ok 758 - synced practice policies enforce all repaired clinical writes on running Medplum
+  ---
+  duration_ms: 106.601167
+  type: 'test'
+  location: 'mcp/tests/clinicalWriteAuthzLive.test.ts:1:1060'
+  failureType: 'testCodeFailure'
+  error: 'ODOS_OPERATOR_PROJECT_ID is required for the privileged live authorization fixture seeder.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    requiredEnv (mcp/tests/integration-helpers.ts:377:11)
+    createOperatorSeeder (mcp/tests/integration-helpers.ts:338:21)
+    createLiveAuthorizationClients (mcp/tests/integration-helpers.ts:222:55)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (mcp/tests/clinicalWriteAuthzLive.test.ts:45:7)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+
+not ok 1664 - a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+  ---
+  duration_ms: 210.768333
+  type: 'test'
+  location: 'mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:1220'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected one synced canonical provider AccessPolicy in Project/672cc4b0-16e5-41ee-8c22-ada25ede3647.
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/encounterUndoLedgerAuthzLive.test.ts:103:14)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+
+not ok 2076 - local Medplum seeds 5001 patient answers, paginates reviews, and excludes ROS in the index
+  ---
+  duration_ms: 5174.596041
+  type: 'test'
+  location: 'mcp/tests/historyPaginationMedplum.test.ts:1:589'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"status":"429","outcome":{"resourceType":"OperationOutcome","id":"too-many-requests","issue":[{"severity":"error","code":"throttled","details":{"text":"Too Many Requests"},"diagnostics":"{\"_remainingPoints\":0,\"_msBeforeNext\":36343,\"_consumedPoints\":50031,\"_isFirstInDuration\":false,\"limit\":50000}"}]}}
+    + actual - expected
+
+    + {
+    +   response: {
+    +     outcome: {
+    +       id: 'too-many-requests',
+    +       issue: [
+    +         {
+    +           code: 'throttled',
+    +           details: {
+    +             text: 'Too Many Requests'
+    +           },
+    +           diagnostics: '{"_remainingPoints":0,"_msBeforeNext":36343,"_consumedPoints":50031,"_isFirstInDuration":false,"limit":50000}',
+    +           severity: 'error'
+    +         }
+    +       ],
+    +       resourceType: 'OperationOutcome'
+    +     },
+    +     status: '429'
+    +   }
+    + }
+    - undefined
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual:
+    response:
+      outcome:
+        resourceType: 'OperationOutcome'
+        id: 'too-many-requests'
+        issue:
+          0:
+            severity: 'error'
+            code: 'throttled'
+            details:
+              text: 'Too Many Requests'
+            diagnostics: '{"_remainingPoints":0,"_msBeforeNext":36343,"_consumedPoints":50031,"_isFirstInDuration":false,"limit":50000}'
+      status: '429'
+  operator: 'strictEqual'
+  stack: |-
+    seed (mcp/tests/historyPaginationMedplum.test.ts:34:14)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (mcp/tests/historyPaginationMedplum.test.ts:37:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+
+not ok 2566 - update_patient MCP write tool integrates with Medplum
+  ---
+  duration_ms: 156.34
+  type: 'test'
+  location: 'mcp/tests/patient-update.test.ts:1:210'
+  failureType: 'testCodeFailure'
+  error: 'FHIR POST /fhir/R4/Patient [Patient] 429 Too Many Requests: {"_remainingPoints":0,"_msBeforeNext":9216,"_consumedPoints":50031,"_isFirstInDuration":false,"limit":50000}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    toError (mcp/src/fhir-client.ts:316:19)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async <anonymous> (mcp/src/fhir-client.ts:806:19)
+    async audited (mcp/src/fhir-client.ts:397:14)
+    async TestContext.<anonymous> (mcp/tests/patient-update.test.ts:28:19)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+
+not ok 3839 - audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available
+  ---
+  duration_ms: 109.691625
+  type: 'test'
+  location: 'mcp/tests/v05a-authz.test.ts:1:12602'
+  failureType: 'testCodeFailure'
+  error: 'ODOS_OPERATOR_PROJECT_ID is required for the privileged live authorization fixture seeder.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    requiredEnv (mcp/tests/integration-helpers.ts:377:11)
+    createOperatorSeeder (mcp/tests/integration-helpers.ts:338:21)
+    createLiveAuthorizationClients (mcp/tests/integration-helpers.ts:222:55)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (mcp/tests/v05a-authz.test.ts:410:26)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+
+not ok 3840 - v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)
+  ---
+  duration_ms: 69.456333
+  type: 'test'
+  location: 'mcp/tests/v05a-authz.test.ts:1:13407'
+  failureType: 'testCodeFailure'
+  error: 'ODOS_OPERATOR_PROJECT_ID is required for the privileged live authorization fixture seeder.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    requiredEnv (mcp/tests/integration-helpers.ts:377:11)
+    createOperatorSeeder (mcp/tests/integration-helpers.ts:338:21)
+    createLiveAuthorizationClients (mcp/tests/integration-helpers.ts:222:55)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (mcp/tests/v05a-authz.test.ts:437:66)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...

@@ -1,3 +1,4 @@
+import { patientWriteVersion, type PatientWriteVersion } from "./patient-version.js";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { Bundle, Consent, Patient } from "@medplum/fhirtypes";
@@ -20,6 +21,7 @@ export async function writeCommsPreferences(
   cells: CommsPreferenceInput[],
   actor: CommsPreferenceActor,
   confirmation?: { confirmedVia?: ConsentCaptureMethod | null; formDate?: string },
+  onPatientWritten?: (version: PatientWriteVersion | undefined) => void,
 ): Promise<Patient> {
   const patient = await fhir.read<Patient>("Patient", patientReference.slice("Patient/".length));
   if (!patient.id || !patient.meta?.versionId) throw new Error("Preference write requires a Patient id and version.");
@@ -40,12 +42,13 @@ export async function writeCommsPreferences(
     ],
   };
   if (consent) transaction.entry!.push({ fullUrl: consentUrl, resource: consent, request: { method: "POST", url: "Consent" } });
-  await fhir.executeTransactionAsActor(transaction, {
+  const response = await fhir.executeTransactionAsActor(transaction, {
     actorReference: actor.actorReference, actorRole: actor.actorRole, policyUrl: actor.policyUrl,
     actionReason: "communications.preferences.manage set",
   }, { "X-ODOS-Source": "mcp/comms-preferences-write" }, {
     validateResponse: response => assertPreferenceTransaction(response, transaction.entry!.length),
   });
+  onPatientWritten?.(patientWriteVersion(response, `Patient/${patient.id}`, patient.meta.versionId));
   return fhir.read<Patient>("Patient", patient.id);
 }
 
@@ -111,7 +114,8 @@ export function buildCommsConsent(patientReference: string, scope: Pick<CommsPre
   };
 }
 export async function attachCommsConsentEvidence(fhir: Pick<MedplumClient, "read" | "executeTransactionAsActor">,
-  input: ReturnType<typeof parseConsentEvidenceInput>, actor: CommsPreferenceActor): Promise<Patient> {
+  input: ReturnType<typeof parseConsentEvidenceInput>, actor: CommsPreferenceActor,
+  onPatientWritten?: (version: PatientWriteVersion | undefined) => void): Promise<Patient> {
   const patient = await fhir.read<Patient>("Patient", input.patientReference.slice(8));
   if (!patient.id || !patient.meta?.versionId) throw new Error("Preference write requires a Patient id and version.");
   const consent = buildCommsConsent(input.patientReference, input.scope, input.method, actor, input.formDate);
@@ -131,9 +135,10 @@ export async function attachCommsConsentEvidence(fhir: Pick<MedplumClient, "read
       entityValues: input.scope.map(pair => ({ role: "source", display: `${pair.purpose}/${pair.channel}: evidence recorded` })),
     }), request: { method: "POST", url: "Provenance" } },
   ] };
-  await fhir.executeTransactionAsActor(transaction, { actorReference: actor.actorReference, actorRole: actor.actorRole,
+  const response = await fhir.executeTransactionAsActor(transaction, { actorReference: actor.actorReference, actorRole: actor.actorRole,
     policyUrl: actor.policyUrl, actionReason: "communications.preferences.manage evidence" },
   { "X-ODOS-Source": "mcp/comms-preferences-write" }, { validateResponse: response => assertPreferenceTransaction(response, transaction.entry!.length) });
+  onPatientWritten?.(patientWriteVersion(response, `Patient/${patient.id}`, patient.meta.versionId));
   return fhir.read<Patient>("Patient", patient.id);
 }
 

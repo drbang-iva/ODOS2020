@@ -1,0 +1,11 @@
+--- a/ui/src/components/comms/EngageSheet.tsx
++++ b/ui/src/components/comms/EngageSheet.tsx
+@@ -252,7 +252,7 @@
+         const chartConflict = results.some(result => result.outcome === "sent" && result.chartUpdate === "conflict");
+         const sentMessage = preferenceFailed
+           ? "Education sent, but their education email setting couldn't be switched on. Update it in Edit demographics."
+-          : pending.educationEmailWithheld ? "Education sent. Their education email setting is now on."
++          : false ? "Education sent. Their education email setting is now on."
+             : results.length > 1 ? `Education sent to ${results.length} recipients.` : "Education sent.";
+         setStatus(`${sentMessage}${chartConflict ? " The chart's contact wasn't updated because the record changed — update it from Edit demographics." : ""}`);
+         if (pending.educationEmailWithheld && !preferenceFailed) setPreferenceRevision(current => current + 1);

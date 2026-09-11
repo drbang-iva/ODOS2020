@@ -1,0 +1,11 @@
+--- a/ui/src/components/comms/EngageSheet.tsx
++++ b/ui/src/components/comms/EngageSheet.tsx
+@@ -124,7 +124,7 @@
+     if (channel === "print") return false;
+     const cell = preferenceCell(item, channel);
+     return preferenceAvailability === "loading" || cell?.source === "suppression"
+-      || (cell?.value === false && (channel === "sms" || item.consentClass === "marketing"));
++      || (cell?.value === false && item.consentClass === "marketing");
+   };
+   const educationEmailWithheld = (item: EducationContentItem) => item.consentClass !== "marketing"
+     && preferenceCell(item, "email")?.source === "explicit" && preferenceCell(item, "email")?.value === false;

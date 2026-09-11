@@ -1,0 +1,201 @@
+Working directory: ui
+Command: node --import tsx --test tests/engageCommunicationPreferences.test.tsx tests/engageSheet.test.tsx
+Captured process exit: 0
+TAP version 13
+# Subtest: M8 marketing email and Print follow effective preferences without a legacy consent record
+ok 1 - M8 marketing email and Print follow effective preferences without a legacy consent record
+  ---
+  duration_ms: 22.545041
+  type: 'test'
+  ...
+# Subtest: M8 withheld marketing email and Text stay disabled; Print stays available, legacy=false
+ok 2 - M8 withheld marketing email and Text stay disabled; Print stays available, legacy=false
+  ---
+  duration_ms: 2.542625
+  type: 'test'
+  ...
+# Subtest: M8 withheld marketing email and Text stay disabled; Print stays available, legacy=true
+ok 3 - M8 withheld marketing email and Text stay disabled; Print stays available, legacy=true
+  ---
+  duration_ms: 2.69375
+  type: 'test'
+  ...
+# Subtest: M9 education Text withheld disables; education Email remains enabled with override note
+ok 4 - M9 education Text withheld disables; education Email remains enabled with override note
+  ---
+  duration_ms: 3.854542
+  type: 'test'
+  ...
+# Subtest: STOP still disables Text for both item purposes; email suppression cannot be overridden
+ok 5 - STOP still disables Text for both item purposes; email suppression cannot be overridden
+  ---
+  duration_ms: 3.05625
+  type: 'test'
+  ...
+# Subtest: M10 preference-withheld result names transactional sms
+ok 6 - M10 preference-withheld result names transactional sms
+  ---
+  duration_ms: 2.820042
+  type: 'test'
+  ...
+# Subtest: M10 preference-withheld result names transactional email
+ok 7 - M10 preference-withheld result names transactional email
+  ---
+  duration_ms: 2.253125
+  type: 'test'
+  ...
+# Subtest: M10 preference-withheld result names marketing sms
+ok 8 - M10 preference-withheld result names marketing sms
+  ---
+  duration_ms: 2.409792
+  type: 'test'
+  ...
+# Subtest: M10 preference-withheld result names marketing email
+ok 9 - M10 preference-withheld result names marketing email
+  ---
+  duration_ms: 2.760708
+  type: 'test'
+  ...
+# Subtest: M10 sent preference failure remains success and preserves chart conflict=undefined
+ok 10 - M10 sent preference failure remains success and preserves chart conflict=undefined
+  ---
+  duration_ms: 2.294167
+  type: 'test'
+  ...
+# Subtest: M10 sent preference failure remains success and preserves chart conflict=conflict
+ok 11 - M10 sent preference failure remains success and preserves chart conflict=conflict
+  ---
+  duration_ms: 2.060709
+  type: 'test'
+  ...
+# Subtest: failed matrix read is explicit and dispatch remains the enforcement boundary
+ok 12 - failed matrix read is explicit and dispatch remains the enforcement boundary
+  ---
+  duration_ms: 2.360625
+  type: 'test'
+  ...
+# Subtest: matrix read loading holds electronic buttons while Print remains available
+ok 13 - matrix read loading holds electronic buttons while Print remains available
+  ---
+  duration_ms: 1.374208
+  type: 'test'
+  ...
+# Subtest: diagnosis Engage prefilters content, names guardian recipients, blocks marketing, and warns on a front-desk override
+ok 14 - diagnosis Engage prefilters content, names guardian recipients, blocks marketing, and warns on a front-desk override
+  ---
+  duration_ms: 23.612042
+  type: 'test'
+  ...
+# Subtest: marketing companion: a withheld cell disables despite no legacy record
+ok 15 - marketing companion: a withheld cell disables despite no legacy record
+  ---
+  duration_ms: 2.483584
+  type: 'test'
+  ...
+# Subtest: toolbar Engage stays unfiltered and a locked practice pins retail content to clinical without a toggle
+ok 16 - toolbar Engage stays unfiltered and a locked practice pins retail content to clinical without a toggle
+  ---
+  duration_ms: 3.923125
+  type: 'test'
+  ...
+# Subtest: the chart routes diagnosis-row and permanent-tab doors to the same Engage sheet
+ok 17 - the chart routes diagnosis-row and permanent-tab doors to the same Engage sheet
+  ---
+  duration_ms: 0.364709
+  type: 'test'
+  ...
+# Subtest: the shared communications client lists filtered education and posts the exact dispatch body
+ok 18 - the shared communications client lists filtered education and posts the exact dispatch body
+  ---
+  duration_ms: 1.081375
+  type: 'test'
+  ...
+# Subtest: the education client rejects missing or malformed channel availability
+ok 19 - the education client rejects missing or malformed channel availability
+  ---
+  duration_ms: 0.41575
+  type: 'test'
+  ...
+# Subtest: an unavailable email channel stays visible, disabled, and explained
+ok 20 - an unavailable email channel stays visible, disabled, and explained
+  ---
+  duration_ms: 1.866125
+  type: 'test'
+  ...
+# Subtest: card notices distinguish no SMS lane from the unavailable default lane
+ok 21 - card notices distinguish no SMS lane from the unavailable default lane
+  ---
+  duration_ms: 4.692459
+  type: 'test'
+  ...
+# Subtest: the SMS lane toggle explains only the unavailable selected lane
+ok 22 - the SMS lane toggle explains only the unavailable selected lane
+  ---
+  duration_ms: 3.893416
+  type: 'test'
+  ...
+# Subtest: a minor without a recorded consent-authority guardian cannot dispatch education
+ok 23 - a minor without a recorded consent-authority guardian cannot dispatch education
+  ---
+  duration_ms: 1.36675
+  type: 'test'
+  ...
+# Subtest: a suppressed default SMS lane disables Text before compose and names the suppression
+ok 24 - a suppressed default SMS lane disables Text before compose and names the suppression
+  ---
+  duration_ms: 2.931583
+  type: 'test'
+  ...
+# Subtest: a provider-shaped 403 preference probe keeps Text available for dispatch enforcement
+ok 25 - a provider-shaped 403 preference probe keeps Text available for dispatch enforcement
+  ---
+  duration_ms: 1.738417
+  type: 'test'
+  ...
+# Subtest: suppressed and rescheduled education outcomes render actionable sentences
+ok 26 - suppressed and rescheduled education outcomes render actionable sentences
+  ---
+  duration_ms: 2.57425
+  type: 'test'
+  ...
+# Subtest: a failed confirmation reuses its idempotency key until the send succeeds
+ok 27 - a failed confirmation reuses its idempotency key until the send succeeds
+  ---
+  duration_ms: 3.4815
+  type: 'test'
+  ...
+# Subtest: selecting a second guardian clears and disables a one-person override
+ok 28 - selecting a second guardian clears and disables a one-person override
+  ---
+  duration_ms: 2.469208
+  type: 'test'
+  ...
+# Subtest: chart update appears only after an override value and print returns a user-clicked link
+ok 29 - chart update appears only after an override value and print returns a user-clicked link
+  ---
+  duration_ms: 2.263334
+  type: 'test'
+  ...
+# Subtest: chart contact conflict is sent success and clears pending using real dispatch client
+ok 30 - chart contact conflict is sent success and clears pending using real dispatch client
+  ---
+  duration_ms: 2.044125
+  type: 'test'
+  ...
+# Subtest: education dispatch client rejects malformed chart update metadata
+ok 31 - education dispatch client rejects malformed chart update metadata
+  ---
+  duration_ms: 0.272625
+  type: 'test'
+  ...
+1..31
+# tests 31
+# suites 0
+# pass 31
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 584.666125
+
+Exit: 0

@@ -1,0 +1,2 @@
+Captured rg verification of the applied mutation:
+20:  if (false) return undefined;

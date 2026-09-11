@@ -1,0 +1,14 @@
+[
+  {
+    "variant": "before",
+    "exitCode": 1,
+    "timedOut": true,
+    "elapsedSeconds": 8.01
+  },
+  {
+    "variant": "after",
+    "exitCode": 1,
+    "timedOut": false,
+    "elapsedSeconds": 1.19
+  }
+]

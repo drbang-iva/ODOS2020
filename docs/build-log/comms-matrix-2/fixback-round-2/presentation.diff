@@ -1,0 +1,31 @@
+--- a/ui/src/components/patient/CommunicationPreferencesControl.tsx
++++ b/ui/src/components/patient/CommunicationPreferencesControl.tsx
+@@ -216,7 +216,7 @@
+               </td>;
+             })}
+             <td className="border-b px-2 py-3 text-left text-xs" data-evidence-tone={amber ? "amber" : "neutral"} style={{ color: amber ? "var(--odos-amber, #b7791f)" : "var(--odos-faint)" }}>
+-              {evidence && <span>{`✓ ${label}${gap ? ` (${evidenceChannels.join(", ")})` : ""}${evidence.dateTime ? ` · ${evidence.dateTime.slice(0, 10)}` : ""}`}{(amber || gap) ? " · " : ""}</span>}{amber || gap ? `⚠ No evidence${evidence && gapChannels.length ? ` for ${gapChannels.join(", ")}` : ""}` : !evidence ? "— No evidence needed" : null}
++              {evidence && <span>{`✓ ${label}${evidence.dateTime ? ` · ${evidence.dateTime.slice(0, 10)}` : ""}`}{(amber || gap) ? " · " : ""}</span>}{amber || gap ? `⚠ No evidence` : !evidence ? "— No evidence needed" : null}
+             </td>
+           </tr>;
+         })}</tbody>
+--- a/ui/src/components/comms/EngageSheet.tsx
++++ b/ui/src/components/comms/EngageSheet.tsx
+@@ -335,7 +335,7 @@
+                   <span className="text-xs uppercase text-[color:var(--odos-muted)]">{item.kind}</span>
+                 </div>
+                 {preferenceCell(item, "sms")?.value === false && preferenceCell(item, "sms")?.source !== "suppression" && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">{preferenceWithheldMessage(item, "sms")}</p>}
+-                {item.consentClass === "marketing" && preferenceCell(item, "email")?.value === false && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Marketing email is off for this patient.</p>}
++                {item.consentClass === "marketing" && preferenceCell(item, "email")?.value === false && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Marketing email are off for this patient.</p>}
+                 {educationEmailWithheld(item) && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Their education email setting is off. Sending will switch it on.</p>}
+                 <div className="mt-3 flex flex-wrap gap-2">
+                   <ChannelButton label="Text" channel="sms" item={item} disabled={!recipients.length || preferenceBlocked(item, "sms") || !item.channels.includes("sms") || !defaultSmsLaneConfigured || smsAvailability === "loading" || isSmsLaneSuppressed(smsState, defaultSmsLane)} onClick={beginSend} />
+@@ -486,7 +486,7 @@
+ }
+ 
+ function preferenceWithheldMessage(item: EducationContentItem, channel: PendingSend["channel"]): string {
+-  if (item.consentClass === "marketing") return channel === "sms" ? "Marketing texts are off for this patient." : "Marketing email is off for this patient.";
++  if (item.consentClass === "marketing") return channel === "sms" ? "Marketing texts are off for this patient." : "Marketing email are off for this patient.";
+   return channel === "email" ? "Education by email is switched off in this patient's communication preferences."
+     : "Education by text is switched off in this patient's communication preferences.";
+ }

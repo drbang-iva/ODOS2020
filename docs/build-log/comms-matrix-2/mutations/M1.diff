@@ -1,0 +1,11 @@
+--- a/ui/src/components/patient/CommunicationPreferencesControl.tsx
++++ b/ui/src/components/patient/CommunicationPreferencesControl.tsx
+@@ -187,7 +187,7 @@
+               const source = changed && baseline.source !== "suppression" ? "explicit" : baseline.source;
+               const value = shownValue(draft, purpose, channel);
+               return <td key={channel} className="border-b px-2 py-3" data-source={source}>
+-                {source === "suppression" ? <span aria-disabled="true" title={STOP_TOOLTIP} className="rounded-full px-2 py-1 text-xs font-bold" style={{ background: "var(--odos-amber, #f5b942)", color: "#2a1d00", cursor: "not-allowed" }}>STOP</span>
++                {false ? <span aria-disabled="true" title={STOP_TOOLTIP} className="rounded-full px-2 py-1 text-xs font-bold" style={{ background: "var(--odos-amber, #f5b942)", color: "#2a1d00", cursor: "not-allowed" }}>STOP</span>
+                   : <label className="relative inline-flex items-center gap-1" title={source === "default" ? "Practice default — not yet confirmed with the patient" : "Set explicitly"}>
+                     <input type="checkbox" aria-label={`${COMMUNICATION_PURPOSE_LABELS[purpose]} ${COMMUNICATION_CHANNEL_LABELS[channel]}`} checked={value} disabled={!editable}
+                       className="peer absolute h-6 w-6 cursor-pointer opacity-0" onChange={event => changeCells([{ purpose, channel, allowed: event.target.checked }])} />

@@ -1,0 +1,5 @@
+Command: npm run preflight
+Clean base: 0 warnings, 0 hard blocks; exit 0
+Initial branch: 2 hard blocks (new hardcoded UI color classes); exit 1
+Final source: 0 warnings, 0 hard blocks; exit 0
+The source now uses existing theme tokens. No guard or source-of-truth changes.

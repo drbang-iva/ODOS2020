@@ -1,0 +1,11 @@
+--- a/ui/src/scenes/ConsentEvidence.tsx
++++ b/ui/src/scenes/ConsentEvidence.tsx
+@@ -77,7 +77,7 @@
+     </section>
+     {error && <p role="alert">{error}</p>}{exportNotice && <p role="status">{exportNotice}</p>}
+     {loading && <p role="status">Loading consent evidence…</p>}
+-    {report?.truncated && <section role="status" className="flex items-center justify-between gap-4 rounded border border-[var(--odos-amber)] p-4"><p>This report is truncated. More patients remain; counts cover the loaded results.</p><button type="button" className="odos-pill" disabled={loading} onClick={() => void loadMore()}>Load more</button></section>}
++    {false && <section role="status" className="flex items-center justify-between gap-4 rounded border border-[var(--odos-amber)] p-4"><p>This report is truncated. More patients remain; counts cover the loaded results.</p><button type="button" className="odos-pill" disabled={loading} onClick={() => void loadMore()}>Load more</button></section>}
+     {report && <div className="overflow-x-auto"><table className="w-full text-left" aria-label="Consent evidence gaps"><thead><tr>{["Patient", "Purpose", "Channel", "Tier", "Status"].map(label => <th key={label} className="border-b p-3">{label}</th>)}</tr></thead><tbody>{([
+       ...report.rows.map(row => ({ ...row, status: "gap" })), ...report.suppressed.map(row => ({ ...row, status: "suppressed" })),
+     ]).map(row => <tr key={`${row.patientReference}/${row.purpose}/${row.channel}/${row.status}`}><td className="border-b p-3"><a className="underline" href={`/clinic?patientId=${encodeURIComponent(row.patientReference.slice("Patient/".length))}`}>{row.patientReference}</a></td><td className="border-b p-3">{COMMUNICATION_PURPOSE_LABELS[row.purpose]}</td><td className="border-b p-3">{COMMUNICATION_CHANNEL_LABELS[row.channel]}</td><td className="border-b p-3">{row.tier}</td><td className="border-b p-3">{row.status}</td></tr>)}</tbody></table>{!report.rows.length && !report.suppressed.length && <p className="p-4">No preference gaps or suppressed channels match these filters.</p>}</div>}

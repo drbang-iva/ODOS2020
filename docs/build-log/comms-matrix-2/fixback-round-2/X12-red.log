@@ -1,0 +1,193 @@
+TAP version 13
+# Subtest: preferences GET returns effective matrix and evidence rows
+ok 1 - preferences GET returns effective matrix and evidence rows
+  ---
+  duration_ms: 18.039042
+  type: 'test'
+  ...
+# Subtest: G2 preferences PUT all twenty ON leaves STOP extensions unchanged
+ok 2 - G2 preferences PUT all twenty ON leaves STOP extensions unchanged
+  ---
+  duration_ms: 11.799792
+  type: 'test'
+  ...
+# Subtest: G6 preferences PUT requires actual preferences business action
+ok 3 - G6 preferences PUT requires actual preferences business action
+  ---
+  duration_ms: 3.731292
+  type: 'test'
+  ...
+# Subtest: G6 removing preferences action from staff declaration refuses PUT
+ok 4 - G6 removing preferences action from staff declaration refuses PUT
+  ---
+  duration_ms: 1.946084
+  type: 'test'
+  ...
+# Subtest: G21 preference PUT optimistic conflict returns 409
+ok 5 - G21 preference PUT optimistic conflict returns 409
+  ---
+  duration_ms: 2.265833
+  type: 'test'
+  ...
+# Subtest: evidence POST uses an atomic Patient Consent Provenance transaction and preserves cells
+ok 6 - evidence POST uses an atomic Patient Consent Provenance transaction and preserves cells
+  ---
+  duration_ms: 4.061667
+  type: 'test'
+  ...
+# Subtest: preferences routes reject invalid enums duplicates dates and phone keys
+ok 7 - preferences routes reject invalid enums duplicates dates and phone keys
+  ---
+  duration_ms: 8.467167
+  type: 'test'
+  ...
+# Subtest: evidence gaps routes provide JSON and CSV and reject arbitrary URL cursor
+ok 8 - evidence gaps routes provide JSON and CSV and reject arbitrary URL cursor
+  ---
+  duration_ms: 4.665709
+  type: 'test'
+  ...
+# Subtest: CSV evidence report exposes truncation and continuation even with zero rows
+ok 9 - CSV evidence report exposes truncation and continuation even with zero rows
+  ---
+  duration_ms: 87.033584
+  type: 'test'
+  ...
+# Subtest: preferences GET audit identifies the queried patient
+ok 10 - preferences GET audit identifies the queried patient
+  ---
+  duration_ms: 1.688792
+  type: 'test'
+  ...
+# Subtest: M5 preferences reports opaque versions from the Patient transaction entry
+ok 11 - M5 preferences reports opaque versions from the Patient transaction entry
+  ---
+  duration_ms: 1.6195
+  type: 'test'
+  ...
+# Subtest: M5 consent-evidence reports opaque versions from the Patient transaction entry
+ok 12 - M5 consent-evidence reports opaque versions from the Patient transaction entry
+  ---
+  duration_ms: 1.387583
+  type: 'test'
+  ...
+# Subtest: M5 preferences omits unknown version undefined
+ok 13 - M5 preferences omits unknown version undefined
+  ---
+  duration_ms: 1.553708
+  type: 'test'
+  ...
+# Subtest: M5 preferences omits unknown version Patient/other/_history/opaque-next
+ok 14 - M5 preferences omits unknown version Patient/other/_history/opaque-next
+  ---
+  duration_ms: 1.107709
+  type: 'test'
+  ...
+# Subtest: M5 preferences omits unknown version Patient/synthetic-matrix/_history/
+ok 15 - M5 preferences omits unknown version Patient/synthetic-matrix/_history/
+  ---
+  duration_ms: 1.000375
+  type: 'test'
+  ...
+# Subtest: M5 consent-evidence omits unknown version undefined
+ok 16 - M5 consent-evidence omits unknown version undefined
+  ---
+  duration_ms: 0.91975
+  type: 'test'
+  ...
+# Subtest: M5 consent-evidence omits unknown version Patient/other/_history/opaque-next
+ok 17 - M5 consent-evidence omits unknown version Patient/other/_history/opaque-next
+  ---
+  duration_ms: 1.715541
+  type: 'test'
+  ...
+# Subtest: M5 consent-evidence omits unknown version Patient/synthetic-matrix/_history/
+ok 18 - M5 consent-evidence omits unknown version Patient/synthetic-matrix/_history/
+  ---
+  duration_ms: 0.939042
+  type: 'test'
+  ...
+# Subtest: M6 defaults route returns imported server defaults with communications read access
+ok 19 - M6 defaults route returns imported server defaults with communications read access
+  ---
+  duration_ms: 1.087916
+  type: 'test'
+  ...
+# Subtest: defaults route requires communications read access
+ok 20 - defaults route requires communications read access
+  ---
+  duration_ms: 0.674625
+  type: 'test'
+  ...
+# Subtest: M5 preferences history fallback
+ok 21 - M5 preferences history fallback
+  ---
+  duration_ms: 0.936833
+  type: 'test'
+  ...
+# Subtest: M5 preferences disagreement omits report
+ok 22 - M5 preferences disagreement omits report
+  ---
+  duration_ms: 1.67875
+  type: 'test'
+  ...
+# Subtest: M5 consent-evidence history fallback
+ok 23 - M5 consent-evidence history fallback
+  ---
+  duration_ms: 1.148209
+  type: 'test'
+  ...
+# Subtest: M5 consent-evidence disagreement omits report
+ok 24 - M5 consent-evidence disagreement omits report
+  ---
+  duration_ms: 1.154875
+  type: 'test'
+  ...
+# Subtest: F1 confirmed non-Text preferences preserve stored Text ON after STOP is cleared and exclude Text evidence
+ok 25 - F1 confirmed non-Text preferences preserve stored Text ON after STOP is cleared and exclude Text evidence
+  ---
+  duration_ms: 5.905875
+  type: 'test'
+  ...
+# Subtest: X12 a returned Patient with a different id yields no patientVersion
+not ok 26 - X12 a returned Patient with a different id yields no patientVersion
+  ---
+  duration_ms: 1.806625
+  type: 'test'
+  location: 'mcp/tests/commsPreferencesRoutes.test.ts:1:14833'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + {
+    +   current: 'opaque-other',
+    +   writtenAgainst: 'opaque-before'
+    + }
+    - undefined
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual:
+    writtenAgainst: 'opaque-before'
+    current: 'opaque-other'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/commsPreferencesRoutes.test.ts:240:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..26
+# tests 26
+# suites 0
+# pass 25
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 533.454417

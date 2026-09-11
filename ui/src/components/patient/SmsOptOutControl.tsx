@@ -7,6 +7,7 @@ import {
   type SmsOptOutIdentityVerification,
   type SmsLaneRole,
   type SmsOptOutState,
+  type PatientVersion,
 } from "../../lib/communications-client";
 
 const IDENTITY_VERIFICATION_OPTIONS: Array<{
@@ -24,12 +25,14 @@ export function SmsOptOutControl({
   onActiveLaneSuppressionChange,
   onStateChange,
   onUnavailable,
+  onPatientWritten,
 }: {
   patientReference: string;
   // The approved B2a compose bar will supply these props for the second mount.
   activeLaneRole?: SmsLaneRole;
   onActiveLaneSuppressionChange?: (suppressed: boolean) => void;
   onStateChange?: (state: SmsOptOutState) => void;
+  onPatientWritten?: (version?: PatientVersion) => void;
   onUnavailable?: (reason: "denied" | "error") => void;
 }) {
   const [state, setState] = useState<SmsOptOutState>();
@@ -46,6 +49,8 @@ export function SmsOptOutControl({
   const operationGenerationRef = useRef(0);
   const suppressionChangeRef = useRef(onActiveLaneSuppressionChange);
   const stateChangeRef = useRef(onStateChange);
+  const patientWrittenRef = useRef(onPatientWritten);
+  patientWrittenRef.current = onPatientWritten;
   const unavailableRef = useRef(onUnavailable);
   suppressionChangeRef.current = onActiveLaneSuppressionChange;
   stateChangeRef.current = onStateChange;
@@ -117,6 +122,7 @@ export function SmsOptOutControl({
           ...(recordScope === "per-number" ? { number: recordNumber } : {}),
         });
         if (!isCurrentOperation()) return;
+        patientWrittenRef.current?.(nextState.patientVersion);
         setState(nextState);
         stateChangeRef.current?.(nextState);
         if (activeLaneRole) {
@@ -135,6 +141,7 @@ export function SmsOptOutControl({
         ...(clearNumber ? { number: clearNumber } : {}),
       });
       if (!isCurrentOperation()) return;
+      patientWrittenRef.current?.(response.patientVersion);
       const remainingOptOuts = response.remainingOptOuts
         ?? (clearNumber === null && !response.smsOptedOut ? { global: false, numbers: [] } : state.remainingOptOuts);
       setState({ ...state, smsOptedOut: response.smsOptedOut, remainingOptOuts });

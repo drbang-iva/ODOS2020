@@ -1,0 +1,16 @@
+--- a/ui/src/lib/communications-client.ts
++++ b/ui/src/lib/communications-client.ts
+@@ -520,11 +520,11 @@
+ }
+ export function readCommunicationPreferences(patientReference: string, fetchImpl: typeof fetch = fetch): Promise<CommunicationPreferencesResponse> {
+   return preferenceRequest(`?patient=${encodeURIComponent(patientReference)}`,
+-    (value): value is CommunicationPreferencesResponse => isCommunicationPreferencesResponse(value) && value.patientReference === patientReference, fetchImpl);
++    (value): value is CommunicationPreferencesResponse => isCommunicationPreferencesResponse(value), fetchImpl);
+ }
+ export function saveCommunicationPreferences(input: CommunicationPreferencesInput & { patientReference: string }, fetchImpl: typeof fetch = fetch): Promise<CommunicationPreferencesResponse> {
+   return preferenceRequest("",
+-    (value): value is CommunicationPreferencesResponse => isCommunicationPreferencesResponse(value) && value.patientReference === input.patientReference, fetchImpl, input);
++    (value): value is CommunicationPreferencesResponse => isCommunicationPreferencesResponse(value), fetchImpl, input);
+ }
+ export function readCommunicationPreferenceDefaults(fetchImpl: typeof fetch = fetch): Promise<CommunicationPreferenceDefaultsResponse> {
+   return preferenceRequest("/defaults", isCommunicationPreferenceDefaultsResponse, fetchImpl);

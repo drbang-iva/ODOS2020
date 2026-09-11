@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: consent evidence direct navigation keeps exact document bypass and CSV downloads through the real client
+ok 1 - consent evidence direct navigation keeps exact document bypass and CSV downloads through the real client
+  ---
+  duration_ms: 3687.78175
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4909.724958

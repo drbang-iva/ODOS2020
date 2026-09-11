@@ -997,6 +997,7 @@ test("clearing one named patient on a shared handset leaves the other patient su
       patientReference: PATIENT_REFERENCE,
       smsOptedOut: false,
       cleared: true,
+      patientVersion: { writtenAgainst: "1", current: "2" },
     });
     assert.equal(hasSmsOptOut(fixture.patients[1]!), true);
     assert.equal(hasSmsOptOut(fixture.patients[0]!), false);
@@ -1052,6 +1053,7 @@ test("number-scoped clear reports a surviving legacy opt-out without a second Pa
       cleared: false,
       suppressionCleared: false,
       remainingOptOuts: { global: true, numbers: [] },
+      patientVersion: { writtenAgainst: "1", current: "1" },
     });
     assert.equal(hasSmsOptOut(fixture.patients[0]!), true);
     assert.equal(fixture.provenances.length, 0);
@@ -1115,6 +1117,7 @@ test("a bearer-authenticated staff membership reaches the opt-out clear through 
       patientReference: PATIENT_REFERENCE,
       smsOptedOut: false,
       cleared: true,
+      patientVersion: { writtenAgainst: "1", current: "2" },
     });
     assert.equal(fixture.grants[0]?.actorId, "real-staff");
     assert.equal(fixture.grants[0]?.actorRole, "staff");
@@ -2081,7 +2084,7 @@ async function startServer(options: {
         resourceType: "Bundle",
         type: "transaction-response",
         entry: [
-          { response: { status: "200 OK", location: `Patient/${patientId}/_history/${patients[index]!.meta?.versionId}` } },
+          { resource: structuredClone(patients[index]), response: { status: "200 OK", location: `Patient/${patientId}` } },
           { response: { status: "201 Created", location: `Provenance/${provenances.at(-1)!.id}/_history/1` } },
         ],
       };
@@ -2509,3 +2512,64 @@ for (const withheld of [true, false]) {
     } finally { await fixture.close(); }
   });
 }
+
+for (const action of ["record", "clear"] as const) {
+  test(`M5 opt-out ${action} reports the transaction Patient version`, async () => {
+    const fixture = await startServer({ optOutTransactionResponse: {
+      resourceType: "Bundle", type: "transaction-response", entry: [
+        { resource: { resourceType: "Patient", id: PATIENT_REFERENCE.slice(8), meta: { versionId: "opaque-next" } }, response: { status: "200 OK", location: PATIENT_REFERENCE } },
+        { response: { status: "201 Created", location: "Provenance/example/_history/other" } },
+      ],
+    } });
+    if (action === "record") fixture.patients[0]!.extension = [];
+    const patient = fixture.patients[0]!;
+    patient.meta!.versionId = "opaque-before";
+    try {
+      const response = await request(fixture.base, `/communications/opt-out/${action}`, "POST", action === "record" ? OPT_OUT_RECORD_BODY : OPT_OUT_CLEAR_BODY, "staff");
+      assert.equal(response.status, 200);
+      assert.deepEqual((await response.json()).patientVersion, { writtenAgainst: patient.meta!.versionId, current: "opaque-next" });
+    } finally { await fixture.close(); }
+  });
+}
+
+for (const action of ["record", "clear"] as const) {
+  test(`M5 opt-out ${action} no-op reports equal opaque versions`, async () => {
+    const fixture = await startServer();
+    if (action === "clear") fixture.patients[0]!.extension = [];
+    fixture.patients[0]!.meta!.versionId = "opaque-before";
+    try {
+      const response = await request(fixture.base, `/communications/opt-out/${action}`, "POST", action === "record" ? OPT_OUT_RECORD_BODY : OPT_OUT_CLEAR_BODY, "staff");
+      assert.equal(response.status, 200);
+      assert.deepEqual((await response.json()).patientVersion, { writtenAgainst: "opaque-before", current: "opaque-before" });
+      assert.equal(fixture.attributedActors.length, 0);
+    } finally { await fixture.close(); }
+  });
+  for (const location of [undefined, "Patient/other/_history/opaque-next", `${PATIENT_REFERENCE}/_history/`]) {
+    test(`M5 opt-out ${action} omits unknown version ${location}`, async () => {
+      const fixture = await startServer({ optOutTransactionResponse: {
+        resourceType: "Bundle", type: "transaction-response", entry: [
+          { response: { status: "200 OK", ...(location ? { location } : {}) } },
+          { response: { status: "201 Created", location: "Provenance/example/_history/other" } },
+        ],
+      } });
+      if (action === "record") fixture.patients[0]!.extension = [];
+      try {
+        const response = await request(fixture.base, `/communications/opt-out/${action}`, "POST", action === "record" ? OPT_OUT_RECORD_BODY : OPT_OUT_CLEAR_BODY, "staff");
+        assert.equal(response.status, 200);
+        assert.equal(Object.hasOwn(await response.json(), "patientVersion"), false);
+      } finally { await fixture.close(); }
+    });
+  }
+}
+
+for (const disagreement of [false, true]) test(`M5 opt-out ${disagreement ? "disagreement omits report" : "history fallback"}`, async () => {
+  const fixture = await startServer({ optOutTransactionResponse: { resourceType: "Bundle", type: "transaction-response", entry: [
+    { ...(disagreement ? { resource: { resourceType: "Patient" as const, id: PATIENT_REFERENCE.slice(8), meta: { versionId: "resource-version" } } } : {}), response: { status: "200 OK", location: `${PATIENT_REFERENCE}/_history/history-version` } },
+    { response: { status: "201 Created" } },
+  ] } });
+  try {
+    const response = await request(fixture.base, "/communications/opt-out/clear", "POST", OPT_OUT_CLEAR_BODY, "staff");
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json()).patientVersion, disagreement ? undefined : { writtenAgainst: "1", current: "history-version" });
+  } finally { await fixture.close(); }
+});

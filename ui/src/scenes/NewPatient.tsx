@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Patient } from "@medplum/fhirtypes";
+import { CommunicationPreferencesControl, communicationPreferencesInput, type CommunicationPreferencesDraft } from "../components/patient/CommunicationPreferencesControl";
 import { PatientDemographicsFields } from "../components/patient/PatientDemographicsEditor";
 import {
   createPatient,
@@ -8,6 +9,7 @@ import {
   registerPatient,
   validatePatientRegistration,
   type PatientDemographicsDraft,
+  type PatientRegistrationOptions,
 } from "../lib/patient-registration";
 import {
   emptyRelatedResponsibleParty,
@@ -25,6 +27,8 @@ export function NewPatient() {
   const [responsibleParties, setResponsibleParties] = useState<ResponsiblePartyDraft[]>(() => [
     emptySelfResponsibleParty("self"),
   ]);
+  const [preferences, setPreferences] = useState<CommunicationPreferencesDraft>();
+  const [preferenceAvailability, setPreferenceAvailability] = useState<"loading" | "available" | "unavailable">("loading");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [duplicates, setDuplicates] = useState<Patient[]>([]);
   const [saving, setSaving] = useState(false);
@@ -42,15 +46,24 @@ export function NewPatient() {
     setView({ kind: "picker" });
   };
 
+  const registrationOptions = (): PatientRegistrationOptions => {
+    if (!preferences && preferenceAvailability === "unavailable") return { responsibleParties, today };
+    if (!preferences) throw new Error("Wait for communication preference defaults to load.");
+    const communicationPreferences = communicationPreferencesInput(preferences);
+    return { responsibleParties, today, ...(communicationPreferences.cells.length ? { communicationPreferences } : {}) };
+  };
+
   const submit = async () => {
-    const registrationOptions = { responsibleParties, today };
-    const nextErrors = validatePatientRegistration(draft, registrationOptions);
+    let options: PatientRegistrationOptions;
+    try { options = registrationOptions(); }
+    catch (cause) { setSaveError(cause instanceof Error ? cause.message : String(cause)); return; }
+    const nextErrors = validatePatientRegistration(draft, options);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
     setSaving(true);
     setSaveError(undefined);
     try {
-      const result = await registerPatient(draft, registrationOptions);
+      const result = await registerPatient(draft, options);
       if (result.kind === "duplicates") {
         setDuplicates(result.patients);
       } else if (result.warning) {
@@ -69,7 +82,7 @@ export function NewPatient() {
     setSaving(true);
     setSaveError(undefined);
     try {
-      const result = await createPatient(draft, { responsibleParties, today });
+      const result = await createPatient(draft, registrationOptions());
       if (result.warning) {
         setDuplicates([]);
         setRepairWarning({ message: result.warning.message });
@@ -95,7 +108,8 @@ export function NewPatient() {
           <button type="button" onClick={returnToSearch} className="rounded border border-white/15 px-3 py-2 text-sm text-white/65">Back to patient search</button>
         </header>
         {saveError && <div role="alert" className="mb-4 rounded border border-red-400/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">{saveError}</div>}
-        <PatientDemographicsFields draft={draft} errors={errors} onChange={(next) => { setDraft(next); setDuplicates([]); }} />
+        <PatientDemographicsFields draft={draft} errors={errors} onChange={(next) => { setDraft(next); setDuplicates([]); }}
+          communicationPreferences={<CommunicationPreferencesControl mode="registration" value={preferences} onChange={setPreferences} onAvailabilityChange={setPreferenceAvailability} canEdit={!saving} />} />
         <ResponsiblePartiesEditor
           parties={responsibleParties}
           errors={errors}
@@ -107,7 +121,7 @@ export function NewPatient() {
           }}
         />
         <div className="mt-6 flex justify-end">
-          <button type="button" disabled={saving} onClick={() => void submit()} className="rounded bg-blue-500 px-5 py-2.5 text-sm font-semibold disabled:opacity-50">{saving ? "Checking…" : "Create patient"}</button>
+          <button type="button" disabled={saving || preferenceAvailability === "loading"} onClick={() => void submit()} className="rounded bg-blue-500 px-5 py-2.5 text-sm font-semibold disabled:opacity-50">{saving ? "Checking…" : "Create patient"}</button>
         </div>
       </section>
 

@@ -1,0 +1,26 @@
+{
+  "base": "87e8e5b8a4649f73dfe84a9ddab3b98419b16325",
+  "command": "npm --prefix mcp test",
+  "baseFailures": [
+    "SMART registration checks auth/me before creating a client in the configured project",
+    "SMART registration refuses a session project mismatch before POSTing a client",
+    "a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum",
+    "audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available",
+    "local Medplum seeds 5001 patient answers, paginates reviews, and excludes ROS in the index",
+    "synced practice policies enforce all repaired clinical writes on running Medplum",
+    "update_patient MCP write tool integrates with Medplum",
+    "v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)"
+  ],
+  "branchFailures": [
+    "SMART registration checks auth/me before creating a client in the configured project",
+    "SMART registration refuses a session project mismatch before POSTing a client",
+    "a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum",
+    "audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available",
+    "local Medplum seeds 5001 patient answers, paginates reviews, and excludes ROS in the index",
+    "synced practice policies enforce all repaired clinical writes on running Medplum",
+    "update_patient MCP write tool integrates with Medplum",
+    "v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)"
+  ],
+  "branchOnly": [],
+  "baseOnly": []
+}

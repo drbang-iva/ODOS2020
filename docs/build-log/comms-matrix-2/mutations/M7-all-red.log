@@ -1,0 +1,805 @@
+Working directory: ui
+Command: node --import tsx --test tests/communicationPreferencesControl.test.tsx tests/registrationCommunicationPreferences.test.tsx
+Captured process exit: 1
+TAP version 13
+# Subtest: M1 STOP cells are locked amber labels, never checkboxes; default and legacy states remain distinct
+ok 1 - M1 STOP cells are locked amber labels, never checkboxes; default and legacy states remain distinct
+  ---
+  duration_ms: 17.489792
+  type: 'test'
+  ...
+# Subtest: M7 unconfirmed patient save sends only changed cells and reports the server version
+not ok 2 - M7 unconfirmed patient save sends only changed cells and reports the server version
+  ---
+  duration_ms: 7.7475
+  type: 'test'
+  location: 'ui/tests/communicationPreferencesControl.test.tsx:1:3290'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+        {
+          cells: [
+            {
+    +         allowed: true,
+    +         channel: 'sms',
+    +         purpose: 'recalls'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'call',
+    +         purpose: 'recalls'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'email',
+    +         purpose: 'recalls'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'mail',
+    +         purpose: 'recalls'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'sms',
+    +         purpose: 'appointment'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'call',
+    +         purpose: 'appointment'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'email',
+    +         purpose: 'appointment'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'mail',
+    +         purpose: 'appointment'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'sms',
+    +         purpose: 'product-pickup'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'call',
+    +         purpose: 'product-pickup'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'email',
+    +         purpose: 'product-pickup'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'mail',
+    +         purpose: 'product-pickup'
+    +       },
+    +       {
+              allowed: false,
+              channel: 'sms',
+    +         purpose: 'marketing-promo'
+    +       },
+    +       {
+    +         allowed: false,
+    +         channel: 'call',
+    +         purpose: 'marketing-promo'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'email',
+    +         purpose: 'marketing-promo'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'mail',
+    +         purpose: 'marketing-promo'
+    +       },
+    +       {
+    +         allowed: false,
+    +         channel: 'sms',
+              purpose: 'education'
+            },
+    +       {
+    +         allowed: true,
+    +         channel: 'call',
+    +         purpose: 'education'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'email',
+    +         purpose: 'education'
+    +       },
+    +       {
+    +         allowed: true,
+    +         channel: 'mail',
+    +         purpose: 'education'
+    +       }
+          ],
+          patientReference: 'Patient/synthetic-matrix'
+        }
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      patientReference: 'Patient/synthetic-matrix'
+      cells:
+        0:
+          purpose: 'education'
+          channel: 'sms'
+          allowed: false
+  actual:
+    0:
+      patientReference: 'Patient/synthetic-matrix'
+      cells:
+        0:
+          purpose: 'recalls'
+          channel: 'sms'
+          allowed: true
+        1:
+          purpose: 'recalls'
+          channel: 'call'
+          allowed: true
+        2:
+          purpose: 'recalls'
+          channel: 'email'
+          allowed: true
+        3:
+          purpose: 'recalls'
+          channel: 'mail'
+          allowed: true
+        4:
+          purpose: 'appointment'
+          channel: 'sms'
+          allowed: true
+        5:
+          purpose: 'appointment'
+          channel: 'call'
+          allowed: true
+        6:
+          purpose: 'appointment'
+          channel: 'email'
+          allowed: true
+        7:
+          purpose: 'appointment'
+          channel: 'mail'
+          allowed: true
+        8:
+          purpose: 'product-pickup'
+          channel: 'sms'
+          allowed: true
+        9:
+          purpose: 'product-pickup'
+          channel: 'call'
+          allowed: true
+        10:
+          purpose: 'product-pickup'
+          channel: 'email'
+          allowed: true
+        11:
+          purpose: 'product-pickup'
+          channel: 'mail'
+          allowed: true
+        12:
+          purpose: 'marketing-promo'
+          channel: 'sms'
+          allowed: false
+        13:
+          purpose: 'marketing-promo'
+          channel: 'call'
+          allowed: false
+        14:
+          purpose: 'marketing-promo'
+          channel: 'email'
+          allowed: true
+        15:
+          purpose: 'marketing-promo'
+          channel: 'mail'
+          allowed: true
+        16:
+          purpose: 'education'
+          channel: 'sms'
+          allowed: false
+        17:
+          purpose: 'education'
+          channel: 'call'
+          allowed: true
+        18:
+          purpose: 'education'
+          channel: 'email'
+          allowed: true
+        19:
+          purpose: 'education'
+          channel: 'mail'
+          allowed: true
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (ui/tests/communicationPreferencesControl.test.tsx:55:12)
+    async mount (ui/tests/communicationPreferencesControl.test.tsx:25:65)
+    async TestContext.<anonymous> (ui/tests/communicationPreferencesControl.test.tsx:47:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: M7 patient paper confirmation sends all twenty cells and evidence fields
+ok 3 - M7 patient paper confirmation sends all twenty cells and evidence fields
+  ---
+  duration_ms: 4.888291
+  type: 'test'
+  ...
+# Subtest: patient paper confirmation with no date refuses to send
+ok 4 - patient paper confirmation with no date refuses to send
+  ---
+  duration_ms: 1.911208
+  type: 'test'
+  ...
+# Subtest: 403 leaves the loaded grid read-only with the permission message
+ok 5 - 403 leaves the loaded grid read-only with the permission message
+  ---
+  duration_ms: 3.136834
+  type: 'test'
+  ...
+# Subtest: 409 rereads the grid, discards stale changes, and never calls the successful-write callback
+ok 6 - 409 rereads the grid, discards stale changes, and never calls the successful-write callback
+  ---
+  duration_ms: 3.166459
+  type: 'test'
+  ...
+# Subtest: M14 a preferences GET 5xx renders the malformed-record message and no grid
+ok 7 - M14 a preferences GET 5xx renders the malformed-record message and no grid
+  ---
+  duration_ms: 0.546
+  type: 'test'
+  ...
+# Subtest: registration reads server defaults and D2 sends only changes unless the grid is confirmed
+not ok 8 - registration reads server defaults and D2 sends only changes unless the grid is confirmed
+  ---
+  duration_ms: 1.638209
+  type: 'test'
+  location: 'ui/tests/communicationPreferencesControl.test.tsx:1:7752'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + [
+    +   {
+    +     allowed: true,
+    +     channel: 'sms',
+    +     purpose: 'recalls'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'call',
+    +     purpose: 'recalls'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'email',
+    +     purpose: 'recalls'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'mail',
+    +     purpose: 'recalls'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'sms',
+    +     purpose: 'appointment'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'call',
+    +     purpose: 'appointment'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'email',
+    +     purpose: 'appointment'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'mail',
+    +     purpose: 'appointment'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'sms',
+    +     purpose: 'product-pickup'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'call',
+    +     purpose: 'product-pickup'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'email',
+    +     purpose: 'product-pickup'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'mail',
+    +     purpose: 'product-pickup'
+    +   },
+    +   {
+    +     allowed: false,
+    +     channel: 'sms',
+    +     purpose: 'marketing-promo'
+    +   },
+    +   {
+    +     allowed: false,
+    +     channel: 'call',
+    +     purpose: 'marketing-promo'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'email',
+    +     purpose: 'marketing-promo'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'mail',
+    +     purpose: 'marketing-promo'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'sms',
+    +     purpose: 'education'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'call',
+    +     purpose: 'education'
+    +   },
+    +   {
+    +     allowed: false,
+    +     channel: 'email',
+    +     purpose: 'education'
+    +   },
+    +   {
+    +     allowed: true,
+    +     channel: 'mail',
+    +     purpose: 'education'
+    +   }
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      purpose: 'recalls'
+      channel: 'sms'
+      allowed: true
+    1:
+      purpose: 'recalls'
+      channel: 'call'
+      allowed: true
+    2:
+      purpose: 'recalls'
+      channel: 'email'
+      allowed: true
+    3:
+      purpose: 'recalls'
+      channel: 'mail'
+      allowed: true
+    4:
+      purpose: 'appointment'
+      channel: 'sms'
+      allowed: true
+    5:
+      purpose: 'appointment'
+      channel: 'call'
+      allowed: true
+    6:
+      purpose: 'appointment'
+      channel: 'email'
+      allowed: true
+    7:
+      purpose: 'appointment'
+      channel: 'mail'
+      allowed: true
+    8:
+      purpose: 'product-pickup'
+      channel: 'sms'
+      allowed: true
+    9:
+      purpose: 'product-pickup'
+      channel: 'call'
+      allowed: true
+    10:
+      purpose: 'product-pickup'
+      channel: 'email'
+      allowed: true
+    11:
+      purpose: 'product-pickup'
+      channel: 'mail'
+      allowed: true
+    12:
+      purpose: 'marketing-promo'
+      channel: 'sms'
+      allowed: false
+    13:
+      purpose: 'marketing-promo'
+      channel: 'call'
+      allowed: false
+    14:
+      purpose: 'marketing-promo'
+      channel: 'email'
+      allowed: true
+    15:
+      purpose: 'marketing-promo'
+      channel: 'mail'
+      allowed: true
+    16:
+      purpose: 'education'
+      channel: 'sms'
+      allowed: true
+    17:
+      purpose: 'education'
+      channel: 'call'
+      allowed: true
+    18:
+      purpose: 'education'
+      channel: 'email'
+      allowed: false
+    19:
+      purpose: 'education'
+      channel: 'mail'
+      allowed: true
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (ui/tests/communicationPreferencesControl.test.tsx:122:12)
+    mount (ui/tests/communicationPreferencesControl.test.tsx:25:71)
+    async TestContext.<anonymous> (ui/tests/communicationPreferencesControl.test.tsx:120:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: registration paper confirmation includes the date and twenty cells
+ok 9 - registration paper confirmation includes the date and twenty cells
+  ---
+  duration_ms: 1.934167
+  type: 'test'
+  ...
+# Subtest: external refresh preserves unsaved changes while new STOP state locks the cell
+ok 10 - external refresh preserves unsaved changes while new STOP state locks the cell
+  ---
+  duration_ms: 2.699958
+  type: 'test'
+  ...
+# Subtest: evidence warning amber is reserved for uncovered marketing Text and last setter is shown
+ok 11 - evidence warning amber is reserved for uncovered marketing Text and last setter is shown
+  ---
+  duration_ms: 1.198167
+  type: 'test'
+  ...
+# Subtest: M14 failed refresh removes a previously loaded grid instead of leaving editable stale preferences
+ok 12 - M14 failed refresh removes a previously loaded grid instead of leaving editable stale preferences
+  ---
+  duration_ms: 1.3485
+  type: 'test'
+  ...
+# Subtest: bulk selection never changes a suppressed cell in an unconfirmed write
+not ok 13 - bulk selection never changes a suppressed cell in an unconfirmed write
+  ---
+  duration_ms: 5.221458
+  type: 'test'
+  location: 'ui/tests/communicationPreferencesControl.test.tsx:1:12348'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+
+      assert.ok(!payload.cells.some(cell => cell.purpose === "education" && cell.channel === "sms"))
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    <anonymous> (ui/tests/communicationPreferencesControl.test.tsx:187:32)
+    async mount (ui/tests/communicationPreferencesControl.test.tsx:25:65)
+    async TestContext.<anonymous> (ui/tests/communicationPreferencesControl.test.tsx:184:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: a late rejected 409 reread cannot hide a different patient's freshly loaded grid
+ok 14 - a late rejected 409 reread cannot hide a different patient's freshly loaded grid
+  ---
+  duration_ms: 2.455917
+  type: 'test'
+  ...
+# Subtest: evidence without capture metadata uses a neutral label instead of inventing an in-person confirmation
+ok 15 - evidence without capture metadata uses a neutral label instead of inventing an in-person confirmation
+  ---
+  duration_ms: 0.87325
+  type: 'test'
+  ...
+# Subtest: M7 New Patient unconfirmed registration sends only changed cells and grid makes no separate writes
+not ok 16 - M7 New Patient unconfirmed registration sends only changed cells and grid makes no separate writes
+  ---
+  duration_ms: 29.339042
+  type: 'test'
+  location: 'ui/tests/registrationCommunicationPreferences.test.tsx:1:2414'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      {
+        cells: [
+          {
+    +       allowed: true,
+    +       channel: 'sms',
+    +       purpose: 'recalls'
+    +     },
+    +     {
+    +       allowed: true,
+    +       channel: 'call',
+    +       purpose: 'recalls'
+    +     },
+    +     {
+    +       allowed: true,
+    +       channel: 'email',
+    +       purpose: 'recalls'
+    +     },
+    +     {
+    +       allowed: true,
+    +       channel: 'mail',
+    +       purpose: 'recalls'
+    +     },
+    +     {
+    +       allowed: true,
+    +       channel: 'sms',
+    +       purpose: 'appointment'
+    +     },
+    +     {
+    +       allowed: true,
+    +       channel: 'call',
+    +       purpose: 'appointment'
+    +     },
+    +     {
+    +       allowed: true,
+    +       channel: 'email',
+    +       purpose: 'appointment'
+    +     },
+    +     {
+    +       allowed: true,
+    +       channel: 'mail',
+    +       purpose: 'appointment'
+    +     },
+    +     {
+    +       allowed: true,
+    +       channel: 'sms',
+    +       purpose: 'product-pickup'
+    +     },
+    +     {
+    +       allowed: true,
+    +       channel: 'call',
+    +       purpose: 'product-pickup'
+    +     },
+    +     {
+    +       allowed: true,
+    +       channel: 'email',
+    +       purpose: 'product-pickup'
+    +     },
+    +     {
+    +       allowed: true,
+    +       channel: 'mail',
+    +       purpose: 'product-pickup'
+    +     },
+    +     {
+            allowed: false,
+    +       channel: 'sms',
+    +       purpose: 'marketing-promo'
+    +     },
+    +     {
+    +       allowed: false,
+    +       channel: 'call',
+    +       purpose: 'marketing-promo'
+    +     },
+    +     {
+    +       allowed: true,
+            channel: 'email',
+    +       purpose: 'marketing-promo'
+    +     },
+    +     {
+    +       allowed: true,
+    +       channel: 'mail',
+    +       purpose: 'marketing-promo'
+    +     },
+    +     {
+    +       allowed: true,
+    +       channel: 'sms',
+            purpose: 'education'
+          },
+    +     {
+    +       allowed: true,
+    +       channel: 'call',
+    +       purpose: 'education'
+    +     },
+    +     {
+    +       allowed: false,
+    +       channel: 'email',
+    +       purpose: 'education'
+    +     },
+    +     {
+    +       allowed: true,
+    +       channel: 'mail',
+    +       purpose: 'education'
+    +     }
+        ]
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    cells:
+      0:
+        purpose: 'education'
+        channel: 'email'
+        allowed: false
+  actual:
+    cells:
+      0:
+        purpose: 'recalls'
+        channel: 'sms'
+        allowed: true
+      1:
+        purpose: 'recalls'
+        channel: 'call'
+        allowed: true
+      2:
+        purpose: 'recalls'
+        channel: 'email'
+        allowed: true
+      3:
+        purpose: 'recalls'
+        channel: 'mail'
+        allowed: true
+      4:
+        purpose: 'appointment'
+        channel: 'sms'
+        allowed: true
+      5:
+        purpose: 'appointment'
+        channel: 'call'
+        allowed: true
+      6:
+        purpose: 'appointment'
+        channel: 'email'
+        allowed: true
+      7:
+        purpose: 'appointment'
+        channel: 'mail'
+        allowed: true
+      8:
+        purpose: 'product-pickup'
+        channel: 'sms'
+        allowed: true
+      9:
+        purpose: 'product-pickup'
+        channel: 'call'
+        allowed: true
+      10:
+        purpose: 'product-pickup'
+        channel: 'email'
+        allowed: true
+      11:
+        purpose: 'product-pickup'
+        channel: 'mail'
+        allowed: true
+      12:
+        purpose: 'marketing-promo'
+        channel: 'sms'
+        allowed: false
+      13:
+        purpose: 'marketing-promo'
+        channel: 'call'
+        allowed: false
+      14:
+        purpose: 'marketing-promo'
+        channel: 'email'
+        allowed: true
+      15:
+        purpose: 'marketing-promo'
+        channel: 'mail'
+        allowed: true
+      16:
+        purpose: 'education'
+        channel: 'sms'
+        allowed: true
+      17:
+        purpose: 'education'
+        channel: 'call'
+        allowed: true
+      18:
+        purpose: 'education'
+        channel: 'email'
+        allowed: false
+      19:
+        purpose: 'education'
+        channel: 'mail'
+        allowed: true
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (ui/tests/registrationCommunicationPreferences.test.tsx:51:12)
+    async mounted (ui/tests/registrationCommunicationPreferences.test.tsx:33:72)
+    async TestContext.<anonymous> (ui/tests/registrationCommunicationPreferences.test.tsx:39:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: M7 New Patient paper confirmation sends all twenty cells and carries them through Create anyway
+ok 17 - M7 New Patient paper confirmation sends all twenty cells and carries them through Create anyway
+  ---
+  duration_ms: 9.305833
+  type: 'test'
+  ...
+# Subtest: unchanged and unconfirmed registration leaves defaults implicit
+not ok 18 - unchanged and unconfirmed registration leaves defaults implicit
+  ---
+  duration_ms: 4.056041
+  type: 'test'
+  location: 'ui/tests/registrationCommunicationPreferences.test.tsx:1:5075'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    true !== false
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (ui/tests/registrationCommunicationPreferences.test.tsx:84:32)
+    async mounted (ui/tests/registrationCommunicationPreferences.test.tsx:33:72)
+    async TestContext.<anonymous> (ui/tests/registrationCommunicationPreferences.test.tsx:78:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: registration preference denial shows a specific message
+ok 19 - registration preference denial shows a specific message
+  ---
+  duration_ms: 6.32125
+  type: 'test'
+  ...
+# Subtest: failed server defaults remain visible and prevent registration without a loaded grid
+ok 20 - failed server defaults remain visible and prevent registration without a loaded grid
+  ---
+  duration_ms: 1.094042
+  type: 'test'
+  ...
+# Subtest: paper confirmation requires a valid date before registration
+ok 21 - paper confirmation requires a valid date before registration
+  ---
+  duration_ms: 3.031584
+  type: 'test'
+  ...
+# Subtest: both registration client entry points omit an empty optional preference payload
+ok 22 - both registration client entry points omit an empty optional preference payload
+  ---
+  duration_ms: 0.370292
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 17
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 604.231833

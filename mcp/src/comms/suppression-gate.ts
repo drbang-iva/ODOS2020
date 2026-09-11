@@ -1,3 +1,4 @@
+import { patientWriteVersion, type PatientWriteVersion } from "./patient-version.js";
 import type { Bundle, Communication, Patient, Provenance, Reference, Resource } from "@medplum/fhirtypes";
 import type { PracticeRoleId } from "../authz/roles.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
@@ -227,6 +228,7 @@ export async function recordPatientSmsOptOut(
     scope: SmsStopScope;
     number?: string;
   },
+  onPatientWritten?: (version: PatientWriteVersion | undefined) => void,
 ): Promise<PatientSmsOptOutState> {
   const patient = await readPatient(fhir, patientReference);
   const existing = patient.extension ?? [];
@@ -261,7 +263,7 @@ export async function recordPatientSmsOptOut(
         { resource: provenance, request: { method: "POST", url: "Provenance" } },
       ],
     };
-    await fhir.executeTransactionAsActor(transaction, {
+    const response = await fhir.executeTransactionAsActor(transaction, {
       actorReference: input.actorReference,
       actorRole: input.actorRole,
       ...(input.policyUrl ? { policyUrl: input.policyUrl } : {}),
@@ -269,6 +271,9 @@ export async function recordPatientSmsOptOut(
     }, { "X-ODOS-Source": "mcp/comms-opt-out-record" }, {
       validateResponse: (response) => assertSmsOptOutTransaction(response, transaction.entry!.length),
     });
+    onPatientWritten?.(patientWriteVersion(response, patientReference, patient.meta.versionId));
+  } else {
+    onPatientWritten?.(patient.meta?.versionId ? { writtenAgainst: patient.meta.versionId, current: patient.meta.versionId } : undefined);
   }
   const remainingOptOuts = summarizeSmsOptOuts(nextExtensions);
   return { patientReference, smsOptedOut: remainingOptOuts.global || remainingOptOuts.numbers.length > 0, remainingOptOuts };
@@ -286,6 +291,7 @@ export async function clearPatientSmsOptOut(
     identityVerification: SmsOptOutIdentityVerification;
     number?: string;
   },
+  onPatientWritten?: (version: PatientWriteVersion | undefined) => void,
 ): Promise<ClearPatientSmsOptOutResult> {
   const patient = await readPatient(fhir, patientReference);
   const existing = patient.extension ?? [];
@@ -297,6 +303,7 @@ export async function clearPatientSmsOptOut(
   const scopeStillSuppressed = number !== undefined
     && (remainingOptOuts.global || remainingOptOuts.numbers.includes(number));
   if (nextExtensions.length === existing.length) {
+    onPatientWritten?.(patient.meta?.versionId ? { writtenAgainst: patient.meta.versionId, current: patient.meta.versionId } : undefined);
     return number === undefined
       ? { patientReference, smsOptedOut: false, cleared: false }
       : {
@@ -342,7 +349,7 @@ export async function clearPatientSmsOptOut(
       { resource: provenance, request: { method: "POST", url: "Provenance" } },
     ],
   };
-  await fhir.executeTransactionAsActor(
+  const response = await fhir.executeTransactionAsActor(
     transaction,
     {
       actorReference: input.actorReference,
@@ -353,6 +360,7 @@ export async function clearPatientSmsOptOut(
     { "X-ODOS-Source": "mcp/comms-opt-out-clear" },
     { validateResponse: (response) => assertSmsOptOutTransaction(response, transaction.entry!.length) },
   );
+  onPatientWritten?.(patientWriteVersion(response, patientReference, patient.meta.versionId));
   return number === undefined
     ? { patientReference, smsOptedOut: false, cleared: true }
     : {

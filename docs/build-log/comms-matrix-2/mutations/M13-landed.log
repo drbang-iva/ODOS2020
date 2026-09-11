@@ -1,0 +1,2 @@
+Captured rg verification of the applied mutation:
+831:      if (active) setTextingBlocked(state.remainingOptOuts.global);

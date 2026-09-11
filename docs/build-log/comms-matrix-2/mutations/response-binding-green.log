@@ -1,0 +1,111 @@
+Working directory: ui
+Command: node --import tsx --test tests/communicationPreferencesClient.test.tsx
+Captured process exit: 0
+TAP version 13
+# Subtest: preferences client reads twenty cells and saves the exact payload with opaque versions
+ok 1 - preferences client reads twenty cells and saves the exact payload with opaque versions
+  ---
+  duration_ms: 8.968167
+  type: 'test'
+  ...
+# Subtest: M11 preferences client rejects malformed source
+ok 2 - M11 preferences client rejects malformed source
+  ---
+  duration_ms: 0.349833
+  type: 'test'
+  ...
+# Subtest: M11 preferences client rejects malformed evidenceStatus
+ok 3 - M11 preferences client rejects malformed evidenceStatus
+  ---
+  duration_ms: 0.171417
+  type: 'test'
+  ...
+# Subtest: M11 preferences client rejects malformed patientVersion
+ok 4 - M11 preferences client rejects malformed patientVersion
+  ---
+  duration_ms: 0.18875
+  type: 'test'
+  ...
+# Subtest: M11 preferences client rejects malformed matrix
+ok 5 - M11 preferences client rejects malformed matrix
+  ---
+  duration_ms: 0.175708
+  type: 'test'
+  ...
+# Subtest: M11 preferences client rejects malformed rows
+ok 6 - M11 preferences client rejects malformed rows
+  ---
+  duration_ms: 0.131541
+  type: 'test'
+  ...
+# Subtest: M11 preferences client rejects malformed metadata
+ok 7 - M11 preferences client rejects malformed metadata
+  ---
+  duration_ms: 0.172875
+  type: 'test'
+  ...
+# Subtest: M11 preferences client rejects malformed evidence
+ok 8 - M11 preferences client rejects malformed evidence
+  ---
+  duration_ms: 0.628875
+  type: 'test'
+  ...
+# Subtest: defaults parser requires every server boolean and version
+ok 9 - defaults parser requires every server boolean and version
+  ---
+  duration_ms: 0.493708
+  type: 'test'
+  ...
+# Subtest: opt-out parsers retain optional opaque versions and reject malformed present shapes
+ok 10 - opt-out parsers retain optional opaque versions and reject malformed present shapes
+  ---
+  duration_ms: 0.976458
+  type: 'test'
+  ...
+# Subtest: evidence client preserves filters, cursor, suppressed rows and CSV metadata
+ok 11 - evidence client preserves filters, cursor, suppressed rows and CSV metadata
+  ---
+  duration_ms: 1.048458
+  type: 'test'
+  ...
+# Subtest: education sent parser surfaces only the supported preference failure flag
+ok 12 - education sent parser surfaces only the supported preference failure flag
+  ---
+  duration_ms: 0.141667
+  type: 'test'
+  ...
+# Subtest: preference and CSV failures preserve HTTP status for recovery
+ok 13 - preference and CSV failures preserve HTTP status for recovery
+  ---
+  duration_ms: 0.249708
+  type: 'test'
+  ...
+# Subtest: evidence report requests omit undefined optional filters in JSON and CSV
+ok 14 - evidence report requests omit undefined optional filters in JSON and CSV
+  ---
+  duration_ms: 0.143875
+  type: 'test'
+  ...
+# Subtest: preferences read rejects another patient's response and accepts the requested patient
+ok 15 - preferences read rejects another patient's response and accepts the requested patient
+  ---
+  duration_ms: 0.231375
+  type: 'test'
+  ...
+# Subtest: preferences save rejects another patient's response and accepts the requested patient
+ok 16 - preferences save rejects another patient's response and accepts the requested patient
+  ---
+  duration_ms: 0.175083
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 358.562167
+
+Exit: 0

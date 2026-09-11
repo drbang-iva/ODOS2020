@@ -1,3 +1,4 @@
+import { readSmsOptOut } from "../lib/communications-client";
 import React, { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { Patient, ServiceRequest } from "@medplum/fhirtypes";
 import {
@@ -326,6 +327,7 @@ export function PatientOverview({
         {demographicsEditorOpen && (
           <PatientDemographicsEditor
             patient={patient}
+            onPatientRefreshed={onPatientSaved}
             onDiscard={() => setDemographicsEditorOpen(false)}
             onSaved={(savedPatient) => {
               onPatientSaved(savedPatient);
@@ -821,8 +823,18 @@ function DemographicDetail({
   chartNumber?: string;
   overview?: PatientOverviewPayload;
 }) {
+  const [textingBlocked, setTextingBlocked] = useState(false);
+  useEffect(() => {
+    let active = true;
+    setTextingBlocked(false);
+    if (patient.id) void readSmsOptOut(`Patient/${patient.id}`).then(state => {
+      if (active) setTextingBlocked(state.remainingOptOuts.global || state.remainingOptOuts.numbers.length > 0);
+    }).catch(() => { if (active) setTextingBlocked(false); });
+    return () => { active = false; };
+  }, [patient.id, patient.meta?.versionId]);
   return (
     <div className="odos-overview-meta">
+      {textingBlocked && <span className="rounded border border-amber-400/50 bg-amber-500/10 px-2 py-0.5 text-amber-200">Texting blocked (STOP)</span>}
       <span>{demographics || "Age/sex not recorded"}</span>
       <span>DOB <b>{patient.birthDate ? localDate(patient.birthDate) : "not recorded"}</b></span>
       <span>Chart <b>{chartNumber ? `#${chartNumber}` : "not recorded"}</b></span>

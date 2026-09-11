@@ -1,0 +1,223 @@
+Working directory: .
+Command: npm --prefix mcp test -- tests/commsPreferencesRoutes.test.ts
+Captured process exit: 1
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/commsPreferencesRoutes.test.ts
+
+TAP version 13
+# Subtest: preferences GET returns effective matrix and evidence rows
+ok 1 - preferences GET returns effective matrix and evidence rows
+  ---
+  duration_ms: 21.047833
+  type: 'test'
+  ...
+# Subtest: G2 preferences PUT all twenty ON leaves STOP extensions unchanged
+ok 2 - G2 preferences PUT all twenty ON leaves STOP extensions unchanged
+  ---
+  duration_ms: 13.845834
+  type: 'test'
+  ...
+# Subtest: G6 preferences PUT requires actual preferences business action
+ok 3 - G6 preferences PUT requires actual preferences business action
+  ---
+  duration_ms: 2.706375
+  type: 'test'
+  ...
+# Subtest: G6 removing preferences action from staff declaration refuses PUT
+ok 4 - G6 removing preferences action from staff declaration refuses PUT
+  ---
+  duration_ms: 1.685709
+  type: 'test'
+  ...
+# Subtest: G21 preference PUT optimistic conflict returns 409
+ok 5 - G21 preference PUT optimistic conflict returns 409
+  ---
+  duration_ms: 3.606166
+  type: 'test'
+  ...
+# Subtest: evidence POST uses an atomic Patient Consent Provenance transaction and preserves cells
+ok 6 - evidence POST uses an atomic Patient Consent Provenance transaction and preserves cells
+  ---
+  duration_ms: 4.612625
+  type: 'test'
+  ...
+# Subtest: preferences routes reject invalid enums duplicates dates and phone keys
+ok 7 - preferences routes reject invalid enums duplicates dates and phone keys
+  ---
+  duration_ms: 8.542625
+  type: 'test'
+  ...
+# Subtest: evidence gaps routes provide JSON and CSV and reject arbitrary URL cursor
+ok 8 - evidence gaps routes provide JSON and CSV and reject arbitrary URL cursor
+  ---
+  duration_ms: 3.885542
+  type: 'test'
+  ...
+# Subtest: CSV evidence report exposes truncation and continuation even with zero rows
+ok 9 - CSV evidence report exposes truncation and continuation even with zero rows
+  ---
+  duration_ms: 89.943542
+  type: 'test'
+  ...
+# Subtest: preferences GET audit identifies the queried patient
+ok 10 - preferences GET audit identifies the queried patient
+  ---
+  duration_ms: 1.66175
+  type: 'test'
+  ...
+# Subtest: M5 preferences reports opaque versions from the Patient transaction entry
+ok 11 - M5 preferences reports opaque versions from the Patient transaction entry
+  ---
+  duration_ms: 1.447541
+  type: 'test'
+  ...
+# Subtest: M5 consent-evidence reports opaque versions from the Patient transaction entry
+ok 12 - M5 consent-evidence reports opaque versions from the Patient transaction entry
+  ---
+  duration_ms: 1.238375
+  type: 'test'
+  ...
+# Subtest: M5 preferences omits unknown version undefined
+ok 13 - M5 preferences omits unknown version undefined
+  ---
+  duration_ms: 1.646458
+  type: 'test'
+  ...
+# Subtest: M5 preferences omits unknown version Patient/other/_history/opaque-next
+ok 14 - M5 preferences omits unknown version Patient/other/_history/opaque-next
+  ---
+  duration_ms: 1.80875
+  type: 'test'
+  ...
+# Subtest: M5 preferences omits unknown version Patient/synthetic-matrix/_history/
+ok 15 - M5 preferences omits unknown version Patient/synthetic-matrix/_history/
+  ---
+  duration_ms: 1.675209
+  type: 'test'
+  ...
+# Subtest: M5 consent-evidence omits unknown version undefined
+ok 16 - M5 consent-evidence omits unknown version undefined
+  ---
+  duration_ms: 1.155541
+  type: 'test'
+  ...
+# Subtest: M5 consent-evidence omits unknown version Patient/other/_history/opaque-next
+ok 17 - M5 consent-evidence omits unknown version Patient/other/_history/opaque-next
+  ---
+  duration_ms: 1.116917
+  type: 'test'
+  ...
+# Subtest: M5 consent-evidence omits unknown version Patient/synthetic-matrix/_history/
+ok 18 - M5 consent-evidence omits unknown version Patient/synthetic-matrix/_history/
+  ---
+  duration_ms: 1.042583
+  type: 'test'
+  ...
+# Subtest: M6 defaults route returns imported server defaults with communications read access
+not ok 19 - M6 defaults route returns imported server defaults with communications read access
+  ---
+  duration_ms: 3.383208
+  type: 'test'
+  location: 'mcp/tests/commsPreferencesRoutes.test.ts:1:11071'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+
+      {
+        defaults: {
+          'marketing-promo': {
+            call: false,
+            email: true,
+    ...
+            call: false,
+    +       email: false,
+    -       email: true,
+            mail: true,
+            sms: true
+          },
+          recalls: {
+            call: true,
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    version: '2026-09-10'
+    defaults:
+      recalls:
+        sms: true
+        call: true
+        email: true
+        mail: true
+      appointment:
+        sms: true
+        call: true
+        email: true
+        mail: true
+      product-pickup:
+        sms: true
+        call: true
+        email: true
+        mail: true
+      marketing-promo:
+        sms: false
+        call: false
+        email: true
+        mail: true
+      education:
+        sms: true
+        call: false
+        email: true
+        mail: true
+  actual:
+    version: '2026-09-10'
+    defaults:
+      recalls:
+        sms: true
+        call: true
+        email: true
+        mail: true
+      appointment:
+        sms: true
+        call: true
+        email: true
+        mail: true
+      product-pickup:
+        sms: true
+        call: true
+        email: true
+        mail: true
+      marketing-promo:
+        sms: false
+        call: false
+        email: true
+        mail: true
+      education:
+        sms: true
+        call: false
+        email: false
+        mail: true
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/commsPreferencesRoutes.test.ts:182:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: defaults route requires communications read access
+ok 20 - defaults route requires communications read access
+  ---
+  duration_ms: 2.497875
+  type: 'test'
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 19
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 709.601959

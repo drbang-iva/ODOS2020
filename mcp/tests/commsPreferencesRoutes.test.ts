@@ -6,11 +6,14 @@ import express from "express";
 import type { Bundle, Consent, Patient } from "@medplum/fhirtypes";
 import { getRoleDeclaration, type BusinessAction } from "../src/authz/roles.js";
 import { registerCommsApiRoutes, type CommsApiRouteDeps } from "../src/comms/comms-api.js";
-import { COMMS_PURPOSES, COMMS_PREFERENCE_CHANNELS, ODOS_COMMS_OPT_OUT_EXTENSION_URL, readCommsPreferenceCells } from "../src/comms/suppression-gate.js";
+import { COMMS_PREFERENCE_DEFAULTS, COMMS_PREFERENCE_DEFAULTS_VERSION, COMMS_PURPOSES, COMMS_PREFERENCE_CHANNELS, ODOS_COMMS_OPT_OUT_EXTENSION_URL, readCommsPreferenceCells } from "../src/comms/suppression-gate.js";
+
+import { patientWriteVersion } from "../src/comms/patient-version.js";
+import { COMMS_CONSENT_SCOPE_URL } from "../src/comms/comms-preferences.js";
 
 const pair = { purpose: "education", channel: "email", allowed: true };
 const patientReference = "Patient/synthetic-matrix";
-async function fixture(options: { conflict?: boolean; businessActions?: readonly BusinessAction[]; stop?: boolean; manyPatients?: boolean } = {}) {
+async function fixture(options: { conflict?: boolean; businessActions?: readonly BusinessAction[]; stop?: boolean; manyPatients?: boolean; patientLocation?: string; omitPatientResource?: boolean; returnedVersion?: string } = {}) {
   let patient: Patient = { resourceType: "Patient", id: "synthetic-matrix", active: true, meta: { versionId: "3" },
     ...(options.stop ? { extension: [{ url: ODOS_COMMS_OPT_OUT_EXTENSION_URL, extension: [{ url: "channel", valueCode: "sms" }, { url: "scope", valueCode: "global" }] }] } : {}) };
   const initial = structuredClone(patient);
@@ -27,7 +30,10 @@ async function fixture(options: { conflict?: boolean; businessActions?: readonly
         : [{ resource: structuredClone(patient) }] }),
     executeTransactionAsActor: async (bundle: Bundle, _actor: unknown, _headers: unknown, validation: { validateResponse?: (response: Bundle) => void } = {}) => {
       transactions.push(structuredClone(bundle));
-      const response: Bundle = { resourceType: "Bundle", type: "transaction-response", entry: bundle.entry!.map(() => ({ response: { status: options.conflict ? "412 Precondition Failed" : "200 OK" } })) };
+      const response: Bundle = { resourceType: "Bundle", type: "transaction-response", entry: bundle.entry!.map(entry => ({
+        ...(!options.omitPatientResource && entry.resource?.resourceType === "Patient" ? { resource: { ...entry.resource, meta: { versionId: options.returnedVersion ?? "opaque-next" } } } : {}),
+        response: { status: options.conflict ? "412 Precondition Failed" : "200 OK", ...(entry.resource?.resourceType === "Patient" ? { location: options.patientLocation ?? patientReference } : {}) },
+      })) };
       validation.validateResponse?.(response);
       for (const entry of bundle.entry!) {
         if (entry.resource?.resourceType === "Patient") patient = structuredClone(entry.resource);
@@ -146,4 +152,90 @@ test("preferences GET audit identifies the queried patient", async () => {
     assert.equal(f.auditRows.length, 1);
     assert.equal(f.auditRows[0].patientId, "synthetic-matrix");
   } finally { await f.close(); }
+});
+
+for (const route of ["preferences", "consent-evidence"] as const) {
+  test(`M5 ${route} reports opaque versions from the Patient transaction entry`, async () => {
+    const f = await fixture();
+    try {
+      const response = await f.request(`/communications/${route}`, route === "preferences" ? "PUT" : "POST",
+        route === "preferences" ? { patientReference, cells: [pair] } : { patientReference, scope: [pair].map(({ purpose, channel }) => ({ purpose, channel })), method: "in-person" });
+      assert.equal(response.status, 200);
+      assert.deepEqual((await response.json()).patientVersion, { writtenAgainst: "3", current: "opaque-next" });
+    } finally { await f.close(); }
+  });
+}
+
+for (const route of ["preferences", "consent-evidence"] as const) {
+  for (const patientLocation of [undefined, "Patient/other/_history/opaque-next", "Patient/synthetic-matrix/_history/"]) {
+    test(`M5 ${route} omits unknown version ${patientLocation}`, async () => {
+      const f = await fixture({ patientLocation, omitPatientResource: true });
+      try {
+        const response = await f.request(`/communications/${route}`, route === "preferences" ? "PUT" : "POST",
+          route === "preferences" ? { patientReference, cells: [pair] } : { patientReference, scope: [{ purpose: "education", channel: "email" }], method: "in-person" });
+        assert.equal(response.status, 200);
+        assert.equal(Object.hasOwn(await response.json(), "patientVersion"), false);
+      } finally { await f.close(); }
+    });
+  }
+}
+
+test("M6 defaults route returns imported server defaults with communications read access", async () => {
+  const f = await fixture({ businessActions: ["communications.read"] });
+  try {
+    const response = await f.request("/communications/preferences/defaults");
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { version: COMMS_PREFERENCE_DEFAULTS_VERSION, defaults: COMMS_PREFERENCE_DEFAULTS });
+    assert.equal(f.transactions.length, 0);
+  } finally { await f.close(); }
+});
+test("defaults route requires communications read access", async () => {
+  const f = await fixture({ businessActions: ["communications.preferences.manage"] });
+  try { assert.equal((await f.request("/communications/preferences/defaults")).status, 403); }
+  finally { await f.close(); }
+});
+
+for (const route of ["preferences", "consent-evidence"] as const) {
+  for (const disagreement of [false, true]) test(`M5 ${route} ${disagreement ? "disagreement omits report" : "history fallback"}`, async () => {
+    const f = await fixture({ patientLocation: `${patientReference}/_history/history-version`, omitPatientResource: !disagreement });
+    try {
+      const response = await f.request(`/communications/${route}`, route === "preferences" ? "PUT" : "POST",
+        route === "preferences" ? { patientReference, cells: [pair] } : { patientReference, scope: [{ purpose: "education", channel: "email" }], method: "in-person" });
+      assert.equal(response.status, 200);
+      assert.deepEqual((await response.json()).patientVersion, disagreement ? undefined : { writtenAgainst: "3", current: "history-version" });
+    } finally { await f.close(); }
+  });
+}
+
+test("F1 confirmed non-Text preferences preserve stored Text ON after STOP is cleared and exclude Text evidence", async () => {
+  const f = await fixture();
+  try {
+    assert.equal((await f.request("/communications/preferences", "PUT", { patientReference, cells: [{ purpose: "education", channel: "sms", allowed: true }] })).status, 200);
+    const stored = readCommsPreferenceCells(f.patient).find(cell => cell.purpose === "education" && cell.channel === "sms");
+    assert.equal(stored?.allowed, true);
+    const identity = { patientReference, reason: "Synthetic patient request", identityVerification: "in-person" };
+    assert.equal((await f.request("/communications/opt-out/record", "POST", { ...identity, scope: "global" })).status, 200);
+    const stopped = await (await f.request(`/communications/preferences?patient=${patientReference}`)).json();
+    assert.equal(stopped.matrix.education.sms.source, "suppression");
+    const cells = COMMS_PURPOSES.flatMap(purpose => COMMS_PREFERENCE_CHANNELS.filter(channel => channel !== "sms").map(channel => ({ purpose, channel, allowed: stopped.matrix[purpose][channel].value })));
+    assert.equal((await f.request("/communications/preferences", "PUT", { patientReference, cells, confirmedVia: "in-person" })).status, 200);
+    assert.deepEqual(readCommsPreferenceCells(f.patient).find(cell => cell.purpose === "education" && cell.channel === "sms"), stored);
+    const consent = f.transactions.at(-1)!.entry!.find(entry => entry.resource?.resourceType === "Consent")!.resource as Consent;
+    const scope = consent.extension!.filter(extension => extension.url === COMMS_CONSENT_SCOPE_URL);
+    assert.equal(scope.length, 15);
+    assert.equal(scope.some(extension => extension.extension?.some(part => part.url === "channel" && part.valueCode === "sms")), false);
+    assert.equal((await f.request("/communications/opt-out/clear", "POST", identity)).status, 200);
+    const cleared = await (await f.request(`/communications/preferences?patient=${patientReference}`)).json();
+    assert.equal(cleared.matrix.education.sms.value, true);
+    assert.equal(cleared.matrix.education.sms.source, "explicit");
+    assert.equal(cleared.rows.find((row: { purpose: string; channel: string }) => row.purpose === "education" && row.channel === "sms").evidenceSummary.length, 0);
+  } finally { await f.close(); }
+});
+
+test("X12 a returned Patient with a different id yields no patientVersion", () => {
+  const response: Bundle = { resourceType: "Bundle", type: "transaction-response", entry: [{
+    resource: { resourceType: "Patient", id: "different-patient", meta: { versionId: "opaque-other" } },
+    response: { status: "200 OK", location: patientReference },
+  }] };
+  assert.equal(patientWriteVersion(response, patientReference, "opaque-before"), undefined);
 });

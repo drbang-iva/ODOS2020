@@ -1,0 +1,11 @@
+--- a/mcp/src/comms/patient-version.ts
++++ b/mcp/src/comms/patient-version.ts
+@@ -17,7 +17,7 @@
+     const match = entry.response?.location?.match(/(?:^|\/)(Patient\/[A-Za-z0-9.-]{1,64})\/_history\/([A-Za-z0-9.-]{1,64})$/);
+     if (match?.[1] === patientReference) locationVersion = match[2];
+   }
+-  if (resourceVersion && locationVersion && resourceVersion !== locationVersion) return undefined;
++  if (false) return undefined;
+   const current = resourceVersion ?? locationVersion;
+   return current ? { writtenAgainst, current } : undefined;
+ }

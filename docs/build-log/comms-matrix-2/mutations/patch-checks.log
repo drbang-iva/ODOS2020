@@ -1,0 +1,29 @@
+Source head: 4f99d7aa38378733a9920b778589baf3e085a467
+Command per patch: git apply --check docs/build-log/comms-matrix-2/mutations/<patch>.diff
+No mutations executed; historical focused results preserved.
+M1.diff: exit 0
+M10-failed.diff: exit 0
+M10-success.diff: exit 0
+M10-withheld.diff: exit 0
+M11-evidenceStatus.diff: exit 0
+M11-patientVersion.diff: exit 0
+M11-source.diff: exit 0
+M12-banner.diff: exit 0
+M12-cursor.diff: exit 0
+M13.diff: exit 0
+M14.diff: exit 0
+M15.diff: exit 0
+M2.diff: exit 0
+M3.diff: exit 0
+M4.diff: exit 0
+M5a.diff: exit 0
+M5b.diff: exit 0
+M6.diff: exit 0
+M7-all.diff: exit 0
+M7-none.diff: exit 0
+M8.diff: exit 0
+M9-email.diff: exit 0
+M9-note.diff: exit 0
+M9-text.diff: exit 0
+registration-fallback.diff: exit 0
+response-binding.diff: exit 0
