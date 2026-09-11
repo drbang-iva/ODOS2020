@@ -1,4 +1,6 @@
-import { writeCommsPreferences } from "./comms-preferences.js";
+import { resolvePractitionerReference } from "../authz/practitioner-reference.js";
+import { writeCommsPreferences, parsePreferenceWriteInput, parseConsentEvidenceInput, parseEvidenceGapFilters,
+  attachCommsConsentEvidence, readCommsPreferences, reportCommsEvidenceGaps, evidenceGapCsv } from "./comms-preferences.js";
 import { effectiveCommsPreferences } from "./suppression-gate.js";
 import { isFhirConflict } from "../clinical-graph/fhir-conflict.js";
 import type { Communication, Condition, Encounter, Patient, Provenance, RelatedPerson } from "@medplum/fhirtypes";
@@ -88,6 +90,7 @@ export interface CommsApiRouteDeps {
 }
 
 class CommsApiValidationError extends Error {}
+class CommsPreferencePermissionError extends Error {}
 class CommsApiCapabilityError extends Error {}
 class PendingEducationReconciliationError extends CommsApiCapabilityError {}
 class CommsApiNotFoundError extends Error {}
@@ -100,7 +103,7 @@ class CommsProviderTimeoutError extends Error {}
 
 type CommsApiResult =
   | { status: number; body: unknown }
-  | { status: number; media: { contentType: string; bytes: Uint8Array } };
+  | { status: number; media: { contentType: string; bytes: Uint8Array }; headers?: Record<string, string> };
 
 const MAX_CALL_HISTORY_WINDOW = 1_000;
 const MAX_CONVERSATIONS_PER_PROVIDER = 100;
@@ -525,6 +528,51 @@ export function registerCommsApiRoutes(
       }
       await enforceEducationLifecycle(deps, staff);
       return { status: 200, body: await dispatchEducation(deps, staff, patient, body) };
+    },
+  ));
+
+  app.get("/communications/preferences", async (req, res) => withStaff(
+    req, res, deps, "communications.read", "Patient", "communications-preferences-read",
+    patientReferenceForAudit(req), async staff => {
+      const patientReference = requiredPatientReference(queryString(req, "patient"));
+      return { status: 200, body: await preferenceAccess(() => readCommsPreferences(staff.fhir, patientReference)) };
+    },
+  ));
+  app.put("/communications/preferences", async (req, res) => withStaff(
+    req, res, deps, "communications.preferences.manage", "Patient", "communications-preferences-write",
+    patientReferenceFromBody(req.body), async staff => {
+      const now = deps.now?.() ?? new Date().toISOString();
+      const input = validatedPreferenceInput(() => parsePreferenceWriteInput(req.body, now));
+      const actorReference = await preferencePractitioner(staff);
+      await preferenceAccess(() => writeCommsPreferences(staff.fhir, input.patientReference, input.cells, {
+        actorReference, actorRole: staff.actorRole, policyUrl: staff.authorizationPolicyUrl,
+        recordedAt: now, surface: "staff-demographics",
+      }, input));
+      return { status: 200, body: await preferenceAccess(() => readCommsPreferences(staff.fhir, input.patientReference)) };
+    },
+  ));
+  app.post("/communications/consent-evidence", async (req, res) => withStaff(
+    req, res, deps, "communications.preferences.manage", "Consent", "communications-consent-evidence",
+    patientReferenceFromBody(req.body), async staff => {
+      const now = deps.now?.() ?? new Date().toISOString();
+      const input = validatedPreferenceInput(() => parseConsentEvidenceInput(req.body, now));
+      const actorReference = await preferencePractitioner(staff);
+      await preferenceAccess(() => attachCommsConsentEvidence(staff.fhir, input, {
+        actorReference, actorRole: staff.actorRole, policyUrl: staff.authorizationPolicyUrl,
+        recordedAt: now, surface: "staff-demographics",
+      }));
+      return { status: 200, body: await preferenceAccess(() => readCommsPreferences(staff.fhir, input.patientReference)) };
+    },
+  ));
+  app.get("/communications/preferences/evidence-gaps", async (req, res) => withStaff(
+    req, res, deps, "communications.preferences.manage", "Consent", "communications-evidence-gaps", undefined,
+    async staff => {
+      const filters = validatedPreferenceInput(() => parseEvidenceGapFilters(req.query));
+      const report = await preferenceAccess(() => reportCommsEvidenceGaps(staff.fhir, filters));
+      return filters.format === "csv" ? {
+        status: 200, media: { contentType: "text/csv", bytes: Buffer.from(evidenceGapCsv(report)) },
+        headers: { "X-ODOS-Truncated": String(report.truncated), ...(report.cursor ? { "X-ODOS-Cursor": report.cursor } : {}) },
+      } : { status: 200, body: report };
     },
   ));
 
@@ -1264,7 +1312,7 @@ async function dispatchEducationInternal(
       if (withheldEducationEmail && actor.kind === "staff") {
         try {
           await writeCommsPreferences(actor.staff.fhir, body.patientReference, [{ purpose: "education", channel: "email", allowed: true }], {
-            actorReference: actor.staff.staffReference, actorRole: actor.staff.actorRole,
+            actorReference: await preferencePractitioner(actor.staff), actorRole: actor.staff.actorRole,
             policyUrl: actor.staff.authorizationPolicyUrl, recordedAt: deps.now?.() ?? new Date().toISOString(), surface: "staff-manual-send",
           });
         } catch {
@@ -1496,6 +1544,7 @@ async function withStaff(
       throw error;
     }
     if ("media" in result) {
+      if (result.headers) res.set(result.headers);
       res.status(result.status).type(result.media.contentType).send(Buffer.from(result.media.bytes));
     } else {
       res.status(result.status).json(result.body);
@@ -1504,6 +1553,10 @@ async function withStaff(
     if (res.headersSent) return;
     if (error instanceof EducationSequenceAdmissionError) {
       res.status(409).json({ outcome: "refused", reason: error.message });
+      return;
+    }
+    if (error instanceof CommsPreferencePermissionError) {
+      res.status(403).json({ error: "Communication preference access denied." });
       return;
     }
     if (error instanceof CommsApiValidationError) {
@@ -2616,4 +2669,25 @@ function record(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
+}
+
+function validatedPreferenceInput<T>(parse: () => T): T {
+  try { return parse(); }
+  catch (error) { throw new CommsApiValidationError(error instanceof Error ? error.message : "Invalid communication preferences."); }
+}
+
+async function preferenceAccess<T>(operation: () => Promise<T>): Promise<T> {
+  try { return await operation(); }
+  catch (error) {
+    if (typeof error === "object" && error !== null && "status" in error && error.status === 403) {
+      throw new CommsPreferencePermissionError();
+    }
+    if (isFhirNotFound(error)) throw new CommsApiNotFoundError("Patient or consent evidence not found.");
+    throw error;
+  }
+}
+async function preferencePractitioner(staff: CommsStaff): Promise<string> {
+  const reference = await preferenceAccess(() => resolvePractitionerReference(staff.fhir, staff.staffReference));
+  if (!reference) throw new CommsApiValidationError("Communication preferences require a staff Practitioner.");
+  return reference;
 }
