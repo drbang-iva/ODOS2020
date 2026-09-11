@@ -43,7 +43,7 @@ test("system send keeps enrolling sender, records executor, and reconciles froze
   const f=fixture();
   const result=await (api as any).dispatchEducationAs(f.actor,f.deps,f.patient,f.body);
   assert.equal(result.outcome,"sent");
-  assert.deepEqual(f.requests[0].suppression,{});
+  assert.deepEqual(f.requests[0].suppression,{ consentClass: "transactional" });
   const reservation=f.resources.find(r=>r.resourceType==="Communication");
   assert.equal(reservation.sender.reference,"Practitioner/enroller");
   const provenance=f.resources.find(r=>r.resourceType==="Provenance");
@@ -222,7 +222,7 @@ test("recorded system marketing receipt reconciles after consent and catalog are
   f.deps.dispatch.getAdapterForRole = () => provider;
   const result = await api.dispatchEducationAs(f.actor, f.deps, f.patient, f.body);
   assert.equal(result.outcome, "sent");
-  assert.deepEqual(f.requests[0].suppression, { requiresMarketingConsent: true });
+  assert.deepEqual(f.requests[0].suppression, { requiresMarketingConsent: true, consentClass: "marketing" });
   f.patient.extension = [];
   f.deps.educationCatalog.get = () => { throw Error("withdrawn catalog"); };
   f.fhir.read = async () => { throw Error("mutable patient unavailable"); };

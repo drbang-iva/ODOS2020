@@ -1038,7 +1038,7 @@ export async function prepareEducationSequenceDispatch(
   const result = await provider.preflightSuppression({
     patientReference: body.patientReference, body: url, subject: prepared.item.title,
     campaignType: "clinical-education", campaignId: prepared.campaignId, messageId: body.idempotencyKey,
-    suppression: prepared.item.consentClass === "marketing" ? { requiresMarketingConsent: true } : {},
+    suppression: { consentClass: prepared.item.consentClass, ...(prepared.item.consentClass === "marketing" ? { requiresMarketingConsent: true } : {}) },
   }, body.channel);
   if (result?.outcome === "rescheduled") return { kind: "deferred", notBefore: result.rescheduledAt };
   if (result?.outcome === "suppressed") return { kind: "held", reason: "patient-opt-out" };
@@ -1149,8 +1149,8 @@ async function dispatchEducationInternal(
     }
   }
   const { item, recipient, laneSelection, campaignId } = options.prepared ?? await prepareEducationDispatch(deps, staff.fhir, patient, body);
-  const requiredConsent = actor.kind === "system" && item.consentClass === "marketing"
-    ? { requiresMarketingConsent: true } : {};
+  const requiredConsent = { consentClass: item.consentClass,
+    ...(actor.kind === "system" && item.consentClass === "marketing" ? { requiresMarketingConsent: true } : {}) };
   const frozenContext = (providerMessageIdentifierSystem: string): string => JSON.stringify({
     kind: "education-dispatch", executingReference: staff.executingReference, body, item, recipientValue: recipient.value, laneSelection, providerMessageIdentifierSystem,
   } satisfies FrozenEducationDispatch);
@@ -1376,7 +1376,7 @@ async function dispatchEducationInternal(
     campaignId,
     messageId: body.idempotencyKey,
     suppression: actor.kind === "staff" && item.consentClass === "transactional"
-      ? { quietHoursExemption: "staff-initiated-chart-education" }
+      ? { ...requiredConsent, quietHoursExemption: "staff-initiated-chart-education" }
       : requiredConsent,
   });
   if (result.outcome === "sent") {

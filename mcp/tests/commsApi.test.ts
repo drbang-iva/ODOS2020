@@ -420,8 +420,8 @@ test("only transactional staff chart education receives the quiet-hours exemptio
     }
 
     assert.deepEqual(fixture.smsRequests.map(({ suppression }) => suppression), [
-      { quietHoursExemption: "staff-initiated-chart-education" },
-      {},
+      { quietHoursExemption: "staff-initiated-chart-education", consentClass: "transactional" },
+      { consentClass: "marketing" },
     ]);
   } finally {
     await fixture.close();

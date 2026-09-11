@@ -22,6 +22,32 @@ export const ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM =
 export const ODOS_COMMS_SEND_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-send";
 
+export const COMMS_PURPOSES = ["recalls", "appointment", "product-pickup", "marketing-promo", "education"] as const;
+export type CommsPurpose = typeof COMMS_PURPOSES[number];
+export const COMMS_PREFERENCE_CHANNELS = ["sms", "call", "email", "mail"] as const;
+export type CommsPreferenceChannel = typeof COMMS_PREFERENCE_CHANNELS[number];
+export const PURPOSE_BY_CAMPAIGN_TYPE = {
+  "appointment-reminder": "appointment",
+  "clinical-education": "education",
+} as const satisfies Record<string, CommsPurpose>;
+export const MATRIX_EXEMPT_CAMPAIGN_TYPES = ["staff-initiated"] as const;
+export const COMMS_PREFERENCE_DEFAULTS_VERSION = "2026-09-10";
+export const COMMS_PREFERENCE_DEFAULTS: Record<CommsPurpose, Record<CommsPreferenceChannel, boolean>> = {
+  recalls: { sms: true, call: true, email: true, mail: true },
+  appointment: { sms: true, call: true, email: true, mail: true },
+  "product-pickup": { sms: true, call: true, email: true, mail: true },
+  "marketing-promo": { sms: false, call: false, email: true, mail: true },
+  education: { sms: true, call: false, email: true, mail: true },
+};
+
+export function communicationPurpose(campaignType: string, consentClass?: "transactional" | "marketing"): CommsPurpose | undefined {
+  if (consentClass === "marketing") return "marketing-promo";
+  if ((MATRIX_EXEMPT_CAMPAIGN_TYPES as readonly string[]).includes(campaignType)) return undefined;
+  const purpose = (PURPOSE_BY_CAMPAIGN_TYPE as Record<string, CommsPurpose>)[campaignType];
+  if (purpose) return purpose;
+  throw new Error(`Communications campaignType "${campaignType}" has no communication purpose; register it in PURPOSE_BY_CAMPAIGN_TYPE.`);
+}
+
 export type SuppressionFhir = Pick<MedplumClient, "baseUrl" | "read" | "search" | "searchUrl">;
 export type InboundSuppressionFhir = Pick<MedplumClient, "search" | "searchUrl" | "update">;
 export type SmsOptOutManagementFhir = Pick<MedplumClient, "read" | "executeTransactionAsActor">;
