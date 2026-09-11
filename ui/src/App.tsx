@@ -1,3 +1,4 @@
+import { ConsentEvidence, canViewConsentEvidence } from "./scenes/ConsentEvidence";
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { EncounterCharting } from "./scenes/EncounterCharting";
 import { ProcedureDefinitionsSettings } from "./scenes/settings/ProcedureDefinitionsSettings";
@@ -388,6 +389,8 @@ export function RouteSwitch({
   search = typeof window === "undefined" ? "" : window.location.search,
 }: RouteSwitchProps) {
   switch (path) {
+    case "/communications/consent-evidence":
+      return <ConsentEvidence canView={canViewConsentEvidence(roles)} />;
     case "/communications/education/review":
       return <EducationSequenceReview canReview={roles.includes("provider")} />;
     case "/audit/log":
