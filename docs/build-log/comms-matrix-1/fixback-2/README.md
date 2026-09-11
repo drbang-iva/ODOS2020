@@ -1,6 +1,6 @@
 # MATRIX-1 fixback round 2 — author evidence
 
-Reviewed parent: `659008585fc134971f37e56cd44be085116467aa`. Fix commit: `4f9e41298a39068cb38cbc18fbe246fbdf3399d7`. Same branch `drbang-iva/comms-matrix-1`, same PR #577. This is author verification, not independent evaluation.
+Reviewed parent: `659008585fc134971f37e56cd44be085116467aa`. Fix commit: `4f9e41298a39068cb38cbc18fbe246fbdf3399d7`. Patient-version fixture follow-up: `b655287aca9b8a0fdcd7ae3f0f2c9c2340b1461c`. Same branch `drbang-iva/comms-matrix-1`, same PR #577. This is author verification, not independent evaluation.
 
 The staff email path now sends, persists the sent Communication, updates the recipient contact, flips the withheld preference using a fresh Patient read, and records send Provenance. `withheldEducationEmail` is still computed before sending. The flip catch and G19/G19b failure semantics are unchanged.
 
@@ -38,3 +38,11 @@ The initial run had nine additional HTTP 429 failures in unchanged profile and P
 Captured commands, own exit statuses and exact failure names: [initial MCP](mcp-initial-summary.log), [clean base](base-summary.log), [final MCP](mcp-final-summary.log), [UI](ui-summary.log). MCP build exited 0: [output](build.log). The base worktree remained clean. The full list and prior comparison history remain in [the failure table](../failure-comparison.md).
 
 Files: `mcp/src/comms/comms-api.ts`, `mcp/tests/commsApi.test.ts`, the four regenerated mutation packets, and their author evidence/index documents. No other executable source changed in this fixback.
+
+## Patient-version fixture follow-up
+
+The bot correctly identified that the same Patient update fixture derived its next version from the Communication store. The authorized conditional-write fixture now advances the version from the current Patient record. No existing assertion changed. All 75 API tests, including the 73 pre-existing tests, pass with this stronger enforcement: [output](version-fixture-existing.log).
+
+The two new F1 cases additionally require version 3 after contact plus preference flip, and version 2 after contact alone. Resetting successful Patient updates to version 1 makes those two cases fail: 73/75, exit 1; restoration passes 75/75, exit 0. [Mutation](Patient-version-mutation.diff) · [proof](Patient-version-proof.log) · [red](Patient-version-red.log) · [green](Patient-version-green.log) · [result](Patient-version-result.json). F1 and G12/G19/G19b were rerun and remain red/restored-green and 3/3 green respectively; their outputs above were refreshed.
+
+After the Patient-version fixture follow-up, full MCP was rerun: **4,640 total, 4,627 passed, 8 failed, 5 skipped, exit 1**. The failure set still matches the clean base exactly, with zero branch-only failures. [Final output](mcp-final-summary.log). The UI source is unchanged and its full 1,341/1,341 run remains valid.

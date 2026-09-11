@@ -62,3 +62,5 @@ Final repeat after the terminology relocation: **4,638 total, 4,625 passed, 8 fa
 ## Fixback round 2
 
 The F1 fix adds two API cases and enforces stale Patient If-Match rejection in the authorized fixture. Initial full branch run: 4,640 total, 4,618 passed, 17 failed, 5 skipped, exit 1; nine additional failures returned HTTP 429 while UI ran concurrently. A fresh clean-base run again produced 4,578 total, 4,565 passed, 8 failed, 5 skipped, exit 1. Sequentially rerunning unchanged branch code produced **4,640 total, 4,627 passed, 8 failed, 5 skipped, exit 1**. Exact failure-name sets match: **zero branch-only failures**. All existing API tests passed under the enforced fixture. [Full fixback command record and failure lists](fixback-2/README.md).
+
+The Patient-version fixture follow-up at `b655287aca9b8a0fdcd7ae3f0f2c9c2340b1461c` was followed by another full MCP run: 4,640 total, 4,627 passed, 8 failed, 5 skipped, exit 1. Exact failure names still match the clean base; zero branch-only failures. No existing API assertion changed.

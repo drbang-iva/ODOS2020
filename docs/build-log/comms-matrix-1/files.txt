@@ -54,6 +54,11 @@ docs/build-log/comms-matrix-1/fixback-2/G21-green.log
 docs/build-log/comms-matrix-1/fixback-2/G21-proof.log
 docs/build-log/comms-matrix-1/fixback-2/G21-red.log
 docs/build-log/comms-matrix-1/fixback-2/G21-result.json
+docs/build-log/comms-matrix-1/fixback-2/Patient-version-green.log
+docs/build-log/comms-matrix-1/fixback-2/Patient-version-mutation.diff
+docs/build-log/comms-matrix-1/fixback-2/Patient-version-proof.log
+docs/build-log/comms-matrix-1/fixback-2/Patient-version-red.log
+docs/build-log/comms-matrix-1/fixback-2/Patient-version-result.json
 docs/build-log/comms-matrix-1/fixback-2/README.md
 docs/build-log/comms-matrix-1/fixback-2/base-summary.log
 docs/build-log/comms-matrix-1/fixback-2/build.log
@@ -61,6 +66,7 @@ docs/build-log/comms-matrix-1/fixback-2/fixture-existing.log
 docs/build-log/comms-matrix-1/fixback-2/mcp-final-summary.log
 docs/build-log/comms-matrix-1/fixback-2/mcp-initial-summary.log
 docs/build-log/comms-matrix-1/fixback-2/ui-summary.log
+docs/build-log/comms-matrix-1/fixback-2/version-fixture-existing.log
 docs/build-log/comms-matrix-1/live-fixture-cleanup.md
 docs/build-log/comms-matrix-1/live-isolation-boundary.log
 docs/build-log/comms-matrix-1/live-next-link.log

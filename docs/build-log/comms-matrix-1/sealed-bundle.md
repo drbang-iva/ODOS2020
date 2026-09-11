@@ -2,7 +2,7 @@
 
 Status: needs independent review; eight base-matching full-suite environment failures remain. No independent evaluation. Base: `78a8ef6f7691ccffad2a752231f818ae2d9668bd`. Branch: `drbang-iva/comms-matrix-1`.
 
-[Fixback round 2: F1, strict fixture, new control tests and refreshed diffs](fixback-2/README.md). Source fix commit: `4f9e41298a39068cb38cbc18fbe246fbdf3399d7`. Independent re-evaluation is still required.
+[Fixback round 2: F1, strict fixture, new control tests and refreshed diffs](fixback-2/README.md). Source fix commit: `4f9e41298a39068cb38cbc18fbe246fbdf3399d7`; Patient-version fixture follow-up: `b655287aca9b8a0fdcd7ae3f0f2c9c2340b1461c`. Independent re-evaluation is still required.
 
 ## Behavior
 

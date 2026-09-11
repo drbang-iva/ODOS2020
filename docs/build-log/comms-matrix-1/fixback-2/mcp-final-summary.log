@@ -1,4 +1,4 @@
-Source commit: 4f9e41298a39068cb38cbc18fbe246fbdf3399d7
+Source commit: b655287aca9b8a0fdcd7ae3f0f2c9c2340b1461c
 Command: npm --prefix mcp test
 Exit: 1
 Exact failure-name sets match the clean base: 8 common, 0 branch-only, 0 base-only.
@@ -14,4 +14,4 @@ not ok 3840 - v0.5a audit-only boundary AccessPolicy enforces compartment isolat
 # pass 4627
 # fail 8
 # skipped 5
-# duration_ms 292928.671375
+# duration_ms 289264.947792

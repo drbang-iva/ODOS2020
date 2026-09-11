@@ -1,0 +1,8 @@
+Mutation applied and source verified byte-for-byte.
+--- a/mcp/tests/commsApi.test.ts
++++ b/mcp/tests/commsApi.test.ts
+@@ -2291,3 +2291,3 @@
+             id,
+-            meta: { ...resource.meta, versionId: String(Number(currentVersion ?? "0") + 1) },
++            meta: { ...resource.meta, versionId: "1" },
+           } as T;
