@@ -76,11 +76,13 @@ test("consent evidence direct navigation keeps exact document bypass and CSV dow
     if (url.searchParams.get("format") === "csv") { res.setHeader("Content-Type", "text/csv"); res.setHeader("X-ODOS-Truncated", "true"); res.setHeader("X-ODOS-Cursor", "synthetic_cursor"); res.end("patientReference,purpose,channel,tier,status,truncated\r\nPatient/synthetic-one,marketing-promo,sms,1,gap,true"); return; }
     res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify(first));
   });
-  await new Promise<void>(done => upstream.listen(0, "127.0.0.1", done)); const upstreamAddress = upstream.address(); assert.ok(upstreamAddress && typeof upstreamAddress !== "string");
-  const server = await createServer({ root: resolve(import.meta.dirname, ".."), logLevel: "silent", server: { host: "127.0.0.1", port: 0, proxy: { "/communications": { target: `http://127.0.0.1:${upstreamAddress.port}` } } }, plugins: [{ name: "consent-evidence-route-proof", transformIndexHtml(html) { return html.replace('/src/main.tsx', '/consent-proof.js'); }, resolveId(id) { if (id === "/consent-proof.js") return id; }, load(id) { if (id === "/consent-proof.js") return `import React from 'react'; import {createRoot} from 'react-dom/client'; import {RouteSwitch} from '/src/App.tsx'; import {AppShell} from '/src/components/AppShell.tsx'; import '/src/styles/globals.css'; const roles=['staff']; createRoot(document.getElementById('root')).render(React.createElement(AppShell,{path:location.pathname,roles,homePath:'/clinic',side:'clinic',email:'synthetic@example.test'},React.createElement(RouteSwitch,{view:{kind:'picker'},path:location.pathname,roles})));`; } }] });
-  await server.listen(); const address = server.httpServer!.address(); assert.ok(address && typeof address !== "string");
-  const browser = await chromium.launch({ channel: "chrome", args: process.platform === "linux" ? ["--no-sandbox"] : [] });
+  let server: Awaited<ReturnType<typeof createServer>> | undefined;
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   try {
+    await new Promise<void>(done => upstream.listen(0, "127.0.0.1", done)); const upstreamAddress = upstream.address(); assert.ok(upstreamAddress && typeof upstreamAddress !== "string");
+    server = await createServer({ root: resolve(import.meta.dirname, ".."), logLevel: "silent", server: { host: "127.0.0.1", port: 0, proxy: { "/communications": { target: `http://127.0.0.1:${upstreamAddress.port}` } } }, plugins: [{ name: "consent-evidence-route-proof", transformIndexHtml(html) { return html.replace('/src/main.tsx', '/consent-proof.js'); }, resolveId(id) { if (id === "/consent-proof.js") return id; }, load(id) { if (id === "/consent-proof.js") return `import React from 'react'; import {createRoot} from 'react-dom/client'; import {RouteSwitch} from '/src/App.tsx'; import {AppShell} from '/src/components/AppShell.tsx'; import '/src/styles/globals.css'; const roles=['staff']; createRoot(document.getElementById('root')).render(React.createElement(AppShell,{path:location.pathname,roles,homePath:'/clinic',side:'clinic',email:'synthetic@example.test'},React.createElement(RouteSwitch,{view:{kind:'picker'},path:location.pathname,roles})));`; } }] });
+    await server.listen(); const address = server.httpServer!.address(); assert.ok(address && typeof address !== "string");
+    browser = await chromium.launch({ channel: "chrome", args: process.platform === "linux" ? ["--no-sandbox"] : [] });
     const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } }); const url = `http://127.0.0.1:${address.port}${route}`;
     assert.equal((await fetch(url, { headers: { Accept: "application/json" } })).status, 404);
     assert.equal((await fetch(`${url}/other`, { headers: { Accept: "text/html" } })).status, 404);
@@ -97,5 +99,11 @@ test("consent evidence direct navigation keeps exact document bypass and CSV dow
     assert.match(Buffer.concat(chunks).toString(), /Patient\/synthetic-one,marketing-promo,sms,1,gap,true/);
     assert.ok(requests.some(request => new URL(request, "http://localhost").searchParams.get("format") === "csv"));
     await page.getByText("The CSV contains a partial report. Use Load more to review remaining results.").waitFor();
-  } finally { await browser.close(); await server.close(); await new Promise<void>(done => upstream.close(() => done())); }
+  } finally {
+    try { await browser?.close(); }
+    finally {
+      try { await server?.close(); }
+      finally { await new Promise<void>(done => upstream.close(() => done())); }
+    }
+  }
 });
