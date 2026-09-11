@@ -326,6 +326,7 @@ export function PatientOverview({
         {demographicsEditorOpen && (
           <PatientDemographicsEditor
             patient={patient}
+            onPatientRefreshed={onPatientSaved}
             onDiscard={() => setDemographicsEditorOpen(false)}
             onSaved={(savedPatient) => {
               onPatientSaved(savedPatient);
