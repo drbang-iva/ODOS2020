@@ -527,11 +527,16 @@ export function saveCommunicationPreferences(input: CommunicationPreferencesInpu
 export function readCommunicationPreferenceDefaults(fetchImpl: typeof fetch = fetch): Promise<CommunicationPreferenceDefaultsResponse> {
   return preferenceRequest("/defaults", isCommunicationPreferenceDefaultsResponse, fetchImpl);
 }
+function evidenceGapQuery(filters: EvidenceGapFilters, format: "json" | "csv"): URLSearchParams {
+  const query = new URLSearchParams({ format });
+  for (const [key, value] of Object.entries(filters)) if (value !== undefined) query.set(key, value);
+  return query;
+}
 export function listEvidenceGaps(filters: EvidenceGapFilters = {}, fetchImpl: typeof fetch = fetch): Promise<EvidenceGapReport> {
-  return preferenceRequest(`/evidence-gaps?${new URLSearchParams({ ...filters, format: "json" })}`, isEvidenceGapReport, fetchImpl);
+  return preferenceRequest(`/evidence-gaps?${evidenceGapQuery(filters, "json")}`, isEvidenceGapReport, fetchImpl);
 }
 export async function downloadEvidenceGapsCsv(filters: EvidenceGapFilters = {}, fetchImpl: typeof fetch = fetch): Promise<{ text: string; truncated: string | null; cursor: string | null }> {
-  const response = await fetchImpl(`${clinicalGraphApiBase()}/communications/preferences/evidence-gaps?${new URLSearchParams({ ...filters, format: "csv" })}`, { headers: authHeaders() });
+  const response = await fetchImpl(`${clinicalGraphApiBase()}/communications/preferences/evidence-gaps?${evidenceGapQuery(filters, "csv")}`, { headers: authHeaders() });
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => ({}));
     throw new CommunicationsResponseError(response.status, responseError(body) ?? `Consent evidence export failed (${response.status}).`);

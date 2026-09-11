@@ -75,3 +75,16 @@ test("preference and CSV failures preserve HTTP status for recovery", async () =
       await assert.rejects(run(), (error: unknown) => error instanceof CommunicationsResponseError && error.status === status && error.message === "synthetic refusal");
   }
 });
+
+
+test("evidence report requests omit undefined optional filters in JSON and CSV", async () => {
+  const filters = { tier: undefined, purpose: undefined, channel: undefined, cursor: undefined };
+  await listEvidenceGaps(filters, async url => {
+    assert.deepEqual(Object.fromEntries(new URL(String(url), "http://localhost").searchParams), { format: "json" });
+    return new Response(JSON.stringify({ rows: [], suppressed: [], counts: { "1": 0, "2": 0, "3": 0 }, truncated: false }));
+  });
+  await downloadEvidenceGapsCsv(filters, async url => {
+    assert.deepEqual(Object.fromEntries(new URL(String(url), "http://localhost").searchParams), { format: "csv" });
+    return new Response("patientReference,purpose");
+  });
+});
