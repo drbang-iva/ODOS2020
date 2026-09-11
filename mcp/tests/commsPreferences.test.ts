@@ -43,3 +43,12 @@ test("G10 override is restricted to education email", async () => {
   assert.deepEqual((await gate.checkMessageSuppression(deps(p), request({ staffEducationOverride: true }), "sms")).result, { outcome: "suppressed", reason: "preference-withheld" });
   assert.equal((await gate.checkMessageSuppression(deps(p), request({ staffEducationOverride: true }), "email")).result, undefined);
 });
+test("G1 G3 STOP wins over explicit education SMS ON and resolver reports suppression", async () => {
+  const p = gate.replaceCommsPreferenceCells({ ...patient, extension: [gate.buildCommsOptOutExtension("sms")] }, [{ purpose: "education", channel: "sms", allowed: true }], metadata);
+  assert.deepEqual(gate.effectiveCommsPreferences(p, {}).education.sms, { value: false, source: "suppression" });
+  assert.deepEqual((await gate.checkMessageSuppression(deps(p), request(), "sms")).result, { outcome: "suppressed", reason: "patient-opt-out" });
+});
+test("G11 staff email override cannot bypass email unsubscribe", async () => {
+  const p = gate.replaceCommsPreferenceCells({ ...patient, extension: [gate.buildCommsOptOutExtension("email")] }, [{ purpose: "education", channel: "email", allowed: false }], metadata);
+  assert.deepEqual((await gate.checkMessageSuppression(deps(p), request({ staffEducationOverride: true }), "email")).result, { outcome: "suppressed", reason: "patient-opt-out" });
+});

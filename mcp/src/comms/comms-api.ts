@@ -979,7 +979,7 @@ export interface PreparedEducationSequenceDispatch {
 }
 export type EducationSequencePreparation =
   | { kind: "ready"; prepared: PreparedEducationSequenceDispatch }
-  | { kind: "held"; reason: "content-unavailable" | "no-recipient-channel" | "patient-opt-out" | "needs-acknowledgement" }
+  | { kind: "held"; reason: "content-unavailable" | "no-recipient-channel" | "patient-opt-out" | "preference-withheld" | "needs-acknowledgement" }
   | { kind: "deferred"; notBefore: string };
 
 async function prepareEducationDispatch(
@@ -1019,7 +1019,7 @@ export async function prepareEducationSequenceDispatch(
     prepared = await prepareEducationDispatch(deps, fhir, patient, body);
   } catch (error) {
     if (error instanceof CommsApiNotFoundError) return { kind: "held", reason: "content-unavailable" };
-    if (error instanceof CommsApiRefusalError) return { kind: "held", reason: "patient-opt-out" };
+    if (error instanceof CommsApiRefusalError) return { kind: "held", reason: error.reason === "marketing-consent-absent" ? "preference-withheld" : "patient-opt-out" };
     if (error instanceof CommsApiCapabilityError || error instanceof CommsApiValidationError) {
       return { kind: "held", reason: /published/.test(error.message) ? "content-unavailable" : "no-recipient-channel" };
     }
@@ -1041,7 +1041,7 @@ export async function prepareEducationSequenceDispatch(
     suppression: { consentClass: prepared.item.consentClass, ...(prepared.item.consentClass === "marketing" ? { requiresMarketingConsent: true } : {}) },
   }, body.channel);
   if (result?.outcome === "rescheduled") return { kind: "deferred", notBefore: result.rescheduledAt };
-  if (result?.outcome === "suppressed") return { kind: "held", reason: "patient-opt-out" };
+  if (result?.outcome === "suppressed") return { kind: "held", reason: result.reason === "preference-withheld" ? "preference-withheld" : "patient-opt-out" };
   return { kind: "ready", prepared: structuredClone({ body, ...prepared }) };
 }
 

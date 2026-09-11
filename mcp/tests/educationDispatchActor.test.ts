@@ -120,6 +120,10 @@ test("preflight holds missing recipient, unsupported channel, absent consent, an
   assert.deepEqual(await api.prepareEducationSequenceDispatch(f.deps, f.fhir, f.patient, f.body), { kind: "held", reason: "no-recipient-channel" });
   f.body.channel = "print";
   assert.deepEqual(await api.prepareEducationSequenceDispatch(f.deps, f.fhir, f.patient, f.body), { kind: "held", reason: "needs-acknowledgement" });
+  f.body.channel = "sms";
+  f.item.channels = ["sms"];
+  f.patient.telecom = [{ system: "phone", value: "+15555550100" }];
+  assert.deepEqual(await api.prepareEducationSequenceDispatch(f.deps, f.fhir, f.patient, f.body), { kind: "held", reason: "preference-withheld" });
   assert.equal(f.resources.length, 0);
   assert.equal(f.requests.length, 0);
 });
