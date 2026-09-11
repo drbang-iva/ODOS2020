@@ -1,3 +1,5 @@
+import { writeCommsPreferences } from "./comms-preferences.js";
+import { effectiveCommsPreferences } from "./suppression-gate.js";
 import { isFhirConflict } from "../clinical-graph/fhir-conflict.js";
 import type { Communication, Condition, Encounter, Patient, Provenance, RelatedPerson } from "@medplum/fhirtypes";
 import { randomUUID } from "node:crypto";
@@ -1087,16 +1089,17 @@ export async function readEducationDispatchEvidence(fhir: MedplumClient, body: E
   return outcome ? { outcome, providerInvoked: outcome.outcome === "rescheduled" ? false : "unknown", frozen } : undefined;
 }
 
-type EducationDispatchResult = EducationEnrollmentSendOutcome & { chartUpdate?: "conflict" };
+type EducationDispatchResult = EducationEnrollmentSendOutcome & { chartUpdate?: "conflict"; preferenceUpdate?: "failed" };
 
 async function dispatchEducation(
   deps: CommsApiRouteDeps, staff: CommsStaff, patient: Patient, body: EducationDispatchBody,
   options: { reconcileOnly?: boolean; senderReference?: string } = {},
 ): Promise<EducationDispatchResult> {
   let chartConflict = false;
+  let preferenceFailed = false;
   const result = await dispatchEducationInternal({ kind: "staff", staff }, deps, patient, body, options,
-    () => { chartConflict = true; });
-  return result.outcome === "sent" && chartConflict ? { ...result, chartUpdate: "conflict" } : result;
+    () => { chartConflict = true; }, () => { preferenceFailed = true; });
+  return result.outcome === "sent" ? { ...result, ...(chartConflict ? { chartUpdate: "conflict" as const } : {}), ...(preferenceFailed ? { preferenceUpdate: "failed" as const } : {}) } : result;
 }
 
 export async function dispatchEducationAs(
@@ -1116,6 +1119,7 @@ async function dispatchEducationInternal(
   body: EducationDispatchBody,
   options: { reconcileOnly?: boolean; senderReference?: string; prepared?: PreparedEducationSequenceDispatch },
   onRecipientConflict?: () => void,
+  onPreferenceFailure?: () => void,
 ): Promise<EducationEnrollmentSendOutcome> {
   if (actor.kind === "system" && "quietHoursExemption" in actor) {
     throw new CommsApiRefusalError("system actor cannot carry a quiet-hours exemption");
@@ -1244,6 +1248,8 @@ async function dispatchEducationInternal(
         "Education send outcome is pending reconciliation; do not resend with a new key.",
       );
     }
+    const staffEducationOverride = actor.kind === "staff" && item.consentClass === "transactional";
+    const withheldEducationEmail = staffEducationOverride && !effectiveCommsPreferences(patient, {}).education.email.value;
     const result = await provider.sendEmail({
       patientReference: body.patientReference,
       toAddress: recipient.value,
@@ -1252,9 +1258,20 @@ async function dispatchEducationInternal(
       campaignType: "clinical-education",
       campaignId,
       messageId: body.idempotencyKey,
-      suppression: requiredConsent,
+      suppression: { ...requiredConsent, ...(staffEducationOverride ? { staffEducationOverride: true as const } : {}) },
     });
     if (result.outcome === "sent") {
+      if (withheldEducationEmail && actor.kind === "staff") {
+        try {
+          await writeCommsPreferences(actor.staff.fhir, body.patientReference, [{ purpose: "education", channel: "email", allowed: true }], {
+            actorReference: actor.staff.staffReference, actorRole: actor.staff.actorRole,
+            policyUrl: actor.staff.authorizationPolicyUrl, recordedAt: deps.now?.() ?? new Date().toISOString(), surface: "staff-manual-send",
+          });
+        } catch {
+          onPreferenceFailure?.();
+          console.error("odos-mcp: education email sent; preference update failed.");
+        }
+      }
       await persistAfterSend(() => persistStaffSentSend(staff.fhir, {
         communication: reservation.communication,
         idempotencyKey: body.idempotencyKey,
