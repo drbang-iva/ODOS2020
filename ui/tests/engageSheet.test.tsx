@@ -730,3 +730,34 @@ function educationList(
 ) {
   return { items, chartDispatchLane, availableChannels };
 }
+
+test("chart contact conflict is sent success and clears pending using real dispatch client", async () => {
+  const originalFetch = globalThis.fetch;
+  let sends = 0;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.includes("/education/dispatch")) {
+      sends++;
+      return new Response(JSON.stringify({ outcome: "sent", providerMessageId: "synthetic-receipt", chartUpdate: "conflict" }));
+    }
+    if (url.includes("/communications/education")) return new Response(JSON.stringify(educationList(ITEMS)));
+    if (url.includes("RelatedPerson")) return new Response(JSON.stringify({ resourceType: "Bundle", entry: [] }));
+    return unsuppressedSmsFetch(input);
+  };
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<EngageSheet open patient={{ ...PATIENT, birthDate: "1980-01-01" }} onClose={() => undefined} />);
+    });
+    act(() => renderer.root.findByProps({ "aria-label": "Text Understanding dry eye" }).props.onClick());
+    await act(async () => { renderer.root.findByProps({ "aria-label": "Confirm education send" }).props.onClick(); });
+    assert.equal(sends, 1);
+    assert.match(renderedText(renderer), /Education sent\. The chart's contact wasn't updated because the record changed — update it from Edit demographics\./);
+    assert.equal(renderer.root.findAllByProps({ role: "alert" }).length, 0);
+    assert.equal(renderer.root.findAllByProps({ "aria-label": "Confirm education send" }).length, 0);
+    assert.equal(renderer.root.findAllByProps({ role: "status" }).length, 1);
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});

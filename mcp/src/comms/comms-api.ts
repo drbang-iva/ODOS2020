@@ -734,12 +734,12 @@ export function registerCommsApiRoutes(
         suppression: {},
       });
       if (result.outcome === "sent") {
-        await persistStaffSentSms(staff.fhir, {
+        await persistAfterSend(() => persistStaffSentSms(staff.fhir, {
           communication: reservation.communication,
           idempotencyKey,
           providerMessageId: result.providerMessageId,
           providerMessageIdentifierSystem,
-        }, { now: () => deps.now?.() ?? new Date().toISOString() });
+        }, { now: () => deps.now?.() ?? new Date().toISOString() }));
       }
       return { status: 200, body: result };
     },
@@ -1087,11 +1087,16 @@ export async function readEducationDispatchEvidence(fhir: MedplumClient, body: E
   return outcome ? { outcome, providerInvoked: outcome.outcome === "rescheduled" ? false : "unknown", frozen } : undefined;
 }
 
+type EducationDispatchResult = EducationEnrollmentSendOutcome & { chartUpdate?: "conflict" };
+
 async function dispatchEducation(
   deps: CommsApiRouteDeps, staff: CommsStaff, patient: Patient, body: EducationDispatchBody,
   options: { reconcileOnly?: boolean; senderReference?: string } = {},
-): Promise<EducationEnrollmentSendOutcome> {
-  return dispatchEducationAs({ kind: "staff", staff }, deps, patient, body, options);
+): Promise<EducationDispatchResult> {
+  let chartConflict = false;
+  const result = await dispatchEducationInternal({ kind: "staff", staff }, deps, patient, body, options,
+    () => { chartConflict = true; });
+  return result.outcome === "sent" && chartConflict ? { ...result, chartUpdate: "conflict" } : result;
 }
 
 export async function dispatchEducationAs(
@@ -1100,6 +1105,17 @@ export async function dispatchEducationAs(
   patient: Patient | undefined,
   body: EducationDispatchBody,
   options: { reconcileOnly?: boolean; senderReference?: string; prepared?: PreparedEducationSequenceDispatch } = {},
+): Promise<EducationEnrollmentSendOutcome> {
+  return dispatchEducationInternal(actor, deps, patient, body, options);
+}
+
+async function dispatchEducationInternal(
+  actor: EducationDispatchActor,
+  deps: CommsApiRouteDeps,
+  patient: Patient | undefined,
+  body: EducationDispatchBody,
+  options: { reconcileOnly?: boolean; senderReference?: string; prepared?: PreparedEducationSequenceDispatch },
+  onRecipientConflict?: () => void,
 ): Promise<EducationEnrollmentSendOutcome> {
   if (actor.kind === "system" && "quietHoursExemption" in actor) {
     throw new CommsApiRefusalError("system actor cannot carry a quiet-hours exemption");
@@ -1118,9 +1134,9 @@ export async function dispatchEducationAs(
     const evidence = await readEducationDispatchEvidence(staff.fhir, body, senderReference);
     if (evidence) {
       if (evidence.outcome.outcome === "sent") {
-        await persistEducationSendProvenance(staff.fhir, {
+        await persistAfterSend(() => persistEducationSendProvenance(staff.fhir, {
           ...evidence.frozen, staff: evidence.frozen.executingReference ? { ...staff, staffReference: senderReference, executingReference: evidence.frozen.executingReference } : staff, now: deps.now?.() ?? new Date().toISOString(),
-        });
+        }));
       }
       return evidence.outcome;
     }
@@ -1206,16 +1222,20 @@ export async function dispatchEducationAs(
     }
     if (reservation.state === "sent") {
       if (body.alsoUpdateChart) {
-        await updateEducationRecipient(staff.fhir, recipient, body, staff);
+        const updated = await updateSentEducationRecipient(staff.fhir, recipient, body, staff);
+        if (!updated) {
+          onRecipientConflict?.();
+          body = { ...body, alsoUpdateChart: false };
+        }
       }
-      await persistEducationSendProvenance(staff.fhir, {
+      await persistAfterSend(() => persistEducationSendProvenance(staff.fhir, {
         body,
         item,
         staff,
         recipientValue: recipient.value,
         laneSelection,
         now: deps.now?.() ?? new Date().toISOString(),
-      });
+      }));
       return { outcome: "sent", providerMessageId: reservation.providerMessageId };
     }
     if (reservation.state === "terminal") return reservation.result;
@@ -1235,7 +1255,7 @@ export async function dispatchEducationAs(
       suppression: requiredConsent,
     });
     if (result.outcome === "sent") {
-      await persistStaffSentSend(staff.fhir, {
+      await persistAfterSend(() => persistStaffSentSend(staff.fhir, {
         communication: reservation.communication,
         idempotencyKey: body.idempotencyKey,
         providerMessageId: result.providerMessageId,
@@ -1243,18 +1263,22 @@ export async function dispatchEducationAs(
         category: ODOS_PATIENT_EMAIL_CATEGORY,
         outboundCategory: ODOS_PATIENT_EMAIL_OUTBOUND_CATEGORY,
         completed: true,
-      }, { now: () => deps.now?.() ?? new Date().toISOString() });
+      }, { now: () => deps.now?.() ?? new Date().toISOString() }));
       if (body.alsoUpdateChart) {
-        await updateEducationRecipient(staff.fhir, recipient, body, staff);
+        const updated = await updateSentEducationRecipient(staff.fhir, recipient, body, staff);
+        if (!updated) {
+          onRecipientConflict?.();
+          body = { ...body, alsoUpdateChart: false };
+        }
       }
-      await persistEducationSendProvenance(staff.fhir, {
+      await persistAfterSend(() => persistEducationSendProvenance(staff.fhir, {
         body,
         item,
         staff,
         recipientValue: recipient.value,
         laneSelection,
         now: deps.now?.() ?? new Date().toISOString(),
-      });
+      }));
     } else {
       await persistStaffTerminalOutcome(staff.fhir, {
         communication: reservation.communication,
@@ -1320,16 +1344,20 @@ export async function dispatchEducationAs(
   }
   if (reservation.state === "sent") {
     if (body.alsoUpdateChart) {
-      await updateEducationRecipient(staff.fhir, recipient, body, staff);
+      const updated = await updateSentEducationRecipient(staff.fhir, recipient, body, staff);
+      if (!updated) {
+        onRecipientConflict?.();
+        body = { ...body, alsoUpdateChart: false };
+      }
     }
-    await persistEducationSendProvenance(staff.fhir, {
+    await persistAfterSend(() => persistEducationSendProvenance(staff.fhir, {
       body,
       item,
       staff,
       recipientValue: recipient.value,
       laneSelection,
       now: deps.now?.() ?? new Date().toISOString(),
-    });
+    }));
     return { outcome: "sent", providerMessageId: reservation.providerMessageId };
   }
   if (reservation.state === "terminal") {
@@ -1352,23 +1380,27 @@ export async function dispatchEducationAs(
       : requiredConsent,
   });
   if (result.outcome === "sent") {
-    await persistStaffSentSms(staff.fhir, {
+    await persistAfterSend(() => persistStaffSentSms(staff.fhir, {
       communication: reservation.communication,
       idempotencyKey: body.idempotencyKey,
       providerMessageId: result.providerMessageId,
       providerMessageIdentifierSystem,
-    }, { now: () => deps.now?.() ?? new Date().toISOString() });
+    }, { now: () => deps.now?.() ?? new Date().toISOString() }));
     if (body.alsoUpdateChart) {
-      await updateEducationRecipient(staff.fhir, recipient, body, staff);
+      const updated = await updateSentEducationRecipient(staff.fhir, recipient, body, staff);
+      if (!updated) {
+        onRecipientConflict?.();
+        body = { ...body, alsoUpdateChart: false };
+      }
     }
-    await persistEducationSendProvenance(staff.fhir, {
+    await persistAfterSend(() => persistEducationSendProvenance(staff.fhir, {
       body,
       item,
       staff,
       recipientValue: recipient.value,
       laneSelection,
       now: deps.now?.() ?? new Date().toISOString(),
-    });
+    }));
   } else {
     await persistStaffSmsTerminalOutcome(staff.fhir, {
       communication: reservation.communication,
@@ -2298,6 +2330,27 @@ function telecomValue(resource: Patient | RelatedPerson, system: "phone" | "emai
     ? candidates.find((telecom) => telecom.use === "mobile") ?? candidates[0]
     : candidates[0];
   return preferred?.value;
+}
+
+async function persistAfterSend(write: () => Promise<unknown>): Promise<void> {
+  try {
+    await write();
+  } catch (error) {
+    if (!isFhirConflict(error)) throw error;
+    throw new Error("Message accepted, but its delivery record could not be saved.", { cause: error });
+  }
+}
+
+async function updateSentEducationRecipient(
+  ...args: Parameters<typeof updateEducationRecipient>
+): Promise<boolean> {
+  try {
+    await updateEducationRecipient(...args);
+    return true;
+  } catch (error) {
+    if (!isFhirConflict(error)) throw error;
+    return false;
+  }
 }
 
 async function updateEducationRecipient(

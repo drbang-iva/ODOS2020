@@ -1775,31 +1775,95 @@ for (const malformed of [
   });
 }
 
-test("conflict mapping: education recipient If-Match returns 409", async () => {
-  const fixture = await startServer({
-    channelRoutes: { "clinical-sms": "twilio" },
-    senderNumbers: { "clinical-sms": "+18485550100" },
-    recipientUpdateError: await fhirWriterError(412, "PUT"),
+for (const channel of ["sms", "email"] as const) {
+  test(`post-send recipient conflict: ${channel} remains sent with provenance`, async () => {
+    const fixture = await startServer({
+      channelRoutes: { "clinical-sms": "twilio", email: "twilio" },
+      senderNumbers: { "clinical-sms": "+18485550100" },
+      recipientUpdateError: await fhirWriterError(412, "PUT"),
+    });
+    const before = structuredClone(fixture.patients);
+    try {
+      const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+        patientReference: PATIENT_REFERENCE, educationId: "dry-eye-basics", version: 2,
+        channel, lane: "clinical", recipientOverride: channel === "sms"
+          ? { phone: "+18645550177" } : { email: "changed@example.test" },
+        alsoUpdateChart: true, idempotencyKey: `education-recipient-conflict-${channel}`,
+      }, "staff");
+      assert.equal(response.status, 200);
+      const result = await response.json() as Record<string, unknown>;
+      assert.equal(result.outcome, "sent");
+      assert.equal(result.chartUpdate, "conflict");
+      assert.deepEqual(fixture.patients, before);
+      assert.deepEqual(fixture.recipientUpdates, []);
+      assert.equal(fixture.smsRequests.length + fixture.emailRequests.length, 1);
+      assert.equal(fixture.provenances.length, 1);
+      assert.doesNotMatch(JSON.stringify(fixture.provenances), /Recipient override also updated chart/);
+    } finally { await fixture.close(); }
   });
+}
+
+test("print chart update refuses before provenance or output", async () => {
+  const fixture = await startServer();
   const before = structuredClone(fixture.patients);
   try {
     const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
-      patientReference: PATIENT_REFERENCE, educationId: "dry-eye-basics", version: 2,
-      channel: "sms", lane: "clinical", recipientOverride: { phone: "+18645550177" },
-      alsoUpdateChart: true, idempotencyKey: "education-recipient-conflict",
+      patientReference: PATIENT_REFERENCE, educationId: "dry-eye-home-care", version: 1,
+      channel: "print", lane: "clinical", alsoUpdateChart: true,
+      recipientOverride: { email: "changed@example.test" }, idempotencyKey: "print-chart-refusal",
     }, "staff");
-    assert.equal(response.status, 409);
-    assert.deepEqual(await response.json(), { error: CONFLICT_MESSAGE });
-    assert.deepEqual(fixture.patients, before);
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { error: "alsoUpdateChart requires a phone or email recipient override." });
+    assert.deepEqual(fixture.provenances, []);
     assert.deepEqual(fixture.recipientUpdates, []);
-    assert.equal(fixture.smsRequests.length, 1);
+    assert.deepEqual(fixture.persistedCommunications, []);
+    assert.deepEqual(fixture.patients, before);
   } finally { await fixture.close(); }
 });
+
+for (const channel of ["compose", "sms", "email"] as const) {
+  test(`post-send persistence conflict: ${channel} remains 502`, async () => {
+    const fixture = await startServer({
+      channelRoutes: { "clinical-sms": "twilio", "transactional-sms": "twilio", email: "twilio" },
+      senderNumbers: { "clinical-sms": "+18485550100", "transactional-sms": "+18485550100" },
+      completionError: await fhirWriterError(412, "PUT"),
+    });
+    try {
+      const response = await request(fixture.base, channel === "compose" ? "/communications/messages" : "/communications/education/dispatch", "POST", channel === "compose" ? {
+        patientReference: PATIENT_REFERENCE, body: "Synthetic message", idempotencyKey: "completion-conflict-compose",
+      } : {
+        patientReference: PATIENT_REFERENCE, educationId: "dry-eye-basics", version: 2,
+        channel, lane: "clinical", idempotencyKey: `completion-conflict-${channel}`,
+      }, "staff");
+      assert.equal(response.status, 502);
+      assert.equal(fixture.smsRequests.length + fixture.emailRequests.length, 1);
+    } finally { await fixture.close(); }
+  });
+}
+for (const channel of ["sms", "email"] as const) {
+  test(`post-send provenance conflict: ${channel} remains 502`, async () => {
+    const fixture = await startServer({
+      channelRoutes: { "clinical-sms": "twilio", "transactional-sms": "twilio", email: "twilio" },
+      senderNumbers: { "clinical-sms": "+18485550100", "transactional-sms": "+18485550100" },
+      provenanceError: await fhirWriterError(412, "PUT"),
+    });
+    try {
+      const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+        patientReference: PATIENT_REFERENCE, educationId: "dry-eye-basics", version: 2,
+        channel, lane: "clinical", idempotencyKey: `completion-conflict-${channel}`,
+      }, "staff");
+      assert.equal(response.status, 502);
+      assert.equal(fixture.smsRequests.length + fixture.emailRequests.length, 1);
+    } finally { await fixture.close(); }
+  });
+}
 
 async function startServer(options: {
   optOutTransactionError?: Error;
   optOutTransactionResponse?: Bundle;
   recipientUpdateError?: Error;
+  completionError?: Error;
+  provenanceError?: Error;
   recordingEnabled?: boolean;
   recordingVisible?: boolean;
   callVisible?: boolean;
@@ -2163,6 +2227,7 @@ async function startServer(options: {
           throw new Error("Unexpected FHIR pagination in communications API test.");
         },
         async create<T extends Resource>(resource: T): Promise<T> {
+          if (resource.resourceType === "Provenance" && options.provenanceError) throw options.provenanceError;
           const persisted = {
             ...resource,
             id: `persisted-${persistedCommunications.length + 1}`,
@@ -2193,6 +2258,8 @@ async function startServer(options: {
             options.failSmsCompletion = false;
             throw Object.assign(new Error("Synthetic FHIR outage"), { status: 503 });
           }
+          if (options.completionError && resource.resourceType === "Communication"
+            && (smsRequests.length + emailRequests.length) > 0) throw options.completionError;
           const restored = structuredClone(resource);
           if (restored.resourceType === "Patient" || restored.resourceType === "RelatedPerson") {
             if (options.recipientUpdateError) {

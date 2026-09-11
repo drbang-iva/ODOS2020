@@ -229,3 +229,13 @@ test("recorded system marketing receipt reconciles after consent and catalog are
   assert.deepEqual(await api.dispatchEducationAs(f.actor, f.deps, undefined, f.body, { reconcileOnly: true }), result);
   assert.equal(f.requests.length, 1);
 });
+
+test("system actor cannot request a chart update or produce chart metadata", async () => {
+  const f = fixture();
+  await assert.rejects(api.dispatchEducationAs(f.actor, f.deps, f.patient, { ...f.body, alsoUpdateChart: true }),
+    /system education dispatch requires an electronic send without chart mutation/);
+  assert.equal(f.requests.length, 0);
+  assert.equal(f.resources.length, 0);
+  const result = await api.dispatchEducationAs(f.actor, f.deps, f.patient, f.body);
+  assert.equal("chartUpdate" in result, false);
+});

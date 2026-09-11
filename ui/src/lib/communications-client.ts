@@ -86,7 +86,7 @@ export interface EducationDispatchInput {
 }
 
 export type EducationDispatchResult =
-  | { outcome: "sent"; providerMessageId: string }
+  | { outcome: "sent"; providerMessageId: string; chartUpdate?: "conflict" }
   | { outcome: "print"; url: string }
   | { outcome: "refused"; reason: string }
   | { outcome: "suppressed"; reason: "patient-opt-out" | "frequency-cap" }

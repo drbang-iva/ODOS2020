@@ -221,6 +221,8 @@ export function EngageSheet({
         setError("Texting is blocked by the communication frequency limit.");
       } else if (rescheduled) {
         setStatus(`Not sent — try after ${rescheduled.rescheduledAt}.`);
+      } else if (results.some((result) => result.outcome === "sent" && result.chartUpdate === "conflict")) {
+        setStatus("Education sent. The chart's contact wasn't updated because the record changed — update it from Edit demographics.");
       } else {
         setStatus(results.length > 1 ? `Education sent to ${results.length} recipients.` : "Education sent.");
       }
