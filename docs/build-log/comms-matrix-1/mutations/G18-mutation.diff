@@ -1,10 +1,8 @@
---- mcp/src/comms/suppression-gate.ts
-+++ mcp/src/comms/suppression-gate.ts
-@@ -128,1 +128,2 @@
+--- a/mcp/src/comms/suppression-gate.ts
++++ b/mcp/src/comms/suppression-gate.ts
+@@ -128,3 +128,4 @@
+ export function effectiveCommsPreferences(patient: Patient, options: { smsSenderNumber?: string; stopScope?: SmsStopScope }): Record<CommsPurpose, Record<CommsPreferenceChannel, EffectiveCell>> {
 -  const explicit = readCommsPreferenceCells(patient);
 +  let explicit: ExplicitCommsPreference[];
 +  try { explicit = readCommsPreferenceCells(patient); } catch { explicit = []; }
-@@ -405,1 +406,2 @@
--        const explicit = readCommsPreferenceCells(patient);
-+        let explicit: ExplicitCommsPreference[];
-+  try { explicit = readCommsPreferenceCells(patient); } catch { explicit = []; }
+   return Object.fromEntries(COMMS_PURPOSES.map(purpose => [purpose, Object.fromEntries(COMMS_PREFERENCE_CHANNELS.map(channel => {

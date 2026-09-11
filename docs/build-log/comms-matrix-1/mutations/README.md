@@ -17,9 +17,9 @@ Author verification only; these results are not an independent evaluation. Each 
 | G10 | Remove the email-only condition from the staff education override. | 8/9 passed; exit 1 | 9/9 passed; exit 0 | [proof](G10-proof.log) · [red](G10-red.log) · [green](G10-green.log) · [diff](G10-mutation.diff) |
 | G11 | Return from the staff email override before suppression. | 8/9 passed; exit 1 | 9/9 passed; exit 0 | [proof](G11-proof.log) · [red](G11-red.log) · [green](G11-green.log) · [diff](G11-mutation.diff) |
 | G12 | Skip the post-send withheld-cell flip. | 0/1 passed; exit 1 | 1/1 passed; exit 0 | [proof](G12-proof.log) · [red](G12-red.log) · [green](G12-green.log) · [diff](G12-mutation.diff) |
-| G13 | Add marketing-promo to the START cell set. | 1/3 passed; exit 1 | 3/3 passed; exit 0 | [proof](G13-proof.log) · [red](G13-red.log) · [green](G13-green.log) · [diff](G13-mutation.diff) |
+| G13 | Add marketing-promo to the START cell set. | 3/5 passed; exit 1 | 5/5 passed; exit 0 | [proof](G13-proof.log) · [red](G13-red.log) · [green](G13-green.log) · [diff](G13-mutation.diff) |
 | G14a | Disable the shared-number START refusal before writes. | 2/3 passed; exit 1 | 3/3 passed; exit 0 | [proof](G14a-proof.log) · [red](G14a-red.log) · [green](G14a-green.log) · [diff](G14a-mutation.diff) |
-| G14b | Allow START cell writes despite a remaining global opt-out. | 2/3 passed; exit 1 | 3/3 passed; exit 0 | [proof](G14b-proof.log) · [red](G14b-red.log) · [green](G14b-green.log) · [diff](G14b-mutation.diff) |
+| G14b | Allow START cell writes despite a remaining global opt-out. | 4/5 passed; exit 1 | 5/5 passed; exit 0 | [proof](G14b-proof.log) · [red](G14b-red.log) · [green](G14b-green.log) · [diff](G14b-mutation.diff) |
 | G15 | Bypass only the preference cell writer when constructing the registration Patient. | 24/25 passed; exit 1 | 25/25 passed; exit 0 | [proof](G15-proof.log) · [red](G15-red.log) · [green](G15-green.log) · [diff](G15-mutation.diff) |
 | G16 | Restore the channel-independent legacy marketing check. | 8/9 passed; exit 1 | 9/9 passed; exit 0 | [proof](G16-proof.log) · [red](G16-red.log) · [green](G16-green.log) · [diff](G16-mutation.diff) |
 | G17 | Delete the SMS legacy-marketing-consent clause. | 8/9 passed; exit 1 | 9/9 passed; exit 0 | [proof](G17-proof.log) · [red](G17-red.log) · [green](G17-green.log) · [diff](G17-mutation.diff) |
@@ -27,7 +27,7 @@ Author verification only; these results are not an independent evaluation. Each 
 | G19 | Rethrow an ordinary flip failure; HTTP 502 replaces the sent response. | 0/1 passed; exit 1 | 1/1 passed; exit 0 | [proof](G19-proof.log) · [red](G19-red.log) · [green](G19-green.log) · [diff](G19-mutation.diff) |
 | G19b | Rethrow a flip conflict; HTTP 409 replaces the sent response. | 0/1 passed; exit 1 | 1/1 passed; exit 0 | [proof](G19b-proof.log) · [red](G19b-red.log) · [green](G19b-green.log) · [diff](G19b-mutation.diff) |
 | G20 | Skip the registration preference permission check; unauthorized input reaches FHIR. | 24/25 passed; exit 1 | 25/25 passed; exit 0 | [proof](G20-proof.log) · [red](G20-red.log) · [green](G20-green.log) · [diff](G20-mutation.diff) |
-| G21 | Rename transaction validator status property to statusRemoved; HTTP 502 replaces 409. | 0/1 passed; exit 1 | 1/1 passed; exit 0 | [proof](G21-proof.log) · [red](G21-red.log) · [green](G21-green.log) · [diff](G21-mutation.diff) |
+| G21 | Rename transaction validator status property to statusRemoved; HTTP 502 replaces 409. | 9/10 passed; exit 1 | 10/10 passed; exit 0 | [proof](G21-proof.log) · [red](G21-red.log) · [green](G21-green.log) · [diff](G21-mutation.diff) |
 
 ## Commands
 
@@ -76,3 +76,7 @@ The criteria-scoped inventory gains exactly `Consent`, derived from the generate
 G6 was rerun individually with `npm --prefix mcp test -- '--test-name-pattern=^G2 preferences PUT all twenty ON' tests/commsPreferencesRoutes.test.ts`: 0/1, exit 1; restored 1/1, exit 0. Its raw landed-search proof, exact diff, and captured statuses now accompany the outputs.
 
 G21 was rerun individually with `npm --prefix mcp test -- '--test-name-pattern=^G21 preference PUT optimistic conflict' tests/commsPreferencesRoutes.test.ts`: 0/1, exit 1; restored 1/1, exit 0. Raw landed-search proof, exact diff, and captured statuses accompany both outputs.
+
+## Fixback round 2 refresh
+
+G13, G14b, G18 and G21 diffs above were regenerated against the corrected source, checked with `git apply --check`, executed red, and restored byte-identical before green. Their adjacent proof, result and output files were refreshed too. G21 now runs the complete preference-route file. Earlier notes above remain historical. [F1 guard and current command record](../fixback-2/README.md).

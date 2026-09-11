@@ -2,6 +2,8 @@
 
 Status: needs independent review; eight base-matching full-suite environment failures remain. No independent evaluation. Base: `78a8ef6f7691ccffad2a752231f818ae2d9668bd`. Branch: `drbang-iva/comms-matrix-1`.
 
+[Fixback round 2: F1, strict fixture, new control tests and refreshed diffs](fixback-2/README.md). Source fix commit: `4f9e41298a39068cb38cbc18fbe246fbdf3399d7`. Independent re-evaluation is still required.
+
 ## Behavior
 
 Suppression takes precedence over explicit cells and defaults. Patient preferences cover five purposes and four channels. Unknown campaign types and malformed preference extensions fail closed. Marketing email defaults ON without a legacy consent record; an email opt-out still blocks. System marketing SMS still requires legacy consent and an allowed matrix cell.
@@ -18,7 +20,7 @@ No production writer of a legacy marketing-consent extension or opt-out campaign
 
 ## Verification
 
-[Full-suite failure comparison](failure-comparison.md) records the base and branch runs, all 23 initial failures, and their disposition. Final branch command `npm --prefix mcp test`: 4,638 total, 4,625 passed, 8 failed, 5 skipped, exit 1. All three clean-base runs: 4,578 total, 4,565 passed, 8 failed, 5 skipped, exit 1. Failure-name sets match exactly; zero branch-only failures. The new live proof executes on its own server rather than consuming the ordinary suite’s quotas. UI full command `npm --prefix ui test`: 1,341 tests, 1,341 passed, zero failed/skipped, exit 0. MCP and UI production builds each exited 0 after adding PUT to the route registrar's type interface.
+[Full-suite failure comparison](failure-comparison.md) records the base and branch runs, all 23 initial failures, and their disposition. Final branch command `npm --prefix mcp test`: 4,640 total, 4,627 passed, 8 failed, 5 skipped, exit 1. All four clean-base runs: 4,578 total, 4,565 passed, 8 failed, 5 skipped, exit 1. Failure-name sets match exactly; zero branch-only failures. The new live proof executes on its own server rather than consuming the ordinary suite’s quotas. UI full command `npm --prefix ui test`: 1,341 tests, 1,341 passed, zero failed/skipped, exit 0. MCP and UI production builds each exited 0 after adding PUT to the route registrar's type interface.
 
 [Mutation evidence: G1–G21 plus G19b](mutations/README.md). G1b injects an unsafe explicit-ON return before suppression; a return after suppression cannot defeat an already-returned STOP refusal. Every mutation is restored.
 

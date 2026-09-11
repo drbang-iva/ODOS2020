@@ -58,3 +58,7 @@ The intermediate review run had eight additional profile-validation failures fro
 The four new ValueSets were moved from `data/profiles` into `data/terminology`, alongside their CodeSystems. The existing installer handles both directories. This removes eight additional search/create requests from the existing profile integration fixture without modifying that test, the installer, shared retry behavior, or rate limits. Local quota timing remains an environment limitation.
 
 Final repeat after the terminology relocation: **4,638 total, 4,625 passed, 8 failed, 5 skipped, exit 1**. Failure-name sets match the fresh clean-base recheck exactly: zero branch-only and zero base-only failures. All eight profile cases pass. [Captured exact totals and failure list](review-final-summary.log). The intermediate failing result is retained rather than omitted.
+
+## Fixback round 2
+
+The F1 fix adds two API cases and enforces stale Patient If-Match rejection in the authorized fixture. Initial full branch run: 4,640 total, 4,618 passed, 17 failed, 5 skipped, exit 1; nine additional failures returned HTTP 429 while UI ran concurrently. A fresh clean-base run again produced 4,578 total, 4,565 passed, 8 failed, 5 skipped, exit 1. Sequentially rerunning unchanged branch code produced **4,640 total, 4,627 passed, 8 failed, 5 skipped, exit 1**. Exact failure-name sets match: **zero branch-only failures**. All existing API tests passed under the enforced fixture. [Full fixback command record and failure lists](fixback-2/README.md).
