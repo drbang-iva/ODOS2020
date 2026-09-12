@@ -1,0 +1,82 @@
+[
+  {
+    "suite": "commsSuppression",
+    "exit": 0,
+    "tests": 49,
+    "pass": 49,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "commsApi",
+    "exit": 0,
+    "tests": 99,
+    "pass": 99,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "commsConfig",
+    "exit": 0,
+    "tests": 32,
+    "pass": 32,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "commsProfileBindings",
+    "exit": 0,
+    "tests": 11,
+    "pass": 11,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "wenoSwitchNewRx",
+    "exit": 0,
+    "tests": 37,
+    "pass": 37,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "ghlAdapter",
+    "exit": 0,
+    "tests": 17,
+    "pass": 17,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "patientRegistration",
+    "exit": 0,
+    "tests": 20,
+    "pass": 20,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "demographicsConcurrency",
+    "exit": 0,
+    "tests": 3,
+    "pass": 3,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "patientRegistrationEndpoint",
+    "exit": 0,
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "registrationCommunicationPreferences",
+    "exit": 0,
+    "tests": 8,
+    "pass": 8,
+    "fail": 0,
+    "skipped": 0
+  }
+]

@@ -1,0 +1,411 @@
+J1-red (exit 1)
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 123.721375
+
+J1-green (exit 0)
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 95.509875
+
+J2-red (exit 1)
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 123.559542
+
+J2-green (exit 0)
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 94.057209
+
+J3-red (exit 1)
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 120.58825
+
+J3-green (exit 0)
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 93.341125
+
+J4-red (exit 1)
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 122.48425
+
+J4-green (exit 0)
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 99.6905
+
+J5-red (exit 1)
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 102.777792
+
+J5-green (exit 0)
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 94.956625
+
+J6-red (exit 1)
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 97.147583
+
+J6-green (exit 0)
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 92.919667
+
+J7-red (exit 1)
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 122.142125
+
+J7-green (exit 0)
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 95.139375
+
+J8-red (exit 1)
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 122.023875
+
+J8-green (exit 0)
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 92.935041
+
+J9-red (exit 1)
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 121.850583
+
+J9-green (exit 0)
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 94.42725
+
+J10-red (exit 1)
+# J10 canonical hard blocks: 1
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 138.097708
+
+J10-green (exit 0)
+# J10 canonical hard blocks: 0
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 106.687333
+
+J11-red (exit 1)
+# installer exit 0; expected 1 definition, actual 0
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2119.62575
+
+J11-green (exit 0)
+# installer exit 0; expected 1 definition, actual 1
+# created https://odos2020.com/fhir/StructureDefinition/odos-textable-number (5724e2ef-9bf5-47a7-a5df-1629e0630eca)
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1231.272125
+
+J12-red (exit 1)
+# tests 6
+# suites 0
+# pass 4
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 362.8575
+
+J12-green (exit 0)
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 304.392334
+
+J13-red (exit 1)
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 249.2125
+
+J13-green (exit 0)
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 229.303209
+
+J14-red (exit 1)
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 247.056583
+
+J14-green (exit 0)
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 230.300875
+
+commsSuppression (exit 0)
+1..49
+# tests 49
+# suites 0
+# pass 49
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 176.510792
+
+commsApi (exit 0)
+1..99
+# tests 99
+# suites 0
+# pass 99
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 584.877209
+
+commsConfig (exit 0)
+1..32
+# tests 32
+# suites 0
+# pass 32
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 376.780292
+
+commsProfileBindings (exit 0)
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 170.647417
+
+wenoSwitchNewRx (exit 0)
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 207.422
+
+ghlAdapter (exit 0)
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 265.393959
+
+patientRegistration (exit 0)
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 323.685208
+
+demographicsConcurrency (exit 0)
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 551.902208
+
+patientRegistrationEndpoint (exit 0)
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 199.616917
+
+registrationCommunicationPreferences (exit 0)
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 290.1615
+
+Full UI: npm --prefix ui test (exit 0)
+  ...
+1..1419
+# tests 1432
+# suites 0
+# pass 1432
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 184880.483292
+
+MCP build: exit 0 (tsc)
+UI build: exit 0 (tsc and Vite; chunk-size advisory)
+Voice comparisons 2160; unmarked SMS comparisons 720; mismatches 0
+H10 refusal installer regression: tests 1 / pass 1 / fail 0; exit 0

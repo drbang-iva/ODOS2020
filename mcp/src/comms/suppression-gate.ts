@@ -1,5 +1,5 @@
 import { patientWriteVersion, type PatientWriteVersion } from "./patient-version.js";
-import type { Bundle, Communication, Patient, Provenance, Reference, RelatedPerson, Resource } from "@medplum/fhirtypes";
+import type { Bundle, Communication, ContactPoint, Patient, Provenance, Reference, RelatedPerson, Resource } from "@medplum/fhirtypes";
 import type { PracticeRoleId } from "../authz/roles.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import type { MedplumClient } from "../fhir-client.js";
@@ -16,6 +16,8 @@ export const ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-comms-marketing-consent";
 export const ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number";
+export const ODOS_TEXTABLE_NUMBER_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-textable-number";
 export const ODOS_COMMS_OPT_OUT_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out";
 export const ODOS_PATIENT_TIMEZONE_EXTENSION_URL =
@@ -819,21 +821,35 @@ function hasNoTextableNumber(resource: Patient | RelatedPerson): boolean {
 }
 
 export function resolveSmsNumber(resource: Patient | RelatedPerson, now: Date): string | undefined {
-  return hasNoTextableNumber(resource) ? undefined : resolveVoiceNumber(resource, now);
+  return hasNoTextableNumber(resource) ? undefined : resolveSmsHistoryNumber(resource, now);
+}
+
+export function resolveSmsHistoryNumber(resource: Patient | RelatedPerson, now: Date): string | undefined {
+  const active = activePhoneCandidates(resource, now);
+  return (
+    active.find((point) => point.extension?.some((entry) =>
+      entry.url === ODOS_TEXTABLE_NUMBER_EXTENSION_URL && entry.valueBoolean === true))
+    ?? preferredPhoneCandidate(active)
+  )?.value?.trim();
 }
 
 export function resolveVoiceNumber(resource: Patient | RelatedPerson, now: Date): string | undefined {
-  const active = (resource.telecom ?? []).filter((point) =>
+  return preferredPhoneCandidate(activePhoneCandidates(resource, now))?.value?.trim();
+}
+
+function preferredPhoneCandidate(active: ContactPoint[]): ContactPoint | undefined {
+  return active.find((point) => point.system === "sms")
+    ?? active.find((point) => point.use === "mobile")
+    ?? active[0];
+}
+
+function activePhoneCandidates(resource: Patient | RelatedPerson, now: Date): ContactPoint[] {
+  return (resource.telecom ?? []).filter((point) =>
     (point.system === "sms" || point.system === "phone")
     && point.use !== "old"
     && Boolean(point.value?.trim())
     && (!point.period?.start || Date.parse(point.period.start) <= now.getTime())
     && (!point.period?.end || Date.parse(point.period.end) > now.getTime()));
-  return (
-    active.find((point) => point.system === "sms")
-    ?? active.find((point) => point.use === "mobile")
-    ?? active[0]
-  )?.value?.trim();
 }
 
 function patientPhone(patient: Patient, now: Date): string {

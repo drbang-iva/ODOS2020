@@ -1137,3 +1137,86 @@ for (const [guard, value] of [["FB6", true], ["FB7", false], ["FB8", undefined]]
     assert.equal(resolveSmsNumber(subject, TEXTABLE_NOW), value === true ? undefined : "+12025550101");
   });
 }
+
+
+const TEXTABLE_NUMBER = "https://odos2020.com/fhir/StructureDefinition/odos-textable-number";
+const markedWork = { system: "phone", use: "work", value: "+12025550102", extension: [{ url: TEXTABLE_NUMBER, valueBoolean: true }] } as const;
+const currentMobile = { system: "phone", use: "mobile", value: "+12025550101" } as const;
+function textableTelecom(): NonNullable<Patient["telecom"]> {
+  return [structuredClone(currentMobile), { ...markedWork, extension: [{ url: TEXTABLE_NUMBER, valueBoolean: true }] }];
+}
+
+test("J1: explicit textable work outranks mobile and imported sms", () => {
+  for (const imported of [false, true]) {
+    const telecom = textableTelecom();
+    if (imported) telecom.unshift({ system: "sms", value: "+12025550103" });
+    assert.equal(resolveSmsNumber(patient({ telecom }), TEXTABLE_NOW), "+12025550102");
+  }
+});
+
+for (const value of [false, undefined]) {
+  test(`J2: textable value ${String(value)} does not mark a ContactPoint`, () => {
+    const telecom = textableTelecom();
+    telecom[1].extension = [{ url: TEXTABLE_NUMBER, ...(value === undefined ? {} : { valueBoolean: value }) }];
+    assert.equal(resolveSmsNumber(patient({ telecom }), TEXTABLE_NOW), "+12025550101");
+  });
+}
+
+test("J3: refusal wins over an explicitly textable ContactPoint", () => {
+  assert.equal(resolveSmsNumber(noTextablePatient(textableTelecom()), TEXTABLE_NOW), undefined);
+});
+
+for (const [guard, override] of [
+  ["J4", { use: "old" }],
+  ["J5", { period: { end: TEXTABLE_NOW.toISOString() } }],
+  ["J5", { period: { start: "2026-08-03T00:00:00.000Z" } }],
+  ["J5", { value: "  " }],
+  ["J5", { system: "email" }],
+] as const) {
+  test(`${guard}: inactive marked entry ${JSON.stringify(override)} falls back`, () => {
+    const telecom = textableTelecom();
+    telecom[1] = { ...telecom[1], ...override };
+    assert.equal(resolveSmsNumber(patient({ telecom }), TEXTABLE_NOW), "+12025550101");
+  });
+}
+
+test("J6: first active marked entry wins after an obsolete marked entry", () => {
+  const telecom = textableTelecom();
+  telecom.unshift({ ...telecom[1], use: "old", value: "+12025550104" });
+  telecom.push({ ...telecom[2], value: "+12025550105" });
+  assert.equal(resolveSmsNumber(patient({ telecom }), TEXTABLE_NOW), "+12025550102");
+});
+
+test("J7: textable work does not change voice or initiateCall", async () => {
+  for (const refusal of [false, true]) {
+    const subject = refusal ? noTextablePatient(textableTelecom()) : patient({ telecom: textableTelecom() });
+    assert.equal(resolveVoiceNumber(subject, TEXTABLE_NOW), "+12025550101");
+    const calls: string[] = [];
+    const adapter = createSuppressedCommsProvider({
+      ...fakeSmsProvider([]),
+      async initiateCall(request) { calls.push(request.toNumber!); return { callId: "synthetic-call" }; },
+    }, { fhir: fhirFor(subject), practiceTimeZone: "America/New_York", now: () => TEXTABLE_NOW });
+    await adapter.initiateCall!({ patientReference: "Patient/synthetic-1" });
+    assert.deepEqual(calls, ["+12025550101"]);
+  }
+});
+
+test("J8: unmarked SMS and voice retain sms then mobile then first-active ordering", () => {
+  const cases: Array<{ telecom: Patient["telecom"]; expected: string | undefined }> = [
+    { telecom: [{ system: "phone", use: "work", value: " +12025550102 " }, currentMobile, { system: "sms", value: "+12025550103" }], expected: "+12025550103" },
+    { telecom: [{ system: "phone", use: "work", value: "+12025550102" }, currentMobile], expected: "+12025550101" },
+    { telecom: [{ system: "phone", use: "work", value: " +12025550102 " }], expected: "+12025550102" },
+    { telecom: [{ ...currentMobile, use: "old" }], expected: undefined },
+    { telecom: [], expected: undefined },
+    { telecom: undefined, expected: undefined },
+  ];
+  for (const { telecom, expected } of cases) {
+    const subject = patient({ telecom });
+    assert.equal(resolveSmsNumber(subject, TEXTABLE_NOW), expected);
+    assert.equal(resolveVoiceNumber(subject, TEXTABLE_NOW), expected);
+  }
+});
+
+test("J9: imported sms still outranks unmarked mobile", () => {
+  assert.equal(resolveSmsNumber(patient({ telecom: [currentMobile, { system: "sms", value: "+12025550103" }] }), TEXTABLE_NOW), "+12025550103");
+});

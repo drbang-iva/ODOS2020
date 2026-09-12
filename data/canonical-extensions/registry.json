@@ -1003,6 +1003,12 @@
       "namespace": "communications",
       "status": "active",
       "sliceConsumer": "item-1a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "item-1b-i"
     }
   ]
 }

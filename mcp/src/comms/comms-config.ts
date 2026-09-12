@@ -23,7 +23,7 @@ import type { CommsProvider } from "./comms-provider.js";
 import {
   createSuppressedCommsProvider,
   resolveSmsNumber,
-  resolveVoiceNumber,
+  resolveSmsHistoryNumber,
   type SmsStopScope,
   type SuppressionFhir,
 } from "./suppression-gate.js";
@@ -289,7 +289,7 @@ export function createCommsDispatch(
           resolvePatientPhone: (patientReference) =>
             patientPhone(callerFhir, patientReference, deps.now?.() ?? new Date()),
           resolvePatientLookupPhone: (patientReference) =>
-            patientPhone(callerFhir, patientReference, deps.now?.() ?? new Date(), resolveVoiceNumber),
+            patientPhone(callerFhir, patientReference, deps.now?.() ?? new Date(), resolveSmsHistoryNumber),
         });
         return scopeAdapter(
           createSuppressedCommsProvider(adapter, suppression),

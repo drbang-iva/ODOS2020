@@ -59,3 +59,17 @@ below verify its FHIR representation, not publication of an HL7-owned extension.
 |---|---|---|---|---|---|
 | Simple extension base | `http://hl7.org/fhir/StructureDefinition/Extension`; fixed canonical URL; nested extensions prohibited; boolean value | https://hl7.org/fhir/R4/extensibility.html | https://hl7.org/fhir/R4/extension.profile.json.html | 2026-09-12 | verified; sources agree |
 | Context and constraints | Patient context, extension 0..1, value 1..1 with `fixedBoolean: true` | https://hl7.org/fhir/R4/defining-extensions.html | https://hl7.org/fhir/R4/elementdefinition-definitions.html | 2026-09-12 | verified FHIR constraint mechanics; Patient-only semantics are the ODOS contract |
+
+## Item 1b-i: textable ContactPoint marker
+
+Access date: 2026-09-12. `odos-textable-number` is an ODOS-authored canonical,
+not an HL7-published extension. Sources agree on the R4 representation below;
+texting preference and refusal behavior are local application semantics.
+
+| Artifact | Chosen value | Source 1 URL | Source 2 URL | Access date | Status |
+|---|---|---|---|---|---|
+| Datatype context | `context.type=element`, `context.expression=ContactPoint`; R4 uses element identifiers for datatype contexts too | https://hl7.org/fhir/R4/structuredefinition-definitions.html#StructureDefinition.context | https://www.hl7.org/fhir/R4/extension-contactpoint-area.xml.html | 2026-09-12 | verified; sources agree |
+| Simple extension base and URL | `http://hl7.org/fhir/StructureDefinition/Extension`, constraint derivation; `Extension.url.fixedUri` is the ODOS canonical; nested extensions prohibited | https://hl7.org/fhir/R4/defining-extensions.html | https://www.hl7.org/fhir/R4/extension-contactpoint-area.xml.html | 2026-09-12 | verified; sources agree |
+| Cardinality | Extension root `0..1`, simple `Extension.value[x]` `1..1`, nested `Extension.extension` `0..0` | https://hl7.org/fhir/R4/defining-extensions.html#cardinality | https://hl7.org/fhir/R4/elementdefinition-definitions.html | 2026-09-12 | verified; sources agree |
+| Boolean value type | Restrict `Extension.value[x]` to the supported boolean type | https://hl7.org/fhir/R4/extension.profile.json.html | https://hl7.org/fhir/R4/extensibility.html | 2026-09-12 | verified; sources agree |
+| Fixed value constraint | `fixedBoolean: true` on the single boolean value type | https://hl7.org/fhir/R4/elementdefinition-definitions.html | https://hl7.org/fhir/R4/profiling.html | 2026-09-12 | verified fixed-value mechanics; true-only meaning is the ODOS contract |

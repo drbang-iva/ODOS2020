@@ -2675,3 +2675,24 @@ test("H13: marked patient refuses own SMS while education sends to the RelatedPe
     assertEducationNumber(fixture, "+12025550102");
   } finally { await fixture.close(); }
 });
+
+
+for (const relatedRecipient of [false, true]) for (const markerState of ["active", "false", "expired"] as const) {
+  test(`J12: education delegates ${markerState} textable selection for ${relatedRecipient ? "RelatedPerson" : "Patient"}`, async () => {
+    const telecom: Patient["telecom"] = [
+      { system: "phone", use: "mobile", value: "+12025550101" },
+      { system: "sms", value: "+12025550103" },
+      { system: "phone", use: "work", value: "+12025550102", extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-textable-number", valueBoolean: true }] },
+    ];
+    if (markerState === "false") telecom[2].extension![0].valueBoolean = false;
+    if (markerState === "expired") telecom[2].period = { end: "2026-08-02T15:00:00.000Z" };
+    const related: RelatedPerson = { resourceType: "RelatedPerson", id: "related-1", patient: { reference: PATIENT_REFERENCE }, telecom };
+    const fixture = await startServer({ relatedPeople: relatedRecipient ? [related] : [], channelRoutes: { "clinical-sms": "twilio" }, senderNumbers: { "clinical-sms": "+12025550100" } });
+    try {
+      fixture.patients[0].extension = [];
+      if (!relatedRecipient) fixture.patients[0].telecom = telecom;
+      await sendNumberFixture(fixture, `textable-education-${relatedRecipient}`, relatedRecipient ? { reference: "RelatedPerson/related-1", email: "related@example.test" } : undefined);
+      assertEducationNumber(fixture, markerState === "active" ? "+12025550102" : "+12025550103");
+    } finally { await fixture.close(); }
+  });
+}
