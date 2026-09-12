@@ -1,0 +1,110 @@
+{
+  "base_sha": "b9914674ca5657e1e938853c987f34715b49be0d",
+  "scope": "Main-stack database password environment wiring; no live deployment or credential rotation",
+  "compose_cli_version": "5.1.3",
+  "before": {
+    "runtime_config_tests": {
+      "total": 4,
+      "passed": 1,
+      "failed": 3
+    }
+  },
+  "after": {
+    "focused_tests": {
+      "total": 44,
+      "passed": 44,
+      "failed": 0
+    },
+    "scripts_typecheck_exit": 0,
+    "mcp_typecheck_exit": 0
+  },
+  "mutations": [
+    {
+      "mutation": "public-default-fallback",
+      "verified_in_place": true,
+      "exit": 1,
+      "counts": [
+        "# tests 4",
+        "# pass 2",
+        "# fail 2"
+      ]
+    },
+    {
+      "mutation": "postgres-ignores-runtime-password",
+      "verified_in_place": true,
+      "exit": 1,
+      "counts": [
+        "# tests 4",
+        "# pass 3",
+        "# fail 1"
+      ]
+    },
+    {
+      "mutation": "file-without-environment-overlay",
+      "verified_in_place": true,
+      "exit": 1,
+      "counts": [
+        "# tests 4",
+        "# pass 3",
+        "# fail 1"
+      ]
+    },
+    {
+      "mutation": "restored-final",
+      "exit": 0,
+      "counts": [
+        "# tests 44",
+        "# pass 44",
+        "# fail 0"
+      ]
+    }
+  ],
+  "runtime_probe": {
+    "fresh_synthetic_database": true,
+    "published_ports": [],
+    "network_internal": true,
+    "cases": [
+      {
+        "case": "runtime password overrides inert tracked JSON",
+        "pass": true,
+        "http_status": 200
+      },
+      {
+        "case": "missing runtime override rejected by PostgreSQL",
+        "pass": true,
+        "database_error": "password authentication failed",
+        "http_healthy": false
+      },
+      {
+        "case": "restored runtime override recovers existing database",
+        "pass": true,
+        "http_status": 200
+      }
+    ],
+    "literal_dollar_and_hash_preserved": true,
+    "image": "medplum/medplum-server:5.1.30",
+    "image_digest": "medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de",
+    "cleanup_exit": 0,
+    "remaining_containers": [],
+    "remaining_volumes": []
+  },
+  "runtime_probe_isolation": "Local Colima; fresh synthetic database, internal network, no host ports; only harness-owned resources removed",
+  "probe_adjustments": [
+    "Removed unrelated services and host port publication",
+    "Used independent temporary volumes and generated synthetic credentials/signing keys",
+    "Bound a clean copy of the tracked JSON from a directory shared with Colima"
+  ],
+  "limits": [
+    "Does not establish deployment to an existing installation",
+    "Does not rotate an existing database role",
+    "Does not verify operational source-sync scheduling",
+    "Independent evaluation pending"
+  ],
+  "file_sha256": {
+    "docker-compose.yml": "9d4d322d3d45253e0ae3505de415814868800fcc11a90bed4634bf5ee2e40dc3",
+    "medplum.config.json": "bf11929da109668996346e29d0413700f8810a6b3c91da0f389f0e66625d0408",
+    ".env.example": "e572d1006df979685107c00eb09c154d79106d6a2a55ba27131366449610d4fe",
+    "mcp/tests/medplumDatabaseConfig.test.ts": "951c25cd64e34d2f8bf7d999d912f3bfbf64ea481da2d13580fc2fa483d64886",
+    "docs/install.md": "11d1df3ede1cd4056d4836524218d7d4be4ea8810c45c12f518cd8da7e5292a6"
+  }
+}

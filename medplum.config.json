@@ -13,7 +13,7 @@
     "port": 5432,
     "dbname": "medplum",
     "username": "medplum",
-    "password": "medplum"
+    "password": "INERT_ENV_OVERLAY_REQUIRED"
   },
   "redis": {
     "host": "redis",

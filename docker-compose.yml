@@ -15,7 +15,7 @@ services:
     environment:
       POSTGRES_DB: medplum
       POSTGRES_USER: medplum
-      POSTGRES_PASSWORD: medplum
+      POSTGRES_PASSWORD: ${MEDPLUM_DATABASE_PASSWORD:?Set MEDPLUM_DATABASE_PASSWORD in the untracked .env}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     ports:
@@ -65,6 +65,7 @@ services:
       - .env
       - .odos/medplum-signing.env
     environment:
+      MEDPLUM_DATABASE_PASSWORD: ${MEDPLUM_DATABASE_PASSWORD:?Set MEDPLUM_DATABASE_PASSWORD in the untracked .env}
       MEDPLUM_DEFAULT_SUPER_ADMIN_EMAIL: ${MEDPLUM_ADMIN_EMAIL}
       MEDPLUM_DEFAULT_SUPER_ADMIN_PASSWORD: ${MEDPLUM_ADMIN_PASSWORD}
       MEDPLUM_STORAGE_BASE_URL: ${MEDPLUM_STORAGE_BASE_URL:-http://localhost:8103/storage/}
