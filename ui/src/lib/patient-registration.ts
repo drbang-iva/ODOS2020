@@ -286,7 +286,8 @@ function replacePreferredTelecom(
   const preferredIndex = telecom.findIndex((entry) => entry.system === system && entry.use === "home");
   const fallbackIndex = telecom.findIndex((entry) => entry.system === system);
   const replaceIndex = preferredIndex >= 0 ? preferredIndex : fallbackIndex;
-  if (replaceIndex < 0) return value ? [...telecom, { system, use: "home", value }] : telecom;
+  if (!value.trim()) return telecom.filter((_, index) => index !== replaceIndex);
+  if (replaceIndex < 0) return [...telecom, { system, use: "home", value }];
   return telecom.map((entry, index) => index === replaceIndex ? { ...entry, value } : entry);
 }
 

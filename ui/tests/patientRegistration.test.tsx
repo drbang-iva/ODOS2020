@@ -3,6 +3,7 @@ import { test } from "node:test";
 import type { Patient } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { PatientDemographicsEditor } from "../src/components/patient/PatientDemographicsEditor";
 import { resolveSmsNumber } from "../../mcp/src/comms/suppression-gate";
 import {
@@ -227,14 +228,60 @@ test("G4: a missing phone appends exactly one home entry", async () => {
   assert.deepEqual(saved.telecom, [email, { system: "phone", use: "home", value: "5550100" }]);
 });
 
-test("G5: the displayed home email changes or clears in place without moving work email", async () => {
+test("G5: the displayed home email changes in place or is removed when cleared without moving other entries", async () => {
   const work = { system: "email", use: "work", value: "work@example.test" } as const;
   const home = { system: "email", use: "home", value: "home@example.test", rank: 2, period: { start: "2026-01-01" } } as const;
   const phone = { system: "phone", use: "mobile", value: MOBILE } as const;
-  for (const value of ["changed@example.test", ""]) {
+  for (const value of ["changed@example.test", "", "   "]) {
     const { loaded, saved } = await saveTelecom([work, home, phone], { email: value });
     assert.equal(loaded.email, "home@example.test");
-    assert.deepEqual(saved.telecom, [work, { ...home, value }, phone]);
+    assert.deepEqual(saved.telecom, value.trim() ? [work, { ...home, value }, phone] : [work, phone]);
+  }
+});
+
+test("G13: clearing the email box removes only the displayed entry from the real serialized PUT", async () => {
+  const work = { system: "email", use: "work", value: "work@example.test", rank: 1 } as const;
+  const home = { system: "email", use: "home", value: "home@example.test", rank: 2, period: { start: "2026-01-01" } } as const;
+  const mobile = { system: "phone", use: "mobile", value: MOBILE, rank: 3 } as const;
+  const patient: Patient = { ...EXISTING, telecom: [work, home, mobile] };
+  const before = JSON.stringify(patient);
+  const originalFetch = globalThis.fetch;
+  try {
+    for (const blank of ["", "   "]) {
+      const requests: Array<{ url: string; body: string; ifMatch: string | null }> = [];
+      let saved = false;
+      let renderer!: ReactTestRenderer;
+      globalThis.fetch = async (input, init) => {
+        if (init?.method !== "PUT") return Response.json({ error: "Unavailable in this synthetic test" }, { status: 403 });
+        const body = String(init.body);
+        requests.push({ url: String(input), body, ifMatch: new Headers(init.headers).get("If-Match") });
+        return Response.json({ ...JSON.parse(body), meta: { versionId: "4" } });
+      };
+      try {
+        await act(async () => {
+          renderer = create(<PatientDemographicsEditor patient={patient} onSaved={() => { saved = true; }} onDiscard={() => undefined} />);
+        });
+        const emailInput = () => renderer.root.findAllByType("input").find((input) => input.props.type === "email")!;
+        assert.equal(emailInput().props.value, home.value);
+        await act(async () => {
+          emailInput().props.onChange({ target: { value: blank } });
+        });
+        await act(async () => {
+          renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save demographics")!.props.onClick();
+        });
+        assert.equal(saved, true);
+        assert.equal(requests.length, 1);
+        assert.equal(requests[0].url, `/fhir/R4/Patient/${patient.id}`);
+        assert.equal(requests[0].ifMatch, 'W/"3"');
+        assert.doesNotMatch(requests[0].body, /"value"\s*:\s*""/);
+        assert.deepEqual(JSON.parse(requests[0].body).telecom, [work, mobile]);
+        assert.equal(JSON.stringify(patient), before);
+      } finally {
+        act(() => renderer?.unmount());
+      }
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });
 
