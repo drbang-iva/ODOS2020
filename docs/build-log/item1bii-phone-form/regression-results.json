@@ -1,0 +1,221 @@
+[
+  {
+    "suite": "commsSuppression",
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "tests/commsSuppression.test.ts"
+    ],
+    "exit": 0,
+    "tests": 49,
+    "pass": 49,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "commsApi",
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "tests/commsApi.test.ts"
+    ],
+    "exit": 0,
+    "tests": 99,
+    "pass": 99,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "commsConfig",
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "tests/commsConfig.test.ts"
+    ],
+    "exit": 0,
+    "tests": 32,
+    "pass": 32,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "commsProfileBindings",
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "tests/commsProfileBindings.test.ts"
+    ],
+    "exit": 0,
+    "tests": 11,
+    "pass": 11,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "wenoSwitchNewRx",
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "tests/wenoSwitchNewRx.test.ts"
+    ],
+    "exit": 0,
+    "tests": 37,
+    "pass": 37,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "ghlAdapter",
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "tests/ghlAdapter.test.ts"
+    ],
+    "exit": 0,
+    "tests": 17,
+    "pass": 17,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "patientRegistrationAuthz",
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "tests/patientRegistrationAuthz.test.ts"
+    ],
+    "exit": 0,
+    "tests": 29,
+    "pass": 29,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "patientRegistration",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/patientRegistration.test.tsx"
+    ],
+    "exit": 0,
+    "tests": 20,
+    "pass": 20,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "demographicsConcurrency",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/demographicsConcurrency.test.tsx"
+    ],
+    "exit": 0,
+    "tests": 3,
+    "pass": 3,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "patientRegistrationEndpoint",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/patientRegistrationEndpoint.test.tsx"
+    ],
+    "exit": 0,
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "registrationCommunicationPreferences",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/registrationCommunicationPreferences.test.tsx"
+    ],
+    "exit": 0,
+    "tests": 8,
+    "pass": 8,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "patientPhoneForm",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "exit": 0,
+    "tests": 15,
+    "pass": 15,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "full UI",
+    "command": [
+      "npm",
+      "--prefix",
+      "ui",
+      "test"
+    ],
+    "exit": 0,
+    "tests": 1447,
+    "pass": 1447,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  }
+]

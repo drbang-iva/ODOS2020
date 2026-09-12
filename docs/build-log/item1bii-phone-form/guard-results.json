@@ -1,0 +1,759 @@
+[
+  {
+    "guard": "K1",
+    "fault": "Order slots by array position",
+    "file": "ui/src/lib/patient-registration.ts",
+    "original": ".sort((a, b) => priority(a.point) - priority(b.point) || a.sourceIndex - b.sourceIndex)",
+    "replacement": ".sort((a, b) => a.sourceIndex - b.sourceIndex)",
+    "sourceSha256": "9bf4e89f9c0bcaf243ffea92e0a87bde2ca0cbd53aa187eab6a77f6711990954",
+    "mutantSha256": "6ac89629f7670341dc20573b6d397949b225d09c8ce0009411aec43be15f22bf",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K1:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K2",
+    "fault": "Trim untouched slot values",
+    "file": "ui/src/lib/patient-registration.ts",
+    "original": "const changed = slot.value !== original.value || useChanged;",
+    "replacement": "const changed = true;",
+    "sourceSha256": "9bf4e89f9c0bcaf243ffea92e0a87bde2ca0cbd53aa187eab6a77f6711990954",
+    "mutantSha256": "17dcc0ff8a74edab09be886d4c6e39f6262aba179413db67151e0a5131403b13",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K2:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K2-absence",
+    "fault": "Substitute an empty string for an absent snapshot value",
+    "file": "ui/src/lib/patient-registration.ts",
+    "original": "...(point.value === undefined ? {} : { value: point.value }),",
+    "replacement": "value: point.value ?? \"\",",
+    "sourceSha256": "9bf4e89f9c0bcaf243ffea92e0a87bde2ca0cbd53aa187eab6a77f6711990954",
+    "mutantSha256": "bbcc4ecbde05823b8e76049e3c0763ffe53ce51e179d69e9dee4e1085664c4b2",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K2:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K3",
+    "fault": "Serialize a cleared slot with an empty value",
+    "file": "ui/src/lib/patient-registration.ts",
+    "original": "if (!slot.value.trim()) return [];",
+    "replacement": "if (!slot.value.trim()) return [{ ...point, value: \"\" }];",
+    "sourceSha256": "9bf4e89f9c0bcaf243ffea92e0a87bde2ca0cbd53aa187eab6a77f6711990954",
+    "mutantSha256": "ed518dfba119d4619d0eea64a4c3dc6b617dcf365e3e95b079d2d10566a01602",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K3:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K4",
+    "fault": "Restore required-phone validation",
+    "file": "mcp/src/clinic/patient-telecom.ts",
+    "original": "const errors: Record<string, string> = {};",
+    "replacement": "const errors: Record<string, string> = {}; if (phones.every(p => !p.value.trim())) errors.phone = \"Phone number is required.\";",
+    "sourceSha256": "c52f0b4635812a8682867c0ba65f4a070a87d26bddcea2ae2f0a50b3f002aea9",
+    "mutantSha256": "0f699df16cfd92bca4f25c782f2bea7e9bef27f62b0c32d0708faae07c65deab",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K4:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K5",
+    "fault": "Create a phone even when its value is blank",
+    "file": "mcp/src/clinic/patient-telecom.ts",
+    "original": "return value ? { system: \"phone\", use: slot.use, value } : undefined;",
+    "replacement": "return { system: \"phone\", use: slot.use, value };",
+    "sourceSha256": "c52f0b4635812a8682867c0ba65f4a070a87d26bddcea2ae2f0a50b3f002aea9",
+    "mutantSha256": "fcc07508315e5ba0b2de940fd22ecedb6a1afc73b16c9787e4240d9ecc1044e8",
+    "cwd": "mcp",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K5:",
+      "tests/patientRegistrationAuthz.test.ts"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K6",
+    "fault": "Set the selected marker without clearing others",
+    "file": "mcp/src/clinic/patient-telecom.ts",
+    "original": "if (extensions?.length === point.extension?.length) return point;",
+    "replacement": "if (point !== answer) return point;",
+    "sourceSha256": "c52f0b4635812a8682867c0ba65f4a070a87d26bddcea2ae2f0a50b3f002aea9",
+    "mutantSha256": "a15974c3444301626c8c9d926d92147d7add76b029e55634355937444262e147",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K6:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K7",
+    "fault": "Clear ContactPoint markers when choosing Neither",
+    "file": "mcp/src/clinic/patient-telecom.ts",
+    "original": "return { ...patient, extension: [...(otherExtensions ?? []),",
+    "replacement": "return { ...patient, telecom: patient.telecom?.map(point => ({ ...point, extension: point.extension?.filter(e => e.url !== ODOS_TEXTABLE_NUMBER_EXTENSION_URL) })), extension: [...(otherExtensions ?? []),",
+    "sourceSha256": "c52f0b4635812a8682867c0ba65f4a070a87d26bddcea2ae2f0a50b3f002aea9",
+    "mutantSha256": "e4058724b01283e56ae017c7dd9d27e67460c2a787f59a05672c2454244116b5",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K7:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K8",
+    "fault": "Leave the Patient refusal when choosing a phone",
+    "file": "mcp/src/clinic/patient-telecom.ts",
+    "original": "const otherExtensions = patient.extension?.filter(e => e.url !== ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL);",
+    "replacement": "const otherExtensions = patient.extension;",
+    "sourceSha256": "c52f0b4635812a8682867c0ba65f4a070a87d26bddcea2ae2f0a50b3f002aea9",
+    "mutantSha256": "50b7edb0e20a66543ff62220018f9998977d9a7f1f50583d24a358d2c72888c4",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K8:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K9",
+    "fault": "Treat an unanswered question as clear-all",
+    "file": "ui/src/lib/patient-registration.ts",
+    "original": "  return patient;\n}",
+    "replacement": "  if (draft.textable === \"\") patient.telecom = patient.telecom?.map(point => ({ ...point, extension: point.extension?.filter(e => e.url !== ODOS_TEXTABLE_NUMBER_EXTENSION_URL) }));\n  return patient;\n}",
+    "sourceSha256": "9bf4e89f9c0bcaf243ffea92e0a87bde2ca0cbd53aa187eab6a77f6711990954",
+    "mutantSha256": "b71715b6b4947ced480aa90f094e781fa1c3049e9cc224d2ba3f0a1513111a0f",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K9:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K10",
+    "fault": "Hardcode new phones to home",
+    "file": "mcp/src/clinic/patient-telecom.ts",
+    "original": "return value ? { system: \"phone\", use: slot.use, value } : undefined;",
+    "replacement": "return value ? { system: \"phone\", use: \"home\", value } : undefined;",
+    "sourceSha256": "c52f0b4635812a8682867c0ba65f4a070a87d26bddcea2ae2f0a50b3f002aea9",
+    "mutantSha256": "423fb127ee245969be161d3d89604d868761ec8f57a4db9eddf09f6ebdde3ee0",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K10:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K11",
+    "fault": "Ignore the dropdown edit",
+    "file": "ui/src/lib/patient-registration.ts",
+    "original": "const useChanged = slot.use !== \"other\" && slot.use !== original.use;",
+    "replacement": "const useChanged = false;",
+    "sourceSha256": "9bf4e89f9c0bcaf243ffea92e0a87bde2ca0cbd53aa187eab6a77f6711990954",
+    "mutantSha256": "6410f76b04263a8f43241650088764f7e04904c0e57d2a1f31a168d8d2d19ae5",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K11:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K12",
+    "fault": "Restore required-phone validation for H14",
+    "file": "mcp/src/clinic/patient-telecom.ts",
+    "original": "const errors: Record<string, string> = {};",
+    "replacement": "const errors: Record<string, string> = {}; if (phones.every(p => !p.value.trim())) errors.phone = \"Phone number is required.\";",
+    "sourceSha256": "c52f0b4635812a8682867c0ba65f4a070a87d26bddcea2ae2f0a50b3f002aea9",
+    "mutantSha256": "0f699df16cfd92bca4f25c782f2bea7e9bef27f62b0c32d0708faae07c65deab",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K12:|^H14:",
+      "tests/patientPhoneForm.test.tsx",
+      "tests/patientRegistration.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 2,
+      "pass": 0,
+      "fail": 2,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K13",
+    "fault": "Wire the Phone 2 control to Phone 1",
+    "file": "ui/src/components/patient/PatientDemographicsEditor.tsx",
+    "original": "textable: index === 0 ? \"phone1\" : \"phone2\"",
+    "replacement": "textable: \"phone1\"",
+    "sourceSha256": "af3f6ec4d05f98eace5d16ebe826775eac8919229ae913c6eb4ed746b0d3af29",
+    "mutantSha256": "d9b7d65d075e509808f16d4c6c94ec4b8b37fb9071cef05215414ae68466e7bb",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K13:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K14",
+    "fault": "Drop unrelated Patient extensions on save",
+    "file": "ui/src/lib/patient-registration.ts",
+    "original": "    ...(existing ?? {}),",
+    "replacement": "    ...(existing ?? {}), extension: undefined,",
+    "sourceSha256": "9bf4e89f9c0bcaf243ffea92e0a87bde2ca0cbd53aa187eab6a77f6711990954",
+    "mutantSha256": "27d6037a5a2f74a914c044ee1e0963518bdfa734fa56ba1f703f491b8d4aeacb",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K14:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K15",
+    "fault": "Retake the snapshot during preference refresh",
+    "file": "ui/src/components/patient/PatientDemographicsEditor.tsx",
+    "original": "      setHeldPatient(fresh);",
+    "replacement": "      setHeldPatient(fresh);\n      setEdit(edit => ({ ...edit, snapshot: patientTelecomSnapshot(fresh, edit.snapshot.now) }));",
+    "sourceSha256": "af3f6ec4d05f98eace5d16ebe826775eac8919229ae913c6eb4ed746b0d3af29",
+    "mutantSha256": "e1e8de8ce42600043f660e8c66f68a2514bc2bb23271feb6a9298e43cb374040",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K15:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "K16",
+    "fault": "Omit server marker and refusal application",
+    "file": "mcp/src/clinic/patient-registration-endpoint.ts",
+    "original": "  if (input.demographics.textable) {",
+    "replacement": "  if (false) {",
+    "sourceSha256": "79a63dbb95d7d1aea5369d73fb75d1639c23c8272e43c7b13c1a5d1f84192429",
+    "mutantSha256": "a88ae0bf09ba9bfaf6b56c6ba6e32103512a3773f525cdaae316028f69bccb3e",
+    "cwd": "mcp",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K16:",
+      "tests/patientRegistrationAuthz.test.ts"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "R2",
+    "fault": "Allow an empty selected texting slot",
+    "file": "mcp/src/clinic/patient-telecom.ts",
+    "original": "if (textable === `phone${index + 1}` && (!slot.value.trim() || !valid))",
+    "replacement": "if (false)",
+    "sourceSha256": "c52f0b4635812a8682867c0ba65f4a070a87d26bddcea2ae2f0a50b3f002aea9",
+    "mutantSha256": "551abac457e4e836b82a18c209f43bf75997e2b20e09c069193ce38a805f3d41",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^R2:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  }
+]
