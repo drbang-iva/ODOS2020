@@ -22,6 +22,7 @@ import {
 import type { CommsProvider } from "./comms-provider.js";
 import {
   createSuppressedCommsProvider,
+  resolveSmsNumber,
   type SmsStopScope,
   type SuppressionFhir,
 } from "./suppression-gate.js";
@@ -716,17 +717,7 @@ async function patientPhone(
   const match = /^Patient\/([A-Za-z0-9.-]{1,64})$/.exec(patientReference);
   if (!match) throw new Error("GHL conversation patientReference must be Patient/….");
   const patient = await fhir.read<Patient>("Patient", match[1]);
-  const active = patient.telecom?.filter((point) =>
-    (point.system === "sms" || point.system === "phone")
-    && point.use !== "old"
-    && Boolean(point.value?.trim())
-    && (!point.period?.start || Date.parse(point.period.start) <= now.getTime())
-    && (!point.period?.end || Date.parse(point.period.end) > now.getTime()));
-  const phone = (
-    active?.find((point) => point.system === "sms")
-    ?? active?.find((point) => point.use === "mobile")
-    ?? active?.[0]
-  )?.value?.trim();
+  const phone = resolveSmsNumber(patient, now);
   if (!phone) throw new Error(`Patient/${patient.id ?? match[1]} has no active phone in Patient.telecom.`);
   return phone;
 }
