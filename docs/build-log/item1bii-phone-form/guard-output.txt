@@ -7,7 +7,7 @@ TAP version 13
 # Subtest: K1: the real reader selects active slots in resolver order
 ok 1 - K1: the real reader selects active slots in resolver order
   ---
-  duration_ms: 3.413333
+  duration_ms: 3.502541
   type: 'test'
   ...
 1..1
@@ -18,7 +18,7 @@ ok 1 - K1: the real reader selects active slots in resolver order
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 333.898375
+# duration_ms 338.38525
 
 K1 — red
 cwd: ui
@@ -28,7 +28,7 @@ TAP version 13
 # Subtest: K1: the real reader selects active slots in resolver order
 not ok 1 - K1: the real reader selects active slots in resolver order
   ---
-  duration_ms: 2.492458
+  duration_ms: 2.596541
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:4059'
   failureType: 'testCodeFailure'
@@ -90,7 +90,7 @@ not ok 1 - K1: the real reader selects active slots in resolver order
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 337.96475
+# duration_ms 329.77175
 
 K1 — restored
 cwd: ui
@@ -100,7 +100,7 @@ TAP version 13
 # Subtest: K1: the real reader selects active slots in resolver order
 ok 1 - K1: the real reader selects active slots in resolver order
   ---
-  duration_ms: 3.5075
+  duration_ms: 3.499875
   type: 'test'
   ...
 1..1
@@ -111,7 +111,7 @@ ok 1 - K1: the real reader selects active slots in resolver order
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 330.509042
+# duration_ms 337.9325
 
 K2 — green
 cwd: ui
@@ -121,7 +121,7 @@ TAP version 13
 # Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
 ok 1 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
   ---
-  duration_ms: 16.835417
+  duration_ms: 16.598708
   type: 'test'
   ...
 1..1
@@ -132,7 +132,7 @@ ok 1 - K2: every fixture round-trips untouched telecom and extensions, including
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 346.783916
+# duration_ms 360.239167
 
 K2 — red
 cwd: ui
@@ -142,7 +142,7 @@ TAP version 13
 # Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
 not ok 1 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
   ---
-  duration_ms: 6.267833
+  duration_ms: 6.36875
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:4711'
   failureType: 'testCodeFailure'
@@ -171,7 +171,7 @@ not ok 1 - K2: every fixture round-trips untouched telecom and extensions, inclu
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 337.378292
+# duration_ms 346.8385
 
 K2 — restored
 cwd: ui
@@ -181,7 +181,7 @@ TAP version 13
 # Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
 ok 1 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
   ---
-  duration_ms: 16.25275
+  duration_ms: 15.78375
   type: 'test'
   ...
 1..1
@@ -192,7 +192,7 @@ ok 1 - K2: every fixture round-trips untouched telecom and extensions, including
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 350.891417
+# duration_ms 347.549792
 
 K2-absence — green
 cwd: ui
@@ -202,7 +202,7 @@ TAP version 13
 # Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
 ok 1 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
   ---
-  duration_ms: 16.399417
+  duration_ms: 15.704875
   type: 'test'
   ...
 1..1
@@ -213,7 +213,7 @@ ok 1 - K2: every fixture round-trips untouched telecom and extensions, including
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 346.127708
+# duration_ms 344.143042
 
 K2-absence — red
 cwd: ui
@@ -223,7 +223,7 @@ TAP version 13
 # Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
 not ok 1 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
   ---
-  duration_ms: 6.453833
+  duration_ms: 6.395875
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:4711'
   failureType: 'testCodeFailure'
@@ -250,7 +250,7 @@ not ok 1 - K2: every fixture round-trips untouched telecom and extensions, inclu
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 336.169166
+# duration_ms 345.619375
 
 K2-absence — restored
 cwd: ui
@@ -260,7 +260,7 @@ TAP version 13
 # Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
 ok 1 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
   ---
-  duration_ms: 16.0335
+  duration_ms: 16.359417
   type: 'test'
   ...
 1..1
@@ -271,7 +271,7 @@ ok 1 - K2: every fixture round-trips untouched telecom and extensions, including
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 343.168792
+# duration_ms 345.339917
 
 K3 — green
 cwd: ui
@@ -281,7 +281,7 @@ TAP version 13
 # Subtest: K3: clearing slot 2 removes only its original entry from one serialized PUT
 ok 1 - K3: clearing slot 2 removes only its original entry from one serialized PUT
   ---
-  duration_ms: 2.733
+  duration_ms: 3.126667
   type: 'test'
   ...
 1..1
@@ -292,7 +292,7 @@ ok 1 - K3: clearing slot 2 removes only its original entry from one serialized P
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 332.123167
+# duration_ms 337.781375
 
 K3 — red
 cwd: ui
@@ -302,7 +302,7 @@ TAP version 13
 # Subtest: K3: clearing slot 2 removes only its original entry from one serialized PUT
 not ok 1 - K3: clearing slot 2 removes only its original entry from one serialized PUT
   ---
-  duration_ms: 4.636458
+  duration_ms: 5.021792
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:5551'
   failureType: 'testCodeFailure'
@@ -444,7 +444,7 @@ not ok 1 - K3: clearing slot 2 removes only its original entry from one serializ
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 337.288
+# duration_ms 345.8675
 
 K3 — restored
 cwd: ui
@@ -454,7 +454,7 @@ TAP version 13
 # Subtest: K3: clearing slot 2 removes only its original entry from one serialized PUT
 ok 1 - K3: clearing slot 2 removes only its original entry from one serialized PUT
   ---
-  duration_ms: 2.645917
+  duration_ms: 2.77475
   type: 'test'
   ...
 1..1
@@ -465,7 +465,7 @@ ok 1 - K3: clearing slot 2 removes only its original entry from one serialized P
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 333.917792
+# duration_ms 342.643875
 
 K4 — green
 cwd: ui
@@ -475,7 +475,7 @@ TAP version 13
 # Subtest: K4: absent and empty telecom allow an address-only save without creating telecom
 ok 1 - K4: absent and empty telecom allow an address-only save without creating telecom
   ---
-  duration_ms: 2.720167
+  duration_ms: 2.902042
   type: 'test'
   ...
 1..1
@@ -486,7 +486,7 @@ ok 1 - K4: absent and empty telecom allow an address-only save without creating 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 329.337833
+# duration_ms 343.030708
 
 K4 — red
 cwd: ui
@@ -496,7 +496,7 @@ TAP version 13
 # Subtest: K4: absent and empty telecom allow an address-only save without creating telecom
 not ok 1 - K4: absent and empty telecom allow an address-only save without creating telecom
   ---
-  duration_ms: 1.775709
+  duration_ms: 1.712333
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:5869'
   failureType: 'testCodeFailure'
@@ -520,7 +520,7 @@ not ok 1 - K4: absent and empty telecom allow an address-only save without creat
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 328.670375
+# duration_ms 350.163708
 
 K4 — restored
 cwd: ui
@@ -530,7 +530,7 @@ TAP version 13
 # Subtest: K4: absent and empty telecom allow an address-only save without creating telecom
 ok 1 - K4: absent and empty telecom allow an address-only save without creating telecom
   ---
-  duration_ms: 2.647125
+  duration_ms: 2.716041
   type: 'test'
   ...
 1..1
@@ -541,7 +541,7 @@ ok 1 - K4: absent and empty telecom allow an address-only save without creating 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 336.304667
+# duration_ms 349.280583
 
 K5 — green
 cwd: mcp
@@ -551,7 +551,7 @@ TAP version 13
 # Subtest: K5: the real registration route accepts blank slots and rejects the scalar contract
 ok 1 - K5: the real registration route accepts blank slots and rejects the scalar contract
   ---
-  duration_ms: 36.251041
+  duration_ms: 38.907916
   type: 'test'
   ...
 1..1
@@ -562,7 +562,7 @@ ok 1 - K5: the real registration route accepts blank slots and rejects the scala
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 260.830167
+# duration_ms 268.796917
 
 K5 — red
 cwd: mcp
@@ -572,7 +572,7 @@ TAP version 13
 # Subtest: K5: the real registration route accepts blank slots and rejects the scalar contract
 not ok 1 - K5: the real registration route accepts blank slots and rejects the scalar contract
   ---
-  duration_ms: 31.766542
+  duration_ms: 32.850458
   type: 'test'
   location: '<worktree>/mcp/tests/patientRegistrationAuthz.test.ts:1:1129'
   failureType: 'testCodeFailure'
@@ -620,7 +620,7 @@ not ok 1 - K5: the real registration route accepts blank slots and rejects the s
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 250.949417
+# duration_ms 231.189083
 
 K5 — restored
 cwd: mcp
@@ -630,7 +630,7 @@ TAP version 13
 # Subtest: K5: the real registration route accepts blank slots and rejects the scalar contract
 ok 1 - K5: the real registration route accepts blank slots and rejects the scalar contract
   ---
-  duration_ms: 36.250833
+  duration_ms: 35.817708
   type: 'test'
   ...
 1..1
@@ -641,7 +641,7 @@ ok 1 - K5: the real registration route accepts blank slots and rejects the scala
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 250.621
+# duration_ms 256.984625
 
 K6 — green
 cwd: ui
@@ -651,7 +651,7 @@ TAP version 13
 # Subtest: K6: a changed phone choice leaves exactly one marker across the entire resource
 ok 1 - K6: a changed phone choice leaves exactly one marker across the entire resource
   ---
-  duration_ms: 3.518667
+  duration_ms: 3.8325
   type: 'test'
   ...
 1..1
@@ -662,7 +662,7 @@ ok 1 - K6: a changed phone choice leaves exactly one marker across the entire re
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 329.516875
+# duration_ms 343.66475
 
 K6 — red
 cwd: ui
@@ -672,7 +672,7 @@ TAP version 13
 # Subtest: K6: a changed phone choice leaves exactly one marker across the entire resource
 not ok 1 - K6: a changed phone choice leaves exactly one marker across the entire resource
   ---
-  duration_ms: 4.281625
+  duration_ms: 4.676916
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:6309'
   failureType: 'testCodeFailure'
@@ -706,7 +706,7 @@ not ok 1 - K6: a changed phone choice leaves exactly one marker across the entir
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 329.693375
+# duration_ms 338.542959
 
 K6 — restored
 cwd: ui
@@ -716,7 +716,7 @@ TAP version 13
 # Subtest: K6: a changed phone choice leaves exactly one marker across the entire resource
 ok 1 - K6: a changed phone choice leaves exactly one marker across the entire resource
   ---
-  duration_ms: 3.60475
+  duration_ms: 3.767333
   type: 'test'
   ...
 1..1
@@ -727,7 +727,7 @@ ok 1 - K6: a changed phone choice leaves exactly one marker across the entire re
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 342.092417
+# duration_ms 344.481083
 
 K7 — green
 cwd: ui
@@ -737,7 +737,7 @@ TAP version 13
 # Subtest: K7: Neither writes one refusal and preserves every ContactPoint marker
 ok 1 - K7: Neither writes one refusal and preserves every ContactPoint marker
   ---
-  duration_ms: 3.082542
+  duration_ms: 2.901916
   type: 'test'
   ...
 1..1
@@ -748,7 +748,7 @@ ok 1 - K7: Neither writes one refusal and preserves every ContactPoint marker
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 334.375708
+# duration_ms 335.590375
 
 K7 — red
 cwd: ui
@@ -758,7 +758,7 @@ TAP version 13
 # Subtest: K7: Neither writes one refusal and preserves every ContactPoint marker
 not ok 1 - K7: Neither writes one refusal and preserves every ContactPoint marker
   ---
-  duration_ms: 4.846333
+  duration_ms: 5.061583
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:6875'
   failureType: 'testCodeFailure'
@@ -901,7 +901,7 @@ not ok 1 - K7: Neither writes one refusal and preserves every ContactPoint marke
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 329.988792
+# duration_ms 337.5145
 
 K7 — restored
 cwd: ui
@@ -911,7 +911,7 @@ TAP version 13
 # Subtest: K7: Neither writes one refusal and preserves every ContactPoint marker
 ok 1 - K7: Neither writes one refusal and preserves every ContactPoint marker
   ---
-  duration_ms: 3.19375
+  duration_ms: 3.222542
   type: 'test'
   ...
 1..1
@@ -922,7 +922,7 @@ ok 1 - K7: Neither writes one refusal and preserves every ContactPoint marker
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 333.367916
+# duration_ms 330.733375
 
 K8 — green
 cwd: ui
@@ -932,7 +932,7 @@ TAP version 13
 # Subtest: K8: choosing a phone removes refusal and switches the actual SMS resolver
 ok 1 - K8: choosing a phone removes refusal and switches the actual SMS resolver
   ---
-  duration_ms: 3.059166
+  duration_ms: 3.177
   type: 'test'
   ...
 1..1
@@ -943,7 +943,7 @@ ok 1 - K8: choosing a phone removes refusal and switches the actual SMS resolver
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 331.134459
+# duration_ms 331.371708
 
 K8 — red
 cwd: ui
@@ -953,7 +953,7 @@ TAP version 13
 # Subtest: K8: choosing a phone removes refusal and switches the actual SMS resolver
 not ok 1 - K8: choosing a phone removes refusal and switches the actual SMS resolver
   ---
-  duration_ms: 3.852542
+  duration_ms: 3.73625
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:7309'
   failureType: 'testCodeFailure'
@@ -980,7 +980,7 @@ not ok 1 - K8: choosing a phone removes refusal and switches the actual SMS reso
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 332.294459
+# duration_ms 335.770875
 
 K8 — restored
 cwd: ui
@@ -990,7 +990,7 @@ TAP version 13
 # Subtest: K8: choosing a phone removes refusal and switches the actual SMS resolver
 ok 1 - K8: choosing a phone removes refusal and switches the actual SMS resolver
   ---
-  duration_ms: 2.793542
+  duration_ms: 3.154291
   type: 'test'
   ...
 1..1
@@ -1001,7 +1001,7 @@ ok 1 - K8: choosing a phone removes refusal and switches the actual SMS resolver
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 335.183875
+# duration_ms 340.569834
 
 K9 — green
 cwd: ui
@@ -1011,7 +1011,7 @@ TAP version 13
 # Subtest: K9: an ineffective inherited marker survives an address-only save
 ok 1 - K9: an ineffective inherited marker survives an address-only save
   ---
-  duration_ms: 3.124959
+  duration_ms: 3.099584
   type: 'test'
   ...
 1..1
@@ -1022,7 +1022,7 @@ ok 1 - K9: an ineffective inherited marker survives an address-only save
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 334.701292
+# duration_ms 332.693208
 
 K9 — red
 cwd: ui
@@ -1032,7 +1032,7 @@ TAP version 13
 # Subtest: K9: an ineffective inherited marker survives an address-only save
 not ok 1 - K9: an ineffective inherited marker survives an address-only save
   ---
-  duration_ms: 4.742625
+  duration_ms: 4.860625
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:7714'
   failureType: 'testCodeFailure'
@@ -1150,7 +1150,7 @@ not ok 1 - K9: an ineffective inherited marker survives an address-only save
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 337.15375
+# duration_ms 340.620917
 
 K9 — restored
 cwd: ui
@@ -1160,7 +1160,7 @@ TAP version 13
 # Subtest: K9: an ineffective inherited marker survives an address-only save
 ok 1 - K9: an ineffective inherited marker survives an address-only save
   ---
-  duration_ms: 3.829583
+  duration_ms: 3.385959
   type: 'test'
   ...
 1..1
@@ -1171,7 +1171,7 @@ ok 1 - K9: an ineffective inherited marker survives an address-only save
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 332.383542
+# duration_ms 335.924333
 
 K10 — green
 cwd: ui
@@ -1181,7 +1181,7 @@ TAP version 13
 # Subtest: K10: a new mobile appends after obsolete history with the chosen use
 ok 1 - K10: a new mobile appends after obsolete history with the chosen use
   ---
-  duration_ms: 2.783417
+  duration_ms: 2.72725
   type: 'test'
   ...
 1..1
@@ -1192,7 +1192,7 @@ ok 1 - K10: a new mobile appends after obsolete history with the chosen use
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 331.95975
+# duration_ms 330.188834
 
 K10 — red
 cwd: ui
@@ -1202,7 +1202,7 @@ TAP version 13
 # Subtest: K10: a new mobile appends after obsolete history with the chosen use
 not ok 1 - K10: a new mobile appends after obsolete history with the chosen use
   ---
-  duration_ms: 4.580208
+  duration_ms: 4.789208
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:8144'
   failureType: 'testCodeFailure'
@@ -1304,7 +1304,7 @@ not ok 1 - K10: a new mobile appends after obsolete history with the chosen use
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 331.17725
+# duration_ms 333.249833
 
 K10 — restored
 cwd: ui
@@ -1314,7 +1314,7 @@ TAP version 13
 # Subtest: K10: a new mobile appends after obsolete history with the chosen use
 ok 1 - K10: a new mobile appends after obsolete history with the chosen use
   ---
-  duration_ms: 2.7245
+  duration_ms: 2.905166
   type: 'test'
   ...
 1..1
@@ -1325,7 +1325,7 @@ ok 1 - K10: a new mobile appends after obsolete history with the chosen use
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 335.567709
+# duration_ms 332.22725
 
 K11 — green
 cwd: ui
@@ -1335,7 +1335,7 @@ TAP version 13
 # Subtest: K11: a use-only edit retains metadata and the other legacy use verbatim
 ok 1 - K11: a use-only edit retains metadata and the other legacy use verbatim
   ---
-  duration_ms: 3.131583
+  duration_ms: 3.322125
   type: 'test'
   ...
 1..1
@@ -1346,7 +1346,7 @@ ok 1 - K11: a use-only edit retains metadata and the other legacy use verbatim
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 335.76825
+# duration_ms 336.671125
 
 K11 — red
 cwd: ui
@@ -1356,7 +1356,7 @@ TAP version 13
 # Subtest: K11: a use-only edit retains metadata and the other legacy use verbatim
 not ok 1 - K11: a use-only edit retains metadata and the other legacy use verbatim
   ---
-  duration_ms: 5.037625
+  duration_ms: 4.698084
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:8477'
   failureType: 'testCodeFailure'
@@ -1468,7 +1468,7 @@ not ok 1 - K11: a use-only edit retains metadata and the other legacy use verbat
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 337.160167
+# duration_ms 337.132458
 
 K11 — restored
 cwd: ui
@@ -1478,7 +1478,7 @@ TAP version 13
 # Subtest: K11: a use-only edit retains metadata and the other legacy use verbatim
 ok 1 - K11: a use-only edit retains metadata and the other legacy use verbatim
   ---
-  duration_ms: 3.131333
+  duration_ms: 3.234083
   type: 'test'
   ...
 1..1
@@ -1489,7 +1489,7 @@ ok 1 - K11: a use-only edit retains metadata and the other legacy use verbatim
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 336.458417
+# duration_ms 331.399625
 
 K12 — green
 cwd: ui
@@ -1499,13 +1499,13 @@ TAP version 13
 # Subtest: K12: blank and whitespace phone values save once without an empty ContactPoint
 ok 1 - K12: blank and whitespace phone values save once without an empty ContactPoint
   ---
-  duration_ms: 2.92425
+  duration_ms: 3.023917
   type: 'test'
   ...
 # Subtest: H14: blank phone saves remove the entry while email still exercises contact removal
 ok 2 - H14: blank phone saves remove the entry while email still exercises contact removal
   ---
-  duration_ms: 2.329666
+  duration_ms: 2.273125
   type: 'test'
   ...
 1..2
@@ -1516,7 +1516,7 @@ ok 2 - H14: blank phone saves remove the entry while email still exercises conta
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 380.10975
+# duration_ms 381.6125
 
 K12 — red
 cwd: ui
@@ -1526,7 +1526,7 @@ TAP version 13
 # Subtest: K12: blank and whitespace phone values save once without an empty ContactPoint
 not ok 1 - K12: blank and whitespace phone values save once without an empty ContactPoint
   ---
-  duration_ms: 1.912708
+  duration_ms: 1.781
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:8879'
   failureType: 'testCodeFailure'
@@ -1545,7 +1545,7 @@ not ok 1 - K12: blank and whitespace phone values save once without an empty Con
 # Subtest: H14: blank phone saves remove the entry while email still exercises contact removal
 not ok 2 - H14: blank phone saves remove the entry while email still exercises contact removal
   ---
-  duration_ms: 3.271584
+  duration_ms: 3.619791
   type: 'test'
   location: '<worktree>/ui/tests/patientRegistration.test.tsx:1:14973'
   failureType: 'testCodeFailure'
@@ -1574,7 +1574,7 @@ not ok 2 - H14: blank phone saves remove the entry while email still exercises c
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 383.240667
+# duration_ms 381.6995
 
 K12 — restored
 cwd: ui
@@ -1584,13 +1584,13 @@ TAP version 13
 # Subtest: K12: blank and whitespace phone values save once without an empty ContactPoint
 ok 1 - K12: blank and whitespace phone values save once without an empty ContactPoint
   ---
-  duration_ms: 3.00375
+  duration_ms: 3.057208
   type: 'test'
   ...
 # Subtest: H14: blank phone saves remove the entry while email still exercises contact removal
 ok 2 - H14: blank phone saves remove the entry while email still exercises contact removal
   ---
-  duration_ms: 2.198333
+  duration_ms: 2.164334
   type: 'test'
   ...
 1..2
@@ -1601,7 +1601,7 @@ ok 2 - H14: blank phone saves remove the entry while email still exercises conta
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 383.679708
+# duration_ms 384.995208
 
 K13 — green
 cwd: ui
@@ -1611,7 +1611,7 @@ TAP version 13
 # Subtest: K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
 ok 1 - K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
   ---
-  duration_ms: 22.853208
+  duration_ms: 22.777333
   type: 'test'
   ...
 1..1
@@ -1622,7 +1622,7 @@ ok 1 - K13: the rendered editor, serialized PUT, reload, resolvers and configure
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 346.61775
+# duration_ms 349.786333
 
 K13 — red
 cwd: ui
@@ -1632,7 +1632,7 @@ TAP version 13
 # Subtest: K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
 not ok 1 - K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
   ---
-  duration_ms: 15.650125
+  duration_ms: 15.121459
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:11138'
   failureType: 'testCodeFailure'
@@ -1662,7 +1662,7 @@ not ok 1 - K13: the rendered editor, serialized PUT, reload, resolvers and confi
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 346.881666
+# duration_ms 344.629042
 
 K13 — restored
 cwd: ui
@@ -1672,7 +1672,7 @@ TAP version 13
 # Subtest: K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
 ok 1 - K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
   ---
-  duration_ms: 22.423166
+  duration_ms: 22.527792
   type: 'test'
   ...
 1..1
@@ -1683,7 +1683,7 @@ ok 1 - K13: the rendered editor, serialized PUT, reload, resolvers and configure
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 351.838833
+# duration_ms 350.273667
 
 K14 — green
 cwd: ui
@@ -1693,7 +1693,7 @@ TAP version 13
 # Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
 ok 1 - K14: unrelated extensions and effective appointment suppression survive every transition
   ---
-  duration_ms: 25.281041
+  duration_ms: 24.931959
   type: 'test'
   ...
 1..1
@@ -1704,7 +1704,7 @@ ok 1 - K14: unrelated extensions and effective appointment suppression survive e
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 353.720917
+# duration_ms 356.374458
 
 K14 — red
 cwd: ui
@@ -1714,7 +1714,7 @@ TAP version 13
 # Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
 not ok 1 - K14: unrelated extensions and effective appointment suppression survive every transition
   ---
-  duration_ms: 4.411125
+  duration_ms: 4.098958
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:11271'
   failureType: 'testCodeFailure'
@@ -1743,7 +1743,7 @@ not ok 1 - K14: unrelated extensions and effective appointment suppression survi
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 341.124625
+# duration_ms 341.2
 
 K14 — restored
 cwd: ui
@@ -1753,7 +1753,7 @@ TAP version 13
 # Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
 ok 1 - K14: unrelated extensions and effective appointment suppression survive every transition
   ---
-  duration_ms: 24.499542
+  duration_ms: 25.099958
   type: 'test'
   ...
 1..1
@@ -1764,7 +1764,7 @@ ok 1 - K14: unrelated extensions and effective appointment suppression survive e
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 356.881958
+# duration_ms 355.873083
 
 K15 — green
 cwd: ui
@@ -1774,7 +1774,7 @@ TAP version 13
 # Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
 ok 1 - K15: preserve the remainder and validate the original snapshot through preference refresh
   ---
-  duration_ms: 19.493417
+  duration_ms: 19.549458
   type: 'test'
   ...
 1..1
@@ -1785,7 +1785,7 @@ ok 1 - K15: preserve the remainder and validate the original snapshot through pr
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 351.895125
+# duration_ms 348.74875
 
 K15 — red
 cwd: ui
@@ -1795,7 +1795,7 @@ TAP version 13
 # Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
 not ok 1 - K15: preserve the remainder and validate the original snapshot through preference refresh
   ---
-  duration_ms: 24.420167
+  duration_ms: 21.84775
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:11744'
   failureType: 'testCodeFailure'
@@ -1824,7 +1824,7 @@ not ok 1 - K15: preserve the remainder and validate the original snapshot throug
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 365.938958
+# duration_ms 364.665917
 
 K15 — restored
 cwd: ui
@@ -1834,7 +1834,7 @@ TAP version 13
 # Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
 ok 1 - K15: preserve the remainder and validate the original snapshot through preference refresh
   ---
-  duration_ms: 18.678166
+  duration_ms: 19.587292
   type: 'test'
   ...
 1..1
@@ -1845,7 +1845,7 @@ ok 1 - K15: preserve the remainder and validate the original snapshot through pr
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 356.370834
+# duration_ms 351.541292
 
 K16 — green
 cwd: mcp
@@ -1855,7 +1855,7 @@ TAP version 13
 # Subtest: K16: registration and editor emit the same marker state through preference application
 ok 1 - K16: registration and editor emit the same marker state through preference application
   ---
-  duration_ms: 41.8835
+  duration_ms: 42.057084
   type: 'test'
   ...
 1..1
@@ -1866,7 +1866,7 @@ ok 1 - K16: registration and editor emit the same marker state through preferenc
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 263.723375
+# duration_ms 257.27125
 
 K16 — red
 cwd: mcp
@@ -1876,7 +1876,7 @@ TAP version 13
 # Subtest: K16: registration and editor emit the same marker state through preference application
 not ok 1 - K16: registration and editor emit the same marker state through preference application
   ---
-  duration_ms: 33.123708
+  duration_ms: 33.265833
   type: 'test'
   location: '<worktree>/mcp/tests/patientRegistrationAuthz.test.ts:1:2315'
   failureType: 'testCodeFailure'
@@ -1939,7 +1939,7 @@ not ok 1 - K16: registration and editor emit the same marker state through prefe
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 259.669
+# duration_ms 232.761584
 
 K16 — restored
 cwd: mcp
@@ -1949,7 +1949,7 @@ TAP version 13
 # Subtest: K16: registration and editor emit the same marker state through preference application
 ok 1 - K16: registration and editor emit the same marker state through preference application
   ---
-  duration_ms: 40.715292
+  duration_ms: 42.001541
   type: 'test'
   ...
 1..1
@@ -1960,7 +1960,7 @@ ok 1 - K16: registration and editor emit the same marker state through preferenc
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 258.112583
+# duration_ms 256.093292
 
 R2 — green
 cwd: ui
@@ -1970,7 +1970,7 @@ TAP version 13
 # Subtest: R2: choosing a blank or invalid slot blocks the real form on that slot
 ok 1 - R2: choosing a blank or invalid slot blocks the real form on that slot
   ---
-  duration_ms: 17.856208
+  duration_ms: 18.400833
   type: 'test'
   ...
 1..1
@@ -1981,7 +1981,7 @@ ok 1 - R2: choosing a blank or invalid slot blocks the real form on that slot
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 349.265375
+# duration_ms 347.72
 
 R2 — red
 cwd: ui
@@ -1991,7 +1991,7 @@ TAP version 13
 # Subtest: R2: choosing a blank or invalid slot blocks the real form on that slot
 not ok 1 - R2: choosing a blank or invalid slot blocks the real form on that slot
   ---
-  duration_ms: 14.753667
+  duration_ms: 14.610792
   type: 'test'
   location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:12858'
   failureType: 'testCodeFailure'
@@ -2020,7 +2020,7 @@ not ok 1 - R2: choosing a blank or invalid slot blocks the real form on that slo
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 344.16075
+# duration_ms 338.492916
 
 R2 — restored
 cwd: ui
@@ -2030,7 +2030,7 @@ TAP version 13
 # Subtest: R2: choosing a blank or invalid slot blocks the real form on that slot
 ok 1 - R2: choosing a blank or invalid slot blocks the real form on that slot
   ---
-  duration_ms: 18.314208
+  duration_ms: 17.615167
   type: 'test'
   ...
 1..1
@@ -2041,4 +2041,4 @@ ok 1 - R2: choosing a blank or invalid slot blocks the real form on that slot
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 348.324458
+# duration_ms 342.389083

@@ -223,3 +223,43 @@ mcp-build; exit 0
 
 browser; exit 0
 APP /clinic + Medplum: 5 PUTs returned 200; H / Neither / M history verified; R2 made zero writes; seven captures; zero page errors.
+
+Theme correction: npm run preflight, exit 1 before correction
+ODOS preflight complete: 0 warning(s), 1 hard block(s).
+PatientDemographicsEditor.tsx has 16 hardcoded styling instance(s); baseline count is 10
+
+Theme correction: npm run preflight, exit 0 after correction
+ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md
+
+Theme correction: UI form/concurrency, exit 0
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 592.840292
+
+Theme correction: npm --prefix ui run build, exit 0
+
+> odos-ui@0.2.0 build
+> tsc --noEmit --skipLibCheck && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 320 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/version.json                   0.16 kB │ gzip:   0.15 kB
+dist/index.html                     0.95 kB │ gzip:   0.56 kB
+dist/assets/index-MgzHian6.css    226.50 kB │ gzip:  38.17 kB
+dist/assets/index-D__YNPQG.js   1,887.85 kB │ gzip: 509.31 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.22s

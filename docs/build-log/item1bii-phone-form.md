@@ -4,8 +4,9 @@ Status: **NOT EVALUATED — needs independent review.**
 
 Base: `300462446fa2f908d4f614b2be7d0f371ef2794b`. Branch: `drbang-iva/phone-textable`.
 Implementation checkpoints: `d066bd94` (editor caller), `8985a7656d23979cd8f576463fad5820209aed2c`
-(registration caller). Evidence below was collected against that implementation; later evidence-only
-commits do not change its application code. These are author checks, not an independent verdict.
+(registration caller), `ac39a410` (theme-variable correction). Regression-floor evidence was collected
+against the registration checkpoint; all guard cycles and browser captures were refreshed after the
+theme correction. These are author checks, not an independent verdict.
 
 ## Behavior and scope
 
@@ -63,6 +64,12 @@ MCP command per row: `npm --prefix mcp test -- tests/<suite>.test.ts`.
 UI command per row, from `ui/`: `node --import tsx --test tests/<suite>.test.tsx`.
 Full UI: `npm --prefix ui test`. Both `npm --prefix mcp run build` and
 `npm --prefix ui run build` exited 0. Vite retains its large-chunk warning.
+
+CI's appearance guard caught six newly hardcoded color classes in the phone controls (16 total,
+baseline 10). They now use existing theme variables. `npm run preflight` reproduced the initial
+one-block failure and now reports **0 warnings, 0 hard blocks, exit 0**; the guard and its baseline
+were not changed. The 18 form/concurrency tests and UI build were rerun after this correction.
+[Correction evidence](item1bii-phone-form/style-preflight.json) and output are retained.
 
 The accepted pre-change floor was patientRegistration 20, demographicsConcurrency 3,
 patientRegistrationAuthz 26, and commsConfig 32, all exit 0. H10/J11 installer probes were not

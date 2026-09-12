@@ -552,8 +552,8 @@
     "file": "ui/src/components/patient/PatientDemographicsEditor.tsx",
     "original": "textable: index === 0 ? \"phone1\" : \"phone2\"",
     "replacement": "textable: \"phone1\"",
-    "sourceSha256": "af3f6ec4d05f98eace5d16ebe826775eac8919229ae913c6eb4ed746b0d3af29",
-    "mutantSha256": "d9b7d65d075e509808f16d4c6c94ec4b8b37fb9071cef05215414ae68466e7bb",
+    "sourceSha256": "c74c6080d416a95bcc5278fc18324f5f3276f6a9852651b57f661c1e8da5bc6d",
+    "mutantSha256": "76be3118583ea3458bad93b1da5ed54aea77420fc7350f08313f1bd723d0cf6b",
     "cwd": "ui",
     "command": [
       "node",
@@ -636,8 +636,8 @@
     "file": "ui/src/components/patient/PatientDemographicsEditor.tsx",
     "original": "      setHeldPatient(fresh);",
     "replacement": "      setHeldPatient(fresh);\n      setEdit(edit => ({ ...edit, snapshot: patientTelecomSnapshot(fresh, edit.snapshot.now) }));",
-    "sourceSha256": "af3f6ec4d05f98eace5d16ebe826775eac8919229ae913c6eb4ed746b0d3af29",
-    "mutantSha256": "e1e8de8ce42600043f660e8c66f68a2514bc2bb23271feb6a9298e43cb374040",
+    "sourceSha256": "c74c6080d416a95bcc5278fc18324f5f3276f6a9852651b57f661c1e8da5bc6d",
+    "mutantSha256": "71f6731ae40bd2bfb322a7e60e0b5655bbfb826f9e53b089d9c7f6c3d10edc9f",
     "cwd": "ui",
     "command": [
       "node",
