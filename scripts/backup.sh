@@ -3,10 +3,10 @@ set -euo pipefail
 
 timestamp="${ODOS_BACKUP_TIMESTAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 backup_dir="${ODOS_BACKUP_DIR:-/backup}"
-postgres_url="${ODOS_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5433/medplum}"
+postgres_url="${ODOS_POSTGRES_URL:?Set ODOS_POSTGRES_URL in the runtime environment}"
 redis_host="${ODOS_REDIS_HOST:-127.0.0.1}"
 redis_port="${ODOS_REDIS_PORT:-6379}"
-redis_password="${ODOS_REDIS_PASSWORD:-medplum}"
+redis_password="${ODOS_REDIS_PASSWORD:?Set ODOS_REDIS_PASSWORD in the runtime environment}"
 binary_source="${ODOS_BINARY_SOURCE:-/data/binary}"
 
 record_event() {

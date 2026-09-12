@@ -27,7 +27,8 @@ Ledger row 47 verifies that Compose v2 uses `docker compose` and the Compose Spe
 
 Create `.env` from `.env.example` and fill in the required values before starting
 Compose. Set `MEDPLUM_DATABASE_PASSWORD` to a unique database password and
-`ODOS_POSTGRES_URL` to the matching connection string described below. Compose
+`ODOS_POSTGRES_URL` to the matching connection string described below. Also set
+`ODOS_REDIS_PASSWORD` to a unique Redis password. Compose
 refuses to start the main stack when the database password is missing or empty.
 
 ```bash
@@ -115,6 +116,33 @@ the ODOS service, and verify database-backed operations. Never delete the databa
 volume to apply a password change or print resolved Compose configuration with
 real credentials into logs or public evidence.
 
+### Redis password configuration
+
+The main stack requires `ODOS_REDIS_PASSWORD` in the ignored `.env`. Compose uses
+that same raw value in the Redis server command, its healthcheck, and Medplum's
+`MEDPLUM_REDIS_PASSWORD` environment override. The tracked JSON Redis password is
+an inert placeholder; the existing `file:/config/medplum.config.json,env` loader
+replaces it at runtime. The healthcheck uses `redis-cli -e` so authentication
+errors produce a failing exit status. Use the single-quote escaping guidance above for special
+characters. Never put the replacement password in tracked configuration.
+
+Before deploying this configuration, the ignored `.env` must contain
+`ODOS_REDIS_PASSWORD`, `MEDPLUM_DATABASE_PASSWORD`, and the matching
+`ODOS_POSTGRES_URL`, along with the existing bootstrap and signing configuration.
+Stage the current Redis password first, recreate the affected services with the
+environment wiring, and verify operation before the separate operator rotation.
+Missing or empty Redis/PostgreSQL passwords prevent Compose from rendering.
+Recreating Redis may drop cache and session state and log users out. The Redis
+image declares `/data` as a volume; do not assume there is no persisted Redis data.
+Coordinate recreation and rotation in an operator-selected maintenance window.
+
+Host-run `scripts/backup.sh` and `scripts/restore.sh` require exported
+`ODOS_POSTGRES_URL` and `ODOS_REDIS_PASSWORD`; merely editing `.env` does not export
+those variables into a shell. Both scripts refuse missing or empty values by name
+before backup/restore operations. The isolated drill wrapper supplies its own Redis
+credential regardless of the persistent password exported in the calling shell.
+See `docs/dr-drill.md` for the manual drill environment.
+
 The root npm scripts use `docker-compose` in this checkout. If your Docker install exposes only `docker compose`, use the equivalent space-separated command.
 
 Healthcheck commands:
@@ -151,6 +179,7 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `MEDPLUM_ADMIN_EMAIL` | yes for first-run setup and local Compose | Medplum super-admin bootstrap email and break-glass MCP password-login email. The MCP runtime uses it only when both `MEDPLUM_CLIENT_*` values are absent. |
 | `MEDPLUM_ADMIN_PASSWORD` | yes for first-run setup and local Compose | Medplum super-admin bootstrap secret and break-glass MCP password-login secret. It never recovers a partial, invalid, or failed client-credential configuration. |
 | `MEDPLUM_STORAGE_BASE_URL` | no | Defaults to `http://localhost:8103/storage/`; set it to the public storage origin when the port or host is remapped. |
+| `ODOS_REDIS_PASSWORD` | yes for the main Compose stack and host backup/restore | Raw Redis password; Medplum receives it through its Redis environment override. The isolated drill uses its own credential. |
 | `MEDPLUM_DATABASE_PASSWORD` | yes for the main Compose stack | Untracked runtime password shared by PostgreSQL initialization and the Medplum environment override. Does not rotate an existing database role. |
 | `ODOS_POSTGRES_URL` | yes for a configured installation | PostgreSQL URL used by ODOS and operator scripts; use the same password as Medplum, URL-encoded. |
 | `ODOS_SETUP_STATE_PATH` | no | Defaults to `./.odos-setup-state.json`. No PHI is written there. |

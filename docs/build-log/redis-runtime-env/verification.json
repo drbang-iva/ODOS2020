@@ -1,0 +1,326 @@
+{
+  "base": "37a956529a1623ffdace05b5e8b589a02927f6a5",
+  "scope": "Redis runtime credentials and bounded disaster-recovery credential guards; no deployment or rotation",
+  "loader_prefix_branches_verbatim": [
+    "    if (key.startsWith('DATABASE_')) {",
+    "      if (key.startsWith('SSL_')) {",
+    "    } else if (key.startsWith('READONLY_DATABASE_')) {",
+    "      if (key.startsWith('SSL_')) {",
+    "    } else if (key.startsWith('CACHE_REDIS_')) {",
+    "    } else if (key.startsWith('RATE_LIMIT_REDIS_')) {",
+    "    } else if (key.startsWith('PUBSUB_REDIS_')) {",
+    "    } else if (key.startsWith('BACKGROUND_JOBS_REDIS_')) {",
+    "    } else if (key.startsWith('REDIS_')) {",
+    "    } else if (key.startsWith('SMTP_')) {",
+    "    } else if (key.startsWith('BULLMQ_')) {",
+    "    } else if (key.startsWith('FISSION_')) {",
+    "    } else if (key.startsWith('WORKERS_')) {",
+    "    } else if (key.startsWith('DATA_WAREHOUSE_')) {"
+  ],
+  "red": {
+    "compose": {
+      "tests": 8,
+      "pass": 5,
+      "fail": 3
+    },
+    "scripts": {
+      "tests": 11,
+      "pass": 2,
+      "fail": 9
+    },
+    "healthcheck_error_exit": {
+      "tests": 8,
+      "pass": 7,
+      "fail": 1
+    }
+  },
+  "green": {
+    "tests": 59,
+    "pass": 59,
+    "fail": 0
+  },
+  "mutations": [
+    {
+      "mutation": "redis-command-default",
+      "broken": {
+        "exit": 1,
+        "counts": [
+          "# tests 19",
+          "# pass 18",
+          "# fail 1"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": [
+          "# tests 19",
+          "# pass 19",
+          "# fail 0"
+        ]
+      }
+    },
+    {
+      "mutation": "redis-healthcheck-default",
+      "broken": {
+        "exit": 1,
+        "counts": [
+          "# tests 19",
+          "# pass 18",
+          "# fail 1"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": [
+          "# tests 19",
+          "# pass 19",
+          "# fail 0"
+        ]
+      }
+    },
+    {
+      "mutation": "healthcheck-error-exit-removed",
+      "broken": {
+        "exit": 1,
+        "counts": [
+          "# tests 19",
+          "# pass 18",
+          "# fail 1"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": [
+          "# tests 19",
+          "# pass 19",
+          "# fail 0"
+        ]
+      }
+    },
+    {
+      "mutation": "medplum-redis-overlay-missing",
+      "broken": {
+        "exit": 1,
+        "counts": [
+          "# tests 19",
+          "# pass 18",
+          "# fail 1"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": [
+          "# tests 19",
+          "# pass 19",
+          "# fail 0"
+        ]
+      }
+    },
+    {
+      "mutation": "tracked-redis-placeholder-replaced",
+      "broken": {
+        "exit": 1,
+        "counts": [
+          "# tests 19",
+          "# pass 18",
+          "# fail 1"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": [
+          "# tests 19",
+          "# pass 19",
+          "# fail 0"
+        ]
+      }
+    },
+    {
+      "mutation": "drill-inherits-persistent",
+      "broken": {
+        "exit": 1,
+        "counts": [
+          "# tests 19",
+          "# pass 18",
+          "# fail 1"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": [
+          "# tests 19",
+          "# pass 19",
+          "# fail 0"
+        ]
+      }
+    },
+    {
+      "mutation": "backup.sh-ODOS_POSTGRES_URL-guard-removed",
+      "broken": {
+        "exit": 1,
+        "counts": [
+          "# tests 19",
+          "# pass 17",
+          "# fail 2"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": [
+          "# tests 19",
+          "# pass 19",
+          "# fail 0"
+        ]
+      }
+    },
+    {
+      "mutation": "backup.sh-ODOS_REDIS_PASSWORD-guard-removed",
+      "broken": {
+        "exit": 1,
+        "counts": [
+          "# tests 19",
+          "# pass 17",
+          "# fail 2"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": [
+          "# tests 19",
+          "# pass 19",
+          "# fail 0"
+        ]
+      }
+    },
+    {
+      "mutation": "restore.sh-ODOS_POSTGRES_URL-guard-removed",
+      "broken": {
+        "exit": 1,
+        "counts": [
+          "# tests 19",
+          "# pass 17",
+          "# fail 2"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": [
+          "# tests 19",
+          "# pass 19",
+          "# fail 0"
+        ]
+      }
+    },
+    {
+      "mutation": "restore.sh-ODOS_REDIS_PASSWORD-guard-removed",
+      "broken": {
+        "exit": 1,
+        "counts": [
+          "# tests 19",
+          "# pass 17",
+          "# fail 2"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": [
+          "# tests 19",
+          "# pass 19",
+          "# fail 0"
+        ]
+      }
+    },
+    {
+      "mutation": "drill-copy-credential-altered",
+      "broken": {
+        "exit": 1,
+        "counts": [
+          "# tests 19",
+          "# pass 18",
+          "# fail 1"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": [
+          "# tests 19",
+          "# pass 19",
+          "# fail 0"
+        ]
+      }
+    }
+  ],
+  "runtime": {
+    "fresh_volumes": true,
+    "internal_network": true,
+    "host_ports": [],
+    "cases": [
+      {
+        "case": "Redis healthcheck",
+        "output": "healthy",
+        "pass": true
+      },
+      {
+        "case": "old published password rejected",
+        "stdout": "",
+        "stderr": "Warning: Using a password with '-a' or '-u' option on the command line interface may not be safe.\nAUTH failed: WRONGPASS invalid username-password pair or user is disabled.\nNOAUTH Authentication required.",
+        "exit": 1,
+        "pass": true
+      },
+      {
+        "case": "Medplum with Redis runtime override and inert JSON",
+        "output": "HTTP 200",
+        "pass": true
+      },
+      {
+        "case": "healthcheck-only wrong password",
+        "output": "unhealthy",
+        "pass": true
+      },
+      {
+        "case": "healthcheck credential restored",
+        "output": "healthy",
+        "pass": true
+      },
+      {
+        "case": "Medplum Redis override removed",
+        "output": "WRONGPASS; HTTP unhealthy",
+        "pass": true
+      },
+      {
+        "case": "Redis override restored",
+        "output": "HTTP 200",
+        "pass": true
+      }
+    ],
+    "literal_shell_hostile_password_preserved": true,
+    "medplum_digest": "medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de",
+    "cleanup_exit": 0,
+    "remaining_containers": [],
+    "remaining_volumes": [],
+    "redis_volume_remaining": []
+  },
+  "probe_adjustments": [
+    "Fresh synthetic credentials and signing keys; isolated local Colima network; no host ports",
+    "Named harness-owned Redis volume; unrelated services omitted",
+    "Wrong-healthcheck mutation uses 1-second interval and 2 retries; restored healthcheck uses tracked timings"
+  ],
+  "limitations": [
+    "No live deployment, credential rotation, or real practice connection",
+    "Four designated PostgreSQL fallback consumers remain deliberately unchanged",
+    "Public drill credentials remain; persistent Redis exposure ends only after operator rotation",
+    "Not an independent evaluation"
+  ],
+  "file_sha256": {
+    ".env.example": "2e9565a0eae242fac5f0cb8362f6f724a5f32e85f0bd9a25ce29e2ab548120dd",
+    "docker-compose.yml": "88bb3d9f3aec41dc51fe325c5e42aa166a6824741b05dc50dc7c1f220b87afca",
+    "medplum.config.json": "9e0563ad3a9e1ab227ee5b909a7b57728cb8bc2b267fce6e61354ac9c3cab471",
+    "scripts/backup.sh": "0d6675cddcdcb4b88f850ce0311e0eb03884baddec7cf8c69e3d934138300509",
+    "scripts/restore.sh": "90fa7cb95264e1e82d256ae6d46402ef8096508a84c841dca1ebd9ab49230be0",
+    "scripts/dr-drill.ts": "919486436766a218a7c7ec8b15655bba40a3bf01b5bb4ababacf69b4e7b6b44b",
+    "docs/install.md": "4de7c8e579e36618f7a1a2f188a0332856146fb330f3707666073cc6218fb984",
+    "docs/dr-drill.md": "b95c26d21029a8c9dfc51c81ed4e2221cd74e4d40fb521487905da87e1ee5d7a",
+    "mcp/tests/medplumDatabaseConfig.test.ts": "4fc7d9a9f13535a13b1ada70fd6b34936435b968453b3c084a726ad11f5f20fc",
+    "mcp/tests/disasterRecoveryCredentials.test.ts": "71131ead6105de53fc0bb14a881be3003fba694933f1d80f62e3a0c62f63c3f8"
+  }
+}

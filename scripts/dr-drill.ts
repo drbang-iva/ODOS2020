@@ -16,7 +16,7 @@ const drillEnv = {
   ODOS_POSTGRES_URL:
     process.env.ODOS_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:15432/medplum",
   ODOS_REDIS_PORT: process.env.ODOS_REDIS_PORT ?? "16379",
-  ODOS_REDIS_PASSWORD: process.env.ODOS_REDIS_PASSWORD ?? "medplum",
+  ODOS_REDIS_PASSWORD: "medplum",
   ODOS_COMPOSE_PROJECT: project,
   ODOS_COMPOSE_FILE: composeFile,
   ODOS_BACKUP_DIR: backupDir,
