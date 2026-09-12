@@ -70,6 +70,8 @@ created https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number (3
 H10 GREEN: installer exit 0; expected 1 definition, actual 1; installation assertion PASS
 ```
 
+H7 and H13 use a marker-only Patient extension list, excluding the fixture default opt-out. Both mutations were rerun after that isolation: each remained RED 1/0/1 and GREEN 1/1/0. H7 asserts the expected HTTP 409.
+
 H13 exercises the HTTP education dispatch and asserts the RelatedPerson number reaches the fake sending adapter while the marked Patient resolves no SMS number. No external message was sent.
 
 ## Browser and persistence proof

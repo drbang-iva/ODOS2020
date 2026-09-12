@@ -2652,14 +2652,14 @@ for (const disagreement of [false, true]) test(`M5 opt-out ${disagreement ? "dis
 test("H7: education refuses a marked patient's recorded mobile through the shared resolver", async () => {
   const fixture = await startServer({ channelRoutes: { "clinical-sms": "twilio" }, senderNumbers: { "clinical-sms": "+12025550100" } });
   try {
-    fixture.patients[0].extension = [...fixture.patients[0].extension ?? [], { url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }];
+    fixture.patients[0].extension = [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }];
     fixture.patients[0].telecom = [{ system: "phone", use: "mobile", value: "+12025550101" }];
     assert.equal(resolveSmsNumber(fixture.patients[0], new Date("2026-08-02T15:00:00.000Z")), undefined);
     const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
       patientReference: PATIENT_REFERENCE, educationId: "dry-eye-basics", version: 2,
       channel: "sms", lane: "clinical", idempotencyKey: "textable-refusal-education",
     }, "provider");
-    assert.notEqual(response.status, 200);
+    assert.equal(response.status, 409);
     assert.equal(fixture.smsRequests.length, 0);
   } finally { await fixture.close(); }
 });
@@ -2668,7 +2668,7 @@ test("H13: marked patient refuses own SMS while education sends to the RelatedPe
   const related: RelatedPerson = { resourceType: "RelatedPerson", id: "related-1", patient: { reference: PATIENT_REFERENCE }, telecom: [{ system: "phone", use: "mobile", value: "+12025550102" }] };
   const fixture = await startServer({ relatedPeople: [related], channelRoutes: { "clinical-sms": "twilio" }, senderNumbers: { "clinical-sms": "+12025550100" } });
   try {
-    fixture.patients[0].extension = [...fixture.patients[0].extension ?? [], { url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }];
+    fixture.patients[0].extension = [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }];
     fixture.patients[0].telecom = [{ system: "phone", use: "mobile", value: "+12025550101" }];
     assert.equal(resolveSmsNumber(fixture.patients[0], new Date("2026-08-02T15:00:00.000Z")), undefined);
     await sendNumberFixture(fixture, "textable-related-person", { reference: "RelatedPerson/related-1", email: "related@example.test" });
