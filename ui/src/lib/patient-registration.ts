@@ -286,9 +286,9 @@ function replacePreferredTelecom(
   const preferredIndex = telecom.findIndex((entry) => entry.system === system && entry.use === "home");
   const fallbackIndex = telecom.findIndex((entry) => entry.system === system);
   const replaceIndex = preferredIndex >= 0 ? preferredIndex : fallbackIndex;
-  const next = telecom.filter((_, index) => index !== replaceIndex);
-  if (value) next.push({ ...(replaceIndex >= 0 ? telecom[replaceIndex] : undefined), system, use: "home", value });
-  return next;
+  if (!value.trim()) return telecom.filter((_, index) => index !== replaceIndex);
+  if (replaceIndex < 0) return [...telecom, { system, use: "home", value }];
+  return telecom.map((entry, index) => index === replaceIndex ? { ...entry, value } : entry);
 }
 
 function preferredAddressIndex(patient: Patient | undefined): number {

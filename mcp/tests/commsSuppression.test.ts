@@ -13,6 +13,7 @@ import {
   createSuppressedCommsProvider,
   readPatientSmsOptOut,
   recordPatientSmsOptOut,
+  resolveSmsNumber,
   updateInboundSuppression,
 } from "../src/comms/suppression-gate.js";
 
@@ -674,6 +675,77 @@ test("SMS-specific Patient.telecom takes precedence over mobile and other phones
   });
 
   assert.equal(sent[0].toNumber, "+18645550188");
+});
+
+test("G6: the shared SMS resolver skips an expired mobile for a current home", () => {
+  assert.equal(resolveSmsNumber(patient({ telecom: [
+    { system: "phone", use: "mobile", value: "EXPIRED", period: { end: "2026-08-02T15:00:00.000Z" } },
+    { system: "phone", use: "home", value: "CURRENT" },
+  ] }), new Date("2026-08-02T15:00:00.000Z")), "CURRENT");
+});
+
+test("G7: the shared SMS resolver prefers an explicit SMS entry over mobile", () => {
+  assert.equal(resolveSmsNumber(patient({ telecom: [
+    { system: "sms", value: "S" },
+    { system: "phone", use: "mobile", value: "M" },
+  ] }), new Date("2026-08-02T15:00:00.000Z")), "S");
+});
+
+test("SMS resolution retains active-period boundaries, trimming, and first-candidate fallback", () => {
+  const now = new Date("2026-08-02T15:00:00.000Z");
+  const inactive: NonNullable<Patient["telecom"]> = [
+    { system: "email", value: "email@example.test" },
+    { system: "sms", use: "old", value: "OLD" },
+    { system: "sms", value: "   " },
+    { system: "sms", value: "FUTURE", period: { start: "2026-08-02T15:00:00.001Z" } },
+    { system: "sms", value: "ENDED", period: { end: now.toISOString() } },
+    { system: "sms", value: "INVALID", period: { start: "invalid" } },
+  ];
+  assert.equal(resolveSmsNumber(patient({ telecom: inactive }), now), undefined);
+  assert.equal(resolveSmsNumber(patient({ telecom: undefined }), now), undefined);
+  assert.equal(resolveSmsNumber(patient({ telecom: [
+    ...inactive,
+    { system: "phone", use: "work", value: " FIRST ", period: { start: now.toISOString(), end: "2026-08-02T15:00:00.001Z" } },
+    { system: "phone", use: "home", value: "SECOND" },
+  ] }), now), "FIRST");
+});
+
+test("G10: the suppression wrapper retains its no-active-phone error", async () => {
+  const sent: SendSmsRequest[] = [];
+  const provider = createSuppressedCommsProvider(fakeSmsProvider(sent), {
+    fhir: fhirFor(patient({ telecom: [{ system: "phone", use: "old", value: "OLD" }] })),
+    practiceTimeZone: "America/New_York",
+    now: () => new Date("2026-08-02T15:00:00.000Z"),
+  });
+  await assert.rejects(provider.sendSms!({
+    patientReference: "Patient/synthetic-1", body: "Synthetic message.",
+    campaignType: "appointment-reminder", suppression: {},
+  }), { message: "Patient/synthetic-1 has no active phone in Patient.telecom." });
+  assert.equal(sent.length, 0);
+});
+
+test("G11: voice retains mobile, active-period, and explicit-SMS selection through its wrapper", async () => {
+  const cases: Array<{ telecom: Patient["telecom"]; expected: string }> = [
+    { telecom: [{ system: "phone", use: "mobile", value: "M" }, { system: "phone", use: "work", value: "W" }], expected: "M" },
+    { telecom: [{ system: "phone", use: "mobile", value: "EXPIRED", period: { end: "2026-08-02T15:00:00.000Z" } }, { system: "phone", use: "home", value: "CURRENT" }], expected: "CURRENT" },
+    { telecom: [{ system: "sms", value: "S" }, { system: "phone", use: "mobile", value: "M" }], expected: "S" },
+  ];
+  for (const scenario of cases) {
+    const numbers: Array<string | undefined> = [];
+    const provider = createSuppressedCommsProvider({
+      ...fakeSmsProvider([]),
+      async initiateCall(request) {
+        numbers.push(request.toNumber);
+        return { callId: "synthetic-call" };
+      },
+    }, {
+      fhir: fhirFor(patient({ telecom: scenario.telecom })),
+      practiceTimeZone: "America/New_York",
+      now: () => new Date("2026-08-02T15:00:00.000Z"),
+    });
+    assert.deepEqual(await provider.initiateCall!({ patientReference: "Patient/synthetic-1" }), { callId: "synthetic-call" });
+    assert.deepEqual(numbers, [scenario.expected]);
+  }
 });
 
 test("outside quiet hours reschedules to the next patient-local 8 AM rather than sending or dropping", async () => {

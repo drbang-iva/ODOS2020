@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
 import { test } from "node:test";
 import type { Bundle, Patient, Resource } from "@medplum/fhirtypes";
+import { resolveSmsNumber } from "../src/comms/suppression-gate.js";
 import {
   COMMS_CHANNEL_ROLES,
   commsChannelRoutingFromEnv,
@@ -78,6 +79,57 @@ function fakeFhir() {
     }),
   };
 }
+
+test("G9: configured conversation lookup selects the same mobile, current home, and explicit SMS numbers", async () => {
+  const now = new Date("2026-08-02T15:00:00.000Z");
+  const cases: Array<{ telecom: Patient["telecom"]; expected: string }> = [
+    { telecom: [{ system: "phone", use: "mobile", value: "+12025550101" }, { system: "phone", use: "work", value: "+12025550102" }], expected: "+12025550101" },
+    { telecom: [{ system: "phone", use: "mobile", value: "+12025550101", period: { end: now.toISOString() } }, { system: "phone", use: "home", value: "+12025550102" }], expected: "+12025550102" },
+    { telecom: [{ system: "sms", value: "+12025550103" }, { system: "phone", use: "mobile", value: "+12025550101" }], expected: "+12025550103" },
+  ];
+  for (const scenario of cases) {
+    const subject: Patient = { resourceType: "Patient", id: "synthetic-1", telecom: scenario.telecom };
+    const queries: string[] = [];
+    const reads: string[] = [];
+    const dispatch = createCommsDispatch([{ provider: "ghl", config: { locationId: "synthetic", accessToken: "synthetic-token" } }], {
+      now: () => now,
+      fetchImpl: async (url, init) => {
+        assert.equal(new URL(String(url)).pathname, "/contacts/search");
+        queries.push(JSON.parse(String(init?.body)).query);
+        return Response.json({ contacts: [], total: 0 });
+      },
+    });
+    const adapter = dispatch.getAdapter("ghl", {
+      ...fakeFhir(),
+      read: async <T extends Resource>(type: T["resourceType"], id: string): Promise<T> => {
+        reads.push(`${type}/${id}`);
+        return structuredClone(subject) as T;
+      },
+    });
+    assert.equal(resolveSmsNumber(subject, now), scenario.expected);
+    assert.deepEqual(await adapter.listConversations!({ patientReference: "Patient/synthetic-1" }), []);
+    assert.deepEqual(reads, ["Patient/synthetic-1"]);
+    assert.deepEqual(queries, [scenario.expected]);
+  }
+});
+
+test("G10: the conversation wrapper retains its no-active-phone error and reference fallback", async () => {
+  for (const id of ["synthetic-1", undefined]) {
+    let requests = 0;
+    const dispatch = createCommsDispatch([{ provider: "ghl", config: { locationId: "synthetic", accessToken: "synthetic-token" } }], {
+      now: () => new Date("2026-08-02T15:00:00.000Z"),
+      fetchImpl: async () => { requests += 1; return Response.json({ contacts: [] }); },
+    });
+    const adapter = dispatch.getAdapter("ghl", {
+      ...fakeFhir(),
+      read: async <T extends Resource>(): Promise<T> => ({ resourceType: "Patient", id, telecom: [{ system: "phone", use: "old", value: "+12025550101" }] } satisfies Patient) as T,
+    });
+    await assert.rejects(adapter.listConversations!({ patientReference: "Patient/synthetic-1" }), {
+      message: "Patient/synthetic-1 has no active phone in Patient.telecom.",
+    });
+    assert.equal(requests, 0);
+  }
+});
 
 test("communications dispatch is inert without practice config and reports a clear resolution error", () => {
   const dispatch = createCommsDispatch([]);

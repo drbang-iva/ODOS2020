@@ -1,5 +1,5 @@
 import { patientWriteVersion, type PatientWriteVersion } from "./patient-version.js";
-import type { Bundle, Communication, Patient, Provenance, Reference, Resource } from "@medplum/fhirtypes";
+import type { Bundle, Communication, Patient, Provenance, Reference, RelatedPerson, Resource } from "@medplum/fhirtypes";
 import type { PracticeRoleId } from "../authz/roles.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import type { MedplumClient } from "../fhir-client.js";
@@ -812,18 +812,22 @@ function patientEmail(patient: Patient, now: Date): string {
   return email;
 }
 
-function patientPhone(patient: Patient, now: Date): string {
-  const active = (patient.telecom ?? []).filter((point) =>
+export function resolveSmsNumber(resource: Patient | RelatedPerson, now: Date): string | undefined {
+  const active = (resource.telecom ?? []).filter((point) =>
     (point.system === "sms" || point.system === "phone")
     && point.use !== "old"
     && Boolean(point.value?.trim())
     && (!point.period?.start || Date.parse(point.period.start) <= now.getTime())
     && (!point.period?.end || Date.parse(point.period.end) > now.getTime()));
-  const phone = (
+  return (
     active.find((point) => point.system === "sms")
     ?? active.find((point) => point.use === "mobile")
     ?? active[0]
   )?.value?.trim();
+}
+
+function patientPhone(patient: Patient, now: Date): string {
+  const phone = resolveSmsNumber(patient, now);
   if (!phone) {
     throw new Error(`Patient/${patient.id ?? "unknown"} has no active phone in Patient.telecom.`);
   }
