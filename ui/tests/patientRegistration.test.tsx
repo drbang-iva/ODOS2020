@@ -11,6 +11,8 @@ import {
   emptyPatientDemographics,
   localCalendarDate,
   patientDemographicsFromPatient,
+  patientTelecomSnapshot,
+  type PatientDraftPhone,
   validatePatientDemographics,
   validatePatientRegistration,
   type PatientDemographicsDraft,
@@ -35,7 +37,8 @@ const COMPLETE_DRAFT: PatientDemographicsDraft = {
   preferredName: "Janie",
   birthDate: "1980-01-02",
   gender: "female",
-  phone: "864-555-0100",
+  phones: [{ value: "864-555-0100", use: "home", sourceIndex: 0 }, { value: "", use: "mobile", sourceIndex: null }],
+  textable: "",
   email: "jane@example.test",
   address: "1 Main St",
   city: "Greenville",
@@ -139,11 +142,11 @@ test("responsible-party collection errors accumulate without hiding minor consen
 test("required fields block creation while address and email remain optional", () => {
   const blank = emptyPatientDemographics();
   const blankErrors = validatePatientDemographics(blank);
-  assert.deepEqual(Object.keys(blankErrors).sort(), ["birthDate", "firstName", "gender", "lastName", "phone"]);
+  assert.deepEqual(Object.keys(blankErrors).sort(), ["birthDate", "firstName", "gender", "lastName"]);
   const optionalAbsent = validatePatientDemographics({ ...COMPLETE_DRAFT, address: "", city: "", state: "", postalCode: "", email: "" });
   assert.deepEqual(optionalAbsent, {});
   assert.match(validatePatientDemographics({ ...COMPLETE_DRAFT, birthDate: "2026-02-30" }).birthDate, /valid YYYY-MM-DD/);
-  assert.match(validatePatientDemographics({ ...COMPLETE_DRAFT, phone: "123" }).phone, /valid phone/);
+  assert.match(validatePatientDemographics({ ...COMPLETE_DRAFT, phones: [{ ...COMPLETE_DRAFT.phones[0], value: "123" }, COMPLETE_DRAFT.phones[1]] })["phones.0.value"], /valid phone/);
 });
 
 test("demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write", async () => {
@@ -160,7 +163,7 @@ test("demographics editor loads shared Patient fields, saves with the update sou
     update: async (patient: Patient, source: string) => { updates += 1; sourceTag = source; return patient; },
   } as never);
   const changed = { ...loaded, firstName: "Janet" };
-  const saved = await actions.save(changed);
+  const saved = await actions.save(changed, patientTelecomSnapshot(EXISTING, SMS_NOW.toISOString()));
   assert.equal(saved.name?.find((name) => name.use === "official")?.given?.[0], "Janet");
   assert.equal(sourceTag, "patient-demographics-update");
   assert.equal(updates, 1);
@@ -180,13 +183,14 @@ function mobileWorkTelecom(): NonNullable<Patient["telecom"]> {
   ];
 }
 
-async function saveTelecom(telecom: Patient["telecom"], changes: Partial<PatientDemographicsDraft> = {}) {
+async function saveTelecom(telecom: Patient["telecom"], changes: Partial<Omit<PatientDemographicsDraft, "phones">> & { phones?: Record<number, Partial<PatientDraftPhone>> } = {}) {
   const subject = { ...EXISTING, telecom };
-  const loaded = patientDemographicsFromPatient(subject);
+  const loaded = patientDemographicsFromPatient(subject, SMS_NOW.toISOString());
   const actions = createPatientDemographicsActions(subject, {
     update: async (patient: Patient) => patient,
   } as never);
-  return { loaded, saved: await actions.save({ ...loaded, ...changes }) };
+  const draft = { ...loaded, ...changes, phones: loaded.phones.map((phone, index) => ({ ...phone, ...changes.phones?.[index] })) as PatientDemographicsDraft["phones"] };
+  return { loaded, saved: await actions.save(draft, patientTelecomSnapshot(subject, SMS_NOW.toISOString())) };
 }
 
 test("G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom", async () => {
@@ -195,7 +199,7 @@ test("G1: an unchanged demographics save keeps the mobile recipient and byte-ide
   const html = renderToStaticMarkup(<PatientDemographicsEditor patient={{ ...EXISTING, telecom }} onSaved={() => undefined} onDiscard={() => undefined} />);
   assert.ok(html.includes(`value="${MOBILE}"`));
   const { loaded, saved } = await saveTelecom(telecom);
-  assert.equal(loaded.phone, MOBILE);
+  assert.equal(loaded.phones[0].value, MOBILE);
   assert.equal(resolveSmsNumber(saved, SMS_NOW), MOBILE);
   assert.equal(JSON.stringify(saved.telecom), before);
   assert.equal(JSON.stringify(telecom), before);
@@ -203,18 +207,18 @@ test("G1: an unchanged demographics save keeps the mobile recipient and byte-ide
 
 test("G2: a changed mobile value stays at its original position with metadata intact", async () => {
   const telecom = mobileWorkTelecom();
-  const { saved } = await saveTelecom(telecom, { phone: CHANGED });
+  const { saved } = await saveTelecom(telecom, { phones: { 0: { value: CHANGED } } });
   assert.deepEqual(saved.telecom, [{ ...telecom[0], value: CHANGED }, telecom[1]]);
   assert.equal(resolveSmsNumber(saved, SMS_NOW), CHANGED);
   assert.equal(telecom[0].value, MOBILE);
 });
 
-test("G3: the displayed home entry is updated in place even when it is not the first phone", async () => {
+test("G3: the displayed home slot is updated in place even when it is not the first phone", async () => {
   const home = { system: "phone", use: "home", value: WORK, rank: 2 } as const;
   const mobile = { system: "phone", use: "mobile", value: MOBILE, rank: 1 } as const;
   for (const telecom of [[home, mobile], [mobile, home]]) {
-    const { loaded, saved } = await saveTelecom(telecom, { phone: CHANGED });
-    assert.equal(loaded.phone, WORK);
+    const { loaded, saved } = await saveTelecom(telecom, { phones: { 1: { value: CHANGED } } });
+    assert.equal(loaded.phones[1].value, WORK);
     assert.deepEqual(saved.telecom, telecom[0] === home
       ? [{ ...home, value: CHANGED }, mobile]
       : [mobile, { ...home, value: CHANGED }]);
@@ -222,9 +226,9 @@ test("G3: the displayed home entry is updated in place even when it is not the f
   }
 });
 
-test("G4: a missing phone appends exactly one home entry", async () => {
+test("G4: a missing phone appends exactly one entry with the chosen home use", async () => {
   const email = { system: "email", use: "work", value: "work@example.test" } as const;
-  const { saved } = await saveTelecom([email], { phone: "5550100" });
+  const { saved } = await saveTelecom([email], { phones: { 0: { value: "5550100", use: "home" } } });
   assert.deepEqual(saved.telecom, [email, { system: "phone", use: "home", value: "5550100" }]);
 });
 
@@ -292,12 +296,12 @@ test("G12: duplicate home entries keep the first displayed entry in place on unc
   ];
   const before = JSON.stringify(telecom);
   const unchanged = await saveTelecom(telecom);
-  assert.equal(unchanged.loaded.phone, MOBILE);
-  assert.equal(patientDemographicsFromPatient(unchanged.saved).phone, MOBILE);
+  assert.equal(unchanged.loaded.phones[0].value, MOBILE);
+  assert.equal(patientDemographicsFromPatient(unchanged.saved).phones[0].value, MOBILE);
   assert.equal(JSON.stringify(unchanged.saved.telecom), before);
-  const changed = await saveTelecom(telecom, { phone: CHANGED });
+  const changed = await saveTelecom(telecom, { phones: { 0: { value: CHANGED } } });
   assert.deepEqual(changed.saved.telecom, [{ ...telecom[0], value: CHANGED }, telecom[1]]);
-  assert.equal(patientDemographicsFromPatient(changed.saved).phone, CHANGED);
+  assert.equal(patientDemographicsFromPatient(changed.saved).phones[0].value, CHANGED);
   assert.equal(JSON.stringify(telecom), before);
 });
 
@@ -309,8 +313,8 @@ test("H1: obsolete-only contact displays blank and appends a new home without ed
     const contacts = [...companion, old];
     const html = renderToStaticMarkup(<PatientDemographicsEditor patient={{ ...EXISTING, telecom: contacts }} onSaved={() => undefined} onDiscard={() => undefined} />);
     assert.ok(!html.includes(`value="${old.value}"`));
-    const { loaded, saved } = await saveTelecom(contacts, { [system]: value });
-    assert.equal(loaded[system], "");
+    const { loaded, saved } = await saveTelecom(contacts, system === "phone" ? { phones: { 0: { value, ...(system === "phone" && contacts.every(p => p.system !== "phone" || p.use === "old") ? { use: "home" as const } : {}) } } } : { email: value });
+    assert.equal((system === "phone" ? loaded.phones[0].value : loaded.email), "");
     assert.deepEqual(saved.telecom, [...contacts, { system, use: "home", value }]);
     for (const blank of system === "email" ? ["", "   "] : []) {
       assert.deepEqual((await saveTelecom(contacts, { [system]: blank })).saved.telecom, contacts);
@@ -328,8 +332,8 @@ test("H2: obsolete then work displays and edits the same work contact in place",
     const html = renderToStaticMarkup(<PatientDemographicsEditor patient={{ ...EXISTING, telecom: contacts }} onSaved={() => undefined} onDiscard={() => undefined} />);
     assert.ok(html.includes(`value="${work.value}"`));
     assert.ok(!html.includes(`value="${old.value}"`));
-    const { loaded, saved } = await saveTelecom(contacts, { [system]: value });
-    assert.equal(loaded[system], work.value);
+    const { loaded, saved } = await saveTelecom(contacts, system === "phone" ? { phones: { 0: { value, ...(system === "phone" && contacts.every(p => p.system !== "phone" || p.use === "old") ? { use: "home" as const } : {}) } } } : { email: value });
+    assert.equal((system === "phone" ? loaded.phones[0].value : loaded.email), work.value);
     assert.deepEqual(saved.telecom, [...companion, old, { ...work, value }]);
     if (system === "email") assert.deepEqual((await saveTelecom(contacts, { [system]: "" })).saved.telecom, [...companion, old]);
   }
@@ -338,25 +342,27 @@ test("H2: obsolete then work displays and edits the same work contact in place",
 test("H3: a current home contact retains its value and metadata on unchanged save", async () => {
   const home = { system: "phone", use: "home", value: MOBILE, rank: 3, period: { start: "2026-01-01" } } as const;
   const { loaded, saved } = await saveTelecom([home]);
-  assert.equal(loaded.phone, MOBILE);
+  assert.equal(loaded.phones[0].value, MOBILE);
   assert.deepEqual(saved.telecom, [home]);
 });
 
-test("H14: required phone validation closes blank saves while email exercises contact removal", async () => {
+test("H14: blank phone saves remove the entry while email still exercises contact removal", async () => {
   for (const phone of ["", "   "]) {
     const subject: Patient = { ...EXISTING, telecom: [{ system: "phone", use: "home", value: MOBILE }] };
-    const draft = { ...patientDemographicsFromPatient(subject), phone };
+    const draft = patientDemographicsFromPatient(subject, SMS_NOW.toISOString());
+    draft.phones[0].value = phone;
     let writes = 0;
     let persisted: Patient | undefined;
     const actions = createPatientDemographicsActions(subject, {
       update: async (resource: Patient) => { writes++; persisted = resource; return resource; },
     } as never);
     let failure: unknown;
-    try { await actions.save(draft); } catch (error) { failure = error; }
-    assert.equal(writes, 0, `Blank phone reached persistence: ${JSON.stringify(persisted?.telecom)}`);
-    assert.equal(validatePatientDemographics(draft).phone, "Phone number is required.");
-    assert.ok(failure instanceof Error);
-    assert.equal(failure.message, "Phone number is required.");
+    try { await actions.save(draft, patientTelecomSnapshot(subject, SMS_NOW.toISOString())); } catch (error) { failure = error; }
+    assert.equal(writes, 1);
+    assert.equal(validatePatientDemographics(draft)["phones.0.value"], undefined);
+    assert.equal(failure, undefined);
+    assert.deepEqual(persisted?.telecom, []);
+    assert.doesNotMatch(JSON.stringify(persisted), /"value"\s*:\s*""/);
   }
   const phone = { system: "phone", use: "home", value: MOBILE } as const;
   const email = { system: "email", use: "home", value: "synthetic@example.test" } as const;

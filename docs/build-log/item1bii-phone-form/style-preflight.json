@@ -1,0 +1,22 @@
+{
+  "preflightBefore": {
+    "exit": 1,
+    "warnings": 0,
+    "hardBlocks": 1,
+    "finding": "PatientDemographicsEditor.tsx: 16 hardcoded styling instances; baseline 10"
+  },
+  "preflightAfter": {
+    "command": "npm run preflight",
+    "exit": 0,
+    "warnings": 0,
+    "hardBlocks": 0
+  },
+  "followupTests": {
+    "command": "cd ui && node --import tsx --test tests/patientPhoneForm.test.tsx tests/demographicsConcurrency.test.tsx",
+    "tests": 18,
+    "pass": 18,
+    "fail": 0,
+    "skipped": 0,
+    "exit": 0
+  }
+}

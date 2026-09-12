@@ -1,0 +1,1948 @@
+
+===== K1 / green =====
+TAP version 13
+# Subtest: K1: the real reader selects active slots in resolver order
+ok 1 - K1: the real reader selects active slots in resolver order
+  ---
+  duration_ms: 3.316666
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 341.3815
+
+===== K1 / red =====
+TAP version 13
+# Subtest: K1: the real reader selects active slots in resolver order
+not ok 1 - K1: the real reader selects active slots in resolver order
+  ---
+  duration_ms: 2.794125
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:4130'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        {
+    -     sourceIndex: 3,
+    -     use: 'mobile',
+    -     value: '+12025550101'
+    -   },
+    -   {
+          sourceIndex: 0,
+          use: 'home',
+          value: '+12025550102'
+        },
+    +   {
+    +     sourceIndex: 2,
+    +     use: 'work',
+    +     value: '+12025550103'
+    +   }
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      value: '+12025550101'
+      use: 'mobile'
+      sourceIndex: 3
+    1:
+      value: '+12025550102'
+      use: 'home'
+      sourceIndex: 0
+  actual:
+    0:
+      value: '+12025550102'
+      use: 'home'
+      sourceIndex: 0
+    1:
+      value: '+12025550103'
+      use: 'work'
+      sourceIndex: 2
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:81:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 328.318375
+
+===== K1 / restored =====
+TAP version 13
+# Subtest: K1: the real reader selects active slots in resolver order
+ok 1 - K1: the real reader selects active slots in resolver order
+  ---
+  duration_ms: 3.963583
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 330.301709
+
+===== K2 / green =====
+TAP version 13
+# Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+ok 1 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+  ---
+  duration_ms: 15.765375
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 339.02525
+
+===== K2 / red =====
+TAP version 13
+# Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+not ok 1 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+  ---
+  duration_ms: 6.361917
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:4782'
+  failureType: 'testCodeFailure'
+  error: |-
+    WHITESPACE
+    + actual - expected
+    
+    + '[{"id":"synthetic-12025550102","system":"phone","value":"+12025550102","use":"home","rank":2,"period":{"start":"2026-01-01","end":"2027-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]},{"id":"synthetic-email","system":"email","use":"home","value":"synthetic@example.test","rank":3,"period":{"start":"2026-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]},{"id":"synthetic-12025550103","system":"phone","value":"+12025550103","use":"work","rank":2,"period":{"start":"2026-01-01","end":"2027-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]},{"id":"synthetic-12025550101","system":"phone","value":"+12025550101","use":"mobile","rank":2,"period":{"start":"2026-01-01","end":"2027-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]}]'
+    - '[{"id":"synthetic-12025550102","system":"phone","value":"+12025550102","use":"home","rank":2,"period":{"start":"2026-01-01","end":"2027-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]},{"id":"synthetic-email","system":"email","use":"home","value":"synthetic@example.test","rank":3,"period":{"start":"2026-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]},{"id":"synthetic-12025550103","system":"phone","value":"+12025550103","use":"work","rank":2,"period":{"start":"2026-01-01","end":"2027-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]},{"id":"synthetic-12025550101","system":"phone","value":" +12025550101 ","use":"mobile","rank":2,"period":{"start":"2026-01-01","end":"2027-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]}]'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '[{"id":"synthetic-12025550102","system":"phone","value":"+12025550102","use":"home","rank":2,"period":{"start":"2026-01-01","end":"2027-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]},{"id":"synthetic-email","system":"email","use":"home","value":"synthetic@example.test","rank":3,"period":{"start":"2026-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]},{"id":"synthetic-12025550103","system":"phone","value":"+12025550103","use":"work","rank":2,"period":{"start":"2026-01-01","end":"2027-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]},{"id":"synthetic-12025550101","system":"phone","value":" +12025550101 ","use":"mobile","rank":2,"period":{"start":"2026-01-01","end":"2027-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]}]'
+  actual: '[{"id":"synthetic-12025550102","system":"phone","value":"+12025550102","use":"home","rank":2,"period":{"start":"2026-01-01","end":"2027-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]},{"id":"synthetic-email","system":"email","use":"home","value":"synthetic@example.test","rank":3,"period":{"start":"2026-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]},{"id":"synthetic-12025550103","system":"phone","value":"+12025550103","use":"work","rank":2,"period":{"start":"2026-01-01","end":"2027-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]},{"id":"synthetic-12025550101","system":"phone","value":"+12025550101","use":"mobile","rank":2,"period":{"start":"2026-01-01","end":"2027-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]}]'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:98:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 331.303083
+
+===== K2 / restored =====
+TAP version 13
+# Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+ok 1 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+  ---
+  duration_ms: 15.341834
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 339.173417
+
+===== K2-absence / green =====
+TAP version 13
+# Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+ok 1 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+  ---
+  duration_ms: 16.042375
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 347.42875
+
+===== K2-absence / red =====
+TAP version 13
+# Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+not ok 1 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+  ---
+  duration_ms: 6.425708
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:4782'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:101:35)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 331.398375
+
+===== K2-absence / restored =====
+TAP version 13
+# Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+ok 1 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+  ---
+  duration_ms: 15.438208
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 341.467042
+
+===== K3 / green =====
+TAP version 13
+# Subtest: K3: clearing slot 2 removes only its original entry from one serialized PUT
+ok 1 - K3: clearing slot 2 removes only its original entry from one serialized PUT
+  ---
+  duration_ms: 2.691458
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 340.553917
+
+===== K3 / red =====
+TAP version 13
+# Subtest: K3: clearing slot 2 removes only its original entry from one serialized PUT
+not ok 1 - K3: clearing slot 2 removes only its original entry from one serialized PUT
+  ---
+  duration_ms: 5.20875
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:5622'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      [
+        {
+          extension: [
+            {
+              url: 'urn:synthetic:contact-note',
+    ...
+          ],
+    +     id: 'synthetic-12025550102',
+    +     period: {
+    +       end: '2027-01-01',
+    +       start: '2026-01-01'
+    +     },
+    +     rank: 2,
+    +     system: 'phone',
+    +     use: 'home',
+    +     value: ''
+    +   },
+    +   {
+    +     extension: [
+    +       {
+    +         url: 'urn:synthetic:contact-note',
+    +         valueString: 'Synthetic retained metadata'
+    +       }
+    +     ],
+          id: 'synthetic-email',
+          period: {
+            start: '2026-01-01'
+          },
+          rank: 3,
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      id: 'synthetic-email'
+      system: 'email'
+      use: 'home'
+      value: 'synthetic@example.test'
+      rank: 3
+      period:
+        start: '2026-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    1:
+      id: 'synthetic-12025550103'
+      system: 'phone'
+      value: '+12025550103'
+      use: 'work'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0: <Circular>
+    2:
+      id: 'synthetic-12025550101'
+      system: 'phone'
+      value: '+12025550101'
+      use: 'mobile'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0: <Circular>
+  actual:
+    0:
+      id: 'synthetic-12025550102'
+      system: 'phone'
+      value: ''
+      use: 'home'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    1:
+      id: 'synthetic-email'
+      system: 'email'
+      use: 'home'
+      value: 'synthetic@example.test'
+      rank: 3
+      period:
+        start: '2026-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    2:
+      id: 'synthetic-12025550103'
+      system: 'phone'
+      value: '+12025550103'
+      use: 'work'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    3:
+      id: 'synthetic-12025550101'
+      system: 'phone'
+      value: '+12025550101'
+      use: 'mobile'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:115:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 333.117541
+
+===== K3 / restored =====
+TAP version 13
+# Subtest: K3: clearing slot 2 removes only its original entry from one serialized PUT
+ok 1 - K3: clearing slot 2 removes only its original entry from one serialized PUT
+  ---
+  duration_ms: 2.762541
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 330.950709
+
+===== K4 / green =====
+TAP version 13
+# Subtest: K4: absent and empty telecom allow an address-only save without creating telecom
+ok 1 - K4: absent and empty telecom allow an address-only save without creating telecom
+  ---
+  duration_ms: 2.927542
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 334.35025
+
+===== K4 / red =====
+TAP version 13
+# Subtest: K4: absent and empty telecom allow an address-only save without creating telecom
+not ok 1 - K4: absent and empty telecom allow an address-only save without creating telecom
+  ---
+  duration_ms: 1.692792
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:5940'
+  failureType: 'testCodeFailure'
+  error: 'Phone number is required.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    buildPatientResource (<worktree>/ui/src/lib/patient-registration.ts:136:41)
+    Object.save (<worktree>/ui/src/lib/patient-registration.ts:256:25)
+    savePatient (<worktree>/ui/tests/patientPhoneForm.test.tsx:42:64)
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:122:29)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 330.975041
+
+===== K4 / restored =====
+TAP version 13
+# Subtest: K4: absent and empty telecom allow an address-only save without creating telecom
+ok 1 - K4: absent and empty telecom allow an address-only save without creating telecom
+  ---
+  duration_ms: 2.901458
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 327.670709
+
+===== K5 / green =====
+TAP version 13
+# Subtest: K5: the real registration route accepts blank slots and rejects the scalar contract
+ok 1 - K5: the real registration route accepts blank slots and rejects the scalar contract
+  ---
+  duration_ms: 36.769417
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 249.52175
+
+===== K5 / red =====
+TAP version 13
+# Subtest: K5: the real registration route accepts blank slots and rejects the scalar contract
+not ok 1 - K5: the real registration route accepts blank slots and rejects the scalar contract
+  ---
+  duration_ms: 31.748917
+  type: 'test'
+  location: '<worktree>/mcp/tests/patientRegistrationAuthz.test.ts:1:1129'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + [
+    +   {
+    +     system: 'phone',
+    +     use: 'mobile',
+    +     value: ''
+    +   },
+    +   {
+    +     system: 'phone',
+    +     use: 'home',
+    +     value: ''
+    +   }
+    + ]
+    - undefined
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual:
+    0:
+      system: 'phone'
+      use: 'mobile'
+      value: ''
+    1:
+      system: 'phone'
+      use: 'home'
+      value: ''
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/patientRegistrationAuthz.test.ts:36:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 224.727667
+
+===== K5 / restored =====
+TAP version 13
+# Subtest: K5: the real registration route accepts blank slots and rejects the scalar contract
+ok 1 - K5: the real registration route accepts blank slots and rejects the scalar contract
+  ---
+  duration_ms: 34.950208
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 248.139667
+
+===== K6 / green =====
+TAP version 13
+# Subtest: K6: a changed phone choice leaves exactly one marker across the entire resource
+ok 1 - K6: a changed phone choice leaves exactly one marker across the entire resource
+  ---
+  duration_ms: 3.676209
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 338.614292
+
+===== K6 / red =====
+TAP version 13
+# Subtest: K6: a changed phone choice leaves exactly one marker across the entire resource
+not ok 1 - K6: a changed phone choice leaves exactly one marker across the entire resource
+  ---
+  duration_ms: 4.320417
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:6380'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   '+12025550103',
+        '+12025550101'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '+12025550101'
+  actual:
+    0: '+12025550103'
+    1: '+12025550101'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:133:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 333.763542
+
+===== K6 / restored =====
+TAP version 13
+# Subtest: K6: a changed phone choice leaves exactly one marker across the entire resource
+ok 1 - K6: a changed phone choice leaves exactly one marker across the entire resource
+  ---
+  duration_ms: 3.597333
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 329.127166
+
+===== K7 / green =====
+TAP version 13
+# Subtest: K7: Neither writes one refusal and preserves every ContactPoint marker
+ok 1 - K7: Neither writes one refusal and preserves every ContactPoint marker
+  ---
+  duration_ms: 3.13
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 330.02875
+
+===== K7 / red =====
+TAP version 13
+# Subtest: K7: Neither writes one refusal and preserves every ContactPoint marker
+not ok 1 - K7: Neither writes one refusal and preserves every ContactPoint marker
+  ---
+  duration_ms: 4.768917
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:6946'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      [
+        {
+          extension: [
+            {
+              url: 'urn:synthetic:contact-note',
+    ...
+            },
+    -       {
+    -         url: 'https://odos2020.com/fhir/StructureDefinition/odos-textable-number',
+    -         valueBoolean: true
+    -       }
+          ],
+          id: 'synthetic-12025550103',
+          period: {
+            end: '2027-01-01',
+            start: '2026-01-01'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      id: 'synthetic-12025550102'
+      system: 'phone'
+      value: '+12025550102'
+      use: 'home'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    1:
+      id: 'synthetic-email'
+      system: 'email'
+      use: 'home'
+      value: 'synthetic@example.test'
+      rank: 3
+      period:
+        start: '2026-01-01'
+      extension:
+        0: <Circular>
+    2:
+      id: 'synthetic-12025550103'
+      system: 'phone'
+      value: '+12025550103'
+      use: 'work'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0: <Circular>
+        1:
+          url: 'https://odos2020.com/fhir/StructureDefinition/odos-textable-number'
+          valueBoolean: true
+    3:
+      id: 'synthetic-12025550101'
+      system: 'phone'
+      value: '+12025550101'
+      use: 'mobile'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0: <Circular>
+  actual:
+    0:
+      id: 'synthetic-12025550102'
+      system: 'phone'
+      value: '+12025550102'
+      use: 'home'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    1:
+      id: 'synthetic-email'
+      system: 'email'
+      use: 'home'
+      value: 'synthetic@example.test'
+      rank: 3
+      period:
+        start: '2026-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    2:
+      id: 'synthetic-12025550103'
+      system: 'phone'
+      value: '+12025550103'
+      use: 'work'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    3:
+      id: 'synthetic-12025550101'
+      system: 'phone'
+      value: '+12025550101'
+      use: 'mobile'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:144:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 340.467209
+
+===== K7 / restored =====
+TAP version 13
+# Subtest: K7: Neither writes one refusal and preserves every ContactPoint marker
+ok 1 - K7: Neither writes one refusal and preserves every ContactPoint marker
+  ---
+  duration_ms: 3.213208
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 328.876333
+
+===== K8 / green =====
+TAP version 13
+# Subtest: K8: choosing a phone removes refusal and switches the actual SMS resolver
+ok 1 - K8: choosing a phone removes refusal and switches the actual SMS resolver
+  ---
+  duration_ms: 3.130792
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 339.949833
+
+===== K8 / red =====
+TAP version 13
+# Subtest: K8: choosing a phone removes refusal and switches the actual SMS resolver
+not ok 1 - K8: choosing a phone removes refusal and switches the actual SMS resolver
+  ---
+  duration_ms: 3.879542
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:7380'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:152:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 334.583458
+
+===== K8 / restored =====
+TAP version 13
+# Subtest: K8: choosing a phone removes refusal and switches the actual SMS resolver
+ok 1 - K8: choosing a phone removes refusal and switches the actual SMS resolver
+  ---
+  duration_ms: 3.017792
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 330.191083
+
+===== K9 / green =====
+TAP version 13
+# Subtest: K9: an ineffective inherited marker survives an address-only save
+ok 1 - K9: an ineffective inherited marker survives an address-only save
+  ---
+  duration_ms: 3.2325
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 336.447209
+
+===== K9 / red =====
+TAP version 13
+# Subtest: K9: an ineffective inherited marker survives an address-only save
+not ok 1 - K9: an ineffective inherited marker survives an address-only save
+  ---
+  duration_ms: 4.657584
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:7785'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        {
+          extension: [
+            {
+              url: 'urn:synthetic:contact-note',
+              valueString: 'Synthetic retained metadata'
+            },
+    -       {
+    -         url: 'https://odos2020.com/fhir/StructureDefinition/odos-textable-number',
+    -         valueBoolean: true
+    -       }
+          ],
+          id: 'synthetic-12025550104',
+          period: {
+            end: '2027-01-01',
+            start: '2026-01-01'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      id: 'synthetic-12025550104'
+      system: 'phone'
+      value: '+12025550104'
+      use: 'old'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+        1:
+          url: 'https://odos2020.com/fhir/StructureDefinition/odos-textable-number'
+          valueBoolean: true
+    1:
+      id: 'synthetic-email'
+      system: 'email'
+      use: 'home'
+      value: 'synthetic@example.test'
+      rank: 3
+      period:
+        start: '2026-01-01'
+      extension:
+        0: <Circular>
+    2:
+      id: 'synthetic-12025550101'
+      system: 'phone'
+      value: '+12025550101'
+      use: 'mobile'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0: <Circular>
+  actual:
+    0:
+      id: 'synthetic-12025550104'
+      system: 'phone'
+      value: '+12025550104'
+      use: 'old'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    1:
+      id: 'synthetic-email'
+      system: 'email'
+      use: 'home'
+      value: 'synthetic@example.test'
+      rank: 3
+      period:
+        start: '2026-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    2:
+      id: 'synthetic-12025550101'
+      system: 'phone'
+      value: '+12025550101'
+      use: 'mobile'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:163:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 334.354833
+
+===== K9 / restored =====
+TAP version 13
+# Subtest: K9: an ineffective inherited marker survives an address-only save
+ok 1 - K9: an ineffective inherited marker survives an address-only save
+  ---
+  duration_ms: 3.161167
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 329.18
+
+===== K10 / green =====
+TAP version 13
+# Subtest: K10: a new mobile appends after obsolete history with the chosen use
+ok 1 - K10: a new mobile appends after obsolete history with the chosen use
+  ---
+  duration_ms: 2.867875
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 332.516833
+
+===== K10 / red =====
+TAP version 13
+# Subtest: K10: a new mobile appends after obsolete history with the chosen use
+not ok 1 - K10: a new mobile appends after obsolete history with the chosen use
+  ---
+  duration_ms: 4.731
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:8215'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      [
+        {
+          extension: [
+            {
+              url: 'urn:synthetic:contact-note',
+    ...
+          system: 'phone',
+    +     use: 'home',
+    -     use: 'mobile',
+          value: '+12025550101'
+        }
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      id: 'synthetic-12025550104'
+      system: 'phone'
+      value: '+12025550104'
+      use: 'old'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+        1:
+          url: 'https://odos2020.com/fhir/StructureDefinition/odos-textable-number'
+          valueBoolean: true
+    1:
+      id: 'synthetic-email'
+      system: 'email'
+      use: 'home'
+      value: 'synthetic@example.test'
+      rank: 3
+      period:
+        start: '2026-01-01'
+      extension:
+        0: <Circular>
+    2:
+      system: 'phone'
+      use: 'mobile'
+      value: '+12025550101'
+  actual:
+    0:
+      id: 'synthetic-12025550104'
+      system: 'phone'
+      value: '+12025550104'
+      use: 'old'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+        1:
+          url: 'https://odos2020.com/fhir/StructureDefinition/odos-textable-number'
+          valueBoolean: true
+    1:
+      id: 'synthetic-email'
+      system: 'email'
+      use: 'home'
+      value: 'synthetic@example.test'
+      rank: 3
+      period:
+        start: '2026-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    2:
+      system: 'phone'
+      use: 'home'
+      value: '+12025550101'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:172:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 347.2955
+
+===== K10 / restored =====
+TAP version 13
+# Subtest: K10: a new mobile appends after obsolete history with the chosen use
+ok 1 - K10: a new mobile appends after obsolete history with the chosen use
+  ---
+  duration_ms: 2.896
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 335.690625
+
+===== K11 / green =====
+TAP version 13
+# Subtest: K11: a use-only edit retains metadata and the other legacy use verbatim
+ok 1 - K11: a use-only edit retains metadata and the other legacy use verbatim
+  ---
+  duration_ms: 3.131917
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 328.358791
+
+===== K11 / red =====
+TAP version 13
+# Subtest: K11: a use-only edit retains metadata and the other legacy use verbatim
+not ok 1 - K11: a use-only edit retains metadata and the other legacy use verbatim
+  ---
+  duration_ms: 4.937375
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:8548'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      [
+        {
+          extension: [
+            {
+              url: 'urn:synthetic:contact-note',
+    ...
+          system: 'phone',
+    +     use: 'temp',
+    -     use: 'mobile',
+          value: '+12025550105'
+        },
+        {
+          extension: [
+            {
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      id: 'synthetic-12025550105'
+      system: 'phone'
+      value: '+12025550105'
+      use: 'mobile'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    1:
+      id: 'synthetic-email'
+      system: 'email'
+      use: 'home'
+      value: 'synthetic@example.test'
+      rank: 3
+      period:
+        start: '2026-01-01'
+      extension:
+        0: <Circular>
+    2:
+      id: 'synthetic-12025550106'
+      system: 'phone'
+      value: '+12025550106'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0: <Circular>
+  actual:
+    0:
+      id: 'synthetic-12025550105'
+      system: 'phone'
+      value: '+12025550105'
+      use: 'temp'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    1:
+      id: 'synthetic-email'
+      system: 'email'
+      use: 'home'
+      value: 'synthetic@example.test'
+      rank: 3
+      period:
+        start: '2026-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    2:
+      id: 'synthetic-12025550106'
+      system: 'phone'
+      value: '+12025550106'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:181:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 333.569125
+
+===== K11 / restored =====
+TAP version 13
+# Subtest: K11: a use-only edit retains metadata and the other legacy use verbatim
+ok 1 - K11: a use-only edit retains metadata and the other legacy use verbatim
+  ---
+  duration_ms: 3.045333
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 331.909125
+
+===== K12 / green =====
+TAP version 13
+# Subtest: K12: blank and whitespace phone values save once without an empty ContactPoint
+ok 1 - K12: blank and whitespace phone values save once without an empty ContactPoint
+  ---
+  duration_ms: 2.92225
+  type: 'test'
+  ...
+# Subtest: H14: blank phone saves remove the entry while email still exercises contact removal
+ok 2 - H14: blank phone saves remove the entry while email still exercises contact removal
+  ---
+  duration_ms: 2.372458
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 369.971584
+
+===== K12 / red =====
+TAP version 13
+# Subtest: K12: blank and whitespace phone values save once without an empty ContactPoint
+not ok 1 - K12: blank and whitespace phone values save once without an empty ContactPoint
+  ---
+  duration_ms: 1.662167
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:8950'
+  failureType: 'testCodeFailure'
+  error: 'Phone number is required.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    buildPatientResource (<worktree>/ui/src/lib/patient-registration.ts:136:41)
+    Object.save (<worktree>/ui/src/lib/patient-registration.ts:256:25)
+    savePatient (<worktree>/ui/tests/patientPhoneForm.test.tsx:42:64)
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:189:35)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: H14: blank phone saves remove the entry while email still exercises contact removal
+not ok 2 - H14: blank phone saves remove the entry while email still exercises contact removal
+  ---
+  duration_ms: 3.438333
+  type: 'test'
+  location: '<worktree>/ui/tests/patientRegistration.test.tsx:1:14973'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/ui/tests/patientRegistration.test.tsx:361:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 378.99125
+
+===== K12 / restored =====
+TAP version 13
+# Subtest: K12: blank and whitespace phone values save once without an empty ContactPoint
+ok 1 - K12: blank and whitespace phone values save once without an empty ContactPoint
+  ---
+  duration_ms: 2.811625
+  type: 'test'
+  ...
+# Subtest: H14: blank phone saves remove the entry while email still exercises contact removal
+ok 2 - H14: blank phone saves remove the entry while email still exercises contact removal
+  ---
+  duration_ms: 2.516291
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 389.270792
+
+===== K13 / green =====
+TAP version 13
+# Subtest: K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+ok 1 - K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+  ---
+  duration_ms: 23.469375
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 351.41
+
+===== K13 / red =====
+TAP version 13
+# Subtest: K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+not ok 1 - K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+  ---
+  duration_ms: 14.768625
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:11209'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + '+12025550101'
+    - '+12025550102'
+                  ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '+12025550102'
+  actual: '+12025550101'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.renderedConversationSequence (<worktree>/ui/tests/patientPhoneForm.test.tsx:227:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 342.889416
+
+===== K13 / restored =====
+TAP version 13
+# Subtest: K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+ok 1 - K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+  ---
+  duration_ms: 23.920875
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 353.530167
+
+===== K14 / green =====
+TAP version 13
+# Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
+ok 1 - K14: unrelated extensions and effective appointment suppression survive every transition
+  ---
+  duration_ms: 25.176459
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 353.658833
+
+===== K14 / red =====
+TAP version 13
+# Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
+not ok 1 - K14: unrelated extensions and effective appointment suppression survive every transition
+  ---
+  duration_ms: 3.959125
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:11342'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - '[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out","extension":[{"url":"channel","valueCode":"sms"}]}]'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out","extension":[{"url":"channel","valueCode":"sms"}]}]'
+  operator: 'strictEqual'
+  stack: |-
+    preservationOracle (<worktree>/ui/tests/patientPhoneForm.test.tsx:19:10)
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:244:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 332.1835
+
+===== K14 / restored =====
+TAP version 13
+# Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
+ok 1 - K14: unrelated extensions and effective appointment suppression survive every transition
+  ---
+  duration_ms: 24.898167
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 349.436333
+
+===== K14-retention / green =====
+TAP version 13
+# Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
+ok 1 - K14: unrelated extensions and effective appointment suppression survive every transition
+  ---
+  duration_ms: 24.626
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 353.315916
+
+===== K14-retention / red =====
+TAP version 13
+# Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
+not ok 1 - K14: unrelated extensions and effective appointment suppression survive every transition
+  ---
+  duration_ms: 3.865458
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:11342'
+  failureType: 'testCodeFailure'
+  error: 'Expected telecom entry synthetic-email to be retained'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    preservationOracle (<worktree>/ui/tests/patientPhoneForm.test.tsx:23:12)
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:244:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 359.774083
+
+===== K14-retention / restored =====
+TAP version 13
+# Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
+ok 1 - K14: unrelated extensions and effective appointment suppression survive every transition
+  ---
+  duration_ms: 24.306542
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 354.095958
+
+===== K15 / green =====
+TAP version 13
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+ok 1 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 19.333083
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 349.030334
+
+===== K15 / red =====
+TAP version 13
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+not ok 1 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 21.106291
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:11815'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:262:14)
+    async withRenderedEditor (<worktree>/ui/tests/patientPhoneForm.test.tsx:65:5)
+    async TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:259:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 350.628416
+
+===== K15 / restored =====
+TAP version 13
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+ok 1 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 18.657125
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 353.011042
+
+===== K16 / green =====
+TAP version 13
+# Subtest: K16: registration and editor emit the same marker state through preference application
+ok 1 - K16: registration and editor emit the same marker state through preference application
+  ---
+  duration_ms: 40.844958
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 255.870083
+
+===== K16 / red =====
+TAP version 13
+# Subtest: K16: registration and editor emit the same marker state through preference application
+not ok 1 - K16: registration and editor emit the same marker state through preference application
+  ---
+  duration_ms: 34.6945
+  type: 'test'
+  location: '<worktree>/mcp/tests/patientRegistrationAuthz.test.ts:1:2315'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+        phones: [
+          {
+    +       extension: undefined,
+    -       extension: [
+    -         {
+    -           url: 'https://odos2020.com/fhir/StructureDefinition/odos-textable-number',
+    -           valueBoolean: true
+    -         }
+    -       ],
+            use: 'mobile',
+            value: '+12025550101'
+          },
+          {
+            extension: undefined,
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    phones:
+      0:
+        value: '+12025550101'
+        use: 'mobile'
+        extension:
+          0:
+            url: 'https://odos2020.com/fhir/StructureDefinition/odos-textable-number'
+            valueBoolean: true
+      1:
+        value: '+12025550102'
+        use: 'home'
+    refusal:
+  actual:
+    phones:
+      0:
+        value: '+12025550101'
+        use: 'mobile'
+      1:
+        value: '+12025550102'
+        use: 'home'
+    refusal:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/patientRegistrationAuthz.test.ts:66:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 233.726583
+
+===== K16 / restored =====
+TAP version 13
+# Subtest: K16: registration and editor emit the same marker state through preference application
+ok 1 - K16: registration and editor emit the same marker state through preference application
+  ---
+  duration_ms: 40.197333
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 255.093542
+
+===== R2 / green =====
+TAP version 13
+# Subtest: R2: choosing a blank or invalid slot blocks the real form on that slot
+ok 1 - R2: choosing a blank or invalid slot blocks the real form on that slot
+  ---
+  duration_ms: 18.620708
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 350.433333
+
+===== R2 / red =====
+TAP version 13
+# Subtest: R2: choosing a blank or invalid slot blocks the real form on that slot
+not ok 1 - R2: choosing a blank or invalid slot blocks the real form on that slot
+  ---
+  duration_ms: 15.008041
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:12929'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:281:14)
+    async withRenderedEditor (<worktree>/ui/tests/patientPhoneForm.test.tsx:65:5)
+    async TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:276:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 346.902042
+
+===== R2 / restored =====
+TAP version 13
+# Subtest: R2: choosing a blank or invalid slot blocks the real form on that slot
+ok 1 - R2: choosing a blank or invalid slot blocks the real form on that slot
+  ---
+  duration_ms: 18.1095
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 344.988167

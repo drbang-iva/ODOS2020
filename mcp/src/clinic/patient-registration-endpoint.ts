@@ -17,6 +17,7 @@ import { grantNewlyRegisteredPatientAccess } from "../authz/role-grants.js";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type BusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { searchProjectAll } from "../fhir-search.js";
+import { applyPatientTextableAnswer, createPatientPhone, validatePatientPhones } from "./patient-telecom.js";
 import {
   ODOS_MRN_MAX,
   ODOS_MRN_MIN,
@@ -30,10 +31,13 @@ const CONSENT_AUTHORITY_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefi
 const RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/related-person-primary";
 const COURT_ORDER_NOTES_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes";
 
+const patientPhoneSchema = z.object({ value: z.string(), use: z.enum(["mobile", "home", "work"]) }).strict();
+
 const demographicsSchema = z.object({
   firstName: z.string(), middleName: z.string(), lastName: z.string(), preferredName: z.string(),
   birthDate: z.string(), gender: z.enum(["male", "female", "other", "unknown"]),
-  phone: z.string(), email: z.string(), address: z.string(), city: z.string(), state: z.string(), postalCode: z.string(),
+  phones: z.tuple([patientPhoneSchema, patientPhoneSchema]), textable: z.enum(["phone1", "phone2", "neither", ""]),
+  email: z.string(), address: z.string(), city: z.string(), state: z.string(), postalCode: z.string(),
 }).strict();
 
 const responsiblePartySchema = z.object({
@@ -215,6 +219,11 @@ function buildPatientIdentityTransaction(
   recordedAt?: string,
 ): Bundle {
   const patientFullUrl = `urn:uuid:${randomUUID()}`;
+  const phoneEntries = input.demographics.phones.map(createPatientPhone);
+  const telecom = [
+    ...phoneEntries.filter(point => point !== undefined),
+    ...(input.demographics.email.trim() ? [{ system: "email" as const, use: "home" as const, value: input.demographics.email.trim() }] : []),
+  ];
   let patient = registrationResourceInProject<Patient>({
     resourceType: "Patient",
     active: true,
@@ -225,14 +234,15 @@ function buildPatientIdentityTransaction(
     ],
     birthDate: input.demographics.birthDate,
     gender: input.demographics.gender,
-    telecom: [
-      { system: "phone", use: "home", value: input.demographics.phone.trim() },
-      ...(input.demographics.email.trim() ? [{ system: "email" as const, use: "home" as const, value: input.demographics.email.trim() }] : []),
-    ],
+    telecom: telecom.length ? telecom : undefined,
     address: [input.demographics.address, input.demographics.city, input.demographics.state, input.demographics.postalCode].some((value) => value.trim())
       ? [{ use: "home", line: input.demographics.address.trim() ? [input.demographics.address.trim()] : undefined, city: input.demographics.city.trim() || undefined, state: input.demographics.state.trim() || undefined, postalCode: input.demographics.postalCode.trim() || undefined }]
       : undefined,
   }, projectId);
+  if (input.demographics.textable) {
+    patient = applyPatientTextableAnswer(patient, input.demographics.textable === "neither"
+      ? "neither" : phoneEntries[input.demographics.textable === "phone1" ? 0 : 1]!);
+  }
   let consentEntry: BundleEntry | undefined;
   if (input.communicationPreferences) {
     const preferences = input.communicationPreferences;
@@ -343,7 +353,7 @@ function validateRegistration(input: PatientRegistrationInput, today: string): v
   if (!input.demographics.firstName.trim()) errors.push("Legal first name is required.");
   if (!input.demographics.lastName.trim()) errors.push("Legal last name is required.");
   if (!isR4Date(input.demographics.birthDate)) errors.push("Date of birth must be a valid YYYY-MM-DD date.");
-  if (!isPhoneNumber(input.demographics.phone)) errors.push("Enter a valid phone number.");
+  errors.push(...Object.values(validatePatientPhones(input.demographics.phones, input.demographics.textable)));
   if (input.demographics.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.demographics.email.trim())) errors.push("Enter a valid email address.");
   if (input.responsibleParties.length === 0) errors.push("At least one responsible party is required.");
   if (new Set(input.responsibleParties.map((party) => party.localId)).size !== input.responsibleParties.length) {
@@ -458,12 +468,6 @@ function responsiblePartyActiveOn(party: ResponsiblePartyInput, today: string): 
 function isR4Date(value: string): boolean {
   const date = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00.000Z`) : undefined;
   return Boolean(date && !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value);
-}
-
-function isPhoneNumber(value: string): boolean {
-  if (!/^\+?[\d\s().-]+(?:\s*(?:x|ext\.?)\s*\d+)?$/i.test(value.trim())) return false;
-  const digits = value.replace(/\D/g, "");
-  return digits.length >= 7 && digits.length <= 15;
 }
 
 function normalized(value: string | undefined): string { return value?.trim().toLocaleLowerCase() ?? ""; }

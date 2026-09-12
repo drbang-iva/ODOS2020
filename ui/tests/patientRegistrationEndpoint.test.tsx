@@ -15,7 +15,8 @@ const DEMOGRAPHICS: PatientDemographicsDraft = {
   preferredName: "Janie",
   birthDate: "1980-01-02",
   gender: "female",
-  phone: "864-555-0100",
+  phones: [{ value: "864-555-0100", use: "mobile", sourceIndex: null }, { value: "", use: "mobile", sourceIndex: null }],
+  textable: "",
   email: "jane@example.test",
   address: "1 Main St",
   city: "Greenville",
@@ -50,7 +51,7 @@ test("registration posts only the typed form contract to the clinic orchestrator
   assert.equal(requestInput, "/clinic/patients");
   assert.equal(requestInit?.method, "POST");
   assert.deepEqual(JSON.parse(String(requestInit?.body)), {
-    demographics: DEMOGRAPHICS,
+    demographics: { ...DEMOGRAPHICS, phones: DEMOGRAPHICS.phones.map(({ value, use }) => ({ value, use })) },
     responsibleParties: parties,
     confirmDuplicate: false,
   });
@@ -67,7 +68,7 @@ test("create anyway is a server-side duplicate override, not a browser FHIR writ
 
   assert.equal(result.patient.id, "patient-1");
   assert.deepEqual(body, {
-    demographics: DEMOGRAPHICS,
+    demographics: { ...DEMOGRAPHICS, phones: DEMOGRAPHICS.phones.map(({ value, use }) => ({ value, use })) },
     responsibleParties: [emptySelfResponsibleParty("self")],
     confirmDuplicate: true,
   });
