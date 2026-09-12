@@ -25,9 +25,17 @@ Ledger row 47 verifies that Compose v2 uses `docker compose` and the Compose Spe
 
 ## Start the Local Stack
 
+Create `.env` from `.env.example` and fill in the required values before starting
+Compose. Set `MEDPLUM_DATABASE_PASSWORD` to a unique database password and
+`ODOS_POSTGRES_URL` to the matching connection string described below. Compose
+refuses to start the main stack when the database password is missing or empty.
+
 ```bash
 git clone https://github.com/drbang-iva/ODOS2020.git
 cd ODOS2020
+cp .env.example .env
+chmod 600 .env
+# Fill in .env before continuing. Do not overwrite an existing installation's .env.
 npm install
 cd mcp && npm install && cd ..
 cd ui && npm install && cd ..
@@ -75,6 +83,38 @@ If you remap the storage port or serve storage from another host, set
 `MEDPLUM_STORAGE_BASE_URL` to that public storage origin; otherwise attachment
 fetches fail with HTTP 401 `Invalid signature` and no server-log breadcrumb.
 
+### Database password configuration
+
+The main stack reads `MEDPLUM_DATABASE_PASSWORD` from the untracked `.env` and
+passes it to both PostgreSQL initialization and the Medplum server. Medplum loads
+`file:/config/medplum.config.json,env`, so the environment overrides the inert JSON
+password while retaining the JSON database host, port, and other settings.
+Never place the real password in tracked Compose or JSON files.
+
+Set `ODOS_POSTGRES_URL` separately for the ODOS service and operator scripts, using
+`postgresql://medplum:<encoded-password>@127.0.0.1:5433/medplum`. Percent-encode the
+password component of that URL; do not encode the separate
+`MEDPLUM_DATABASE_PASSWORD` value. Single-quote values containing `$` or `#` in
+`.env` so Compose reads them literally; escape an embedded apostrophe as `\'`.
+The two settings must describe the same
+database account. The optional containerized `odos-core` uses the internal host
+`postgres:5432` with a password-free URL and receives the same raw password through
+`PGPASSWORD`; node-postgres uses that environment value when the URL omits a password.
+The isolated DR-drill stack retains its own disposable defaults
+and does not consume the main stack's password.
+
+For an existing installation, first configure the current database password in
+the untracked environment and recreate Medplum with the new environment wiring.
+Coordinate automatic source updates and service restarts during this rollout:
+an old container does not acquire a newly added environment variable on restart.
+Verify this configuration migration before changing the database role password.
+Changing `POSTGRES_PASSWORD` or `.env` does not alter a role in an existing
+PostgreSQL volume. Perform that later rotation in an authorized maintenance
+window, update both environment settings, recreate affected containers, restart
+the ODOS service, and verify database-backed operations. Never delete the database
+volume to apply a password change or print resolved Compose configuration with
+real credentials into logs or public evidence.
+
 The root npm scripts use `docker-compose` in this checkout. If your Docker install exposes only `docker compose`, use the equivalent space-separated command.
 
 Healthcheck commands:
@@ -111,7 +151,8 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `MEDPLUM_ADMIN_EMAIL` | yes for first-run setup and local Compose | Medplum super-admin bootstrap email and break-glass MCP password-login email. The MCP runtime uses it only when both `MEDPLUM_CLIENT_*` values are absent. |
 | `MEDPLUM_ADMIN_PASSWORD` | yes for first-run setup and local Compose | Medplum super-admin bootstrap secret and break-glass MCP password-login secret. It never recovers a partial, invalid, or failed client-credential configuration. |
 | `MEDPLUM_STORAGE_BASE_URL` | no | Defaults to `http://localhost:8103/storage/`; set it to the public storage origin when the port or host is remapped. |
-| `ODOS_POSTGRES_URL` | no | Defaults to local compose Postgres. Used for audit rows. |
+| `MEDPLUM_DATABASE_PASSWORD` | yes for the main Compose stack | Untracked runtime password shared by PostgreSQL initialization and the Medplum environment override. Does not rotate an existing database role. |
+| `ODOS_POSTGRES_URL` | yes for a configured installation | PostgreSQL URL used by ODOS and operator scripts; use the same password as Medplum, URL-encoded. |
 | `ODOS_SETUP_STATE_PATH` | no | Defaults to `./.odos-setup-state.json`. No PHI is written there. |
 | `ODOS_SETUP_INTERACTIVE_ACK` | no | Set to `human-supervised` only when a human is intentionally running without a TTY. |
 | `ODOS_MCP_TRANSPORT` | yes for the browser UI | Set to `sse` so the UI can call the local HTTP routes. The default `stdio` mode is for launch-on-demand MCP clients. |
@@ -653,22 +694,23 @@ ports:
   - "127.0.0.1:5433:5432"
 ```
 
-Only the left-side host port is remapped. Keep the container-network URL unchanged:
+Only the left-side host port is remapped. The container-network URL has no password;
+Compose supplies `PGPASSWORD` from `MEDPLUM_DATABASE_PASSWORD`:
 
 ```yaml
-ODOS_POSTGRES_URL: postgresql://medplum:medplum@postgres:5432/medplum
+ODOS_POSTGRES_URL: postgresql://medplum@postgres:5432/medplum
 ```
 
 Then make the host-run tooling URL match the new host port in `.env`:
 
 ```bash
-ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:5433/medplum
+ODOS_POSTGRES_URL='postgresql://medplum:<encoded-password>@127.0.0.1:5433/medplum'
 ```
 
 Use the same URL for host-side `psql`, setup, preflight, and audit verification:
 
 ```bash
-export ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:5433/medplum
+export ODOS_POSTGRES_URL='postgresql://medplum:<encoded-password>@127.0.0.1:5433/medplum'
 docker-compose up -d
 psql "$ODOS_POSTGRES_URL" -c "select 1;"
 npm run setup-practice
