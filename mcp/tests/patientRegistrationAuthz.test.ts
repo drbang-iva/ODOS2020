@@ -12,13 +12,85 @@ import type {
 import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import express from "express";
 import { registerClinicRoutes } from "../src/clinic/clinic-routes.js";
-import { registerPatientFromDemographics } from "../src/clinic/patient-registration-endpoint.js";
+import { parsePatientRegistrationInput, registerPatientFromDemographics } from "../src/clinic/patient-registration-endpoint.js";
 import { grantNewlyRegisteredPatientAccess } from "../src/authz/role-grants.js";
 import {
   buildMedplumAccessPolicy,
   getRoleDeclaration,
   type PracticeRoleId,
 } from "../src/authz/roles.js";
+import { buildPatientResource, patientDemographicsFromPatient } from "../../ui/src/lib/patient-registration.js";
+import { NUMBERS, TELECOM_NOW, telecomFixture } from "../../ui/tests/fixtures/patient-telecom.js";
+import { ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, ODOS_TEXTABLE_NUMBER_EXTENSION_URL } from "../src/comms/suppression-gate.js";
+
+function phoneRegistrationBody(values: [string, string], textable: "phone1" | "phone2" | "neither" | "" = "") {
+  return { ...REGISTRATION_BODY, demographics: { ...REGISTRATION_BODY.demographics, phones: [{ value: values[0], use: "mobile" }, { value: values[1], use: "home" }], textable } };
+}
+
+test("K5: the real registration route accepts blank slots and rejects the scalar contract", async () => {
+  for (const values of [["", ""], ["   ", ""]] as [string, string][]) {
+    const fhir = new RegistrationFhir("staff");
+    const response = await postRegistration("staff", fhir, undefined, phoneRegistrationBody(values));
+    assert.equal(response.status, 201);
+    const patient = fhir.transaction!.entry![0].resource as Patient;
+    assert.equal(patient.telecom, undefined);
+    assert.doesNotMatch(JSON.stringify(patient), /"value"\s*:\s*""/);
+  }
+  const scalar = phoneRegistrationBody(["", ""]);
+  const { phones: _phones, textable: _textable, ...demographics } = scalar.demographics;
+  const scalarBody = { ...scalar, demographics: { ...demographics, phone: NUMBERS.M } };
+  const parsed = parsePatientRegistrationInput(scalarBody);
+  assert.equal(parsed.success, false);
+  assert.ok(!parsed.success && parsed.error.issues.some(issue => issue.code === "unrecognized_keys" && issue.keys.includes("phone")));
+  const fhir = new RegistrationFhir("staff");
+  const response = await postRegistration("staff", fhir, undefined, scalarBody);
+  assert.equal(response.status, 400);
+  assert.match(JSON.stringify(await response.json()), /Unrecognized key\(s\) in object: 'phone'/);
+  assert.equal(fhir.account, undefined);
+  assert.equal(fhir.transaction, undefined);
+});
+
+test("K16: registration and editor emit the same marker state through preference application", async () => {
+  const loaded = patientDemographicsFromPatient(telecomFixture("IMPORTED3"), TELECOM_NOW);
+  for (const textable of ["phone1", "phone2", "neither", ""] as const) {
+    const fhir = new RegistrationFhir("staff");
+    const body = { ...phoneRegistrationBody(loaded.phones.map(p => p.value) as [string, string], textable), communicationPreferences: { cells: [{ purpose: "appointment", channel: "sms", allowed: false }] } };
+    const response = await postRegistration("staff", fhir, undefined, body);
+    assert.equal(response.status, 201);
+    const patient = fhir.transaction!.entry![0].resource as Patient;
+    const editor = buildPatientResource({ ...loaded, textable, phones: loaded.phones.map(p => ({ ...p, sourceIndex: null })) as typeof loaded.phones });
+    const markerState = (p: Patient) => ({
+      phones: p.telecom?.filter(c => c.system === "phone").map(c => ({ value: c.value, use: c.use, extension: c.extension })),
+      refusal: p.extension?.filter(e => e.url === ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL) ?? [],
+    });
+    assert.deepEqual(markerState(patient), markerState(editor));
+    const chosen = patient.telecom?.filter(c => c.extension?.some(e => e.url === ODOS_TEXTABLE_NUMBER_EXTENSION_URL && e.valueBoolean === true)) ?? [];
+    assert.deepEqual(chosen.map(c => c.value), textable === "phone1" ? [NUMBERS.M] : textable === "phone2" ? [NUMBERS.H] : []);
+    assert.equal(markerState(patient).refusal.length, textable === "neither" ? 1 : 0);
+    const { readCommsPreferenceCells } = await import("../src/comms/suppression-gate.js");
+    assert.equal(readCommsPreferenceCells(patient)[0].allowed, false);
+    const related = fhir.transaction!.entry!.find(e => e.resource?.resourceType === "RelatedPerson")!.resource;
+    assert.doesNotMatch(JSON.stringify(related), /odos-(?:no-)?textable-number/);
+  }
+});
+
+test("registration phone validation rejects bad choices before reserving an MRN", async () => {
+  for (const body of [
+    phoneRegistrationBody(["", ""], "phone1"), phoneRegistrationBody(["123", ""], "phone1"),
+    phoneRegistrationBody(["", "  "], "phone2"),
+    { ...phoneRegistrationBody([NUMBERS.M, ""]), demographics: { ...phoneRegistrationBody([NUMBERS.M, ""]).demographics, phones: [{ value: NUMBERS.M, use: "other" }, { value: "", use: "home" }] } },
+    { ...phoneRegistrationBody([NUMBERS.M, ""]), demographics: { ...phoneRegistrationBody([NUMBERS.M, ""]).demographics, phones: [{ value: NUMBERS.M, use: "mobile", sourceIndex: 0 }, { value: "", use: "home" }] } },
+    ...[undefined, [], [{ value: "", use: "mobile" }], [{ use: "mobile" }, { value: "", use: "home" }]].map(phones => ({
+      ...phoneRegistrationBody(["", ""]), demographics: { ...phoneRegistrationBody(["", ""]).demographics, phones },
+    })),
+  ]) {
+    const fhir = new RegistrationFhir("staff");
+    const response = await postRegistration("staff", fhir, undefined, body);
+    assert.equal(response.status, 400);
+    assert.equal(fhir.account, undefined);
+    assert.equal(fhir.transaction, undefined);
+  }
+});
 
 test("Provider, Staff, and Admin may register a patient", () => {
   const missing = (["provider", "staff", "admin"] as const).filter(
@@ -356,7 +428,7 @@ test("authoritative registration validation rejects form-invalid input before se
   const invalidBodies = [
     {
       ...REGISTRATION_BODY,
-      demographics: { ...REGISTRATION_BODY.demographics, phone: "1" },
+      demographics: { ...REGISTRATION_BODY.demographics, phones: [{ value: "1", use: "home" }, { value: "", use: "mobile" }] },
     },
     {
       ...REGISTRATION_BODY,
@@ -415,7 +487,8 @@ const REGISTRATION_BODY = {
     preferredName: "",
     birthDate: "2010-01-02",
     gender: "female",
-    phone: "864-555-0100",
+    phones: [{ value: "864-555-0100", use: "home" }, { value: "", use: "mobile" }],
+    textable: "",
     email: "",
     address: "1 Synthetic Way",
     city: "Greenville",
