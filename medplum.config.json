@@ -18,7 +18,7 @@
   "redis": {
     "host": "redis",
     "port": 6379,
-    "password": "medplum"
+    "password": "INERT_ENV_OVERLAY_REQUIRED"
   },
   "maxJsonSize": "10mb",
   "maxBatchSize": "50mb",

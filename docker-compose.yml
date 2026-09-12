@@ -31,11 +31,11 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: ["redis-server", "--requirepass", "medplum"]
+    command: ["redis-server", "--requirepass", "${ODOS_REDIS_PASSWORD:?Set ODOS_REDIS_PASSWORD in the untracked .env}"]
     ports:
       - "127.0.0.1:6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "--pass", "medplum", "ping"]
+      test: ["CMD", "redis-cli", "-e", "--pass", "${ODOS_REDIS_PASSWORD:?Set ODOS_REDIS_PASSWORD in the untracked .env}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -65,6 +65,7 @@ services:
       - .env
       - .odos/medplum-signing.env
     environment:
+      MEDPLUM_REDIS_PASSWORD: ${ODOS_REDIS_PASSWORD:?Set ODOS_REDIS_PASSWORD in the untracked .env}
       MEDPLUM_DATABASE_PASSWORD: ${MEDPLUM_DATABASE_PASSWORD:?Set MEDPLUM_DATABASE_PASSWORD in the untracked .env}
       MEDPLUM_DEFAULT_SUPER_ADMIN_EMAIL: ${MEDPLUM_ADMIN_EMAIL}
       MEDPLUM_DEFAULT_SUPER_ADMIN_PASSWORD: ${MEDPLUM_ADMIN_PASSWORD}

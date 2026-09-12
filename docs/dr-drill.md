@@ -23,7 +23,7 @@ destructive commands.
 - Backup volume mounted and encrypted at rest by the operator.
 - Human-provisioned env vars available where needed:
   - `ODOS_POSTGRES_URL`
-  - `ODOS_REDIS_PASSWORD`
+  - `ODOS_REDIS_PASSWORD` (required explicitly when invoking backup/restore directly)
   - `ODOS_BACKUP_DIR`
 
 ## Commands
@@ -33,6 +33,12 @@ One-command operator wrapper:
 ```bash
 npm run dr-drill
 ```
+
+The wrapper always supplies the isolated Redis credential, ignoring an exported
+persistent-stack `ODOS_REDIS_PASSWORD`. It does not change the drill Compose
+credential. For manual steps, explicitly set the isolated Redis password as below;
+never reuse a persistent credential. Both recovery scripts reject a missing or
+empty `ODOS_POSTGRES_URL` or `ODOS_REDIS_PASSWORD` by name before doing work.
 
 The wrapper runs both DR surfaces that v0.6a currently needs:
 
@@ -46,6 +52,7 @@ export ODOS_DR_COMPOSE="docker-compose -p odos-dr-drill -f docker-compose.dr-dri
 export MEDPLUM_BASE_URL="http://localhost:18103"
 export ODOS_POSTGRES_URL="postgresql://medplum:medplum@127.0.0.1:15432/medplum"
 export ODOS_REDIS_PORT="16379"
+export ODOS_REDIS_PASSWORD="medplum"
 export ODOS_COMPOSE_PROJECT="odos-dr-drill"
 export ODOS_COMPOSE_FILE="docker-compose.dr-drill.yml"
 export MEDPLUM_ADMIN_EMAIL="${MEDPLUM_ADMIN_EMAIL:-drill-admin@odos.local}"
