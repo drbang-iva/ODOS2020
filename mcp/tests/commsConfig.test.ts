@@ -835,3 +835,53 @@ test("FB3: marked patient without a phone gets an accurate history lookup error"
   await assert.rejects(adapter.listConversations!({ patientReference: "Patient/synthetic-1" }), { message: "Patient/synthetic-1 has no active phone in Patient.telecom." });
   assert.equal(requests, 0);
 });
+
+
+for (const refusal of [false, true]) {
+  test(`${refusal ? "J14" : "J13 / J12"}: conversation history finds the marked work contact${refusal ? " despite refusal" : " used by SMS"}`, async () => {
+    const now = new Date("2026-08-02T15:00:00.000Z");
+    const subject: Patient = {
+      resourceType: "Patient", id: "synthetic-1",
+      telecom: [
+        { system: "phone", use: "mobile", value: "+12025550101" },
+        { system: "phone", use: "work", value: "+12025550102", extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-textable-number", valueBoolean: true }] },
+      ],
+      extension: refusal ? [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }] : [],
+    };
+    const queries: string[] = [];
+    const sends: string[] = [];
+    const dispatch = createCommsDispatch([{ provider: "ghl", config: { locationId: "synthetic", accessToken: "synthetic-token" } }], {
+      now: () => now,
+      fetchImpl: async (url, init) => {
+        const parsed = new URL(String(url));
+        if (parsed.pathname === "/contacts/search") {
+          queries.push(JSON.parse(String(init?.body)).query);
+          return Response.json({ contacts: [{ id: "work-contact", phone: "+12025550102" }], total: 1 });
+        }
+        if (parsed.pathname === "/conversations/search") {
+          assert.equal(parsed.searchParams.get("contactId"), "work-contact");
+          return Response.json({ conversations: [{ id: "work-history", contactId: "work-contact", unreadCount: 1, phone: "+12025550102" }] });
+        }
+        assert.equal(parsed.pathname, "/conversations/messages");
+        sends.push(JSON.parse(String(init?.body)).toNumber);
+        return Response.json({ messageId: "synthetic-message", conversationId: "work-history" });
+      },
+    });
+    const adapter = dispatch.getAdapter("ghl", { ...fakeFhir(), read: async <T extends Resource>(): Promise<T> => structuredClone(subject) as T });
+    assert.equal(resolveVoiceNumber(subject, now), "+12025550101");
+    const history = await adapter.listConversations!({ patientReference: "Patient/synthetic-1" });
+    assert.deepEqual(history.map(item => item.id), ["work-history"]);
+    assert.deepEqual(queries, ["+12025550102"]);
+    const request = { patientReference: "Patient/synthetic-1", body: "Synthetic reminder", campaignType: "appointment-reminder", suppression: {} };
+    if (refusal) {
+      await assert.rejects(adapter.sendSms!(request), /no textable number/);
+      assert.deepEqual(sends, []);
+      assert.deepEqual(queries, ["+12025550102"]);
+      assert.equal(resolveSmsNumber(subject, now), undefined);
+    } else {
+      assert.equal(resolveSmsNumber(subject, now), "+12025550102");
+      assert.equal((await adapter.sendSms!(request)).outcome, "sent");
+      assert.deepEqual(sends, ["+12025550102"]);
+    }
+  });
+}
