@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import type { AccessPolicy, Bundle, Communication, Condition, Encounter, Patient, ProjectMembership, Provenance, Resource } from "@medplum/fhirtypes";
+import type { AccessPolicy, Bundle, Communication, Condition, Encounter, Patient, ProjectMembership, Provenance, RelatedPerson, Resource } from "@medplum/fhirtypes";
 import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import {
   buildMedplumAccessPolicy,
@@ -23,7 +23,7 @@ import {
   type CommsApiRouteDeps,
 } from "../src/comms/comms-api.js";
 import type { EducationContentItem } from "../src/comms/education-catalog.js";
-import { checkMessageSuppression, updateInboundSuppression, ODOS_COMMS_OPT_OUT_EXTENSION_URL } from "../src/comms/suppression-gate.js";
+import { checkMessageSuppression, updateInboundSuppression, ODOS_COMMS_OPT_OUT_EXTENSION_URL, resolveSmsNumber } from "../src/comms/suppression-gate.js";
 import { authenticateStaffRoute } from "../src/payments/payment-endpoint.js";
 import express from "express";
 import { createOperatorScriptFhirClient } from "../src/fhir-client.js";
@@ -534,6 +534,78 @@ test("education email sends the published email artifact to the recorded address
   } finally {
     await fixture.close();
   }
+});
+
+function assertEducationNumber(fixture: Awaited<ReturnType<typeof startServer>>, expected: string) {
+  assert.equal(fixture.smsRequests.length, 1);
+  assert.equal(fixture.smsRequests[0].toNumber, expected);
+  assert.equal(fixture.persistedCommunications.length, 1);
+  const frozen = JSON.parse(fixture.persistedCommunications[0].payload![1].contentString!);
+  assert.equal(frozen.recipientValue, expected);
+  assert.equal(fixture.provenances[0]?.entity?.some((entry) => entry.what.display === `Recipient: ${expected}`), true);
+}
+
+async function sendNumberFixture(fixture: Awaited<ReturnType<typeof startServer>>, id: string, recipientOverride?: { reference?: string; phone?: string; email?: string }) {
+  const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+    patientReference: PATIENT_REFERENCE, educationId: "dry-eye-basics", version: 2,
+    channel: "sms", lane: "clinical", idempotencyKey: id, recipientOverride,
+  }, "provider");
+  assert.equal(response.status, 200, JSON.stringify(await response.json()));
+}
+
+test("G6: education records the current home instead of an expired mobile using the injected clock", async () => {
+  const fixture = await startServer({ channelRoutes: { "clinical-sms": "twilio" }, senderNumbers: { "clinical-sms": "+12025550100" } });
+  try {
+    fixture.patients[0].telecom = [
+      { system: "phone", use: "mobile", value: "+12025550101", period: { end: "2026-08-02T15:00:00.000Z" } },
+      { system: "phone", use: "home", value: "+12025550102", period: { start: "2026-08-02T15:00:00.000Z", end: "2026-08-03T00:00:00.000Z" } },
+    ];
+    assert.equal(resolveSmsNumber(fixture.patients[0], new Date("2026-08-02T15:00:00.000Z")), "+12025550102");
+    await sendNumberFixture(fixture, "recipient-expired-mobile");
+    assertEducationNumber(fixture, "+12025550102");
+  } finally { await fixture.close(); }
+});
+
+test("G7: education records the explicit SMS entry instead of mobile", async () => {
+  const fixture = await startServer({ channelRoutes: { "clinical-sms": "twilio" }, senderNumbers: { "clinical-sms": "+12025550100" } });
+  try {
+    fixture.patients[0].telecom = [
+      { system: "sms", value: "+12025550103" },
+      { system: "phone", use: "mobile", value: "+12025550101" },
+    ];
+    assert.equal(resolveSmsNumber(fixture.patients[0], new Date("2026-08-02T15:00:00.000Z")), "+12025550103");
+    await sendNumberFixture(fixture, "recipient-explicit-sms");
+    assertEducationNumber(fixture, "+12025550103");
+  } finally { await fixture.close(); }
+});
+
+test("G8: education records the RelatedPerson current home instead of an expired mobile", async () => {
+  const related: RelatedPerson = {
+    resourceType: "RelatedPerson", id: "related-1", patient: { reference: PATIENT_REFERENCE },
+    telecom: [
+      { system: "phone", use: "mobile", value: "+12025550101", period: { end: "2026-08-02T15:00:00.000Z" } },
+      { system: "phone", use: "home", value: "+12025550102" },
+    ],
+  };
+  const fixture = await startServer({ relatedPeople: [related], channelRoutes: { "clinical-sms": "twilio" }, senderNumbers: { "clinical-sms": "+12025550100" } });
+  try {
+    assert.equal(resolveSmsNumber(related, new Date("2026-08-02T15:00:00.000Z")), "+12025550102");
+    await sendNumberFixture(fixture, "recipient-related-person", { reference: "RelatedPerson/related-1", email: "related@example.test" });
+    assertEducationNumber(fixture, "+12025550102");
+    assert.equal(fixture.recipientUpdates.length, 0);
+  } finally { await fixture.close(); }
+});
+
+test("education keeps an explicit phone override even when no active phone is recorded", async () => {
+  const fixture = await startServer({ channelRoutes: { "clinical-sms": "twilio" }, senderNumbers: { "clinical-sms": "+12025550100" } });
+  try {
+    fixture.patients[0].telecom = [{ system: "phone", use: "old", value: "+12025550101" }];
+    const before = JSON.stringify(fixture.patients[0].telecom);
+    await sendNumberFixture(fixture, "recipient-typed-override", { phone: "+12025550104" });
+    assertEducationNumber(fixture, "+12025550104");
+    assert.equal(JSON.stringify(fixture.patients[0].telecom), before);
+    assert.equal(fixture.recipientUpdates.length, 0);
+  } finally { await fixture.close(); }
 });
 
 test("education dispatch refuses an unconfigured lane and enforces the practice clinical lock", async () => {
@@ -1862,6 +1934,7 @@ for (const channel of ["sms", "email"] as const) {
 }
 
 async function startServer(options: {
+  relatedPeople?: RelatedPerson[];
   optOutTransactionError?: Error;
   optOutTransactionResponse?: Bundle;
   recipientUpdateError?: Error;
@@ -2140,7 +2213,9 @@ async function startServer(options: {
               ? encounters.find((encounter) => encounter.id === id)
               : resourceType === "Condition"
                 ? conditions.find((condition) => condition.id === id)
-                : undefined;
+                : resourceType === "RelatedPerson"
+                  ? options.relatedPeople?.find((person) => person.id === id)
+                  : undefined;
           if (!found) throw Object.assign(new Error(`Missing ${resourceType}/${id}`), { status: 404 });
           return structuredClone(found) as T;
         },

@@ -63,6 +63,7 @@ import {
   recordPatientSmsOptOut,
   hasRecordedMarketingConsent,
   readPatientSmsOptOut,
+  resolveSmsNumber,
   SMS_OPT_OUT_IDENTITY_VERIFICATION_METHODS,
   type SmsOptOutIdentityVerification,
   type SmsOptOutManagementFhir,
@@ -1062,7 +1063,7 @@ async function prepareEducationDispatch(
   if (body.channel === "sms" && item.consentClass === "marketing" && !hasRecordedMarketingConsent(patient)) {
     throw new CommsApiRefusalError("marketing-consent-absent");
   }
-  const recipient = await resolveEducationRecipient(fhir, patient, body);
+  const recipient = await resolveEducationRecipient(fhir, patient, body, new Date(deps.now?.() ?? Date.now()));
   const defaultLane = item.laneHint === "retail" ? "frontdesk" : "clinical";
   const laneSelection = body.lane === defaultLane ? "default" : "overridden";
   const campaignId = `${item.id}@${item.version}`;
@@ -2300,6 +2301,7 @@ async function resolveEducationRecipient(
   fhir: MedplumClient,
   patient: Patient,
   body: EducationDispatchBody,
+  now: Date,
 ): Promise<{ reference: string; value: string; resource: Patient | RelatedPerson }> {
   const reference = body.recipientOverride?.reference ?? body.patientReference;
   if (reference.startsWith("Patient/") && reference !== body.patientReference) {
@@ -2317,9 +2319,9 @@ async function resolveEducationRecipient(
       ? body.recipientOverride?.email
       : undefined;
   const recorded = body.channel === "sms"
-    ? telecomValue(resource, "phone")
+    ? telecomValue(resource, "phone", now)
     : body.channel === "email"
-      ? telecomValue(resource, "email")
+      ? telecomValue(resource, "email", now)
       : reference;
   const value = overridden ?? recorded;
   if (!value) {
@@ -2405,13 +2407,11 @@ async function educationSmsBody(
   return `${deps.practiceName}\n${tracked.url}\nReply STOP to opt out.`;
 }
 
-function telecomValue(resource: Patient | RelatedPerson, system: "phone" | "email"): string | undefined {
+function telecomValue(resource: Patient | RelatedPerson, system: "phone" | "email", now: Date): string | undefined {
+  if (system === "phone") return resolveSmsNumber(resource, now);
   const candidates = (resource.telecom ?? []).filter((telecom) =>
     telecom.system === system && telecom.value && telecom.use !== "old");
-  const preferred = system === "phone"
-    ? candidates.find((telecom) => telecom.use === "mobile") ?? candidates[0]
-    : candidates[0];
-  return preferred?.value;
+  return candidates[0]?.value;
 }
 
 async function persistAfterSend(write: () => Promise<unknown>): Promise<void> {
