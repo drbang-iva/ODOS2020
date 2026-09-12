@@ -300,3 +300,67 @@ test("G12: duplicate home entries keep the first displayed entry in place on unc
   assert.equal(patientDemographicsFromPatient(changed.saved).phone, CHANGED);
   assert.equal(JSON.stringify(telecom), before);
 });
+
+test("H1: obsolete-only contact displays blank and appends a new home without editing history", async () => {
+  for (const system of ["phone", "email"] as const) {
+    const old = { system, use: "old", value: system === "phone" ? MOBILE : "old@example.test", rank: 2 } as const;
+    const value = system === "phone" ? CHANGED : "new@example.test";
+    const companion = system === "email" ? [{ system: "phone" as const, use: "mobile" as const, value: MOBILE }] : [];
+    const contacts = [...companion, old];
+    const html = renderToStaticMarkup(<PatientDemographicsEditor patient={{ ...EXISTING, telecom: contacts }} onSaved={() => undefined} onDiscard={() => undefined} />);
+    assert.ok(!html.includes(`value="${old.value}"`));
+    const { loaded, saved } = await saveTelecom(contacts, { [system]: value });
+    assert.equal(loaded[system], "");
+    assert.deepEqual(saved.telecom, [...contacts, { system, use: "home", value }]);
+    for (const blank of system === "email" ? ["", "   "] : []) {
+      assert.deepEqual((await saveTelecom(contacts, { [system]: blank })).saved.telecom, contacts);
+    }
+  }
+});
+
+test("H2: obsolete then work displays and edits the same work contact in place", async () => {
+  for (const system of ["phone", "email"] as const) {
+    const old = { system, use: "old", value: system === "phone" ? MOBILE : "old@example.test" } as const;
+    const work = { system, use: "work", value: system === "phone" ? WORK : "work@example.test", rank: 2, period: { start: "2026-01-01" } } as const;
+    const value = system === "phone" ? CHANGED : "new@example.test";
+    const companion = system === "email" ? [{ system: "phone" as const, use: "mobile" as const, value: MOBILE }] : [];
+    const contacts = [...companion, old, work];
+    const html = renderToStaticMarkup(<PatientDemographicsEditor patient={{ ...EXISTING, telecom: contacts }} onSaved={() => undefined} onDiscard={() => undefined} />);
+    assert.ok(html.includes(`value="${work.value}"`));
+    assert.ok(!html.includes(`value="${old.value}"`));
+    const { loaded, saved } = await saveTelecom(contacts, { [system]: value });
+    assert.equal(loaded[system], work.value);
+    assert.deepEqual(saved.telecom, [...companion, old, { ...work, value }]);
+    if (system === "email") assert.deepEqual((await saveTelecom(contacts, { [system]: "" })).saved.telecom, [...companion, old]);
+  }
+});
+
+test("H3: a current home contact retains its value and metadata on unchanged save", async () => {
+  const home = { system: "phone", use: "home", value: MOBILE, rank: 3, period: { start: "2026-01-01" } } as const;
+  const { loaded, saved } = await saveTelecom([home]);
+  assert.equal(loaded.phone, MOBILE);
+  assert.deepEqual(saved.telecom, [home]);
+});
+
+test("H14: required phone validation closes blank saves while email exercises contact removal", async () => {
+  for (const phone of ["", "   "]) {
+    const subject: Patient = { ...EXISTING, telecom: [{ system: "phone", use: "home", value: MOBILE }] };
+    const draft = { ...patientDemographicsFromPatient(subject), phone };
+    let writes = 0;
+    let persisted: Patient | undefined;
+    const actions = createPatientDemographicsActions(subject, {
+      update: async (resource: Patient) => { writes++; persisted = resource; return resource; },
+    } as never);
+    let failure: unknown;
+    try { await actions.save(draft); } catch (error) { failure = error; }
+    assert.equal(writes, 0, `Blank phone reached persistence: ${JSON.stringify(persisted?.telecom)}`);
+    assert.equal(validatePatientDemographics(draft).phone, "Phone number is required.");
+    assert.ok(failure instanceof Error);
+    assert.equal(failure.message, "Phone number is required.");
+  }
+  const phone = { system: "phone", use: "home", value: MOBILE } as const;
+  const email = { system: "email", use: "home", value: "synthetic@example.test" } as const;
+  for (const blank of ["", "   "]) {
+    assert.deepEqual((await saveTelecom([phone, email], { email: blank })).saved.telecom, [phone]);
+  }
+});

@@ -1,0 +1,81 @@
+[
+  {
+    "scenario": "old-only",
+    "state": "before",
+    "displayed": "+12025550101",
+    "telecom": [
+      {
+        "system": "phone",
+        "use": "old",
+        "value": "+12025550103"
+      }
+    ],
+    "putStatus": 200,
+    "pageErrors": []
+  },
+  {
+    "scenario": "old-only",
+    "state": "after",
+    "displayed": "",
+    "telecom": [
+      {
+        "system": "phone",
+        "use": "old",
+        "value": "+12025550101"
+      },
+      {
+        "system": "phone",
+        "use": "home",
+        "value": "+12025550103"
+      }
+    ],
+    "putStatus": 200,
+    "pageErrors": []
+  },
+  {
+    "scenario": "blank-phone",
+    "state": "after",
+    "writes": 0,
+    "error": "Phone number is required."
+  },
+  {
+    "scenario": "old-work",
+    "state": "before",
+    "displayed": "+12025550101",
+    "telecom": [
+      {
+        "system": "phone",
+        "use": "old",
+        "value": "+12025550103"
+      },
+      {
+        "system": "phone",
+        "use": "work",
+        "value": "+12025550102",
+        "rank": 2
+      }
+    ],
+    "putStatus": 200,
+    "pageErrors": []
+  },
+  {
+    "scenario": "old-work",
+    "state": "after",
+    "displayed": "+12025550102",
+    "telecom": [
+      {
+        "system": "phone",
+        "use": "old",
+        "value": "+12025550101"
+      },
+      {
+        "system": "phone",
+        "use": "work",
+        "value": "+12025550103",
+        "rank": 2
+      }
+    ],
+    "putStatus": 200,
+    "pageErrors": []
+  }
+]

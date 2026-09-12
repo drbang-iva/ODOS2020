@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
 import { test } from "node:test";
 import type { Bundle, Patient, Resource } from "@medplum/fhirtypes";
-import { resolveSmsNumber } from "../src/comms/suppression-gate.js";
+import { createGhlAdapter } from "../src/comms/adapters/ghl-adapter.js";
+import { resolveSmsNumber, resolveVoiceNumber } from "../src/comms/suppression-gate.js";
 import {
   COMMS_CHANNEL_ROLES,
   commsChannelRoutingFromEnv,
@@ -783,4 +784,54 @@ test("communications dispatch reuses one Google adapter token cache across resol
 
   assert.equal(gmailCalls, 2);
   assert.equal(tokenCalls, 1);
+});
+
+test("H8 / FB1: configured conversation history lists for a marked patient while SMS refuses", async () => {
+  let requests = 0;
+  const dispatch = createCommsDispatch([{ provider: "ghl", config: { locationId: "synthetic", accessToken: "synthetic-token" } }], {
+    now: () => new Date("2026-08-02T15:00:00.000Z"),
+    fetchImpl: async () => { requests++; return Response.json({ contacts: [] }); },
+  });
+  const subject: Patient = { resourceType: "Patient", id: "synthetic-1", telecom: [{ system: "phone", use: "mobile", value: "+12025550101" }], extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }] };
+  const adapter = dispatch.getAdapter("ghl", { ...fakeFhir(), read: async <T extends Resource>(): Promise<T> => structuredClone(subject) as T });
+  assert.equal(resolveSmsNumber(subject, new Date("2026-08-02T15:00:00.000Z")), undefined);
+  assert.deepEqual(await adapter.listConversations!({ patientReference: "Patient/synthetic-1" }), []);
+  assert.ok(requests >= 1);
+  requests = 0;
+  await assert.rejects(adapter.sendSms!({ patientReference: "Patient/synthetic-1", body: "Synthetic reminder", campaignType: "appointment-reminder", suppression: {} }));
+  assert.equal(requests, 0);
+});
+
+
+test("FB2: GHL send uses the SMS resolver and never the lookup resolver", async () => {
+  let requests = 0;
+  const subject: Patient = { resourceType: "Patient", telecom: [{ system: "phone", use: "mobile", value: "+12025550101" }], extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }] };
+  const now = new Date("2026-08-02T15:00:00.000Z");
+  const adapter = createGhlAdapter({ locationId: "synthetic", accessToken: "synthetic-token" }, {
+    resolvePatientPhone: async () => {
+      const number = resolveSmsNumber(subject, now);
+      if (!number) throw new Error("Synthetic SMS refusal");
+      return number;
+    },
+    resolvePatientLookupPhone: async () => resolveVoiceNumber(subject, now)!,
+    fetchImpl: async (url) => {
+      requests++;
+      return Response.json(String(url).endsWith("/conversations/messages")
+        ? { messageId: "synthetic-message", conversationId: "synthetic-thread" }
+        : { contacts: [{ id: "synthetic-contact", phone: "+12025550101" }] });
+    },
+  });
+  await assert.rejects(adapter.sendSms!({ patientReference: "Patient/synthetic-1", body: "Synthetic reminder", campaignType: "appointment-reminder" }), /Synthetic SMS refusal/);
+  assert.equal(requests, 0);
+});
+
+test("FB3: marked patient without a phone gets an accurate history lookup error", async () => {
+  let requests = 0;
+  const dispatch = createCommsDispatch([{ provider: "ghl", config: { locationId: "synthetic", accessToken: "synthetic-token" } }], {
+    fetchImpl: async () => { requests++; return Response.json({ contacts: [] }); },
+  });
+  const subject: Patient = { resourceType: "Patient", id: "synthetic-1", extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }] };
+  const adapter = dispatch.getAdapter("ghl", { ...fakeFhir(), read: async <T extends Resource>(): Promise<T> => structuredClone(subject) as T });
+  await assert.rejects(adapter.listConversations!({ patientReference: "Patient/synthetic-1" }), { message: "Patient/synthetic-1 has no active phone in Patient.telecom." });
+  assert.equal(requests, 0);
 });

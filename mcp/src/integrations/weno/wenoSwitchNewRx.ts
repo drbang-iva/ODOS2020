@@ -754,7 +754,7 @@ function isoDateTime(value: string | undefined, label: string): string {
 }
 
 function phone(telecom: Patient["telecom"] | Practitioner["telecom"]): string | undefined {
-  return telecom?.find((contact) => contact.system === "phone" && contact.value)?.value;
+  return telecom?.find((contact) => contact.system === "phone" && contact.use !== "old" && contact.value?.trim())?.value;
 }
 
 function communicationNumbers(value: string | undefined): string {

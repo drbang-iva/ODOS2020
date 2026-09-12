@@ -9,11 +9,13 @@ import type {
 import type { FhirSearchParams } from "../src/fhir-client.js";
 import {
   ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+  ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL,
   clearPatientSmsOptOut,
   createSuppressedCommsProvider,
   readPatientSmsOptOut,
   recordPatientSmsOptOut,
   resolveSmsNumber,
+  resolveVoiceNumber,
   updateInboundSuppression,
 } from "../src/comms/suppression-gate.js";
 
@@ -1060,3 +1062,78 @@ test("record refuses failed or incomplete transaction responses and propagates c
     executeTransactionAsActor: async () => { throw conflict; },
   } as never, "Patient/synthetic-1", RECORD_INPUT), (error) => error === conflict);
 });
+
+const NO_TEXTABLE_NUMBER = "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number";
+const TEXTABLE_NOW = new Date("2026-08-02T15:00:00.000Z");
+function noTextablePatient(telecom: Patient["telecom"] = [{ system: "phone", use: "mobile", value: "+12025550101" }]): Patient {
+  return patient({ telecom, extension: [{ url: NO_TEXTABLE_NUMBER, valueBoolean: true }] });
+}
+
+test("H4: marked patient resolves no SMS number and sendSms refuses without sending", async () => {
+  const subject = noTextablePatient();
+  assert.equal(resolveSmsNumber(subject, TEXTABLE_NOW), undefined);
+  const sent: SendSmsRequest[] = [];
+  const adapter = createSuppressedCommsProvider(fakeSmsProvider(sent), {
+    fhir: fhirFor(subject), practiceTimeZone: "America/New_York", now: () => TEXTABLE_NOW,
+  });
+  await assert.rejects(adapter.sendSms!({ patientReference: "Patient/synthetic-1", body: "Synthetic reminder", campaignType: "appointment-reminder", suppression: {} }));
+  assert.equal(sent.length, 0);
+});
+
+test("H6: refusal marker wins even over an explicit SMS ContactPoint", () => {
+  assert.equal(resolveSmsNumber(noTextablePatient([{ system: "sms", value: "+12025550103" }]), TEXTABLE_NOW), undefined);
+});
+
+test("H11: refusal errors distinguish a marked patient with and without a current phone", async () => {
+  const errors: string[] = [];
+  for (const telecom of [[], [{ system: "phone", use: "mobile", value: "+12025550101" }]] as Patient["telecom"][]) {
+    const sent: SendSmsRequest[] = [];
+    const adapter = createSuppressedCommsProvider(fakeSmsProvider(sent), {
+      fhir: fhirFor(noTextablePatient(telecom)), practiceTimeZone: "America/New_York", now: () => TEXTABLE_NOW,
+    });
+    await assert.rejects(adapter.sendSms!({ patientReference: "Patient/synthetic-1", body: "Synthetic reminder", campaignType: "appointment-reminder", suppression: {} }), (error: Error) => {
+      errors.push(error.message);
+      assert.match(error.message, /no textable number/i);
+      assert.doesNotMatch(error.message, /no (active )?phone (on file|in Patient.telecom)/i);
+      return true;
+    });
+    assert.equal(sent.length, 0);
+  }
+  assert.notEqual(errors[0], errors[1]);
+});
+
+test("H5: marked patient still resolves a voice number and places a call", async () => {
+  const subject = noTextablePatient();
+  assert.equal(resolveVoiceNumber(subject, TEXTABLE_NOW), "+12025550101");
+  const calls: string[] = [];
+  const adapter = createSuppressedCommsProvider({
+    ...fakeSmsProvider([]),
+    async initiateCall(request) { calls.push(request.toNumber!); return { callId: "synthetic-call" }; },
+  }, { fhir: fhirFor(subject), practiceTimeZone: "America/New_York", now: () => TEXTABLE_NOW });
+  assert.deepEqual(await adapter.initiateCall!({ patientReference: "Patient/synthetic-1" }), { callId: "synthetic-call" });
+  assert.deepEqual(calls, ["+12025550101"]);
+});
+
+test("H12: absent marker keeps SMS and voice mobile then first-active fallback", async () => {
+  for (const telecom of [
+    [{ system: "phone", use: "work", value: "+12025550102" }, { system: "phone", use: "mobile", value: "+12025550101" }],
+    [{ system: "phone", use: "work", value: "+12025550101" }],
+  ] as Patient["telecom"][]) {
+    const subject = patient({ telecom });
+    assert.equal(resolveSmsNumber(subject, TEXTABLE_NOW), "+12025550101");
+    assert.equal(resolveVoiceNumber(subject, TEXTABLE_NOW), "+12025550101");
+    const sent: SendSmsRequest[] = [];
+    const adapter = createSuppressedCommsProvider(fakeSmsProvider(sent), { fhir: fhirFor(subject), practiceTimeZone: "America/New_York", now: () => TEXTABLE_NOW });
+    assert.equal((await adapter.sendSms!({ patientReference: "Patient/synthetic-1", body: "Synthetic reminder", campaignType: "appointment-reminder", suppression: {} })).outcome, "sent");
+    assert.equal(sent[0].toNumber, "+12025550101");
+  }
+});
+
+
+for (const [guard, value] of [["FB6", true], ["FB7", false], ["FB8", undefined]] as const) {
+  test(`${guard}: SMS marker value ${String(value)}`, () => {
+    const subject = noTextablePatient();
+    subject.extension = [{ url: ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, ...(value === undefined ? {} : { valueBoolean: value }) }];
+    assert.equal(resolveSmsNumber(subject, TEXTABLE_NOW), value === true ? undefined : "+12025550101");
+  });
+}

@@ -997,6 +997,12 @@
       "namespace": "communications",
       "status": "active",
       "sliceConsumer": "comms-matrix"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "item-1a"
     }
   ]
 }

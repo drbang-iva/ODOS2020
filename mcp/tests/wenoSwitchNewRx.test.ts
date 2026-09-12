@@ -667,3 +667,18 @@ function pharmacyIdentification(value: string): string {
 }
 
 const PRE_CHANGE_ADULT_XML = `<?xml version="1.0" encoding="utf-8"?><Message DatatypesVersion="20170715" TransportVersion="20170715" TransactionDomain="SCRIPT" TransactionVersion="20170715" StructuresVersion="20170715" ECLVersion="20170715"><Header><To Qualifier="P">1234567</To><From Qualifier="D">TEST_ROUTING_ID</From><MessageID>adult-byte-identical-baseline</MessageID><SentTime>2026-07-17T17:31:00.000Z</SentTime><Security><UsernameToken><Username>1417</Username><Password Type="PasswordDigest">TEST_MD5_PLACEHOLDER</Password></UsernameToken></Security><SenderSoftware><SenderSoftwareDeveloper>Test Developer</SenderSoftwareDeveloper><SenderSoftwareProduct>ODOS 20/20</SenderSoftwareProduct><SenderSoftwareVersionRelease>0.0.1-test</SenderSoftwareVersionRelease></SenderSoftware></Header><Body><NewRx><Patient><HumanPatient><Name><LastName>O&apos;Neil &amp; Sons</LastName><FirstName>Jane &lt;Test&gt;</FirstName></Name><Gender>F</Gender><DateOfBirth><Date>1990-01-02</Date></DateOfBirth><Address><AddressLine1>1 Main &amp; First</AddressLine1><City>Austin</City><StateProvince>TX</StateProvince><PostalCode>78701</PostalCode><CountryCode>US</CountryCode></Address><CommunicationNumbers><PrimaryTelephone><Number>5125550100</Number></PrimaryTelephone></CommunicationNumbers></HumanPatient></Patient><Pharmacy><Identification><NCPDPID>1234567</NCPDPID><NPI>NONE</NPI></Identification><BusinessName>Test Direct Pharmacy</BusinessName><Address><AddressLine1>3 Cert Way</AddressLine1><City>Austin</City><StateProvince>TX</StateProvince><PostalCode>78703</PostalCode><CountryCode>US</CountryCode></Address><CommunicationNumbers><PrimaryTelephone><Number>5125550102</Number></PrimaryTelephone></CommunicationNumbers></Pharmacy><Prescriber><NonVeterinarian><Identification><NPI>1234567893</NPI></Identification><Name><LastName>Bang</LastName><FirstName>Eric</FirstName><Suffix>OD</Suffix></Name><Address><AddressLine1>2 Clinic Rd</AddressLine1><City>Austin</City><StateProvince>TX</StateProvince><PostalCode>78702</PostalCode><CountryCode>US</CountryCode></Address><CommunicationNumbers><PrimaryTelephone><Number>5125550101</Number></PrimaryTelephone></CommunicationNumbers><PrescriberPlaceOfService>11</PrescriberPlaceOfService></NonVeterinarian></Prescriber><MedicationPrescribed><DrugDescription>Test Drug 10 mg tablet</DrugDescription><DrugCoded><DrugDBCode><Code>TEST_DRUG_CODE</Code><Qualifier>TEST_DRUG_QUALIFIER</Qualifier></DrugDBCode><DEASchedule><Code>C38046</Code></DEASchedule></DrugCoded><Quantity><Value>30</Value><CodeListQualifier>38</CodeListQualifier><QuantityUnitOfMeasure><Code>TEST_UOM_CODE</Code></QuantityUnitOfMeasure></Quantity><DaysSupply>30</DaysSupply><WrittenDate><DateTime>2026-07-17T17:30:00.000Z</DateTime></WrittenDate><Substitutions>1</Substitutions><NumberOfRefills>2</NumberOfRefills><Sig><SigText>Take 1 tablet by mouth daily.</SigText></Sig></MedicationPrescribed></NewRx></Body></Message>`;
+
+
+for (const [guard, use] of [["FB4", "home"], ["FB5", "mobile"]] as const) {
+  test(`${guard}: NewRx skips obsolete phone before current ${use}`, () => {
+    const patient: Patient = { ...PATIENT, telecom: [
+      { system: "phone", use: "old", value: "2025550101" },
+      { system: "phone", use, value: "2025550102" },
+    ] };
+    const xml = buildWenoSwitchNewRx({ ...buildInput(`synthetic-${guard}`), patient });
+    const patientXml = xml.match(/<HumanPatient>(.*?)<\/HumanPatient>/s)?.[1];
+    assert.ok(patientXml);
+    assert.match(patientXml, /<PrimaryTelephone><Number>2025550102<\/Number><\/PrimaryTelephone>/);
+    assert.doesNotMatch(patientXml, /2025550101/);
+  });
+}

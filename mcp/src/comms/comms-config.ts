@@ -23,6 +23,7 @@ import type { CommsProvider } from "./comms-provider.js";
 import {
   createSuppressedCommsProvider,
   resolveSmsNumber,
+  resolveVoiceNumber,
   type SmsStopScope,
   type SuppressionFhir,
 } from "./suppression-gate.js";
@@ -287,6 +288,8 @@ export function createCommsDispatch(
           fetchImpl: deps.fetchImpl,
           resolvePatientPhone: (patientReference) =>
             patientPhone(callerFhir, patientReference, deps.now?.() ?? new Date()),
+          resolvePatientLookupPhone: (patientReference) =>
+            patientPhone(callerFhir, patientReference, deps.now?.() ?? new Date(), resolveVoiceNumber),
         });
         return scopeAdapter(
           createSuppressedCommsProvider(adapter, suppression),
@@ -713,11 +716,12 @@ async function patientPhone(
   fhir: SuppressionFhir,
   patientReference: string,
   now: Date,
+  resolveNumber = resolveSmsNumber,
 ): Promise<string> {
   const match = /^Patient\/([A-Za-z0-9.-]{1,64})$/.exec(patientReference);
   if (!match) throw new Error("GHL conversation patientReference must be Patient/….");
   const patient = await fhir.read<Patient>("Patient", match[1]);
-  const phone = resolveSmsNumber(patient, now);
+  const phone = resolveNumber(patient, now);
   if (!phone) throw new Error(`Patient/${patient.id ?? match[1]} has no active phone in Patient.telecom.`);
   return phone;
 }

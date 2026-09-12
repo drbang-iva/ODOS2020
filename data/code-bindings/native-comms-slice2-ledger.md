@@ -49,3 +49,13 @@ Element names are compiled against the installed `@medplum/fhirtypes` R4 declara
 | Every outbound SMS includes opt-out language | Adapter appends `Reply STOP to unsubscribe.` when a caller template omits it; default SMS reminder templates carry it explicitly | `mcp/src/comms/adapters/twilio-adapter.ts` | `mcp/tests/twilioAdapter.test.ts` | verified (local; stricter than Twilio's initial-message floor) |
 | Local suppression mirror | Existing ODOS patient/channel opt-out extension suppresses SMS before provider dispatch; Twilio remains the authoritative carrier-side block and 21610 signal | `mcp/src/comms/suppression-gate.ts` | `mcp/tests/commsSuppression.test.ts` | verified (local) |
 | Webhook boundary | Slice 2 provided signature-first inbound and status handlers without a public route. Voice Slice A later mounted both SMS routes plus the Voice routes when `TWILIO_WEBHOOK_BASE_URL` is configured; inbound conversation persistence/UI remains deferred. | `mcp/src/comms/adapters/twilio-adapter.ts` | `data/code-bindings/native-comms-voice-slice-a-ledger.md` | verified (local); Slice A closed the route gap |
+
+## Item 1a: textable-number marker
+
+Access date: 2026-09-12. The new ODOS canonical URL is locally authored; the sources
+below verify its FHIR representation, not publication of an HL7-owned extension.
+
+| Artifact | Chosen value | Source 1 URL | Source 2 URL | Access date | Status |
+|---|---|---|---|---|---|
+| Simple extension base | `http://hl7.org/fhir/StructureDefinition/Extension`; fixed canonical URL; nested extensions prohibited; boolean value | https://hl7.org/fhir/R4/extensibility.html | https://hl7.org/fhir/R4/extension.profile.json.html | 2026-09-12 | verified; sources agree |
+| Context and constraints | Patient context, extension 0..1, value 1..1 with `fixedBoolean: true` | https://hl7.org/fhir/R4/defining-extensions.html | https://hl7.org/fhir/R4/elementdefinition-definitions.html | 2026-09-12 | verified FHIR constraint mechanics; Patient-only semantics are the ODOS contract |
