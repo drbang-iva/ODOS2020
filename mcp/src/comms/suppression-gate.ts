@@ -815,7 +815,7 @@ function patientEmail(patient: Patient, now: Date): string {
 }
 
 function hasNoTextableNumber(resource: Patient | RelatedPerson): boolean {
-  return resource.extension?.some((entry) => entry.url === ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL) ?? false;
+  return resource.extension?.some((entry) => entry.url === ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL && entry.valueBoolean === true) ?? false;
 }
 
 export function resolveSmsNumber(resource: Patient | RelatedPerson, now: Date): string | undefined {

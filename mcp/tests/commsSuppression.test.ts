@@ -9,6 +9,7 @@ import type {
 import type { FhirSearchParams } from "../src/fhir-client.js";
 import {
   ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+  ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL,
   clearPatientSmsOptOut,
   createSuppressedCommsProvider,
   readPatientSmsOptOut,
@@ -1127,3 +1128,12 @@ test("H12: absent marker keeps SMS and voice mobile then first-active fallback",
     assert.equal(sent[0].toNumber, "+12025550101");
   }
 });
+
+
+for (const [guard, value] of [["FB6", true], ["FB7", false], ["FB8", undefined]] as const) {
+  test(`${guard}: SMS marker value ${String(value)}`, () => {
+    const subject = noTextablePatient();
+    subject.extension = [{ url: ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, ...(value === undefined ? {} : { valueBoolean: value }) }];
+    assert.equal(resolveSmsNumber(subject, TEXTABLE_NOW), value === true ? undefined : "+12025550101");
+  });
+}

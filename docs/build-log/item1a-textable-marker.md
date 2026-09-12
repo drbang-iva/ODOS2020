@@ -93,3 +93,60 @@ Limits: role lookup, overview summary, opt-out and preference reads used explici
 Independent evaluation remains required at the final PR head. The author has not posted an evaluation verdict or applied an evaluated label. Bot completion and comment dispositions are recorded on the PR, separately from this author evidence.
 
 No new architectural decision was made; no decision-index update or cross-repository change was performed.
+
+
+## Fixback: history lookup, prescription phone, and marker value
+
+This section supersedes the original H8 behavior and presence-only marker interpretation above. Starting head: `96b725d8a4d2bb9b916b57e0407e5886d36b348e`; base remains `5b72b1a1002d754f4874c1f4d6d4c9e4b3331f59`.
+
+- F1: GHL history uses a separate lookup resolver wired to the existing `resolveVoiceNumber`. SMS keeps its marker-aware resolver. The shared Patient lookup accepts the selection function, preserving reference validation and avoiding another selector. H8 now requires a provider history lookup while the same marked Patient's SMS is refused.
+- F2: WENO's shared phone helper excludes obsolete and blank entries. Both obsolete/home and obsolete/mobile Patient shapes emit the current number. The adult XML golden is unchanged; existing prescriber expectations pass. Period filtering remains unchanged.
+- F3: The marker refuses SMS only when `valueBoolean === true`. False and missing values resolve normally.
+
+No other adapter uses `resolvePatientPhone` for a read. No UI source, suppression state, preference cells, RelatedPerson semantics, or phone validation changed. The existing GHL adapter history fixture now supplies the new lookup dependency.
+
+### Fixback guard proof
+
+Each command ran from `mcp/`: `node --import tsx --test --test-name-pattern=FBn tests/<file>.test.ts`. Counts below are the runner's actual `# tests / # pass / # fail`; exit statuses were captured separately. Each production mutation was restored before GREEN and before the next guard.
+
+| Guard | Deliberate break | Mutated counts; exit | Restored counts; exit |
+|---|---|---|---|
+| FB1 | Remove the lookup's `resolveVoiceNumber` argument, restoring SMS selection | 1 / 0 / 1; 1 | 1 / 1 / 0; 0 |
+| FB2 | Send through the lookup dependency | 1 / 0 / 1; 1 | 1 / 1 / 0; 0 |
+| FB3 | Substitute the SMS refusal message for the accurate no-phone lookup error | 1 / 0 / 1; 1 | 1 / 1 / 0; 0 |
+| FB4 | Restore the original unfiltered WENO find (old/home) | 1 / 0 / 1; 1 | 1 / 1 / 0; 0 |
+| FB5 | Restore the original unfiltered WENO find (old/mobile) | 1 / 0 / 1; 1 | 1 / 1 / 0; 0 |
+| FB6 | Restore presence-only marker matching; true is the control | 1 / 1 / 0; 0 | 1 / 1 / 0; 0 |
+| FB7 | Restore presence-only marker matching; false | 1 / 0 / 1; 1 | 1 / 1 / 0; 0 |
+| FB8 | Restore presence-only marker matching; missing value | 1 / 0 / 1; 1 | 1 / 1 / 0; 0 |
+
+FB2's mutant completed a synthetic adapter send (`Missing expected rejection`), proving the zero-provider-request boundary. FB1's mutant threw the prior false no-phone error. FB4/FB5 selected the obsolete number. FB7/FB8 returned undefined instead of the current number. An initial marker fixture import omission was corrected before recording these mutation results; that setup failure is not claimed as guard evidence.
+
+### Fixback regression inventory
+
+Baseline numbers are the supplied independently run inventory at the starting head. Every after count below was run on the restored fixback code. MCP commands: `npm --prefix mcp test -- tests/<file>.test.ts`. Individual UI commands, from `ui/`: `node --import tsx --test tests/<file>.test.tsx`.
+
+| File / suite | Starting count | Fixback tests | Pass | Fail | Skipped | Exit |
+|---|---:|---:|---:|---:|---:|---:|
+| commsSuppression | 33 | 36 | 36 | 0 | 0 | 0 |
+| commsApi | 93 | 93 | 93 | 0 | 0 | 0 |
+| commsConfig | 28 | 30 | 30 | 0 | 0 | 0 |
+| commsProfileBindings | 9 | 9 | 9 | 0 | 0 | 0 |
+| wenoSwitchNewRx | 35 | 37 | 37 | 0 | 0 | 0 |
+| ghlAdapter (additional affected suite) | — | 17 | 17 | 0 | 0 | 0 |
+| patientRegistration | 20 | 20 | 20 | 0 | 0 | 0 |
+| demographicsConcurrency | 3 | 3 | 3 | 0 | 0 | 0 |
+| patientRegistrationEndpoint | 4 | 4 | 4 | 0 | 0 | 0 |
+| registrationCommunicationPreferences | 8 | 8 | 8 | 0 | 0 | 0 |
+
+| full UI (`npm --prefix ui test`) | 1432 | 1432 | 1432 | 0 | 0 | 0 |
+
+Build commands: `npm --prefix mcp run build` exited 0; `npm --prefix ui run build` exited 0 (typecheck and Vite bundle; existing bundle-size warning). `git diff --check` exited 0.
+
+H1–H9 and H11–H14 pass in those suites, with H8 rewritten. H10 was also rerun against a fresh synthetic project on the disposable local server: `installer exit 0; expected 1 definition, actual 1; installation assertion PASS`. Its first retry encountered an expired token; a fresh disposable identity resolved that setup issue. The installer and artifact remain unchanged.
+
+### Limits and handoff
+
+Provider calls are synthetic fetch fixtures; no real GHL service or pharmacy received a request. Existing browser evidence covers the unchanged demographics surface. This fixback adds no visible UI and makes no claim of live provider behavior. The no-phone demographics limitation and SMS-as-voice policy question remain outside scope. No new clinical code or FHIR artifact URL was introduced, so no additional verification-ledger rows are required.
+
+**NOT EVALUATED — awaiting independent evaluation of the fixback head.** Author test evidence is not an independent verdict.

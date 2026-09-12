@@ -47,6 +47,7 @@ export interface GhlAdapterConfig {
 export interface GhlAdapterDeps {
   fetchImpl?: typeof fetch;
   resolvePatientPhone?(patientReference: string): Promise<string>;
+  resolvePatientLookupPhone?(patientReference: string): Promise<string>;
 }
 
 interface GhlContact {
@@ -233,10 +234,10 @@ export function createGhlAdapter(
       }
       let contactId: string | undefined;
       if (input.patientReference) {
-        if (!deps.resolvePatientPhone) {
+        if (!deps.resolvePatientLookupPhone) {
           throw new Error("GHL patient-filtered conversation history requires a patient phone resolver.");
         }
-        const contact = await exactContactForPhone(await deps.resolvePatientPhone(input.patientReference));
+        const contact = await exactContactForPhone(await deps.resolvePatientLookupPhone(input.patientReference));
         if (!contact) return [];
         contactId = contact.id;
       }

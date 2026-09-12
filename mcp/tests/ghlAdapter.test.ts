@@ -156,7 +156,7 @@ test("GHL contact-resolution errors never disclose the patient phone number", as
 test("GHL maps a patient-filtered conversation row from the documented search response", async () => {
   const urls: string[] = [];
   const adapter = createGhlAdapter({ locationId: LOCATION_ID, accessToken: ACCESS_TOKEN }, {
-    resolvePatientPhone: async (reference) => {
+    resolvePatientLookupPhone: async (reference) => {
       assert.equal(reference, "Patient/synthetic-1");
       return "+18645550199";
     },
