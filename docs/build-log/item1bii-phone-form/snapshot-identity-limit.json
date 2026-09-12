@@ -1,0 +1,107 @@
+{
+  "finding": "Identical system/value/use triples hide a permutation during preference refresh",
+  "outcome": "LIMITATION REPRODUCED; not an acceptance test or an independent verdict",
+  "originalIds": [
+    "duplicate-A",
+    "duplicate-B"
+  ],
+  "heldIds": [
+    "duplicate-B",
+    "duplicate-A"
+  ],
+  "snapshot": {
+    "now": "2026-09-12T15:00:00.000Z",
+    "loadedTextable": "",
+    "entries": [
+      {
+        "system": "phone",
+        "value": "+12025550101",
+        "use": "mobile"
+      },
+      {
+        "system": "phone",
+        "value": "+12025550101",
+        "use": "mobile"
+      }
+    ]
+  },
+  "originallySelectedId": "duplicate-A",
+  "editedId": "duplicate-B",
+  "writeCount": 1,
+  "serializedPut": {
+    "resourceType": "Patient",
+    "id": "synthetic-telecom",
+    "meta": {
+      "versionId": "4"
+    },
+    "name": [
+      {
+        "use": "official",
+        "given": [
+          "Synthetic"
+        ],
+        "family": "Telecom"
+      }
+    ],
+    "birthDate": "1980-01-02",
+    "gender": "unknown",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "1 Synthetic Way"
+        ],
+        "city": "Synthetic",
+        "state": "SC",
+        "postalCode": "29601"
+      }
+    ],
+    "extension": [
+      {
+        "url": "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out",
+        "extension": [
+          {
+            "url": "channel",
+            "valueCode": "sms"
+          }
+        ]
+      }
+    ],
+    "telecom": [
+      {
+        "id": "duplicate-B",
+        "system": "phone",
+        "value": "+12025550108",
+        "use": "mobile",
+        "rank": 2,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "extension": [
+          {
+            "url": "urn:synthetic:contact-note",
+            "valueString": "Synthetic retained metadata"
+          }
+        ]
+      },
+      {
+        "id": "duplicate-A",
+        "system": "phone",
+        "value": "+12025550101",
+        "use": "mobile",
+        "rank": 1,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "extension": [
+          {
+            "url": "urn:synthetic:contact-note",
+            "valueString": "Synthetic retained metadata"
+          }
+        ]
+      }
+    ]
+  }
+}

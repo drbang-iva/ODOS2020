@@ -105,15 +105,26 @@ and source is restored in `finally` before the next guard.
 | K12 + H14 | Restore required-phone validation | 2 / 2 / 2 |
 | K13 | Wire the rendered Phone 2 control to Phone 1 | 1 / 1 / 1 |
 | K14 | Drop unrelated Patient extensions | 1 / 1 / 1 |
+| K14 retention | Delete an unrelated email ContactPoint | 1 / 1 / 1 |
 | K15 | Retake the snapshot during preference refresh | 1 / 1 / 1 |
 | K16 | Skip the registration marker/refusal write | 1 / 1 / 1 |
 | R2 | Permit an empty selected texting slot | 1 / 1 / 1 |
 
-[Full TAP output for all 54 executions](item1bii-phone-form/guard-output.txt),
+[Full TAP output for all 57 executions](item1bii-phone-form/guard-output.txt),
 [structured results including mutation text and hashes](item1bii-phone-form/guard-results.json),
 and the [replay script](item1bii-phone-form/mutations.py) are retained. K5 asserts the real parser's
 `unrecognized_keys` issue and the real route's HTTP 400. The existing HTTP response projects issue
 path/message rather than exposing the Zod code; that response shape is unchanged.
+
+CodeRabbit found that the preservation oracle skipped identified telecom entries that disappeared.
+An email-deletion mutant demonstrated the gap: K14 still passed before the assertion was strengthened
+([command and counts](item1bii-phone-form/retention-oracle-before.json),
+[actual output](item1bii-phone-form/retention-oracle-before.txt)). The oracle now requires each original
+identified entry to remain before comparing its unrelated extensions. The same deletion now fails
+with `Expected telecom entry synthetic-email to be retained`; restoration passes. The added
+K14-retention row above records that green/red/restored cycle. This corrects test coverage; no
+application behavior changed in this review correction. The 15 phone-form tests and the full UI
+suite (1,447 tests, zero failures/skips, exit 0) were rerun after the correction.
 
 ## Actual browser and persistence proof
 
@@ -172,6 +183,22 @@ or browser capture. Stop this task's containers with
 `docker-compose -p odos-phone-textable -f .odos/phone-proof/compose.json down`.
 
 ## Follow-up and review boundary
+
+**PR-Agent snapshot finding — reproduced, requires contract adjudication.** The required snapshot
+records only raw `system`/`value`/`use` by index. If a preference refresh swaps two entries with
+identical triples but different IDs or metadata, that check cannot detect the permutation. The
+[diagnostic](item1bii-phone-form/snapshot-identity-limit.ts) loads duplicate-A in slot 1, swaps A/B in
+the held Patient, and edits slot 1. The real save serializes one PUT changing duplicate-B
+([captured result](item1bii-phone-form/snapshot-identity-limit.json)). This is a confirmed limitation
+of the prescribed snapshot contract, not a passing acceptance case. Extending the snapshot or
+matching on another field would change that contract; no such change has been made. The independent
+evaluator and operator must adjudicate it before merge. Replay with
+`node --import ./ui/node_modules/tsx/dist/loader.mjs docs/build-log/item1bii-phone-form/snapshot-identity-limit.ts`.
+
+**CodeRabbit Neither finding — rejected against the required behavior.** Clearing ContactPoint
+markers on Neither would destroy the history selection. K7 deliberately makes that exact change
+and fails; K13 and the browser/API sequence retain H-thread while the SMS resolver returns no
+number. Refusal and the retained marker serve distinct purposes. The implementation remains unchanged.
 
 > Known limit until item 1b-iv ships: the MCP update_patient tool (mcp/src/index.ts:5246-5255) and
 > the legacy import merge (mcp/src/legacy-import/patient-import.ts:354-383) replace telecom

@@ -631,6 +631,48 @@
     }
   },
   {
+    "guard": "K14-retention",
+    "fault": "Drop email ContactPoints when choosing a phone",
+    "file": "mcp/src/clinic/patient-telecom.ts",
+    "original": "telecom: patient.telecom?.map(point => {",
+    "replacement": "telecom: patient.telecom?.filter(point => point.system !== \"email\").map(point => {",
+    "sourceSha256": "c52f0b4635812a8682867c0ba65f4a070a87d26bddcea2ae2f0a50b3f002aea9",
+    "mutantSha256": "6afc3e40a16f5cf7c04cb87f42a7b7641a4efee09e317a033f81ebad059f59c0",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^K14:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
     "guard": "K15",
     "fault": "Retake the snapshot during preference refresh",
     "file": "ui/src/components/patient/PatientDemographicsEditor.tsx",

@@ -18,8 +18,10 @@ function preservationOracle(before: Patient, after: Patient) {
   const unrelated = (patient: Patient) => patient.extension?.filter(e => e.url !== ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL);
   assert.equal(JSON.stringify(unrelated(after)), JSON.stringify(unrelated(before)));
   for (const point of before.telecom ?? []) {
-    const retained = after.telecom?.find(p => p.id === point.id && point.id !== undefined);
-    if (retained) assert.equal(JSON.stringify(retained.extension?.filter(e => e.url !== ODOS_TEXTABLE_NUMBER_EXTENSION_URL)), JSON.stringify(point.extension?.filter(e => e.url !== ODOS_TEXTABLE_NUMBER_EXTENSION_URL)));
+    if (point.id === undefined) continue;
+    const retained = after.telecom?.find(p => p.id === point.id);
+    assert.ok(retained, `Expected telecom entry ${point.id} to be retained`);
+    assert.equal(JSON.stringify(retained.extension?.filter(e => e.url !== ODOS_TEXTABLE_NUMBER_EXTENSION_URL)), JSON.stringify(point.extension?.filter(e => e.url !== ODOS_TEXTABLE_NUMBER_EXTENSION_URL)));
   }
   assert.deepEqual(effectiveCommsPreferences(after, {}).appointment.sms, effectiveCommsPreferences(before, {}).appointment.sms);
   assert.equal(effectiveCommsPreferences(after, {}).appointment.sms.source, "suppression");

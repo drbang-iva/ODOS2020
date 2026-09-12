@@ -177,7 +177,7 @@ exit: 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 406.429334
+# duration_ms 392.237416
 
 full UI
 cwd: .
@@ -192,7 +192,7 @@ exit: 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 192020.736917
+# duration_ms 191188.692542
 
 ui-build; exit 0
 

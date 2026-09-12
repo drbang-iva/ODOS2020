@@ -1,0 +1,22 @@
+{
+  "check": "K14 before oracle correction under email-deletion mutant",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-name-pattern=^K14:",
+    "tests/patientPhoneForm.test.tsx"
+  ],
+  "cwd": "ui",
+  "fault": "Drop email ContactPoints when choosing a phone",
+  "original": "telecom: patient.telecom?.map(point => {",
+  "replacement": "telecom: patient.telecom?.filter(point => point.system !== \"email\").map(point => {",
+  "sourceSha256": "c52f0b4635812a8682867c0ba65f4a070a87d26bddcea2ae2f0a50b3f002aea9",
+  "exit": 0,
+  "tests": 1,
+  "pass": 1,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0
+}

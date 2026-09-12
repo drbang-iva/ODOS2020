@@ -29,6 +29,7 @@ cases = [
     ("K12", SHARED, 'const errors: Record<string, string> = {};', 'const errors: Record<string, string> = {}; if (phones.every(p => !p.value.trim())) errors.phone = "Phone number is required.";', "Restore required-phone validation for H14"),
     ("K13", FORM, 'textable: index === 0 ? "phone1" : "phone2"', 'textable: "phone1"', "Wire the Phone 2 control to Phone 1"),
     ("K14", UI, '    ...(existing ?? {}),', '    ...(existing ?? {}), extension: undefined,', "Drop unrelated Patient extensions on save"),
+    ("K14-retention", SHARED, 'telecom: patient.telecom?.map(point => {', 'telecom: patient.telecom?.filter(point => point.system !== "email").map(point => {', "Drop email ContactPoints when choosing a phone"),
     ("K15", FORM, '      setHeldPatient(fresh);', '      setHeldPatient(fresh);\n      setEdit(edit => ({ ...edit, snapshot: patientTelecomSnapshot(fresh, edit.snapshot.now) }));', "Retake the snapshot during preference refresh"),
     ("K16", SERVER, '  if (input.demographics.textable) {', '  if (false) {', "Omit server marker and refusal application"),
     ("R2", SHARED, 'if (textable === `phone${index + 1}` && (!slot.value.trim() || !valid))', 'if (false)', "Allow an empty selected texting slot"),

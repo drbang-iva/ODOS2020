@@ -201,7 +201,9 @@
     "pass": 15,
     "fail": 0,
     "cancelled": 0,
-    "skipped": 0
+    "skipped": 0,
+    "afterRetentionOracleCorrection": true,
+    "phoneFormTestSha256": "c1a370b23c8921389d496b4fc8546e6a087bb39d7c293e6a541b935d90e67d34"
   },
   {
     "suite": "full UI",
@@ -216,6 +218,8 @@
     "pass": 1447,
     "fail": 0,
     "cancelled": 0,
-    "skipped": 0
+    "skipped": 0,
+    "afterRetentionOracleCorrection": true,
+    "phoneFormTestSha256": "c1a370b23c8921389d496b4fc8546e6a087bb39d7c293e6a541b935d90e67d34"
   }
 ]
