@@ -4,6 +4,7 @@ import type { Patient } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PatientDemographicsEditor } from "../src/components/patient/PatientDemographicsEditor";
+import { resolveSmsNumber } from "../../mcp/src/comms/suppression-gate";
 import {
   createPatientDemographicsActions,
   emptyPatientDemographics,
@@ -164,4 +165,91 @@ test("demographics editor loads shared Patient fields, saves with the update sou
   assert.equal(updates, 1);
   assert.deepEqual(actions.discard(), COMPLETE_DRAFT);
   assert.equal(updates, 1);
+});
+
+const MOBILE = "+12025550101";
+const WORK = "+12025550102";
+const CHANGED = "+12025550103";
+const SMS_NOW = new Date("2026-08-02T15:00:00.000Z");
+
+function mobileWorkTelecom(): NonNullable<Patient["telecom"]> {
+  return [
+    { system: "phone", use: "mobile", value: MOBILE, rank: 2, period: { start: "2026-01-01", end: "2027-01-01" } },
+    { system: "phone", use: "work", value: WORK, rank: 1 },
+  ];
+}
+
+async function saveTelecom(telecom: Patient["telecom"], changes: Partial<PatientDemographicsDraft> = {}) {
+  const subject = { ...EXISTING, telecom };
+  const loaded = patientDemographicsFromPatient(subject);
+  const actions = createPatientDemographicsActions(subject, {
+    update: async (patient: Patient) => patient,
+  } as never);
+  return { loaded, saved: await actions.save({ ...loaded, ...changes }) };
+}
+
+test("G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom", async () => {
+  const telecom = mobileWorkTelecom();
+  const before = JSON.stringify(telecom);
+  const html = renderToStaticMarkup(<PatientDemographicsEditor patient={{ ...EXISTING, telecom }} onSaved={() => undefined} onDiscard={() => undefined} />);
+  assert.ok(html.includes(`value="${MOBILE}"`));
+  const { loaded, saved } = await saveTelecom(telecom);
+  assert.equal(loaded.phone, MOBILE);
+  assert.equal(resolveSmsNumber(saved, SMS_NOW), MOBILE);
+  assert.equal(JSON.stringify(saved.telecom), before);
+  assert.equal(JSON.stringify(telecom), before);
+});
+
+test("G2: a changed mobile value stays at its original position with metadata intact", async () => {
+  const telecom = mobileWorkTelecom();
+  const { saved } = await saveTelecom(telecom, { phone: CHANGED });
+  assert.deepEqual(saved.telecom, [{ ...telecom[0], value: CHANGED }, telecom[1]]);
+  assert.equal(resolveSmsNumber(saved, SMS_NOW), CHANGED);
+  assert.equal(telecom[0].value, MOBILE);
+});
+
+test("G3: the displayed home entry is updated in place even when it is not the first phone", async () => {
+  const home = { system: "phone", use: "home", value: WORK, rank: 2 } as const;
+  const mobile = { system: "phone", use: "mobile", value: MOBILE, rank: 1 } as const;
+  for (const telecom of [[home, mobile], [mobile, home]]) {
+    const { loaded, saved } = await saveTelecom(telecom, { phone: CHANGED });
+    assert.equal(loaded.phone, WORK);
+    assert.deepEqual(saved.telecom, telecom[0] === home
+      ? [{ ...home, value: CHANGED }, mobile]
+      : [mobile, { ...home, value: CHANGED }]);
+    assert.equal(resolveSmsNumber(saved, SMS_NOW), MOBILE);
+  }
+});
+
+test("G4: a missing phone appends exactly one home entry", async () => {
+  const email = { system: "email", use: "work", value: "work@example.test" } as const;
+  const { saved } = await saveTelecom([email], { phone: "5550100" });
+  assert.deepEqual(saved.telecom, [email, { system: "phone", use: "home", value: "5550100" }]);
+});
+
+test("G5: the displayed home email changes or clears in place without moving work email", async () => {
+  const work = { system: "email", use: "work", value: "work@example.test" } as const;
+  const home = { system: "email", use: "home", value: "home@example.test", rank: 2, period: { start: "2026-01-01" } } as const;
+  const phone = { system: "phone", use: "mobile", value: MOBILE } as const;
+  for (const value of ["changed@example.test", ""]) {
+    const { loaded, saved } = await saveTelecom([work, home, phone], { email: value });
+    assert.equal(loaded.email, "home@example.test");
+    assert.deepEqual(saved.telecom, [work, { ...home, value }, phone]);
+  }
+});
+
+test("G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves", async () => {
+  const telecom: NonNullable<Patient["telecom"]> = [
+    { system: "phone", use: "home", value: MOBILE, rank: 2, period: { start: "2026-01-01" } },
+    { system: "phone", use: "home", value: WORK, rank: 1 },
+  ];
+  const before = JSON.stringify(telecom);
+  const unchanged = await saveTelecom(telecom);
+  assert.equal(unchanged.loaded.phone, MOBILE);
+  assert.equal(patientDemographicsFromPatient(unchanged.saved).phone, MOBILE);
+  assert.equal(JSON.stringify(unchanged.saved.telecom), before);
+  const changed = await saveTelecom(telecom, { phone: CHANGED });
+  assert.deepEqual(changed.saved.telecom, [{ ...telecom[0], value: CHANGED }, telecom[1]]);
+  assert.equal(patientDemographicsFromPatient(changed.saved).phone, CHANGED);
+  assert.equal(JSON.stringify(telecom), before);
 });
