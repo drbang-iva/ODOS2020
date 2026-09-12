@@ -138,7 +138,6 @@ Baseline numbers are the supplied independently run inventory at the starting he
 | demographicsConcurrency | 3 | 3 | 3 | 0 | 0 | 0 |
 | patientRegistrationEndpoint | 4 | 4 | 4 | 0 | 0 | 0 |
 | registrationCommunicationPreferences | 8 | 8 | 8 | 0 | 0 | 0 |
-
 | full UI (`npm --prefix ui test`) | 1432 | 1432 | 1432 | 0 | 0 | 0 |
 
 Build commands: `npm --prefix mcp run build` exited 0; `npm --prefix ui run build` exited 0 (typecheck and Vite bundle; existing bundle-size warning). `git diff --check` exited 0.
