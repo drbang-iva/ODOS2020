@@ -4,8 +4,10 @@ import { CatalogFieldKit, type CatalogFieldDescriptor } from "../settings/Catalo
 import {
   createPatientDemographicsActions,
   patientDemographicsFromPatient,
+  patientTelecomSnapshot,
   validatePatientDemographics,
   type PatientDemographicsDraft,
+  type PatientDraftPhone,
 } from "../../lib/patient-registration";
 import { fhir } from "../../lib/fhir";
 import type { PatientVersion } from "../../lib/communications-client";
@@ -47,6 +49,10 @@ export function PatientDemographicsFields({
   communicationPreferences?: ReactNode;
 }) {
   const set = (key: string, value: unknown) => onChange({ ...draft, [key]: String(value) });
+  const setPhone = (index: number, change: Partial<PatientDraftPhone>) => onChange({
+    ...draft,
+    phones: draft.phones.map((phone, i) => i === index ? { ...phone, ...change } : phone) as PatientDemographicsDraft["phones"],
+  });
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <fieldset className="grid gap-4 rounded-lg border border-white/10 bg-black/10 p-4">
@@ -56,7 +62,27 @@ export function PatientDemographicsFields({
       </fieldset>
       <fieldset className="grid gap-4 rounded-lg border border-white/10 bg-black/10 p-4">
         <legend className="px-2 text-sm font-semibold text-blue-200">Contact information</legend>
-        <LabeledInput label="Phone" type="text" value={draft.phone} error={errors.phone} onChange={(value) => set("phone", value)} />
+        {draft.phones.map((phone, index) => <div key={index} className="grid grid-cols-[1fr_8rem] items-start gap-3">
+          <LabeledInput label={`Phone ${index + 1}`} type="tel" value={phone.value} error={errors[`phones.${index}.value`]} onChange={value => setPhone(index, { value })} />
+          <label className="grid gap-1 text-sm font-medium text-white/75">Phone {index + 1} type
+            <select className="scheduler-input" value={phone.use} onChange={event => setPhone(index, { use: event.target.value as PatientDraftPhone["use"] })}>
+              {phone.use === "other" && <option value="other" disabled>Other</option>}
+              <option value="mobile">Cell</option><option value="home">Home</option><option value="work">Work</option>
+            </select>
+          </label>
+        </div>)}
+        <fieldset className="grid gap-2 rounded border border-white/10 p-3">
+          <legend className="px-1 text-sm font-semibold text-white/90">Which number accepts text messages?</legend>
+          {draft.phones.map((phone, index) => <label key={index} className="flex items-center gap-2 text-sm text-white/80">
+            <input type="radio" name="textable" value={`phone${index + 1}`} checked={draft.textable === `phone${index + 1}`} onChange={() => onChange({ ...draft, textable: index === 0 ? "phone1" : "phone2" })} />
+            Phone {index + 1}{phone.value.trim() ? ` · ${phone.value}` : ""}
+          </label>)}
+          <label className="flex items-center gap-2 text-sm text-white/80">
+            <input type="radio" name="textable" value="neither" checked={draft.textable === "neither"} onChange={() => onChange({ ...draft, textable: "neither" })} />
+            Neither — none of my numbers can receive texts
+          </label>
+          <p className="text-xs leading-relaxed text-white/60">To stop or change the messages we send you, use the contact-preferences section — this question is only about which of your numbers can receive a text.</p>
+        </fieldset>
         <CatalogFieldKit fields={CONTACT_FIELDS} values={{ ...draft }} errors={errors} onChange={set} />
         <LabeledInput label="Email" type="email" value={draft.email} error={errors.email} onChange={(value) => set("email", value)} />
       </fieldset>
@@ -124,7 +150,8 @@ export function PatientDemographicsEditor({
       }
     }
   };
-  const [draft, setDraft] = useState(() => patientDemographicsFromPatient(patient));
+  const [{ draft, snapshot }, setEdit] = useState(() => readDemographics(patient));
+  const setDraft = (next: PatientDemographicsDraft) => setEdit(edit => ({ ...edit, draft: next }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>();
@@ -142,7 +169,7 @@ export function PatientDemographicsEditor({
     setSaving(true);
     setSaveError(undefined);
     try {
-      onSaved(await actions.save(draft));
+      onSaved(await actions.save(draft, snapshot));
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -151,7 +178,7 @@ export function PatientDemographicsEditor({
   };
 
   const discard = () => {
-    setDraft(actions.discard());
+    setEdit(readDemographics(heldPatient));
     onDiscard();
   };
 
@@ -187,6 +214,11 @@ export function PatientDemographicsEditor({
       </section>
     </div>
   );
+}
+
+function readDemographics(patient: Patient) {
+  const now = new Date().toISOString();
+  return { draft: patientDemographicsFromPatient(patient, now), snapshot: patientTelecomSnapshot(patient, now) };
 }
 
 function LabeledInput({ label, type, value, error, onChange }: { label: string; type: string; value: string; error?: string; onChange: (value: string) => void }) {

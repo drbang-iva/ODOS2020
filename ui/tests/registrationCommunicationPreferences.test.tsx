@@ -24,7 +24,7 @@ async function fillDemographics(renderer: ReactTestRenderer) {
   for (const [key, value] of Object.entries({ firstName: "Synthetic", lastName: "Registration", gender: "female" })) {
     await act(async () => catalogControl(renderer, key).props.onChange({ target: { value } }));
   }
-  for (const [label, value] of Object.entries({ "Date of birth": "1980-01-02", Phone: "555-555-0199" })) {
+  for (const [label, value] of Object.entries({ "Date of birth": "1980-01-02", "Phone 1": "555-555-0199" })) {
     await act(async () => renderer.root.findAllByType("label").find(node => node.children.includes(label))!.findByType("input").props.onChange({ target: { value } }));
   }
 }
@@ -136,7 +136,7 @@ test("paper confirmation requires a valid date before registration", async () =>
 });
 
 test("both registration client entry points omit an empty optional preference payload", async () => {
-  const draft = { ...emptyPatientDemographics(), firstName: "Synthetic", lastName: "Registration", gender: "female" as const, birthDate: "1980-01-02", phone: "555-555-0199" };
+  const draft = { ...emptyPatientDemographics(), firstName: "Synthetic", lastName: "Registration", gender: "female" as const, birthDate: "1980-01-02", phones: [{ value: "555-555-0199", use: "mobile" as const, sourceIndex: null }, { value: "", use: "mobile" as const, sourceIndex: null }] as [import("../src/lib/patient-registration").PatientDraftPhone, import("../src/lib/patient-registration").PatientDraftPhone] };
   for (const request of [registerPatient, createPatient]) {
     await request(draft, { communicationPreferences: { cells: [] } }, async (_input, init) => {
       assert.equal(Object.hasOwn(JSON.parse(String(init?.body)), "communicationPreferences"), false); return reply(created, 201);
