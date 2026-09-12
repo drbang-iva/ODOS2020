@@ -64,24 +64,24 @@ export function PatientDemographicsFields({
         <legend className="px-2 text-sm font-semibold text-blue-200">Contact information</legend>
         {draft.phones.map((phone, index) => <div key={index} className="grid grid-cols-[1fr_8rem] items-start gap-3">
           <LabeledInput label={`Phone ${index + 1}`} type="tel" value={phone.value} error={errors[`phones.${index}.value`]} onChange={value => setPhone(index, { value })} />
-          <label className="grid gap-1 text-sm font-medium text-white/75">Phone {index + 1} type
+          <label className="grid gap-1 text-sm font-medium text-[color:var(--odos-muted)]">Phone {index + 1} type
             <select className="scheduler-input" value={phone.use} onChange={event => setPhone(index, { use: event.target.value as PatientDraftPhone["use"] })}>
               {phone.use === "other" && <option value="other" disabled>Other</option>}
               <option value="mobile">Cell</option><option value="home">Home</option><option value="work">Work</option>
             </select>
           </label>
         </div>)}
-        <fieldset className="grid gap-2 rounded border border-white/10 p-3">
-          <legend className="px-1 text-sm font-semibold text-white/90">Which number accepts text messages?</legend>
-          {draft.phones.map((phone, index) => <label key={index} className="flex items-center gap-2 text-sm text-white/80">
+        <fieldset className="grid gap-2 rounded border border-[var(--odos-line)] p-3">
+          <legend className="px-1 text-sm font-semibold text-[color:var(--odos-text)]">Which number accepts text messages?</legend>
+          {draft.phones.map((phone, index) => <label key={index} className="flex items-center gap-2 text-sm text-[color:var(--odos-text)]">
             <input type="radio" name="textable" value={`phone${index + 1}`} checked={draft.textable === `phone${index + 1}`} onChange={() => onChange({ ...draft, textable: index === 0 ? "phone1" : "phone2" })} />
             Phone {index + 1}{phone.value.trim() ? ` · ${phone.value}` : ""}
           </label>)}
-          <label className="flex items-center gap-2 text-sm text-white/80">
+          <label className="flex items-center gap-2 text-sm text-[color:var(--odos-text)]">
             <input type="radio" name="textable" value="neither" checked={draft.textable === "neither"} onChange={() => onChange({ ...draft, textable: "neither" })} />
             Neither — none of my numbers can receive texts
           </label>
-          <p className="text-xs leading-relaxed text-white/60">To stop or change the messages we send you, use the contact-preferences section — this question is only about which of your numbers can receive a text.</p>
+          <p className="text-xs leading-relaxed text-[color:var(--odos-muted)]">To stop or change the messages we send you, use the contact-preferences section — this question is only about which of your numbers can receive a text.</p>
         </fieldset>
         <CatalogFieldKit fields={CONTACT_FIELDS} values={{ ...draft }} errors={errors} onChange={set} />
         <LabeledInput label="Email" type="email" value={draft.email} error={errors.email} onChange={(value) => set("email", value)} />
