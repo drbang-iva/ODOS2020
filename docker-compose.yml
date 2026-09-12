@@ -134,7 +134,8 @@ services:
     command: ["npm", "--prefix", "mcp", "run", "start"]
     environment:
       MEDPLUM_BASE_URL: http://medplum-server:8103/
-      ODOS_POSTGRES_URL: postgresql://medplum:medplum@postgres:5432/medplum
+      ODOS_POSTGRES_URL: postgresql://medplum@postgres:5432/medplum
+      PGPASSWORD: ${MEDPLUM_DATABASE_PASSWORD:?Set MEDPLUM_DATABASE_PASSWORD in the untracked .env}
       ODOS_AGENTOPS_RUNTIME: supervisor
       ODOS_WEASYPRINT_URL: http://weasyprint:8788
     volumes:

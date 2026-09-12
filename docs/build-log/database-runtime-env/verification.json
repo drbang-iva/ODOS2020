@@ -50,6 +50,16 @@
       ]
     },
     {
+      "mutation": "core-missing-runtime-password",
+      "verified_in_place": true,
+      "exit": 1,
+      "counts": [
+        "# tests 4",
+        "# pass 3",
+        "# fail 1"
+      ]
+    },
+    {
       "mutation": "restored-final",
       "exit": 0,
       "counts": [
@@ -70,6 +80,11 @@
         "http_status": 200
       },
       {
+        "case": "node-postgres authenticates using the core password-free URL and PGPASSWORD",
+        "pass": true,
+        "query": "SELECT 1"
+      },
+      {
         "case": "missing runtime override rejected by PostgreSQL",
         "pass": true,
         "database_error": "password authentication failed",
@@ -86,25 +101,41 @@
     "image_digest": "medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de",
     "cleanup_exit": 0,
     "remaining_containers": [],
-    "remaining_volumes": []
+    "remaining_volumes": [],
+    "literal_apostrophe_preserved": true
   },
   "runtime_probe_isolation": "Local Colima; fresh synthetic database, internal network, no host ports; only harness-owned resources removed",
   "probe_adjustments": [
     "Removed unrelated services and host port publication",
     "Used independent temporary volumes and generated synthetic credentials/signing keys",
-    "Bound a clean copy of the tracked JSON from a directory shared with Colima"
+    "Bound a clean copy of the tracked JSON from a directory shared with Colima",
+    "Ran node-postgres from the installed lockfile dependencies in a Node 22 client probe with the core service database environment; did not start the full ODOS application"
   ],
   "limits": [
     "Does not establish deployment to an existing installation",
     "Does not rotate an existing database role",
     "Does not verify operational source-sync scheduling",
-    "Independent evaluation pending"
+    "Independent evaluation pending",
+    "Existing host-tool/store default URLs are unchanged; host consumers must receive the configured ODOS_POSTGRES_URL"
   ],
   "file_sha256": {
-    "docker-compose.yml": "9d4d322d3d45253e0ae3505de415814868800fcc11a90bed4634bf5ee2e40dc3",
+    "docker-compose.yml": "18e33227695fc178b9556d5a5b3285bf86eb20f638736f4ccb6f7720bde5aeae",
     "medplum.config.json": "bf11929da109668996346e29d0413700f8810a6b3c91da0f389f0e66625d0408",
     ".env.example": "e572d1006df979685107c00eb09c154d79106d6a2a55ba27131366449610d4fe",
-    "mcp/tests/medplumDatabaseConfig.test.ts": "951c25cd64e34d2f8bf7d999d912f3bfbf64ea481da2d13580fc2fa483d64886",
-    "docs/install.md": "11d1df3ede1cd4056d4836524218d7d4be4ea8810c45c12f518cd8da7e5292a6"
+    "mcp/tests/medplumDatabaseConfig.test.ts": "389c5a73255595b7fa52db6e3bb11aa0a5be6fb6a5a398749c7c5fa87cb5fc3e",
+    "docs/install.md": "fcc06c48eeb65b67175b00bf08ec04bbcb4936834dcbeb3a78f127552b31dfaf"
+  },
+  "review_fixback": {
+    "apostrophe_fixture_before_fix": {
+      "total": 4,
+      "passed": 3,
+      "failed": 1
+    },
+    "final_config_tests": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    "core_profile_included": true
   }
 }

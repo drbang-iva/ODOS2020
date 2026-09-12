@@ -95,8 +95,12 @@ Set `ODOS_POSTGRES_URL` separately for the ODOS service and operator scripts, us
 `postgresql://medplum:<encoded-password>@127.0.0.1:5433/medplum`. Percent-encode the
 password component of that URL; do not encode the separate
 `MEDPLUM_DATABASE_PASSWORD` value. Single-quote values containing `$` or `#` in
-`.env` so Compose reads them literally. The two settings must describe the same
-database account. The isolated DR-drill stack retains its own disposable defaults
+`.env` so Compose reads them literally; escape an embedded apostrophe as `\'`.
+The two settings must describe the same
+database account. The optional containerized `odos-core` uses the internal host
+`postgres:5432` with a password-free URL and receives the same raw password through
+`PGPASSWORD`; node-postgres uses that environment value when the URL omits a password.
+The isolated DR-drill stack retains its own disposable defaults
 and does not consume the main stack's password.
 
 For an existing installation, first configure the current database password in
@@ -690,22 +694,23 @@ ports:
   - "127.0.0.1:5433:5432"
 ```
 
-Only the left-side host port is remapped. Keep the container-network URL unchanged:
+Only the left-side host port is remapped. The container-network URL has no password;
+Compose supplies `PGPASSWORD` from `MEDPLUM_DATABASE_PASSWORD`:
 
 ```yaml
-ODOS_POSTGRES_URL: postgresql://medplum:medplum@postgres:5432/medplum
+ODOS_POSTGRES_URL: postgresql://medplum@postgres:5432/medplum
 ```
 
 Then make the host-run tooling URL match the new host port in `.env`:
 
 ```bash
-ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:5433/medplum
+ODOS_POSTGRES_URL='postgresql://medplum:<encoded-password>@127.0.0.1:5433/medplum'
 ```
 
 Use the same URL for host-side `psql`, setup, preflight, and audit verification:
 
 ```bash
-export ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:5433/medplum
+export ODOS_POSTGRES_URL='postgresql://medplum:<encoded-password>@127.0.0.1:5433/medplum'
 docker-compose up -d
 psql "$ODOS_POSTGRES_URL" -c "select 1;"
 npm run setup-practice
