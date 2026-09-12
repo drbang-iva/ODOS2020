@@ -14,6 +14,8 @@ import type { InboundMessageEvent, InboundOptOutType } from "./inbound-receiver.
 
 export const ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-comms-marketing-consent";
+export const ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number";
 export const ODOS_COMMS_OPT_OUT_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out";
 export const ODOS_PATIENT_TIMEZONE_EXTENSION_URL =
@@ -515,7 +517,7 @@ export function createSuppressedCommsProvider(
         const patient = await readPatient(deps.fhir, request.patientReference);
         return provider.initiateCall!({
           ...request,
-          toNumber: request.toNumber ?? patientPhone(patient, deps.now?.() ?? new Date()),
+          toNumber: request.toNumber ?? patientVoicePhone(patient, deps.now?.() ?? new Date()),
         });
       },
     } : {}),
@@ -812,7 +814,15 @@ function patientEmail(patient: Patient, now: Date): string {
   return email;
 }
 
+function hasNoTextableNumber(resource: Patient | RelatedPerson): boolean {
+  return resource.extension?.some((entry) => entry.url === ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL) ?? false;
+}
+
 export function resolveSmsNumber(resource: Patient | RelatedPerson, now: Date): string | undefined {
+  return hasNoTextableNumber(resource) ? undefined : resolveVoiceNumber(resource, now);
+}
+
+export function resolveVoiceNumber(resource: Patient | RelatedPerson, now: Date): string | undefined {
   const active = (resource.telecom ?? []).filter((point) =>
     (point.system === "sms" || point.system === "phone")
     && point.use !== "old"
@@ -827,9 +837,21 @@ export function resolveSmsNumber(resource: Patient | RelatedPerson, now: Date): 
 }
 
 function patientPhone(patient: Patient, now: Date): string {
+  if (hasNoTextableNumber(patient)) {
+    const contact = resolveVoiceNumber(patient, now) ? "a current phone is recorded" : "no current phone is recorded";
+    throw new Error(`Patient/${patient.id ?? "unknown"} reported no textable number; ${contact}.`);
+  }
   const phone = resolveSmsNumber(patient, now);
   if (!phone) {
     throw new Error(`Patient/${patient.id ?? "unknown"} has no active phone in Patient.telecom.`);
+  }
+  return phone;
+}
+
+function patientVoicePhone(patient: Patient, now: Date): string {
+  const phone = resolveVoiceNumber(patient, now);
+  if (!phone) {
+    throw new Error(`Patient/${patient.id ?? "unknown"} has no active phone for a voice call in Patient.telecom.`);
   }
   return phone;
 }

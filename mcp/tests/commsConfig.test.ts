@@ -784,3 +784,16 @@ test("communications dispatch reuses one Google adapter token cache across resol
   assert.equal(gmailCalls, 2);
   assert.equal(tokenCalls, 1);
 });
+
+test("H8: configured conversation lookup refuses a marked patient's recorded mobile", async () => {
+  let requests = 0;
+  const dispatch = createCommsDispatch([{ provider: "ghl", config: { locationId: "synthetic", accessToken: "synthetic-token" } }], {
+    now: () => new Date("2026-08-02T15:00:00.000Z"),
+    fetchImpl: async () => { requests++; return Response.json({ contacts: [] }); },
+  });
+  const subject: Patient = { resourceType: "Patient", id: "synthetic-1", telecom: [{ system: "phone", use: "mobile", value: "+12025550101" }], extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }] };
+  const adapter = dispatch.getAdapter("ghl", { ...fakeFhir(), read: async <T extends Resource>(): Promise<T> => structuredClone(subject) as T });
+  assert.equal(resolveSmsNumber(subject, new Date("2026-08-02T15:00:00.000Z")), undefined);
+  await assert.rejects(adapter.listConversations!({ patientReference: "Patient/synthetic-1" }));
+  assert.equal(requests, 0);
+});

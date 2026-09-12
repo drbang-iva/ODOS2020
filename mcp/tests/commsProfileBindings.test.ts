@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runVendorCanonicalShapePass } from "../../scripts/preflight-lint.js";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import type { CodeSystem, StructureDefinition, ValueSet } from "@medplum/fhirtypes";
@@ -33,3 +34,25 @@ for (const name of Object.values(vocabularies)) {
     assert.deepEqual(valueSet.compose, { include: [{ system: system.url, version: system.version, concept: system.concept }] });
   });
 }
+
+test("textable marker is Patient-only, singular, simple, and fixed true", () => {
+  const definition = read<StructureDefinition>("canonical-extensions/odos-no-textable-number.json");
+  assert.deepEqual(definition.context, [{ type: "element", expression: "Patient" }]);
+  const elements = definition.differential!.element;
+  assert.deepEqual(elements.find(element => element.path === "Extension"), { id: "Extension", path: "Extension", short: "No textable number reported", min: 0, max: "1" });
+  assert.equal(elements.find(element => element.path === "Extension.extension")?.max, "0");
+  assert.equal(elements.find(element => element.path === "Extension.url")?.fixedUri, definition.url);
+  const value = elements.find(element => element.path === "Extension.value[x]")!;
+  assert.equal(value.min, 1);
+  assert.equal(value.max, "1");
+  assert.deepEqual(value.type, [{ code: "boolean" }]);
+  assert.equal(value.fixedBoolean, true);
+});
+
+
+test("H9: registered textable marker produces no canonical URL hard block", () => {
+  const path = new URL("../src/comms/suppression-gate.ts", import.meta.url);
+  const report = runVendorCanonicalShapePass({ files: [{ path: path.pathname, text: readFileSync(path, "utf8") }] });
+  const findings = report.findings.filter(finding => finding.code === "odos-extension-url-shape");
+  assert.deepEqual(findings, []);
+});

@@ -275,7 +275,7 @@ function isPhoneNumber(value: string): boolean {
 
 function preferredTelecom(patient: Patient, system: "phone" | "email") {
   return patient.telecom?.find((entry) => entry.system === system && entry.use === "home")
-    ?? patient.telecom?.find((entry) => entry.system === system);
+    ?? patient.telecom?.find((entry) => entry.system === system && entry.use !== "old");
 }
 
 function replacePreferredTelecom(
@@ -284,7 +284,7 @@ function replacePreferredTelecom(
   value: string,
 ): NonNullable<Patient["telecom"]> {
   const preferredIndex = telecom.findIndex((entry) => entry.system === system && entry.use === "home");
-  const fallbackIndex = telecom.findIndex((entry) => entry.system === system);
+  const fallbackIndex = telecom.findIndex((entry) => entry.system === system && entry.use !== "old");
   const replaceIndex = preferredIndex >= 0 ? preferredIndex : fallbackIndex;
   if (!value.trim()) return telecom.filter((_, index) => index !== replaceIndex);
   if (replaceIndex < 0) return [...telecom, { system, use: "home", value }];

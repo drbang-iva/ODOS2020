@@ -1,0 +1,57 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "odos-no-textable-number",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number",
+  "version": "2026-09-12",
+  "name": "ODOSNoTextableNumber",
+  "title": "ODOS No Textable Number",
+  "status": "active",
+  "date": "2026-09-12",
+  "publisher": "ODOS",
+  "description": "The patient reported that none of their own numbers accepts text messages. Presence records that response; absence means the question has not been recorded. This is not communication opt-out and does not govern another recipient.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Patient"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "No textable number reported",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "boolean"
+          }
+        ],
+        "fixedBoolean": true
+      }
+    ]
+  }
+}
