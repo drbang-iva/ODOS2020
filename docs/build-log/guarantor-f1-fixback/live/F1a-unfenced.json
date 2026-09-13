@@ -1,0 +1,3940 @@
+{
+  "scenario": "F1a-unfenced",
+  "serverVersion": "5.1.30-9b1bd92",
+  "transactionBundles": false,
+  "fixture": {
+    "patients": [
+      {
+        "resourceType": "Patient",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Sam"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "2015-01-01",
+        "gender": "unknown",
+        "id": "d13042e8-4bc4-4b5c-82e2-5af7fee22177",
+        "meta": {
+          "versionId": "6c66e8d3-8a6d-4d2a-9e64-8b0c685100b5",
+          "lastUpdated": "2026-09-13T17:30:18.591Z"
+        }
+      },
+      {
+        "resourceType": "Patient",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Leo"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "2015-01-01",
+        "gender": "unknown",
+        "id": "717e20cd-cc72-47e8-ac96-7522adadc5da",
+        "meta": {
+          "versionId": "a2c93a00-7e4a-4900-b29a-125d2e2ac640",
+          "lastUpdated": "2026-09-13T17:30:18.629Z"
+        }
+      },
+      {
+        "resourceType": "Patient",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Decoy"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "2015-01-01",
+        "gender": "unknown",
+        "id": "a5957849-cb08-44a5-8b45-64c1dca83f1f",
+        "meta": {
+          "versionId": "76d8eebf-38d0-4cb7-b25d-f1600447778b",
+          "lastUpdated": "2026-09-13T17:30:18.635Z"
+        }
+      }
+    ],
+    "children": [
+      {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+        },
+        "name": [
+          {
+            "given": [
+              "Guardian"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "rank": 1,
+            "value": "864-555-0101"
+          },
+          {
+            "system": "phone",
+            "use": "home",
+            "rank": 2,
+            "value": "864-555-0102"
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "text": "1 Synthetic Way, Greenville SC 29601",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Greenville",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Legal guardian"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01",
+          "end": "2035-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": false
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic legal sentinel 0"
+          },
+          {
+            "url": "https://example.test/unrelated",
+            "valueString": "Unrelated 0"
+          }
+        ],
+        "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+        "meta": {
+          "versionId": "d74fce32-d2eb-45b7-8318-2218d1baa9d3",
+          "lastUpdated": "2026-09-13T17:30:18.641Z"
+        }
+      },
+      {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/717e20cd-cc72-47e8-ac96-7522adadc5da"
+        },
+        "name": [
+          {
+            "given": [
+              "Guardian"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "rank": 1,
+            "value": "864-555-0101"
+          },
+          {
+            "system": "phone",
+            "use": "home",
+            "rank": 2,
+            "value": "864-555-0102"
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "text": "1 Synthetic Way, Greenville SC 29601",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Greenville",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Parent"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01",
+          "end": "2035-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": false
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic legal sentinel 1"
+          },
+          {
+            "url": "https://example.test/unrelated",
+            "valueString": "Unrelated 1"
+          }
+        ],
+        "id": "28cdd885-6fe8-4c8a-973f-c7bd831e4010",
+        "meta": {
+          "versionId": "85a964fc-1e85-4134-b3c8-7527c31db883",
+          "lastUpdated": "2026-09-13T17:30:18.650Z"
+        }
+      },
+      {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/a5957849-cb08-44a5-8b45-64c1dca83f1f"
+        },
+        "name": [
+          {
+            "given": [
+              "Guardian"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "rank": 1,
+            "value": "864-555-0101"
+          },
+          {
+            "system": "phone",
+            "use": "home",
+            "rank": 2,
+            "value": "864-555-0102"
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "text": "1 Synthetic Way, Greenville SC 29601",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Greenville",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Parent"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01",
+          "end": "2035-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": false
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic legal sentinel 2"
+          },
+          {
+            "url": "https://example.test/unrelated",
+            "valueString": "Unrelated 2"
+          }
+        ],
+        "id": "310f1281-6734-4101-8149-23a4f9e364a5",
+        "meta": {
+          "versionId": "bae7d060-322e-4ef9-a30d-776297968ab5",
+          "lastUpdated": "2026-09-13T17:30:18.657Z"
+        }
+      }
+    ],
+    "person": {
+      "resourceType": "Person",
+      "active": true,
+      "name": [
+        {
+          "given": [
+            "Guardian"
+          ],
+          "family": "Synthetic"
+        }
+      ],
+      "telecom": [
+        {
+          "system": "phone",
+          "use": "home",
+          "rank": 1,
+          "value": "864-555-0101"
+        },
+        {
+          "system": "phone",
+          "use": "home",
+          "rank": 2,
+          "value": "864-555-0102"
+        }
+      ],
+      "address": [
+        {
+          "use": "home",
+          "text": "1 Synthetic Way, Greenville SC 29601",
+          "line": [
+            "1 Synthetic Way"
+          ],
+          "city": "Greenville",
+          "state": "SC",
+          "postalCode": "29601"
+        }
+      ],
+      "link": [
+        {
+          "target": {
+            "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+          },
+          "assurance": "level2"
+        }
+      ],
+      "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+      "meta": {
+        "versionId": "9255b764-41c6-40e4-a771-7f8430e06b31",
+        "lastUpdated": "2026-09-13T17:30:18.665Z"
+      }
+    },
+    "policy": {
+      "resourceType": "AccessPolicy",
+      "name": "ODOS Staff",
+      "meta": {
+        "tag": [
+          {
+            "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+            "code": "staff"
+          }
+        ],
+        "versionId": "a474af3c-6ced-4d33-b047-02e8a1d8d460",
+        "lastUpdated": "2026-09-13T17:30:18.681Z"
+      },
+      "resource": [
+        {
+          "resourceType": "Patient",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "RelatedPerson",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Person",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Coverage",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Account",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "AllergyIntolerance",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Encounter",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Observation",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Condition",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Procedure",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "DiagnosticReport",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "DocumentReference",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Media",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Device",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "DeviceRequest",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "MedicationAdministration",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "MedicationRequest",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "MedicationStatement",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "EpisodeOfCare",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "CarePlan",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Goal",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "PlanDefinition",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "ChargeItem",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "ChargeItemDefinition",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "QuestionnaireResponse",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Provenance",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Binary",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "ServiceRequest",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Appointment",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Schedule",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Slot",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "HealthcareService",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "DeviceDefinition",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "PaymentReconciliation",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Task",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Invoice",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Claim",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "ClaimResponse",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "CoverageEligibilityRequest",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "CoverageEligibilityResponse",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Organization",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Practitioner",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "PractitionerRole",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Communication",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "BodyStructure",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "CareTeam",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "DeviceUseStatement",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "VisionPrescription",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory-unit"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-variant-settings"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/day-seal|day-seal"
+        },
+        {
+          "resourceType": "Patient",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Patient?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "RelatedPerson",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "RelatedPerson?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "Coverage",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Coverage?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "Account",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Account?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "Encounter",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Encounter?_compartment=%patient_compartment",
+          "writeConstraint": [
+            {
+              "language": "text/fhirpath",
+              "description": "Staff can create or edit an Encounter only while it remains unfinished.",
+              "expression": "status != 'finished' and (%before.exists() implies %before.status != 'finished')"
+            }
+          ]
+        },
+        {
+          "resourceType": "Observation",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Observation?_compartment=%patient_compartment",
+          "writeConstraint": [
+            {
+              "language": "text/fhirpath",
+              "description": "Staff and scribe findings remain preliminary until a Provider attests them.",
+              "expression": "(%before.exists().not() implies status = 'preliminary') and (%before.exists() implies ((%before.status = 'preliminary' and (status = 'preliminary' or status = 'entered-in-error')) or (%before.status = 'entered-in-error' and status = 'preliminary' and ($this is Observation))))"
+            }
+          ]
+        },
+        {
+          "resourceType": "DiagnosticReport",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "DiagnosticReport?_compartment=%patient_compartment",
+          "writeConstraint": [
+            {
+              "language": "text/fhirpath",
+              "description": "Staff and scribe findings remain preliminary until a Provider attests them.",
+              "expression": "(%before.exists().not() implies status = 'preliminary') and (%before.exists() implies ((%before.status = 'preliminary' and (status = 'preliminary' or status = 'entered-in-error')) or (%before.status = 'entered-in-error' and status = 'preliminary' and ($this is Observation))))"
+            }
+          ]
+        },
+        {
+          "resourceType": "DocumentReference",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "DocumentReference?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "Media",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Media?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "QuestionnaireResponse",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "QuestionnaireResponse?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "MedicationAdministration",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "MedicationAdministration?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "MedicationStatement",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "MedicationStatement?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "AllergyIntolerance",
+          "interaction": [
+            "create"
+          ],
+          "criteria": "AllergyIntolerance?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "CareTeam",
+          "interaction": [
+            "create"
+          ],
+          "criteria": "CareTeam?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "MedicationRequest",
+          "interaction": [
+            "create"
+          ],
+          "criteria": "MedicationRequest?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "MedicationRequest",
+          "interaction": [
+            "update"
+          ],
+          "criteria": "MedicationRequest?_compartment=%patient_compartment",
+          "writeConstraint": [
+            {
+              "language": "text/fhirpath",
+              "description": "Staff cannot update an electronically transmitted prescription.",
+              "expression": "%before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/odos-transmission-method' and value = 'electronically-sent').empty()"
+            },
+            {
+              "language": "text/fhirpath",
+              "description": "Staff cannot change the prescription requester after creation.",
+              "expression": "requester.exists() = %before.requester.exists() and (requester.empty() or requester = %before.requester)"
+            },
+            {
+              "language": "text/fhirpath",
+              "description": "Staff cannot change the prescription recorder after creation.",
+              "expression": "recorder.exists() = %before.recorder.exists() and (recorder.empty() or recorder = %before.recorder)"
+            }
+          ]
+        },
+        {
+          "resourceType": "Provenance",
+          "interaction": [
+            "create"
+          ]
+        },
+        {
+          "resourceType": "ServiceRequest",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "ServiceRequest?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "DocumentReference",
+          "interaction": [
+            "create"
+          ],
+          "criteria": "DocumentReference?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "Appointment",
+          "interaction": [
+            "create",
+            "update"
+          ]
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/scheduling-config|odos-scheduling-config"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/scheduling-config|odos-scheduling-config"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/floor-config|odos-floor-config"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/floor-config|odos-floor-config"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/insurance-config|odos-insurance-config"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/insurance-config|odos-insurance-config"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/visit-type-config|odos-visit-type-config"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/statement-message-config|odos-statement-message-config"
+        },
+        {
+          "resourceType": "Person",
+          "interaction": [
+            "create",
+            "update"
+          ]
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory-unit",
+          "writeConstraint": [
+            {
+              "language": "text/fhirpath",
+              "description": "Staff receipts create on-hand units; later writes preserve inventory identity and received-at provenance.",
+              "expression": "(%before.exists().not() implies extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/unit-status').value = 'on_hand') and (%before.exists() implies code ~ %before.code) and (%before.exists() implies identifier ~ %before.identifier) and (%before.exists() implies extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/catalog-canonical-url').value = %before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/catalog-canonical-url').value) and (%before.exists() implies extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/received-at').value = %before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/received-at').value) and (%before.exists() implies extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/dispensary-location').value = %before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/dispensary-location').value)"
+            },
+            {
+              "language": "text/fhirpath",
+              "description": "Staff can advance inventory workflow status but cannot reverse or arbitrarily adjust it.",
+              "expression": "(%before.exists().not()) or (%before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/unit-status').value = extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/unit-status').value) or (%before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/unit-status').value = 'on_hand' and extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/unit-status').value in ('reserved' | 'hold' | 'dispensed')) or (%before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/unit-status').value = 'reserved' and extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/unit-status').value in ('outbound' | 'at_lab' | 'dispensed')) or (%before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/unit-status').value = 'outbound' and extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/unit-status').value in ('at_lab' | 'inbound' | 'dispensed')) or (%before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/unit-status').value = 'at_lab' and extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/unit-status').value in ('inbound' | 'dispensed')) or (%before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/unit-status').value = 'inbound' and extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/unit-status').value = 'dispensed')"
+            }
+          ]
+        },
+        {
+          "resourceType": "DeviceRequest",
+          "interaction": [
+            "create"
+          ]
+        },
+        {
+          "resourceType": "ChargeItem",
+          "interaction": [
+            "create"
+          ]
+        },
+        {
+          "resourceType": "PaymentReconciliation",
+          "interaction": [
+            "create"
+          ]
+        },
+        {
+          "resourceType": "Task",
+          "interaction": [
+            "create",
+            "update"
+          ]
+        },
+        {
+          "resourceType": "Invoice",
+          "interaction": [
+            "create",
+            "update"
+          ]
+        },
+        {
+          "resourceType": "Claim",
+          "interaction": [
+            "create",
+            "update"
+          ]
+        },
+        {
+          "resourceType": "ClaimResponse",
+          "interaction": [
+            "create",
+            "update"
+          ]
+        },
+        {
+          "resourceType": "CoverageEligibilityRequest",
+          "interaction": [
+            "create"
+          ]
+        },
+        {
+          "resourceType": "CoverageEligibilityResponse",
+          "interaction": [
+            "create"
+          ]
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-era-import|odos-era-import"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-era-import|odos-era-import"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-manual-eob|odos-manual-eob"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-manual-eob|odos-manual-eob"
+        },
+        {
+          "resourceType": "Organization",
+          "interaction": [
+            "create"
+          ]
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/billing-identity-config|odos-billing-identity-config"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-dx-pick-tally|odos-dx-pick-tally&identifier=https://odos2020.com/fhir/NamingSystem/dx-pick-tally-practitioner|%profile"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-dx-pick-tally|odos-dx-pick-tally&identifier=https://odos2020.com/fhir/NamingSystem/dx-pick-tally-practitioner|%profile"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-encounter-complaint|odos-encounter-complaint"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-encounter-complaint|odos-encounter-complaint"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-section-group|odos-encounter-section-override"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-section-group|odos-encounter-section-override"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-encounter-undo-ledger|odos-encounter-undo-ledger"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-encounter-undo-ledger|odos-encounter-undo-ledger"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/osod-complaint-definition|osod-complaint-definition"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-section-group|odos-finding-section-group"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-diagnosis-definition|odos-diagnosis-definition"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-procedure-definition|odos-procedure-definition"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-plan-action-instance"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-plan-action-instance"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-protocol-application"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-protocol-application"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-charge-proposal"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-charge-proposal"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-finding-instance"
+        },
+        {
+          "resourceType": "Basic",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-finding-instance"
+        },
+        {
+          "resourceType": "Practitioner",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "PractitionerRole",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Communication",
+          "interaction": [
+            "create"
+          ],
+          "criteria": "Communication?category=https://odos2020.com/fhir/CodeSystem/communication-category|internal-office"
+        },
+        {
+          "resourceType": "Provenance",
+          "interaction": [
+            "create"
+          ],
+          "criteria": "Provenance?_tag=https://odos2020.com/fhir/CodeSystem/office-message-kind|acknowledgement"
+        },
+        {
+          "resourceType": "Communication",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "criteria": "Communication?_compartment=%patient_compartment"
+        },
+        {
+          "resourceType": "Consent",
+          "interaction": [
+            "create",
+            "read",
+            "search",
+            "update"
+          ],
+          "criteria": "Consent?_compartment=%patient_compartment&category=https://odos2020.com/fhir/CodeSystem/consent-category|comms-consent&scope=http://terminology.hl7.org/CodeSystem/consentscope|patient-privacy",
+          "writeConstraint": [
+            {
+              "language": "text/fhirpath",
+              "description": "Only communication preference evidence may be created.",
+              "expression": "%before.exists().not() implies (category.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/consent-category' and code = 'comms-consent').exists() and scope.coding.where(system = 'http://terminology.hl7.org/CodeSystem/consentscope' and code = 'patient-privacy').exists())"
+            },
+            {
+              "language": "text/fhirpath",
+              "description": "Recorded consent evidence is immutable except for status; server-managed metadata may advance.",
+              "expression": "%before.exists() implies ((id.exists() = %before.id.exists() and (id.empty() or id = %before.id)) and (implicitRules.exists() = %before.implicitRules.exists() and (implicitRules.empty() or implicitRules = %before.implicitRules)) and (language.exists() = %before.language.exists() and (language.empty() or language = %before.language)) and (text.exists() = %before.text.exists() and (text.empty() or text = %before.text)) and (contained.exists() = %before.contained.exists() and (contained.empty() or contained = %before.contained)) and (extension.exists() = %before.extension.exists() and (extension.empty() or extension = %before.extension)) and (modifierExtension.exists() = %before.modifierExtension.exists() and (modifierExtension.empty() or modifierExtension = %before.modifierExtension)) and (identifier.exists() = %before.identifier.exists() and (identifier.empty() or identifier = %before.identifier)) and (scope.exists() = %before.scope.exists() and (scope.empty() or scope = %before.scope)) and (category.exists() = %before.category.exists() and (category.empty() or category = %before.category)) and (patient.exists() = %before.patient.exists() and (patient.empty() or patient = %before.patient)) and (dateTime.exists() = %before.dateTime.exists() and (dateTime.empty() or dateTime = %before.dateTime)) and (performer.exists() = %before.performer.exists() and (performer.empty() or performer = %before.performer)) and (organization.exists() = %before.organization.exists() and (organization.empty() or organization = %before.organization)) and (sourceAttachment.exists() = %before.sourceAttachment.exists() and (sourceAttachment.empty() or sourceAttachment = %before.sourceAttachment)) and (sourceReference.exists() = %before.sourceReference.exists() and (sourceReference.empty() or sourceReference = %before.sourceReference)) and (policy.exists() = %before.policy.exists() and (policy.empty() or policy = %before.policy)) and (policyRule.exists() = %before.policyRule.exists() and (policyRule.empty() or policyRule = %before.policyRule)) and (verification.exists() = %before.verification.exists() and (verification.empty() or verification = %before.verification)) and (provision.exists() = %before.provision.exists() and (provision.empty() or provision = %before.provision)) and (meta.id.exists() = %before.meta.id.exists() and (meta.id.empty() or meta.id = %before.meta.id)) and (meta.extension.exists() = %before.meta.extension.exists() and (meta.extension.empty() or meta.extension = %before.meta.extension)) and (meta.source.exists() = %before.meta.source.exists() and (meta.source.empty() or meta.source = %before.meta.source)) and (meta.profile.exists() = %before.meta.profile.exists() and (meta.profile.empty() or meta.profile = %before.meta.profile)) and (meta.security.exists() = %before.meta.security.exists() and (meta.security.empty() or meta.security = %before.meta.security)) and (meta.tag.exists() = %before.meta.tag.exists() and (meta.tag.empty() or meta.tag = %before.meta.tag)))"
+            }
+          ]
+        }
+      ],
+      "id": "9412749c-8412-4beb-9075-4729a593c9ac"
+    }
+  },
+  "resultText": "Responsible parties\n\nSave guarantor contact details separately. Changes apply to all linked patients.\n\nNewest Synthetic\nGiven names 1\nFamily name 1\nPhone 1 (home)\nPhone 2 (home)\nAddress 1 line 1\nCity 1\nState 1\nPostal code 1\nCountry 1\n\nA newer edit to this guarantor landed while yours was being applied. Showing the current record.\n\nChecked against guarantor generation 87846f46-ecaf-440e-be0f-4549609aadae.\n\nSam Synthetic — mismatched\nSave guarantor\nRepair for Sam Synthetic\nReload guarantor",
+  "saved": {
+    "person": {
+      "resourceType": "Person",
+      "active": true,
+      "name": [
+        {
+          "given": [
+            "Newest"
+          ],
+          "family": "Synthetic"
+        }
+      ],
+      "telecom": [
+        {
+          "system": "phone",
+          "use": "home",
+          "rank": 1,
+          "value": "864-555-0101"
+        },
+        {
+          "system": "phone",
+          "use": "home",
+          "rank": 2,
+          "value": "864-555-0102"
+        }
+      ],
+      "address": [
+        {
+          "use": "home",
+          "text": "1 Synthetic Way, Greenville SC 29601",
+          "line": [
+            "1 Synthetic Way"
+          ],
+          "city": "Greenville",
+          "state": "SC",
+          "postalCode": "29601"
+        }
+      ],
+      "link": [
+        {
+          "target": {
+            "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+          },
+          "assurance": "level2"
+        }
+      ],
+      "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+      "meta": {
+        "versionId": "87846f46-ecaf-440e-be0f-4549609aadae",
+        "lastUpdated": "2026-09-13T17:30:19.712Z"
+      }
+    },
+    "child": {
+      "resourceType": "RelatedPerson",
+      "active": true,
+      "patient": {
+        "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+      },
+      "name": [
+        {
+          "given": [
+            "Edited"
+          ],
+          "family": "Synthetic"
+        }
+      ],
+      "telecom": [
+        {
+          "system": "phone",
+          "use": "home",
+          "rank": 1,
+          "value": "864-555-0101"
+        },
+        {
+          "system": "phone",
+          "use": "home",
+          "rank": 2,
+          "value": "864-555-0102"
+        }
+      ],
+      "address": [
+        {
+          "use": "home",
+          "text": "1 Synthetic Way, Greenville SC 29601",
+          "line": [
+            "1 Synthetic Way"
+          ],
+          "city": "Greenville",
+          "state": "SC",
+          "postalCode": "29601"
+        }
+      ],
+      "relationship": [
+        {
+          "text": "Legal guardian"
+        }
+      ],
+      "period": {
+        "start": "2026-01-01",
+        "end": "2035-01-01"
+      },
+      "extension": [
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+          "valueBoolean": true
+        },
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+          "valueBoolean": false
+        },
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+          "valueString": "Synthetic legal sentinel 0"
+        },
+        {
+          "url": "https://example.test/unrelated",
+          "valueString": "Unrelated 0"
+        }
+      ],
+      "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+      "meta": {
+        "versionId": "8fa78e9e-67ea-4385-ac75-d0a69ef45645",
+        "lastUpdated": "2026-09-13T17:30:19.745Z"
+      }
+    }
+  },
+  "capture": [
+    {
+      "seq": 1,
+      "actor": "verification",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person/439a45e2-da3a-4542-8072-2b20e7e068a8"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Guardian"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+          "meta": {
+            "versionId": "9255b764-41c6-40e4-a771-7f8430e06b31",
+            "lastUpdated": "2026-09-13T17:30:18.665Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 2,
+      "actor": "competitor",
+      "request": {
+        "method": "PUT",
+        "path": "/fhir/R4/Person/439a45e2-da3a-4542-8072-2b20e7e068a8",
+        "ifMatch": "W/\"9255b764-41c6-40e4-a771-7f8430e06b31\"",
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Edited"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+          "meta": {
+            "versionId": "9255b764-41c6-40e4-a771-7f8430e06b31",
+            "lastUpdated": "2026-09-13T17:30:18.665Z"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Edited"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+          "meta": {
+            "versionId": "fbcec00c-3788-48a2-8f80-68fb72c14b07",
+            "lastUpdated": "2026-09-13T17:30:18.767Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 3,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Patient",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Sam"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "birthDate": "2015-01-01",
+          "gender": "unknown",
+          "id": "d13042e8-4bc4-4b5c-82e2-5af7fee22177",
+          "meta": {
+            "versionId": "6c66e8d3-8a6d-4d2a-9e64-8b0c685100b5",
+            "lastUpdated": "2026-09-13T17:30:18.591Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 4,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/VisionPrescription?patient=Patient%2Fd13042e8-4bc4-4b5c-82e2-5af7fee22177&status=active&_count=20&_sort=-datewritten"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Bundle",
+          "type": "searchset",
+          "link": [
+            {
+              "relation": "self",
+              "url": "http://127.0.0.1:19613/fhir/R4/VisionPrescription?_count=20&_sort=-datewritten&patient=Patient%2Fd13042e8-4bc4-4b5c-82e2-5af7fee22177&status=active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 5,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson?patient=Patient%2Fd13042e8-4bc4-4b5c-82e2-5af7fee22177"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Bundle",
+          "type": "searchset",
+          "entry": [
+            {
+              "fullUrl": "http://127.0.0.1:19613/fhir/R4/RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+              "search": {
+                "mode": "match"
+              },
+              "resource": {
+                "resourceType": "RelatedPerson",
+                "active": true,
+                "patient": {
+                  "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+                },
+                "name": [
+                  {
+                    "given": [
+                      "Guardian"
+                    ],
+                    "family": "Synthetic"
+                  }
+                ],
+                "telecom": [
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 1,
+                    "value": "864-555-0101"
+                  },
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 2,
+                    "value": "864-555-0102"
+                  }
+                ],
+                "address": [
+                  {
+                    "use": "home",
+                    "text": "1 Synthetic Way, Greenville SC 29601",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "relationship": [
+                  {
+                    "text": "Legal guardian"
+                  }
+                ],
+                "period": {
+                  "start": "2026-01-01",
+                  "end": "2035-01-01"
+                },
+                "extension": [
+                  {
+                    "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+                    "valueBoolean": true
+                  },
+                  {
+                    "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+                    "valueBoolean": false
+                  },
+                  {
+                    "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+                    "valueString": "Synthetic legal sentinel 0"
+                  },
+                  {
+                    "url": "https://example.test/unrelated",
+                    "valueString": "Unrelated 0"
+                  }
+                ],
+                "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+                "meta": {
+                  "versionId": "d74fce32-d2eb-45b7-8318-2218d1baa9d3",
+                  "lastUpdated": "2026-09-13T17:30:18.641Z"
+                }
+              }
+            }
+          ],
+          "link": [
+            {
+              "relation": "self",
+              "url": "http://127.0.0.1:19613/fhir/R4/RelatedPerson?_count=20&patient=Patient%2Fd13042e8-4bc4-4b5c-82e2-5af7fee22177"
+            },
+            {
+              "relation": "first",
+              "url": "http://127.0.0.1:19613/fhir/R4/RelatedPerson?_count=20&patient=Patient%2Fd13042e8-4bc4-4b5c-82e2-5af7fee22177"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 6,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person?link=RelatedPerson%2Fe85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Bundle",
+          "type": "searchset",
+          "entry": [
+            {
+              "fullUrl": "http://127.0.0.1:19613/fhir/R4/Person/439a45e2-da3a-4542-8072-2b20e7e068a8",
+              "search": {
+                "mode": "match"
+              },
+              "resource": {
+                "resourceType": "Person",
+                "active": true,
+                "name": [
+                  {
+                    "given": [
+                      "Edited"
+                    ],
+                    "family": "Synthetic"
+                  }
+                ],
+                "telecom": [
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 1,
+                    "value": "864-555-0101"
+                  },
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 2,
+                    "value": "864-555-0102"
+                  }
+                ],
+                "address": [
+                  {
+                    "use": "home",
+                    "text": "1 Synthetic Way, Greenville SC 29601",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "link": [
+                  {
+                    "target": {
+                      "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+                    },
+                    "assurance": "level2"
+                  }
+                ],
+                "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+                "meta": {
+                  "versionId": "fbcec00c-3788-48a2-8f80-68fb72c14b07",
+                  "lastUpdated": "2026-09-13T17:30:18.767Z"
+                }
+              }
+            }
+          ],
+          "link": [
+            {
+              "relation": "self",
+              "url": "http://127.0.0.1:19613/fhir/R4/Person?_count=20&link=RelatedPerson%2Fe85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+            },
+            {
+              "relation": "first",
+              "url": "http://127.0.0.1:19613/fhir/R4/Person?_count=20&link=RelatedPerson%2Fe85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 7,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+          },
+          "name": [
+            {
+              "given": [
+                "Guardian"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+          "meta": {
+            "versionId": "d74fce32-d2eb-45b7-8318-2218d1baa9d3",
+            "lastUpdated": "2026-09-13T17:30:18.641Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 8,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Patient",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Sam"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "birthDate": "2015-01-01",
+          "gender": "unknown",
+          "id": "d13042e8-4bc4-4b5c-82e2-5af7fee22177",
+          "meta": {
+            "versionId": "6c66e8d3-8a6d-4d2a-9e64-8b0c685100b5",
+            "lastUpdated": "2026-09-13T17:30:18.591Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 9,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+          },
+          "name": [
+            {
+              "given": [
+                "Guardian"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+          "meta": {
+            "versionId": "d74fce32-d2eb-45b7-8318-2218d1baa9d3",
+            "lastUpdated": "2026-09-13T17:30:18.641Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 10,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person/439a45e2-da3a-4542-8072-2b20e7e068a8"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Edited"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+          "meta": {
+            "versionId": "fbcec00c-3788-48a2-8f80-68fb72c14b07",
+            "lastUpdated": "2026-09-13T17:30:18.767Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 11,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person/439a45e2-da3a-4542-8072-2b20e7e068a8"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Edited"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+          "meta": {
+            "versionId": "fbcec00c-3788-48a2-8f80-68fb72c14b07",
+            "lastUpdated": "2026-09-13T17:30:18.767Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 12,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+          },
+          "name": [
+            {
+              "given": [
+                "Guardian"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+          "meta": {
+            "versionId": "d74fce32-d2eb-45b7-8318-2218d1baa9d3",
+            "lastUpdated": "2026-09-13T17:30:18.641Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 13,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Patient",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Sam"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "birthDate": "2015-01-01",
+          "gender": "unknown",
+          "id": "d13042e8-4bc4-4b5c-82e2-5af7fee22177",
+          "meta": {
+            "versionId": "6c66e8d3-8a6d-4d2a-9e64-8b0c685100b5",
+            "lastUpdated": "2026-09-13T17:30:18.591Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 14,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person?link=RelatedPerson%2Fe85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Bundle",
+          "type": "searchset",
+          "entry": [
+            {
+              "fullUrl": "http://127.0.0.1:19613/fhir/R4/Person/439a45e2-da3a-4542-8072-2b20e7e068a8",
+              "search": {
+                "mode": "match"
+              },
+              "resource": {
+                "resourceType": "Person",
+                "active": true,
+                "name": [
+                  {
+                    "given": [
+                      "Edited"
+                    ],
+                    "family": "Synthetic"
+                  }
+                ],
+                "telecom": [
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 1,
+                    "value": "864-555-0101"
+                  },
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 2,
+                    "value": "864-555-0102"
+                  }
+                ],
+                "address": [
+                  {
+                    "use": "home",
+                    "text": "1 Synthetic Way, Greenville SC 29601",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "link": [
+                  {
+                    "target": {
+                      "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+                    },
+                    "assurance": "level2"
+                  }
+                ],
+                "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+                "meta": {
+                  "versionId": "fbcec00c-3788-48a2-8f80-68fb72c14b07",
+                  "lastUpdated": "2026-09-13T17:30:18.767Z"
+                }
+              }
+            }
+          ],
+          "link": [
+            {
+              "relation": "self",
+              "url": "http://127.0.0.1:19613/fhir/R4/Person?_count=20&link=RelatedPerson%2Fe85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+            },
+            {
+              "relation": "first",
+              "url": "http://127.0.0.1:19613/fhir/R4/Person?_count=20&link=RelatedPerson%2Fe85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 15,
+      "actor": "verification",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person/439a45e2-da3a-4542-8072-2b20e7e068a8"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Edited"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+          "meta": {
+            "versionId": "fbcec00c-3788-48a2-8f80-68fb72c14b07",
+            "lastUpdated": "2026-09-13T17:30:18.767Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 16,
+      "actor": "competitor",
+      "request": {
+        "method": "PUT",
+        "path": "/fhir/R4/Person/439a45e2-da3a-4542-8072-2b20e7e068a8",
+        "ifMatch": "W/\"fbcec00c-3788-48a2-8f80-68fb72c14b07\"",
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Newest"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+          "meta": {
+            "versionId": "fbcec00c-3788-48a2-8f80-68fb72c14b07",
+            "lastUpdated": "2026-09-13T17:30:18.767Z"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Newest"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+          "meta": {
+            "versionId": "87846f46-ecaf-440e-be0f-4549609aadae",
+            "lastUpdated": "2026-09-13T17:30:19.712Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 17,
+      "actor": "verification",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+          },
+          "name": [
+            {
+              "given": [
+                "Guardian"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+          "meta": {
+            "versionId": "d74fce32-d2eb-45b7-8318-2218d1baa9d3",
+            "lastUpdated": "2026-09-13T17:30:18.641Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 18,
+      "actor": "competitor",
+      "request": {
+        "method": "PUT",
+        "path": "/fhir/R4/RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+        "ifMatch": "W/\"d74fce32-d2eb-45b7-8318-2218d1baa9d3\"",
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+          },
+          "name": [
+            {
+              "given": [
+                "Newest"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+          "meta": {
+            "versionId": "d74fce32-d2eb-45b7-8318-2218d1baa9d3",
+            "lastUpdated": "2026-09-13T17:30:18.641Z"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+          },
+          "name": [
+            {
+              "given": [
+                "Newest"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+          "meta": {
+            "versionId": "62ef2313-74fe-4d68-976d-a04361d12d6e",
+            "lastUpdated": "2026-09-13T17:30:19.728Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 19,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+          },
+          "name": [
+            {
+              "given": [
+                "Newest"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+          "meta": {
+            "versionId": "62ef2313-74fe-4d68-976d-a04361d12d6e",
+            "lastUpdated": "2026-09-13T17:30:19.728Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 20,
+      "actor": "editor",
+      "request": {
+        "method": "PUT",
+        "path": "/fhir/R4/RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+        "ifMatch": "W/\"62ef2313-74fe-4d68-976d-a04361d12d6e\"",
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+          },
+          "name": [
+            {
+              "given": [
+                "Edited"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+          "meta": {
+            "versionId": "62ef2313-74fe-4d68-976d-a04361d12d6e",
+            "lastUpdated": "2026-09-13T17:30:19.728Z"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+          },
+          "name": [
+            {
+              "given": [
+                "Edited"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+          "meta": {
+            "versionId": "8fa78e9e-67ea-4385-ac75-d0a69ef45645",
+            "lastUpdated": "2026-09-13T17:30:19.745Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 21,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+          },
+          "name": [
+            {
+              "given": [
+                "Edited"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+          "meta": {
+            "versionId": "8fa78e9e-67ea-4385-ac75-d0a69ef45645",
+            "lastUpdated": "2026-09-13T17:30:19.745Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 22,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person/439a45e2-da3a-4542-8072-2b20e7e068a8"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Newest"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+          "meta": {
+            "versionId": "87846f46-ecaf-440e-be0f-4549609aadae",
+            "lastUpdated": "2026-09-13T17:30:19.712Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 23,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+          },
+          "name": [
+            {
+              "given": [
+                "Edited"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+          "meta": {
+            "versionId": "8fa78e9e-67ea-4385-ac75-d0a69ef45645",
+            "lastUpdated": "2026-09-13T17:30:19.745Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 24,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person?link=RelatedPerson%2Fe85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Bundle",
+          "type": "searchset",
+          "entry": [
+            {
+              "fullUrl": "http://127.0.0.1:19613/fhir/R4/Person/439a45e2-da3a-4542-8072-2b20e7e068a8",
+              "search": {
+                "mode": "match"
+              },
+              "resource": {
+                "resourceType": "Person",
+                "active": true,
+                "name": [
+                  {
+                    "given": [
+                      "Newest"
+                    ],
+                    "family": "Synthetic"
+                  }
+                ],
+                "telecom": [
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 1,
+                    "value": "864-555-0101"
+                  },
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 2,
+                    "value": "864-555-0102"
+                  }
+                ],
+                "address": [
+                  {
+                    "use": "home",
+                    "text": "1 Synthetic Way, Greenville SC 29601",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "link": [
+                  {
+                    "target": {
+                      "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+                    },
+                    "assurance": "level2"
+                  }
+                ],
+                "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+                "meta": {
+                  "versionId": "87846f46-ecaf-440e-be0f-4549609aadae",
+                  "lastUpdated": "2026-09-13T17:30:19.712Z"
+                }
+              }
+            }
+          ],
+          "link": [
+            {
+              "relation": "self",
+              "url": "http://127.0.0.1:19613/fhir/R4/Person?_count=20&link=RelatedPerson%2Fe85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+            },
+            {
+              "relation": "first",
+              "url": "http://127.0.0.1:19613/fhir/R4/Person?_count=20&link=RelatedPerson%2Fe85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 25,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+          },
+          "name": [
+            {
+              "given": [
+                "Edited"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+          "meta": {
+            "versionId": "8fa78e9e-67ea-4385-ac75-d0a69ef45645",
+            "lastUpdated": "2026-09-13T17:30:19.745Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 26,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Patient",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Sam"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "birthDate": "2015-01-01",
+          "gender": "unknown",
+          "id": "d13042e8-4bc4-4b5c-82e2-5af7fee22177",
+          "meta": {
+            "versionId": "6c66e8d3-8a6d-4d2a-9e64-8b0c685100b5",
+            "lastUpdated": "2026-09-13T17:30:18.591Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 27,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+          },
+          "name": [
+            {
+              "given": [
+                "Edited"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+          "meta": {
+            "versionId": "8fa78e9e-67ea-4385-ac75-d0a69ef45645",
+            "lastUpdated": "2026-09-13T17:30:19.745Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 28,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person/439a45e2-da3a-4542-8072-2b20e7e068a8"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Newest"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+          "meta": {
+            "versionId": "87846f46-ecaf-440e-be0f-4549609aadae",
+            "lastUpdated": "2026-09-13T17:30:19.712Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 29,
+      "actor": "verification",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person/439a45e2-da3a-4542-8072-2b20e7e068a8"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Newest"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "439a45e2-da3a-4542-8072-2b20e7e068a8",
+          "meta": {
+            "versionId": "87846f46-ecaf-440e-be0f-4549609aadae",
+            "lastUpdated": "2026-09-13T17:30:19.712Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 30,
+      "actor": "verification",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson/e85d6843-f5d3-4d6b-bd47-ebb1c54a2903"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/d13042e8-4bc4-4b5c-82e2-5af7fee22177"
+          },
+          "name": [
+            {
+              "given": [
+                "Edited"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "e85d6843-f5d3-4d6b-bd47-ebb1c54a2903",
+          "meta": {
+            "versionId": "8fa78e9e-67ea-4385-ac75-d0a69ef45645",
+            "lastUpdated": "2026-09-13T17:30:19.745Z"
+          }
+        }
+      }
+    }
+  ]
+}

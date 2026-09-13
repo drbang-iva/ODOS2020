@@ -1,0 +1,67 @@
+[
+  {
+    "mutation": "F1a-F1b-no-repair-fence",
+    "redExit": 1,
+    "restoredExit": 0,
+    "failingTests": [
+      "not ok 2 - F1a repair fences generation after fresh child read",
+      "not ok 3 - F1b repair fences moved ownership after fresh child read"
+    ]
+  },
+  {
+    "mutation": "F1a-early-fence",
+    "redExit": 1,
+    "restoredExit": 0,
+    "failingTests": [
+      "not ok 2 - F1a repair fences generation after fresh child read"
+    ]
+  },
+  {
+    "mutation": "F1c-no-save-fence",
+    "redExit": 1,
+    "restoredExit": 0,
+    "failingTests": [
+      "not ok 2 - F1c save stops Leo after competitor on Sam PUT"
+    ]
+  },
+  {
+    "mutation": "F1d-failed-check-passes",
+    "redExit": 1,
+    "restoredExit": 0,
+    "failingTests": [
+      "not ok 2 - F1d failed generation check stops child submission"
+    ]
+  },
+  {
+    "mutation": "F1e-no-reload",
+    "redExit": 1,
+    "restoredExit": 0,
+    "failingTests": [
+      "not ok 1 - F1e superseded save reloads automatically and one Repair converges"
+    ]
+  },
+  {
+    "mutation": "F1e-old-message",
+    "redExit": 1,
+    "restoredExit": 0,
+    "failingTests": [
+      "not ok 2 - F1e superseded message does not promise absent Repair"
+    ]
+  },
+  {
+    "mutation": "F1f-410-unknown",
+    "redExit": 1,
+    "restoredExit": 0,
+    "failingTests": [
+      "not ok 2 - F1f dangling 410 and 404 are named but 403 stays unknown"
+    ]
+  },
+  {
+    "mutation": "F1f-all-errors-dangling",
+    "redExit": 1,
+    "restoredExit": 0,
+    "failingTests": [
+      "not ok 2 - F1f dangling 410 and 404 are named but 403 stays unknown"
+    ]
+  }
+]

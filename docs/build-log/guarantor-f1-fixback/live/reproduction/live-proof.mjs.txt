@@ -1,0 +1,77 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
+import {chromium} from '../../ui/node_modules/playwright-core/index.mjs';
+const dir=new URL('./',import.meta.url);
+const runtime=JSON.parse(readFileSync(new URL('runtime.json',dir)));
+const {token:admin}=JSON.parse(readFileSync(new URL('session.json',dir)));
+assert.equal(runtime.baseUrl,'http://127.0.0.1:19613');
+const output='docs/build-log/guarantor-f1-fixback/live';mkdirSync(output,{recursive:true});
+const scenario=process.argv[2];assert.ok(['F1a-unfenced','F1a-fenced','F1e'].includes(scenario));
+execFileSync('./mcp/node_modules/.bin/tsx',['.odos/guarantor-f1/fixtures.ts'],{stdio:'pipe'});
+const fixture=JSON.parse(readFileSync(new URL('fixtures.json',dir)));
+const {token:staff}=JSON.parse(readFileSync(new URL('staff-session.json',dir)));
+const capture=[];let armed=false;let injected=false;let childReads=0;
+const ref=r=>`${r.resourceType}/${r.id}`;
+const demos=r=>({name:r.name,telecom:r.telecom,address:r.address});
+async function request(actor,method,path,body,etag){
+ const entry={seq:capture.length+1,actor,request:{method,path,...(etag?{ifMatch:etag}:{}),...(body?{body}:{})}};capture.push(entry);
+ const response=await fetch(runtime.baseUrl+path,{method,headers:{Authorization:`Bearer ${actor==='editor'?staff:admin}`,'Content-Type':'application/fhir+json',...(etag?{'If-Match':etag}:{})},...(body?{body:JSON.stringify(body)}:{})});
+ const text=await response.text();entry.response={status:response.status,body:text?JSON.parse(text):null};return entry.response;
+}
+async function read(r){const res=await request('verification','GET','/fhir/R4/'+ref(r));assert.equal(res.status,200);return res.body;}
+async function update(r,values){const fresh=await read(r);const res=await request('competitor','PUT','/fhir/R4/'+ref(r),{...fresh,...values},`W/"${fresh.meta.versionId}"`);assert.equal(res.status,200);return res.body;}
+if(scenario.startsWith('F1a'))await update(fixture.person,{name:[{given:['Edited'],family:'Synthetic'}]});
+const browser=await chromium.launch({channel:'chrome',headless:true});
+try{
+ const page=await browser.newPage({viewport:{width:1440,height:1200}});
+ await page.addInitScript(token=>sessionStorage.setItem('odos.session.v1',JSON.stringify({accessToken:token,expiresAt:Date.now()+3600000})),staff);
+ await page.route('**/fhir/**',async route=>{
+  const req=route.request();const url=new URL(req.url());const method=req.method();const body=req.postData()?JSON.parse(req.postData()):undefined;
+  if(armed&&!injected&&url.pathname==='/fhir/R4/'+ref(fixture.children[0])){
+   if(scenario.startsWith('F1a')&&method==='GET'&&++childReads===2){
+    injected=true;const newest=await update(fixture.person,{name:[{given:['Newest'],family:'Synthetic'}]});await update(fixture.children[0],demos(newest));
+   }else if(scenario==='F1e'&&method==='PUT'){
+    injected=true;await update(fixture.person,{name:[{given:['Third'],family:'Synthetic'}]});
+   }
+  }
+  const result=await request('editor',method,url.pathname+url.search,body,req.headers()['if-match']);
+  await route.fulfill({status:result.status,contentType:'application/fhir+json',body:JSON.stringify(result.body)});
+ });
+ await page.goto('http://127.0.0.1:19610/tests/fixtures/guarantor-live.html?patientId='+fixture.patients[0].id);
+ await page.getByRole('button',{name:'Edit demographics',exact:true}).click();
+ await page.getByText('Loading responsible parties…').waitFor({state:'hidden'});
+ const section=page.locator('fieldset').filter({has:page.locator('legend').filter({hasText:/^Responsible parties$/})}).first();
+ const start=capture.length;armed=true;
+ if(scenario.startsWith('F1a'))await section.getByRole('button',{name:'Repair for Sam Synthetic',exact:true}).click();
+ else{
+  await section.getByLabel('Given names 1',{exact:true}).fill('Edited');
+  await section.getByRole('button',{name:'Save guarantor',exact:true}).click();
+ }
+ await section.getByRole('button',{name:'Save guarantor',exact:true}).waitFor();
+ assert.ok(injected);
+ const resultText=await section.innerText();
+ const saved={person:await read(fixture.person),child:await read(fixture.children[0])};
+ const writes=capture.slice(start).filter(e=>e.actor==='editor'&&e.request.method==='PUT');
+ if(scenario==='F1a-unfenced'){
+  assert.deepEqual(writes.map(e=>[e.request.path,e.response.status]),[['/fhir/R4/'+ref(fixture.children[0]),200]]);
+  assert.equal(saved.child.name[0].given[0],'Edited');assert.equal(saved.person.name[0].given[0],'Newest');
+ }else if(scenario==='F1a-fenced'){
+  assert.deepEqual(writes,[]);assert.equal(saved.child.name[0].given[0],'Newest');assert.equal(saved.person.name[0].given[0],'Newest');
+ }else{
+  assert.deepEqual(writes.map(e=>e.response.status),[200,200]);
+  assert.match(resultText,/newer edit.*landed/i);
+  assert.equal(saved.child.name[0].given[0],'Edited');assert.equal(saved.person.name[0].given[0],'Third');
+  const repair=section.getByRole('button',{name:'Repair for Sam Synthetic',exact:true});await repair.waitFor();
+  await section.screenshot({path:output+'/F1e-repair-offered.png'});
+  const repairStart=capture.length;await repair.click();await section.getByRole('button',{name:'Save guarantor',exact:true}).waitFor();
+  const repaired={person:await read(fixture.person),child:await read(fixture.children[0])};
+  assert.deepEqual(demos(repaired.child),demos(repaired.person));assert.equal(repaired.person.meta.versionId,saved.person.meta.versionId);
+  assert.deepEqual(capture.slice(repairStart).filter(e=>e.actor==='editor'&&e.request.method==='PUT').map(e=>[e.request.path,e.response.status]),[['/fhir/R4/'+ref(fixture.children[0]),200]]);
+  writeFileSync(output+'/F1e-repaired.json',JSON.stringify({repaired,capture:capture.slice(repairStart)},null,2));
+ }
+ assert.ok(!capture.some(e=>e.actor==='editor'&&e.request.method!=='GET'&&e.request.path.startsWith('/fhir/R4/Patient/')));
+ await section.screenshot({path:output+'/'+scenario+'.png'});
+ writeFileSync(output+'/'+scenario+'.json',JSON.stringify({scenario,serverVersion:'5.1.30-9b1bd92',transactionBundles:false,fixture,resultText,saved,capture},null,2));
+ console.log(JSON.stringify({scenario,writeStatuses:writes.map(e=>e.response.status),child:saved.child.name[0].given[0],person:saved.person.name[0].given[0],passed:true}));
+}finally{await browser.close();}

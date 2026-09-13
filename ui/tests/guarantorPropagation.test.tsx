@@ -405,3 +405,127 @@ test("Q8 child lost response and verification failure remain unknown", async () 
       old,
     );
   }));
+
+test("F1a repair fences generation after fresh child read", async () => fixture(async s => {
+  s.compete("Person/p", edited);
+  const snap = await s.snapshot();
+  let reads = 0;
+  s.hook = (key, method) => {
+    if (key === "RelatedPerson/a" && method === "GET" && ++reads === 2) {
+      s.hook = undefined;
+      s.compete("Person/p", newest);
+      s.compete("RelatedPerson/a", newest);
+    }
+  };
+  const r = await repairGuarantor(snap);
+  assert.deepEqual(s.writes, []);
+  assert.deepEqual(demographics(await fresh("a")), newest);
+  assert.deepEqual(demographics(await fhir.read<Person>("Person", "p")), newest);
+  assert.equal(r.status, "superseded");
+}));
+
+test("F1b repair fences moved ownership after fresh child read", async () => fixture(async s => {
+  s.compete("Person/p", edited);
+  const snap = await s.snapshot();
+  let reads = 0;
+  s.hook = (key, method) => {
+    if (key === "RelatedPerson/a" && method === "GET" && ++reads === 2) {
+      s.hook = undefined;
+      s.compete("Person/p", { link: [{ target: { reference: "RelatedPerson/b" } }] });
+      s.put({ resourceType: "Person", id: "d", meta: { versionId: "1" }, ...newest, link: [{ target: { reference: "RelatedPerson/a" } }] });
+      s.compete("RelatedPerson/a", newest);
+    }
+  };
+  const r = await repairGuarantor(snap);
+  assert.deepEqual(s.writes, []);
+  assert.deepEqual(demographics(await fresh("a")), newest);
+  const owners = await fhir.search<Person>("Person", { link: "RelatedPerson/a" });
+  assert.deepEqual(owners.entry?.map(e => e.resource?.id), ["d"]);
+  assert.equal(r.status, "superseded");
+}));
+
+test("F1c save stops Leo after competitor on Sam PUT", async () => fixture(async s => {
+  const snap = await s.snapshot();
+  s.hook = (key, method) => {
+    if (key === "RelatedPerson/a" && method === "PUT") {
+      s.hook = undefined;
+      s.compete("Person/p", newest);
+    }
+  };
+  const r = await saveGuarantor(snap, edited);
+  assert.deepEqual(s.writes, ["PUT Person/p", "PUT RelatedPerson/a"]);
+  assert.deepEqual(demographics(await fresh("a")), edited);
+  assert.deepEqual(demographics(await fresh("b")), old);
+  assert.deepEqual(demographics(await fhir.read<Person>("Person", "p")), newest);
+  assert.equal(r.status, "superseded");
+  assert.equal(r.children[0].writeStatus, "updated");
+  assert.equal(r.children[1].writeStatus, "stopped");
+  assert.equal(r.children[1].patientName, "Leo");
+}));
+
+test("F1d failed generation check stops child submission", async () => fixture(async s => {
+  const snap = await s.snapshot();
+  s.hook = (key, method) => {
+    if (key === "RelatedPerson/a" && method === "PUT") {
+      s.hook = undefined;
+      s.compete("Person/p", newest);
+      s.failure = (key, method) => {
+        if (key === "Person/p" && method === "GET") {
+          s.failure = undefined;
+          return "error";
+        }
+      };
+    }
+  };
+  const r = await saveGuarantor(snap, edited);
+  assert.deepEqual(s.writes, ["PUT Person/p", "PUT RelatedPerson/a"]);
+  assert.deepEqual(demographics(await fresh("b")), old);
+  assert.equal(r.children[1].writeStatus, "no-response");
+  assert.notEqual(r.status, "saved");
+}));
+
+test("F1e superseded message does not promise absent Repair", async () => fixture(async s => {
+  const snap = await s.snapshot();
+  s.compete("Person/p", newest);
+  const r = await verifyGuarantor(snap);
+  assert.equal(r.status, "superseded");
+  assert.doesNotMatch(r.message, /repair/i);
+}));
+
+test("F1f dangling 410 and 404 are named but 403 stays unknown", async () => fixture(async s => {
+  const transport = s.fetch;
+  for (const status of [410, 404, 403]) {
+    globalThis.fetch = async (input, init) => String(input).includes("/RelatedPerson/b") && (!init?.method || init.method === "GET")
+      ? Response.json({}, { status }) : transport(input, init);
+    const r = await loadGuarantor("a");
+    assert.equal(r.kind, status === 403 ? "unknown" : "dangling");
+    if (r.kind !== "editable" && status !== 403) {
+      assert.deepEqual(r.personIds, ["p"]);
+      assert.match(r.message, /Person\/p/);
+      assert.match(r.message, /RelatedPerson\/b/);
+      assert.match(r.message, /deleted or outside this practice.*Editing refused/);
+    }
+    assert.deepEqual(s.writes, []);
+  }
+}));
+
+test("F1 moved generation stays superseded if trailing verification fails", async () => {
+  for (const repair of [false, true]) await fixture(async s => {
+    if (repair) s.compete("Person/p", edited);
+    const snap = await s.snapshot();
+    let childReads = 0;
+    let moved = false;
+    let checks = 0;
+    s.hook = (key, method) => {
+      if (!moved && key === "RelatedPerson/a" && (repair ? method === "GET" && ++childReads === 2 : method === "PUT")) {
+        moved = true;
+        s.compete("Person/p", newest);
+      }
+    };
+    s.failure = (key, method) => moved && key === "Person/p" && method === "GET" && ++checks > 1 ? "error" : undefined;
+    const r = repair ? await repairGuarantor(snap) : await saveGuarantor(snap, edited);
+    assert.equal(r.status, "superseded");
+    assert.deepEqual(s.writes, repair ? [] : ["PUT Person/p", "PUT RelatedPerson/a"]);
+    assert.deepEqual(demographics(await fresh("b")), old);
+  });
+});

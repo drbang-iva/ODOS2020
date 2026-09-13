@@ -1,0 +1,27 @@
+from pathlib import Path
+import subprocess,json
+lib=Path('ui/src/lib/guarantor-editor.ts'); ui=Path('ui/src/components/patient/ResponsiblePartiesControl.tsx')
+original={lib:lib.read_text(),ui:ui.read_text()}
+mutations=[
+ ('F1a-F1b-no-repair-fence',lib,lambda s:s.replace('halted = await checkGeneration(current.person);','halted = undefined;'),'F1a|F1b'),
+ ('F1a-early-fence',lib,lambda s:s.replace('const fresh = await fhir.read<RelatedPerson>("RelatedPerson", item.resource.id!);\n      halted = await checkGeneration(current.person);','halted = await checkGeneration(current.person);\n      const fresh = await fhir.read<RelatedPerson>("RelatedPerson", item.resource.id!);'),'F1a'),
+ ('F1c-no-save-fence',lib,lambda s:s.replace('halted ??= await checkGeneration(accepted);','halted = undefined;'),'F1c'),
+ ('F1d-failed-check-passes',lib,lambda s:s.replace('} catch { return "no-response"; }','} catch { return undefined; }'),'F1d'),
+ ('F1e-no-reload',ui,lambda s:s.replace('        await refresh();','        // mutation: omit automatic refresh'),'F1e superseded save'),
+ ('F1e-old-message',lib,lambda s:s.replace('A newer guarantor edit superseded this generation. Reload to see the current record.','A newer guarantor edit superseded this generation. Repair will use the current guarantor record.'),'F1e superseded message'),
+ ('F1f-410-unknown',lib,lambda s:s.replace('(404|410)', '(404)'),'F1f'),
+ ('F1f-all-errors-dangling',lib,lambda s:s.replace('error instanceof Error && /^FHIR (404|410)\\b/.test(error.message)','true'),'F1f'),
+]
+out=Path('docs/build-log/guarantor-f1-fixback/guards'); report=[]
+for name,p,mutate,pattern in mutations:
+ try:
+  changed=mutate(original[p]); assert changed != original[p]; p.write_text(changed)
+  r=subprocess.run(['node','--import','tsx','--test','--test-name-pattern='+pattern,'tests/guarantorPropagation.test.tsx','tests/guarantorEditor.test.tsx'],cwd='ui',capture_output=True,text=True)
+  (out/(name+'-red.log')).write_text(r.stdout+r.stderr)
+  assert r.returncode != 0, name+' decorative'
+ finally: p.write_text(original[p])
+ r2=subprocess.run(['node','--import','tsx','--test','--test-name-pattern='+pattern,'tests/guarantorPropagation.test.tsx','tests/guarantorEditor.test.tsx'],cwd='ui',capture_output=True,text=True)
+ (out/(name+'-restored.log')).write_text(r2.stdout+r2.stderr)
+ assert r2.returncode == 0
+ report.append({'mutation':name,'redExit':r.returncode,'restoredExit':r2.returncode,'failingTests':[l for l in r.stdout.splitlines() if l.startswith('not ok')]})
+(out/'mutations.json').write_text(json.dumps(report,indent=2)); print(json.dumps(report,indent=2))
