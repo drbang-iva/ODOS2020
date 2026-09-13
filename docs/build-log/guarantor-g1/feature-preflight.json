@@ -1,0 +1,174 @@
+{
+  "observedAt": "2026-09-13T05:10:41.712Z",
+  "baseSha": "6f8a45a110caeb369be98155a32d71908cb12cc2",
+  "image": "medplum/medplum-server:5.1.30",
+  "initialization": {
+    "method": "POST",
+    "url": "http://127.0.0.1:19413/fhir/R4/Project/$init",
+    "responseStatus": 201,
+    "requestBody": {
+      "resourceType": "Parameters",
+      "parameter": [
+        {
+          "name": "name",
+          "valueString": "G1 Synthetic Practice"
+        },
+        {
+          "name": "owner",
+          "valueReference": {
+            "reference": "User/fa72ee7d-ef09-4511-b46e-192c403c2b36"
+          }
+        }
+      ]
+    },
+    "note": "Initialization succeeded with HTTP 201. An exploratory status assertion expected HTTP 200 and exited 1 after successful creation. A second exploratory call used the generic login helper, which cannot choose between multiple memberships, and received Invalid code. This request uses the existing explicit-project login helper and reads the same project."
+  },
+  "flagRead": {
+    "request": {
+      "method": "GET",
+      "url": "http://127.0.0.1:19413/fhir/R4/Project/b07b76d7-56e6-4528-8500-5b3efb68abe2",
+      "headers": {
+        "Authorization": "[REDACTED]",
+        "Accept": "application/fhir+json"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "resourceType": "Project",
+        "id": "b07b76d7-56e6-4528-8500-5b3efb68abe2",
+        "name": "G1 Synthetic Practice",
+        "owner": {
+          "reference": "User/fa72ee7d-ef09-4511-b46e-192c403c2b36",
+          "display": "[REDACTED]"
+        },
+        "defaultPatientAccessPolicy": {
+          "reference": "AccessPolicy/d2c7ccee-adf8-444a-91a5-7814fac8c415",
+          "display": "Default Patient Access Policy"
+        },
+        "defaultAccessPolicies": [
+          {
+            "profileType": "Patient",
+            "accessPolicy": {
+              "reference": "AccessPolicy/d2c7ccee-adf8-444a-91a5-7814fac8c415",
+              "display": "Default Patient Access Policy"
+            }
+          },
+          {
+            "profileType": "RelatedPerson",
+            "accessPolicy": {
+              "reference": "AccessPolicy/1984671f-b514-4a87-a223-032579d8f4b3",
+              "display": "Default RelatedPerson Access Policy"
+            }
+          },
+          {
+            "profileType": "Admin",
+            "accessPolicy": {
+              "reference": "AccessPolicy/9e913b24-3649-4422-995f-6851d4480d4b",
+              "display": "Default Admin Access Policy"
+            }
+          },
+          {
+            "profileType": "Practitioner",
+            "accessPolicy": {
+              "reference": "AccessPolicy/4c6819df-a7c7-4a41-a010-a51869b5122d",
+              "display": "Default Practitioner Access Policy"
+            }
+          }
+        ],
+        "meta": {
+          "versionId": "333fa5b1-90f2-452f-a1fd-46e3535daabe",
+          "lastUpdated": "2026-09-13T05:09:15.748Z"
+        }
+      }
+    }
+  },
+  "featuresPresent": false,
+  "transactionBundlesEnabled": false,
+  "projectUpdated": false,
+  "superAdminFlagRead": {
+    "observedAt": "2026-09-13T05:11:41.161Z",
+    "request": {
+      "method": "GET",
+      "url": "http://127.0.0.1:19413/fhir/R4/Project/b07b76d7-56e6-4528-8500-5b3efb68abe2",
+      "headers": {
+        "Authorization": "[REDACTED]",
+        "Accept": "application/fhir+json"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "resourceType": "Project",
+        "id": "b07b76d7-56e6-4528-8500-5b3efb68abe2",
+        "name": "G1 Synthetic Practice",
+        "owner": {
+          "reference": "User/fa72ee7d-ef09-4511-b46e-192c403c2b36",
+          "display": "[REDACTED]"
+        },
+        "strictMode": true,
+        "defaultPatientAccessPolicy": {
+          "reference": "AccessPolicy/d2c7ccee-adf8-444a-91a5-7814fac8c415",
+          "display": "Default Patient Access Policy"
+        },
+        "defaultAccessPolicies": [
+          {
+            "profileType": "Patient",
+            "accessPolicy": {
+              "reference": "AccessPolicy/d2c7ccee-adf8-444a-91a5-7814fac8c415",
+              "display": "Default Patient Access Policy"
+            }
+          },
+          {
+            "profileType": "RelatedPerson",
+            "accessPolicy": {
+              "reference": "AccessPolicy/1984671f-b514-4a87-a223-032579d8f4b3",
+              "display": "Default RelatedPerson Access Policy"
+            }
+          },
+          {
+            "profileType": "Admin",
+            "accessPolicy": {
+              "reference": "AccessPolicy/9e913b24-3649-4422-995f-6851d4480d4b",
+              "display": "Default Admin Access Policy"
+            }
+          },
+          {
+            "profileType": "Practitioner",
+            "accessPolicy": {
+              "reference": "AccessPolicy/4c6819df-a7c7-4a41-a010-a51869b5122d",
+              "display": "Default Practitioner Access Policy"
+            }
+          }
+        ],
+        "meta": {
+          "versionId": "333fa5b1-90f2-452f-a1fd-46e3535daabe",
+          "lastUpdated": "2026-09-13T05:09:15.748Z"
+        }
+      }
+    }
+  },
+  "databaseFlagRead": {
+    "command": "docker exec odos-guarantor-g1-postgres-1 psql -U medplum -d medplum -At -c <SELECT Project flag fields>",
+    "sql": "SELECT json_build_object('id', id, 'name', content::jsonb->>'name', 'superAdmin', content::jsonb->'superAdmin', 'featuresPresent', content::jsonb ? 'features', 'features', content::jsonb->'features') FROM \"Project\" WHERE content::jsonb->>'superAdmin' = 'true' OR id = 'b07b76d7-56e6-4528-8500-5b3efb68abe2';",
+    "exitCode": 0,
+    "rows": [
+      {
+        "id": "1237b348-7d04-4167-bca0-cd0fe1458e5c",
+        "name": "Super Admin",
+        "superAdmin": true,
+        "featuresPresent": false,
+        "features": null
+      },
+      {
+        "id": "b07b76d7-56e6-4528-8500-5b3efb68abe2",
+        "name": "G1 Synthetic Practice",
+        "superAdmin": null,
+        "featuresPresent": false,
+        "features": null
+      }
+    ]
+  },
+  "stopCondition": 1,
+  "p11": "UNPROVABLE: transaction-bundles is absent; the feature was not enabled."
+}

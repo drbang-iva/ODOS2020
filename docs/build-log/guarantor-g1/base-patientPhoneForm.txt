@@ -1,0 +1,112 @@
+TAP version 13
+# Subtest: K1: the real reader selects active slots in resolver order
+ok 1 - K1: the real reader selects active slots in resolver order
+  ---
+  duration_ms: 3.9785
+  type: 'test'
+  ...
+# Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+ok 2 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+  ---
+  duration_ms: 14.88425
+  type: 'test'
+  ...
+# Subtest: K3: clearing slot 2 removes only its original entry from one serialized PUT
+ok 3 - K3: clearing slot 2 removes only its original entry from one serialized PUT
+  ---
+  duration_ms: 0.40425
+  type: 'test'
+  ...
+# Subtest: K4: absent and empty telecom allow an address-only save without creating telecom
+ok 4 - K4: absent and empty telecom allow an address-only save without creating telecom
+  ---
+  duration_ms: 0.219875
+  type: 'test'
+  ...
+# Subtest: K6: a changed phone choice leaves exactly one marker across the entire resource
+ok 5 - K6: a changed phone choice leaves exactly one marker across the entire resource
+  ---
+  duration_ms: 0.885583
+  type: 'test'
+  ...
+# Subtest: K7: Neither writes one refusal and preserves every ContactPoint marker
+ok 6 - K7: Neither writes one refusal and preserves every ContactPoint marker
+  ---
+  duration_ms: 0.189334
+  type: 'test'
+  ...
+# Subtest: K8: choosing a phone removes refusal and switches the actual SMS resolver
+ok 7 - K8: choosing a phone removes refusal and switches the actual SMS resolver
+  ---
+  duration_ms: 0.22275
+  type: 'test'
+  ...
+# Subtest: K9: an ineffective inherited marker survives an address-only save
+ok 8 - K9: an ineffective inherited marker survives an address-only save
+  ---
+  duration_ms: 0.272042
+  type: 'test'
+  ...
+# Subtest: K10: a new mobile appends after obsolete history with the chosen use
+ok 9 - K10: a new mobile appends after obsolete history with the chosen use
+  ---
+  duration_ms: 0.277708
+  type: 'test'
+  ...
+# Subtest: K11: a use-only edit retains metadata and the other legacy use verbatim
+ok 10 - K11: a use-only edit retains metadata and the other legacy use verbatim
+  ---
+  duration_ms: 0.361583
+  type: 'test'
+  ...
+# Subtest: K12: blank and whitespace phone values save once without an empty ContactPoint
+ok 11 - K12: blank and whitespace phone values save once without an empty ContactPoint
+  ---
+  duration_ms: 0.203333
+  type: 'test'
+  ...
+# Subtest: K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+ok 12 - K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+  ---
+  duration_ms: 13.36475
+  type: 'test'
+  ...
+# Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
+ok 13 - K14: unrelated extensions and effective appointment suppression survive every transition
+  ---
+  duration_ms: 8.620625
+  type: 'test'
+  ...
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+ok 14 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 8.582417
+  type: 'test'
+  ...
+# Subtest: R2: choosing a blank or invalid slot blocks the real form on that slot
+ok 15 - R2: choosing a blank or invalid slot blocks the real form on that slot
+  ---
+  duration_ms: 4.6635
+  type: 'test'
+  ...
+# Subtest: F1: duplicate values mark only the chosen original entry
+ok 16 - F1: duplicate values mark only the chosen original entry
+  ---
+  duration_ms: 0.425042
+  type: 'test'
+  ...
+# Subtest: F2: a false marker gives neither a loaded answer nor slot priority
+ok 17 - F2: a false marker gives neither a loaded answer nor slot priority
+  ---
+  duration_ms: 0.1225
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 420.771541

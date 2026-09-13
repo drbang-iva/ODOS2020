@@ -1,0 +1,146 @@
+[
+  {
+    "command": "npm --prefix mcp test -- tests/commsSuppression.test.ts",
+    "expected": 49,
+    "tests": 49,
+    "exitCode": 0,
+    "summary": [
+      "# tests 49",
+      "# suites 0",
+      "# pass 49",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0",
+      "# duration_ms 287.247834"
+    ]
+  },
+  {
+    "command": "npm --prefix mcp test -- tests/commsApi.test.ts",
+    "expected": 99,
+    "tests": 99,
+    "exitCode": 0,
+    "summary": [
+      "# tests 99",
+      "# suites 0",
+      "# pass 99",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0",
+      "# duration_ms 661.330584"
+    ]
+  },
+  {
+    "command": "npm --prefix mcp test -- tests/commsConfig.test.ts",
+    "expected": 32,
+    "tests": 32,
+    "exitCode": 0,
+    "summary": [
+      "# tests 32",
+      "# suites 0",
+      "# pass 32",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0",
+      "# duration_ms 388.230667"
+    ]
+  },
+  {
+    "command": "npm --prefix mcp test -- tests/patientRegistrationAuthz.test.ts",
+    "expected": 29,
+    "tests": 29,
+    "exitCode": 0,
+    "summary": [
+      "# tests 29",
+      "# suites 0",
+      "# pass 29",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0",
+      "# duration_ms 428.517625"
+    ]
+  },
+  {
+    "command": "cd ui && node --import tsx --test tests/patientRegistration.test.tsx",
+    "expected": 20,
+    "tests": 20,
+    "exitCode": 0,
+    "summary": [
+      "# tests 20",
+      "# suites 0",
+      "# pass 20",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0",
+      "# duration_ms 303.159708"
+    ]
+  },
+  {
+    "command": "cd ui && node --import tsx --test tests/demographicsConcurrency.test.tsx",
+    "expected": 3,
+    "tests": 3,
+    "exitCode": 0,
+    "summary": [
+      "# tests 3",
+      "# suites 0",
+      "# pass 3",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0",
+      "# duration_ms 583.361209"
+    ]
+  },
+  {
+    "command": "cd ui && node --import tsx --test tests/patientRegistrationEndpoint.test.tsx",
+    "expected": 4,
+    "tests": 4,
+    "exitCode": 0,
+    "summary": [
+      "# tests 4",
+      "# suites 0",
+      "# pass 4",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0",
+      "# duration_ms 206.893875"
+    ]
+  },
+  {
+    "command": "cd ui && node --import tsx --test tests/registrationCommunicationPreferences.test.tsx",
+    "expected": 8,
+    "tests": 8,
+    "exitCode": 0,
+    "summary": [
+      "# tests 8",
+      "# suites 0",
+      "# pass 8",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0",
+      "# duration_ms 297.452458"
+    ]
+  },
+  {
+    "command": "cd ui && node --import tsx --test tests/patientPhoneForm.test.tsx",
+    "expected": 17,
+    "tests": 17,
+    "exitCode": 0,
+    "summary": [
+      "# tests 17",
+      "# suites 0",
+      "# pass 17",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0",
+      "# duration_ms 420.771541"
+    ]
+  }
+]

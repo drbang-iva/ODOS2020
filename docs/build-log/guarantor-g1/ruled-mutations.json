@@ -1,0 +1,121 @@
+[
+  {
+    "guard": "P7",
+    "mutation": {
+      "path": "mcp/src/authz/roles.ts",
+      "originalSha256": "404d866482d8cbd0668ac7549943396c2cc60fc4d252d7fcd18e9f613670a960",
+      "mutantSha256": "c82a610c1f3c578d94b754fc4fdf4de7181c7c12df4fa6bda2f4c36d208fffe0"
+    },
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        ".odos/guarantor-g1/policy-probe.ts"
+      ],
+      "exit": 0,
+      "output": "p7-ruled-green.log",
+      "publishedOutput": "p7-ruled-green.txt",
+      "env": {
+        "G1_POLICY_OUTPUT": "./p7-ruled-green.json"
+      }
+    },
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        ".odos/guarantor-g1/policy-probe.ts"
+      ],
+      "exit": 1,
+      "output": "p7-ruled-red.log",
+      "publishedOutput": "p7-ruled-red.txt",
+      "env": {
+        "G1_POLICY_OUTPUT": "./p7-ruled-red.json"
+      }
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        ".odos/guarantor-g1/policy-probe.ts"
+      ],
+      "exit": 0,
+      "output": "p7-ruled-restored.log",
+      "publishedOutput": "p7-ruled-restored.txt",
+      "env": {
+        "G1_POLICY_OUTPUT": "./p7-ruled-restored.json"
+      }
+    }
+  },
+  {
+    "guard": "P11a",
+    "mutation": {
+      "path": "mcp/src/clinic/patient-registration-endpoint.ts",
+      "originalSha256": "99fe95d5c14b14c98411ee43627d770018f155b0b1f97364d2b6f23addb20377",
+      "mutantSha256": "96df4338a67fca3942f6f9f71770b2a9f331a61ca12347b7324629d60bb53c88"
+    },
+    "green": {
+      "command": [
+        "node",
+        ".odos/guarantor-g1/assert-p11a.mjs",
+        "p11a-green"
+      ],
+      "exit": 0,
+      "output": "p11a-green.log",
+      "publishedOutput": "p11a-green.txt",
+      "env": {}
+    },
+    "redProbe": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        ".odos/guarantor-g1/residue-probe.ts",
+        "RelatedPerson",
+        "p11a-red"
+      ],
+      "exit": 0,
+      "output": "p11a-red-probe.log",
+      "publishedOutput": "p11a-red-probe.txt",
+      "env": {}
+    },
+    "red": {
+      "command": [
+        "node",
+        ".odos/guarantor-g1/assert-p11a.mjs",
+        "p11a-red"
+      ],
+      "exit": 1,
+      "output": "p11a-red.log",
+      "publishedOutput": "p11a-red.txt",
+      "env": {}
+    },
+    "restoredProbe": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        ".odos/guarantor-g1/residue-probe.ts",
+        "RelatedPerson",
+        "p11a-restored"
+      ],
+      "exit": 0,
+      "output": "p11a-restored-probe.log",
+      "publishedOutput": "p11a-restored-probe.txt",
+      "env": {}
+    },
+    "restored": {
+      "command": [
+        "node",
+        ".odos/guarantor-g1/assert-p11a.mjs",
+        "p11a-restored"
+      ],
+      "exit": 0,
+      "output": "p11a-restored.log",
+      "publishedOutput": "p11a-restored.txt",
+      "env": {}
+    }
+  }
+]

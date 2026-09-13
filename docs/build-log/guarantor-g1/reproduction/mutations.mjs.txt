@@ -1,0 +1,80 @@
+import { sanitizeProofOutput } from "./proof-output.mjs";
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+
+const directory = dirname(fileURLToPath(import.meta.url));
+const root = resolve(directory, '../..');
+const endpoint = 'mcp/src/clinic/patient-registration-endpoint.ts';
+const roles = 'mcp/src/authz/roles.ts';
+const originals = new Map([endpoint, roles].map(path => [path, readFileSync(resolve(root, path), 'utf8')]));
+const output = resolve(directory, 'mutations');
+mkdirSync(output, { recursive: true });
+const hash = text => createHash('sha256').update(text).digest('hex');
+const replace = (source, from, to) => {
+  assert.equal(source.split(from).length, 2, `Expected exactly one mutation anchor: ${from}`);
+  return source.replace(from, to);
+};
+const personEntry = `    entries.push({
+      fullUrl: \`urn:uuid:\${randomUUID()}\`,
+      resource: registrationResourceInProject<Person>({
+        resourceType: "Person",
+        ...buildResponsiblePartyDemographics(party),
+        link: [{ target: { reference: fullUrl }, assurance: "level2" }],
+      }, projectId),
+      request: { method: "POST", url: "Person" },
+    });`;
+const phoneMutation = source => replace(source, 'value: party.phone.trim()', 'value: `${party.phone.trim()}0`');
+const referenceMutation = source => replace(source, 'const reference = partyReferences.get(party.localId);', 'const reference = entries.find(entry => entry.resource?.resourceType === "Person")?.fullUrl;');
+const cases = [
+  { id: 'P1', path: endpoint, change: 'Omit the Person link', mutate: source => replace(source, '        link: [{ target: { reference: fullUrl }, assurance: "level2" }],\n', '') },
+  { id: 'P2', path: endpoint, change: 'Create an extra Person for self', mutate: source => replace(source, '      partyReferences.set(party.localId, patientFullUrl);\n      continue;', '      partyReferences.set(party.localId, patientFullUrl);\n      entries.push({ resource: { resourceType: "Person" }, request: { method: "POST", url: "Person" } });\n      continue;') },
+  { id: 'P3', path: endpoint, change: 'Link every Person to the first RelatedPerson', mutate: source => replace(source, 'target: { reference: fullUrl }, assurance: "level2"', 'target: { reference: entries.find(entry => entry.resource?.resourceType === "RelatedPerson")!.fullUrl }, assurance: "level2"') },
+  { id: 'P4', path: endpoint, change: 'Reuse a module cache match on name and birthDate instead of creating a second Person; ResponsiblePartyInput has no birthDate, so it is undefined in this deliberately wrong key', mutate: source => replace(replace(source, 'function buildPatientIdentityTransaction(', 'const reusedGuarantors = new Set<string>();\n\nfunction buildPatientIdentityTransaction('), personEntry, '    const reuseKey = JSON.stringify([party.firstName, party.middleName, party.lastName, (party as ResponsiblePartyInput & { birthDate?: string }).birthDate]);\n    if (reusedGuarantors.has(reuseKey)) continue;\n    reusedGuarantors.add(reuseKey);\n' + personEntry) },
+  { id: 'P5', path: endpoint, change: 'Change the shared phone mapping for both resources; frozen base projection must catch it', mutate: phoneMutation },
+  { id: 'P6', path: endpoint, change: 'Omit the Person project wrapper', mutate: source => replace(source, personEntry, personEntry.replace('registrationResourceInProject<Person>({', '{').replace('      }, projectId),', '      },')) },
+  { id: 'P7-declaration', pattern: '^P7 declaration:', path: roles, change: 'Remove both Person list entries; this proves only the declaration test, not live writes', mutate: source => { assert.equal(source.split('  "Person",\n').length, 3); return source.replaceAll('  "Person",\n', ''); } },
+  { id: 'P8', path: endpoint, change: 'Repoint Account to Person so the statement loses the RelatedPerson recipient', mutate: referenceMutation },
+  { id: 'P9', path: endpoint, change: 'Change shared phone bytes supplied to guardian SMS and voice resolution', mutate: phoneMutation },
+  { id: 'P10', path: endpoint, change: 'Repoint Account guarantors at Person', mutate: referenceMutation },
+  { id: 'P12', path: endpoint, change: 'Move Account to the first entry', mutate: source => replace(source, 'return { resourceType: "Bundle", type: "transaction", entry: entries };', 'return { resourceType: "Bundle", type: "transaction", entry: [entries.at(-1)!, ...entries.slice(0, -1)] };') },
+];
+function runTest(item, phase) {
+  const args = ['--import', 'tsx', '--test', `--test-name-pattern=${item.pattern ?? `^${item.id}:`}`, 'tests/guarantorPerson.test.ts'];
+  const result = spawnSync(process.execPath, args, { cwd: resolve(root, 'mcp'), encoding: 'utf8' });
+  const log = sanitizeProofOutput(result.stdout + result.stderr, root);
+  const path = `${item.id}-${phase}.txt`;
+  writeFileSync(resolve(output, path), log);
+  const counts = Object.fromEntries([...log.matchAll(/^# (tests|pass|fail|skipped) (\d+)$/gm)].map(match => [match[1], Number(match[2])]));
+  return { command: ['node', ...args], cwd: 'mcp', exit: result.status, counts, output: path };
+}
+const manifest = [];
+try {
+  for (const item of cases) {
+    const original = originals.get(item.path);
+    assert.equal(readFileSync(resolve(root, item.path), 'utf8'), original);
+    const green = runTest(item, 'green');
+    assert.equal(green.exit, 0, `${item.id} initial green failed`);
+    assert.equal(green.counts.pass, 1);
+    const mutant = item.mutate(original);
+    assert.notEqual(mutant, original);
+    writeFileSync(resolve(root, item.path), mutant);
+    let red;
+    try { red = runTest(item, 'red'); }
+    finally { writeFileSync(resolve(root, item.path), original); }
+    const restored = runTest(item, 'restored');
+    const evidence = { id: item.id, change: item.change, source: item.path, originalSha256: hash(original), mutantSha256: hash(mutant), green, red, restored, result: red.exit === 1 && red.counts.fail === 1 ? 'mutation caught' : 'decorative or invalid mutation' };
+    manifest.push(evidence);
+    writeFileSync(resolve(output, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+    console.log(JSON.stringify({ id: item.id, green: green.exit, red: red.exit, restored: restored.exit, result: evidence.result }));
+    assert.equal(restored.exit, 0, `${item.id} restored green failed`);
+    assert.equal(restored.counts.pass, 1);
+    assert.equal(red.exit, 1, `${item.id} mutation did not fail`);
+    assert.equal(red.counts.fail, 1, `${item.id} mutation did not produce one failed assertion`);
+  }
+} finally {
+  for (const [path, original] of originals) writeFileSync(resolve(root, path), original);
+}

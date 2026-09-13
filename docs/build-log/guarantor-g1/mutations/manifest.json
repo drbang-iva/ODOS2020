@@ -1,0 +1,652 @@
+[
+  {
+    "id": "P1",
+    "change": "Omit the Person link",
+    "source": "mcp/src/clinic/patient-registration-endpoint.ts",
+    "originalSha256": "99fe95d5c14b14c98411ee43627d770018f155b0b1f97364d2b6f23addb20377",
+    "mutantSha256": "bd8adacff7d46b23c04fd0efb4ea2fb3dbc53632a7a47126df649e5e33dd37b0",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P1:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P1-green.txt"
+    },
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P1:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "skipped": 0
+      },
+      "output": "P1-red.txt"
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P1:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P1-restored.txt"
+    },
+    "result": "mutation caught"
+  },
+  {
+    "id": "P2",
+    "change": "Create an extra Person for self",
+    "source": "mcp/src/clinic/patient-registration-endpoint.ts",
+    "originalSha256": "99fe95d5c14b14c98411ee43627d770018f155b0b1f97364d2b6f23addb20377",
+    "mutantSha256": "226f60d78b74915bd382c4b8d5249b61cd44d4ff4db6c9060857c9da1b177af9",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P2:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P2-green.txt"
+    },
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P2:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "skipped": 0
+      },
+      "output": "P2-red.txt"
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P2:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P2-restored.txt"
+    },
+    "result": "mutation caught"
+  },
+  {
+    "id": "P3",
+    "change": "Link every Person to the first RelatedPerson",
+    "source": "mcp/src/clinic/patient-registration-endpoint.ts",
+    "originalSha256": "99fe95d5c14b14c98411ee43627d770018f155b0b1f97364d2b6f23addb20377",
+    "mutantSha256": "091aa52360ff3dfd9ccf22b0e2be46b671db28443d9694a70e6d6513e06feacc",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P3:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P3-green.txt"
+    },
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P3:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "skipped": 0
+      },
+      "output": "P3-red.txt"
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P3:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P3-restored.txt"
+    },
+    "result": "mutation caught"
+  },
+  {
+    "id": "P4",
+    "change": "Reuse a module cache match on name and birthDate instead of creating a second Person; ResponsiblePartyInput has no birthDate, so it is undefined in this deliberately wrong key",
+    "source": "mcp/src/clinic/patient-registration-endpoint.ts",
+    "originalSha256": "99fe95d5c14b14c98411ee43627d770018f155b0b1f97364d2b6f23addb20377",
+    "mutantSha256": "08ddba3a31b919104a1d5efdcbfe0a97bde4390555ad15deeb712b143795d833",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P4:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P4-green.txt"
+    },
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P4:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "skipped": 0
+      },
+      "output": "P4-red.txt"
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P4:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P4-restored.txt"
+    },
+    "result": "mutation caught"
+  },
+  {
+    "id": "P5",
+    "change": "Change the shared phone mapping for both resources; frozen base projection must catch it",
+    "source": "mcp/src/clinic/patient-registration-endpoint.ts",
+    "originalSha256": "99fe95d5c14b14c98411ee43627d770018f155b0b1f97364d2b6f23addb20377",
+    "mutantSha256": "db92427a8099c1b03d61f56cd358f7806dcc7d043389517b4248005c71e16605",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P5:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P5-green.txt"
+    },
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P5:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "skipped": 0
+      },
+      "output": "P5-red.txt"
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P5:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P5-restored.txt"
+    },
+    "result": "mutation caught"
+  },
+  {
+    "id": "P6",
+    "change": "Omit the Person project wrapper",
+    "source": "mcp/src/clinic/patient-registration-endpoint.ts",
+    "originalSha256": "99fe95d5c14b14c98411ee43627d770018f155b0b1f97364d2b6f23addb20377",
+    "mutantSha256": "e7d1cf1d079909f5ce9697745c1a40c5cd0e94108ecd95a11c1bba3baf54a19d",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P6:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P6-green.txt"
+    },
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P6:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "skipped": 0
+      },
+      "output": "P6-red.txt"
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P6:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P6-restored.txt"
+    },
+    "result": "mutation caught"
+  },
+  {
+    "id": "P8",
+    "change": "Repoint Account to Person so the statement loses the RelatedPerson recipient",
+    "source": "mcp/src/clinic/patient-registration-endpoint.ts",
+    "originalSha256": "99fe95d5c14b14c98411ee43627d770018f155b0b1f97364d2b6f23addb20377",
+    "mutantSha256": "4e86ee6f498a88bfcdf1d043ce7480134e89a9bfffcb0d833b733e80590a371f",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P8:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P8-green.txt"
+    },
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P8:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "skipped": 0
+      },
+      "output": "P8-red.txt"
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P8:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P8-restored.txt"
+    },
+    "result": "mutation caught"
+  },
+  {
+    "id": "P9",
+    "change": "Change shared phone bytes supplied to guardian SMS and voice resolution",
+    "source": "mcp/src/clinic/patient-registration-endpoint.ts",
+    "originalSha256": "99fe95d5c14b14c98411ee43627d770018f155b0b1f97364d2b6f23addb20377",
+    "mutantSha256": "db92427a8099c1b03d61f56cd358f7806dcc7d043389517b4248005c71e16605",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P9:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P9-green.txt"
+    },
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P9:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "skipped": 0
+      },
+      "output": "P9-red.txt"
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P9:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P9-restored.txt"
+    },
+    "result": "mutation caught"
+  },
+  {
+    "id": "P10",
+    "change": "Repoint Account guarantors at Person",
+    "source": "mcp/src/clinic/patient-registration-endpoint.ts",
+    "originalSha256": "99fe95d5c14b14c98411ee43627d770018f155b0b1f97364d2b6f23addb20377",
+    "mutantSha256": "4e86ee6f498a88bfcdf1d043ce7480134e89a9bfffcb0d833b733e80590a371f",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P10:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P10-green.txt"
+    },
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P10:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "skipped": 0
+      },
+      "output": "P10-red.txt"
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P10:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P10-restored.txt"
+    },
+    "result": "mutation caught"
+  },
+  {
+    "id": "P12",
+    "change": "Move Account to the first entry",
+    "source": "mcp/src/clinic/patient-registration-endpoint.ts",
+    "originalSha256": "99fe95d5c14b14c98411ee43627d770018f155b0b1f97364d2b6f23addb20377",
+    "mutantSha256": "08e09b76fcd0868e41cab5ff1e42d00061d52f46be66c469bb5339eda2e66e82",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P12:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P12-green.txt"
+    },
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P12:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "skipped": 0
+      },
+      "output": "P12-red.txt"
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^P12:",
+        "tests/guarantorPerson.test.ts"
+      ],
+      "cwd": "mcp",
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      "output": "P12-restored.txt"
+    },
+    "result": "mutation caught"
+  }
+]

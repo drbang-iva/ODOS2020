@@ -1,0 +1,24 @@
+{
+  "label": "p11a-red",
+  "failedType": "RelatedPerson",
+  "result": {
+    "thrown": "Patient registration transaction failed: 400."
+  },
+  "entryStatuses": [
+    "201",
+    "400",
+    "201",
+    "200"
+  ],
+  "residue": {
+    "patientCount": 0,
+    "relatedPersonCount": 0,
+    "personCount": 0,
+    "accountStatus": "active",
+    "accountSubjectCount": 1,
+    "accountGuarantorCount": 1,
+    "mrnOnAccount": true,
+    "mrnOnPatient": false,
+    "pendingAllocationMarker": false
+  }
+}

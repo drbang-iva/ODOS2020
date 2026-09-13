@@ -1,0 +1,308 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/commsSuppression.test.ts
+
+TAP version 13
+# Subtest: inbound STOP follows Patient pagination and suppresses every shared-number match
+ok 1 - inbound STOP follows Patient pagination and suppresses every shared-number match
+  ---
+  duration_ms: 1.172208
+  type: 'test'
+  ...
+# Subtest: per-number STOP suppresses its sender lane while leaving a different sender lane sendable
+ok 2 - per-number STOP suppresses its sender lane while leaving a different sender lane sendable
+  ---
+  duration_ms: 9.289084
+  type: 'test'
+  ...
+# Subtest: global STOP scope expands a number-specific opt-out across sender lanes
+ok 3 - global STOP scope expands a number-specific opt-out across sender lanes
+  ---
+  duration_ms: 0.15775
+  type: 'test'
+  ...
+# Subtest: inbound STOP without a campaign type blocks clinical education on the receiving sender lane
+ok 4 - inbound STOP without a campaign type blocks clinical education on the receiving sender lane
+  ---
+  duration_ms: 0.187625
+  type: 'test'
+  ...
+# Subtest: replayed inbound STOP uses If-Match once and skips an already-present SMS opt-out
+ok 5 - replayed inbound STOP uses If-Match once and skips an already-present SMS opt-out
+  ---
+  duration_ms: 0.24675
+  type: 'test'
+  ...
+# Subtest: inbound START reports no effect when a surviving legacy opt-out still suppresses the lane
+ok 6 - inbound START reports no effect when a surviving legacy opt-out still suppresses the lane
+  ---
+  duration_ms: 0.193042
+  type: 'test'
+  ...
+# Subtest: an explicit Patient clear removes only that patient's SMS opt-out with versioned Provenance
+ok 7 - an explicit Patient clear removes only that patient's SMS opt-out with versioned Provenance
+  ---
+  duration_ms: 0.458459
+  type: 'test'
+  ...
+# Subtest: scoped clear reports a surviving legacy global opt-out without claiming the lane was cleared
+ok 8 - scoped clear reports a surviving legacy global opt-out without claiming the lane was cleared
+  ---
+  duration_ms: 0.098125
+  type: 'test'
+  ...
+# Subtest: scoped clear removes only its numbered lane and reports the other numbered opt-out
+ok 9 - scoped clear removes only its numbered lane and reports the other numbered opt-out
+  ---
+  duration_ms: 0.310125
+  type: 'test'
+  ...
+# Subtest: PMS-side patient/channel opt-out suppresses before the provider call
+ok 10 - PMS-side patient/channel opt-out suppresses before the provider call
+  ---
+  duration_ms: 0.338792
+  type: 'test'
+  ...
+# Subtest: PMS-side SMS opt-out blocks a send before resolving or calling Twilio
+ok 11 - PMS-side SMS opt-out blocks a send before resolving or calling Twilio
+  ---
+  duration_ms: 0.087541
+  type: 'test'
+  ...
+# Subtest: allowed SMS resolves an active Patient.telecom phone before calling Twilio
+ok 12 - allowed SMS resolves an active Patient.telecom phone before calling Twilio
+  ---
+  duration_ms: 0.335208
+  type: 'test'
+  ...
+# Subtest: SMS-specific Patient.telecom takes precedence over mobile and other phones
+ok 13 - SMS-specific Patient.telecom takes precedence over mobile and other phones
+  ---
+  duration_ms: 1.2765
+  type: 'test'
+  ...
+# Subtest: G6: the shared SMS resolver skips an expired mobile for a current home
+ok 14 - G6: the shared SMS resolver skips an expired mobile for a current home
+  ---
+  duration_ms: 0.1425
+  type: 'test'
+  ...
+# Subtest: G7: the shared SMS resolver prefers an explicit SMS entry over mobile
+ok 15 - G7: the shared SMS resolver prefers an explicit SMS entry over mobile
+  ---
+  duration_ms: 0.05625
+  type: 'test'
+  ...
+# Subtest: SMS resolution retains active-period boundaries, trimming, and first-candidate fallback
+ok 16 - SMS resolution retains active-period boundaries, trimming, and first-candidate fallback
+  ---
+  duration_ms: 0.076667
+  type: 'test'
+  ...
+# Subtest: G10: the suppression wrapper retains its no-active-phone error
+ok 17 - G10: the suppression wrapper retains its no-active-phone error
+  ---
+  duration_ms: 0.404125
+  type: 'test'
+  ...
+# Subtest: G11: voice retains mobile, active-period, and explicit-SMS selection through its wrapper
+ok 18 - G11: voice retains mobile, active-period, and explicit-SMS selection through its wrapper
+  ---
+  duration_ms: 0.181875
+  type: 'test'
+  ...
+# Subtest: outside quiet hours reschedules to the next patient-local 8 AM rather than sending or dropping
+ok 19 - outside quiet hours reschedules to the next patient-local 8 AM rather than sending or dropping
+  ---
+  duration_ms: 0.582667
+  type: 'test'
+  ...
+# Subtest: live staff transactional chart education bypasses quiet hours
+ok 20 - live staff transactional chart education bypasses quiet hours
+  ---
+  duration_ms: 0.332708
+  type: 'test'
+  ...
+# Subtest: staff chart education quiet-hours exemption does not bypass opt-out or frequency caps
+ok 21 - staff chart education quiet-hours exemption does not bypass opt-out or frequency caps
+  ---
+  duration_ms: 0.368042
+  type: 'test'
+  ...
+# Subtest: a configured campaign frequency cap suppresses a repeat inside the lookback window
+ok 22 - a configured campaign frequency cap suppresses a repeat inside the lookback window
+  ---
+  duration_ms: 0.137209
+  type: 'test'
+  ...
+# Subtest: frequency-cap evaluation follows FHIR next links before allowing a send
+ok 23 - frequency-cap evaluation follows FHIR next links before allowing a send
+  ---
+  duration_ms: 0.140833
+  type: 'test'
+  ...
+# Subtest: concurrent in-progress claims elect exactly one deterministic frequency-cap winner
+ok 24 - concurrent in-progress claims elect exactly one deterministic frequency-cap winner
+  ---
+  duration_ms: 0.78975
+  type: 'test'
+  ...
+# Subtest: an allowed send resolves Patient.telecom email and reaches the provider
+ok 25 - an allowed send resolves Patient.telecom email and reaches the provider
+  ---
+  duration_ms: 0.16975
+  type: 'test'
+  ...
+# Subtest: email resolution skips a ContactPoint whose validity starts in the future
+ok 26 - email resolution skips a ContactPoint whose validity starts in the future
+  ---
+  duration_ms: 0.17325
+  type: 'test'
+  ...
+# Subtest: record requires a fresh Patient version before writing
+ok 27 - record requires a fresh Patient version before writing
+  ---
+  duration_ms: 0.129709
+  type: 'test'
+  ...
+# Subtest: record refuses failed or incomplete transaction responses and propagates conflicts
+ok 28 - record refuses failed or incomplete transaction responses and propagates conflicts
+  ---
+  duration_ms: 0.409625
+  type: 'test'
+  ...
+# Subtest: H4: marked patient resolves no SMS number and sendSms refuses without sending
+ok 29 - H4: marked patient resolves no SMS number and sendSms refuses without sending
+  ---
+  duration_ms: 1.333459
+  type: 'test'
+  ...
+# Subtest: H6: refusal marker wins even over an explicit SMS ContactPoint
+ok 30 - H6: refusal marker wins even over an explicit SMS ContactPoint
+  ---
+  duration_ms: 0.039875
+  type: 'test'
+  ...
+# Subtest: H11: refusal errors distinguish a marked patient with and without a current phone
+ok 31 - H11: refusal errors distinguish a marked patient with and without a current phone
+  ---
+  duration_ms: 0.561542
+  type: 'test'
+  ...
+# Subtest: H5: marked patient still resolves a voice number and places a call
+ok 32 - H5: marked patient still resolves a voice number and places a call
+  ---
+  duration_ms: 0.082875
+  type: 'test'
+  ...
+# Subtest: H12: absent marker keeps SMS and voice mobile then first-active fallback
+ok 33 - H12: absent marker keeps SMS and voice mobile then first-active fallback
+  ---
+  duration_ms: 0.27975
+  type: 'test'
+  ...
+# Subtest: FB6: SMS marker value true
+ok 34 - FB6: SMS marker value true
+  ---
+  duration_ms: 0.038208
+  type: 'test'
+  ...
+# Subtest: FB7: SMS marker value false
+ok 35 - FB7: SMS marker value false
+  ---
+  duration_ms: 0.08925
+  type: 'test'
+  ...
+# Subtest: FB8: SMS marker value undefined
+ok 36 - FB8: SMS marker value undefined
+  ---
+  duration_ms: 0.028292
+  type: 'test'
+  ...
+# Subtest: J1: explicit textable work outranks mobile and imported sms
+ok 37 - J1: explicit textable work outranks mobile and imported sms
+  ---
+  duration_ms: 0.054875
+  type: 'test'
+  ...
+# Subtest: J2: textable value false does not mark a ContactPoint
+ok 38 - J2: textable value false does not mark a ContactPoint
+  ---
+  duration_ms: 0.030708
+  type: 'test'
+  ...
+# Subtest: J2: textable value undefined does not mark a ContactPoint
+ok 39 - J2: textable value undefined does not mark a ContactPoint
+  ---
+  duration_ms: 0.019959
+  type: 'test'
+  ...
+# Subtest: J3: refusal wins over an explicitly textable ContactPoint
+ok 40 - J3: refusal wins over an explicitly textable ContactPoint
+  ---
+  duration_ms: 0.027916
+  type: 'test'
+  ...
+# Subtest: J4: inactive marked entry {"use":"old"} falls back
+ok 41 - J4: inactive marked entry {"use":"old"} falls back
+  ---
+  duration_ms: 0.027708
+  type: 'test'
+  ...
+# Subtest: J5: inactive marked entry {"period":{"end":"2026-08-02T15:00:00.000Z"}} falls back
+ok 42 - J5: inactive marked entry {"period":{"end":"2026-08-02T15:00:00.000Z"}} falls back
+  ---
+  duration_ms: 0.02675
+  type: 'test'
+  ...
+# Subtest: J5: inactive marked entry {"period":{"start":"2026-08-03T00:00:00.000Z"}} falls back
+ok 43 - J5: inactive marked entry {"period":{"start":"2026-08-03T00:00:00.000Z"}} falls back
+  ---
+  duration_ms: 0.024292
+  type: 'test'
+  ...
+# Subtest: J5: inactive marked entry {"value":"  "} falls back
+ok 44 - J5: inactive marked entry {"value":"  "} falls back
+  ---
+  duration_ms: 0.020875
+  type: 'test'
+  ...
+# Subtest: J5: inactive marked entry {"system":"email"} falls back
+ok 45 - J5: inactive marked entry {"system":"email"} falls back
+  ---
+  duration_ms: 0.027209
+  type: 'test'
+  ...
+# Subtest: J6: first active marked entry wins after an obsolete marked entry
+ok 46 - J6: first active marked entry wins after an obsolete marked entry
+  ---
+  duration_ms: 0.032209
+  type: 'test'
+  ...
+# Subtest: J7: textable work does not change voice or initiateCall
+ok 47 - J7: textable work does not change voice or initiateCall
+  ---
+  duration_ms: 0.095875
+  type: 'test'
+  ...
+# Subtest: J8: unmarked SMS and voice retain sms then mobile then first-active ordering
+ok 48 - J8: unmarked SMS and voice retain sms then mobile then first-active ordering
+  ---
+  duration_ms: 0.0595
+  type: 'test'
+  ...
+# Subtest: J9: imported sms still outranks unmarked mobile
+ok 49 - J9: imported sms still outranks unmarked mobile
+  ---
+  duration_ms: 0.024333
+  type: 'test'
+  ...
+1..49
+# tests 49
+# suites 0
+# pass 49
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 287.247834

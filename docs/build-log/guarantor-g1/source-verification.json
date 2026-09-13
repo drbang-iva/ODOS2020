@@ -1,0 +1,14 @@
+{
+  "baseHead": "6f8a45a110caeb369be98155a32d71908cb12cc2",
+  "sourceSha256": {
+    "data/code-bindings/patient-identity-ledger.md": "32d8ce9767da458f6a57f55d914abc6b107246889c95fcbe73219c63acb69ec6",
+    "mcp/src/authz/roles.ts": "404d866482d8cbd0668ac7549943396c2cc60fc4d252d7fcd18e9f613670a960",
+    "mcp/src/clinic/patient-registration-endpoint.ts": "99fe95d5c14b14c98411ee43627d770018f155b0b1f97364d2b6f23addb20377",
+    "mcp/tests/patientRegistrationAuthz.test.ts": "30636f08c77eebea297641efc315ab4edb3d46a437345c562852e54357bbbd64",
+    "mcp/tests/guarantorPerson.test.ts": "c95c225e526054aa3c539b3ad9ddb5dc4f0abec18009b94310314065c6267882"
+  },
+  "f16ByteIdentical": true,
+  "ifMatchAssertionChanges": 0,
+  "insuranceWriterUnchanged": true,
+  "censusReturnedToBase": true
+}

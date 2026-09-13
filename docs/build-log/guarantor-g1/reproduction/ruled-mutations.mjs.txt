@@ -1,0 +1,61 @@
+import { sanitizeProofOutput } from "./proof-output.mjs";
+import assert from 'node:assert/strict';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const directory = dirname(fileURLToPath(import.meta.url));
+const root = resolve(directory, '../..');
+const paths = ['mcp/src/authz/roles.ts', 'mcp/src/clinic/patient-registration-endpoint.ts'];
+const originals = new Map(paths.map(path => [path, readFileSync(resolve(root,path), 'utf8')]));
+const p11Only=process.argv.includes('--p11-only');
+const manifest = p11Only?JSON.parse(readFileSync(resolve(directory,'ruled-mutations.json'),'utf8')).filter(entry=>entry.guard==='P7'):[];
+const hash = text => createHash('sha256').update(text).digest('hex');
+function run(label, args, env={}) {
+  const result = spawnSync(process.execPath, args, { cwd: root, encoding: 'utf8', env: {...process.env,...env} });
+  writeFileSync(resolve(directory, `${label}.log`), sanitizeProofOutput(result.stdout + result.stderr, root));
+  return { command: ['node', ...args], exit: result.status, env, output: `${label}.log`, publishedOutput: `${label}.txt` };
+}
+function replace(path, from, to) {
+  const original = originals.get(path);
+  assert.equal(original.split(from).length, 2);
+  const mutated = original.replace(from,to);
+  writeFileSync(resolve(root,path), mutated);
+  return {path, originalSha256:hash(original), mutantSha256:hash(mutated)};
+}
+try {
+  if (!p11Only) {
+  const p7Args=['--import','tsx','.odos/guarantor-g1/policy-probe.ts'];
+  const green=run('p7-ruled-green',p7Args,{G1_POLICY_OUTPUT:'./p7-ruled-green.json'});
+  assert.equal(green.exit,0);
+  const mutation=replace(paths[0], '      { resourceType: "Person", interactions: CREATE_UPDATE_INTERACTIONS, scope: { kind: "practice" } },\n','');
+  let red;
+  try { red=run('p7-ruled-red',p7Args,{G1_POLICY_OUTPUT:'./p7-ruled-red.json'}); }
+  finally { writeFileSync(resolve(root,paths[0]),originals.get(paths[0])); }
+  const restored=run('p7-ruled-restored',p7Args,{G1_POLICY_OUTPUT:'./p7-ruled-restored.json'});
+  manifest.push({guard:'P7',mutation,green,red,restored});
+  assert.equal(red.exit,1); assert.equal(restored.exit,0);
+  const denied=JSON.parse(readFileSync(resolve(directory,'p7-ruled-red.json'),'utf8'));
+  assert.equal(denied.statuses.personRead,200); assert.equal(denied.statuses.personCreate,403); assert.equal(denied.statuses.personUpdate,403);
+
+  }
+  const assertion=label=>['.odos/guarantor-g1/assert-p11a.mjs',label];
+  const p11Green=run('p11a-green',assertion('p11a-green')); assert.equal(p11Green.exit,0);
+  const p11Mutation=replace(paths[1],'autoRollbackCreatedEntries: false','autoRollbackCreatedEntries: true');
+  let probe, p11Red;
+  try {
+    probe=run('p11a-red-probe',['--import','tsx','.odos/guarantor-g1/residue-probe.ts','RelatedPerson','p11a-red']);
+    assert.equal(probe.exit,0);
+    p11Red=run('p11a-red',assertion('p11a-red'));
+  } finally { writeFileSync(resolve(root,paths[1]),originals.get(paths[1])); }
+  const restoredProbe=run('p11a-restored-probe',['--import','tsx','.odos/guarantor-g1/residue-probe.ts','RelatedPerson','p11a-restored']);
+  assert.equal(restoredProbe.exit,0);
+  const p11Restored=run('p11a-restored',assertion('p11a-restored'));
+  manifest.push({guard:'P11a',mutation:p11Mutation,green:p11Green,redProbe:probe,red:p11Red,restoredProbe,restored:p11Restored});
+  assert.equal(p11Red.exit,1); assert.equal(p11Restored.exit,0);
+} finally {
+  for(const [path,original] of originals) writeFileSync(resolve(root,path),original);
+  writeFileSync(resolve(directory,'ruled-mutations.json'),JSON.stringify(manifest,null,2)+'\n');
+}
+console.log(JSON.stringify(manifest,null,2));

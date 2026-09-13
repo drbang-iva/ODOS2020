@@ -1,0 +1,29 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const read = name => JSON.parse(readFileSync(new URL(`./${name}-residue.json`, import.meta.url), 'utf8'));
+const base = read('base');
+const current = read(process.argv[2]);
+function existingState(evidence) {
+  assert.equal(evidence.failedType, 'RelatedPerson');
+  assert.equal(evidence.featureEnabled, false);
+  const request = evidence.requests[0].request.body;
+  assert.equal(request.entry.find(entry => entry.resource?.resourceType === 'RelatedPerson').resource.name, 17);
+  const { personCount, ...residue } = evidence.residue;
+  const mrn = evidence.persisted.account.identifier.find(identifier => identifier.type?.text === 'ODOS medical record number').value;
+  const family = request.entry[0].resource.name[0].family;
+  const resources = [ ...evidence.persisted.patients, evidence.persisted.account, ...evidence.persisted.relatedPersons ].map(resource => {
+    const { id, meta, ...body } = resource;
+    const { versionId, lastUpdated, ...stableMeta } = meta ?? {};
+    return { ...body, meta: stableMeta };
+  });
+  const normalized = JSON.parse(JSON.stringify(resources), (_key, value) => {
+    if (typeof value !== 'string') return value;
+    if (value === mrn) return '<MRN>';
+    if (value === `ODOS chart ${mrn}`) return 'ODOS chart <MRN>';
+    if (value === family) return '<unique synthetic family>';
+    return value.replace(/^(Patient|Account|RelatedPerson)\/[a-f0-9-]{36}$/, '$1/<ID>');
+  });
+  return { residue, resources: normalized };
+}
+assert.deepEqual(existingState(current), existingState(base));
+console.log(JSON.stringify({ guard: 'P11a', result: 'PASS', failingEntry: 'RelatedPerson', base: base.residue, current: current.residue, additionalPersonsRecorded: current.residue.personCount }));

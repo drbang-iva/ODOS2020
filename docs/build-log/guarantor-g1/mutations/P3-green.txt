@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: P3: two non-self parties each link to their own RelatedPerson
+ok 1 - P3: two non-self parties each link to their own RelatedPerson
+  ---
+  duration_ms: 3.100708
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 136.780958

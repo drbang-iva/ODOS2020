@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: P8: a statement run retains the base minor recipient without reading Person
+not ok 1 - P8: a statement run retains the base minor recipient without reading Person
+  ---
+  duration_ms: 5.165834
+  type: 'test'
+  location: '<repo>/mcp/tests/guarantorPerson.test.ts:1:6289'
+  failureType: 'testCodeFailure'
+  error: |-
+    [{"patientReference":"Patient/g1-0","patientName":"Synthetic Child","reason":"Person/g1-2 is not a supported statement guarantor for Patient/g1-0; statement delivery was blocked."}]
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo>/mcp/tests/guarantorPerson.test.ts:171:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 162.376084

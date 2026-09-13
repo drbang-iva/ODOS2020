@@ -1,0 +1,23 @@
+{
+  "baseHead": "e848450f93c4703c04f71187119a877b462a7408",
+  "preRebaseHead": "34d67f564b22ea7fde57a5d4514153efd1da77a3",
+  "rebasedHead": "a53e97540f55096013c9eda56d881b70abfe58cd",
+  "applicationAndTestsByteIdentical": true,
+  "sourceSha256": {
+    "data/code-bindings/patient-identity-ledger.md": "32d8ce9767da458f6a57f55d914abc6b107246889c95fcbe73219c63acb69ec6",
+    "mcp/src/authz/roles.ts": "404d866482d8cbd0668ac7549943396c2cc60fc4d252d7fcd18e9f613670a960",
+    "mcp/src/clinic/patient-registration-endpoint.ts": "99fe95d5c14b14c98411ee43627d770018f155b0b1f97364d2b6f23addb20377",
+    "mcp/tests/patientRegistrationAuthz.test.ts": "30636f08c77eebea297641efc315ab4edb3d46a437345c562852e54357bbbd64",
+    "mcp/tests/guarantorPerson.test.ts": "c95c225e526054aa3c539b3ad9ddb5dc4f0abec18009b94310314065c6267882"
+  },
+  "rangeDiff": "1:  51adebb4 = 1:  fbc97901 Guarantor Person spine and practice write grant\n2:  0bdc7a62 = 2:  2ff9a85f Guarantor spine live proof and mutation evidence\n3:  34d67f56 = 3:  a53e9754 Guarantor evidence replay and review clarifications\n",
+  "f16ByteIdentical": true,
+  "frozenPaths": [
+    "ui/src/lib/patient-insurance.ts",
+    "ui/tests/demographicsConcurrency.test.tsx",
+    "tests/preflight/fhir-read-grant-check.test.ts"
+  ],
+  "dependencyFilesExactlyMatchBase": true,
+  "installedDirectCsvParse": "7.0.2",
+  "installedFastUri": "3.1.7"
+}

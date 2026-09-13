@@ -1,0 +1,14 @@
+{
+  "command": "node --input-type=module (four synthetic sanitizer cases)",
+  "linuxHomeBefore": {
+    "exit": 1,
+    "reason": "Linux home prefix retained"
+  },
+  "after": {
+    "exit": 0,
+    "checks": 4,
+    "passed": 4,
+    "failed": 0
+  },
+  "publishedHelperMatchesExecutedSource": true
+}

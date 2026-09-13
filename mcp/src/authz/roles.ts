@@ -181,6 +181,7 @@ const UPDATE_ONLY_INTERACTIONS: FhirInteraction[] = ["update"];
 const PRACTICE_READ_RESOURCE_TYPES = [
   "Patient",
   "RelatedPerson",
+  "Person",
   "Coverage",
   "Account",
   "AllergyIntolerance",
@@ -1029,6 +1030,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       ...STAFF_PATIENT_WRITE_RESOURCE_RULES,
       ...STAFF_CORRESPONDENCE_RESOURCE_RULES,
       ...SCHEDULING_RESOURCE_RULES,
+      { resourceType: "Person", interactions: CREATE_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
       APPEARANCE_CONFIG_READ_RULE,
       ...STAFF_DISPENSARY_WRITE_RESOURCE_RULES,
       ...CLAIMS_RESOURCE_RULES,

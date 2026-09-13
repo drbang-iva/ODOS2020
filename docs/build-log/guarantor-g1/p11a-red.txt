@@ -1,0 +1,169 @@
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
+  {
+    residue: {
+      accountGuarantorCount: 1,
+      accountStatus: 'active',
+      accountSubjectCount: 1,
+      mrnOnAccount: true,
++     mrnOnPatient: false,
++     patientCount: 0,
+-     mrnOnPatient: true,
+-     patientCount: 1,
+      pendingAllocationMarker: false,
+      relatedPersonCount: 0
+    },
+    resources: [
+      {
+-       active: true,
+-       address: [
+-         {
+-           city: 'Greenville',
+-           line: [
+-             '1 Synthetic Way'
+-           ],
+-           postalCode: '29601',
+-           state: 'SC',
+-           use: 'home'
+-         }
+-       ],
+-       birthDate: '2010-01-02',
+-       gender: 'female',
+-       identifier: [
+-         {
+-           system: 'https://odos2020.com/fhir/NamingSystem/odos-mrn',
+-           type: {
+-             text: 'ODOS medical record number'
+-           },
+-           use: 'usual',
+-           value: '<MRN>'
+-         }
+-       ],
+-       meta: {},
+-       name: [
+-         {
+-           family: '<unique synthetic family>',
+-           given: [
+-             'Synthetic'
+-           ],
+-           use: 'official'
+-         }
+-       ],
+-       resourceType: 'Patient'
+-     },
+-     {
+        guarantor: [
+          {
+            onHold: false,
+            party: {
+              reference: 'RelatedPerson/<ID>'
+
+    at file://<repo>/.odos/guarantor-g1/assert-p11a.mjs:28:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: {
+    residue: {
+      patientCount: 0,
+      relatedPersonCount: 0,
+      accountStatus: 'active',
+      accountSubjectCount: 1,
+      accountGuarantorCount: 1,
+      mrnOnAccount: true,
+      mrnOnPatient: false,
+      pendingAllocationMarker: false
+    },
+    resources: [
+      {
+        resourceType: 'Account',
+        identifier: [
+          {
+            use: 'usual',
+            type: [Object],
+            system: 'https://odos2020.com/fhir/NamingSystem/odos-mrn',
+            value: '<MRN>'
+          }
+        ],
+        status: 'active',
+        type: { text: 'Patient account' },
+        name: 'ODOS chart <MRN>',
+        subject: [ { reference: 'Patient/<ID>' } ],
+        guarantor: [ { party: [Object], onHold: false, period: [Object] } ],
+        meta: {}
+      }
+    ]
+  },
+  expected: {
+    residue: {
+      patientCount: 1,
+      relatedPersonCount: 0,
+      accountStatus: 'active',
+      accountSubjectCount: 1,
+      accountGuarantorCount: 1,
+      mrnOnAccount: true,
+      mrnOnPatient: true,
+      pendingAllocationMarker: false
+    },
+    resources: [
+      {
+        resourceType: 'Patient',
+        active: true,
+        identifier: [
+          {
+            use: 'usual',
+            type: [Object],
+            system: 'https://odos2020.com/fhir/NamingSystem/odos-mrn',
+            value: '<MRN>'
+          }
+        ],
+        name: [
+          {
+            use: 'official',
+            given: [Array],
+            family: '<unique synthetic family>'
+          }
+        ],
+        birthDate: '2010-01-02',
+        gender: 'female',
+        address: [
+          {
+            use: 'home',
+            line: [Array],
+            city: 'Greenville',
+            state: 'SC',
+            postalCode: '29601'
+          }
+        ],
+        meta: {}
+      },
+      {
+        resourceType: 'Account',
+        identifier: [
+          {
+            use: 'usual',
+            type: [Object],
+            system: 'https://odos2020.com/fhir/NamingSystem/odos-mrn',
+            value: '<MRN>'
+          }
+        ],
+        status: 'active',
+        type: { text: 'Patient account' },
+        name: 'ODOS chart <MRN>',
+        subject: [ { reference: 'Patient/<ID>' } ],
+        guarantor: [ { party: [Object], onHold: false, period: [Object] } ],
+        meta: {}
+      }
+    ]
+  },
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.22.3

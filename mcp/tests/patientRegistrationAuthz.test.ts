@@ -110,7 +110,7 @@ test("no user AccessPolicy authorizes a compartment-less Account create", () => 
 });
 
 for (const role of ["provider", "staff", "admin"] as const) {
-  test(`${role} registers Patient, RelatedPerson, and Account through one service transaction`, async () => {
+  test(`${role} registers Patient, RelatedPerson, Person, and Account through one service transaction`, async () => {
     const fhir = new RegistrationFhir(role);
     const response = await postRegistration(role, fhir);
 
@@ -121,7 +121,7 @@ for (const role of ["provider", "staff", "admin"] as const) {
     assert.equal(body.warning, undefined);
     assert.deepEqual(
       fhir.transaction?.entry?.map((entry) => entry.resource?.resourceType),
-      ["Patient", "RelatedPerson", "Account"],
+      ["Patient", "RelatedPerson", "Person", "Account"],
     );
     assert.equal(fhir.account?.status, "active");
     assert.equal(fhir.canRead("Patient/patient-1"), true);
@@ -145,7 +145,7 @@ test("registration creates the MRN reservation and identity resources in the cal
   assert.equal(fhir.persistedReservationProjectId, "practice-1");
   assert.equal(fhir.account?.meta?.project, "practice-1");
   assert.equal(fhir.patient.meta?.project, "practice-1");
-  assert.deepEqual(fhir.persistedTransactionProjectIds, ["practice-1", "practice-1", "practice-1"]);
+  assert.deepEqual(fhir.persistedTransactionProjectIds, ["practice-1", "practice-1", "practice-1", "practice-1"]);
 });
 
 test("a caller in project A never submits registration writes to service project B", async () => {
@@ -156,6 +156,7 @@ test("a caller in project A never submits registration writes to service project
 
   assert.equal(response.status, 201);
   assert.deepEqual(fhir.submittedWriteProjectIds, [
+    "practice-1",
     "practice-1",
     "practice-1",
     "practice-1",
@@ -740,11 +741,16 @@ class RegistrationFhir {
     return {
       resourceType: "Bundle",
       type: "transaction-response",
-      entry: [
-        { response: { status: "201 Created", location: "Patient/patient-1/_history/1" } },
-        { response: { status: "201 Created", location: "RelatedPerson/related-1/_history/1" } },
-        { response: { status: "200 OK", location: "Account/reservation-1/_history/2" } },
-      ],
+      entry: bundle.entry?.map((entry) => ({
+        response: {
+          status: entry.request?.method === "PUT" ? "200 OK" : "201 Created",
+          location: entry.resource?.resourceType === "Patient"
+            ? "Patient/patient-1/_history/1"
+            : entry.resource?.resourceType === "Account"
+              ? "Account/reservation-1/_history/2"
+              : `${entry.resource?.resourceType}/${entry.fullUrl?.slice("urn:uuid:".length)}/_history/1`,
+        },
+      })),
     };
   }
 

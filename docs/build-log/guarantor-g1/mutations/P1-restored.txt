@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: P1: one non-self party creates exactly one Person linked to its RelatedPerson
+ok 1 - P1: one non-self party creates exactly one Person linked to its RelatedPerson
+  ---
+  duration_ms: 3.100083
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 133.350625

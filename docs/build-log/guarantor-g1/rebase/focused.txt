@@ -1,0 +1,355 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/guarantorPerson.test.ts tests/patientRegistrationAuthz.test.ts ../tests/preflight/fhir-read-grant-check.test.ts
+
+TAP version 13
+# Subtest: FHIR read grant scan collects every literal FHIR receiver and requires the search-contract marker for computed searches
+ok 1 - FHIR read grant scan collects every literal FHIR receiver and requires the search-contract marker for computed searches
+  ---
+  duration_ms: 365.356042
+  type: 'test'
+  ...
+# Subtest: FHIR operation scan maps every write interaction to its required Medplum grant
+ok 2 - FHIR operation scan maps every write interaction to its required Medplum grant
+  ---
+  duration_ms: 1.136125
+  type: 'test'
+  ...
+# Subtest: the PR 397 tally create fails grant comparison when its exact profile fence is absent
+ok 3 - the PR 397 tally create fails grant comparison when its exact profile fence is absent
+  ---
+  duration_ms: 0.700833
+  type: 'test'
+  ...
+# Subtest: the exact write ratchet rejects a stale entry instead of silently forgiving it
+ok 4 - the exact write ratchet rejects a stale entry instead of silently forgiving it
+  ---
+  duration_ms: 0.164
+  type: 'test'
+  ...
+# Subtest: the service-identity write inventory rejects an exact ui/src relocation
+ok 5 - the service-identity write inventory rejects an exact ui/src relocation
+  ---
+  duration_ms: 0.1465
+  type: 'test'
+  ...
+# Subtest: FHIR read grant comparison reports the exact sorted subset gap
+ok 6 - FHIR read grant comparison reports the exact sorted subset gap
+  ---
+  duration_ms: 0.097458
+  type: 'test'
+  ...
+# Subtest: an explicitly reasoned non-FHIR literal call site does not manufacture a grant demand
+ok 7 - an explicitly reasoned non-FHIR literal call site does not manufacture a grant demand
+  ---
+  duration_ms: 0.317042
+  type: 'test'
+  ...
+# Subtest: live FHIR read grant check covers all four chart resources through compiled role policies
+ok 8 - live FHIR read grant check covers all four chart resources through compiled role policies
+  ---
+  duration_ms: 898.822167
+  type: 'test'
+  ...
+# Subtest: FHIR read grant CLI passes only with full coverage and always prints its limits
+ok 9 - FHIR read grant CLI passes only with full coverage and always prints its limits
+  ---
+  duration_ms: 1335.081666
+  type: 'test'
+  ...
+# Subtest: an ungranted FHIR create in mcp source makes the CLI fail with its interaction and resource type
+ok 10 - an ungranted FHIR create in mcp source makes the CLI fail with its interaction and resource type
+  ---
+  duration_ms: 1318.606625
+  type: 'test'
+  ...
+# Subtest: an ungranted FHIR create in ui tsx makes the CLI fail with its interaction and resource type
+ok 11 - an ungranted FHIR create in ui tsx makes the CLI fail with its interaction and resource type
+  ---
+  duration_ms: 1307.594417
+  type: 'test'
+  ...
+# Subtest: serviceFhir read of an ungranted non-plumbing resource makes the CLI fail with its name
+ok 12 - serviceFhir read of an ungranted non-plumbing resource makes the CLI fail with its name
+  ---
+  duration_ms: 1315.683917
+  type: 'test'
+  ...
+# Subtest: an ungranted FHIR read in ui/src makes the CLI fail with its name
+ok 13 - an ungranted FHIR read in ui/src makes the CLI fail with its name
+  ---
+  duration_ms: 1303.698792
+  type: 'test'
+  ...
+# Subtest: a marked computed search helper carries literal resource types across source files
+ok 14 - a marked computed search helper carries literal resource types across source files
+  ---
+  duration_ms: 0.87525
+  type: 'test'
+  ...
+# Subtest: P1: one non-self party creates exactly one Person linked to its RelatedPerson
+ok 15 - P1: one non-self party creates exactly one Person linked to its RelatedPerson
+  ---
+  duration_ms: 2.7875
+  type: 'test'
+  ...
+# Subtest: P2: a self responsible party creates no Person and retains two entries
+ok 16 - P2: a self responsible party creates no Person and retains two entries
+  ---
+  duration_ms: 0.269625
+  type: 'test'
+  ...
+# Subtest: P3: two non-self parties each link to their own RelatedPerson
+ok 17 - P3: two non-self parties each link to their own RelatedPerson
+  ---
+  duration_ms: 0.382833
+  type: 'test'
+  ...
+# Subtest: P4: separate registrations with identical guarantors each request a new Person
+ok 18 - P4: separate registrations with identical guarantors each request a new Person
+  ---
+  duration_ms: 0.363042
+  type: 'test'
+  ...
+# Subtest: P5: shared demographics preserve the base projection for both resources
+ok 19 - P5: shared demographics preserve the base projection for both resources
+  ---
+  duration_ms: 0.208375
+  type: 'test'
+  ...
+# Subtest: P6: Person and Patient explicitly belong to the same practice project
+ok 20 - P6: Person and Patient explicitly belong to the same practice project
+  ---
+  duration_ms: 0.310875
+  type: 'test'
+  ...
+# Subtest: P7 declaration: staff Person writes are practice-scoped create/update only
+ok 21 - P7 declaration: staff Person writes are practice-scoped create/update only
+  ---
+  duration_ms: 0.318
+  type: 'test'
+  ...
+# Subtest: P9: guardian SMS and voice resolution retain the base bytes
+ok 22 - P9: guardian SMS and voice resolution retain the base bytes
+  ---
+  duration_ms: 0.26825
+  type: 'test'
+  ...
+# Subtest: P8: a statement run retains the base minor recipient without reading Person
+ok 23 - P8: a statement run retains the base minor recipient without reading Person
+  ---
+  duration_ms: 1.950167
+  type: 'test'
+  ...
+# Subtest: P10: every non-self account guarantor still targets a RelatedPerson entry
+ok 24 - P10: every non-self account guarantor still targets a RelatedPerson entry
+  ---
+  duration_ms: 0.439166
+  type: 'test'
+  ...
+# Subtest: P12: Patient remains first and Account last with Person entries between
+ok 25 - P12: Patient remains first and Account last with Person entries between
+  ---
+  duration_ms: 0.213833
+  type: 'test'
+  ...
+# Subtest: K5: the real registration route accepts blank slots and rejects the scalar contract
+ok 26 - K5: the real registration route accepts blank slots and rejects the scalar contract
+  ---
+  duration_ms: 39.426417
+  type: 'test'
+  ...
+# Subtest: K16: registration and editor emit the same marker state through preference application
+ok 27 - K16: registration and editor emit the same marker state through preference application
+  ---
+  duration_ms: 10.533709
+  type: 'test'
+  ...
+# Subtest: registration phone validation rejects bad choices before reserving an MRN
+ok 28 - registration phone validation rejects bad choices before reserving an MRN
+  ---
+  duration_ms: 14.009708
+  type: 'test'
+  ...
+# Subtest: Provider, Staff, and Admin may register a patient
+ok 29 - Provider, Staff, and Admin may register a patient
+  ---
+  duration_ms: 0.114958
+  type: 'test'
+  ...
+# Subtest: no user AccessPolicy authorizes a compartment-less Account create
+ok 30 - no user AccessPolicy authorizes a compartment-less Account create
+  ---
+  duration_ms: 0.274417
+  type: 'test'
+  ...
+# Subtest: provider registers Patient, RelatedPerson, Person, and Account through one service transaction
+ok 31 - provider registers Patient, RelatedPerson, Person, and Account through one service transaction
+  ---
+  duration_ms: 1.819041
+  type: 'test'
+  ...
+# Subtest: staff registers Patient, RelatedPerson, Person, and Account through one service transaction
+ok 32 - staff registers Patient, RelatedPerson, Person, and Account through one service transaction
+  ---
+  duration_ms: 1.89775
+  type: 'test'
+  ...
+# Subtest: admin registers Patient, RelatedPerson, Person, and Account through one service transaction
+ok 33 - admin registers Patient, RelatedPerson, Person, and Account through one service transaction
+  ---
+  duration_ms: 1.609
+  type: 'test'
+  ...
+# Subtest: registration creates the MRN reservation and identity resources in the caller project
+ok 34 - registration creates the MRN reservation and identity resources in the caller project
+  ---
+  duration_ms: 1.699208
+  type: 'test'
+  ...
+# Subtest: a caller in project A never submits registration writes to service project B
+ok 35 - a caller in project A never submits registration writes to service project B
+  ---
+  duration_ms: 1.466583
+  type: 'test'
+  ...
+# odos-mcp: patient registration failed: Error: Registration resource belongs to Project/project-b, not Project/practice-1.
+#     at registrationResourceInProject (<repo>/mcp/src/clinic/patient-registration-endpoint.ts:312:11)
+#     at buildPatientIdentityTransaction (<repo>/mcp/src/clinic/patient-registration-endpoint.ts:286:19)
+#     at registerPatientFromDemographics (<repo>/mcp/src/clinic/patient-registration-endpoint.ts:116:19)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async handlePatientRegistration (<repo>/mcp/src/clinic/clinic-routes.ts:217:20)
+# Subtest: registration stops when an MRN reservation is returned from another project
+ok 36 - registration stops when an MRN reservation is returned from another project
+  ---
+  duration_ms: 3.091208
+  type: 'test'
+  ...
+# Subtest: registration access grant rejects a Patient outside the caller project
+ok 37 - registration access grant rejects a Patient outside the caller project
+  ---
+  duration_ms: 0.25775
+  type: 'test'
+  ...
+# Subtest: a role without patients.register is refused before any service FHIR call
+ok 38 - a role without patients.register is refused before any service FHIR call
+  ---
+  duration_ms: 0.109208
+  type: 'test'
+  ...
+# odos-mcp: patient registration failed: Error: synthetic transaction failure
+#     at RegistrationFhir.executeTransaction (<repo>/mcp/tests/patientRegistrationAuthz.test.ts:715:37)
+#     at RegistrationFhir.executeTransactionAsActor (<repo>/mcp/tests/patientRegistrationAuthz.test.ts:773:35)
+#     at registerPatientFromDemographics (<repo>/mcp/src/clinic/patient-registration-endpoint.ts:119:39)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async handlePatientRegistration (<repo>/mcp/src/clinic/clinic-routes.ts:217:20)
+# Subtest: a failed identity transaction leaves no Patient and marks its MRN reservation entered-in-error
+ok 39 - a failed identity transaction leaves no Patient and marks its MRN reservation entered-in-error
+  ---
+  duration_ms: 2.620125
+  type: 'test'
+  ...
+# Subtest: a committed identity transaction with a dropped response is reconciled and preserved
+ok 40 - a committed identity transaction with a dropped response is reconciled and preserved
+  ---
+  duration_ms: 1.823583
+  type: 'test'
+  ...
+# Subtest: a membership version conflict is refetched and retried before registration returns
+ok 41 - a membership version conflict is refetched and retried before registration returns
+  ---
+  duration_ms: 1.845333
+  type: 'test'
+  ...
+# Subtest: registration grants access when the caller membership omits active
+ok 42 - registration grants access when the caller membership omits active
+  ---
+  duration_ms: 3.230083
+  type: 'test'
+  ...
+# Subtest: inactive memberships do not consume the registration membership search count
+ok 43 - inactive memberships do not consume the registration membership search count
+  ---
+  duration_ms: 1.487875
+  type: 'test'
+  ...
+# Subtest: registration appends every named compartment parameter on a stacked composite membership
+ok 44 - registration appends every named compartment parameter on a stacked composite membership
+  ---
+  duration_ms: 6.868125
+  type: 'test'
+  ...
+# Subtest: persistent grant failure preserves the active registration and returns asserted repair guidance
+ok 45 - persistent grant failure preserves the active registration and returns asserted repair guidance
+  ---
+  duration_ms: 1.538083
+  type: 'test'
+  ...
+# Subtest: an exact pre-existing Patient is returned as a duplicate and never receives a registration grant
+ok 46 - an exact pre-existing Patient is returned as a duplicate and never receives a registration grant
+  ---
+  duration_ms: 1.019459
+  type: 'test'
+  ...
+# Subtest: an exact duplicate on a later project-scoped search page still requires confirmation
+ok 47 - an exact duplicate on a later project-scoped search page still requires confirmation
+  ---
+  duration_ms: 1.2025
+  type: 'test'
+  ...
+# odos-mcp: patient registration failed: Error: Project-scoped duplicate search returned a Patient outside the caller project.
+#     at findExactDuplicates (<repo>/mcp/src/clinic/patient-registration-endpoint.ts:352:11)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async registerPatientFromDemographics (<repo>/mcp/src/clinic/patient-registration-endpoint.ts:110:22)
+#     at async handlePatientRegistration (<repo>/mcp/src/clinic/clinic-routes.ts:217:20)
+# Subtest: duplicate detection never returns a Patient owned by another project
+ok 48 - duplicate detection never returns a Patient owned by another project
+  ---
+  duration_ms: 1.2105
+  type: 'test'
+  ...
+# Subtest: confirmDuplicate creates a distinct server-owned Patient after the duplicate warning
+ok 49 - confirmDuplicate creates a distinct server-owned Patient after the duplicate warning
+  ---
+  duration_ms: 1.113709
+  type: 'test'
+  ...
+# Subtest: a caller-supplied Patient id is rejected before registration FHIR calls
+ok 50 - a caller-supplied Patient id is rejected before registration FHIR calls
+  ---
+  duration_ms: 0.924125
+  type: 'test'
+  ...
+# Subtest: authoritative registration validation rejects form-invalid input before service FHIR
+ok 51 - authoritative registration validation rejects form-invalid input before service FHIR
+  ---
+  duration_ms: 4.228166
+  type: 'test'
+  ...
+# Subtest: G15 registration includes explicit communication cells attributed to registering staff
+ok 52 - G15 registration includes explicit communication cells attributed to registering staff
+  ---
+  duration_ms: 1.240875
+  type: 'test'
+  ...
+# Subtest: G20 registration without effective preference permission creates nothing
+ok 53 - G20 registration without effective preference permission creates nothing
+  ---
+  duration_ms: 0.103084
+  type: 'test'
+  ...
+# Subtest: registration paper evidence and preference references share the Patient creation transaction
+ok 54 - registration paper evidence and preference references share the Patient creation transaction
+  ---
+  duration_ms: 1.278167
+  type: 'test'
+  ...
+1..54
+# tests 54
+# suites 0
+# pass 54
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8442.932459
