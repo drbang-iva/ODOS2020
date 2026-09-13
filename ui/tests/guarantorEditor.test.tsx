@@ -198,3 +198,30 @@ test("saving an intentionally blank phone removes only that contact and retains 
     person.telecom = [{ system: "phone", use: "home", value: "864-555-0101", rank: 1 }, { system: "phone", use: "home", value: "864-555-0102", rank: 2 }, { system: "email" }];
   });
 });
+
+
+test("per-patient results distinguish rejected child writes from lost update responses", async () => {
+  for (const scenario of [{ mode: "error", message: "update failed", classification: "mismatched" }, { mode: "lost", message: "update response not received", classification: "verified" }]) {
+    await withEditor(1, async renderer => {
+      const field = renderer.root.findAllByType("label").find(label => label.children[0] === "Family name 1")!.findByType("input");
+      await act(async () => { field.props.onChange({ target: { value: "Changed" } }); });
+      const save = renderer.root.findAllByType("button").find(button => button.children.join("") === "Save guarantor")!;
+      await act(async () => { await save.props.onClick(); });
+      const row = renderer.root.findAllByType("li").find(item => item.children.join("").includes("Sam Synthetic"))!;
+      assert.ok(row.children.join("").includes(scenario.message), `Sam's result must say ${scenario.message}`);
+      assert.ok(row.children.join("").includes(scenario.classification));
+      const child = await (await fetch("/fhir/R4/RelatedPerson/party-a")).json();
+      assert.equal(child.name[0].family, scenario.mode === "lost" ? "Changed" : "Guardian");
+    }, data => {
+      const original = data.fetcher;
+      data.fetcher = async (input, init) => {
+        if (String(input).includes("/RelatedPerson/party-a") && init?.method === "PUT") {
+          if (scenario.mode === "error") return new Response(JSON.stringify({ resourceType: "OperationOutcome", issue: [{ severity: "error", code: "exception" }] }), { status: 500 });
+          await original(input, init);
+          throw new TypeError("Synthetic lost update response");
+        }
+        return original(input, init);
+      };
+    });
+  }
+});

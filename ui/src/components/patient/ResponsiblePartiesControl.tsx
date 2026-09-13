@@ -5,6 +5,8 @@ import {
   type GuarantorLoad,
 } from "../../lib/guarantor-editor";
 
+const writeStatusMessages = { updated: "update accepted", conflict: "record changed while you were editing", error: "update failed", "no-response": "update response not received" };
+
 type Demographics = Pick<Person, "name" | "telecom" | "address">;
 const demographics = (person: Person): Demographics => structuredClone({ name: person.name, telecom: person.telecom, address: person.address });
 const displayName = (person: Demographics) => person.name?.[0]?.text || [...(person.name?.[0]?.given ?? []), person.name?.[0]?.family].filter(Boolean).join(" ") || "Unnamed responsible party";
@@ -98,7 +100,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
     </fieldset>
     {notice && <p role="status">{notice}</p>}
     {result?.generation && <p className="text-xs text-[color:var(--odos-muted)]">Checked against guarantor generation {result.generation}.</p>}
-    {result && <ul>{result.children.map(child => <li key={child.relatedPersonId}>{child.patientName} — {child.classification}{child.writeStatus === "conflict" ? ": record changed while you were editing" : ""}</li>)}</ul>}
+    {result && <ul>{result.children.map(child => <li key={child.relatedPersonId}>{child.patientName} — {child.classification}{child.writeStatus ? `: ${writeStatusMessages[child.writeStatus]}` : ""}</li>)}</ul>}
     {mismatched.length > 0 && dirty && <p className="text-sm text-[color:var(--odos-muted)]">Save your changes or reload the guarantor before repairing linked records.</p>}
     <div className="flex flex-wrap gap-2">
       <button type="button" className="rounded bg-[color:var(--odos-accent)] text-[color:var(--odos-accent-ink)] px-3 py-2 disabled:opacity-50" disabled={busy || !dirty} onClick={() => void save()}>{busy ? "Working…" : "Save guarantor"}</button>
