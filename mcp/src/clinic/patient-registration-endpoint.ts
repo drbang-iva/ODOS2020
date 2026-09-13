@@ -1,4 +1,4 @@
-import { buildResponsiblePartyDemographics as buildGuarantorPersonDemographics } from "./responsible-party-demographics.js";
+import { buildResponsiblePartyDemographics } from "./responsible-party-demographics.js";
 import { resolvePractitionerReference } from "../authz/practitioner-reference.js";
 import { buildCommsConsent, communicationPreferencesInputSchema, parsePreferenceWriteInput } from "../comms/comms-preferences.js";
 import { replaceCommsPreferenceCells } from "../comms/suppression-gate.js";
@@ -278,7 +278,7 @@ function buildPatientIdentityTransaction(
       fullUrl: `urn:uuid:${randomUUID()}`,
       resource: registrationResourceInProject<Person>({
         resourceType: "Person",
-        ...buildGuarantorPersonDemographics(party),
+        ...buildResponsiblePartyDemographics(party),
         link: [{ target: { reference: fullUrl }, assurance: "level2" }],
       }, projectId),
       request: { method: "POST", url: "Person" },
@@ -331,16 +331,6 @@ function buildRelatedPerson(party: ResponsiblePartyInput, patientReference: stri
   };
 }
 
-
-function buildResponsiblePartyDemographics(party: ResponsiblePartyInput): Pick<RelatedPerson, "name" | "telecom" | "address"> {
-  return {
-    name: [{ use: "official", given: [party.firstName.trim(), party.middleName.trim()].filter(Boolean), family: party.lastName.trim() }],
-    telecom: party.phone.trim() ? [{ system: "phone", use: "home", value: party.phone.trim() }] : undefined,
-    address: [party.address, party.city, party.state, party.postalCode].some((value) => value.trim())
-      ? [{ use: "home", line: party.address.trim() ? [party.address.trim()] : undefined, city: party.city.trim() || undefined, state: party.state.trim() || undefined, postalCode: party.postalCode.trim() || undefined }]
-      : undefined,
-  };
-}
 
 async function findExactDuplicates(
   fhir: Pick<MedplumClient, "baseUrl" | "searchProject" | "searchProjectUrl">,
