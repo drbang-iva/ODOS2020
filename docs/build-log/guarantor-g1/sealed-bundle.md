@@ -106,3 +106,7 @@ The requested Person cleanup and exact additional-Person count were not applied:
 The provider/admin authorization concern is not applicable to the registration service path. `registerPatientFromDemographics` calls `deps.serviceFhir.executeTransactionAsActor`; the actor role is audit attribution, while `performTransaction` uses that client's credential headers. It does not switch to a provider/admin credential. Additional real-server runs with provider and admin audit roles both returned registration 201 and persisted the linked Person: [provider](provider-registration.json), [admin](admin-registration.json). No additional grants were introduced.
 
 The generic docstring-coverage warning conflicts with the repository's default-no-comments instruction and is not applied. The independent-evaluation gate remains intentionally unsatisfied by the author.
+
+## Rebase review adjudication
+
+CodeRabbit identified that the reproduction output helper sanitized macOS home paths but retained Linux home paths. The helper now covers both prefixes while preserving the repository placeholder and HTTP status text. A synthetic Linux-path assertion exited **1 before the change**; the corrected helper passed **4/4 checks**, exit **0**. [Verification result](rebase/sanitizer-verification.json). The published helper matches the source executed by the check. This evidence-only correction changes no application, test, or ledger bytes and does not invalidate the clinical mutation source hashes.
