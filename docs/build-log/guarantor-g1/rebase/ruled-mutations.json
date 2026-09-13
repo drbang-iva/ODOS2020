@@ -116,6 +116,42 @@
       "env": {},
       "output": "p11a-restored.log",
       "publishedOutput": "p11a-restored.txt"
+    },
+    "baseProbe": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        ".odos/guarantor-g1/residue-probe.ts",
+        "RelatedPerson",
+        "rebase-base"
+      ],
+      "cwd": "<base-repo>",
+      "headSha": "e848450f93c4703c04f71187119a877b462a7408",
+      "exit": 0,
+      "env": {},
+      "output": "rebase-base-probe.log",
+      "publishedOutput": "base-residue-probe.txt",
+      "capture": "rebase-base-residue.json",
+      "publishedCapture": "base-residue.json"
+    },
+    "greenProbe": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        ".odos/guarantor-g1/residue-probe.ts",
+        "RelatedPerson",
+        "p11a-green"
+      ],
+      "cwd": "<repo>",
+      "headSha": "a53e97540f55096013c9eda56d881b70abfe58cd",
+      "exit": 0,
+      "env": {},
+      "output": "p11a-green-probe.log",
+      "publishedOutput": "p11a-green-probe.txt",
+      "capture": "p11a-green-residue.json",
+      "publishedCapture": "p11a-green-residue.json"
     }
   }
 ]
