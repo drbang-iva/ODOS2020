@@ -1,0 +1,214 @@
+TAP version 13
+# Subtest: A1: a stale demographics PUT shows the concurrent-edit alert without retrying
+ok 1 - A1: a stale demographics PUT shows the concurrent-edit alert without retrying
+  ---
+  duration_ms: 19.52275
+  type: 'test'
+  ...
+# Subtest: A2: missing Patient version refuses before any network call
+ok 2 - A2: missing Patient version refuses before any network call
+  ---
+  duration_ms: 0.419875
+  type: 'test'
+  ...
+# Subtest: A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
+ok 3 - A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
+  ---
+  duration_ms: 17.373125
+  type: 'test'
+  ...
+# Subtest: Q10: missing linked Person is read-only and direct save handler cannot create
+ok 4 - Q10: missing linked Person is read-only and direct save handler cannot create
+  ---
+  duration_ms: 15.872583
+  type: 'test'
+  ...
+# Subtest: Q11: reopening a clean editor offers repair by patient name and converges
+ok 5 - Q11: reopening a clean editor offers repair by patient name and converges
+  ---
+  duration_ms: 12.317209
+  type: 'test'
+  ...
+# Subtest: Q12: multiple linked Persons refuse editing and identify both records
+ok 6 - Q12: multiple linked Persons refuse editing and identify both records
+  ---
+  duration_ms: 1.192166
+  type: 'test'
+  ...
+# Subtest: editing one name preserves every loaded contact and address entry without a Patient write
+ok 7 - editing one name preserves every loaded contact and address entry without a Patient write
+  ---
+  duration_ms: 6.6235
+  type: 'test'
+  ...
+# Subtest: structured address edits clear stale display text only on the edited address
+ok 8 - structured address edits clear stale display text only on the edited address
+  ---
+  duration_ms: 19.497709
+  type: 'test'
+  ...
+# Subtest: clearing then replacing the first phone keeps the second phone in its original slot
+ok 9 - clearing then replacing the first phone keeps the second phone in its original slot
+  ---
+  duration_ms: 3.465917
+  type: 'test'
+  ...
+# Subtest: saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+ok 10 - saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+  ---
+  duration_ms: 3.046
+  type: 'test'
+  ...
+# Subtest: per-patient results distinguish rejected child writes from lost update responses
+ok 11 - per-patient results distinguish rejected child writes from lost update responses
+  ---
+  duration_ms: 6.761166
+  type: 'test'
+  ...
+# Subtest: F1e superseded save reloads automatically and one Repair converges
+ok 12 - F1e superseded save reloads automatically and one Repair converges
+  ---
+  duration_ms: 3.473625
+  type: 'test'
+  ...
+# Subtest: Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+ok 13 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+  ---
+  duration_ms: 21.22375
+  type: 'test'
+  ...
+# Subtest: Q5a Q6a preflight mismatch zero writes reload
+ok 14 - Q5a Q6a preflight mismatch zero writes reload
+  ---
+  duration_ms: 2.470042
+  type: 'test'
+  ...
+# Subtest: Q5b parent stale after preflight prevents children
+ok 15 - Q5b parent stale after preflight prevents children
+  ---
+  duration_ms: 1.095583
+  type: 'test'
+  ...
+# Subtest: Q6b Q8 late child conflict preserves competitor and labels correct patient
+ok 16 - Q6b Q8 late child conflict preserves competitor and labels correct patient
+  ---
+  duration_ms: 2.822334
+  type: 'test'
+  ...
+# Subtest: Q8 failed re-read and unresolved lost response are unknown
+ok 17 - Q8 failed re-read and unresolved lost response are unknown
+  ---
+  duration_ms: 3.364291
+  type: 'test'
+  ...
+# Subtest: lost parent response confirmed landed proceeds once
+ok 18 - lost parent response confirmed landed proceeds once
+  ---
+  duration_ms: 1.172083
+  type: 'test'
+  ...
+# Subtest: Q9a converged repeat zero writes and unchanged versions
+ok 19 - Q9a converged repeat zero writes and unchanged versions
+  ---
+  duration_ms: 1.744666
+  type: 'test'
+  ...
+# Subtest: Q9b repair only failed child fresh ETag and second pass zero writes
+ok 20 - Q9b repair only failed child fresh ETag and second pass zero writes
+  ---
+  duration_ms: 2.245417
+  type: 'test'
+  ...
+# Subtest: Q9c repair superseded generation uses newest values
+ok 21 - Q9c repair superseded generation uses newest values
+  ---
+  duration_ms: 1.78775
+  type: 'test'
+  ...
+# Subtest: Q10 Q12 missing or many matches refuse direct save
+ok 22 - Q10 Q12 missing or many matches refuse direct save
+  ---
+  duration_ms: 1.738417
+  type: 'test'
+  ...
+# Subtest: Q13 trailing parent catches torn verification
+ok 23 - Q13 trailing parent catches torn verification
+  ---
+  duration_ms: 0.637458
+  type: 'test'
+  ...
+# Subtest: Q2 fresh SMS resolver independently observes propagated phone
+ok 24 - Q2 fresh SMS resolver independently observes propagated phone
+  ---
+  duration_ms: 1.0665
+  type: 'test'
+  ...
+# Subtest: Q6a independently stale child preflight zero writes
+ok 25 - Q6a independently stale child preflight zero writes
+  ---
+  duration_ms: 0.602084
+  type: 'test'
+  ...
+# Subtest: Q10 directly supplied unlinked snapshot refuses create or update
+ok 26 - Q10 directly supplied unlinked snapshot refuses create or update
+  ---
+  duration_ms: 0.220208
+  type: 'test'
+  ...
+# Subtest: Q8 child lost response and verification failure remain unknown
+ok 27 - Q8 child lost response and verification failure remain unknown
+  ---
+  duration_ms: 0.937625
+  type: 'test'
+  ...
+# Subtest: F1a repair fences generation after fresh child read
+ok 28 - F1a repair fences generation after fresh child read
+  ---
+  duration_ms: 0.90925
+  type: 'test'
+  ...
+# Subtest: F1b repair fences moved ownership after fresh child read
+ok 29 - F1b repair fences moved ownership after fresh child read
+  ---
+  duration_ms: 1.002792
+  type: 'test'
+  ...
+# Subtest: F1c save stops Leo after competitor on Sam PUT
+ok 30 - F1c save stops Leo after competitor on Sam PUT
+  ---
+  duration_ms: 1.006917
+  type: 'test'
+  ...
+# Subtest: F1d failed generation check stops child submission
+ok 31 - F1d failed generation check stops child submission
+  ---
+  duration_ms: 0.901917
+  type: 'test'
+  ...
+# Subtest: F1e superseded message does not promise absent Repair
+ok 32 - F1e superseded message does not promise absent Repair
+  ---
+  duration_ms: 0.500584
+  type: 'test'
+  ...
+# Subtest: F1f dangling 410 and 404 are named but 403 stays unknown
+ok 33 - F1f dangling 410 and 404 are named but 403 stays unknown
+  ---
+  duration_ms: 0.7445
+  type: 'test'
+  ...
+# Subtest: F1 moved generation stays superseded if trailing verification fails
+ok 34 - F1 moved generation stays superseded if trailing verification fails
+  ---
+  duration_ms: 2.3385
+  type: 'test'
+  ...
+1..34
+# tests 34
+# suites 0
+# pass 34
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 522.065417

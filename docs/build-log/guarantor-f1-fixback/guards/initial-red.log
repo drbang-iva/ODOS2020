@@ -1,0 +1,208 @@
+TAP version 13
+# Subtest: F1e superseded save reloads automatically and one Repair converges
+not ok 1 - F1e superseded save reloads automatically and one Repair converges
+  ---
+  duration_ms: 24.973583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorEditor.test.tsx:1:12524'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /newer edit.*landed/i. Input:
+    
+    '{"type":"fieldset","props":{"className":"grid gap-4 rounded-lg border border-[var(--odos-line)] bg-[var(--odos-context-surface)] text-[color:var(--odos-text)] p-4 lg:col-span-2"},"children":[{"type":"legend","props":{"className":"px-2 text-sm font-semibold text-[color:var(--odos-text)]"},"children":["Responsible parties"]},{"type":"p","props":{"className":"text-sm text-[color:var(--odos-muted)]"},"children":["Save guarantor contact details separately. Changes apply to all linked patients."]},{"type":"section","props":{"className":"grid gap-3 rounded border border-[var(--odos-line)] p-3","aria-label":"New Guardian"},"children":[{"type":"h3","props":{"className":"font-semibold"},"children":["New Guardian"]},{"type":"fieldset","props":{"disabled":false,"className":"grid gap-3 sm:grid-cols-2"},"children":[{"type":"div","props":{"className":"grid gap-2"},"children":[{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["Given names 1",{"type":"input","props":{"className":"scheduler-input","value":"New"},"children":null}]},{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["Family name 1",{"type":"input","props":{"className":"scheduler-input","value":"Edited"},"children":null}]}]},{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["Phone 1",{"type":"input","props":{"className":"scheduler-input","value":"864-555-0101"},"children":null}]},{"type":"div","props":{"className":"grid gap-2"},"children":[{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["Address 1 line 1",{"type":"input","props":{"className":"scheduler-input","value":"New street"},"children":null}]},{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["City 1",{"type":"input","props":{"className":"scheduler-input","value":""},"children":null}]},{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["State 1",{"type":"input","props":{"className":"scheduler-input","value":""},"children":null}]},{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["Postal code 1",{"type":"input","props":{"className":"scheduler-input","value":""},"children":null}]},{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["Country 1",{"type":"input","props":{"className":"scheduler-input","value":""},"children":null}]}]}]},{"type":"p","props":{"role":"status"},"children":["A newer guarantor edit superseded this generation. Repair will use the current guarantor record."]},{"type":"p","props":{"className":"text-xs text-[color:var(--odos-muted)]"},"children":["Checked against guarantor generation ","8","."]},{"type":"ul","props":{},"children":[{"type":"li","props":{},"children":["Sam Synthetic"," — ","superseded",": update accepted"]}]},{"type":"div","props":{"className":"flex flex-wrap gap-2"},"children":[{"type":"button","props":{"type":"button","className":"rounded bg-[color:var(--odos-accent)] text-[color:var(--odos-accent-ink)] px-3 py-2 disabled:opacity-50","disabled":false},"children":["Save guarantor"]},{"type":"button","props":{"type":"button","disabled":false},"children":["Reload guarantor"]}]}]}]}'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: '{"type":"fieldset","props":{"className":"grid gap-4 rounded-lg border border-[var(--odos-line)] bg-[var(--odos-context-surface)] text-[color:var(--odos-text)] p-4 lg:col-span-2"},"children":[{"type":"legend","props":{"className":"px-2 text-sm font-semibold text-[color:var(--odos-text)]"},"children":["Responsible parties"]},{"type":"p","props":{"className":"text-sm text-[color:var(--odos-muted)]"},"children":["Save guarantor contact details separately. Changes apply to all linked patients."]},{"type":"section","props":{"className":"grid gap-3 rounded border border-[var(--odos-line)] p-3","aria-label":"New Guardian"},"children":[{"type":"h3","props":{"className":"font-semibold"},"children":["New Guardian"]},{"type":"fieldset","props":{"disabled":false,"className":"grid gap-3 sm:grid-cols-2"},"children":[{"type":"div","props":{"className":"grid gap-2"},"children":[{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["Given names 1",{"type":"input","props":{"className":"scheduler-input","value":"New"},"children":null}]},{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["Family name 1",{"type":"input","props":{"className":"scheduler-input","value":"Edited"},"children":null}]}]},{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["Phone 1",{"type":"input","props":{"className":"scheduler-input","value":"864-555-0101"},"children":null}]},{"type":"div","props":{"className":"grid gap-2"},"children":[{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["Address 1 line 1",{"type":"input","props":{"className":"scheduler-input","value":"New street"},"children":null}]},{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["City 1",{"type":"input","props":{"className":"scheduler-input","value":""},"children":null}]},{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["State 1",{"type":"input","props":{"className":"scheduler-input","value":""},"children":null}]},{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["Postal code 1",{"type":"input","props":{"className":"scheduler-input","value":""},"children":null}]},{"type":"label","props":{"className":"grid gap-1 text-sm text-[color:var(--odos-muted)]"},"children":["Country 1",{"type":"input","props":{"className":"scheduler-input","value":""},"children":null}]}]}]},{"type":"p","props":{"role":"status"},"children":["A newer guarantor edit superseded this generation. Repair will use the current guarantor record."]},{"type":"p","props":{"className":"text-xs text-[color:var(--odos-muted)]"},"children":["Checked against guarantor generation ","8","."]},{"type":"ul","props":{},"children":[{"type":"li","props":{},"children":["Sam Synthetic"," — ","superseded",": update accepted"]}]},{"type":"div","props":{"className":"flex flex-wrap gap-2"},"children":[{"type":"button","props":{"type":"button","className":"rounded bg-[color:var(--odos-accent)] text-[color:var(--odos-accent-ink)] px-3 py-2 disabled:opacity-50","disabled":false},"children":["Save guarantor"]},{"type":"button","props":{"type":"button","disabled":false},"children":["Reload guarantor"]}]}]}]}'
+  operator: 'match'
+  stack: |-
+    original (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorEditor.test.tsx:234:12)
+    async withEditor (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorEditor.test.tsx:62:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorEditor.test.tsx:230:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: F1a repair fences generation after fresh child read
+not ok 2 - F1a repair fences generation after fresh child read
+  ---
+  duration_ms: 20.098041
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:1:11184'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'PUT RelatedPerson/a',
+    +   'PUT RelatedPerson/b'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'PUT RelatedPerson/a'
+    1: 'PUT RelatedPerson/b'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:421:10)
+    async fixture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:141:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: F1b repair fences moved ownership after fresh child read
+not ok 3 - F1b repair fences moved ownership after fresh child read
+  ---
+  duration_ms: 1.723291
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:1:11731'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'PUT RelatedPerson/a',
+    +   'PUT RelatedPerson/b'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'PUT RelatedPerson/a'
+    1: 'PUT RelatedPerson/b'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:440:10)
+    async fixture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:141:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: F1c save stops Leo after competitor on Sam PUT
+not ok 4 - F1c save stops Leo after competitor on Sam PUT
+  ---
+  duration_ms: 1.510708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:1:12497'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        'PUT Person/p',
+        'PUT RelatedPerson/a',
+    +   'PUT RelatedPerson/b'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'PUT Person/p'
+    1: 'PUT RelatedPerson/a'
+  actual:
+    0: 'PUT Person/p'
+    1: 'PUT RelatedPerson/a'
+    2: 'PUT RelatedPerson/b'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:456:10)
+    async fixture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:141:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: F1d failed generation check stops child submission
+not ok 5 - F1d failed generation check stops child submission
+  ---
+  duration_ms: 1.479958
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:1:13189'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        'PUT Person/p',
+        'PUT RelatedPerson/a',
+    +   'PUT RelatedPerson/b'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'PUT Person/p'
+    1: 'PUT RelatedPerson/a'
+  actual:
+    0: 'PUT Person/p'
+    1: 'PUT RelatedPerson/a'
+    2: 'PUT RelatedPerson/b'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:480:10)
+    async fixture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:141:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: F1e superseded message does not promise absent Repair
+not ok 6 - F1e superseded message does not promise absent Repair
+  ---
+  duration_ms: 0.714667
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:1:13736'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input was expected to not match the regular expression /repair/i. Input:
+    
+    'A newer guarantor edit superseded this generation. Repair will use the current guarantor record.'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'A newer guarantor edit superseded this generation. Repair will use the current guarantor record.'
+  operator: 'doesNotMatch'
+  stack: |-
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:491:10)
+    async fixture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:141:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: F1f dangling 410 and 404 are named but 403 stays unknown
+not ok 7 - F1f dangling 410 and 404 are named but 403 stays unknown
+  ---
+  duration_ms: 0.431459
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:1:13999'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'unknown'
+    - 'dangling'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'dangling'
+  actual: 'unknown'
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:500:12)
+    async fixture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:141:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 0
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 273.508792

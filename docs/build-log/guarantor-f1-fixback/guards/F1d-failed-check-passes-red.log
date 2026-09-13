@@ -1,0 +1,50 @@
+TAP version 13
+1..0
+# Subtest: tests/guarantorEditor.test.tsx
+ok 1 - tests/guarantorEditor.test.tsx
+  ---
+  duration_ms: 213.9415
+  type: 'test'
+  ...
+# Subtest: F1d failed generation check stops child submission
+not ok 2 - F1d failed generation check stops child submission
+  ---
+  duration_ms: 17.537542
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:1:13189'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        'PUT Person/p',
+        'PUT RelatedPerson/a',
+    +   'PUT RelatedPerson/b'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'PUT Person/p'
+    1: 'PUT RelatedPerson/a'
+  actual:
+    0: 'PUT Person/p'
+    1: 'PUT RelatedPerson/a'
+    2: 'PUT RelatedPerson/b'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:481:10)
+    async fixture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:141:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 217.831

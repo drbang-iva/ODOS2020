@@ -1,0 +1,23 @@
+TAP version 13
+# Subtest: F1e superseded save reloads automatically and one Repair converges
+ok 1 - F1e superseded save reloads automatically and one Repair converges
+  ---
+  duration_ms: 26.097333
+  type: 'test'
+  ...
+1..0
+# Subtest: tests/guarantorPropagation.test.tsx
+ok 2 - tests/guarantorPropagation.test.tsx
+  ---
+  duration_ms: 193.15325
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 244.06

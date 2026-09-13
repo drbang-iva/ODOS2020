@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: F1e superseded save reloads automatically and one Repair converges
+not ok 1 - F1e superseded save reloads automatically and one Repair converges
+  ---
+  duration_ms: 25.902167
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorEditor.test.tsx:1:12524'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(repair)
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    original (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorEditor.test.tsx:236:12)
+    async withEditor (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorEditor.test.tsx:62:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorEditor.test.tsx:230:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..0
+# Subtest: tests/guarantorPropagation.test.tsx
+ok 2 - tests/guarantorPropagation.test.tsx
+  ---
+  duration_ms: 185.595292
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 237.09
