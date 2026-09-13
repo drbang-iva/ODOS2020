@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+const dir='.odos/insurance-ins1',mode=process.argv[2]??'base';
+const s=JSON.parse(readFileSync(`${dir}/session.json`)),f=JSON.parse(readFileSync(`${dir}/fixture.json`));
+const base='http://127.0.0.1:19813';
+async function request(path,method='GET',body,token=s.admin){const r=await fetch(base+'/fhir/R4/'+path,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/fhir+json'},body:body?JSON.stringify(body):undefined});assert.ok(r.ok,`${method} ${path}: ${r.status}`);return r.json();}
+const subscriber=await request('RelatedPerson','POST',{resourceType:'RelatedPerson',active:true,patient:{reference:`Patient/${f.patient.id}`},name:[{family:'Synthetic',given:['Original']}]});
+await request(`RelatedPerson/${subscriber.id}`,'PUT',{...subscriber,name:[{family:'Synthetic',given:['Concurrent']}]});
+const before=await request(`Coverage?beneficiary=Patient/${f.patient.id}`);
+const bundle={resourceType:'Bundle',type:'transaction',entry:[{resource:{...subscriber,name:[{family:'Synthetic',given:['Stale']}]},request:{method:'PUT',url:`RelatedPerson/${subscriber.id}`,ifMatch:`W/"${subscriber.meta.versionId}"`}},{resource:{resourceType:'Coverage',status:'active',beneficiary:{reference:`Patient/${f.patient.id}`},subscriber:{reference:`RelatedPerson/${subscriber.id}`},payor:[{reference:`Organization/${f.payer.id}`} ]},request:{method:'POST',url:'Coverage'}}]};
+const r=await fetch('http://127.0.0.1:19811/insurance/coverages',{method:'POST',headers:{Authorization:`Bearer ${s.staff}`,'Content-Type':'application/json'},body:JSON.stringify({bundle})});
+const body=await r.json();
+const after=await request(`Coverage?beneficiary=Patient/${f.patient.id}`,'GET',undefined,s.staff);
+const row=readFileSync(`${dir}/audit.jsonl`,'utf8').trim().split('\n').map(JSON.parse).filter(a=>a.eventType==='coverage.write').at(-1);
+const existing=new Set((before.entry??[]).map(e=>e.resource.id));
+const added=(after.entry??[]).map(e=>e.resource).filter(c=>!existing.has(c.id));
+assert.equal(r.status,mode==='base'?200:409);assert.equal(added.length,mode==='base'?1:0);assert.equal(row.actionOutcome,mode==='base'?'granted':'denied');
+const output={mode,health:await(await fetch(base+'/healthcheck')).json(),request:bundle,status:r.status,body,audit:row,newCoverages:added,currentSubscriber:await request(`RelatedPerson/${subscriber.id}`,'GET',undefined,s.staff)};
+mkdirSync('docs/build-log/insurance-ins1/live',{recursive:true});writeFileSync(`docs/build-log/insurance-ins1/live/${mode}.json`,JSON.stringify(output,null,2));
+console.log(JSON.stringify({mode,status:r.status,audit:row.actionOutcome,newCoverages:added.length}));

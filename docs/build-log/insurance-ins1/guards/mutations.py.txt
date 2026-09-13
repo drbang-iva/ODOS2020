@@ -1,0 +1,39 @@
+from pathlib import Path
+import subprocess,json
+root=Path.cwd(); p=root/'mcp/src/insurance/patient-insurance-handlers.ts'; original=p.read_text()
+out=root/'docs/build-log/insurance-ins1/guards'
+mutations=[
+ ('I1','const submissions = subscriberUpdate','const submissions = false && subscriberUpdate','I1 stale subscriber stops before Coverage'),
+ ('I2','if (result.failure) {','if (false && result.failure) {','I2 mixed create response reports surviving subscriber and denied audit'),
+ ('I3','if (subscriberUpdate && !subscriberUpdate.request?.ifMatch?.trim())','if (false && subscriberUpdate && !subscriberUpdate.request?.ifMatch?.trim())','I3 unversioned subscriber PUT submits nothing'),
+ ('I4',' || extension.url === RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL','','I4 primary extension alone fences guardian'),
+ ('I5','if (people.length > 0) return true;','if (false) return true;','I5 Person link alone fences guardian'),
+ ('I6','current[0].extension?.some','(bundle.entry?.find(entry => entry.resource?.resourceType === "RelatedPerson")?.resource as RelatedPerson)?.extension?.some','I6 current server extensions cannot be omitted by request body'),
+ ('I7','if (entry.resource?.resourceType === "Coverage") {','if (false && entry.resource?.resourceType === "Coverage") {','I7 Coverage-only existing guardian reference is fenced'),
+ ('I8','"coverage.write", "success", patientReference','"coverage.write", "failure", patientReference','I8 versioned subscriber-only update succeeds before Coverage'),
+ ('I9','const result = inspectInsuranceResponse(bundle, response, []);','const result = { written: [], failure: undefined };','I9 mixed vision benefits response is denied with written locations'),
+ ('targets','if (!validInsuranceEntryTargets(entries))','if (false && !validInsuranceEntryTargets(entries))','Insurance entry URLs cannot disguise a guardian write as Coverage'),
+ ('references','if (subscriber && !/','if (false && subscriber && !/','Noncanonical subscriber references cannot bypass the guardian fence'),
+ ('no-compensation','autoRollbackCreatedEntries: false','autoRollbackCreatedEntries: true','I1 stale subscriber stops before Coverage'),
+]
+cmd=['npm','--prefix','mcp','test','--','tests/patientInsuranceHonestSave.test.ts']
+def run(name):
+ r=subprocess.run(cmd,capture_output=True,text=True)
+ (out/(name+'.txt')).write_text(r.stdout+r.stderr)
+ return {'exit':r.returncode,'failed':[l.split(' - ',1)[1] for l in r.stdout.splitlines() if l.startswith('not ok ')]}
+results=[]
+try:
+ green=run('mutation-green');assert green['exit']==0,green
+ for key,old,new,name in mutations:
+  assert old in original,key
+  p.write_text(original.replace(old,new,1))
+  red=run(key+'-red')
+  p.write_text(original)
+  restored=run(key+'-restored')
+  item={'guard':key,'expectedFailure':name,'green':green,'red':red,'restored':restored};results.append(item)
+  assert red['exit']!=0 and name in red['failed'],item
+  assert restored['exit']==0,item
+  print(key, 'green -> red -> restored',flush=True)
+finally:
+ p.write_text(original)
+ (out/'mutations.json').write_text(json.dumps(results,indent=2)+'\n')

@@ -1,0 +1,124 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/patientInsuranceHonestSave.test.ts
+
+TAP version 13
+# Subtest: I1 stale subscriber stops before Coverage
+ok 1 - I1 stale subscriber stops before Coverage
+  ---
+  duration_ms: 2.260416
+  type: 'test'
+  ...
+# Subtest: I2 mixed create response reports surviving subscriber and denied audit
+ok 2 - I2 mixed create response reports surviving subscriber and denied audit
+  ---
+  duration_ms: 0.955958
+  type: 'test'
+  ...
+# Subtest: I3 unversioned subscriber PUT submits nothing
+ok 3 - I3 unversioned subscriber PUT submits nothing
+  ---
+  duration_ms: 0.121333
+  type: 'test'
+  ...
+# Subtest: I4 primary extension alone fences guardian
+ok 4 - I4 primary extension alone fences guardian
+  ---
+  duration_ms: 0.255208
+  type: 'test'
+  ...
+# Subtest: I5 Person link alone fences guardian
+ok 5 - I5 Person link alone fences guardian
+  ---
+  duration_ms: 0.158666
+  type: 'test'
+  ...
+# Subtest: I6 current server extensions cannot be omitted by request body
+ok 6 - I6 current server extensions cannot be omitted by request body
+  ---
+  duration_ms: 0.11875
+  type: 'test'
+  ...
+# Subtest: I7 Coverage-only existing guardian reference is fenced
+ok 7 - I7 Coverage-only existing guardian reference is fenced
+  ---
+  duration_ms: 0.198083
+  type: 'test'
+  ...
+# Subtest: I8 versioned subscriber-only update succeeds before Coverage
+ok 8 - I8 versioned subscriber-only update succeeds before Coverage
+  ---
+  duration_ms: 0.200625
+  type: 'test'
+  ...
+# Subtest: I9 mixed vision benefits response is denied with written locations
+ok 9 - I9 mixed vision benefits response is denied with written locations
+  ---
+  duration_ms: 0.541042
+  type: 'test'
+  ...
+# Subtest: Insurance entry URLs cannot disguise a guardian write as Coverage
+not ok 10 - Insurance entry URLs cannot disguise a guardian write as Coverage
+  ---
+  duration_ms: 1.756958
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:6984'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 400
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:98:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: Subscriber PUT target must match its resource id
+not ok 11 - Subscriber PUT target must match its resource id
+  ---
+  duration_ms: 0.362125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:7249'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 400
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:102:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: Noncanonical subscriber references cannot bypass the guardian fence
+ok 12 - Noncanonical subscriber references cannot bypass the guardian fence
+  ---
+  duration_ms: 0.099084
+  type: 'test'
+  ...
+# Subtest: A later Coverage failure reports the earlier successful subscriber PUT
+ok 13 - A later Coverage failure reports the earlier successful subscriber PUT
+  ---
+  duration_ms: 1.262583
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 11
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 150.777208

@@ -1,0 +1,147 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/patientInsuranceHonestSave.test.ts
+
+TAP version 13
+# Subtest: I1 stale subscriber stops before Coverage
+ok 1 - I1 stale subscriber stops before Coverage
+  ---
+  duration_ms: 2.247542
+  type: 'test'
+  ...
+# Subtest: I2 mixed create response reports surviving subscriber and denied audit
+ok 2 - I2 mixed create response reports surviving subscriber and denied audit
+  ---
+  duration_ms: 0.813541
+  type: 'test'
+  ...
+# Subtest: I3 unversioned subscriber PUT submits nothing
+not ok 3 - I3 unversioned subscriber PUT submits nothing
+  ---
+  duration_ms: 2.090792
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:3896'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+        body: {
+    +     entry: [
+    +       {
+    +         response: {
+    +           location: 'RelatedPerson/saved/_history/2',
+    +           status: '201 Created'
+    +         }
+    +       },
+    +       {
+    +         response: {
+    +           location: 'Coverage/saved/_history/2',
+    +           status: '201 Created'
+    +         }
+    +       }
+    +     ],
+    +     resourceType: 'Bundle',
+    +     type: 'transaction-response'
+    -     error: 'Subscriber updates require a version.'
+        },
+    +   status: 200
+    -   status: 400
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    status: 400
+    body:
+      error: 'Subscriber updates require a version.'
+  actual:
+    status: 200
+    body:
+      resourceType: 'Bundle'
+      type: 'transaction-response'
+      entry:
+        0:
+          response:
+            status: '201 Created'
+            location: 'RelatedPerson/saved/_history/2'
+        1:
+          response:
+            status: '201 Created'
+            location: 'Coverage/saved/_history/2'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:60:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: I4 primary extension alone fences guardian
+ok 4 - I4 primary extension alone fences guardian
+  ---
+  duration_ms: 0.241042
+  type: 'test'
+  ...
+# Subtest: I5 Person link alone fences guardian
+ok 5 - I5 Person link alone fences guardian
+  ---
+  duration_ms: 0.2665
+  type: 'test'
+  ...
+# Subtest: I6 current server extensions cannot be omitted by request body
+ok 6 - I6 current server extensions cannot be omitted by request body
+  ---
+  duration_ms: 0.108042
+  type: 'test'
+  ...
+# Subtest: I7 Coverage-only existing guardian reference is fenced
+ok 7 - I7 Coverage-only existing guardian reference is fenced
+  ---
+  duration_ms: 0.158958
+  type: 'test'
+  ...
+# Subtest: I8 versioned subscriber-only update succeeds before Coverage
+ok 8 - I8 versioned subscriber-only update succeeds before Coverage
+  ---
+  duration_ms: 0.27925
+  type: 'test'
+  ...
+# Subtest: I9 mixed vision benefits response is denied with written locations
+ok 9 - I9 mixed vision benefits response is denied with written locations
+  ---
+  duration_ms: 0.631542
+  type: 'test'
+  ...
+# Subtest: Insurance entry URLs cannot disguise a guardian write as Coverage
+ok 10 - Insurance entry URLs cannot disguise a guardian write as Coverage
+  ---
+  duration_ms: 1.202
+  type: 'test'
+  ...
+# Subtest: Subscriber PUT target must match its resource id
+ok 11 - Subscriber PUT target must match its resource id
+  ---
+  duration_ms: 0.083833
+  type: 'test'
+  ...
+# Subtest: Noncanonical subscriber references cannot bypass the guardian fence
+ok 12 - Noncanonical subscriber references cannot bypass the guardian fence
+  ---
+  duration_ms: 0.077541
+  type: 'test'
+  ...
+# Subtest: A later Coverage failure reports the earlier successful subscriber PUT
+ok 13 - A later Coverage failure reports the earlier successful subscriber PUT
+  ---
+  duration_ms: 0.252708
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 12
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 152.096375

@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {randomUUID} from 'node:crypto';
+import {loginForLocalRepair} from '../../scripts/repair-practice-roles.ts';
+import {buildMedplumAccessPolicy,getRoleDeclaration} from '../../mcp/src/authz/roles.ts';
+import {createRoleClient} from '../../mcp/tests/liveRoleClient.ts';
+import {CONSENT_AUTHORITY_EXTENSION_URL,RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL} from '../../mcp/src/clinic/patient-registration-endpoint.ts';
+const dir='.odos/insurance-ins1';
+const runtime=JSON.parse(readFileSync(`${dir}/runtime.json`,'utf8'));
+assert.equal(runtime.baseUrl,'http://127.0.0.1:19813');
+const health=await(await fetch(runtime.baseUrl+'/healthcheck')).json();
+assert.equal(health.version,'5.1.30-9b1bd92');
+const token=await loginForLocalRepair(runtime);
+const me=await(await fetch(runtime.baseUrl+'/auth/me',{headers:{Authorization:`Bearer ${token}`}})).json();
+assert.ok(!(me.project.features??[]).includes('transaction-bundles'));
+async function post(resource:any){const r=await fetch(runtime.baseUrl+'/fhir/R4/'+resource.resourceType,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/fhir+json'},body:JSON.stringify(resource)});assert.equal(r.status,201,await r.clone().text());return r.json();}
+const patient=await post({resourceType:'Patient',active:true,name:[{given:['Sam'],family:'Synthetic'}],birthDate:'2015-01-01'});
+const payer=await post({resourceType:'Organization',active:true,name:'Synthetic Insurance'});
+const guardian=await post({resourceType:'RelatedPerson',active:true,patient:{reference:`Patient/${patient.id}`},name:[{given:['Guardian'],family:'Synthetic'}],birthDate:'1978-03-04',telecom:[{system:'phone',use:'home',value:'864-555-0101'}],address:[{line:['1 Guardian Way'],city:'Greenville',state:'SC',postalCode:'29601'}],relationship:[{text:'Parent'}],period:{start:'2026-01-01',end:'2035-01-01'},extension:[{url:CONSENT_AUTHORITY_EXTENSION_URL,valueBoolean:true},{url:RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL,valueBoolean:true}]});
+const subscriber=await post({resourceType:'RelatedPerson',active:true,patient:{reference:`Patient/${patient.id}`},name:[{given:['Subscriber'],family:'Synthetic'}],birthDate:'1978-03-04'});
+const practitioner=await post({resourceType:'Practitioner',name:[{given:['Synthetic'],family:'Staff'}]});
+const policy=await post(buildMedplumAccessPolicy(getRoleDeclaration('staff')));
+const {token:staff}=await createRoleClient({baseUrl:runtime.baseUrl,roleId:'staff',policyReference:`AccessPolicy/${policy.id}`,patientReference:`Patient/${patient.id}`,practitionerReference:`Practitioner/${practitioner.id}`,projectId:me.project.id,runId:randomUUID(),adminToken:token,track:r=>r});
+writeFileSync(`${dir}/session.json`,JSON.stringify({admin:token,staff,projectId:me.project.id}),{mode:0o600});
+writeFileSync(`${dir}/fixture.json`,JSON.stringify({patient,payer,guardian,subscriber,policy},null,2));
+console.log(JSON.stringify({health,features:me.project.features??[],patient:patient.id,guardian:guardian.id,policy:policy.id}));

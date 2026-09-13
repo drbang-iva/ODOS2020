@@ -1,0 +1,28 @@
+{
+  "registrationExactlyTwoExports": true,
+  "uiDiff": [],
+  "existingTestBodiesChanged": false,
+  "baselineFailures": [
+    "rebuild is atomic and server-side worklist grouping returns honest untouched facts",
+    "never-paid-untouched aggregation is performed by payer and month in PostgreSQL",
+    "reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth",
+    "an older per-claim upsert cannot overwrite a newer completed rebuild",
+    "an older rebuild snapshot fails loudly without publishing incomplete FHIR truth",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts",
+    "B5 only action-holding staff can record an opt-out",
+    "drill child commands never inherit the persistent Redis password"
+  ],
+  "regressionFailures": [
+    "rebuild is atomic and server-side worklist grouping returns honest untouched facts",
+    "never-paid-untouched aggregation is performed by payer and month in PostgreSQL",
+    "reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth",
+    "an older per-claim upsert cannot overwrite a newer completed rebuild",
+    "an older rebuild snapshot fails loudly without publishing incomplete FHIR truth",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts",
+    "drill child commands never inherit the persistent Redis password"
+  ],
+  "newFailures": [],
+  "baselineFailureNowPassing": [
+    "B5 only action-holding staff can record an opt-out"
+  ]
+}

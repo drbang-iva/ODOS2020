@@ -1,0 +1,19 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+const dir='.odos/insurance-ins1',base='http://127.0.0.1:19813';
+const s=JSON.parse(readFileSync(`${dir}/session.json`)),f=JSON.parse(readFileSync(`${dir}/fixture.json`));
+async function get(path){const r=await fetch(base+'/fhir/R4/'+path,{headers:{Authorization:`Bearer ${s.staff}`}});assert.equal(r.status,200);return r.json();}
+const before=await get(`RelatedPerson/${f.guardian.id}`);
+const beforeCoverages=await get(`Coverage?beneficiary=Patient/${f.patient.id}`);
+const results=[];
+for(const put of [false,true]){
+ const bundle={resourceType:'Bundle',type:'transaction',entry:[...(put?[{resource:{...before,name:[{family:'Blocked'}]},request:{method:'PUT',url:`RelatedPerson/${before.id}`,ifMatch:`W/"${before.meta.versionId}"`}}]:[]),{resource:{resourceType:'Coverage',status:'active',beneficiary:{reference:`Patient/${f.patient.id}`},subscriber:{reference:`RelatedPerson/${before.id}`},payor:[{reference:`Organization/${f.payer.id}`}]},request:{method:'POST',url:'Coverage'}}]};
+ const r=await fetch('http://127.0.0.1:19811/insurance/coverages',{method:'POST',headers:{Authorization:`Bearer ${s.staff}`,'Content-Type':'application/json'},body:JSON.stringify({bundle})});
+ const body=await r.json();assert.equal(r.status,422);assert.match(body.error,/responsible party/);
+ const after=await get(`RelatedPerson/${before.id}`);assert.deepEqual(after,before);
+ const afterCoverages=await get(`Coverage?beneficiary=Patient/${f.patient.id}`);assert.deepEqual((afterCoverages.entry??[]).map(e=>e.resource.id).sort(),(beforeCoverages.entry??[]).map(e=>e.resource.id).sort());
+ const audit=readFileSync(`${dir}/audit.jsonl`,'utf8').trim().split('\n').map(JSON.parse).filter(a=>a.eventType==='coverage.write').at(-1);assert.equal(audit.actionOutcome,'denied');
+ results.push({put,request:bundle,status:r.status,body,audit,before,after,newCoverages:0});
+}
+writeFileSync('docs/build-log/insurance-ins1/live/fence.json',JSON.stringify({results},null,2));
+console.log(JSON.stringify(results.map(r=>({put:r.put,status:r.status,guardianVersion:r.after.meta.versionId,unchanged:true,newCoverages:0}))));

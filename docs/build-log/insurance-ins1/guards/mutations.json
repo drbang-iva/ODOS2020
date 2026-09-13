@@ -1,0 +1,228 @@
+[
+  {
+    "guard": "I1",
+    "expectedFailure": "I1 stale subscriber stops before Coverage",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "I1 stale subscriber stops before Coverage",
+        "I8 versioned subscriber-only update succeeds before Coverage",
+        "A later Coverage failure reports the earlier successful subscriber PUT"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "I2",
+    "expectedFailure": "I2 mixed create response reports surviving subscriber and denied audit",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "I1 stale subscriber stops before Coverage",
+        "I2 mixed create response reports surviving subscriber and denied audit",
+        "A later Coverage failure reports the earlier successful subscriber PUT"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "I3",
+    "expectedFailure": "I3 unversioned subscriber PUT submits nothing",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "I3 unversioned subscriber PUT submits nothing"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "I4",
+    "expectedFailure": "I4 primary extension alone fences guardian",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "I4 primary extension alone fences guardian"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "I5",
+    "expectedFailure": "I5 Person link alone fences guardian",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "I5 Person link alone fences guardian",
+        "I7 Coverage-only existing guardian reference is fenced"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "I6",
+    "expectedFailure": "I6 current server extensions cannot be omitted by request body",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "I4 primary extension alone fences guardian",
+        "I6 current server extensions cannot be omitted by request body"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "I7",
+    "expectedFailure": "I7 Coverage-only existing guardian reference is fenced",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "I7 Coverage-only existing guardian reference is fenced"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "I8",
+    "expectedFailure": "I8 versioned subscriber-only update succeeds before Coverage",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "I8 versioned subscriber-only update succeeds before Coverage"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "I9",
+    "expectedFailure": "I9 mixed vision benefits response is denied with written locations",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "I9 mixed vision benefits response is denied with written locations"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "targets",
+    "expectedFailure": "Insurance entry URLs cannot disguise a guardian write as Coverage",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "Insurance entry URLs cannot disguise a guardian write as Coverage",
+        "Subscriber PUT target must match its resource id"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "references",
+    "expectedFailure": "Noncanonical subscriber references cannot bypass the guardian fence",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "Noncanonical subscriber references cannot bypass the guardian fence"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "no-compensation",
+    "expectedFailure": "I1 stale subscriber stops before Coverage",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "I1 stale subscriber stops before Coverage",
+        "I2 mixed create response reports surviving subscriber and denied audit",
+        "I8 versioned subscriber-only update succeeds before Coverage",
+        "A later Coverage failure reports the earlier successful subscriber PUT"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  }
+]

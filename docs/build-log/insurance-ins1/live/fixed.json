@@ -1,0 +1,110 @@
+{
+  "mode": "fixed",
+  "health": {
+    "ok": true,
+    "version": "5.1.30-9b1bd92",
+    "platform": "linux",
+    "runtime": "v24.18.1",
+    "postgres": true,
+    "redis": true,
+    "redisInstances": {
+      "default": true
+    }
+  },
+  "request": {
+    "resourceType": "Bundle",
+    "type": "transaction",
+    "entry": [
+      {
+        "resource": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+          },
+          "name": [
+            {
+              "family": "Synthetic",
+              "given": [
+                "Stale"
+              ]
+            }
+          ],
+          "id": "4b322204-f69e-4529-90c4-16d1d255aa7f",
+          "meta": {
+            "versionId": "aaa4e5d5-0d15-41b5-bb8f-5ca7367f45ef",
+            "lastUpdated": "2026-09-13T21:39:10.738Z"
+          }
+        },
+        "request": {
+          "method": "PUT",
+          "url": "RelatedPerson/4b322204-f69e-4529-90c4-16d1d255aa7f",
+          "ifMatch": "W/\"aaa4e5d5-0d15-41b5-bb8f-5ca7367f45ef\""
+        }
+      },
+      {
+        "resource": {
+          "resourceType": "Coverage",
+          "status": "active",
+          "beneficiary": {
+            "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+          },
+          "subscriber": {
+            "reference": "RelatedPerson/4b322204-f69e-4529-90c4-16d1d255aa7f"
+          },
+          "payor": [
+            {
+              "reference": "Organization/da46a9e2-0b5c-4f18-88d1-f5341241e32e"
+            }
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "url": "Coverage"
+        }
+      }
+    ]
+  },
+  "status": 409,
+  "body": {
+    "error": "This record changed while you were editing it. Reload and try again.",
+    "written": []
+  },
+  "audit": {
+    "id": "af8c1062-064b-413f-b803-dd528bfda6b4",
+    "eventTime": "2026-09-13T21:39:10.782Z",
+    "eventType": "coverage.write",
+    "actorId": "4bee8d9e-c2e3-43db-87dd-d7f1ee0cfcbd",
+    "actorRole": "staff",
+    "patientId": "7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f",
+    "resourceType": "Coverage",
+    "resourceId": "uncreated",
+    "actionOutcome": "denied",
+    "actionReason": "coverage.write failure RelatedPerson/4b322204-f69e-4529-90c4-16d1d255aa7f: 412; written: []",
+    "breakGlass": false,
+    "ibActorClassification": "health-care-provider",
+    "ibException": "security",
+    "createdAt": "2026-09-13T21:39:10.782Z"
+  },
+  "newCoverages": [],
+  "currentSubscriber": {
+    "resourceType": "RelatedPerson",
+    "active": true,
+    "patient": {
+      "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+    },
+    "name": [
+      {
+        "family": "Synthetic",
+        "given": [
+          "Concurrent"
+        ]
+      }
+    ],
+    "id": "4b322204-f69e-4529-90c4-16d1d255aa7f",
+    "meta": {
+      "versionId": "b7098f9c-c030-4aa7-bcaa-8fa2cacb2533",
+      "lastUpdated": "2026-09-13T21:39:10.768Z"
+    }
+  }
+}

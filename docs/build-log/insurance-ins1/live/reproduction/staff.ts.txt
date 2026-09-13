@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {randomUUID,randomBytes} from 'node:crypto';
+import {loginForLocalRepair} from '../../scripts/repair-practice-roles.ts';
+import {buildProjectMembershipAccess} from '../../mcp/src/authz/roles.ts';
+const dir='.odos/insurance-ins1';const runtime=JSON.parse(readFileSync(`${dir}/runtime.json`,'utf8'));const session=JSON.parse(readFileSync(`${dir}/session.json`,'utf8'));const fixture=JSON.parse(readFileSync(`${dir}/fixture.json`,'utf8'));
+assert.equal(runtime.baseUrl,'http://127.0.0.1:19813');
+const email=`ins1-${randomUUID()}@example.test`,password=randomBytes(24).toString('hex');
+async function post(path,body){const r=await fetch(runtime.baseUrl+path,{method:'POST',headers:{Authorization:`Bearer ${session.admin}`,'Content-Type':'application/json'},body:JSON.stringify(body)});assert.ok(r.ok,`${path}: ${r.status}`);return r.json();}
+const membership=await post(`/admin/projects/${session.projectId}/invite`,{resourceType:'Practitioner',email,firstName:'Synthetic',lastName:'Insurance Staff',sendEmail:false});
+assert.ok(membership.id);
+await post('/admin/super/setpassword',{email,password});
+const url=`/admin/projects/${session.projectId}/members/${membership.id}`;
+const fresh=await(await fetch(runtime.baseUrl+url,{headers:{Authorization:`Bearer ${session.admin}`}})).json();
+const {accessPolicy,...rest}=fresh;
+await post(url,{...rest,access:buildProjectMembershipAccess({policyReference:`AccessPolicy/${fixture.policy.id}`,parameters:{patientCompartmentReference:`Patient/${fixture.patient.id}`}})});
+session.staff=await loginForLocalRepair({baseUrl:runtime.baseUrl,email,password,projectId:session.projectId});
+writeFileSync(`${dir}/session.json`,JSON.stringify(session),{mode:0o600});
+const me=await(await fetch(runtime.baseUrl+'/auth/me',{headers:{Authorization:`Bearer ${session.staff}`}})).json();assert.equal(me.profile.resourceType,'Practitioner');assert.ok(!(me.project.features??[]).includes('transaction-bundles'));
+console.log(JSON.stringify({staffProfile:me.profile.resourceType,policy:fixture.policy.id,features:me.project.features??[]}));
