@@ -1,3 +1,4 @@
+import { sanitizeProofOutput } from "./proof-output.mjs";
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -13,8 +14,8 @@ const manifest = p11Only?JSON.parse(readFileSync(resolve(directory,'ruled-mutati
 const hash = text => createHash('sha256').update(text).digest('hex');
 function run(label, args, env={}) {
   const result = spawnSync(process.execPath, args, { cwd: root, encoding: 'utf8', env: {...process.env,...env} });
-  writeFileSync(resolve(directory, `${label}.log`), result.stdout + result.stderr);
-  return { command: ['node', ...args], exit: result.status, output: `${label}.log` };
+  writeFileSync(resolve(directory, `${label}.log`), sanitizeProofOutput(result.stdout + result.stderr, root));
+  return { command: ['node', ...args], exit: result.status, env, output: `${label}.log`, publishedOutput: `${label}.txt` };
 }
 function replace(path, from, to) {
   const original = originals.get(path);

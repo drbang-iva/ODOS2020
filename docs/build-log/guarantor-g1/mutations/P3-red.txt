@@ -4,7 +4,7 @@ not ok 1 - P3: two non-self parties each link to their own RelatedPerson
   ---
   duration_ms: 4.453708
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:1:3275'
+  location: '<repo>/mcp/tests/guarantorPerson.test.ts:1:3275'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -40,7 +40,7 @@ not ok 1 - P3: two non-self parties each link to their own RelatedPerson
       family: 'Synthetic'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:82:12)
+    TestContext.<anonymous> (<repo>/mcp/tests/guarantorPerson.test.ts:82:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

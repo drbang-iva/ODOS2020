@@ -4,7 +4,7 @@ not ok 1 - P8: a statement run retains the base minor recipient without reading 
   ---
   duration_ms: 5.165834
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:1:6289'
+  location: '<repo>/mcp/tests/guarantorPerson.test.ts:1:6289'
   failureType: 'testCodeFailure'
   error: |-
     [{"patientReference":"Patient/g1-0","patientName":"Synthetic Child","reason":"Person/g1-2 is not a supported statement guarantor for Patient/g1-0; statement delivery was blocked."}]
@@ -17,7 +17,7 @@ not ok 1 - P8: a statement run retains the base minor recipient without reading 
   actual: 0
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:171:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/guarantorPerson.test.ts:171:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

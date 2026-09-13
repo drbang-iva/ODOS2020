@@ -4,7 +4,7 @@ not ok 1 - P9: guardian SMS and voice resolution retain the base bytes
   ---
   duration_ms: 4.161208
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:1:5972'
+  location: '<repo>/mcp/tests/guarantorPerson.test.ts:1:5972'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -20,7 +20,7 @@ not ok 1 - P9: guardian SMS and voice resolution retain the base bytes
   actual: '864-555-01010'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:133:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/guarantorPerson.test.ts:133:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

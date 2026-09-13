@@ -14,7 +14,11 @@
         ".odos/guarantor-g1/policy-probe.ts"
       ],
       "exit": 0,
-      "output": "p7-ruled-green.txt"
+      "output": "p7-ruled-green.log",
+      "publishedOutput": "p7-ruled-green.txt",
+      "env": {
+        "G1_POLICY_OUTPUT": "./p7-ruled-green.json"
+      }
     },
     "red": {
       "command": [
@@ -24,7 +28,11 @@
         ".odos/guarantor-g1/policy-probe.ts"
       ],
       "exit": 1,
-      "output": "p7-ruled-red.txt"
+      "output": "p7-ruled-red.log",
+      "publishedOutput": "p7-ruled-red.txt",
+      "env": {
+        "G1_POLICY_OUTPUT": "./p7-ruled-red.json"
+      }
     },
     "restored": {
       "command": [
@@ -34,7 +42,11 @@
         ".odos/guarantor-g1/policy-probe.ts"
       ],
       "exit": 0,
-      "output": "p7-ruled-restored.txt"
+      "output": "p7-ruled-restored.log",
+      "publishedOutput": "p7-ruled-restored.txt",
+      "env": {
+        "G1_POLICY_OUTPUT": "./p7-ruled-restored.json"
+      }
     }
   },
   {
@@ -51,7 +63,9 @@
         "p11a-green"
       ],
       "exit": 0,
-      "output": "p11a-green.txt"
+      "output": "p11a-green.log",
+      "publishedOutput": "p11a-green.txt",
+      "env": {}
     },
     "redProbe": {
       "command": [
@@ -63,7 +77,9 @@
         "p11a-red"
       ],
       "exit": 0,
-      "output": "p11a-red-probe.txt"
+      "output": "p11a-red-probe.log",
+      "publishedOutput": "p11a-red-probe.txt",
+      "env": {}
     },
     "red": {
       "command": [
@@ -72,7 +88,9 @@
         "p11a-red"
       ],
       "exit": 1,
-      "output": "p11a-red.txt"
+      "output": "p11a-red.log",
+      "publishedOutput": "p11a-red.txt",
+      "env": {}
     },
     "restoredProbe": {
       "command": [
@@ -84,7 +102,9 @@
         "p11a-restored"
       ],
       "exit": 0,
-      "output": "p11a-restored-probe.txt"
+      "output": "p11a-restored-probe.log",
+      "publishedOutput": "p11a-restored-probe.txt",
+      "env": {}
     },
     "restored": {
       "command": [
@@ -93,7 +113,9 @@
         "p11a-restored"
       ],
       "exit": 0,
-      "output": "p11a-restored.txt"
+      "output": "p11a-restored.log",
+      "publishedOutput": "p11a-restored.txt",
+      "env": {}
     }
   }
 ]

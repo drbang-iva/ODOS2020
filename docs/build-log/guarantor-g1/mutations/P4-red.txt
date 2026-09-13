@@ -4,7 +4,7 @@ not ok 1 - P4: separate registrations with identical guarantors each request a n
   ---
   duration_ms: 4.14
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:1:3960'
+  location: '<repo>/mcp/tests/guarantorPerson.test.ts:1:3960'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - P4: separate registrations with identical guarantors each request a n
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:93:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/guarantorPerson.test.ts:93:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

@@ -1,0 +1,58 @@
+{
+  "statuses": {
+    "personRead": 200,
+    "personUpdate": 200,
+    "relatedUpdate": 200,
+    "personCreate": 201,
+    "personDelete": 403
+  },
+  "personMeta": {
+    "versionId": "ce952289-9b35-4250-b7bc-ba2bf5ae9296",
+    "lastUpdated": "2026-09-13T11:09:46.242Z",
+    "author": {
+      "reference": "ClientApplication/451aa682-4ba5-4f2e-bc71-0d3b503e3b5a",
+      "display": "clinical-write-staff-4f7e0f2f-abc8-44f3-a672-cf2f8e4a7538"
+    },
+    "project": "b07b76d7-56e6-4528-8500-5b3efb68abe2",
+    "compartment": [
+      {
+        "reference": "Project/b07b76d7-56e6-4528-8500-5b3efb68abe2"
+      }
+    ]
+  },
+  "relatedMeta": {
+    "versionId": "73977f57-50a2-426e-bf05-88794a6fd3d6",
+    "lastUpdated": "2026-09-13T11:09:46.254Z",
+    "author": {
+      "reference": "ClientApplication/451aa682-4ba5-4f2e-bc71-0d3b503e3b5a",
+      "display": "clinical-write-staff-4f7e0f2f-abc8-44f3-a672-cf2f8e4a7538"
+    },
+    "project": "b07b76d7-56e6-4528-8500-5b3efb68abe2",
+    "compartment": [
+      {
+        "reference": "Project/b07b76d7-56e6-4528-8500-5b3efb68abe2"
+      },
+      {
+        "reference": "Patient/68cd22bc-3d89-447c-a5bb-2124d3eec590"
+      }
+    ]
+  },
+  "personRules": [
+    {
+      "resourceType": "Person",
+      "interaction": [
+        "read",
+        "search",
+        "history",
+        "vread"
+      ]
+    },
+    {
+      "resourceType": "Person",
+      "interaction": [
+        "create",
+        "update"
+      ]
+    }
+  ]
+}

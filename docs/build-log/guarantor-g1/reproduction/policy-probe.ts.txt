@@ -25,9 +25,11 @@ const policy=buildMedplumAccessPolicy(getRoleDeclaration('staff'));
 if(process.argv[2]) for(const rule of policy.resource??[]) if(rule.resourceType==='Person'&&rule.interaction?.includes('create')) rule.criteria=process.argv[2];
 const staffPolicy=await post(policy);
 const input={demographics:{firstName:'Synthetic',middleName:'',lastName:`G1Policy${runId.slice(0,8)}`,preferredName:'',birthDate:'2010-01-02',gender:'female',phones:[{value:'',use:'home'},{value:'',use:'mobile'}],textable:'',email:'',address:'1 Synthetic Way',city:'Greenville',state:'SC',postalCode:'29601'},responsibleParties:[{localId:'guardian',kind:'person',relationship:'legal-guardian',firstName:'Responsible',middleName:'',lastName:'Synthetic',phone:'864-555-0101',address:'1 Synthetic Way',city:'Greenville',state:'SC',postalCode:'29601',financialResponsible:true,consentAuthority:true,primary:true,courtOrderNotes:'',effectiveDate:'2026-08-25',endDate:''}],confirmDuplicate:false};
+const registrationActorRole=process.env.G1_REGISTRATION_ACTOR_ROLE??"staff";
+assert.ok(["staff","provider","admin"].includes(registrationActorRole));
 let submitted:any;
 const serviceFhir={...fhir,executeTransactionAsActor:async(...args:any[])=>{submitted=args[0]; return (fhir.executeTransactionAsActor as any)(...args);}};
-const registration=await registerPatientFromDemographics(input as never,{staffReference:`Practitioner/${practitioner.id}`,actorRole:'staff',roles:['staff'],project:{reference:`Project/${runtime.projectId}`}},{serviceFhir,now:()=> '2026-09-13T12:00:00.000Z'});
+const registration=await registerPatientFromDemographics(input as never,{staffReference:`Practitioner/${practitioner.id}`,actorRole:registrationActorRole,roles:[registrationActorRole],project:{reference:`Project/${runtime.projectId}`}},{serviceFhir,now:()=> '2026-09-13T12:00:00.000Z'});
 assert.equal(registration.status,201);
 const patient=(registration.body as any).patient;
 const relatedSearch=await fhir.search('RelatedPerson',{patient:`Patient/${patient.id}`});
@@ -49,7 +51,7 @@ const statuses:any={personRead:await request('GET',`Person/${person.id}`),person
 statuses.personDelete = await request('DELETE', `Person/${person.id}`);
 assert.equal(person.link?.[0]?.target?.reference, `RelatedPerson/${related.id}`);
 const extended=async(type:string,id:string)=>{const response=await fetch(`${runtime.baseUrl}/fhir/R4/${type}/${id}`,{headers}); assert.equal(response.status,200);return response.json();};
-const evidence={observedAt:new Date().toISOString(),projectId:runtime.projectId,policy:staffPolicy,registrationRequest:submitted,registrationStatus:registration.status,statuses,person:await extended('Person',person.id),relatedPerson:await extended('RelatedPerson',related.id),capture};
+const evidence={observedAt:new Date().toISOString(),projectId:runtime.projectId,policy:staffPolicy,registrationRequest:submitted,registrationStatus:registration.status,registrationActorRole,statuses,person:await extended('Person',person.id),relatedPerson:await extended('RelatedPerson',related.id),capture};
 writeFileSync(new URL(process.env.G1_POLICY_OUTPUT??(process.argv[2]?'./policy-chain-probe.json':'./policy-probe.json'),import.meta.url),JSON.stringify(evidence,null,2)+'\n');
 console.log(JSON.stringify({statuses,personMeta:evidence.person.meta,relatedMeta:evidence.relatedPerson.meta,personRules:staffPolicy.resource.filter((r:any)=>r.resourceType==='Person')},null,2));
 

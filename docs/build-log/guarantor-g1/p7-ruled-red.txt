@@ -66,7 +66,7 @@ AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
     relatedUpdate: 200
   }
 
-    at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/.odos/guarantor-g1/policy-probe.ts:56:8)
+    at <anonymous> (<repo>/.odos/guarantor-g1/policy-probe.ts:56:8)
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
   generatedMessage: true,
   code: 'ERR_ASSERTION',

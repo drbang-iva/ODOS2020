@@ -4,7 +4,7 @@ not ok 1 - P5: shared demographics preserve the base projection for both resourc
   ---
   duration_ms: 4.461417
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:1:4488'
+  location: '<repo>/mcp/tests/guarantorPerson.test.ts:1:4488'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -70,7 +70,7 @@ not ok 1 - P5: shared demographics preserve the base projection for both resourc
         postalCode: '29601'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:109:12)
+    TestContext.<anonymous> (<repo>/mcp/tests/guarantorPerson.test.ts:109:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

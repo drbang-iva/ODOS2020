@@ -4,7 +4,7 @@ not ok 1 - P6: Person and Patient explicitly belong to the same practice project
   ---
   duration_ms: 4.031
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:1:5131'
+  location: '<repo>/mcp/tests/guarantorPerson.test.ts:1:5131'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -18,7 +18,7 @@ not ok 1 - P6: Person and Patient explicitly belong to the same practice project
   expected: 'g1-synthetic-practice'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:117:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/guarantorPerson.test.ts:117:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

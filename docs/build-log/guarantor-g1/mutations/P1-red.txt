@@ -4,7 +4,7 @@ not ok 1 - P1: one non-self party creates exactly one Person linked to its Relat
   ---
   duration_ms: 4.07675
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:1:2380'
+  location: '<repo>/mcp/tests/guarantorPerson.test.ts:1:2380'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -29,7 +29,7 @@ not ok 1 - P1: one non-self party creates exactly one Person linked to its Relat
       assurance: 'level2'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:59:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/guarantorPerson.test.ts:59:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

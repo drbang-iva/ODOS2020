@@ -1,3 +1,4 @@
+import { sanitizeProofOutput } from "./proof-output.mjs";
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -44,7 +45,7 @@ const cases = [
 function runTest(item, phase) {
   const args = ['--import', 'tsx', '--test', `--test-name-pattern=${item.pattern ?? `^${item.id}:`}`, 'tests/guarantorPerson.test.ts'];
   const result = spawnSync(process.execPath, args, { cwd: resolve(root, 'mcp'), encoding: 'utf8' });
-  const log = result.stdout + result.stderr;
+  const log = sanitizeProofOutput(result.stdout + result.stderr, root);
   const path = `${item.id}-${phase}.txt`;
   writeFileSync(resolve(output, path), log);
   const counts = Object.fromEntries([...log.matchAll(/^# (tests|pass|fail|skipped) (\d+)$/gm)].map(match => [match[1], Number(match[2])]));
