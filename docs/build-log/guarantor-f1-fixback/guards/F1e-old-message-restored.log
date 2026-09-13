@@ -1,0 +1,23 @@
+TAP version 13
+1..0
+# Subtest: tests/guarantorEditor.test.tsx
+ok 1 - tests/guarantorEditor.test.tsx
+  ---
+  duration_ms: 204.24475
+  type: 'test'
+  ...
+# Subtest: F1e superseded message does not promise absent Repair
+ok 2 - F1e superseded message does not promise absent Repair
+  ---
+  duration_ms: 15.464708
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 207.365834

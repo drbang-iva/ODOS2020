@@ -1,0 +1,166 @@
+TAP version 13
+# Subtest: A1: a stale demographics PUT shows the concurrent-edit alert without retrying
+ok 1 - A1: a stale demographics PUT shows the concurrent-edit alert without retrying
+  ---
+  duration_ms: 19.077417
+  type: 'test'
+  ...
+# Subtest: A2: missing Patient version refuses before any network call
+ok 2 - A2: missing Patient version refuses before any network call
+  ---
+  duration_ms: 0.340916
+  type: 'test'
+  ...
+# Subtest: A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
+ok 3 - A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
+  ---
+  duration_ms: 15.228167
+  type: 'test'
+  ...
+# Subtest: Q10: missing linked Person is read-only and direct save handler cannot create
+ok 4 - Q10: missing linked Person is read-only and direct save handler cannot create
+  ---
+  duration_ms: 14.848
+  type: 'test'
+  ...
+# Subtest: Q11: reopening a clean editor offers repair by patient name and converges
+ok 5 - Q11: reopening a clean editor offers repair by patient name and converges
+  ---
+  duration_ms: 12.286875
+  type: 'test'
+  ...
+# Subtest: Q12: multiple linked Persons refuse editing and identify both records
+ok 6 - Q12: multiple linked Persons refuse editing and identify both records
+  ---
+  duration_ms: 1.127417
+  type: 'test'
+  ...
+# Subtest: editing one name preserves every loaded contact and address entry without a Patient write
+ok 7 - editing one name preserves every loaded contact and address entry without a Patient write
+  ---
+  duration_ms: 5.514875
+  type: 'test'
+  ...
+# Subtest: structured address edits clear stale display text only on the edited address
+ok 8 - structured address edits clear stale display text only on the edited address
+  ---
+  duration_ms: 15.647583
+  type: 'test'
+  ...
+# Subtest: clearing then replacing the first phone keeps the second phone in its original slot
+ok 9 - clearing then replacing the first phone keeps the second phone in its original slot
+  ---
+  duration_ms: 2.75275
+  type: 'test'
+  ...
+# Subtest: saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+ok 10 - saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+  ---
+  duration_ms: 2.8545
+  type: 'test'
+  ...
+# Subtest: per-patient results distinguish rejected child writes from lost update responses
+ok 11 - per-patient results distinguish rejected child writes from lost update responses
+  ---
+  duration_ms: 5.728667
+  type: 'test'
+  ...
+# Subtest: Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+ok 12 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+  ---
+  duration_ms: 19.537041
+  type: 'test'
+  ...
+# Subtest: Q5a Q6a preflight mismatch zero writes reload
+ok 13 - Q5a Q6a preflight mismatch zero writes reload
+  ---
+  duration_ms: 2.042917
+  type: 'test'
+  ...
+# Subtest: Q5b parent stale after preflight prevents children
+ok 14 - Q5b parent stale after preflight prevents children
+  ---
+  duration_ms: 0.975667
+  type: 'test'
+  ...
+# Subtest: Q6b Q8 late child conflict preserves competitor and labels correct patient
+ok 15 - Q6b Q8 late child conflict preserves competitor and labels correct patient
+  ---
+  duration_ms: 4.00475
+  type: 'test'
+  ...
+# Subtest: Q8 failed re-read and unresolved lost response are unknown
+ok 16 - Q8 failed re-read and unresolved lost response are unknown
+  ---
+  duration_ms: 2.0325
+  type: 'test'
+  ...
+# Subtest: lost parent response confirmed landed proceeds once
+ok 17 - lost parent response confirmed landed proceeds once
+  ---
+  duration_ms: 1.342625
+  type: 'test'
+  ...
+# Subtest: Q9a converged repeat zero writes and unchanged versions
+ok 18 - Q9a converged repeat zero writes and unchanged versions
+  ---
+  duration_ms: 1.744292
+  type: 'test'
+  ...
+# Subtest: Q9b repair only failed child fresh ETag and second pass zero writes
+ok 19 - Q9b repair only failed child fresh ETag and second pass zero writes
+  ---
+  duration_ms: 2.149167
+  type: 'test'
+  ...
+# Subtest: Q9c repair superseded generation uses newest values
+ok 20 - Q9c repair superseded generation uses newest values
+  ---
+  duration_ms: 1.630709
+  type: 'test'
+  ...
+# Subtest: Q10 Q12 missing or many matches refuse direct save
+ok 21 - Q10 Q12 missing or many matches refuse direct save
+  ---
+  duration_ms: 1.585125
+  type: 'test'
+  ...
+# Subtest: Q13 trailing parent catches torn verification
+ok 22 - Q13 trailing parent catches torn verification
+  ---
+  duration_ms: 0.610708
+  type: 'test'
+  ...
+# Subtest: Q2 fresh SMS resolver independently observes propagated phone
+ok 23 - Q2 fresh SMS resolver independently observes propagated phone
+  ---
+  duration_ms: 1.035084
+  type: 'test'
+  ...
+# Subtest: Q6a independently stale child preflight zero writes
+ok 24 - Q6a independently stale child preflight zero writes
+  ---
+  duration_ms: 0.590333
+  type: 'test'
+  ...
+# Subtest: Q10 directly supplied unlinked snapshot refuses create or update
+ok 25 - Q10 directly supplied unlinked snapshot refuses create or update
+  ---
+  duration_ms: 0.225958
+  type: 'test'
+  ...
+# Subtest: Q8 child lost response and verification failure remain unknown
+ok 26 - Q8 child lost response and verification failure remain unknown
+  ---
+  duration_ms: 1.23425
+  type: 'test'
+  ...
+1..26
+# tests 26
+# suites 0
+# pass 26
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 480.479667

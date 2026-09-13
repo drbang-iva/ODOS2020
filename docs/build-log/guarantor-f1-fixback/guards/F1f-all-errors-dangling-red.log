@@ -1,0 +1,42 @@
+TAP version 13
+1..0
+# Subtest: tests/guarantorEditor.test.tsx
+ok 1 - tests/guarantorEditor.test.tsx
+  ---
+  duration_ms: 215.421667
+  type: 'test'
+  ...
+# Subtest: F1f dangling 410 and 404 are named but 403 stays unknown
+not ok 2 - F1f dangling 410 and 404 are named but 403 stays unknown
+  ---
+  duration_ms: 12.433666
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:1:14028'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'dangling'
+    - 'unknown'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'unknown'
+  actual: 'dangling'
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:501:12)
+    async fixture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:141:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 218.606542

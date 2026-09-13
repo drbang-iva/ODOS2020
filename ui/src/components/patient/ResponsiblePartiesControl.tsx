@@ -5,7 +5,7 @@ import {
   type GuarantorLoad,
 } from "../../lib/guarantor-editor";
 
-const writeStatusMessages = { updated: "update accepted", conflict: "record changed while you were editing", error: "update failed", "no-response": "update response not received" };
+const writeStatusMessages = { stopped: "not updated — a newer edit to this guarantor landed", updated: "update accepted", conflict: "record changed while you were editing", error: "update failed", "no-response": "update response not received" };
 
 type Demographics = Pick<Person, "name" | "telecom" | "address">;
 const demographics = (person: Person): Demographics => structuredClone({ name: person.name, telecom: person.telecom, address: person.address });
@@ -39,6 +39,13 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
   const [notice, setNotice] = useState<string>();
   const editable = loaded.kind === "editable";
   const dirty = editable && JSON.stringify(draft) !== JSON.stringify(demographics(loaded.snapshot.person));
+  const refresh = async () => {
+    const next = await loadGuarantor(loaded.relatedPerson.id!);
+    setLoaded(next);
+    setEditedContacts(new Set());
+    setDraft(next.kind === "editable" ? demographics(next.snapshot.person) : {});
+    setResult(next.kind === "editable" ? next.verification : undefined);
+  };
   const save = async (repair = false) => {
     if (loaded.kind !== "editable" || busy || (repair && dirty)) return;
     setBusy(true);
@@ -47,7 +54,10 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
       const next = repair ? await repairGuarantor(loaded.snapshot) : await saveGuarantor(loaded.snapshot, { ...draft, telecom: draft.telecom?.filter((contact, index) => !editedContacts.has(index) || Boolean(contact.value?.trim())) });
       setResult(next);
       setNotice(next.message);
-      if (next.snapshot) {
+      if (next.status === "superseded") {
+        setNotice("A newer edit to this guarantor landed while yours was being applied. Showing the current record.");
+        await refresh();
+      } else if (next.snapshot) {
         setLoaded({ ...loaded, snapshot: next.snapshot });
         if (repair || next.status === "saved" || next.status === "unchanged" || next.status === "partial") {
           setDraft(demographics(next.snapshot.person));
@@ -62,11 +72,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
     if (!loaded.relatedPerson?.id || busy) return;
     setBusy(true);
     try {
-      const next = await loadGuarantor(loaded.relatedPerson.id);
-      setLoaded(next);
-      setEditedContacts(new Set());
-      setDraft(next.kind === "editable" ? demographics(next.snapshot.person) : {});
-      setResult(next.kind === "editable" ? next.verification : undefined);
+      await refresh();
       setNotice(undefined);
     } catch { setNotice("Could not reload this responsible party. Try again."); }
     finally { setBusy(false); }
@@ -76,8 +82,9 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
     <p>{loaded.relatedPerson.telecom?.map(contact => `${contact.system ?? "Contact"}: ${contact.value ?? "Not recorded"}`).join(" · ") || "No contact details recorded."}</p>
     <p>{loaded.relatedPerson.address?.map(address => address.text || [...address.line ?? [], address.city, address.state, address.postalCode, address.country].filter(Boolean).join(", ")).join(" · ") || "No address recorded."}</p>
     <p role="status">{loaded.message}</p>
+    {notice && <p role="status">{notice}</p>}
     {loaded.personIds?.length ? <p>Guarantor records: {loaded.personIds.join(", ")}</p> : null}
-    <button type="button" disabled onClick={() => void save()}>Save guarantor</button>
+    <button type="button" disabled onClick={() => save()}>Save guarantor</button>
     <button type="button" disabled={busy} onClick={() => void reload()}>Reload guarantor</button>
   </section>;
   const names = draft.name?.length ? draft.name : [{}];
@@ -103,8 +110,8 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
     {result && <ul>{result.children.map(child => <li key={child.relatedPersonId}>{child.patientName} — {child.classification}{child.writeStatus ? `: ${writeStatusMessages[child.writeStatus]}` : ""}</li>)}</ul>}
     {mismatched.length > 0 && dirty && <p className="text-sm text-[color:var(--odos-muted)]">Save your changes or reload the guarantor before repairing linked records.</p>}
     <div className="flex flex-wrap gap-2">
-      <button type="button" className="rounded bg-[color:var(--odos-accent)] text-[color:var(--odos-accent-ink)] px-3 py-2 disabled:opacity-50" disabled={busy || !dirty} onClick={() => void save()}>{busy ? "Working…" : "Save guarantor"}</button>
-      {mismatched.length > 0 && <button type="button" disabled={busy || dirty} onClick={() => void save(true)}>Repair for {mismatched.map(child => child.patientName).join(", ")}</button>}
+      <button type="button" className="rounded bg-[color:var(--odos-accent)] text-[color:var(--odos-accent-ink)] px-3 py-2 disabled:opacity-50" disabled={busy || !dirty} onClick={() => save()}>{busy ? "Working…" : "Save guarantor"}</button>
+      {mismatched.length > 0 && <button type="button" disabled={busy || dirty} onClick={() => save(true)}>Repair for {mismatched.map(child => child.patientName).join(", ")}</button>}
       <button type="button" disabled={busy} onClick={() => void reload()}>Reload guarantor</button>
     </div>
   </section>;

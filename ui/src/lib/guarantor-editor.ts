@@ -9,7 +9,7 @@ export type GuarantorClassification = "verified" | "mismatched" | "unknown" | "s
 export interface GuarantorChildResult {
   relatedPersonId: string; patientId: string; patientName: string;
   classification: GuarantorClassification;
-  writeStatus?: "updated" | "conflict" | "error" | "no-response";
+  writeStatus?: "updated" | "conflict" | "error" | "no-response" | "stopped";
 }
 export interface GuarantorResult {
   status: "saved" | "unchanged" | "not-saved" | "partial" | "unknown" | "superseded";
@@ -18,7 +18,7 @@ export interface GuarantorResult {
 export type GuarantorLoad = {
   kind: "editable"; relatedPerson: RelatedPerson; snapshot: GuarantorSnapshot; verification: GuarantorResult;
 } | {
-  kind: "missing" | "ambiguous" | "unknown"; relatedPerson: RelatedPerson; message: string; personIds: string[];
+  kind: "missing" | "ambiguous" | "unknown" | "dangling"; relatedPerson: RelatedPerson; message: string; personIds: string[];
 };
 const source = "guarantor-editor";
 const same = (a: unknown, b: unknown): boolean => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
@@ -65,11 +65,21 @@ async function child(resource: RelatedPerson): Promise<GuarantorChild> {
   }
   return { resource, patientName };
 }
+class DanglingGuarantorLink extends Error {
+  constructor(readonly personId: string, relatedPersonId: string) {
+    super(`Person/${personId}, RelatedPerson/${relatedPersonId}: linked record cannot be read — deleted or outside this practice. Editing refused.`);
+  }
+}
 async function readSnapshot(person: Person): Promise<GuarantorSnapshot> {
   version(person);
   const children: GuarantorChild[] = [];
   for (const id of linkedIds(person)) {
-    const resource = await fhir.read<RelatedPerson>("RelatedPerson", id);
+    let resource: RelatedPerson;
+    try { resource = await fhir.read<RelatedPerson>("RelatedPerson", id); }
+    catch (error) {
+      if (error instanceof Error && /^FHIR (404|410)\b/.test(error.message)) throw new DanglingGuarantorLink(person.id!, id);
+      throw error;
+    }
     version(resource);
     children.push(await child(resource));
   }
@@ -90,6 +100,7 @@ async function resolveGuarantor(relatedPerson: RelatedPerson): Promise<Guarantor
     const snapshot = await readSnapshot(persons[0]);
     return { kind: "editable", relatedPerson, snapshot, verification: await verifyGuarantor(snapshot) };
   } catch (error) {
+    if (error instanceof DanglingGuarantorLink) return { kind: "dangling", relatedPerson, personIds: [error.personId], message: error.message };
     return { kind: "unknown", relatedPerson, personIds: [], message: `Guarantor lookup could not be completed: ${error instanceof Error ? error.message : "unknown error"}` };
   }
 }
@@ -109,10 +120,10 @@ export async function verifyGuarantor(snapshot: GuarantorSnapshot): Promise<Guar
   }
   let trailing: Person;
   try { trailing = await fhir.read<Person>("Person", snapshot.person.id!); }
-  catch { return { status: "unknown", message: "The guarantor generation could not be verified. Reload before repair.", generation, children: children.map(c => ({ ...c, classification: "unknown" })) }; }
-  if (trailing.meta?.versionId !== generation) return { status: "superseded", message: "A newer guarantor edit superseded this generation. Repair will use the current guarantor record.", generation, children: children.map(c => ({ ...c, classification: "superseded" })) };
+  catch { return { status: "unknown", message: "The guarantor generation could not be verified. Reload before continuing.", generation, children: children.map(c => ({ ...c, classification: "unknown" })) }; }
+  if (trailing.meta?.versionId !== generation) return { status: "superseded", message: "A newer guarantor edit superseded this generation. Reload to see the current record.", generation, children: children.map(c => ({ ...c, classification: "superseded" })) };
   const status = children.every(c => c.classification === "verified") ? "saved" : children.some(c => c.classification === "unknown") ? "unknown" : "partial";
-  return { status, message: status === "saved" ? `Verified against guarantor generation ${generation}.` : "Review the result for each patient; mismatched records can be repaired.", generation, children, ...(refreshed.length === snapshot.children.length ? { snapshot: { person: trailing, children: refreshed } } : {}) };
+  return { status, message: status === "saved" ? `Verified against guarantor generation ${generation}.` : "Review the result for each patient.", generation, children, ...(refreshed.length === snapshot.children.length ? { snapshot: { person: trailing, children: refreshed } } : {}) };
 }
 async function confirmEditable(snapshot: GuarantorSnapshot): Promise<void> {
   version(snapshot.person);
@@ -135,6 +146,12 @@ async function writeChild(item: GuarantorChild, person: Person): Promise<Guarant
     if (error instanceof Error && error.message === CONCURRENT_EDIT_MESSAGE) return "conflict";
     return error instanceof Error && /^FHIR \d+/.test(error.message) ? "error" : "no-response";
   }
+}
+async function checkGeneration(person: Person): Promise<"stopped" | "no-response" | undefined> {
+  try {
+    const current = await fhir.read<Person>("Person", person.id!);
+    return current.meta?.versionId === version(person) ? undefined : "stopped";
+  } catch { return "no-response"; }
 }
 export async function saveGuarantor(snapshot: GuarantorSnapshot, demographics: GuarantorDemographics): Promise<GuarantorResult> {
   try {
@@ -163,27 +180,35 @@ export async function saveGuarantor(snapshot: GuarantorSnapshot, demographics: G
     } catch { return stopped(snapshot, "unknown", "The guarantor save could not be confirmed. Reload; no children were submitted."); }
   }
   const writes = new Map<string, GuarantorChildResult["writeStatus"]>();
-  for (const item of snapshot.children) writes.set(item.resource.id!, await writeChild(item, accepted));
+  let halted: "stopped" | "no-response" | undefined;
+  for (const item of snapshot.children) {
+    halted ??= await checkGeneration(accepted);
+    writes.set(item.resource.id!, halted ?? await writeChild(item, accepted));
+  }
   const verification = await verifyGuarantor({ ...snapshot, person: accepted });
-  return { ...verification, children: verification.children.map(c => ({ ...c, writeStatus: writes.get(c.relatedPersonId) })) };
+  return { ...verification, ...(halted === "stopped" ? { status: "superseded" as const, message: "A newer guarantor edit superseded this generation. Reload to see the current record." } : {}), children: verification.children.map(c => ({ ...c, writeStatus: writes.get(c.relatedPersonId) })) };
 }
 export async function repairGuarantor(previous: GuarantorSnapshot): Promise<GuarantorResult> {
   let current: GuarantorSnapshot;
   try {
     current = await readSnapshot(await fhir.read<Person>("Person", previous.person.id!));
     await confirmEditable(current);
-  } catch (error) { return stopped(previous, "unknown", error instanceof Error ? error.message : "Repair could not read the current guarantor."); }
+  } catch (error) { return stopped(previous, "unknown", error instanceof Error ? error.message : "Could not read the current guarantor."); }
   const superseded = version(current.person) !== version(previous.person);
   const writes = new Map<string, GuarantorChildResult["writeStatus"]>();
+  let halted: "stopped" | "no-response" | undefined;
   for (const item of current.children) {
+    if (halted) { writes.set(item.resource.id!, halted); continue; }
     if (demographicsMatch(item.resource, current.person)) continue;
     try {
       const fresh = await fhir.read<RelatedPerson>("RelatedPerson", item.resource.id!);
+      halted = await checkGeneration(current.person);
+      if (halted) { writes.set(item.resource.id!, halted); continue; }
       if (!demographicsMatch(fresh, current.person)) writes.set(fresh.id!, await writeChild({ ...item, resource: fresh }, current.person));
     } catch { writes.set(item.resource.id!, "no-response"); }
   }
   const verification = await verifyGuarantor(current);
-  return { ...verification, status: superseded ? "superseded" : !writes.size && verification.status === "saved" ? "unchanged" : verification.status,
-    message: superseded ? `The earlier generation was superseded. Reconciled against current generation ${version(current.person)}. ${verification.message}` : verification.message,
+  return { ...verification, status: superseded || halted === "stopped" ? "superseded" : !writes.size && verification.status === "saved" ? "unchanged" : verification.status,
+    message: halted === "stopped" ? "A newer guarantor edit superseded this generation. Reload to see the current record." : superseded ? `The earlier generation was superseded. Reconciled against current generation ${version(current.person)}. ${verification.message}` : verification.message,
     children: verification.children.map(c => ({ ...c, writeStatus: writes.get(c.relatedPersonId) })) };
 }

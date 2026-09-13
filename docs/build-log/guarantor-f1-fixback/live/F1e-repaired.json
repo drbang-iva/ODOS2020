@@ -1,0 +1,986 @@
+{
+  "repaired": {
+    "person": {
+      "resourceType": "Person",
+      "active": true,
+      "name": [
+        {
+          "given": [
+            "Third"
+          ],
+          "family": "Synthetic"
+        }
+      ],
+      "telecom": [
+        {
+          "system": "phone",
+          "use": "home",
+          "rank": 1,
+          "value": "864-555-0101"
+        },
+        {
+          "system": "phone",
+          "use": "home",
+          "rank": 2,
+          "value": "864-555-0102"
+        }
+      ],
+      "address": [
+        {
+          "use": "home",
+          "text": "1 Synthetic Way, Greenville SC 29601",
+          "line": [
+            "1 Synthetic Way"
+          ],
+          "city": "Greenville",
+          "state": "SC",
+          "postalCode": "29601"
+        }
+      ],
+      "link": [
+        {
+          "target": {
+            "reference": "RelatedPerson/0132118a-7fef-4baa-8a60-ef52f6b10b93"
+          },
+          "assurance": "level2"
+        }
+      ],
+      "id": "ebd310a1-cf5b-47c8-b18d-081cdacc98c2",
+      "meta": {
+        "versionId": "5fefc88e-da21-4b4e-bfbc-fad4b6c60bc7",
+        "lastUpdated": "2026-09-13T17:42:45.149Z"
+      }
+    },
+    "child": {
+      "resourceType": "RelatedPerson",
+      "active": true,
+      "patient": {
+        "reference": "Patient/bdc2e8a5-8663-40e5-b654-f629a1a009a6"
+      },
+      "name": [
+        {
+          "given": [
+            "Third"
+          ],
+          "family": "Synthetic"
+        }
+      ],
+      "telecom": [
+        {
+          "system": "phone",
+          "use": "home",
+          "rank": 1,
+          "value": "864-555-0101"
+        },
+        {
+          "system": "phone",
+          "use": "home",
+          "rank": 2,
+          "value": "864-555-0102"
+        }
+      ],
+      "address": [
+        {
+          "use": "home",
+          "text": "1 Synthetic Way, Greenville SC 29601",
+          "line": [
+            "1 Synthetic Way"
+          ],
+          "city": "Greenville",
+          "state": "SC",
+          "postalCode": "29601"
+        }
+      ],
+      "relationship": [
+        {
+          "text": "Legal guardian"
+        }
+      ],
+      "period": {
+        "start": "2026-01-01",
+        "end": "2035-01-01"
+      },
+      "extension": [
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+          "valueBoolean": true
+        },
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+          "valueBoolean": false
+        },
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+          "valueString": "Synthetic legal sentinel 0"
+        },
+        {
+          "url": "https://example.test/unrelated",
+          "valueString": "Unrelated 0"
+        }
+      ],
+      "id": "0132118a-7fef-4baa-8a60-ef52f6b10b93",
+      "meta": {
+        "versionId": "b650cb03-276f-4303-ad2d-2d8657eb3695",
+        "lastUpdated": "2026-09-13T17:42:45.460Z"
+      }
+    }
+  },
+  "capture": [
+    {
+      "seq": 28,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person/ebd310a1-cf5b-47c8-b18d-081cdacc98c2"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Third"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/0132118a-7fef-4baa-8a60-ef52f6b10b93"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "ebd310a1-cf5b-47c8-b18d-081cdacc98c2",
+          "meta": {
+            "versionId": "5fefc88e-da21-4b4e-bfbc-fad4b6c60bc7",
+            "lastUpdated": "2026-09-13T17:42:45.149Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 29,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson/0132118a-7fef-4baa-8a60-ef52f6b10b93"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/bdc2e8a5-8663-40e5-b654-f629a1a009a6"
+          },
+          "name": [
+            {
+              "given": [
+                "Edited"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "0132118a-7fef-4baa-8a60-ef52f6b10b93",
+          "meta": {
+            "versionId": "adb5e03a-568e-4bc0-8cc9-c40a0d3432e7",
+            "lastUpdated": "2026-09-13T17:42:45.157Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 30,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Patient/bdc2e8a5-8663-40e5-b654-f629a1a009a6"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Patient",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Sam"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "birthDate": "2015-01-01",
+          "gender": "unknown",
+          "id": "bdc2e8a5-8663-40e5-b654-f629a1a009a6",
+          "meta": {
+            "versionId": "de114ac3-3223-4710-a926-241e5fe5fc5b",
+            "lastUpdated": "2026-09-13T17:42:44.001Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 31,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person?link=RelatedPerson%2F0132118a-7fef-4baa-8a60-ef52f6b10b93"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Bundle",
+          "type": "searchset",
+          "entry": [
+            {
+              "fullUrl": "http://127.0.0.1:19613/fhir/R4/Person/ebd310a1-cf5b-47c8-b18d-081cdacc98c2",
+              "search": {
+                "mode": "match"
+              },
+              "resource": {
+                "resourceType": "Person",
+                "active": true,
+                "name": [
+                  {
+                    "given": [
+                      "Third"
+                    ],
+                    "family": "Synthetic"
+                  }
+                ],
+                "telecom": [
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 1,
+                    "value": "864-555-0101"
+                  },
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 2,
+                    "value": "864-555-0102"
+                  }
+                ],
+                "address": [
+                  {
+                    "use": "home",
+                    "text": "1 Synthetic Way, Greenville SC 29601",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "link": [
+                  {
+                    "target": {
+                      "reference": "RelatedPerson/0132118a-7fef-4baa-8a60-ef52f6b10b93"
+                    },
+                    "assurance": "level2"
+                  }
+                ],
+                "id": "ebd310a1-cf5b-47c8-b18d-081cdacc98c2",
+                "meta": {
+                  "versionId": "5fefc88e-da21-4b4e-bfbc-fad4b6c60bc7",
+                  "lastUpdated": "2026-09-13T17:42:45.149Z"
+                }
+              }
+            }
+          ],
+          "link": [
+            {
+              "relation": "self",
+              "url": "http://127.0.0.1:19613/fhir/R4/Person?_count=20&link=RelatedPerson%2F0132118a-7fef-4baa-8a60-ef52f6b10b93"
+            },
+            {
+              "relation": "first",
+              "url": "http://127.0.0.1:19613/fhir/R4/Person?_count=20&link=RelatedPerson%2F0132118a-7fef-4baa-8a60-ef52f6b10b93"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 32,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson/0132118a-7fef-4baa-8a60-ef52f6b10b93"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/bdc2e8a5-8663-40e5-b654-f629a1a009a6"
+          },
+          "name": [
+            {
+              "given": [
+                "Edited"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "0132118a-7fef-4baa-8a60-ef52f6b10b93",
+          "meta": {
+            "versionId": "adb5e03a-568e-4bc0-8cc9-c40a0d3432e7",
+            "lastUpdated": "2026-09-13T17:42:45.157Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 33,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person/ebd310a1-cf5b-47c8-b18d-081cdacc98c2"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Third"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/0132118a-7fef-4baa-8a60-ef52f6b10b93"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "ebd310a1-cf5b-47c8-b18d-081cdacc98c2",
+          "meta": {
+            "versionId": "5fefc88e-da21-4b4e-bfbc-fad4b6c60bc7",
+            "lastUpdated": "2026-09-13T17:42:45.149Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 34,
+      "actor": "editor",
+      "request": {
+        "method": "PUT",
+        "path": "/fhir/R4/RelatedPerson/0132118a-7fef-4baa-8a60-ef52f6b10b93",
+        "ifMatch": "W/\"adb5e03a-568e-4bc0-8cc9-c40a0d3432e7\"",
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/bdc2e8a5-8663-40e5-b654-f629a1a009a6"
+          },
+          "name": [
+            {
+              "given": [
+                "Third"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "0132118a-7fef-4baa-8a60-ef52f6b10b93",
+          "meta": {
+            "versionId": "adb5e03a-568e-4bc0-8cc9-c40a0d3432e7",
+            "lastUpdated": "2026-09-13T17:42:45.157Z"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/bdc2e8a5-8663-40e5-b654-f629a1a009a6"
+          },
+          "name": [
+            {
+              "given": [
+                "Third"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "0132118a-7fef-4baa-8a60-ef52f6b10b93",
+          "meta": {
+            "versionId": "b650cb03-276f-4303-ad2d-2d8657eb3695",
+            "lastUpdated": "2026-09-13T17:42:45.460Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 35,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson/0132118a-7fef-4baa-8a60-ef52f6b10b93"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/bdc2e8a5-8663-40e5-b654-f629a1a009a6"
+          },
+          "name": [
+            {
+              "given": [
+                "Third"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "0132118a-7fef-4baa-8a60-ef52f6b10b93",
+          "meta": {
+            "versionId": "b650cb03-276f-4303-ad2d-2d8657eb3695",
+            "lastUpdated": "2026-09-13T17:42:45.460Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 36,
+      "actor": "editor",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person/ebd310a1-cf5b-47c8-b18d-081cdacc98c2"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Third"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/0132118a-7fef-4baa-8a60-ef52f6b10b93"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "ebd310a1-cf5b-47c8-b18d-081cdacc98c2",
+          "meta": {
+            "versionId": "5fefc88e-da21-4b4e-bfbc-fad4b6c60bc7",
+            "lastUpdated": "2026-09-13T17:42:45.149Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 37,
+      "actor": "verification",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/Person/ebd310a1-cf5b-47c8-b18d-081cdacc98c2"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "given": [
+                "Third"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "link": [
+            {
+              "target": {
+                "reference": "RelatedPerson/0132118a-7fef-4baa-8a60-ef52f6b10b93"
+              },
+              "assurance": "level2"
+            }
+          ],
+          "id": "ebd310a1-cf5b-47c8-b18d-081cdacc98c2",
+          "meta": {
+            "versionId": "5fefc88e-da21-4b4e-bfbc-fad4b6c60bc7",
+            "lastUpdated": "2026-09-13T17:42:45.149Z"
+          }
+        }
+      }
+    },
+    {
+      "seq": 38,
+      "actor": "verification",
+      "request": {
+        "method": "GET",
+        "path": "/fhir/R4/RelatedPerson/0132118a-7fef-4baa-8a60-ef52f6b10b93"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/bdc2e8a5-8663-40e5-b654-f629a1a009a6"
+          },
+          "name": [
+            {
+              "given": [
+                "Third"
+              ],
+              "family": "Synthetic"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 1,
+              "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
+            }
+          ],
+          "address": [
+            {
+              "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Greenville",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "relationship": [
+            {
+              "text": "Legal guardian"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2035-01-01"
+          },
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+              "valueBoolean": true
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+              "valueBoolean": false
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+              "valueString": "Synthetic legal sentinel 0"
+            },
+            {
+              "url": "https://example.test/unrelated",
+              "valueString": "Unrelated 0"
+            }
+          ],
+          "id": "0132118a-7fef-4baa-8a60-ef52f6b10b93",
+          "meta": {
+            "versionId": "b650cb03-276f-4303-ad2d-2d8657eb3695",
+            "lastUpdated": "2026-09-13T17:42:45.460Z"
+          }
+        }
+      }
+    }
+  ]
+}
