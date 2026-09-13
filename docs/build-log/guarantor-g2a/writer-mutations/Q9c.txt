@@ -8,9 +8,9 @@ not ok 1 - Q9c repair superseded generation uses newest values
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
-    
+
       assert.ok(repaired.children.every(child => child.classification === "verified"))
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true

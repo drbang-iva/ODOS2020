@@ -9,7 +9,7 @@ not ok 1 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         active: true,
         extension: [
@@ -22,7 +22,7 @@ not ok 1 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write
             url: 'urn:primary',
             valueBoolean: false
           },
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

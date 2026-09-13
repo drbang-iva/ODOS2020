@@ -9,14 +9,14 @@ not ok 1 - Q6a independently stale child preflight zero writes
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'PUT Person/p',
     +   'PUT RelatedPerson/a',
     +   'PUT RelatedPerson/b'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

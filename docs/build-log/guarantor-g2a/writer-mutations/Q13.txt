@@ -9,10 +9,10 @@ not ok 1 - Q13 trailing parent catches torn verification
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'saved'
     - 'superseded'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'superseded'

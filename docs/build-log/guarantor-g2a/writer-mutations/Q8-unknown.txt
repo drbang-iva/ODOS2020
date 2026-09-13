@@ -9,10 +9,10 @@ not ok 1 - Q8 failed re-read and unresolved lost response are unknown
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'mismatched'
     - 'unknown'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'unknown'

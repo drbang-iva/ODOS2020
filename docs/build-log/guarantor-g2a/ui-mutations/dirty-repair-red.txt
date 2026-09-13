@@ -1,0 +1,39 @@
+TAP version 13
+# Subtest: editing one name preserves every loaded contact and address entry without a Patient write
+not ok 1 - editing one name preserves every loaded contact and address entry without a Patient write
+  ---
+  duration_ms: 26.853875
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorEditor.test.tsx:1:5692'
+  failureType: 'testCodeFailure'
+  error: |-
+    repair must not discard an unsaved draft even through a direct handler call
+    + actual - expected
+
+    + [
+    +   'PUT RelatedPerson/party-a'
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'PUT RelatedPerson/party-a'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorEditor.test.tsx:118:12)
+    async withEditor (<worktree>/ui/tests/guarantorEditor.test.tsx:62:5)
+    async TestContext.<anonymous> (<worktree>/ui/tests/guarantorEditor.test.tsx:112:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 215.334125

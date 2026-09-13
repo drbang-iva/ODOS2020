@@ -9,10 +9,10 @@ not ok 1 - Q5b parent stale after preflight prevents children
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'saved'
     - 'not-saved'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'not-saved'

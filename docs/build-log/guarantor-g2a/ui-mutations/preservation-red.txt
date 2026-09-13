@@ -1,0 +1,80 @@
+TAP version 13
+# Subtest: editing one name preserves every loaded contact and address entry without a Patient write
+not ok 1 - editing one name preserves every loaded contact and address entry without a Patient write
+  ---
+  duration_ms: 27.436083
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorEditor.test.tsx:1:5692'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+        {
+          rank: 2,
+          system: 'phone',
+          use: 'home',
+          value: ' (864) 555-0101 ext 2 '
+        },
+    -   {
+    -     period: {
+    -       end: '2020-01-01'
+    -     },
+    -     system: 'phone',
+    -     use: 'home',
+    -     value: '864-555-0102'
+    -   },
+    -   {
+    -     system: 'email',
+    -     value: 'synthetic@example.test'
+    -   },
+    -   {
+    -     system: 'fax',
+    -     value: '864-555-0103'
+    -   }
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      system: 'phone'
+      use: 'home'
+      value: ' (864) 555-0101 ext 2 '
+      rank: 2
+    1:
+      system: 'phone'
+      use: 'home'
+      value: '864-555-0102'
+      period:
+        end: '2020-01-01'
+    2:
+      system: 'email'
+      value: 'synthetic@example.test'
+    3:
+      system: 'fax'
+      value: '864-555-0103'
+  actual:
+    0:
+      system: 'phone'
+      use: 'home'
+      value: ' (864) 555-0101 ext 2 '
+      rank: 2
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorEditor.test.tsx:120:12)
+    async withEditor (<worktree>/ui/tests/guarantorEditor.test.tsx:62:5)
+    async TestContext.<anonymous> (<worktree>/ui/tests/guarantorEditor.test.tsx:112:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 215.312542

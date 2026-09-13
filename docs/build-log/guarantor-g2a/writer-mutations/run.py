@@ -53,4 +53,3 @@ print(json.dumps(results,indent=2))
 shutil.rmtree(scratch)
 assert green.returncode == 0
 assert all(r['exit'] != 0 and r['failed'] for r in results)
-

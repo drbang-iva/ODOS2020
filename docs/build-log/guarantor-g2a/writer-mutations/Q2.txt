@@ -9,11 +9,11 @@ not ok 1 - Q2 fresh SMS resolver independently observes propagated phone
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + '+15555550101'
     - '+15555550102'
                   ^
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: '+15555550102'

@@ -9,12 +9,12 @@ not ok 1 - Q5a Q6a preflight mismatch zero writes reload
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'PUT Person/p'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

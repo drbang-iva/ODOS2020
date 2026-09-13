@@ -9,10 +9,10 @@ not ok 1 - Q9a converged repeat zero writes and unchanged versions
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'saved'
     - 'unchanged'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'unchanged'

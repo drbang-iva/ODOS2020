@@ -9,12 +9,12 @@ not ok 1 - Q9b repair only failed child fresh ETag and second pass zero writes
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
     +   'PUT RelatedPerson/a',
         'PUT RelatedPerson/b'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

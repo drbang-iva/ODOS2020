@@ -9,10 +9,10 @@ not ok 1 - Q10 Q12 missing or many matches refuse direct save
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'saved'
     - 'not-saved'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'not-saved'

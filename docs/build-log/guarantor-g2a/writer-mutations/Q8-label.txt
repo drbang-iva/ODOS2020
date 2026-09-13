@@ -8,9 +8,9 @@ not ok 1 - Q6b Q8 late child conflict preserves competitor and labels correct pa
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     'Guardian' !== 'Sam'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'Sam'

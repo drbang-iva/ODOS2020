@@ -8,9 +8,9 @@ not ok 1 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     'partial' !== 'saved'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'saved'

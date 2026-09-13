@@ -1,0 +1,39 @@
+TAP version 13
+# Subtest: Q10: missing linked Person is read-only and direct save handler cannot create
+not ok 1 - Q10: missing linked Person is read-only and direct save handler cannot create
+  ---
+  duration_ms: 15.530916
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorEditor.test.tsx:1:3470'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + [
+    +   'POST Person'
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'POST Person'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorEditor.test.tsx:72:12)
+    async withEditor (<worktree>/ui/tests/guarantorEditor.test.tsx:61:5)
+    async TestContext.<anonymous> (<worktree>/ui/tests/guarantorEditor.test.tsx:66:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 204.934083
