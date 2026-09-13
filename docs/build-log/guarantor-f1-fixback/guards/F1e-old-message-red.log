@@ -3,13 +3,13 @@ TAP version 13
 # Subtest: tests/guarantorEditor.test.tsx
 ok 1 - tests/guarantorEditor.test.tsx
   ---
-  duration_ms: 217.718292
+  duration_ms: 216.697792
   type: 'test'
   ...
 # Subtest: F1e superseded message does not promise absent Repair
 not ok 2 - F1e superseded message does not promise absent Repair
   ---
-  duration_ms: 17.476166
+  duration_ms: 16.652709
   type: 'test'
   location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/ui/tests/guarantorPropagation.test.tsx:1:13765'
   failureType: 'testCodeFailure'
@@ -37,4 +37,4 @@ not ok 2 - F1e superseded message does not promise absent Repair
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 221.027125
+# duration_ms 220.022333

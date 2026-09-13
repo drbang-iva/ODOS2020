@@ -1,0 +1,6 @@
+import assert from 'node:assert/strict';
+let requests=0;
+globalThis.fetch=async()=>{requests++;throw new Error('Network calls forbidden by this guard');};
+await assert.rejects(import('./setup.ts'), {code:'ERR_ASSERTION'});
+assert.equal(requests,0);
+console.log('Invalid endpoint refused before login; network requests: 0');

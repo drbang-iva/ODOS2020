@@ -230,14 +230,14 @@ test("F1e superseded save reloads automatically and one Repair converges", async
   await withEditor(1, async (renderer, data) => {
     const field = renderer.root.findAllByType("label").find(label => label.children[0] === "Family name 1")!.findByType("input");
     await act(async () => { field.props.onChange({ target: { value: "Edited" } }); });
-    await act(async () => { renderer.root.findAllByType("button").find(b => b.children.join("") === "Save guarantor")!.props.onClick(); });
+    await act(async () => { await renderer.root.findAllByType("button").find(b => b.children.join("") === "Save guarantor")!.props.onClick(); });
     assert.match(text(renderer), /newer edit.*landed/i);
     const repair = renderer.root.findAllByType("button").find(b => b.children.join("") === "Repair for Sam Synthetic");
     assert.ok(repair);
     assert.equal(repair.props.disabled, false);
     assert.equal((await (await fetch("/fhir/R4/RelatedPerson/party-a")).json()).name[0].family, "Edited");
     data.writes.length = 0;
-    await act(async () => { repair.props.onClick(); });
+    await act(async () => { await repair.props.onClick(); });
     assert.deepEqual(data.writes, ["PUT RelatedPerson/party-a"]);
     assert.equal((await (await fetch("/fhir/R4/RelatedPerson/party-a")).json()).name[0].family, "Third");
     assert.equal(renderer.root.findAllByType("button").filter(b => b.children.join("").startsWith("Repair for")).length, 0);

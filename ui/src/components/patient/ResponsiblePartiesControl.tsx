@@ -84,7 +84,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
     <p role="status">{loaded.message}</p>
     {notice && <p role="status">{notice}</p>}
     {loaded.personIds?.length ? <p>Guarantor records: {loaded.personIds.join(", ")}</p> : null}
-    <button type="button" disabled onClick={() => void save()}>Save guarantor</button>
+    <button type="button" disabled onClick={() => save()}>Save guarantor</button>
     <button type="button" disabled={busy} onClick={() => void reload()}>Reload guarantor</button>
   </section>;
   const names = draft.name?.length ? draft.name : [{}];
@@ -110,8 +110,8 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
     {result && <ul>{result.children.map(child => <li key={child.relatedPersonId}>{child.patientName} — {child.classification}{child.writeStatus ? `: ${writeStatusMessages[child.writeStatus]}` : ""}</li>)}</ul>}
     {mismatched.length > 0 && dirty && <p className="text-sm text-[color:var(--odos-muted)]">Save your changes or reload the guarantor before repairing linked records.</p>}
     <div className="flex flex-wrap gap-2">
-      <button type="button" className="rounded bg-[color:var(--odos-accent)] text-[color:var(--odos-accent-ink)] px-3 py-2 disabled:opacity-50" disabled={busy || !dirty} onClick={() => void save()}>{busy ? "Working…" : "Save guarantor"}</button>
-      {mismatched.length > 0 && <button type="button" disabled={busy || dirty} onClick={() => void save(true)}>Repair for {mismatched.map(child => child.patientName).join(", ")}</button>}
+      <button type="button" className="rounded bg-[color:var(--odos-accent)] text-[color:var(--odos-accent-ink)] px-3 py-2 disabled:opacity-50" disabled={busy || !dirty} onClick={() => save()}>{busy ? "Working…" : "Save guarantor"}</button>
+      {mismatched.length > 0 && <button type="button" disabled={busy || dirty} onClick={() => save(true)}>Repair for {mismatched.map(child => child.patientName).join(", ")}</button>}
       <button type="button" disabled={busy} onClick={() => void reload()}>Reload guarantor</button>
     </div>
   </section>;

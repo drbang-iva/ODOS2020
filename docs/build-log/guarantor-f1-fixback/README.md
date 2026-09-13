@@ -56,3 +56,11 @@ Install locked root, MCP and UI dependencies. Copy `live/reproduction/*` into ig
 Run setup.ts with `./mcp/node_modules/.bin/tsx`, then serve.mjs with Node. Run `node .odos/guarantor-f1/live-proof.mjs F1e`. For F1a, temporarily replace only `halted = await checkGeneration(current.person);` with `halted = undefined;`, run `F1a-unfenced`, restore the line, then run `F1a-fenced`. The harness asserts the different outcomes; a green unfenced run means the unsafe outcome was reproduced, not that the writer is correct.
 
 The mutation runner snapshot at `guards/mutations.py.txt` writes only the two production files temporarily and restores them in a finally block. Run from the task root after copying it to an ignored working file. Never run mutations concurrently with the full regression suite or a different live experiment.
+
+## Bot review fixback
+
+CodeRabbit's loopback finding is addressed by an exact baseUrl assertion before the reproduction setup invokes login. The setup guard replaces fetch with a request counter and rejects a non-loopback runtime with zero requests; removing the assertion makes that guard red, and restoring it makes it green. Logs are `guards/setup-loopback-{green,red,restored}.log`; the guard source is included with the reproduction files. The approved local setup still succeeds.
+
+Save and Repair callbacks now return the operation promise. The new F1e UI test awaits both inside act, so completion includes reload and repair. Existing test bodies remain unchanged. F1e live proof and the focused/full UI checks were repeated after this callback change.
+
+The request for an atomic server-side precondition was adjudicated as the documented limitation: transaction bundles and new server/policy changes are outside this slice, and the PR does not claim atomicity. The generation GET-to-child-PUT gap remains stated above.

@@ -3,6 +3,7 @@ import {readFileSync,writeFileSync,chmodSync} from 'node:fs';
 import {loginForLocalRepair} from '../../scripts/repair-practice-roles.ts';
 const dir=new URL('./',import.meta.url);
 const runtime=JSON.parse(readFileSync(new URL('runtime.json',dir),'utf8'));
+assert.equal(runtime.baseUrl,'http://127.0.0.1:19613');
 const token=await loginForLocalRepair(runtime);
 const res=await fetch(runtime.baseUrl+'/auth/me',{headers:{Authorization:`Bearer ${token}`}});
 assert.equal(res.status,200);

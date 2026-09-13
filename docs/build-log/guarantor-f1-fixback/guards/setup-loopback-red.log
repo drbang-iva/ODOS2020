@@ -1,0 +1,25 @@
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ Comparison {}
+- Comparison {
+-   code: 'ERR_ASSERTION'
+- }
+
+    at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/.odos/guarantor-f1/setup-guard.mjs:4:1) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: Error: Network calls forbidden by this guard
+      at globalThis.fetch (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/.odos/guarantor-f1/setup-guard.mjs:3:45)
+      at loginForLocalRepair (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/scripts/repair-practice-roles.ts:340:31)
+      at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-f1/.odos/guarantor-f1/setup.ts:7:19),
+  expected: { code: 'ERR_ASSERTION' },
+  operator: 'rejects',
+  diff: 'simple'
+}
+
+Node.js v22.22.3
