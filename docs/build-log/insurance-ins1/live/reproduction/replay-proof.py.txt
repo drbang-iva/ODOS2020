@@ -24,7 +24,7 @@ def run(script,mode=None,red=False):
  else:assert result.returncode==0,(args,result.stdout,result.stderr)
  print(script,mode,'expected red' if red else result.stdout.strip(),flush=True)
 try:
- handler.write_text(subprocess.check_output(['git','show','origin/main:mcp/src/insurance/patient-insurance-handlers.ts'],text=True));start();run('probe','base');stop()
+ handler.write_text(subprocess.check_output(['git','show','bba0f46068f9ad93bc5b126a7dfe0f98f1f76ab2:mcp/src/insurance/patient-insurance-handlers.ts'],text=True));start();run('probe','base');stop()
  handler.write_text(fixed);start();run('probe','fixed');run('fence');stop()
  serve.write_text(normal.replace('recordAudit:row=>audit.record(row,()=>undefined)','recordAudit:async()=>undefined'))
  start();run('probe','fixed',True);run('fence',red=True);stop()
