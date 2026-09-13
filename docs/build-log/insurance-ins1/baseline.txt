@@ -7,14 +7,14 @@ not ok 693 - rebuild is atomic and server-side worklist grouping returns honest 
   ---
   duration_ms: 2.25
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts:1:1266'
+  location: 'mcp/tests/claimReadModelStore.test.ts:1:1266'
   failureType: 'hookFailed'
   error: 'connect ECONNREFUSED 127.0.0.1:5433'
   code: 'ECONNREFUSED'
   stack: |-
-    /Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/node_modules/pg-pool/index.js:45:11
+    mcp/node_modules/pg-pool/index.js:45:11
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestContext.<anonymous> (mcp/tests/claimReadModelStore.test.ts:32:3)
     async TestHook.run (node:internal/test_runner/test:1054:7)
   ...
 
@@ -22,14 +22,14 @@ not ok 694 - never-paid-untouched aggregation is performed by payer and month in
   ---
   duration_ms: 0.842
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts:1:2197'
+  location: 'mcp/tests/claimReadModelStore.test.ts:1:2197'
   failureType: 'hookFailed'
   error: 'connect ECONNREFUSED 127.0.0.1:5433'
   code: 'ECONNREFUSED'
   stack: |-
-    /Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/node_modules/pg-pool/index.js:45:11
+    mcp/node_modules/pg-pool/index.js:45:11
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestContext.<anonymous> (mcp/tests/claimReadModelStore.test.ts:32:3)
     async TestHook.run (node:internal/test_runner/test:1054:7)
   ...
 
@@ -37,14 +37,14 @@ not ok 695 - reconciliation detects a corrupted money row and a rebuild restores
   ---
   duration_ms: 0.03525
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts:1:2852'
+  location: 'mcp/tests/claimReadModelStore.test.ts:1:2852'
   failureType: 'hookFailed'
   error: 'connect ECONNREFUSED 127.0.0.1:5433'
   code: 'ECONNREFUSED'
   stack: |-
-    /Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/node_modules/pg-pool/index.js:45:11
+    mcp/node_modules/pg-pool/index.js:45:11
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestContext.<anonymous> (mcp/tests/claimReadModelStore.test.ts:32:3)
     async TestHook.run (node:internal/test_runner/test:1054:7)
   ...
 
@@ -52,14 +52,14 @@ not ok 696 - an older per-claim upsert cannot overwrite a newer completed rebuil
   ---
   duration_ms: 0.020917
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts:1:3524'
+  location: 'mcp/tests/claimReadModelStore.test.ts:1:3524'
   failureType: 'hookFailed'
   error: 'connect ECONNREFUSED 127.0.0.1:5433'
   code: 'ECONNREFUSED'
   stack: |-
-    /Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/node_modules/pg-pool/index.js:45:11
+    mcp/node_modules/pg-pool/index.js:45:11
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestContext.<anonymous> (mcp/tests/claimReadModelStore.test.ts:32:3)
     async TestHook.run (node:internal/test_runner/test:1054:7)
   ...
 
@@ -67,28 +67,28 @@ not ok 697 - an older rebuild snapshot fails loudly without publishing incomplet
   ---
   duration_ms: 0.024959
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts:1:3875'
+  location: 'mcp/tests/claimReadModelStore.test.ts:1:3875'
   failureType: 'hookFailed'
   error: 'connect ECONNREFUSED 127.0.0.1:5433'
   code: 'ECONNREFUSED'
   stack: |-
-    /Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/node_modules/pg-pool/index.js:45:11
+    mcp/node_modules/pg-pool/index.js:45:11
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestContext.<anonymous> (mcp/tests/claimReadModelStore.test.ts:32:3)
     async TestHook.run (node:internal/test_runner/test:1054:7)
   ...
 
-not ok 698 - /Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts
+not ok 698 - mcp/tests/claimReadModelStore.test.ts
   ---
   duration_ms: 2.558667
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts:1:1135'
+  location: 'mcp/tests/claimReadModelStore.test.ts:1:1135'
   failureType: 'hookFailed'
   error: 'connect ECONNREFUSED 127.0.0.1:5433'
   code: 'ECONNREFUSED'
   stack: |-
-    /Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/node_modules/pg-pool/index.js:45:11
+    mcp/node_modules/pg-pool/index.js:45:11
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/claimReadModelStore.test.ts:39:3)
+    async TestContext.<anonymous> (mcp/tests/claimReadModelStore.test.ts:39:3)
     async TestHook.run (node:internal/test_runner/test:1054:7)
     async Test.runHook (node:internal/test_runner/test:965:9)
     async after (node:internal/test_runner/test:1005:9)
@@ -99,20 +99,20 @@ not ok 816 - B5 only action-holding staff can record an opt-out
   ---
   duration_ms: 8.503666
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/commsApi.test.ts:1:33123'
+  location: 'mcp/tests/commsApi.test.ts:1:33123'
   failureType: 'testCodeFailure'
   error: |-
     provider
-    
+
     200 !== 403
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 403
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/commsApi.test.ts:956:14)
+    TestContext.<anonymous> (mcp/tests/commsApi.test.ts:956:14)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
@@ -122,14 +122,14 @@ not ok 1520 - drill child commands never inherit the persistent Redis password
   ---
   duration_ms: 35.127333
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/disasterRecoveryCredentials.test.ts:1:2044'
+  location: 'mcp/tests/disasterRecoveryCredentials.test.ts:1:2044'
   failureType: 'testCodeFailure'
   error: |-
     node:internal/modules/esm/resolve:275
         throw new ERR_MODULE_NOT_FOUND(
               ^
-    
-    Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/node_modules/tsx/dist/loader.mjs' imported from /private/var/folders/6h/z2xtt68j36x9g9f33tkw11580000gq/T/odos-dr-isolation-SIm52e/
+
+    Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'node_modules/tsx/dist/loader.mjs' imported from <temporary-directory>/odos-dr-isolation-SIm52e/
         at finalizeResolution (node:internal/modules/esm/resolve:275:11)
         at moduleResolve (node:internal/modules/esm/resolve:861:10)
         at defaultResolve (node:internal/modules/esm/resolve:985:11)
@@ -141,14 +141,14 @@ not ok 1520 - drill child commands never inherit the persistent Redis password
         at ModuleLoader.import (node:internal/modules/esm/loader:679:21)
         at asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:112:36) {
       code: 'ERR_MODULE_NOT_FOUND',
-      url: 'file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/node_modules/tsx/dist/loader.mjs'
+      url: 'node_modules/tsx/dist/loader.mjs'
     }
-    
+
     Node.js v22.22.3
-    
-    
+
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0
@@ -165,7 +165,7 @@ not ok 1520 - drill child commands never inherit the persistent Redis password
     TracingChannel.tracePromise (node:diagnostics_channel:350:14)
     ModuleLoader.import (node:internal/modules/esm/loader:679:21)
     asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:112:36) {
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/disasterRecoveryCredentials.test.ts:90:12)
+    TestContext.<anonymous> (mcp/tests/disasterRecoveryCredentials.test.ts:90:12)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)

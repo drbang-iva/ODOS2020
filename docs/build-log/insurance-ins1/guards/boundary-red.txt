@@ -62,20 +62,20 @@ not ok 10 - Insurance entry URLs cannot disguise a guardian write as Coverage
   ---
   duration_ms: 2.011
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:6984'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:6984'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 400
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 400
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:98:10)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:98:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -84,20 +84,20 @@ not ok 11 - Subscriber PUT target must match its resource id
   ---
   duration_ms: 0.300583
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:7249'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:7249'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 400
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 400
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:102:10)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:102:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -106,20 +106,20 @@ not ok 12 - Noncanonical subscriber references cannot bypass the guardian fence
   ---
   duration_ms: 0.152042
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:7488'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:7488'
   failureType: 'testCodeFailure'
   error: |-
     http://127.0.0.1:19813/fhir/R4/RelatedPerson/guardian
-    
+
     200 !== 400
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 400
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:108:12)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:108:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

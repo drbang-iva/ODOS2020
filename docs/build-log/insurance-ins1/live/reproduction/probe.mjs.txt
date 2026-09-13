@@ -8,10 +8,11 @@ const subscriber=await request('RelatedPerson','POST',{resourceType:'RelatedPers
 await request(`RelatedPerson/${subscriber.id}`,'PUT',{...subscriber,name:[{family:'Synthetic',given:['Concurrent']}]});
 const before=await request(`Coverage?beneficiary=Patient/${f.patient.id}`);
 const bundle={resourceType:'Bundle',type:'transaction',entry:[{resource:{...subscriber,name:[{family:'Synthetic',given:['Stale']}]},request:{method:'PUT',url:`RelatedPerson/${subscriber.id}`,ifMatch:`W/"${subscriber.meta.versionId}"`}},{resource:{resourceType:'Coverage',status:'active',beneficiary:{reference:`Patient/${f.patient.id}`},subscriber:{reference:`RelatedPerson/${subscriber.id}`},payor:[{reference:`Organization/${f.payer.id}`} ]},request:{method:'POST',url:'Coverage'}}]};
+const auditOffset=readFileSync(`${dir}/audit.jsonl`,'utf8').trim().split('\n').filter(Boolean).length;
 const r=await fetch('http://127.0.0.1:19811/insurance/coverages',{method:'POST',headers:{Authorization:`Bearer ${s.staff}`,'Content-Type':'application/json'},body:JSON.stringify({bundle})});
 const body=await r.json();
 const after=await request(`Coverage?beneficiary=Patient/${f.patient.id}`,'GET',undefined,s.staff);
-const row=readFileSync(`${dir}/audit.jsonl`,'utf8').trim().split('\n').map(JSON.parse).filter(a=>a.eventType==='coverage.write').at(-1);
+const appended=readFileSync(`${dir}/audit.jsonl`,'utf8').trim().split('\n').filter(Boolean).slice(auditOffset).map(JSON.parse).filter(a=>a.eventType==='coverage.write' && a.patientId===f.patient.id);assert.equal(appended.length,1,'Exactly one new matching coverage.write audit');const row=appended[0];
 const existing=new Set((before.entry??[]).map(e=>e.resource.id));
 const added=(after.entry??[]).map(e=>e.resource).filter(c=>!existing.has(c.id));
 assert.equal(r.status,mode==='base'?200:409);assert.equal(added.length,mode==='base'?1:0);assert.equal(row.actionOutcome,mode==='base'?'granted':'denied');

@@ -8,7 +8,7 @@ not ok 1 - I1 stale subscriber stops before Coverage
   ---
   duration_ms: 2.952833
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:3033'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:3033'
   failureType: 'testCodeFailure'
   error: 'Insurance must disable compensating deletes'
   code: 'ERR_ASSERTION'
@@ -17,8 +17,8 @@ not ok 1 - I1 stale subscriber stops before Coverage
   actual: false
   operator: '=='
   stack: |-
-    writes (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:41:57)
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:47:20)
+    writes (mcp/tests/patientInsuranceHonestSave.test.ts:41:57)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:47:20)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -27,20 +27,20 @@ not ok 2 - I2 mixed create response reports surviving subscriber and denied audi
   ---
   duration_ms: 0.357625
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:3412'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:3412'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 502
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 502
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:54:10)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:54:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -49,12 +49,12 @@ not ok 3 - I3 unversioned subscriber PUT submits nothing
   ---
   duration_ms: 0.9725
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:3896'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:3896'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         body: {
     +     entry: [
@@ -78,7 +78,7 @@ not ok 3 - I3 unversioned subscriber PUT submits nothing
     +   status: 200
     -   status: 400
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -101,7 +101,7 @@ not ok 3 - I3 unversioned subscriber PUT submits nothing
             location: 'Coverage/saved/_history/2'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:60:10)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:60:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -110,12 +110,12 @@ not ok 4 - I4 primary extension alone fences guardian
   ---
   duration_ms: 0.311875
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:4602'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:4602'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         body: {
     +     entry: [
@@ -139,7 +139,7 @@ not ok 4 - I4 primary extension alone fences guardian
     +   status: 200
     -   status: 422
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -162,7 +162,7 @@ not ok 4 - I4 primary extension alone fences guardian
             location: 'Coverage/saved/_history/2'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:69:10)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:69:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -171,12 +171,12 @@ not ok 5 - I5 Person link alone fences guardian
   ---
   duration_ms: 0.204333
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:4602'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:4602'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         body: {
     +     entry: [
@@ -200,7 +200,7 @@ not ok 5 - I5 Person link alone fences guardian
     +   status: 200
     -   status: 422
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -223,7 +223,7 @@ not ok 5 - I5 Person link alone fences guardian
             location: 'Coverage/saved/_history/2'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:69:10)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:69:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -232,12 +232,12 @@ not ok 6 - I6 current server extensions cannot be omitted by request body
   ---
   duration_ms: 0.148166
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:4602'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:4602'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         body: {
     +     entry: [
@@ -261,7 +261,7 @@ not ok 6 - I6 current server extensions cannot be omitted by request body
     +   status: 200
     -   status: 422
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -284,7 +284,7 @@ not ok 6 - I6 current server extensions cannot be omitted by request body
             location: 'Coverage/saved/_history/2'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:69:10)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:69:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -293,12 +293,12 @@ not ok 7 - I7 Coverage-only existing guardian reference is fenced
   ---
   duration_ms: 0.217875
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:5083'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:5083'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         body: {
     +     entry: [
@@ -316,7 +316,7 @@ not ok 7 - I7 Coverage-only existing guardian reference is fenced
     +   status: 200
     -   status: 422
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -335,7 +335,7 @@ not ok 7 - I7 Coverage-only existing guardian reference is fenced
             location: 'Coverage/saved/_history/2'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:75:10)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:75:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -344,7 +344,7 @@ not ok 8 - I8 versioned subscriber-only update succeeds before Coverage
   ---
   duration_ms: 0.143667
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:5350'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:5350'
   failureType: 'testCodeFailure'
   error: 'Insurance must disable compensating deletes'
   code: 'ERR_ASSERTION'
@@ -353,8 +353,8 @@ not ok 8 - I8 versioned subscriber-only update succeeds before Coverage
   actual: false
   operator: '=='
   stack: |-
-    writes (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:41:57)
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:81:20)
+    writes (mcp/tests/patientInsuranceHonestSave.test.ts:41:57)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:81:20)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -363,20 +363,20 @@ not ok 9 - I9 mixed vision benefits response is denied with written locations
   ---
   duration_ms: 0.623
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:5685'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:5685'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 502
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 502
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:91:10)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:91:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -385,20 +385,20 @@ not ok 10 - Insurance entry URLs cannot disguise a guardian write as Coverage
   ---
   duration_ms: 0.384125
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:6984'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:6984'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 400
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 400
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:98:10)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:98:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -407,20 +407,20 @@ not ok 11 - Subscriber PUT target must match its resource id
   ---
   duration_ms: 0.224666
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:7249'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:7249'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 400
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 400
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:102:10)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:102:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -429,20 +429,20 @@ not ok 12 - Noncanonical subscriber references cannot bypass the guardian fence
   ---
   duration_ms: 0.757542
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:7488'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:7488'
   failureType: 'testCodeFailure'
   error: |-
     http://127.0.0.1:19813/fhir/R4/RelatedPerson/guardian
-    
+
     200 !== 400
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 400
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:108:12)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:108:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -451,20 +451,20 @@ not ok 13 - A later Coverage failure reports the earlier successful subscriber P
   ---
   duration_ms: 0.20425
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:1:7930'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:7930'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/insurance-ins1/mcp/tests/patientInsuranceHonestSave.test.ts:113:10)
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:113:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

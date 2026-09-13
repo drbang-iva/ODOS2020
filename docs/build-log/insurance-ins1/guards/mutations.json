@@ -1,5 +1,60 @@
 [
   {
+    "guard": "I10",
+    "expectedFailure": "I10 POST carrying primary role false refuses before server requests",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "I10 POST carrying primary role false refuses before server requests"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "I11",
+    "expectedFailure": "I11 PUT adding consent authority refuses before current-resource lookup",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "I10 POST carrying primary role false refuses before server requests",
+        "I11 PUT adding consent authority refuses before current-resource lookup"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "subscriber-binding",
+    "expectedFailure": "Bundled RelatedPerson must identify Coverage subscriber before any write",
+    "green": {
+      "exit": 0,
+      "failed": []
+    },
+    "red": {
+      "exit": 1,
+      "failed": [
+        "Bundled RelatedPerson must identify Coverage subscriber before any write"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
     "guard": "I1",
     "expectedFailure": "I1 stale subscriber stops before Coverage",
     "green": {
@@ -67,7 +122,8 @@
     "red": {
       "exit": 1,
       "failed": [
-        "I4 primary extension alone fences guardian"
+        "I4 primary extension alone fences guardian",
+        "I10 POST carrying primary role false refuses before server requests"
       ]
     },
     "restored": {
@@ -105,7 +161,8 @@
       "exit": 1,
       "failed": [
         "I4 primary extension alone fences guardian",
-        "I6 current server extensions cannot be omitted by request body"
+        "I6 current server extensions cannot be omitted by request body",
+        "I7 Coverage-only existing guardian reference is fenced"
       ]
     },
     "restored": {
@@ -141,7 +198,8 @@
     "red": {
       "exit": 1,
       "failed": [
-        "I8 versioned subscriber-only update succeeds before Coverage"
+        "I8 versioned subscriber-only update succeeds before Coverage",
+        "Subscriber-only POST stays one successful request"
       ]
     },
     "restored": {
@@ -177,8 +235,7 @@
     "red": {
       "exit": 1,
       "failed": [
-        "Insurance entry URLs cannot disguise a guardian write as Coverage",
-        "Subscriber PUT target must match its resource id"
+        "Insurance entry URLs cannot disguise a guardian write as Coverage"
       ]
     },
     "restored": {
@@ -217,7 +274,8 @@
         "I1 stale subscriber stops before Coverage",
         "I2 mixed create response reports surviving subscriber and denied audit",
         "I8 versioned subscriber-only update succeeds before Coverage",
-        "A later Coverage failure reports the earlier successful subscriber PUT"
+        "A later Coverage failure reports the earlier successful subscriber PUT",
+        "Subscriber-only POST stays one successful request"
       ]
     },
     "restored": {

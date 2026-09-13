@@ -114,3 +114,36 @@ test("A later Coverage failure reports the earlier successful subscriber PUT", a
   assert.deepEqual(writes(f), [["RelatedPerson/subscriber"], ["Coverage"]]); denied(f);
   assert.match(f.audits[0].actionReason!, /RelatedPerson\/saved\/_history\/2/);
 });
+
+test("Bundled RelatedPerson must identify Coverage subscriber before any write", async () => {
+  for (const method of ["POST", "PUT"] as const) {
+    for (const reference of ["RelatedPerson/other", "Patient/patient", undefined]) {
+      const f = fixture(); const bundle = coverage(method);
+      (bundle.entry![1].resource as any).subscriber = reference ? { reference } : undefined;
+      assert.equal((await f.save(bundle)).status, 400, `${method}: ${reference}`);
+      assert.deepEqual(writes(f), []); assert.deepEqual(f.reads, []);
+      assert.ok(f.audits.every(a => a.actionOutcome !== "granted"));
+    }
+  }
+});
+
+test("I10 POST carrying primary role false refuses before server requests", async () => {
+  const f = fixture(); const bundle = coverage("POST");
+  (bundle.entry![0].resource as RelatedPerson).extension = [{ url: RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL, valueBoolean: false }];
+  assert.deepEqual(await f.save(bundle), { status: 422, body: { error: "Insurance cannot set responsible-party roles. Use the guarantor editor." } });
+  assert.deepEqual(writes(f), []); assert.deepEqual(f.reads, []); denied(f);
+});
+test("I11 PUT adding consent authority refuses before current-resource lookup", async () => {
+  for (const valueBoolean of [true, false]) {
+    const f = fixture(); const bundle = coverage();
+    (bundle.entry![0].resource as RelatedPerson).extension = [{ url: CONSENT_AUTHORITY_EXTENSION_URL, valueBoolean }];
+    assert.deepEqual(await f.save(bundle), { status: 422, body: { error: "Insurance cannot set responsible-party roles. Use the guarantor editor." } });
+    assert.deepEqual(writes(f), []); assert.deepEqual(f.reads, []); denied(f);
+  }
+});
+test("Subscriber-only POST stays one successful request", async () => {
+  const f = fixture(); const result = await f.save(coverage("POST"));
+  assert.equal(result.status, 200); assert.equal((result.body as Bundle).entry?.length, 2);
+  assert.deepEqual(writes(f), [["RelatedPerson", "Coverage"]]);
+  assert.deepEqual(f.audits.map(a => a.actionOutcome), ["granted"]);
+});

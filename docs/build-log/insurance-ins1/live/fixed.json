@@ -30,16 +30,16 @@
               ]
             }
           ],
-          "id": "4b322204-f69e-4529-90c4-16d1d255aa7f",
+          "id": "1075d930-d514-47d9-a484-a48dd2039291",
           "meta": {
-            "versionId": "aaa4e5d5-0d15-41b5-bb8f-5ca7367f45ef",
-            "lastUpdated": "2026-09-13T21:39:10.738Z"
+            "versionId": "f8191ae9-0190-41e8-bf55-04d06e26aac9",
+            "lastUpdated": "2026-09-13T21:57:56.176Z"
           }
         },
         "request": {
           "method": "PUT",
-          "url": "RelatedPerson/4b322204-f69e-4529-90c4-16d1d255aa7f",
-          "ifMatch": "W/\"aaa4e5d5-0d15-41b5-bb8f-5ca7367f45ef\""
+          "url": "RelatedPerson/1075d930-d514-47d9-a484-a48dd2039291",
+          "ifMatch": "W/\"f8191ae9-0190-41e8-bf55-04d06e26aac9\""
         }
       },
       {
@@ -50,7 +50,7 @@
             "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
           },
           "subscriber": {
-            "reference": "RelatedPerson/4b322204-f69e-4529-90c4-16d1d255aa7f"
+            "reference": "RelatedPerson/1075d930-d514-47d9-a484-a48dd2039291"
           },
           "payor": [
             {
@@ -71,8 +71,8 @@
     "written": []
   },
   "audit": {
-    "id": "af8c1062-064b-413f-b803-dd528bfda6b4",
-    "eventTime": "2026-09-13T21:39:10.782Z",
+    "id": "6876c6e3-22fb-4bf5-8616-594d02d10a0e",
+    "eventTime": "2026-09-13T21:57:56.204Z",
     "eventType": "coverage.write",
     "actorId": "4bee8d9e-c2e3-43db-87dd-d7f1ee0cfcbd",
     "actorRole": "staff",
@@ -80,11 +80,11 @@
     "resourceType": "Coverage",
     "resourceId": "uncreated",
     "actionOutcome": "denied",
-    "actionReason": "coverage.write failure RelatedPerson/4b322204-f69e-4529-90c4-16d1d255aa7f: 412; written: []",
+    "actionReason": "coverage.write failure RelatedPerson/1075d930-d514-47d9-a484-a48dd2039291: 412; written: []",
     "breakGlass": false,
     "ibActorClassification": "health-care-provider",
     "ibException": "security",
-    "createdAt": "2026-09-13T21:39:10.782Z"
+    "createdAt": "2026-09-13T21:57:56.204Z"
   },
   "newCoverages": [],
   "currentSubscriber": {
@@ -101,10 +101,10 @@
         ]
       }
     ],
-    "id": "4b322204-f69e-4529-90c4-16d1d255aa7f",
+    "id": "1075d930-d514-47d9-a484-a48dd2039291",
     "meta": {
-      "versionId": "b7098f9c-c030-4aa7-bcaa-8fa2cacb2533",
-      "lastUpdated": "2026-09-13T21:39:10.768Z"
+      "versionId": "56ae75d5-7cf7-45fe-a7e7-4590d1d73fe7",
+      "lastUpdated": "2026-09-13T21:57:56.187Z"
     }
   }
 }

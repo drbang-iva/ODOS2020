@@ -34,8 +34,8 @@
         "error": "This person is a responsible party. Save the subscriber as a separate record."
       },
       "audit": {
-        "id": "64fe286f-6759-455a-9b0e-b87a0a8a4c45",
-        "eventTime": "2026-09-13T21:39:51.425Z",
+        "id": "eff99877-3fd3-4088-ad55-c1612fcb956d",
+        "eventTime": "2026-09-13T21:57:56.302Z",
         "eventType": "coverage.write",
         "actorId": "4bee8d9e-c2e3-43db-87dd-d7f1ee0cfcbd",
         "actorRole": "staff",
@@ -47,7 +47,7 @@
         "breakGlass": false,
         "ibActorClassification": "health-care-provider",
         "ibException": "health-IT-performance",
-        "createdAt": "2026-09-13T21:39:51.425Z"
+        "createdAt": "2026-09-13T21:57:56.302Z"
       },
       "before": {
         "resourceType": "RelatedPerson",
@@ -210,16 +210,6 @@
                 "start": "2026-01-01",
                 "end": "2035-01-01"
               },
-              "extension": [
-                {
-                  "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
-                  "valueBoolean": true
-                },
-                {
-                  "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
-                  "valueBoolean": true
-                }
-              ],
               "id": "721e89d1-9372-40e9-b439-ae19f7516856",
               "meta": {
                 "versionId": "0c11226c-c502-4ca7-b1aa-96e80df35308",
@@ -260,8 +250,8 @@
         "error": "This person is a responsible party. Save the subscriber as a separate record."
       },
       "audit": {
-        "id": "a98e69c8-f633-4e75-8212-ac073440b212",
-        "eventTime": "2026-09-13T21:39:51.459Z",
+        "id": "bb26b039-7989-4fe4-9ad5-eebfffc6f143",
+        "eventTime": "2026-09-13T21:57:56.332Z",
         "eventType": "coverage.write",
         "actorId": "4bee8d9e-c2e3-43db-87dd-d7f1ee0cfcbd",
         "actorRole": "staff",
@@ -273,7 +263,7 @@
         "breakGlass": false,
         "ibActorClassification": "health-care-provider",
         "ibException": "health-IT-performance",
-        "createdAt": "2026-09-13T21:39:51.459Z"
+        "createdAt": "2026-09-13T21:57:56.332Z"
       },
       "before": {
         "resourceType": "RelatedPerson",

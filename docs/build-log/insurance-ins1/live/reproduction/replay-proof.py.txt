@@ -1,0 +1,33 @@
+from pathlib import Path
+import subprocess,time,socket
+handler=Path('mcp/src/insurance/patient-insurance-handlers.ts');fixed=handler.read_text();serve=Path('.odos/insurance-ins1/serve.ts');normal=serve.read_text();process=None
+out=Path('docs/build-log/insurance-ins1/guards')
+def start():
+ global process
+ process=subprocess.Popen(['node','--import','./mcp/node_modules/tsx/dist/loader.mjs',str(serve)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+ for _ in range(80):
+  assert process.poll() is None,'Proof server exited'
+  try:
+   with socket.create_connection(('127.0.0.1',19811),timeout=.2):return
+  except OSError:time.sleep(.1)
+ raise RuntimeError('Proof server did not bind')
+def stop():
+ global process
+ if process is not None:process.terminate();process.wait(timeout=10);process=None
+
+def run(script,mode=None,red=False):
+ args=['node',f'.odos/insurance-ins1/{script}.mjs']+([mode] if mode else [])
+ result=subprocess.run(args,capture_output=True,text=True)
+ if red:
+  assert result.returncode!=0 and 'Exactly one new matching coverage.write audit' in result.stderr,(args,result.stdout,result.stderr)
+  (out/f'proof-{script}-audit-red.txt').write_text(result.stdout+result.stderr)
+ else:assert result.returncode==0,(args,result.stdout,result.stderr)
+ print(script,mode,'expected red' if red else result.stdout.strip(),flush=True)
+try:
+ handler.write_text(subprocess.check_output(['git','show','origin/main:mcp/src/insurance/patient-insurance-handlers.ts'],text=True));start();run('probe','base');stop()
+ handler.write_text(fixed);start();run('probe','fixed');run('fence');stop()
+ serve.write_text(normal.replace('recordAudit:row=>audit.record(row,()=>undefined)','recordAudit:async()=>undefined'))
+ start();run('probe','fixed',True);run('fence',red=True);stop()
+ serve.write_text(normal);start();run('probe','fixed');run('fence');stop()
+finally:
+ stop();handler.write_text(fixed);serve.write_text(normal)

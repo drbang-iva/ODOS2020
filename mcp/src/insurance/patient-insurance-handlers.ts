@@ -73,6 +73,11 @@ export async function handlePatientInsuranceWrite(
   if (error) return { status: 400, body: { error } };
   const patientReference = coveragePatientReference(bundle);
   const fallbackTarget = bundleTargetReference(bundle, "Coverage");
+  if (bundle.entry?.some(entry => entry.resource?.resourceType === "RelatedPerson" && hasResponsiblePartyRole(entry.resource))) {
+    const reason = "Insurance cannot set responsible-party roles. Use the guarantor editor.";
+    await auditWrite(deps, auth, "coverage.write", "failure", patientReference, fallbackTarget, reason);
+    return { status: 422, body: { error: reason } };
+  }
   const subscriberUpdate = bundle.entry?.find(entry => entry.resource?.resourceType === "RelatedPerson" && entry.request?.method === "PUT");
   if (subscriberUpdate && !subscriberUpdate.request?.ifMatch?.trim()) {
     return { status: 400, body: { error: "Subscriber updates require a version." } };
@@ -192,6 +197,10 @@ function insuranceTransportFailure(cause: unknown, fallback: string, written: st
   return { status: result.status, body: { ...(result.body as { error: string }), written } };
 }
 
+function hasResponsiblePartyRole(person: RelatedPerson): boolean {
+  return Boolean(person.extension?.some(extension => extension.url === CONSENT_AUTHORITY_EXTENSION_URL || extension.url === RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL));
+}
+
 async function bundleReferencesGuardian(fhir: AuthenticatedInsuranceStaff["fhir"], bundle: Bundle): Promise<boolean> {
   const references = new Set<string>();
   for (const entry of bundle.entry ?? []) {
@@ -206,7 +215,7 @@ async function bundleReferencesGuardian(fhir: AuthenticatedInsuranceStaff["fhir"
   for (const reference of references) {
     const current = await searchAll<RelatedPerson>(fhir, "RelatedPerson", { _id: reference.slice("RelatedPerson/".length) });
     if (current.length !== 1) throw Object.assign(new Error("Subscriber record could not be read. Reload and try again."), { status: 404 });
-    if (current[0].extension?.some(extension => extension.url === CONSENT_AUTHORITY_EXTENSION_URL || extension.url === RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL)) return true;
+    if (hasResponsiblePartyRole(current[0])) return true;
     const people = await searchAll<Person>(fhir, "Person", { link: reference });
     if (people.length > 0) return true;
   }
@@ -270,6 +279,10 @@ function validateCoverageBundle(bundle: Bundle): string | undefined {
   const coverage = coverages[0].resource as Coverage;
   if (!isPatientReference(coverage.beneficiary.reference)) return "Coverage.beneficiary must reference a Patient.";
   const subscriber = coverage.subscriber?.reference;
+  const relatedEntry = relatedPeople[0];
+  if (relatedEntry && (!subscriber || subscriber !== (relatedEntry.request?.method === "PUT" ? relatedEntry.request.url : relatedEntry.fullUrl))) {
+    return "Bundled RelatedPerson must match Coverage.subscriber.";
+  }
   if (subscriber && !/^(?:RelatedPerson|Patient)\/[A-Za-z0-9.-]{1,64}$/.test(subscriber) && !subscriber.startsWith("urn:uuid:")) {
     return "Coverage.subscriber must use a local Patient or RelatedPerson reference, or a new subscriber URN.";
   }

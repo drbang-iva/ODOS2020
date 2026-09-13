@@ -6,87 +6,111 @@ TAP version 13
 # Subtest: I1 stale subscriber stops before Coverage
 ok 1 - I1 stale subscriber stops before Coverage
   ---
-  duration_ms: 2.183416
+  duration_ms: 2.338708
   type: 'test'
   ...
 # Subtest: I2 mixed create response reports surviving subscriber and denied audit
 ok 2 - I2 mixed create response reports surviving subscriber and denied audit
   ---
-  duration_ms: 0.310083
+  duration_ms: 0.312875
   type: 'test'
   ...
 # Subtest: I3 unversioned subscriber PUT submits nothing
 ok 3 - I3 unversioned subscriber PUT submits nothing
   ---
-  duration_ms: 0.151042
+  duration_ms: 0.126916
   type: 'test'
   ...
 # Subtest: I4 primary extension alone fences guardian
 ok 4 - I4 primary extension alone fences guardian
   ---
-  duration_ms: 0.205459
+  duration_ms: 0.180583
   type: 'test'
   ...
 # Subtest: I5 Person link alone fences guardian
 ok 5 - I5 Person link alone fences guardian
   ---
-  duration_ms: 0.160667
+  duration_ms: 0.175125
   type: 'test'
   ...
 # Subtest: I6 current server extensions cannot be omitted by request body
 ok 6 - I6 current server extensions cannot be omitted by request body
   ---
-  duration_ms: 0.10075
+  duration_ms: 0.120917
   type: 'test'
   ...
 # Subtest: I7 Coverage-only existing guardian reference is fenced
 ok 7 - I7 Coverage-only existing guardian reference is fenced
   ---
-  duration_ms: 0.211125
+  duration_ms: 0.143
   type: 'test'
   ...
 # Subtest: I8 versioned subscriber-only update succeeds before Coverage
 ok 8 - I8 versioned subscriber-only update succeeds before Coverage
   ---
-  duration_ms: 0.199875
+  duration_ms: 0.1765
   type: 'test'
   ...
 # Subtest: I9 mixed vision benefits response is denied with written locations
 ok 9 - I9 mixed vision benefits response is denied with written locations
   ---
-  duration_ms: 0.511375
+  duration_ms: 0.463125
   type: 'test'
   ...
 # Subtest: Insurance entry URLs cannot disguise a guardian write as Coverage
 ok 10 - Insurance entry URLs cannot disguise a guardian write as Coverage
   ---
-  duration_ms: 0.266959
+  duration_ms: 0.31
   type: 'test'
   ...
 # Subtest: Subscriber PUT target must match its resource id
 ok 11 - Subscriber PUT target must match its resource id
   ---
-  duration_ms: 0.097875
+  duration_ms: 0.12375
   type: 'test'
   ...
 # Subtest: Noncanonical subscriber references cannot bypass the guardian fence
 ok 12 - Noncanonical subscriber references cannot bypass the guardian fence
   ---
-  duration_ms: 0.13275
+  duration_ms: 0.155541
   type: 'test'
   ...
 # Subtest: A later Coverage failure reports the earlier successful subscriber PUT
 ok 13 - A later Coverage failure reports the earlier successful subscriber PUT
   ---
-  duration_ms: 0.183875
+  duration_ms: 0.199583
   type: 'test'
   ...
-1..13
-# tests 13
+# Subtest: Bundled RelatedPerson must identify Coverage subscriber before any write
+ok 14 - Bundled RelatedPerson must identify Coverage subscriber before any write
+  ---
+  duration_ms: 0.673
+  type: 'test'
+  ...
+# Subtest: I10 POST carrying primary role false refuses before server requests
+ok 15 - I10 POST carrying primary role false refuses before server requests
+  ---
+  duration_ms: 0.106792
+  type: 'test'
+  ...
+# Subtest: I11 PUT adding consent authority refuses before current-resource lookup
+ok 16 - I11 PUT adding consent authority refuses before current-resource lookup
+  ---
+  duration_ms: 0.104875
+  type: 'test'
+  ...
+# Subtest: Subscriber-only POST stays one successful request
+ok 17 - Subscriber-only POST stays one successful request
+  ---
+  duration_ms: 0.168583
+  type: 'test'
+  ...
+1..17
+# tests 17
 # suites 0
-# pass 13
+# pass 17
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 129.875042
+# duration_ms 123.269958

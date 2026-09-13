@@ -3,12 +3,15 @@ import subprocess,json
 root=Path.cwd(); p=root/'mcp/src/insurance/patient-insurance-handlers.ts'; original=p.read_text()
 out=root/'docs/build-log/insurance-ins1/guards'
 mutations=[
+ ('I10','entry.resource?.resourceType === "RelatedPerson" && hasResponsiblePartyRole(entry.resource)','entry.resource?.resourceType === "RelatedPerson" && entry.request?.method === "PUT" && hasResponsiblePartyRole(entry.resource)','I10 POST carrying primary role false refuses before server requests'),
+ ('I11','if (bundle.entry?.some','if (false && bundle.entry?.some','I11 PUT adding consent authority refuses before current-resource lookup'),
+ ('subscriber-binding','if (relatedEntry && (!subscriber','if (false && relatedEntry && (!subscriber','Bundled RelatedPerson must identify Coverage subscriber before any write'),
  ('I1','const submissions = subscriberUpdate','const submissions = false && subscriberUpdate','I1 stale subscriber stops before Coverage'),
  ('I2','if (result.failure) {','if (false && result.failure) {','I2 mixed create response reports surviving subscriber and denied audit'),
  ('I3','if (subscriberUpdate && !subscriberUpdate.request?.ifMatch?.trim())','if (false && subscriberUpdate && !subscriberUpdate.request?.ifMatch?.trim())','I3 unversioned subscriber PUT submits nothing'),
  ('I4',' || extension.url === RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL','','I4 primary extension alone fences guardian'),
  ('I5','if (people.length > 0) return true;','if (false) return true;','I5 Person link alone fences guardian'),
- ('I6','current[0].extension?.some','(bundle.entry?.find(entry => entry.resource?.resourceType === "RelatedPerson")?.resource as RelatedPerson)?.extension?.some','I6 current server extensions cannot be omitted by request body'),
+ ('I6','hasResponsiblePartyRole(current[0])','hasResponsiblePartyRole(bundle.entry?.find(entry => entry.resource?.resourceType === "RelatedPerson")?.resource as RelatedPerson)','I6 current server extensions cannot be omitted by request body'),
  ('I7','if (entry.resource?.resourceType === "Coverage") {','if (false && entry.resource?.resourceType === "Coverage") {','I7 Coverage-only existing guardian reference is fenced'),
  ('I8','"coverage.write", "success", patientReference','"coverage.write", "failure", patientReference','I8 versioned subscriber-only update succeeds before Coverage'),
  ('I9','const result = inspectInsuranceResponse(bundle, response, []);','const result = { written: [], failure: undefined };','I9 mixed vision benefits response is denied with written locations'),
