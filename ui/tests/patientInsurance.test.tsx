@@ -32,6 +32,7 @@ import {
   type PlanTemplate,
 } from "../src/lib/insurance-config";
 import { coverageGroupName, coverageGroupNumber, SUBSCRIBER_RELATIONSHIP_SYSTEM } from "../src/lib/submit-claims";
+import { CONSENT_AUTHORITY_EXTENSION_URL, RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL } from "../src/lib/patient-identity";
 import { CoverageEditor, InsuranceGrid } from "../src/scenes/insurance/PatientInsurance";
 import { BenefitsTable } from "../src/scenes/insurance/VisionPlanBenefits";
 
@@ -420,3 +421,102 @@ function responseFixture(): CoverageEligibilityResponse {
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
+
+const INS2_GUARDIAN: RelatedPerson = {
+  resourceType: "RelatedPerson", id: "ins2-guardian", meta: { versionId: "11" }, active: true,
+  patient: { reference: "Patient/patient-1" },
+  name: [{ given: ["Guardian"], family: "Synthetic" }], birthDate: "1978-03-04",
+  address: [{ line: ["1 Guardian Way"] }],
+  telecom: [{ system: "phone", use: "home", value: "864-555-0101" }],
+  period: { start: "2026-01-01", end: "2035-01-01" },
+  extension: [
+    { url: CONSENT_AUTHORITY_EXTENSION_URL, valueBoolean: true },
+    { url: RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL, valueBoolean: true },
+  ],
+};
+const INS2_SUBSCRIBER: RelatedPerson = {
+  resourceType: "RelatedPerson", id: "ins2-subscriber", meta: { versionId: "4" }, active: false,
+  patient: { reference: "Patient/patient-1" },
+  name: [{ given: ["Subscriber"], family: "Synthetic" }], birthDate: "1978-03-04",
+};
+
+function ins2Draft(person?: RelatedPerson) {
+  const coverage: Coverage = { ...LEGACY_COVERAGE, subscriber: person ? { reference: `RelatedPerson/${person.id}` } : undefined };
+  const draft = coverageDraftFromResource(coverage, PATIENT, person);
+  return { ...draft, subscriber: { ...draft.subscriber, firstName: "Insurance", lastName: "Synthetic", birthDate: "1978-03-04", address: "2 Subscriber Way" } };
+}
+
+function ins2ReuseOptions(guardian: RelatedPerson) {
+  const html = renderToStaticMarkup(<CoverageEditor draft={ins2Draft()} patient={PATIENT} relatedPeople={[guardian, INS2_SUBSCRIBER]} saving={false} onChange={() => undefined} onCancel={() => undefined} onSave={() => undefined} />);
+  const select = html.match(/Reuse existing subscriber<select[^>]*>(.*?)<\/select>/)?.[1];
+  assert.ok(select, "The reuse control is rendered");
+  return [...select.matchAll(/<option value="([^"]*)"/g)].map((match) => match[1]);
+}
+
+function ins2AssertGuardianCopy(guardian: RelatedPerson) {
+  const before = structuredClone(guardian);
+  const draft = { ...ins2Draft(guardian), active: false };
+  const bundle = buildCoverageSaveBundle({ draft, existingCoverage: LEGACY_COVERAGE, existingRelatedPerson: guardian, uuid: () => "ins2-copy" });
+  assert.equal(bundle.entry?.length, 2);
+  const subscriber = bundle.entry!.find((entry) => entry.resource?.resourceType === "RelatedPerson")!;
+  assert.deepEqual(subscriber.request, { method: "POST", url: "RelatedPerson" });
+  assert.equal(subscriber.fullUrl, "urn:uuid:ins2-copy");
+  const resource = subscriber.resource as RelatedPerson;
+  assert.equal(resource.id, undefined);
+  assert.equal(resource.meta, undefined);
+  assert.equal(resource.extension, undefined);
+  assert.equal(resource.telecom, undefined);
+  assert.equal(resource.period, undefined);
+  assert.equal(resource.active, true);
+  assert.deepEqual(resource.name, [{ given: ["Insurance"], family: "Synthetic" }]);
+  assert.equal(resource.address?.[0]?.line?.[0], "2 Subscriber Way");
+  assert.equal(resource.patient.reference, "Patient/patient-1");
+  assert.equal(resource.birthDate, "1978-03-04");
+  assert.equal(resource.relationship?.[0]?.coding?.[0]?.code, "other");
+  const coverage = bundle.entry!.find((entry) => entry.resource?.resourceType === "Coverage")!;
+  assert.deepEqual(coverage.request, { method: "PUT", url: "Coverage/legacy-coverage", ifMatch: 'W/"7"' });
+  assert.equal((coverage.resource as Coverage).subscriber?.reference, "urn:uuid:ins2-copy");
+  assert.notEqual((coverage.resource as Coverage).status, "active");
+  assert.equal(bundle.entry!.filter((entry) => [entry.request?.url, entry.fullUrl].some((url) => url?.includes(guardian.id!))).length, 0);
+  assert.deepEqual(guardian, before);
+}
+
+test("INS2 U1 reuse offers only subscriber-only records", () => {
+  assert.deepEqual(ins2ReuseOptions(INS2_GUARDIAN), ["", "RelatedPerson/ins2-subscriber"]);
+});
+
+test("INS2 U2 legacy guardian subscriber becomes a new record without a guardian write", () => {
+  ins2AssertGuardianCopy(INS2_GUARDIAN);
+});
+
+test("INS2 U3 subscriber activity is independent of Coverage activity", () => {
+  const created = buildCoverageSaveBundle({ draft: { ...ins2Draft(), active: false }, uuid: () => "ins2-active" });
+  const entry = created.entry!.find((candidate) => candidate.resource?.resourceType === "RelatedPerson")!;
+  assert.deepEqual(entry.request, { method: "POST", url: "RelatedPerson" });
+  assert.equal(entry.fullUrl, "urn:uuid:ins2-active");
+  assert.equal((entry.resource as RelatedPerson).active, true);
+  assert.notEqual((created.entry!.find((candidate) => candidate.resource?.resourceType === "Coverage")!.resource as Coverage).status, "active");
+  for (const active of [false, true, undefined]) {
+    const existing = { ...INS2_SUBSCRIBER, active };
+    const updated = buildCoverageSaveBundle({ draft: { ...ins2Draft(existing), active: active !== true }, existingRelatedPerson: existing });
+    const subscriber = updated.entry!.find((candidate) => candidate.resource?.resourceType === "RelatedPerson")!;
+    assert.deepEqual(subscriber.request, { method: "PUT", url: "RelatedPerson/ins2-subscriber", ifMatch: 'W/"4"' });
+    assert.equal((subscriber.resource as RelatedPerson).active, active);
+  }
+});
+
+test("INS2 U4 unloaded or mismatched subscriber refuses to emit a bundle", () => {
+  for (const [subscriberReference, existingRelatedPerson] of [["RelatedPerson/not-loaded", undefined], ["RelatedPerson/not-loaded", INS2_SUBSCRIBER], ["RelatedPerson/undefined", undefined]] as const) {
+    let bundle: Bundle | undefined;
+    assert.throws(() => {
+      bundle = buildCoverageSaveBundle({ draft: { ...ins2Draft(), subscriberReference }, existingRelatedPerson });
+    }, { message: "The subscriber record is not loaded. Reload before saving." });
+    assert.equal(bundle, undefined);
+  }
+});
+
+test("INS2 U5 primary extension alone excludes reuse and prevents guardian writes", () => {
+  const guardian = { ...INS2_GUARDIAN, extension: [{ url: RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL, valueBoolean: false }] };
+  assert.deepEqual(ins2ReuseOptions(guardian), ["", "RelatedPerson/ins2-subscriber"]);
+  ins2AssertGuardianCopy(guardian);
+});

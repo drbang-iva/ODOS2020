@@ -1,0 +1,11 @@
+import {createServer} from '../../ui/node_modules/vite/dist/node/index.js';
+import react from '../../ui/node_modules/@vitejs/plugin-react/dist/index.js';
+import {resolve} from 'node:path';
+import tailwindcss from '../../ui/node_modules/tailwindcss/lib/index.js';
+import autoprefixer from '../../ui/node_modules/autoprefixer/lib/autoprefixer.js';
+import theme from '../../ui/tailwind.config.js';
+const runtime={baseUrl:'http://127.0.0.1:19713'};
+for(const [root,port] of [[resolve('ui'),19710],['/private/tmp/odos-ins2-base/ui',19709]]){
+ const server=await createServer({configFile:false,root,css:{postcss:{plugins:[tailwindcss({...theme,content:[resolve(root,'index.html'),resolve(root,'src/**/*.{ts,tsx}')]}),autoprefixer()]}},plugins:[react()],resolve:{dedupe:['react','react-dom']},server:{host:'127.0.0.1',port,strictPort:true,proxy:{'/fhir':{target:runtime.baseUrl,changeOrigin:true},'/insurance':{target:'http://127.0.0.1:19711',changeOrigin:true}},fs:{allow:[resolve(root,'..')]}}});
+ await server.listen();server.printUrls();
+}

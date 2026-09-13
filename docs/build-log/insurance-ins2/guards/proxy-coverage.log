@@ -1,0 +1,5 @@
+Proxy-coverage census — 24 backend route families discovered, 27 proxy table entries.
+
+Every backend route family has a proxy table entry.
+
+Reporting only — CI annotates findings, but this check never fails the build.

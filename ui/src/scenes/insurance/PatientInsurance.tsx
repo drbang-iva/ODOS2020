@@ -6,6 +6,7 @@ import {
   coverageDraftFromResource,
   emptyCoverageDraft,
   fetchPatientInsurance,
+  isGuardianRelatedPerson,
   COB_APPLICABILITY_OPTIONS,
   savePatientInsurance,
   SUBSCRIBER_RELATIONSHIPS,
@@ -231,7 +232,7 @@ export function CoverageEditor({
               const relationship = value as CoverageEditorDraft["relationship"];
               onChange({ ...draft, relationship, subscriberReference: relationship === "self" ? draft.patientReference : "", subscriber: relationship === "self" ? demographicsFromPatient(patient) : emptyDemographics() });
             }} />
-            {draft.relationship !== "self" && <Select label="Reuse existing subscriber" value={draft.subscriberReference} options={[{ value: "", label: "Create new subscriber" }, ...relatedPeople.filter((person) => person.id).map((person) => ({ value: `RelatedPerson/${person.id}`, label: relatedPersonName(person) }))]} onChange={selectExistingSubscriber} />}
+            {draft.relationship !== "self" && <Select label="Reuse existing subscriber" value={draft.subscriberReference} options={[{ value: "", label: "Create new subscriber" }, ...relatedPeople.filter((person) => person.id && !isGuardianRelatedPerson(person)).map((person) => ({ value: `RelatedPerson/${person.id}`, label: relatedPersonName(person) }))]} onChange={selectExistingSubscriber} />}
           </div>
           {draft.relationship === "self" && <p className="mt-3 rounded border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/50">Self subscriber demographics come from the Patient record and are read-only here.</p>}
           <SubscriberFields subscriber={draft.subscriber} readOnly={draft.relationship === "self"} onChange={(subscriber) => set("subscriber", subscriber)} />
