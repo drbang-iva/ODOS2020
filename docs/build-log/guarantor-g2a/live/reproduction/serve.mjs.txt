@@ -1,0 +1,6 @@
+import {createServer} from '../../ui/node_modules/vite/dist/node/index.js';
+import react from '../../ui/node_modules/@vitejs/plugin-react/dist/index.js';
+import {resolve} from 'node:path';
+process.chdir('ui');
+const server=await createServer({configFile:false,root:resolve('.'),plugins:[react()],resolve:{dedupe:['react','react-dom']},server:{host:'127.0.0.1',port:19510,strictPort:true,proxy:{'/fhir':{target:'http://127.0.0.1:19513',changeOrigin:true}},fs:{allow:[resolve('..')]}}});
+await server.listen();server.printUrls();

@@ -1,0 +1,39 @@
+TAP version 13
+# Subtest: Q5a Q6a preflight mismatch zero writes reload
+not ok 1 - Q5a Q6a preflight mismatch zero writes reload
+  ---
+  duration_ms: 19.238375
+  type: 'test'
+  location: '/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:1:4545'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'PUT Person/p'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'PUT Person/p'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:199:14)
+    async fixture (/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:141:5)
+    async TestContext.<anonymous> (/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:193:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 190.78875

@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {loginForLocalRepair} from '../../scripts/repair-practice-roles.ts';
+const dir=new URL('./',import.meta.url);
+const runtime=JSON.parse(readFileSync(new URL('runtime.json',dir),'utf8'));
+const token=await loginForLocalRepair(runtime);
+const res=await fetch(runtime.baseUrl+'/auth/me',{headers:{Authorization:`Bearer ${token}`}});
+assert.equal(res.status,200);
+const me=await res.json();
+runtime.projectId=me.project.id;
+writeFileSync(new URL('runtime.json',dir),JSON.stringify(runtime,null,2),{mode:0o600});
+writeFileSync(new URL('session.json',dir),JSON.stringify({token}),{mode:0o600});
+console.log(JSON.stringify({projectId:runtime.projectId,health:await(await fetch(runtime.baseUrl+'/healthcheck')).json(),features:me.project.features??[]}));

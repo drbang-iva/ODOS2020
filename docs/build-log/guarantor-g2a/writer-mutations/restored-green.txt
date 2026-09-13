@@ -1,0 +1,100 @@
+TAP version 13
+# Subtest: Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+ok 1 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+  ---
+  duration_ms: 21.008208
+  type: 'test'
+  ...
+# Subtest: Q5a Q6a preflight mismatch zero writes reload
+ok 2 - Q5a Q6a preflight mismatch zero writes reload
+  ---
+  duration_ms: 2.650084
+  type: 'test'
+  ...
+# Subtest: Q5b parent stale after preflight prevents children
+ok 3 - Q5b parent stale after preflight prevents children
+  ---
+  duration_ms: 1.062708
+  type: 'test'
+  ...
+# Subtest: Q6b Q8 late child conflict preserves competitor and labels correct patient
+ok 4 - Q6b Q8 late child conflict preserves competitor and labels correct patient
+  ---
+  duration_ms: 2.904792
+  type: 'test'
+  ...
+# Subtest: Q8 failed re-read and unresolved lost response are unknown
+ok 5 - Q8 failed re-read and unresolved lost response are unknown
+  ---
+  duration_ms: 3.196792
+  type: 'test'
+  ...
+# Subtest: lost parent response confirmed landed proceeds once
+ok 6 - lost parent response confirmed landed proceeds once
+  ---
+  duration_ms: 1.386
+  type: 'test'
+  ...
+# Subtest: Q9a converged repeat zero writes and unchanged versions
+ok 7 - Q9a converged repeat zero writes and unchanged versions
+  ---
+  duration_ms: 1.830083
+  type: 'test'
+  ...
+# Subtest: Q9b repair only failed child fresh ETag and second pass zero writes
+ok 8 - Q9b repair only failed child fresh ETag and second pass zero writes
+  ---
+  duration_ms: 2.511083
+  type: 'test'
+  ...
+# Subtest: Q9c repair superseded generation uses newest values
+ok 9 - Q9c repair superseded generation uses newest values
+  ---
+  duration_ms: 2.082167
+  type: 'test'
+  ...
+# Subtest: Q10 Q12 missing or many matches refuse direct save
+ok 10 - Q10 Q12 missing or many matches refuse direct save
+  ---
+  duration_ms: 1.317541
+  type: 'test'
+  ...
+# Subtest: Q13 trailing parent catches torn verification
+ok 11 - Q13 trailing parent catches torn verification
+  ---
+  duration_ms: 0.534625
+  type: 'test'
+  ...
+# Subtest: Q2 fresh SMS resolver independently observes propagated phone
+ok 12 - Q2 fresh SMS resolver independently observes propagated phone
+  ---
+  duration_ms: 0.875333
+  type: 'test'
+  ...
+# Subtest: Q6a independently stale child preflight zero writes
+ok 13 - Q6a independently stale child preflight zero writes
+  ---
+  duration_ms: 0.705958
+  type: 'test'
+  ...
+# Subtest: Q10 directly supplied unlinked snapshot refuses create or update
+ok 14 - Q10 directly supplied unlinked snapshot refuses create or update
+  ---
+  duration_ms: 0.257583
+  type: 'test'
+  ...
+# Subtest: Q8 child lost response and verification failure remain unknown
+ok 15 - Q8 child lost response and verification failure remain unknown
+  ---
+  duration_ms: 0.82025
+  type: 'test'
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 220.01075

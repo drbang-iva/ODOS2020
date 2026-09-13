@@ -1,0 +1,80 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
+import {chromium} from '../../ui/node_modules/playwright-core/index.mjs';
+const dir=new URL('./',import.meta.url);
+const runtime=JSON.parse(readFileSync(new URL('runtime.json',dir)));
+const {token:admin}=JSON.parse(readFileSync(new URL('session.json',dir)));
+assert.equal(runtime.baseUrl,'http://127.0.0.1:19513');
+const output='docs/build-log/guarantor-g2a/live';mkdirSync(output,{recursive:true});
+const browser=await chromium.launch({channel:'chrome',headless:true});
+const ref=r=>`${r.resourceType}/${r.id}`;
+const content=r=>{const {meta,...rest}=r;return rest;};
+const demos=r=>({name:r.name,telecom:r.telecom,address:r.address});
+const legal=r=>{const {meta,name,telecom,address,...rest}=r;return rest;};
+try{
+for(const scenario of ['Q5b','Q6b-Q9b']){
+execFileSync('./mcp/node_modules/.bin/tsx',['.odos/guarantor-g2a/fixtures.ts'],{stdio:'pipe'});
+const fixture=JSON.parse(readFileSync(new URL('fixtures.json',dir)));
+const {token:staff}=JSON.parse(readFileSync(new URL('staff-session.json',dir)));
+const capture=[];let armed=false;let injected=false;
+async function request(actor,method,path,body,etag){
+ const seq=capture.length+1;
+ const entry={seq,actor,request:{method,path,...(etag?{ifMatch:etag}:{}),...(body?{body}: {})}};capture.push(entry);
+ const response=await fetch(runtime.baseUrl+path,{method,headers:{Authorization:`Bearer ${actor==='editor'?staff:admin}`,'Content-Type':'application/fhir+json',...(etag?{'If-Match':etag}:{})},...(body?{body:JSON.stringify(body)}:{})});
+ const text=await response.text();entry.response={status:response.status,body:text?JSON.parse(text):null};return entry.response;
+}
+async function read(r){const res=await request('verification','GET','/fhir/R4/'+ref(r));assert.equal(res.status,200);return res.body;}
+async function compete(r){const fresh=await read(r);const body={...fresh,telecom:[{system:'phone',use:'home',value:'864-555-0199'}]};const response=await request('competitor','PUT','/fhir/R4/'+ref(r),body,`W/"${fresh.meta.versionId}"`);assert.equal(response.status,200);return response.body;}
+const page=await browser.newPage({viewport:{width:1440,height:1200}});
+await page.addInitScript(token=>sessionStorage.setItem('odos.session.v1',JSON.stringify({accessToken:token,expiresAt:Date.now()+3600000})),staff);
+await page.route('**/fhir/**',async route=>{
+ const req=route.request();const url=new URL(req.url());const method=req.method();const body=req.postData()?JSON.parse(req.postData()):undefined;
+ if(armed&&!injected&&method==='PUT'&&url.pathname==='/fhir/R4/'+ref(fixture.person)&&scenario==='Q5b'){injected=true;await compete(fixture.person);}
+ const result=await request('editor',method,url.pathname+url.search,body,req.headers()['if-match']);
+ if(armed&&!injected&&method==='PUT'&&url.pathname==='/fhir/R4/'+ref(fixture.person)&&scenario==='Q6b-Q9b'){assert.equal(result.status,200);injected=true;await compete(fixture.children[1]);}
+ await route.fulfill({status:result.status,contentType:'application/fhir+json',body:JSON.stringify(result.body)});
+});
+await page.goto('http://127.0.0.1:19510/tests/fixtures/guarantor-live.html?patientId='+fixture.patients[0].id);
+await page.getByRole('button',{name:'Edit demographics',exact:true}).click();
+await page.getByText('Loading responsible parties…').waitFor({state:'hidden'});
+const section=page.locator('fieldset').filter({has:page.locator('legend').filter({hasText:/^Responsible parties$/})}).first();
+await section.getByLabel('Given names 1',{exact:true}).fill('Corrected');
+await section.getByLabel('Phone 1 (home)',{exact:true}).fill('864-555-0123');
+await section.getByLabel('Address 1 line 1',{exact:true}).fill('2 Synthetic Way');
+const start=capture.length;armed=true;
+await section.getByRole('button',{name:'Save guarantor',exact:true}).click();
+await section.getByRole('button',{name:'Save guarantor',exact:true}).waitFor();
+assert.equal(injected,true);
+const saveText=await section.innerText();
+const saved={person:await read(fixture.person),children:await Promise.all(fixture.children.map(read)),patients:await Promise.all(fixture.patients.map(read))};
+const writes=capture.slice(start).filter(e=>e.actor==='editor'&&e.request.method==='PUT');
+assert.ok(!writes.some(e=>e.request.path.startsWith('/fhir/R4/Patient/')));
+for(let i=0;i<3;i++){assert.deepEqual(legal(saved.children[i]),legal(fixture.children[i]));assert.deepEqual(content(saved.patients[i]),content(fixture.patients[i]));}
+assert.deepEqual(content(saved.children[2]),content(fixture.children[2]));
+if(scenario==='Q5b'){
+ assert.deepEqual(writes.map(e=>e.response.status),[412]);assert.match(saveText,/Not saved.*reload/i);
+ assert.equal(saved.person.telecom[0].value,'864-555-0199');
+ for(let i=0;i<2;i++)assert.deepEqual(content(saved.children[i]),content(fixture.children[i]));
+}else{
+ assert.deepEqual(writes.map(e=>e.response.status),[200,200,412]);assert.deepEqual(demos(saved.person),demos(saved.children[0]));assert.equal(saved.children[1].telecom[0].value,'864-555-0199');assert.match(saveText,/Leo Synthetic.*mismatched/);
+ await section.screenshot({path:output+'/partial.png'});
+ const repairStart=capture.length;
+ await section.getByRole('button',{name:/Repair for Leo Synthetic/}).click();
+ await section.getByRole('button',{name:'Save guarantor',exact:true}).waitFor();
+ const repaired={person:await read(fixture.person),children:await Promise.all(fixture.children.map(read))};
+ const repairWrites=capture.slice(repairStart).filter(e=>e.actor==='editor'&&e.request.method==='PUT');
+ assert.deepEqual(repairWrites.map(e=>[e.request.path,e.response.status]),[['/fhir/R4/'+ref(fixture.children[1]),200]]);
+ assert.equal(repaired.person.meta.versionId,saved.person.meta.versionId);assert.equal(repaired.children[0].meta.versionId,saved.children[0].meta.versionId);assert.notEqual(repaired.children[1].meta.versionId,saved.children[1].meta.versionId);
+ for(let i=0;i<2;i++)assert.deepEqual(demos(repaired.children[i]),demos(repaired.person));
+ const repeatStart=capture.length;
+ const repeat=await page.evaluate(async id=>{const {loadGuarantor,repairGuarantor}=await import('/src/lib/guarantor-editor.ts');const loaded=await loadGuarantor(id);return repairGuarantor(loaded.snapshot);},fixture.children[0].id);
+ assert.equal(repeat.status,'unchanged');assert.equal(capture.slice(repeatStart).filter(e=>e.actor==='editor'&&e.request.method==='PUT').length,0);
+ await section.screenshot({path:output+'/repaired.png'});
+ writeFileSync(output+'/Q9b.json',JSON.stringify({scenario:'Q9b',saved,repaired,repeat,capture:capture.slice(repairStart)},null,2));
+}
+writeFileSync(output+'/'+scenario+'.json',JSON.stringify({scenario,serverVersion:'5.1.30-9b1bd92',transactionBundles:false,policy:fixture.policy,fixture,saveText,saved,capture},null,2));
+await section.screenshot({path:output+'/'+scenario+'.png'});
+console.log(JSON.stringify({scenario,writeStatuses:writes.map(e=>e.response.status),patientWrites:0,passed:true}));await page.close();
+}
+}finally{await browser.close();}
