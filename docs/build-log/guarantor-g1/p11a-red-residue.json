@@ -1,0 +1,494 @@
+{
+  "label": "p11a-red",
+  "failedType": "RelatedPerson",
+  "featureEnabled": false,
+  "result": {
+    "thrown": "Patient registration transaction failed: 400."
+  },
+  "requests": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:19413/fhir/R4",
+        "headers": {
+          "Authorization": "[REDACTED]",
+          "Content-Type": "application/fhir+json"
+        },
+        "body": {
+          "resourceType": "Bundle",
+          "type": "transaction",
+          "entry": [
+            {
+              "fullUrl": "urn:uuid:1b0b6e81-d644-4361-9163-14ca843db878",
+              "resource": {
+                "resourceType": "Patient",
+                "active": true,
+                "identifier": [
+                  {
+                    "use": "usual",
+                    "type": {
+                      "text": "ODOS medical record number"
+                    },
+                    "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+                    "value": "5320312"
+                  }
+                ],
+                "name": [
+                  {
+                    "use": "official",
+                    "given": [
+                      "Synthetic"
+                    ],
+                    "family": "Guarantor3fac4f89"
+                  }
+                ],
+                "birthDate": "2010-01-02",
+                "gender": "female",
+                "address": [
+                  {
+                    "use": "home",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "meta": {
+                  "project": "b07b76d7-56e6-4528-8500-5b3efb68abe2"
+                }
+              },
+              "request": {
+                "method": "POST",
+                "url": "Patient"
+              }
+            },
+            {
+              "fullUrl": "urn:uuid:2b6200fc-5862-4da1-b044-c450d05268c6",
+              "resource": {
+                "resourceType": "RelatedPerson",
+                "active": true,
+                "patient": {
+                  "reference": "urn:uuid:1b0b6e81-d644-4361-9163-14ca843db878"
+                },
+                "relationship": [
+                  {
+                    "text": "Legal guardian"
+                  }
+                ],
+                "name": 17,
+                "telecom": [
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "value": "864-555-0101"
+                  }
+                ],
+                "address": [
+                  {
+                    "use": "home",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "period": {
+                  "start": "2026-08-25"
+                },
+                "extension": [
+                  {
+                    "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+                    "valueBoolean": true
+                  },
+                  {
+                    "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+                    "valueBoolean": true
+                  }
+                ],
+                "meta": {
+                  "project": "b07b76d7-56e6-4528-8500-5b3efb68abe2"
+                }
+              },
+              "request": {
+                "method": "POST",
+                "url": "RelatedPerson"
+              }
+            },
+            {
+              "fullUrl": "urn:uuid:4d74cbce-4b3f-44ee-b727-5a8614a558df",
+              "resource": {
+                "resourceType": "Person",
+                "name": [
+                  {
+                    "use": "official",
+                    "given": [
+                      "Responsible"
+                    ],
+                    "family": "Synthetic"
+                  }
+                ],
+                "telecom": [
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "value": "864-555-0101"
+                  }
+                ],
+                "address": [
+                  {
+                    "use": "home",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "link": [
+                  {
+                    "target": {
+                      "reference": "urn:uuid:2b6200fc-5862-4da1-b044-c450d05268c6"
+                    },
+                    "assurance": "level2"
+                  }
+                ],
+                "meta": {
+                  "project": "b07b76d7-56e6-4528-8500-5b3efb68abe2"
+                }
+              },
+              "request": {
+                "method": "POST",
+                "url": "Person"
+              }
+            },
+            {
+              "resource": {
+                "resourceType": "Account",
+                "id": "78740386-9f69-46e1-bddb-f73398785b9d",
+                "meta": {
+                  "project": "b07b76d7-56e6-4528-8500-5b3efb68abe2",
+                  "versionId": "c74004af-4584-4eac-b504-db8e552bff05",
+                  "lastUpdated": "2026-09-13T10:45:39.459Z",
+                  "author": {
+                    "reference": "Practitioner/a7bffb2c-8b22-4585-87b7-e2f217c0fe5d",
+                    "display": "Medplum Admin"
+                  },
+                  "compartment": [
+                    {
+                      "reference": "Project/b07b76d7-56e6-4528-8500-5b3efb68abe2"
+                    }
+                  ]
+                },
+                "identifier": [
+                  {
+                    "use": "usual",
+                    "type": {
+                      "text": "ODOS medical record number"
+                    },
+                    "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+                    "value": "5320312"
+                  }
+                ],
+                "status": "active",
+                "type": {
+                  "text": "Patient account"
+                },
+                "name": "ODOS chart 5320312",
+                "subject": [
+                  {
+                    "reference": "urn:uuid:1b0b6e81-d644-4361-9163-14ca843db878"
+                  }
+                ],
+                "guarantor": [
+                  {
+                    "party": {
+                      "reference": "urn:uuid:2b6200fc-5862-4da1-b044-c450d05268c6"
+                    },
+                    "onHold": false,
+                    "period": {
+                      "start": "2026-08-25"
+                    }
+                  }
+                ]
+              },
+              "request": {
+                "method": "PUT",
+                "url": "Account/78740386-9f69-46e1-bddb-f73398785b9d",
+                "ifMatch": "W/\"c74004af-4584-4eac-b504-db8e552bff05\""
+              }
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Bundle",
+          "type": "transaction-response",
+          "entry": [
+            {
+              "response": {
+                "outcome": {
+                  "resourceType": "OperationOutcome",
+                  "id": "created",
+                  "issue": [
+                    {
+                      "severity": "information",
+                      "code": "informational",
+                      "details": {
+                        "text": "Created"
+                      }
+                    }
+                  ]
+                },
+                "status": "201",
+                "location": "Patient/d991493a-edf8-4e85-afa6-5b901260936d"
+              },
+              "resource": {
+                "resourceType": "Patient",
+                "active": true,
+                "identifier": [
+                  {
+                    "use": "usual",
+                    "type": {
+                      "text": "ODOS medical record number"
+                    },
+                    "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+                    "value": "5320312"
+                  }
+                ],
+                "name": [
+                  {
+                    "use": "official",
+                    "given": [
+                      "Synthetic"
+                    ],
+                    "family": "Guarantor3fac4f89"
+                  }
+                ],
+                "birthDate": "2010-01-02",
+                "gender": "female",
+                "address": [
+                  {
+                    "use": "home",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "meta": {
+                  "versionId": "a84765cc-5564-45af-9a93-0bed1ba6e900",
+                  "lastUpdated": "2026-09-13T10:45:39.471Z"
+                },
+                "id": "d991493a-edf8-4e85-afa6-5b901260936d"
+              }
+            },
+            {
+              "response": {
+                "outcome": {
+                  "resourceType": "OperationOutcome",
+                  "issue": [
+                    {
+                      "severity": "error",
+                      "code": "structure",
+                      "details": {
+                        "text": "Expected array of values for property"
+                      },
+                      "expression": [
+                        "RelatedPerson.name"
+                      ]
+                    }
+                  ]
+                },
+                "status": "400"
+              }
+            },
+            {
+              "response": {
+                "outcome": {
+                  "resourceType": "OperationOutcome",
+                  "id": "created",
+                  "issue": [
+                    {
+                      "severity": "information",
+                      "code": "informational",
+                      "details": {
+                        "text": "Created"
+                      }
+                    }
+                  ]
+                },
+                "status": "201",
+                "location": "Person/dcb95079-d5b8-4a56-9a12-8c6e2a5a8561"
+              },
+              "resource": {
+                "resourceType": "Person",
+                "name": [
+                  {
+                    "use": "official",
+                    "given": [
+                      "Responsible"
+                    ],
+                    "family": "Synthetic"
+                  }
+                ],
+                "telecom": [
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "value": "864-555-0101"
+                  }
+                ],
+                "address": [
+                  {
+                    "use": "home",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "link": [
+                  {
+                    "target": {
+                      "reference": "RelatedPerson/eb885e93-f9f9-47e5-9c8d-8c189ba917d6"
+                    },
+                    "assurance": "level2"
+                  }
+                ],
+                "meta": {
+                  "versionId": "39a4ddbc-e051-4a26-95cb-b045ee1fc5d2",
+                  "lastUpdated": "2026-09-13T10:45:39.485Z"
+                },
+                "id": "dcb95079-d5b8-4a56-9a12-8c6e2a5a8561"
+              }
+            },
+            {
+              "response": {
+                "outcome": {
+                  "resourceType": "OperationOutcome",
+                  "id": "ok",
+                  "issue": [
+                    {
+                      "severity": "information",
+                      "code": "informational",
+                      "details": {
+                        "text": "All OK"
+                      }
+                    }
+                  ]
+                },
+                "status": "200",
+                "location": "Account/78740386-9f69-46e1-bddb-f73398785b9d"
+              },
+              "resource": {
+                "resourceType": "Account",
+                "id": "78740386-9f69-46e1-bddb-f73398785b9d",
+                "meta": {
+                  "versionId": "5d1e45f3-4665-4726-9b36-5538f06574ed",
+                  "lastUpdated": "2026-09-13T10:45:39.492Z"
+                },
+                "identifier": [
+                  {
+                    "use": "usual",
+                    "type": {
+                      "text": "ODOS medical record number"
+                    },
+                    "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+                    "value": "5320312"
+                  }
+                ],
+                "status": "active",
+                "type": {
+                  "text": "Patient account"
+                },
+                "name": "ODOS chart 5320312",
+                "subject": [
+                  {
+                    "reference": "Patient/d991493a-edf8-4e85-afa6-5b901260936d"
+                  }
+                ],
+                "guarantor": [
+                  {
+                    "party": {
+                      "reference": "RelatedPerson/eb885e93-f9f9-47e5-9c8d-8c189ba917d6"
+                    },
+                    "onHold": false,
+                    "period": {
+                      "start": "2026-08-25"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "persisted": {
+    "patients": [],
+    "account": {
+      "resourceType": "Account",
+      "id": "78740386-9f69-46e1-bddb-f73398785b9d",
+      "meta": {
+        "versionId": "5d1e45f3-4665-4726-9b36-5538f06574ed",
+        "lastUpdated": "2026-09-13T10:45:39.492Z"
+      },
+      "identifier": [
+        {
+          "use": "usual",
+          "type": {
+            "text": "ODOS medical record number"
+          },
+          "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+          "value": "5320312"
+        }
+      ],
+      "status": "active",
+      "type": {
+        "text": "Patient account"
+      },
+      "name": "ODOS chart 5320312",
+      "subject": [
+        {
+          "reference": "Patient/d991493a-edf8-4e85-afa6-5b901260936d"
+        }
+      ],
+      "guarantor": [
+        {
+          "party": {
+            "reference": "RelatedPerson/eb885e93-f9f9-47e5-9c8d-8c189ba917d6"
+          },
+          "onHold": false,
+          "period": {
+            "start": "2026-08-25"
+          }
+        }
+      ]
+    },
+    "relatedPersons": [],
+    "persons": []
+  },
+  "residue": {
+    "patientCount": 0,
+    "relatedPersonCount": 0,
+    "personCount": 0,
+    "accountStatus": "active",
+    "accountSubjectCount": 1,
+    "accountGuarantorCount": 1,
+    "mrnOnAccount": true,
+    "mrnOnPatient": false,
+    "pendingAllocationMarker": false
+  }
+}

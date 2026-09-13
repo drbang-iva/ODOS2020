@@ -1,0 +1,85 @@
+TAP version 13
+# Subtest: P5: shared demographics preserve the base projection for both resources
+not ok 1 - P5: shared demographics preserve the base projection for both resources
+  ---
+  duration_ms: 4.461417
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:1:4488'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        address: [
+          {
+            city: 'Greenville',
+            line: [
+    ...
+            use: 'home',
+    +       value: '864-555-01010'
+    -       value: '864-555-0101'
+          }
+        ]
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    name:
+      0:
+        use: 'official'
+        given:
+          0: 'Responsible'
+          1: 'Middle'
+        family: 'Synthetic'
+    telecom:
+      0:
+        system: 'phone'
+        use: 'home'
+        value: '864-555-0101'
+    address:
+      0:
+        use: 'home'
+        line:
+          0: '1 Synthetic Way'
+        city: 'Greenville'
+        state: 'SC'
+        postalCode: '29601'
+  actual:
+    name:
+      0:
+        use: 'official'
+        given:
+          0: 'Responsible'
+          1: 'Middle'
+        family: 'Synthetic'
+    telecom:
+      0:
+        system: 'phone'
+        use: 'home'
+        value: '864-555-01010'
+    address:
+      0:
+        use: 'home'
+        line:
+          0: '1 Synthetic Way'
+        city: 'Greenville'
+        state: 'SC'
+        postalCode: '29601'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:109:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 163.679125

@@ -1,0 +1,54 @@
+import assert from 'node:assert/strict';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { loginForLocalRepair } from '../../scripts/repair-practice-roles.js';
+import { createMedplumClient } from '../../mcp/src/fhir-client.js';
+import { registerPatientFromDemographics } from '../../mcp/src/clinic/patient-registration-endpoint.js';
+import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from '../../mcp/tests/fhirAuditTestStub.js';
+const runtime=JSON.parse(readFileSync(new URL('./runtime.json',import.meta.url),'utf8'));
+assert.equal(runtime.baseUrl,'http://127.0.0.1:19413');
+const target=process.argv[2]??'RelatedPerson';
+const label=process.argv[3]??'base';
+const token=await loginForLocalRepair(runtime);
+const fhir=createMedplumClient({baseUrl:runtime.baseUrl,accessToken:token,audit:TEST_FHIR_AUDIT_RECORDER,auditContext:TEST_FHIR_AUDIT_CONTEXT});
+const project=await fhir.read('Project',runtime.projectId);
+assert.equal(project.features?.includes('transaction-bundles')===true,false);
+const practitioner=await fhir.create({resourceType:'Practitioner',name:[{family:'Synthetic',given:['G1']} ]});
+const suffix=randomUUID().slice(0,8);
+const input={demographics:{firstName:'Synthetic',middleName:'',lastName:`Guarantor${suffix}`,preferredName:'',birthDate:'2010-01-02',gender:'female',phones:[{value:'',use:'home'},{value:'',use:'mobile'}],textable:'',email:'',address:'1 Synthetic Way',city:'Greenville',state:'SC',postalCode:'29601'},responsibleParties:[{localId:'guardian',kind:'person',relationship:'legal-guardian',firstName:'Responsible',middleName:'',lastName:'Synthetic',phone:'864-555-0101',address:'1 Synthetic Way',city:'Greenville',state:'SC',postalCode:'29601',financialResponsible:true,consentAuthority:true,primary:true,courtOrderNotes:'',effectiveDate:'2026-08-25',endDate:''}],confirmDuplicate:false};
+const realFetch=globalThis.fetch;
+const requests:any[]=[];
+let attempted:any;
+globalThis.fetch=async (url,init)=>{
+  if(String(url)===`${runtime.baseUrl}/fhir/R4`&&init?.method==='POST') {
+    const bundle=JSON.parse(String(init.body));
+    const entry=bundle.entry.find((e:any)=>e.resource?.resourceType===target);
+    assert.ok(entry,`${target} entry is required for failure injection`);
+    entry.resource.name=17;
+    attempted=bundle;
+    init={...init,body:JSON.stringify(bundle)};
+    const response=await realFetch(url,init);
+    requests.push({request:{method:'POST',url:String(url),headers:{Authorization:'[REDACTED]','Content-Type':'application/fhir+json'},body:bundle},response:{status:response.status,body:await response.clone().json()}});
+    return response;
+  }
+  return realFetch(url,init);
+};
+let result:any;
+try {
+  result=await registerPatientFromDemographics(input as never,{staffReference:`Practitioner/${practitioner.id}`,actorRole:'staff',roles:['staff'],project:{reference:`Project/${runtime.projectId}`}},{serviceFhir:fhir,now:()=> '2026-09-13T12:00:00.000Z'});
+} catch(error:any) { result={thrown:error.message,status:error.status}; }
+finally { globalThis.fetch=realFetch; }
+assert.ok(attempted,'Registration must reach the server');
+const patientResult=await fhir.search('Patient',{family:input.demographics.lastName});
+const patients=patientResult.entry?.map(e=>e.resource)??[];
+const accountId=attempted.entry.at(-1).resource.id;
+const account=await fhir.read('Account',accountId);
+const related=patients.length?await fhir.search('RelatedPerson',{patient:`Patient/${patients[0]?.id}`}):undefined;
+const personLocations=requests[0].response.body.entry.filter((e:any)=>/^2/.test(e.response?.status??'')&&/^Person\//.test(e.response?.location??'')).map((e:any)=>e.response.location.split('/')[1]);
+const people=personLocations.length?await fhir.search('Person',{_id:personLocations.join(',')}):{entry:[]};
+const mrn=account.identifier?.find((i:any)=>i.type?.text==='ODOS medical record number')?.value;
+const persisted={patients,account,relatedPersons:related?.entry?.map(e=>e.resource)??[],persons:people.entry?.map(e=>e.resource)??[]};
+const residue={patientCount:patients.length,relatedPersonCount:persisted.relatedPersons.length,personCount:persisted.persons.length,accountStatus:account.status,accountSubjectCount:account.subject?.length??0,accountGuarantorCount:account.guarantor?.length??0,mrnOnAccount:!!mrn,mrnOnPatient:patients.some((p:any)=>p.identifier?.some((i:any)=>i.value===mrn)),pendingAllocationMarker:account.identifier?.some((i:any)=>i.system?.includes('allocation-token'))??false};
+const evidence={label,failedType:target,featureEnabled:false,result,requests,persisted,residue};
+writeFileSync(new URL(`./${label}-residue.json`,import.meta.url),JSON.stringify(evidence,null,2)+'\n');
+console.log(JSON.stringify({label,failedType:target,result:{status:result.status,thrown:result.thrown,warning:result.body?.warning},entryStatuses:requests[0]?.response.body.entry?.map((e:any)=>e.response?.status),residue},null,2));

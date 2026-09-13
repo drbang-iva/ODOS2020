@@ -1,0 +1,608 @@
+{
+  "label": "current",
+  "failedType": "Person",
+  "featureEnabled": false,
+  "result": {
+    "thrown": "Patient registration transaction failed: 400."
+  },
+  "requests": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:19413/fhir/R4",
+        "headers": {
+          "Authorization": "[REDACTED]",
+          "Content-Type": "application/fhir+json"
+        },
+        "body": {
+          "resourceType": "Bundle",
+          "type": "transaction",
+          "entry": [
+            {
+              "fullUrl": "urn:uuid:133f8723-4687-42fd-b9cb-ff0b18df48e6",
+              "resource": {
+                "resourceType": "Patient",
+                "active": true,
+                "identifier": [
+                  {
+                    "use": "usual",
+                    "type": {
+                      "text": "ODOS medical record number"
+                    },
+                    "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+                    "value": "6912810"
+                  }
+                ],
+                "name": [
+                  {
+                    "use": "official",
+                    "given": [
+                      "Synthetic"
+                    ],
+                    "family": "Guarantor1c391eaf"
+                  }
+                ],
+                "birthDate": "2010-01-02",
+                "gender": "female",
+                "address": [
+                  {
+                    "use": "home",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "meta": {
+                  "project": "b07b76d7-56e6-4528-8500-5b3efb68abe2"
+                }
+              },
+              "request": {
+                "method": "POST",
+                "url": "Patient"
+              }
+            },
+            {
+              "fullUrl": "urn:uuid:9752d7d1-9c9a-4722-8c8b-a962e65fc65c",
+              "resource": {
+                "resourceType": "RelatedPerson",
+                "active": true,
+                "patient": {
+                  "reference": "urn:uuid:133f8723-4687-42fd-b9cb-ff0b18df48e6"
+                },
+                "relationship": [
+                  {
+                    "text": "Legal guardian"
+                  }
+                ],
+                "name": [
+                  {
+                    "use": "official",
+                    "given": [
+                      "Responsible"
+                    ],
+                    "family": "Synthetic"
+                  }
+                ],
+                "telecom": [
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "value": "864-555-0101"
+                  }
+                ],
+                "address": [
+                  {
+                    "use": "home",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "period": {
+                  "start": "2026-08-25"
+                },
+                "extension": [
+                  {
+                    "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+                    "valueBoolean": true
+                  },
+                  {
+                    "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+                    "valueBoolean": true
+                  }
+                ],
+                "meta": {
+                  "project": "b07b76d7-56e6-4528-8500-5b3efb68abe2"
+                }
+              },
+              "request": {
+                "method": "POST",
+                "url": "RelatedPerson"
+              }
+            },
+            {
+              "fullUrl": "urn:uuid:63d5025f-7359-41d7-85e4-2c710045493f",
+              "resource": {
+                "resourceType": "Person",
+                "name": 17,
+                "telecom": [
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "value": "864-555-0101"
+                  }
+                ],
+                "address": [
+                  {
+                    "use": "home",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "link": [
+                  {
+                    "target": {
+                      "reference": "urn:uuid:9752d7d1-9c9a-4722-8c8b-a962e65fc65c"
+                    },
+                    "assurance": "level2"
+                  }
+                ],
+                "meta": {
+                  "project": "b07b76d7-56e6-4528-8500-5b3efb68abe2"
+                }
+              },
+              "request": {
+                "method": "POST",
+                "url": "Person"
+              }
+            },
+            {
+              "resource": {
+                "resourceType": "Account",
+                "id": "5c59bb5c-7838-45ae-867d-ab571f72e04f",
+                "meta": {
+                  "project": "b07b76d7-56e6-4528-8500-5b3efb68abe2",
+                  "versionId": "e72a78b4-3612-48f1-b640-e65defc95ccd",
+                  "lastUpdated": "2026-09-13T09:57:11.036Z",
+                  "author": {
+                    "reference": "Practitioner/a7bffb2c-8b22-4585-87b7-e2f217c0fe5d",
+                    "display": "Medplum Admin"
+                  },
+                  "compartment": [
+                    {
+                      "reference": "Project/b07b76d7-56e6-4528-8500-5b3efb68abe2"
+                    }
+                  ]
+                },
+                "identifier": [
+                  {
+                    "use": "usual",
+                    "type": {
+                      "text": "ODOS medical record number"
+                    },
+                    "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+                    "value": "6912810"
+                  }
+                ],
+                "status": "active",
+                "type": {
+                  "text": "Patient account"
+                },
+                "name": "ODOS chart 6912810",
+                "subject": [
+                  {
+                    "reference": "urn:uuid:133f8723-4687-42fd-b9cb-ff0b18df48e6"
+                  }
+                ],
+                "guarantor": [
+                  {
+                    "party": {
+                      "reference": "urn:uuid:9752d7d1-9c9a-4722-8c8b-a962e65fc65c"
+                    },
+                    "onHold": false,
+                    "period": {
+                      "start": "2026-08-25"
+                    }
+                  }
+                ]
+              },
+              "request": {
+                "method": "PUT",
+                "url": "Account/5c59bb5c-7838-45ae-867d-ab571f72e04f",
+                "ifMatch": "W/\"e72a78b4-3612-48f1-b640-e65defc95ccd\""
+              }
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "resourceType": "Bundle",
+          "type": "transaction-response",
+          "entry": [
+            {
+              "response": {
+                "outcome": {
+                  "resourceType": "OperationOutcome",
+                  "id": "created",
+                  "issue": [
+                    {
+                      "severity": "information",
+                      "code": "informational",
+                      "details": {
+                        "text": "Created"
+                      }
+                    }
+                  ]
+                },
+                "status": "201",
+                "location": "Patient/32826c60-4de3-4d3b-8311-20c0ac2ac9e6"
+              },
+              "resource": {
+                "resourceType": "Patient",
+                "active": true,
+                "identifier": [
+                  {
+                    "use": "usual",
+                    "type": {
+                      "text": "ODOS medical record number"
+                    },
+                    "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+                    "value": "6912810"
+                  }
+                ],
+                "name": [
+                  {
+                    "use": "official",
+                    "given": [
+                      "Synthetic"
+                    ],
+                    "family": "Guarantor1c391eaf"
+                  }
+                ],
+                "birthDate": "2010-01-02",
+                "gender": "female",
+                "address": [
+                  {
+                    "use": "home",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "meta": {
+                  "versionId": "1f6a5043-7c11-42fd-ac44-7aac1014a29f",
+                  "lastUpdated": "2026-09-13T09:57:11.051Z"
+                },
+                "id": "32826c60-4de3-4d3b-8311-20c0ac2ac9e6"
+              }
+            },
+            {
+              "response": {
+                "outcome": {
+                  "resourceType": "OperationOutcome",
+                  "id": "created",
+                  "issue": [
+                    {
+                      "severity": "information",
+                      "code": "informational",
+                      "details": {
+                        "text": "Created"
+                      }
+                    }
+                  ]
+                },
+                "status": "201",
+                "location": "RelatedPerson/197869cd-fbc6-4dbc-8633-b9c039e7da3a"
+              },
+              "resource": {
+                "resourceType": "RelatedPerson",
+                "active": true,
+                "patient": {
+                  "reference": "Patient/32826c60-4de3-4d3b-8311-20c0ac2ac9e6"
+                },
+                "relationship": [
+                  {
+                    "text": "Legal guardian"
+                  }
+                ],
+                "name": [
+                  {
+                    "use": "official",
+                    "given": [
+                      "Responsible"
+                    ],
+                    "family": "Synthetic"
+                  }
+                ],
+                "telecom": [
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "value": "864-555-0101"
+                  }
+                ],
+                "address": [
+                  {
+                    "use": "home",
+                    "line": [
+                      "1 Synthetic Way"
+                    ],
+                    "city": "Greenville",
+                    "state": "SC",
+                    "postalCode": "29601"
+                  }
+                ],
+                "period": {
+                  "start": "2026-08-25"
+                },
+                "extension": [
+                  {
+                    "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+                    "valueBoolean": true
+                  },
+                  {
+                    "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+                    "valueBoolean": true
+                  }
+                ],
+                "meta": {
+                  "versionId": "8d510646-7b10-476d-a95b-ec6aea0bb207",
+                  "lastUpdated": "2026-09-13T09:57:11.064Z"
+                },
+                "id": "197869cd-fbc6-4dbc-8633-b9c039e7da3a"
+              }
+            },
+            {
+              "response": {
+                "outcome": {
+                  "resourceType": "OperationOutcome",
+                  "issue": [
+                    {
+                      "severity": "error",
+                      "code": "structure",
+                      "details": {
+                        "text": "Expected array of values for property"
+                      },
+                      "expression": [
+                        "Person.name"
+                      ]
+                    }
+                  ]
+                },
+                "status": "400"
+              }
+            },
+            {
+              "response": {
+                "outcome": {
+                  "resourceType": "OperationOutcome",
+                  "id": "ok",
+                  "issue": [
+                    {
+                      "severity": "information",
+                      "code": "informational",
+                      "details": {
+                        "text": "All OK"
+                      }
+                    }
+                  ]
+                },
+                "status": "200",
+                "location": "Account/5c59bb5c-7838-45ae-867d-ab571f72e04f"
+              },
+              "resource": {
+                "resourceType": "Account",
+                "id": "5c59bb5c-7838-45ae-867d-ab571f72e04f",
+                "meta": {
+                  "versionId": "851beb4e-f4fc-4b12-8f0f-7617fec42693",
+                  "lastUpdated": "2026-09-13T09:57:11.081Z"
+                },
+                "identifier": [
+                  {
+                    "use": "usual",
+                    "type": {
+                      "text": "ODOS medical record number"
+                    },
+                    "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+                    "value": "6912810"
+                  }
+                ],
+                "status": "active",
+                "type": {
+                  "text": "Patient account"
+                },
+                "name": "ODOS chart 6912810",
+                "subject": [
+                  {
+                    "reference": "Patient/32826c60-4de3-4d3b-8311-20c0ac2ac9e6"
+                  }
+                ],
+                "guarantor": [
+                  {
+                    "party": {
+                      "reference": "RelatedPerson/197869cd-fbc6-4dbc-8633-b9c039e7da3a"
+                    },
+                    "onHold": false,
+                    "period": {
+                      "start": "2026-08-25"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "persisted": {
+    "patients": [
+      {
+        "resourceType": "Patient",
+        "active": true,
+        "identifier": [
+          {
+            "use": "usual",
+            "type": {
+              "text": "ODOS medical record number"
+            },
+            "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+            "value": "6912810"
+          }
+        ],
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Guarantor1c391eaf"
+          }
+        ],
+        "birthDate": "2010-01-02",
+        "gender": "female",
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Greenville",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "meta": {
+          "versionId": "1f6a5043-7c11-42fd-ac44-7aac1014a29f",
+          "lastUpdated": "2026-09-13T09:57:11.051Z"
+        },
+        "id": "32826c60-4de3-4d3b-8311-20c0ac2ac9e6"
+      }
+    ],
+    "account": {
+      "resourceType": "Account",
+      "id": "5c59bb5c-7838-45ae-867d-ab571f72e04f",
+      "meta": {
+        "versionId": "851beb4e-f4fc-4b12-8f0f-7617fec42693",
+        "lastUpdated": "2026-09-13T09:57:11.081Z"
+      },
+      "identifier": [
+        {
+          "use": "usual",
+          "type": {
+            "text": "ODOS medical record number"
+          },
+          "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+          "value": "6912810"
+        }
+      ],
+      "status": "active",
+      "type": {
+        "text": "Patient account"
+      },
+      "name": "ODOS chart 6912810",
+      "subject": [
+        {
+          "reference": "Patient/32826c60-4de3-4d3b-8311-20c0ac2ac9e6"
+        }
+      ],
+      "guarantor": [
+        {
+          "party": {
+            "reference": "RelatedPerson/197869cd-fbc6-4dbc-8633-b9c039e7da3a"
+          },
+          "onHold": false,
+          "period": {
+            "start": "2026-08-25"
+          }
+        }
+      ]
+    },
+    "relatedPersons": [
+      {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/32826c60-4de3-4d3b-8311-20c0ac2ac9e6"
+        },
+        "relationship": [
+          {
+            "text": "Legal guardian"
+          }
+        ],
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Responsible"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "value": "864-555-0101"
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Greenville",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "period": {
+          "start": "2026-08-25"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          }
+        ],
+        "meta": {
+          "versionId": "8d510646-7b10-476d-a95b-ec6aea0bb207",
+          "lastUpdated": "2026-09-13T09:57:11.064Z"
+        },
+        "id": "197869cd-fbc6-4dbc-8633-b9c039e7da3a"
+      }
+    ],
+    "persons": []
+  },
+  "residue": {
+    "patientCount": 1,
+    "relatedPersonCount": 1,
+    "personCount": 0,
+    "accountStatus": "active",
+    "accountSubjectCount": 1,
+    "accountGuarantorCount": 1,
+    "mrnOnAccount": true,
+    "mrnOnPatient": true,
+    "pendingAllocationMarker": false
+  }
+}

@@ -1,0 +1,20 @@
+import { spawnSync } from 'node:child_process';
+import { readFileSync, openSync, closeSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const directory = dirname(fileURLToPath(import.meta.url));
+const root = resolve(directory, '../..');
+const config = JSON.parse(readFileSync(resolve(directory, 'compose.json'), 'utf8')).services.postgres.environment;
+const database = new URL('postgresql://127.0.0.1:19432/medplum');
+database.username = config.POSTGRES_USER;
+database.password = config.POSTGRES_PASSWORD;
+const output = openSync(resolve(directory, 'mcp-full-configured-postgres.log'), 'w');
+try {
+  const result = spawnSync('npm', ['--prefix', 'mcp', 'test'], {
+    cwd: root,
+    env: { ...process.env, ODOS_POSTGRES_URL: database.toString() },
+    stdio: ['ignore', output, output],
+  });
+  console.log(JSON.stringify({ command: 'npm --prefix mcp test', postgres: 'task-owned PostgreSQL at 127.0.0.1:19432', credentialedFhirTests: 'not configured', exit: result.status }));
+  process.exitCode = result.status ?? 1;
+} finally { closeSync(output); }

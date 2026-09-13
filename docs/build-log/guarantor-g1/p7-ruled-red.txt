@@ -1,0 +1,91 @@
+{
+  "statuses": {
+    "personRead": 200,
+    "personUpdate": 403,
+    "relatedUpdate": 200,
+    "personCreate": 403,
+    "personDelete": 403
+  },
+  "personMeta": {
+    "project": "b07b76d7-56e6-4528-8500-5b3efb68abe2",
+    "versionId": "3480f02b-0016-43b1-8828-2dc5de58d142",
+    "lastUpdated": "2026-09-13T10:44:05.496Z",
+    "author": {
+      "reference": "Practitioner/a7bffb2c-8b22-4585-87b7-e2f217c0fe5d",
+      "display": "Medplum Admin"
+    },
+    "compartment": [
+      {
+        "reference": "Project/b07b76d7-56e6-4528-8500-5b3efb68abe2"
+      }
+    ]
+  },
+  "relatedMeta": {
+    "versionId": "e2c21356-e045-4c87-8f16-e4d7d372634d",
+    "lastUpdated": "2026-09-13T10:44:05.578Z",
+    "author": {
+      "reference": "ClientApplication/969d07ba-0a57-4d2a-8e87-d0de48373db8",
+      "display": "clinical-write-staff-c11f964c-5c79-4902-a309-12ebd59430e2"
+    },
+    "project": "b07b76d7-56e6-4528-8500-5b3efb68abe2",
+    "compartment": [
+      {
+        "reference": "Project/b07b76d7-56e6-4528-8500-5b3efb68abe2"
+      },
+      {
+        "reference": "Patient/6658c97f-14e5-48b6-aa2c-0799315b2a6f"
+      }
+    ]
+  },
+  "personRules": [
+    {
+      "resourceType": "Person",
+      "interaction": [
+        "read",
+        "search",
+        "history",
+        "vread"
+      ]
+    }
+  ]
+}
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
+  {
++   personCreate: 403,
+-   personCreate: 201,
+    personDelete: 403,
+    personRead: 200,
++   personUpdate: 403,
+-   personUpdate: 200,
+    relatedUpdate: 200
+  }
+
+    at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/.odos/guarantor-g1/policy-probe.ts:56:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: {
+    personRead: 200,
+    personUpdate: 403,
+    relatedUpdate: 200,
+    personCreate: 403,
+    personDelete: 403
+  },
+  expected: {
+    personRead: 200,
+    personUpdate: 200,
+    relatedUpdate: 200,
+    personCreate: 201,
+    personDelete: 403
+  },
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.22.3

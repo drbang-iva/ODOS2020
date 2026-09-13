@@ -1,0 +1,44 @@
+TAP version 13
+# Subtest: P1: one non-self party creates exactly one Person linked to its RelatedPerson
+not ok 1 - P1: one non-self party creates exactly one Person linked to its RelatedPerson
+  ---
+  duration_ms: 4.07675
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:1:2380'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + undefined
+    - [
+    -   {
+    -     assurance: 'level2',
+    -     target: {
+    -       reference: 'urn:uuid:07f8d9e5-c3fc-4609-a19f-3fabebab9243'
+    -     }
+    -   }
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      target:
+        reference: 'urn:uuid:07f8d9e5-c3fc-4609-a19f-3fabebab9243'
+      assurance: 'level2'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g1/mcp/tests/guarantorPerson.test.ts:59:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 192.356708
