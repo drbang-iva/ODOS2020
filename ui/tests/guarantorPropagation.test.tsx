@@ -318,6 +318,8 @@ test("Q9c repair superseded generation uses newest values", async () =>
     s.compete("Person/p", newest);
     s.writes = [];
     const repaired = await repairGuarantor(r.snapshot!);
+    assert.equal(repaired.status, "superseded");
+    assert.ok(repaired.children.every(child => child.classification === "verified"));
     assert.match(repaired.message, /superseded/i);
     for (const id of ["a", "b"])
       assert.deepEqual(demographics(await fresh(id)), newest);

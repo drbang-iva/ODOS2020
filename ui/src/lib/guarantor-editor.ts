@@ -183,7 +183,7 @@ export async function repairGuarantor(previous: GuarantorSnapshot): Promise<Guar
     } catch { writes.set(item.resource.id!, "no-response"); }
   }
   const verification = await verifyGuarantor(current);
-  return { ...verification, status: !writes.size && verification.status === "saved" ? "unchanged" : verification.status,
+  return { ...verification, status: superseded ? "superseded" : !writes.size && verification.status === "saved" ? "unchanged" : verification.status,
     message: superseded ? `The earlier generation was superseded. Reconciled against current generation ${version(current.person)}. ${verification.message}` : verification.message,
     children: verification.children.map(c => ({ ...c, writeStatus: writes.get(c.relatedPersonId) })) };
 }

@@ -21,9 +21,9 @@ export function ResponsiblePartiesControl({ patientId }: { patientId: string }) 
     });
     return () => { active = false; };
   }, [patientId]);
-  return <fieldset className="grid gap-4 rounded-lg border border-white/10 bg-black/10 p-4 lg:col-span-2">
-    <legend className="px-2 text-sm font-semibold text-blue-200">Responsible parties</legend>
-    <p className="text-sm text-white/60">Save guarantor contact details separately. Changes apply to all linked patients.</p>
+  return <fieldset className="grid gap-4 rounded-lg border border-[var(--odos-line)] bg-[var(--odos-context-surface)] text-[color:var(--odos-text)] p-4 lg:col-span-2">
+    <legend className="px-2 text-sm font-semibold text-[color:var(--odos-text)]">Responsible parties</legend>
+    <p className="text-sm text-[color:var(--odos-muted)]">Save guarantor contact details separately. Changes apply to all linked patients.</p>
     {error ? <p role="status">{error}</p> : !parties ? <p role="status">Loading responsible parties…</p> : parties.length === 0 ? <p>No responsible parties recorded.</p> : parties.map((party, index) => <PartyEditor key={`${patientId}-${party.relatedPerson?.id ?? index}`} initial={party} />)}
   </fieldset>;
 }
@@ -64,7 +64,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
     } catch { setNotice("Could not reload this responsible party. Try again."); }
     finally { setBusy(false); }
   };
-  if (!editable) return <section className="grid gap-2 rounded border border-white/10 p-3">
+  if (!editable) return <section className="grid gap-2 rounded border border-[var(--odos-line)] p-3">
     <h3 className="font-semibold">{displayName(loaded.relatedPerson ?? {})}</h3>
     <p>{loaded.relatedPerson.telecom?.map(contact => `${contact.system ?? "Contact"}: ${contact.value ?? "Not recorded"}`).join(" · ") || "No contact details recorded."}</p>
     <p>{loaded.relatedPerson.address?.map(address => address.text || [...address.line ?? [], address.city, address.state, address.postalCode, address.country].filter(Boolean).join(", ")).join(" · ") || "No address recorded."}</p>
@@ -77,7 +77,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
   const telecom = draft.telecom?.length ? draft.telecom : [{ system: "phone" as const }];
   const addresses = draft.address?.length ? draft.address : [{}];
   const mismatched = result?.children.filter(child => child.classification === "mismatched") ?? [];
-  return <section className="grid gap-3 rounded border border-white/10 p-3" aria-label={displayName(loaded.snapshot.person)}>
+  return <section className="grid gap-3 rounded border border-[var(--odos-line)] p-3" aria-label={displayName(loaded.snapshot.person)}>
     <h3 className="font-semibold">{displayName(loaded.snapshot.person)}</h3>
     <fieldset disabled={busy} className="grid gap-3 sm:grid-cols-2">
       {names.map((name, index) => <div className="grid gap-2" key={`name-${index}`}>
@@ -92,11 +92,11 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
       </div>)}
     </fieldset>
     {notice && <p role="status">{notice}</p>}
-    {result?.generation && <p className="text-xs text-white/60">Checked against guarantor generation {result.generation}.</p>}
+    {result?.generation && <p className="text-xs text-[color:var(--odos-muted)]">Checked against guarantor generation {result.generation}.</p>}
     {result && <ul>{result.children.map(child => <li key={child.relatedPersonId}>{child.patientName} — {child.classification}{child.writeStatus === "conflict" ? ": record changed while you were editing" : ""}</li>)}</ul>}
-    {mismatched.length > 0 && dirty && <p className="text-sm text-white/60">Save your changes or reload the guarantor before repairing linked records.</p>}
+    {mismatched.length > 0 && dirty && <p className="text-sm text-[color:var(--odos-muted)]">Save your changes or reload the guarantor before repairing linked records.</p>}
     <div className="flex flex-wrap gap-2">
-      <button type="button" className="rounded bg-blue-500 px-3 py-2 disabled:opacity-50" disabled={busy || !dirty} onClick={() => void save()}>{busy ? "Working…" : "Save guarantor"}</button>
+      <button type="button" className="rounded bg-[color:var(--odos-accent)] text-[color:var(--odos-accent-ink)] px-3 py-2 disabled:opacity-50" disabled={busy || !dirty} onClick={() => void save()}>{busy ? "Working…" : "Save guarantor"}</button>
       {mismatched.length > 0 && <button type="button" disabled={busy || dirty} onClick={() => void save(true)}>Repair for {mismatched.map(child => child.patientName).join(", ")}</button>}
       <button type="button" disabled={busy} onClick={() => void reload()}>Reload guarantor</button>
     </div>
@@ -104,5 +104,5 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
 }
 
 function Field({ label, value, change }: { label: string; value: string; change: (value: string) => void }) {
-  return <label className="grid gap-1 text-sm text-white/75">{label}<input className="scheduler-input" value={value} onChange={event => change(event.target.value)} /></label>;
+  return <label className="grid gap-1 text-sm text-[color:var(--odos-muted)]">{label}<input className="scheduler-input" value={value} onChange={event => change(event.target.value)} /></label>;
 }
