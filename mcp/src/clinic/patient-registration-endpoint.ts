@@ -7,6 +7,7 @@ import type {
   Bundle,
   BundleEntry,
   Patient,
+  Person,
   Project,
   Reference,
   RelatedPerson,
@@ -272,6 +273,15 @@ function buildPatientIdentityTransaction(
       resource: registrationResourceInProject(buildRelatedPerson(party, patientFullUrl, today), projectId),
       request: { method: "POST", url: "RelatedPerson" },
     });
+    entries.push({
+      fullUrl: `urn:uuid:${randomUUID()}`,
+      resource: registrationResourceInProject<Person>({
+        resourceType: "Person",
+        ...buildResponsiblePartyDemographics(party),
+        link: [{ target: { reference: fullUrl }, assurance: "level2" }],
+      }, projectId),
+      request: { method: "POST", url: "Person" },
+    });
   }
   const account = registrationResourceInProject<Account>({
     resourceType: "Account",
@@ -310,17 +320,23 @@ function buildRelatedPerson(party: ResponsiblePartyInput, patientReference: stri
     active: responsiblePartyActiveOn(party, today),
     patient: { reference: patientReference },
     relationship: [{ text: party.relationship === "legal-guardian" ? "Legal guardian" : capitalize(party.relationship) }],
-    name: [{ use: "official", given: [party.firstName.trim(), party.middleName.trim()].filter(Boolean), family: party.lastName.trim() }],
-    telecom: party.phone.trim() ? [{ system: "phone", use: "home", value: party.phone.trim() }] : undefined,
-    address: [party.address, party.city, party.state, party.postalCode].some((value) => value.trim())
-      ? [{ use: "home", line: party.address.trim() ? [party.address.trim()] : undefined, city: party.city.trim() || undefined, state: party.state.trim() || undefined, postalCode: party.postalCode.trim() || undefined }]
-      : undefined,
+    ...buildResponsiblePartyDemographics(party),
     period: responsiblePartyPeriod(party),
     extension: [
       { url: CONSENT_AUTHORITY_EXTENSION_URL, valueBoolean: party.consentAuthority },
       { url: RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL, valueBoolean: party.primary },
       ...(party.courtOrderNotes.trim() ? [{ url: COURT_ORDER_NOTES_EXTENSION_URL, valueString: party.courtOrderNotes.trim() }] : []),
     ],
+  };
+}
+
+function buildResponsiblePartyDemographics(party: ResponsiblePartyInput): Pick<RelatedPerson, "name" | "telecom" | "address"> {
+  return {
+    name: [{ use: "official", given: [party.firstName.trim(), party.middleName.trim()].filter(Boolean), family: party.lastName.trim() }],
+    telecom: party.phone.trim() ? [{ system: "phone", use: "home", value: party.phone.trim() }] : undefined,
+    address: [party.address, party.city, party.state, party.postalCode].some((value) => value.trim())
+      ? [{ use: "home", line: party.address.trim() ? [party.address.trim()] : undefined, city: party.city.trim() || undefined, state: party.state.trim() || undefined, postalCode: party.postalCode.trim() || undefined }]
+      : undefined,
   };
 }
 
