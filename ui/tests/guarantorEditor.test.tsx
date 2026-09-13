@@ -164,3 +164,37 @@ test("structured address edits clear stale display text only on the edited addre
   });
   }
 });
+
+
+test("clearing then replacing the first phone keeps the second phone in its original slot", async () => {
+  await withEditor(1, async (renderer) => {
+    const firstPhone = () => renderer.root.findAllByType("label").find(label => label.children[0] === "Phone 1 (home)")!.findByType("input");
+    await act(async () => { firstPhone().props.onChange({ target: { value: "" } }); });
+    await act(async () => { firstPhone().props.onChange({ target: { value: "864-555-0199" } }); });
+    const save = renderer.root.findAllByType("button").find(button => button.children.join("") === "Save guarantor")!;
+    await act(async () => { await save.props.onClick(); });
+    for (const reference of ["Person/guarantor-a", "RelatedPerson/party-a"]) {
+      const resource = await (await fetch(`/fhir/R4/${reference}`)).json();
+      assert.deepEqual(resource.telecom, [{ system: "phone", use: "home", value: "864-555-0199", rank: 1 }, { system: "phone", use: "home", value: "864-555-0102", rank: 2 }, { system: "email" }]);
+    }
+  }, data => {
+    const person = data.records.get("Person/guarantor-a") as Person;
+    person.telecom = [{ system: "phone", use: "home", value: "864-555-0101", rank: 1 }, { system: "phone", use: "home", value: "864-555-0102", rank: 2 }, { system: "email" }];
+  });
+});
+
+test("saving an intentionally blank phone removes only that contact and retains untouched valueless entries", async () => {
+  await withEditor(1, async (renderer) => {
+    const first = renderer.root.findAllByType("label").find(label => label.children[0] === "Phone 1 (home)")!.findByType("input");
+    await act(async () => { first.props.onChange({ target: { value: "   " } }); });
+    const save = renderer.root.findAllByType("button").find(button => button.children.join("") === "Save guarantor")!;
+    await act(async () => { await save.props.onClick(); });
+    for (const reference of ["Person/guarantor-a", "RelatedPerson/party-a"]) {
+      const resource = await (await fetch(`/fhir/R4/${reference}`)).json();
+      assert.deepEqual(resource.telecom, [{ system: "phone", use: "home", value: "864-555-0102", rank: 2 }, { system: "email" }]);
+    }
+  }, data => {
+    const person = data.records.get("Person/guarantor-a") as Person;
+    person.telecom = [{ system: "phone", use: "home", value: "864-555-0101", rank: 1 }, { system: "phone", use: "home", value: "864-555-0102", rank: 2 }, { system: "email" }];
+  });
+});

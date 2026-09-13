@@ -32,6 +32,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
   const [loaded, setLoaded] = useState(initial);
   const [draft, setDraft] = useState<Demographics>(() => initial.kind === "editable" ? demographics(initial.snapshot.person) : {});
   const [result, setResult] = useState(initial.kind === "editable" ? initial.verification : undefined);
+  const [editedContacts, setEditedContacts] = useState<Set<number>>(() => new Set());
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string>();
   const editable = loaded.kind === "editable";
@@ -41,12 +42,15 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
     setBusy(true);
     setNotice(undefined);
     try {
-      const next = repair ? await repairGuarantor(loaded.snapshot) : await saveGuarantor(loaded.snapshot, draft);
+      const next = repair ? await repairGuarantor(loaded.snapshot) : await saveGuarantor(loaded.snapshot, { ...draft, telecom: draft.telecom?.filter((contact, index) => !editedContacts.has(index) || Boolean(contact.value?.trim())) });
       setResult(next);
       setNotice(next.message);
       if (next.snapshot) {
         setLoaded({ ...loaded, snapshot: next.snapshot });
-        if (repair || next.status === "saved" || next.status === "unchanged" || next.status === "partial") setDraft(demographics(next.snapshot.person));
+        if (repair || next.status === "saved" || next.status === "unchanged" || next.status === "partial") {
+          setDraft(demographics(next.snapshot.person));
+          setEditedContacts(new Set());
+        }
       }
     } catch (cause) {
       setNotice(cause instanceof Error ? cause.message : "The result could not be determined. Reload before continuing.");
@@ -58,6 +62,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
     try {
       const next = await loadGuarantor(loaded.relatedPerson.id);
       setLoaded(next);
+      setEditedContacts(new Set());
       setDraft(next.kind === "editable" ? demographics(next.snapshot.person) : {});
       setResult(next.kind === "editable" ? next.verification : undefined);
       setNotice(undefined);
@@ -85,7 +90,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
         <Field label={`Family name ${index + 1}`} value={name.family ?? ""} change={value => setDraft({ ...draft, name: names.map((entry, i) => i === index ? { ...entry, family: value || undefined } : entry) })} />
         {name.text !== undefined && <Field label={`Display name ${index + 1}`} value={name.text} change={value => setDraft({ ...draft, name: names.map((entry, i) => i === index ? { ...entry, text: value || undefined } : entry) })} />}
       </div>)}
-      {telecom.map((contact, index) => <Field key={`contact-${index}`} label={`${contact.system === "phone" ? "Phone" : contact.system ?? "Contact"} ${index + 1}${contact.use ? ` (${contact.use})` : ""}`} value={contact.value ?? ""} change={value => setDraft({ ...draft, telecom: value.trim() ? telecom.map((entry, i) => i === index ? { ...entry, value } : entry) : telecom.filter((_, i) => i !== index) })} />)}
+      {telecom.map((contact, index) => <Field key={`contact-${index}`} label={`${contact.system === "phone" ? "Phone" : contact.system ?? "Contact"} ${index + 1}${contact.use ? ` (${contact.use})` : ""}`} value={contact.value ?? ""} change={value => { setEditedContacts(previous => new Set([...previous, index])); setDraft({ ...draft, telecom: telecom.map((entry, i) => i === index ? { ...entry, value } : entry) }); }} />)}
       {addresses.map((address, index) => <div key={`address-${index}`} className="grid gap-2">
         {(address.line?.length ? address.line : [""]).map((line, lineIndex) => <Field key={lineIndex} label={`Address ${index + 1} line ${lineIndex + 1}`} value={line} change={value => setDraft({ ...draft, address: addresses.map((entry, i) => i === index ? { ...entry, text: undefined, line: (entry.line?.length ? entry.line : [""]).map((old, j) => j === lineIndex ? value : old) } : entry) })} />)}
         {(["city", "state", "postalCode", "country"] as const).map(key => <Field key={key} label={`${key === "postalCode" ? "Postal code" : key[0].toUpperCase() + key.slice(1)} ${index + 1}`} value={address[key] ?? ""} change={value => setDraft({ ...draft, address: addresses.map((entry, i) => i === index ? { ...entry, text: undefined, [key]: value || undefined } : entry) })} />)}
