@@ -8,6 +8,51 @@ Implementation checkpoints: `d066bd94` (editor caller), `8985a7656d23979cd8f5764
 against the registration checkpoint; all guard cycles and browser captures were refreshed after the
 theme correction. These are author checks, not an independent verdict.
 
+## Evaluation fixture fixback — F1 and F2
+
+This fixback adds two fixture-backed tests and changes no production code. Both `ui/src/` and
+`mcp/src/` remain byte-identical to `b937072b`. Optional F3 hardening is not included.
+
+F1 uses DUP-VALUE, with equal values and different rank/period metadata. It selects each slot in
+turn and inspects the serialized Patient: the complete resource has exactly one marked entry at
+the chosen original sourceIndex, with metadata and the other entry preserved. F2 uses FALSE-MARKED:
+a false ContactPoint marker yields no loaded answer and no slot-order priority. Three variants
+exercise SMS before mobile, mobile before array order, and array-order fallback with the false
+marker visible in a slot. The phone-form suite is now 17 tests (15 existing + 2).
+
+The real phone-form and registration suites ran together for each mutation using
+`node --import tsx --test tests/patientPhoneForm.test.tsx tests/patientRegistration.test.tsx`
+from `ui/`. Each phase ran 37 tests, with zero cancelled or skipped tests.
+
+| Mutation | Green pass/fail | Red pass/fail | Restored pass/fail | Exits |
+|---|---:|---:|---:|---|
+| F1: marker attaches by value rather than reference | 37/0 | 36/1 | 37/0 | 0/1/0 |
+| F2: reader tests marker URL presence rather than true | 37/0 | 36/1 | 37/0 | 0/1/0 |
+
+F1's red reports marked indices `[0, 1]` instead of `[0]`; F2's red reports loaded answer `phone1`
+instead of the empty answer. Both are assertion failures in the new tests, not setup errors.
+[Actual runner output](item1bii-phone-form/fixture-fixback-guard-output.txt) and
+[mutation text, commands, and restored source hashes](item1bii-phone-form/fixture-fixback-guard-results.json)
+are retained. Replay with
+`PHONE_GUARDS=F1,F2 python3 docs/build-log/item1bii-phone-form/mutations.py`.
+
+| Inventory suite | Pass | Fail | Skipped | Exit |
+|---|---:|---:|---:|---:|
+| commsSuppression | 49 | 0 | 0 | 0 |
+| commsApi | 99 | 0 | 0 | 0 |
+| commsConfig | 32 | 0 | 0 | 0 |
+| patientRegistrationAuthz | 29 | 0 | 0 | 0 |
+| patientRegistration | 20 | 0 | 0 | 0 |
+| demographicsConcurrency | 3 | 0 | 0 | 0 |
+| patientRegistrationEndpoint | 4 | 0 | 0 | 0 |
+| registrationCommunicationPreferences | 8 | 0 | 0 | 0 |
+| patientPhoneForm | 17 | 0 | 0 | 0 |
+
+[Inventory commands/counts](item1bii-phone-form/fixture-fixback-inventory-results.json) and
+[complete output](item1bii-phone-form/fixture-fixback-inventory-output.txt) are retained.
+Evidence in the following sections belongs to the preceding checkpoints unless stated otherwise.
+The fixback requires a new evaluation at its new head; these are author checks, not a verdict.
+
 ## Revision 2.5 fixback
 
 The snapshot now holds deep-frozen clones of complete ContactPoints, preserving absent fields and

@@ -325,3 +325,28 @@ test("R2: choosing a blank or invalid slot blocks the real form on that slot", a
     });
   }
 });
+
+
+test("F1: duplicate values mark only the chosen original entry", async () => {
+  for (const chosen of [0, 1]) {
+    const patient = telecomFixture("DUP-VALUE");
+    assert.equal(patient.telecom![0].value, patient.telecom![1].value);
+    const { saved } = await savePatient(patient, draft => {
+      assert.equal(draft.phones[chosen].sourceIndex, chosen);
+      draft.textable = chosen === 0 ? "phone1" : "phone2";
+    });
+    assert.deepEqual(saved.telecom!.flatMap((point, index) => marked(point) ? [index] : []), [chosen]);
+    assert.deepEqual(saved.telecom!.map(point => ({ rank: point.rank, period: point.period })), patient.telecom!.map(point => ({ rank: point.rank, period: point.period })));
+    assert.deepEqual(saved.telecom![1 - chosen], patient.telecom![1 - chosen]);
+  }
+});
+
+test("F2: a false marker gives neither a loaded answer nor slot priority", () => {
+  for (const [count, indices] of [[4, [3, 2]], [3, [2, 0]], [2, [0, 1]]] as const) {
+    const patient = telecomFixture("FALSE-MARKED");
+    patient.telecom = patient.telecom!.slice(0, count);
+    const draft = patientDemographicsFromPatient(patient, TELECOM_NOW);
+    assert.equal(draft.textable, "");
+    assert.deepEqual(draft.phones.map(phone => phone.sourceIndex), indices);
+  }
+});

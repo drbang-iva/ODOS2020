@@ -14,6 +14,8 @@ FORM = "ui/src/components/patient/PatientDemographicsEditor.tsx"
 SHARED = "mcp/src/clinic/patient-telecom.ts"
 SERVER = "mcp/src/clinic/patient-registration-endpoint.ts"
 cases = [
+    ("F1", SHARED, "if (point === answer)", 'if (typeof answer !== "string" && point.value === answer.value)', "Attach the marker by value instead of chosen entry identity"),
+    ("F2", UI, "entry => entry.url === ODOS_TEXTABLE_NUMBER_EXTENSION_URL && entry.valueBoolean === true,", "entry => entry.url === ODOS_TEXTABLE_NUMBER_EXTENSION_URL,", "Treat a false marker as true by URL presence"),
     ("K1", UI, '.sort((a, b) => priority(a.point) - priority(b.point) || a.sourceIndex - b.sourceIndex)', '.sort((a, b) => a.sourceIndex - b.sourceIndex)', "Order slots by array position"),
     ("K2", UI, 'const changed = slot.value !== original.value || useChanged;', 'const changed = true;', "Trim untouched slot values"),
     ("K2-absence", UI, 'entries: freezeTelecomValue(structuredClone(patient.telecom ?? [])),', 'entries: freezeTelecomValue(structuredClone((patient.telecom ?? []).map(point => ({ ...point, value: point.value ?? "" })))), ', "Substitute an empty string for an absent snapshot value"),
@@ -60,7 +62,10 @@ for label, filename, original, replacement, fault in cases:
     if guard == "K12":
         tests.append("tests/patientRegistration.test.tsx")
         pattern += "|^H14:"
-    command = ["node", "--import", "tsx", "--test", f"--test-name-pattern={pattern}", *tests]
+    if guard in ["F1", "F2"]:
+        tests.append("tests/patientRegistration.test.tsx")
+        pattern = None
+    command = ["node", "--import", "tsx", "--test", *([f"--test-name-pattern={pattern}"] if pattern else []), *tests]
     green, _ = run(label, "green", command, ROOT / package)
     assert green["exit"] == 0 and green.get("fail") == 0 and green.get("tests", 0) > 0, (label, green)
     mutated = source.replace(original, replacement)

@@ -30,7 +30,9 @@ export function telecomFixture(name: string): Patient {
     case "EXPIRED": patient.telecom = [phonePoint(NUMBERS.H, "home", { period: { end: "2026-01-01" } }), email, phonePoint(NUMBERS.M, "mobile")]; break;
     case "LEGACY-SMS": patient.telecom = [phonePoint(NUMBERS.S, undefined, { system: "sms" }), email, phonePoint(NUMBERS.H, "home")]; break;
     case "TEMP": patient.telecom = [phonePoint(NUMBERS.T, "temp"), email, phonePoint(NUMBERS.N)]; break;
+    case "DUP-VALUE":
     case "DUP-SWAP": patient.telecom = [phonePoint(NUMBERS.M, "mobile", { rank: 1 }), phonePoint(NUMBERS.M, "mobile", { rank: 2, period: { start: "2026-02-01" }, extension: [{ ...CONTACT_NOTE, valueString: "Second duplicate" }] })]; patient.telecom.forEach(point => { delete point.id; }); break;
+    case "FALSE-MARKED": patient.telecom = [imported[2], { ...imported[0], extension: [CONTACT_NOTE, { ...TEXTABLE_MARKER, valueBoolean: false }] }, imported[3], phonePoint(NUMBERS.S, undefined, { system: "sms" })]; break;
     case "NONE": delete patient.telecom; break;
     case "EMPTY": patient.telecom = []; break;
     case "WHITESPACE": imported[3].value = ` ${NUMBERS.M} `; break;
@@ -40,4 +42,4 @@ export function telecomFixture(name: string): Patient {
   return structuredClone(patient);
 }
 
-export const TELECOM_FIXTURES = ["DUP-SWAP", "IMPORTED3", "MARKED-W", "REFUSED+MARKED", "TWO-MARKED", "OLD-MARKED", "EXPIRED", "LEGACY-SMS", "TEMP", "NONE", "EMPTY", "WHITESPACE", "ABSENT"];
+export const TELECOM_FIXTURES = ["DUP-VALUE", "FALSE-MARKED", "DUP-SWAP", "IMPORTED3", "MARKED-W", "REFUSED+MARKED", "TWO-MARKED", "OLD-MARKED", "EXPIRED", "LEGACY-SMS", "TEMP", "NONE", "EMPTY", "WHITESPACE", "ABSENT"];
