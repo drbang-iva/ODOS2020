@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: Q9b repair only failed child fresh ETag and second pass zero writes
+not ok 1 - Q9b repair only failed child fresh ETag and second pass zero writes
+  ---
+  duration_ms: 20.851333
+  type: 'test'
+  location: '/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:1:7382'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+    +   'PUT RelatedPerson/a',
+        'PUT RelatedPerson/b'
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'PUT RelatedPerson/b'
+  actual:
+    0: 'PUT RelatedPerson/a'
+    1: 'PUT RelatedPerson/b'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:306:12)
+    async fixture (/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:141:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 192.921542

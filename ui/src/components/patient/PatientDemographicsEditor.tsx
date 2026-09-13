@@ -12,6 +12,7 @@ import {
 import { fhir } from "../../lib/fhir";
 import type { PatientVersion } from "../../lib/communications-client";
 import { CommunicationPreferencesControl } from "./CommunicationPreferencesControl";
+import { ResponsiblePartiesControl } from "./ResponsiblePartiesControl";
 import { SmsOptOutControl } from "./SmsOptOutControl";
 import { SmsOptOutErrorBoundary } from "./SmsOptOutErrorBoundary";
 
@@ -42,11 +43,13 @@ export function PatientDemographicsFields({
   errors,
   onChange,
   communicationPreferences,
+  responsibleParties,
 }: {
   draft: PatientDemographicsDraft;
   errors: Record<string, string>;
   onChange: (draft: PatientDemographicsDraft) => void;
   communicationPreferences?: ReactNode;
+  responsibleParties?: ReactNode;
 }) {
   const set = (key: string, value: unknown) => onChange({ ...draft, [key]: String(value) });
   const setPhone = (index: number, change: Partial<PatientDraftPhone>) => onChange({
@@ -86,6 +89,7 @@ export function PatientDemographicsFields({
         <CatalogFieldKit fields={CONTACT_FIELDS} values={{ ...draft }} errors={errors} onChange={set} />
         <LabeledInput label="Email" type="email" value={draft.email} error={errors.email} onChange={(value) => set("email", value)} />
       </fieldset>
+      {responsibleParties}
       {communicationPreferences && <fieldset className="grid gap-4 rounded-lg border border-[var(--odos-line)] bg-[var(--odos-context-surface)] p-4 lg:col-span-2">
         <legend className="px-2 text-sm font-semibold text-blue-200">Communication preferences</legend>
         {communicationPreferences}
@@ -196,6 +200,7 @@ export function PatientDemographicsEditor({
           draft={draft}
           errors={errors}
           onChange={setDraft}
+          responsibleParties={patient.id ? <ResponsiblePartiesControl patientId={patient.id} /> : undefined}
           communicationPreferences={patient.id ? (
             <>
               <SmsOptOutErrorBoundary>

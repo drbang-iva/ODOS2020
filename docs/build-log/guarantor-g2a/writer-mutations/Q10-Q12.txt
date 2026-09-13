@@ -1,0 +1,42 @@
+TAP version 13
+# Subtest: Q10 Q12 missing or many matches refuse direct save
+not ok 1 - Q10 Q12 missing or many matches refuse direct save
+  ---
+  duration_ms: 20.115667
+  type: 'test'
+  location: '/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:1:8773'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'saved'
+    - 'not-saved'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'not-saved'
+  actual: 'saved'
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:344:14)
+    async fixture (/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:141:5)
+    async TestContext.<anonymous> (/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:330:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: Q10 directly supplied unlinked snapshot refuses create or update
+ok 2 - Q10 directly supplied unlinked snapshot refuses create or update
+  ---
+  duration_ms: 0.560417
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 192.983666

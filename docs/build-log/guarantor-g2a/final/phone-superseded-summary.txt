@@ -1,0 +1,3 @@
+Source: 796caab50fde12d1247933c43f82234aeb27e981
+UI build exit 0. Focused editor + propagation + demographics: 25 tests, 25 pass, 0 fail/skip.
+Full UI run deliberately terminated after a further CodeRabbit fixback was required; superseded, no full-suite pass claim.

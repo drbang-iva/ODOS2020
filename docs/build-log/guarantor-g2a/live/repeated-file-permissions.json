@@ -1,0 +1,14 @@
+{
+  "protectedDirectoryMode": "0o700",
+  "initialFileModes": "0o644",
+  "resultFileModes": {
+    "runtime.json": "0o600",
+    "session.json": "0o600",
+    "staff-session.json": "0o600"
+  },
+  "commands": [
+    "tsx .odos/guarantor-g2a/setup.ts",
+    "tsx .odos/guarantor-g2a/fixtures.ts"
+  ],
+  "passed": true
+}

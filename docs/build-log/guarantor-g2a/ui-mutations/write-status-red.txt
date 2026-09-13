@@ -1,0 +1,30 @@
+TAP version 13
+# Subtest: per-patient results distinguish rejected child writes from lost update responses
+not ok 1 - per-patient results distinguish rejected child writes from lost update responses
+  ---
+  duration_ms: 26.953541
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorEditor.test.tsx:1:11034'
+  failureType: 'testCodeFailure'
+  error: "Sam's result must say update failed"
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    original (<worktree>/ui/tests/guarantorEditor.test.tsx:211:14)
+    async withEditor (<worktree>/ui/tests/guarantorEditor.test.tsx:62:5)
+    async TestContext.<anonymous> (<worktree>/ui/tests/guarantorEditor.test.tsx:205:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 227.330584

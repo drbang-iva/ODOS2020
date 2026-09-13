@@ -1,0 +1,146 @@
+[
+  {
+    "guard": "Q9c-status",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q9c repair superseded generation uses newest values",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q2",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q2 fresh SMS resolver independently observes propagated phone",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q6a",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q6a independently stale child preflight zero writes",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q10",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q10 directly supplied unlinked snapshot refuses create or update",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q1-Q2",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q3",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q4",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q5a-Q6a",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q5a Q6a preflight mismatch zero writes reload",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q5b",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q5b parent stale after preflight prevents children",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q6b",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q6b Q8 late child conflict preserves competitor and labels correct patient",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q7",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q8-label",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q6b Q8 late child conflict preserves competitor and labels correct patient",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q8-unknown",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q8 failed re-read and unresolved lost response are unknown",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q9a",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q9a converged repeat zero writes and unchanged versions",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q9b",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q9b repair only failed child fresh ETag and second pass zero writes",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q9c",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q9c repair superseded generation uses newest values",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q10-Q12",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q10 Q12 missing or many matches refuse direct save",
+      "# fail 1"
+    ]
+  },
+  {
+    "guard": "Q13",
+    "exit": 1,
+    "failed": [
+      "not ok 1 - Q13 trailing parent catches torn verification",
+      "# fail 1"
+    ]
+  }
+]

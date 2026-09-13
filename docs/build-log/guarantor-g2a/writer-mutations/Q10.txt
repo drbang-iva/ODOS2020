@@ -1,0 +1,31 @@
+TAP version 13
+# Subtest: Q10 directly supplied unlinked snapshot refuses create or update
+not ok 1 - Q10 directly supplied unlinked snapshot refuses create or update
+  ---
+  duration_ms: 8.809709
+  type: 'test'
+  location: '/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:1:10276'
+  failureType: 'testCodeFailure'
+  error: 'Value is not JSON serializable'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    serializeJavascriptValueToJSONString (node:internal/deps/undici/undici:4604:15)
+    Response.json (node:internal/deps/undici/undici:9307:11)
+    fetch (/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:107:23)
+    Object.create (/private<isolated-workspace>/ui/src/lib/fhir.ts:420:23)
+    saveGuarantor (/private<isolated-workspace>/ui/src/lib/guarantor-editor.ts:140:13)
+    <anonymous> (/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:389:25)
+    async fixture (/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:141:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 191.285916

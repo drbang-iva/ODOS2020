@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+not ok 1 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+  ---
+  duration_ms: 19.865791
+  type: 'test'
+  location: '/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:1:3519'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      {
+        active: true,
+        extension: [
+          {
+            url: 'urn:consentAuthority',
+    +       valueBoolean: false
+    -       valueBoolean: true
+          },
+          {
+            url: 'urn:primary',
+            valueBoolean: false
+          },
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    resourceType: 'RelatedPerson'
+    id: 'a'
+    patient:
+      reference: 'Patient/a'
+    active: true
+    period:
+      start: '2020-01-01'
+      end: '2030-01-01'
+    relationship:
+      0:
+        text: 'role-a'
+    extension:
+      0:
+        url: 'urn:consentAuthority'
+        valueBoolean: true
+      1:
+        url: 'urn:primary'
+        valueBoolean: false
+      2:
+        url: 'urn:courtOrderNotes'
+        valueString: 'notes-a'
+      3:
+        url: 'urn:unrelated'
+        valueString: 'sentinel-a'
+  actual:
+    resourceType: 'RelatedPerson'
+    id: 'a'
+    patient:
+      reference: 'Patient/a'
+    active: true
+    period:
+      start: '2020-01-01'
+      end: '2030-01-01'
+    relationship:
+      0:
+        text: 'role-a'
+    extension:
+      0:
+        url: 'urn:consentAuthority'
+        valueBoolean: false
+      1:
+        url: 'urn:primary'
+        valueBoolean: false
+      2:
+        url: 'urn:courtOrderNotes'
+        valueString: 'notes-a'
+      3:
+        url: 'urn:unrelated'
+        valueString: 'sentinel-a'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:173:16)
+    async fixture (/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:141:5)
+    async TestContext.<anonymous> (/private<isolated-workspace>/ui/tests/guarantorPropagation.test.tsx:151:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 187.286208

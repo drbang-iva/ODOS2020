@@ -1,0 +1,71 @@
+TAP version 13
+# Subtest: clearing then replacing the first phone keeps the second phone in its original slot
+not ok 1 - clearing then replacing the first phone keeps the second phone in its original slot
+  ---
+  duration_ms: 27.595917
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorEditor.test.tsx:1:8971'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+        {
+    +     rank: 2,
+    -     rank: 1,
+          system: 'phone',
+          use: 'home',
+          value: '864-555-0199'
+        },
+        {
+    -     rank: 2,
+    -     system: 'phone',
+    -     use: 'home',
+    -     value: '864-555-0102'
+    -   },
+    -   {
+          system: 'email'
+        }
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      system: 'phone'
+      use: 'home'
+      value: '864-555-0199'
+      rank: 1
+    1:
+      system: 'phone'
+      use: 'home'
+      value: '864-555-0102'
+      rank: 2
+    2:
+      system: 'email'
+  actual:
+    0:
+      system: 'phone'
+      use: 'home'
+      value: '864-555-0199'
+      rank: 2
+    1:
+      system: 'email'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorEditor.test.tsx:178:14)
+    async withEditor (<worktree>/ui/tests/guarantorEditor.test.tsx:62:5)
+    async TestContext.<anonymous> (<worktree>/ui/tests/guarantorEditor.test.tsx:170:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 217.806458
