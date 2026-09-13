@@ -141,3 +141,26 @@ test("editing one name preserves every loaded contact and address entry without 
     expected.name![0].family = "Corrected";
   });
 });
+
+
+test("structured address edits clear stale display text only on the edited address", async () => {
+  for (const [label, key, value] of [["Address 1 line 1", "line", "Corrected street"], ["City 1", "city", "Corrected city"], ["State 1", "state", "Corrected state"], ["Postal code 1", "postalCode", "12345"], ["Country 1", "country", "US"]]) {
+  let untouched: NonNullable<Person["address"]>[number];
+  await withEditor(1, async (renderer) => {
+    const field = renderer.root.findAllByType("label").find(node => node.children[0] === label)!.findByType("input");
+    await act(async () => { field.props.onChange({ target: { value } }); });
+    const save = renderer.root.findAllByType("button").find(button => button.children.join("") === "Save guarantor")!;
+    await act(async () => { await save.props.onClick(); });
+    for (const reference of ["Person/guarantor-a", "RelatedPerson/party-a"]) {
+      const resource = await (await fetch(`/fhir/R4/${reference}`)).json();
+      assert.equal(resource.address[0].text, undefined);
+      assert.deepEqual(resource.address[0][key], key === "line" ? [value, "Suite 2"] : value);
+      assert.deepEqual(resource.address[1], untouched);
+    }
+  }, data => {
+    const person = data.records.get("Person/guarantor-a") as Person;
+    untouched = { use: "old", text: "Preserved historical address", line: ["Historical road"], city: "Previous city" };
+    person.address = [{ text: "Old street, Synthetic city", line: ["Old street", "Suite 2"], city: "Synthetic city" }, structuredClone(untouched)];
+  });
+  }
+});
