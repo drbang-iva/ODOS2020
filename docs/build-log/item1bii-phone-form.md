@@ -8,6 +8,40 @@ Implementation checkpoints: `d066bd94` (editor caller), `8985a7656d23979cd8f5764
 against the registration checkpoint; all guard cycles and browser captures were refreshed after the
 theme correction. These are author checks, not an independent verdict.
 
+## Revision 2.5 fixback
+
+The snapshot now holds deep-frozen clones of complete ContactPoints, preserving absent fields and
+nested metadata. Save validation compares each held slot entry structurally with its original clone:
+key order is irrelevant, array order and property presence matter, and primitive values compare
+strictly. Raw draft change detection and the original sourceIndex values are unchanged.
+
+K15 now includes DUP-SWAP with no ContactPoint IDs: identical system/value/use, different rank,
+period and extension data, reordered by the held-Patient refresh. The rendered form emits zero PUTs
+and the reload message. Replacing the structural check with the old three-field comparison emits a
+PUT changing the entry with rank 2 and makes K15 fail. K15 also checks nested clone isolation and
+freezing, reordered object keys, individual metadata changes, and absent versus undefined fields.
+
+| K15 fault | Green / red / restored | Exit codes |
+|---|---:|---|
+| Retake the snapshot on preference refresh | 1 / 1 / 1 | 0 / 1 / 0 |
+| DUP-SWAP: revert to the three-field comparison | 1 / 1 / 1 | 0 / 1 / 0 |
+
+[Full fixback K15 output](item1bii-phone-form/rev25-guard-output.txt) and
+[mutation commands and source hashes](item1bii-phone-form/rev25-guard-results.json) are retained.
+The [four inventory suites](item1bii-phone-form/rev25-inventory-results.json) remain:
+patientRegistration 20, demographicsConcurrency 3, patientRegistrationAuthz 29, commsConfig 32;
+all zero failures/skips, exit 0. The phone-form suite remains 15, also zero failures/skips, exit 0.
+[Actual inventory output](item1bii-phone-form/rev25-inventory-output.txt) is retained.
+Both UI and MCP builds exited 0. Other regression and browser evidence below is from the preceding
+head; the 19-cycle table below is historical evidence, not a claim of a full mutation rerun here.
+
+Neither conversation-panel browser capture was not obtainable; K13's configured-adapter assertion that Neither retains H-thread stands in for it.
+
+Item 1b-iv remains the recorded follow-up.
+
+Replay the fixback cycles with
+`PHONE_GUARDS=K15,K15-dup-swap python3 docs/build-log/item1bii-phone-form/mutations.py`.
+
 ## Behavior and scope
 
 The editor and New Patient form now show two optional phone slots with Cell/Home/Work types and
@@ -184,16 +218,11 @@ or browser capture. Stop this task's containers with
 
 ## Follow-up and review boundary
 
-**PR-Agent snapshot finding — reproduced, requires contract adjudication.** The required snapshot
-records only raw `system`/`value`/`use` by index. If a preference refresh swaps two entries with
-identical triples but different IDs or metadata, that check cannot detect the permutation. The
-[diagnostic](item1bii-phone-form/snapshot-identity-limit.ts) loads duplicate-A in slot 1, swaps A/B in
-the held Patient, and edits slot 1. The real save serializes one PUT changing duplicate-B
-([captured result](item1bii-phone-form/snapshot-identity-limit.json)). This is a confirmed limitation
-of the prescribed snapshot contract, not a passing acceptance case. Extending the snapshot or
-matching on another field would change that contract; no such change has been made. The independent
-evaluator and operator must adjudicate it before merge. Replay with
-`node --import ./ui/node_modules/tsx/dist/loader.mjs docs/build-log/item1bii-phone-form/snapshot-identity-limit.ts`.
+**Snapshot identity finding — corrected by the revision 2.5 fixback above.** The original
+three-field comparison could change duplicate-B after duplicate-A was displayed. The
+[diagnostic](item1bii-phone-form/snapshot-identity-limit.ts) now confirms that the same swap is
+refused with zero writes ([current result](item1bii-phone-form/snapshot-identity-limit.json)). The
+DUP-SWAP mutation records the original wrong-entry PUT. Independent evaluation remains required.
 
 **CodeRabbit Neither finding — rejected against the required behavior.** Clearing ContactPoint
 markers on Neither would destroy the history selection. K7 deliberately makes that exact change

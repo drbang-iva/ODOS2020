@@ -1,0 +1,87 @@
+[
+  {
+    "suite": "patientRegistration",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/patientRegistration.test.tsx"
+    ],
+    "exit": 0,
+    "tests": 20,
+    "pass": 20,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "demographicsConcurrency",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/demographicsConcurrency.test.tsx"
+    ],
+    "exit": 0,
+    "tests": 3,
+    "pass": 3,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "patientRegistrationAuthz",
+    "cwd": "mcp",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/patientRegistrationAuthz.test.ts"
+    ],
+    "exit": 0,
+    "tests": 29,
+    "pass": 29,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "commsConfig",
+    "cwd": "mcp",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/commsConfig.test.ts"
+    ],
+    "exit": 0,
+    "tests": 32,
+    "pass": 32,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "patientPhoneForm",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "exit": 0,
+    "tests": 15,
+    "pass": 15,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  }
+]

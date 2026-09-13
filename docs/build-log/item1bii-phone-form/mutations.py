@@ -16,7 +16,7 @@ SERVER = "mcp/src/clinic/patient-registration-endpoint.ts"
 cases = [
     ("K1", UI, '.sort((a, b) => priority(a.point) - priority(b.point) || a.sourceIndex - b.sourceIndex)', '.sort((a, b) => a.sourceIndex - b.sourceIndex)', "Order slots by array position"),
     ("K2", UI, 'const changed = slot.value !== original.value || useChanged;', 'const changed = true;', "Trim untouched slot values"),
-    ("K2-absence", UI, '...(point.value === undefined ? {} : { value: point.value }),', 'value: point.value ?? "",', "Substitute an empty string for an absent snapshot value"),
+    ("K2-absence", UI, 'entries: freezeTelecomValue(structuredClone(patient.telecom ?? [])),', 'entries: freezeTelecomValue(structuredClone((patient.telecom ?? []).map(point => ({ ...point, value: point.value ?? "" })))), ', "Substitute an empty string for an absent snapshot value"),
     ("K3", UI, 'if (!slot.value.trim()) return [];', 'if (!slot.value.trim()) return [{ ...point, value: "" }];', "Serialize a cleared slot with an empty value"),
     ("K4", SHARED, 'const errors: Record<string, string> = {};', 'const errors: Record<string, string> = {}; if (phones.every(p => !p.value.trim())) errors.phone = "Phone number is required.";', "Restore required-phone validation"),
     ("K5", SHARED, 'return value ? { system: "phone", use: slot.use, value } : undefined;', 'return { system: "phone", use: slot.use, value };', "Create a phone even when its value is blank"),
@@ -31,6 +31,7 @@ cases = [
     ("K14", UI, '    ...(existing ?? {}),', '    ...(existing ?? {}), extension: undefined,', "Drop unrelated Patient extensions on save"),
     ("K14-retention", SHARED, 'telecom: patient.telecom?.map(point => {', 'telecom: patient.telecom?.filter(point => point.system !== "email").map(point => {', "Drop email ContactPoints when choosing a phone"),
     ("K15", FORM, '      setHeldPatient(fresh);', '      setHeldPatient(fresh);\n      setEdit(edit => ({ ...edit, snapshot: patientTelecomSnapshot(fresh, edit.snapshot.now) }));', "Retake the snapshot during preference refresh"),
+    ("K15-dup-swap", UI, "!equalTelecomValue(held, original)", "held.system !== original.system || held.value !== original.value || held.use !== original.use", "Fall back to three-field comparison and edit the wrong duplicate"),
     ("K16", SERVER, '  if (input.demographics.textable) {', '  if (false) {', "Omit server marker and refusal application"),
     ("R2", SHARED, 'if (textable === `phone${index + 1}` && (!slot.value.trim() || !valid))', 'if (false)', "Allow an empty selected texting slot"),
 ]
@@ -41,6 +42,11 @@ def run(label, phase, command, cwd):
     (OUT / f"{label}-{phase}.log").write_text(output)
     counts = {key: int(value) for key, value in re.findall(r"^# (tests|pass|fail|skipped|cancelled) (\d+)$", output, re.M)}
     return {"exit": result.returncode, **counts}, output
+
+selected = os.environ.get("PHONE_GUARDS", "").split(",")
+if selected != [""]:
+    cases = [case for case in cases if case[0] in selected]
+    assert {case[0] for case in cases} == set(selected)
 
 results = []
 for label, filename, original, replacement, fault in cases:

@@ -1,0 +1,144 @@
+
+K15 / green
+TAP version 13
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+ok 1 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 22.006583
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 335.419291
+
+K15 / red
+TAP version 13
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+not ok 1 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 16.649875
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:11815'
+  failureType: 'testCodeFailure'
+  error: |-
+    DUP-SWAP must refuse the write; emitted {"resourceType":"Patient","id":"synthetic-telecom","meta":{"versionId":"4"},"name":[{"use":"official","given":["Synthetic"],"family":"Telecom"}],"birthDate":"1980-01-02","gender":"unknown","address":[{"use":"home","line":["1 Synthetic Way"],"city":"Synthetic","state":"SC","postalCode":"29601"}],"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out","extension":[{"url":"channel","valueCode":"sms"}]}],"telecom":[{"system":"phone","value":"+12025550108","use":"mobile","rank":2,"period":{"start":"2026-02-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Second duplicate"}]},{"system":"phone","value":"+12025550101","use":"mobile","rank":1,"period":{"start":"2026-01-01","end":"2027-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]}]}
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:259:12)
+    async withRenderedEditor (<worktree>/ui/tests/patientPhoneForm.test.tsx:65:5)
+    async TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:254:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 335.589875
+
+K15 / restored
+TAP version 13
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+ok 1 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 21.978292
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 337.041292
+
+K15-dup-swap / green
+TAP version 13
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+ok 1 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 21.742
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 339.656792
+
+K15-dup-swap / red
+TAP version 13
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+not ok 1 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 16.071333
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:11815'
+  failureType: 'testCodeFailure'
+  error: |-
+    DUP-SWAP must refuse the write; emitted {"resourceType":"Patient","id":"synthetic-telecom","meta":{"versionId":"4"},"name":[{"use":"official","given":["Synthetic"],"family":"Telecom"}],"birthDate":"1980-01-02","gender":"unknown","address":[{"use":"home","line":["1 Synthetic Way"],"city":"Synthetic","state":"SC","postalCode":"29601"}],"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out","extension":[{"url":"channel","valueCode":"sms"}]}],"telecom":[{"system":"phone","value":"+12025550108","use":"mobile","rank":2,"period":{"start":"2026-02-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Second duplicate"}]},{"system":"phone","value":"+12025550101","use":"mobile","rank":1,"period":{"start":"2026-01-01","end":"2027-01-01"},"extension":[{"url":"urn:synthetic:contact-note","valueString":"Synthetic retained metadata"}]}]}
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:259:12)
+    async withRenderedEditor (<worktree>/ui/tests/patientPhoneForm.test.tsx:65:5)
+    async TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:254:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 339.924667
+
+K15-dup-swap / restored
+TAP version 13
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+ok 1 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 23.010125
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 345.560709

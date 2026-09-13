@@ -247,6 +247,48 @@ test("K14: unrelated extensions and effective appointment suppression survive ev
 });
 
 test("K15: preserve the remainder and validate the original snapshot through preference refresh", async () => {
+  const duplicate = telecomFixture("DUP-SWAP");
+  const swapped = structuredClone(duplicate);
+  swapped.telecom!.reverse();
+  swapped.meta!.versionId = "4";
+  await withRenderedEditor(duplicate, async (renderer, bodies) => {
+    const input = renderer.root.findAllByType("input").find(node => node.props.type === "tel")!;
+    await act(async () => { input.props.onChange({ target: { value: NUMBERS.changed } }); });
+    await act(async () => { renderer.root.findByType(SmsOptOutControl).props.onPatientWritten({ writtenAgainst: "3", current: "4" }); });
+    await clickSave(renderer);
+    assert.equal(bodies.length, 0, `DUP-SWAP must refuse the write; emitted ${bodies.join(" ")}`);
+    assert.equal(renderer.root.findByProps({ role: "alert" }).children.join(""), "Contact information changed on the server. Reload before saving.");
+  }, swapped);
+  const frozen = patientTelecomSnapshot(duplicate, TELECOM_NOW);
+  assert.deepEqual(frozen.entries, duplicate.telecom);
+  assert.notEqual(frozen.entries[0], duplicate.telecom![0]);
+  assert.notEqual(frozen.entries[0].period, duplicate.telecom![0].period);
+  assert.notEqual(frozen.entries[0].extension, duplicate.telecom![0].extension);
+  assert.ok(Object.isFrozen(frozen.entries));
+  assert.ok(Object.isFrozen(frozen.entries[0]));
+  assert.ok(Object.isFrozen(frozen.entries[0].period));
+  assert.ok(Object.isFrozen(frozen.entries[0].extension));
+  assert.ok(Object.isFrozen(frozen.entries[0].extension![0]));
+  const reversedKeys = (value: unknown): unknown => Array.isArray(value) ? value.map(reversedKeys)
+    : value !== null && typeof value === "object" ? Object.fromEntries(Object.entries(value).reverse().map(([key, child]) => [key, reversedKeys(child)])) : value;
+  const reordered = reversedKeys(duplicate) as Patient;
+  assert.deepEqual((await savePatient(duplicate, () => {}, reordered)).saved.telecom, duplicate.telecom);
+  const draft = patientDemographicsFromPatient(duplicate, TELECOM_NOW);
+  for (const alter of [
+    (point: ContactPoint) => { point.rank = 3; },
+    (point: ContactPoint) => { point.period!.start = "2026-03-01"; },
+    (point: ContactPoint) => { point.extension![0].valueString = "Changed metadata"; },
+    (point: ContactPoint) => { point.id = "changed-id"; },
+    (point: ContactPoint) => { point.id = undefined; },
+  ]) {
+    const held = structuredClone(duplicate);
+    alter(held.telecom![0]);
+    let writes = 0;
+    assert.throws(() => createPatientDemographicsActions(held, { update: async () => { writes++; return held; } }).save(draft, frozen), /Contact information changed on the server. Reload before saving./);
+    assert.equal(writes, 0);
+  }
+  duplicate.telecom![0].period!.start = "2026-04-01";
+  assert.equal(frozen.entries[0].period!.start, "2026-01-01");
   const patient = telecomFixture("IMPORTED3");
   const { saved } = await savePatient(patient, draft => { draft.phones[0].value = NUMBERS.changed; });
   assert.deepEqual(saved.telecom![2], patient.telecom![2]);

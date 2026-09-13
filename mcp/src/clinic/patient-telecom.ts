@@ -17,7 +17,7 @@ export interface PatientDraftPhone {
 export interface PatientTelecomSnapshot {
   now: string;
   loadedTextable: PatientTextableAnswer;
-  entries: ReadonlyArray<{ system?: string; value?: string; use?: string }>;
+  entries: ReadonlyArray<ContactPoint>;
 }
 
 export function validatePatientPhones(phones: readonly Pick<PatientDraftPhone, "value" | "use">[], textable: PatientTextableAnswer): Record<string, string> {

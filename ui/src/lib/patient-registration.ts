@@ -102,15 +102,30 @@ function patientPhoneDraft(patient: Patient, now: string): Pick<PatientDemograph
   };
 }
 
+function freezeTelecomValue<T>(value: T): T {
+  if (value !== null && typeof value === "object") {
+    Object.values(value).forEach(freezeTelecomValue);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+// ContactPoints contain FHIR JSON values; compare their structure without depending on key order.
+function equalTelecomValue(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (left === null || right === null || typeof left !== "object" || typeof right !== "object") return false;
+  if (Object.getPrototypeOf(left) !== Object.getPrototypeOf(right)) return false;
+  if (Array.isArray(left) && left.length !== (right as unknown[]).length) return false;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every(key =>
+    Object.hasOwn(right, key) && equalTelecomValue((left as Record<string, unknown>)[key], (right as Record<string, unknown>)[key]));
+}
+
 export function patientTelecomSnapshot(patient: Patient, now: string): PatientTelecomSnapshot {
   return Object.freeze({
     now,
     loadedTextable: patientPhoneDraft(patient, now).textable,
-    entries: Object.freeze((patient.telecom ?? []).map(point => Object.freeze({
-      ...(point.system === undefined ? {} : { system: point.system }),
-      ...(point.value === undefined ? {} : { value: point.value }),
-      ...(point.use === undefined ? {} : { use: point.use }),
-    }))),
+    entries: freezeTelecomValue(structuredClone(patient.telecom ?? [])),
   });
 }
 
@@ -170,7 +185,7 @@ export function buildPatientResource(draft: PatientDemographicsDraft, existing?:
     if (slot.sourceIndex === null) continue;
     const original = snapshot?.entries[slot.sourceIndex];
     const held = existing?.telecom?.[slot.sourceIndex];
-    if (!original || !held || held.system !== original.system || held.value !== original.value || held.use !== original.use) {
+    if (!original || !held || !equalTelecomValue(held, original)) {
       throw new Error("Contact information changed on the server. Reload before saving.");
     }
   }

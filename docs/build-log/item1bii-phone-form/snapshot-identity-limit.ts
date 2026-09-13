@@ -23,21 +23,17 @@ async function main() {
     return Response.json({ ...JSON.parse(String(init.body)), meta: { versionId: "5" } });
   };
   try {
-    await createPatientDemographicsActions(held).save(draft, snapshot);
-    assert.equal(bodies.length, 1);
-    const written = JSON.parse(bodies[0]);
-    const editedId = written.telecom.find((point: { value?: string }) => point.value === NUMBERS.changed)?.id;
-    assert.equal(editedId, "duplicate-B");
+    assert.throws(() => createPatientDemographicsActions(held).save(draft, snapshot), /Contact information changed on the server. Reload before saving./);
+    assert.equal(bodies.length, 0);
     process.stdout.write(JSON.stringify({
       finding: "Identical system/value/use triples hide a permutation during preference refresh",
-      outcome: "LIMITATION REPRODUCED; not an acceptance test or an independent verdict",
+      outcome: "FULL-ENTRY GUARD VERIFIED; not an independent verdict",
       originalIds: original.telecom.map(point => point.id),
       heldIds: held.telecom!.map(point => point.id),
       snapshot,
       originallySelectedId: "duplicate-A",
-      editedId,
       writeCount: bodies.length,
-      serializedPut: written,
+      error: "Contact information changed on the server. Reload before saving.",
     }, null, 2) + "\n");
   } finally { globalThis.fetch = originalFetch; }
 }
