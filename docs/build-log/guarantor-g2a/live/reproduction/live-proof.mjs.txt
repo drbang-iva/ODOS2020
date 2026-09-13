@@ -57,7 +57,7 @@ if(scenario==='Q5b'){
  assert.equal(saved.person.telecom[0].value,'864-555-0199');
  for(let i=0;i<2;i++)assert.deepEqual(content(saved.children[i]),content(fixture.children[i]));
 }else{
- assert.deepEqual(writes.map(e=>e.response.status),[200,200,412]);assert.deepEqual(demos(saved.person),demos(saved.children[0]));assert.equal(saved.children[1].telecom[0].value,'864-555-0199');assert.match(saveText,/Leo Synthetic.*mismatched/);
+ assert.deepEqual(writes.map(e=>e.response.status),[200,200,412]);assert.equal(saved.person.address[0].text,undefined);assert.deepEqual(demos(saved.person),demos(saved.children[0]));assert.equal(saved.children[1].telecom[0].value,'864-555-0199');assert.match(saveText,/Leo Synthetic.*mismatched/);
  await section.screenshot({path:output+'/partial.png'});
  const repairStart=capture.length;
  await section.getByRole('button',{name:/Repair for Leo Synthetic/}).click();

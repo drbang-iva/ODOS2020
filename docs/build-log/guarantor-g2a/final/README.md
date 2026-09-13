@@ -13,7 +13,7 @@ Commands ran against the completed source working tree based on `9d1ccf9ee32629d
 | demographicsConcurrency | 3 | 3 | 0 | 0 |
 | patientPhoneForm | 17 | 17 | 0 | 0 |
 | guarantorPropagation | 15 | 15 | 0 | 0 |
-| guarantorEditor | 4 | 4 | 0 | 0 |
+| guarantorEditor (final fixbacks) | 8 | 8 | 0 | 0 |
 
 Focused command: `node --import tsx --test tests/<suite>.test.<ts|tsx>` in each package.
 
@@ -23,4 +23,6 @@ Full MCP: `npm --prefix mcp test` with isolated PostgreSQL — 4704 tests; 4656 
 
 Initial full UI: 1468 tests passed; 0 failed/skipped; 190480.503708 ms. This completed before the Q9c structured-classification and component CSS-variable fixbacks.
 
-The final UI suite and build rerun use clean application source at `2f7d9471d9fa818e99652f5f26affcee7a27a7da`. Final UI build exited 0. Final `npm --prefix ui test` exited 0: 1468 tests, 1468 passed, 0 failed, 0 skipped; 187756.918917 ms.
+The earlier UI suite and build rerun use clean application source at `2f7d9471d9fa818e99652f5f26affcee7a27a7da`. Final UI build exited 0. Final `npm --prefix ui test` exited 0: 1468 tests, 1468 passed, 0 failed, 0 skipped; 187756.918917 ms.
+
+Final bot-fixback verification uses clean application source `b4a3cbb0b3eb24d260df7fa7aa3ad6e64882a0a9`. `npm --prefix ui test` exited 0: tests 1472, pass 1472, fail 0, skipped 0, duration_ms 187123.768792. `npm --prefix ui run build` exited 0. Focused editor 8 + propagation 15 + demographics concurrency 3 passed 26/26 with no failures or skips. MCP source is unchanged, so its full suite/build evidence above remains applicable.

@@ -13,7 +13,7 @@ The staff policy is generated from the unchanged staff declaration. The syntheti
 | Q9b | Click Repair on the partial result | Only Leo's RelatedPerson gets a PUT and new version; Person and Sam versions unchanged; projections converge |
 | Q9b repeat | Invoke the same exported repair operation after fresh indexed load of the converged set | Unchanged result; zero writes |
 
-The evidence includes serialized request bodies, If-Match versions, statuses, patient-specific rendered results, and fresh persisted reads. Authentication headers are deliberately absent. Each scenario starts with new synthetic resources; there are no compensating writes. Patient content and the same-name unlinked decoy remain unchanged; editor write sets contain no Patient interaction. All role/legal fields, periods, and unrelated extensions are compared after saving.
+The evidence includes serialized request bodies, If-Match versions, statuses, patient-specific rendered results, and fresh persisted reads. Authentication headers are deliberately absent. Each scenario starts with new synthetic resources; there are no compensating writes. Patient content and the same-name unlinked decoy remain unchanged; editor write sets contain no Patient interaction. All role/legal fields, periods, and unrelated extensions are compared after saving. The fixtures include an existing Address.text; the successful structured-address correction is asserted to clear that stale display string.
 
 `Q5b.json`, `Q6b-Q9b.json`, and `Q9b.json` contain the traces. `partial.png` and `repaired.png` show the live control before and after repair. These are author-side proofs, not independent evaluation.
 

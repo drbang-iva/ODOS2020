@@ -1,0 +1,10 @@
+Command (from ui/): node --import tsx --test tests/guarantorEditor.test.tsx tests/guarantorPropagation.test.tsx tests/demographicsConcurrency.test.tsx
+Exit: 0
+# tests 26
+# suites 0
+# pass 26
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 575.256042

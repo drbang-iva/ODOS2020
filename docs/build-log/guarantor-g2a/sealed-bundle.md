@@ -4,23 +4,23 @@
 
 The demographics editor now contains a separately saved Responsible parties control. Editing a guarantor updates its Person first, then each linked RelatedPerson with conditional writes. Results identify each patient. Reopening classifies projection differences and offers repair even with a clean form. Repair reads the current Person and writes only divergent children using fresh versions.
 
-Base: `9cdc65f73c6767d0546d8c5b9625e0efed1c0129`. Application source verified at `2f7d9471d9fa818e99652f5f26affcee7a27a7da`; later evidence-only commits do not change these source bytes.
+Base: `9cdc65f73c6767d0546d8c5b9625e0efed1c0129`. Application source verified at `b4a3cbb0b3eb24d260df7fa7aa3ad6e64882a0a9`; later evidence-only commits do not change these source bytes.
 
 ## Files and commits
 
 - `mcp/src/clinic/responsible-party-demographics.ts` and `patient-registration-endpoint.ts`: one shared demographic builder/projection. Extracted the Person caller in `9304b2c6`, checked G-1 11/11, then migrated RelatedPerson in `9d1ccf9e`, checked 11/11 again.
 - `ui/src/lib/guarantor-editor.ts`: indexed reads, cardinality refusal, preflight, parent-success barrier, conditional child writes, trailing-parent verification, and selective repair.
 - `ui/src/components/patient/ResponsiblePartiesControl.tsx` and `PatientDemographicsEditor.tsx`: independent control, raw name/contact/address preservation, patient-specific results, clean-form repair, and dirty-repair refusal.
-- `ui/tests/guarantorPropagation.test.tsx` and `guarantorEditor.test.tsx`: 15 transport-backed guards and 4 rendered-control tests.
+- `ui/tests/guarantorPropagation.test.tsx` and `guarantorEditor.test.tsx`: 15 transport-backed guards and 8 rendered-control tests.
 - `ui/tests/fixtures/guarantor-live.html` and `.tsx`: production PatientRoute/PatientOverview browser fixture.
 - `docs/build-log/guarantor-g2a/`: sanitized evidence and reproduction scripts.
 - `c205a96c`: editor/writer/guards. `2f7d9471`: explicit superseded repair status and appearance-token correction.
 
 ## Verification
 
-See `baseline/README.md` and `final/README.md` for commands, exact counts, durations, and limitations. All eight requested focused inventories retain **49 / 99 / 32 / 29 / 11 / 20 / 3 / 17**, with zero failures/skips. New focused guards: **15 writer + 4 UI**, all passing. Both package builds pass. Preflight: **0 warnings, 0 hard blocks**. Proxy census: all 24 backend route families covered by the existing 27 proxy entries (advisory only).
+See `baseline/README.md` and `final/README.md` for commands, exact counts, durations, and limitations. All eight requested focused inventories retain **49 / 99 / 32 / 29 / 11 / 20 / 3 / 17**, with zero failures/skips. New focused guards: **15 writer + 8 UI**, all passing. Both package builds pass. Preflight: **0 warnings, 0 hard blocks**. Proxy census: all 24 backend route families covered by the existing 27 proxy entries (advisory only).
 
-The complete UI suite at the final application source has **1,468 passed, 0 failed, 0 skipped**, exit 0.
+The complete UI suite at the final application source has **1,472 passed, 0 failed, 0 skipped**, exit 0; 187123.768792 ms.
 
 The complete MCP suite has **4,704 tests: 4,656 passed, 0 failed, 48 skipped**. Its wrapper exits 1 because 41 tracked live-stack tests are unconfigured. This is unchanged from base and does **not** establish authorization coverage; no opt-out was used. The dedicated synthetic staff HTTP proof covers this slice's existing Person and RelatedPerson write authority.
 
@@ -60,6 +60,12 @@ Writer mutation recipes, commands, red output, and restored green: `writer-mutat
 - All editor write sets exclude Patient; Patient content, decoy, and role/legal fields remain unchanged.
 
 Serialized HTTP sequences and fresh persisted reads are in `live/*.json`; the screenshots show partial and repaired states. Credentials, runtime configuration, and sessions are excluded.
+
+## Review fixbacks
+
+PR-Agent identified stale address `text` after structured edits; `01b167f5` clears it only on edited addresses. `796caab5` preserves draft contact slots while clearing and retyping, removing only explicitly edited blank entries on Save. `b4a3cbb0` displays every per-patient write response separately from verification status. Transport-backed tests and red/restored mutation output cover all three.
+
+CodeRabbit also identified existing-file permission drift in the reproduction scripts. Both scripts now enforce mode 0600 after writes; rerunning them over mode-0644 files in the protected directory restored all three files to 0600 (`live/repeated-file-permissions.json`).
 
 ## Boundaries and follow-ups
 

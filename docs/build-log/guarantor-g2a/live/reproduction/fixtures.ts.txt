@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync} from 'node:fs';
+import {readFileSync,writeFileSync,chmodSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
 import {buildMedplumAccessPolicy,getRoleDeclaration} from '../../mcp/src/authz/roles.ts';
 import {createRoleClient,clientCredentialsToken} from '../../mcp/tests/liveRoleClient.ts';
@@ -10,7 +10,7 @@ assert.equal(runtime.baseUrl,'http://127.0.0.1:19513');
 async function post(resource:any){const r=await fetch(runtime.baseUrl+'/fhir/R4/'+resource.resourceType,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/fhir+json'},body:JSON.stringify(resource)});assert.equal(r.status,201,await r.clone().text());return r.json();}
 const patients=[];
 for(const given of ['Sam','Leo','Decoy']) patients.push(await post({resourceType:'Patient',active:true,name:[{given:[given],family:'Synthetic'}],birthDate:'2015-01-01',gender:'unknown'}));
-const demographics={name:[{given:['Guardian'],family:'Synthetic'}],telecom:[{system:'phone',use:'home',value:'864-555-0101'}],address:[{use:'home',line:['1 Synthetic Way'],city:'Greenville',state:'SC',postalCode:'29601'}]};
+const demographics={name:[{given:['Guardian'],family:'Synthetic'}],telecom:[{system:'phone',use:'home',rank:1,value:'864-555-0101'},{system:'phone',use:'home',rank:2,value:'864-555-0102'}],address:[{use:'home',text:'1 Synthetic Way, Greenville SC 29601',line:['1 Synthetic Way'],city:'Greenville',state:'SC',postalCode:'29601'}]};
 const children=[];
 for(const [i,patient] of patients.entries())children.push(await post({resourceType:'RelatedPerson',active:true,patient:{reference:`Patient/${patient.id}`},...demographics,relationship:[{text:i===0?'Legal guardian':'Parent'}],period:{start:'2026-01-01',end:'2035-01-01'},extension:[{url:'https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority',valueBoolean:i===0},{url:'https://odos2020.com/fhir/StructureDefinition/related-person-primary',valueBoolean:i!==0},{url:'https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes',valueString:`Synthetic legal sentinel ${i}`},{url:'https://example.test/unrelated',valueString:`Unrelated ${i}`}]}));
 const person=await post({resourceType:'Person',active:true,...demographics,link:children.slice(0,2).map(r=>({target:{reference:`RelatedPerson/${r.id}`},assurance:'level2'}))});
@@ -27,6 +27,7 @@ fresh.access.push({...structuredClone(fresh.access[0]),parameter:[{name:'patient
 const update=await fetch(url,{method:'POST',headers,body:JSON.stringify(fresh)});assert.equal(update.status,200);
 const staffToken=await clientCredentialsToken(runtime.baseUrl,client.id,client.secret,'staff');
 writeFileSync(new URL('staff-session.json',dir),JSON.stringify({token:staffToken}),{mode:0o600});
+chmodSync(new URL('staff-session.json',dir),0o600);
 writeFileSync(new URL('fixtures.json',dir),JSON.stringify({patients,children,person,policy},null,2));
 for(const child of children.slice(0,2)){
  const r=await fetch(runtime.baseUrl+`/fhir/R4/RelatedPerson/${child.id}`,{method:'PUT',headers:{Authorization:`Bearer ${staffToken}`,'Content-Type':'application/fhir+json','If-Match':`W/"${child.meta.versionId}"`},body:JSON.stringify(child)});assert.equal(r.status,200,await r.clone().text());

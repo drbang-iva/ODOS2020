@@ -1,0 +1,76 @@
+TAP version 13
+# Subtest: A1: a stale demographics PUT shows the concurrent-edit alert without retrying
+ok 1 - A1: a stale demographics PUT shows the concurrent-edit alert without retrying
+  ---
+  duration_ms: 20.224083
+  type: 'test'
+  ...
+# Subtest: A2: missing Patient version refuses before any network call
+ok 2 - A2: missing Patient version refuses before any network call
+  ---
+  duration_ms: 0.354625
+  type: 'test'
+  ...
+# Subtest: A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
+ok 3 - A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
+  ---
+  duration_ms: 14.060583
+  type: 'test'
+  ...
+# Subtest: Q10: missing linked Person is read-only and direct save handler cannot create
+ok 4 - Q10: missing linked Person is read-only and direct save handler cannot create
+  ---
+  duration_ms: 16.222875
+  type: 'test'
+  ...
+# Subtest: Q11: reopening a clean editor offers repair by patient name and converges
+ok 5 - Q11: reopening a clean editor offers repair by patient name and converges
+  ---
+  duration_ms: 11.881791
+  type: 'test'
+  ...
+# Subtest: Q12: multiple linked Persons refuse editing and identify both records
+ok 6 - Q12: multiple linked Persons refuse editing and identify both records
+  ---
+  duration_ms: 1.078542
+  type: 'test'
+  ...
+# Subtest: editing one name preserves every loaded contact and address entry without a Patient write
+ok 7 - editing one name preserves every loaded contact and address entry without a Patient write
+  ---
+  duration_ms: 4.501833
+  type: 'test'
+  ...
+# Subtest: structured address edits clear stale display text only on the edited address
+ok 8 - structured address edits clear stale display text only on the edited address
+  ---
+  duration_ms: 16.343375
+  type: 'test'
+  ...
+# Subtest: clearing then replacing the first phone keeps the second phone in its original slot
+ok 9 - clearing then replacing the first phone keeps the second phone in its original slot
+  ---
+  duration_ms: 3.029375
+  type: 'test'
+  ...
+# Subtest: saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+ok 10 - saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+  ---
+  duration_ms: 2.832125
+  type: 'test'
+  ...
+# Subtest: per-patient results distinguish rejected child writes from lost update responses
+ok 11 - per-patient results distinguish rejected child writes from lost update responses
+  ---
+  duration_ms: 4.533708
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 511.504791

@@ -16,7 +16,14 @@
         {
           "system": "phone",
           "use": "home",
+          "rank": 1,
           "value": "864-555-0123"
+        },
+        {
+          "system": "phone",
+          "use": "home",
+          "rank": 2,
+          "value": "864-555-0102"
         }
       ],
       "address": [
@@ -33,21 +40,21 @@
       "link": [
         {
           "target": {
-            "reference": "RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+            "reference": "RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
           },
           "assurance": "level2"
         },
         {
           "target": {
-            "reference": "RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+            "reference": "RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
           },
           "assurance": "level2"
         }
       ],
-      "id": "bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+      "id": "ead3157b-985e-46bf-ab32-e0ad1040da63",
       "meta": {
-        "versionId": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
-        "lastUpdated": "2026-09-13T14:52:20.547Z"
+        "versionId": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
+        "lastUpdated": "2026-09-13T15:12:04.233Z"
       }
     },
     "children": [
@@ -55,7 +62,7 @@
         "resourceType": "RelatedPerson",
         "active": true,
         "patient": {
-          "reference": "Patient/c1ec26eb-bab0-4f2d-a152-910b18668850"
+          "reference": "Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801"
         },
         "name": [
           {
@@ -69,7 +76,14 @@
           {
             "system": "phone",
             "use": "home",
+            "rank": 1,
             "value": "864-555-0123"
+          },
+          {
+            "system": "phone",
+            "use": "home",
+            "rank": 2,
+            "value": "864-555-0102"
           }
         ],
         "address": [
@@ -110,17 +124,17 @@
             "valueString": "Unrelated 0"
           }
         ],
-        "id": "891c5282-30b6-4745-901d-6cc776897cb3",
+        "id": "a1f9b0ef-d5e5-4633-bff1-1074f67ac370",
         "meta": {
-          "versionId": "5edd77f6-8bff-4d6b-9f7c-10067e1bdd23",
-          "lastUpdated": "2026-09-13T14:52:20.570Z"
+          "versionId": "4697b655-0c57-4b90-ab65-408e811ed9d6",
+          "lastUpdated": "2026-09-13T15:12:04.258Z"
         }
       },
       {
         "resourceType": "RelatedPerson",
         "active": true,
         "patient": {
-          "reference": "Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+          "reference": "Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
         },
         "name": [
           {
@@ -140,6 +154,7 @@
         "address": [
           {
             "use": "home",
+            "text": "1 Synthetic Way, Greenville SC 29601",
             "line": [
               "1 Synthetic Way"
             ],
@@ -175,17 +190,17 @@
             "valueString": "Unrelated 1"
           }
         ],
-        "id": "b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
+        "id": "3d20a35d-210d-403c-a1b0-28b63d7f55b5",
         "meta": {
-          "versionId": "3c5bb518-7e80-4a32-a58c-5668dd9cb36d",
-          "lastUpdated": "2026-09-13T14:52:20.559Z"
+          "versionId": "128458cb-00cb-4377-a946-969e6133b8f7",
+          "lastUpdated": "2026-09-13T15:12:04.246Z"
         }
       },
       {
         "resourceType": "RelatedPerson",
         "active": true,
         "patient": {
-          "reference": "Patient/278b6995-fdc4-4d0a-9f35-be8f4748930b"
+          "reference": "Patient/f8c0cf49-01b6-40c7-80c8-4ed85f640e52"
         },
         "name": [
           {
@@ -199,12 +214,20 @@
           {
             "system": "phone",
             "use": "home",
+            "rank": 1,
             "value": "864-555-0101"
+          },
+          {
+            "system": "phone",
+            "use": "home",
+            "rank": 2,
+            "value": "864-555-0102"
           }
         ],
         "address": [
           {
             "use": "home",
+            "text": "1 Synthetic Way, Greenville SC 29601",
             "line": [
               "1 Synthetic Way"
             ],
@@ -240,10 +263,10 @@
             "valueString": "Unrelated 2"
           }
         ],
-        "id": "46893552-5384-43ba-862b-3d85c8a2b46f",
+        "id": "83a277cf-295c-4d5d-9137-586399ac0a6b",
         "meta": {
-          "versionId": "d1a6f198-aa6a-461f-8584-30a7b8db8a50",
-          "lastUpdated": "2026-09-13T14:52:19.834Z"
+          "versionId": "b210d11b-a1d0-4fac-abe4-a75ab733fa9b",
+          "lastUpdated": "2026-09-13T15:12:03.420Z"
         }
       }
     ],
@@ -261,10 +284,10 @@
         ],
         "birthDate": "2015-01-01",
         "gender": "unknown",
-        "id": "c1ec26eb-bab0-4f2d-a152-910b18668850",
+        "id": "47d23c73-d612-4b43-b7da-8beaa2f1a801",
         "meta": {
-          "versionId": "491cc8a8-96ca-49ba-9dfb-9e727f81d49b",
-          "lastUpdated": "2026-09-13T14:52:19.785Z"
+          "versionId": "5f67f5b0-a102-4eb0-83a6-3b5350f79d70",
+          "lastUpdated": "2026-09-13T15:12:03.306Z"
         }
       },
       {
@@ -280,10 +303,10 @@
         ],
         "birthDate": "2015-01-01",
         "gender": "unknown",
-        "id": "6983b5d3-b289-47a4-9c02-72d8caf064db",
+        "id": "437ba302-8fb0-41d3-ad34-399599fe7dd0",
         "meta": {
-          "versionId": "edb0f0da-f8e8-4d2e-9a52-3278f712a997",
-          "lastUpdated": "2026-09-13T14:52:19.805Z"
+          "versionId": "edaeb46d-c143-4f32-87bf-7600e4c339c5",
+          "lastUpdated": "2026-09-13T15:12:03.337Z"
         }
       },
       {
@@ -299,10 +322,10 @@
         ],
         "birthDate": "2015-01-01",
         "gender": "unknown",
-        "id": "278b6995-fdc4-4d0a-9f35-be8f4748930b",
+        "id": "f8c0cf49-01b6-40c7-80c8-4ed85f640e52",
         "meta": {
-          "versionId": "a3edf830-7990-4133-b7f1-2e7764b113e6",
-          "lastUpdated": "2026-09-13T14:52:19.811Z"
+          "versionId": "07e3134b-6f0e-42fc-b0ca-bbaad68addd4",
+          "lastUpdated": "2026-09-13T15:12:03.351Z"
         }
       }
     ]
@@ -323,7 +346,14 @@
         {
           "system": "phone",
           "use": "home",
+          "rank": 1,
           "value": "864-555-0123"
+        },
+        {
+          "system": "phone",
+          "use": "home",
+          "rank": 2,
+          "value": "864-555-0102"
         }
       ],
       "address": [
@@ -340,21 +370,21 @@
       "link": [
         {
           "target": {
-            "reference": "RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+            "reference": "RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
           },
           "assurance": "level2"
         },
         {
           "target": {
-            "reference": "RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+            "reference": "RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
           },
           "assurance": "level2"
         }
       ],
-      "id": "bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+      "id": "ead3157b-985e-46bf-ab32-e0ad1040da63",
       "meta": {
-        "versionId": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
-        "lastUpdated": "2026-09-13T14:52:20.547Z"
+        "versionId": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
+        "lastUpdated": "2026-09-13T15:12:04.233Z"
       }
     },
     "children": [
@@ -362,7 +392,7 @@
         "resourceType": "RelatedPerson",
         "active": true,
         "patient": {
-          "reference": "Patient/c1ec26eb-bab0-4f2d-a152-910b18668850"
+          "reference": "Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801"
         },
         "name": [
           {
@@ -376,7 +406,14 @@
           {
             "system": "phone",
             "use": "home",
+            "rank": 1,
             "value": "864-555-0123"
+          },
+          {
+            "system": "phone",
+            "use": "home",
+            "rank": 2,
+            "value": "864-555-0102"
           }
         ],
         "address": [
@@ -417,17 +454,17 @@
             "valueString": "Unrelated 0"
           }
         ],
-        "id": "891c5282-30b6-4745-901d-6cc776897cb3",
+        "id": "a1f9b0ef-d5e5-4633-bff1-1074f67ac370",
         "meta": {
-          "versionId": "5edd77f6-8bff-4d6b-9f7c-10067e1bdd23",
-          "lastUpdated": "2026-09-13T14:52:20.570Z"
+          "versionId": "4697b655-0c57-4b90-ab65-408e811ed9d6",
+          "lastUpdated": "2026-09-13T15:12:04.258Z"
         }
       },
       {
         "resourceType": "RelatedPerson",
         "active": true,
         "patient": {
-          "reference": "Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+          "reference": "Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
         },
         "name": [
           {
@@ -441,7 +478,14 @@
           {
             "system": "phone",
             "use": "home",
+            "rank": 1,
             "value": "864-555-0123"
+          },
+          {
+            "system": "phone",
+            "use": "home",
+            "rank": 2,
+            "value": "864-555-0102"
           }
         ],
         "address": [
@@ -482,17 +526,17 @@
             "valueString": "Unrelated 1"
           }
         ],
-        "id": "b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
+        "id": "3d20a35d-210d-403c-a1b0-28b63d7f55b5",
         "meta": {
-          "versionId": "d2a94ffd-5193-4002-95b7-d4f294fef340",
-          "lastUpdated": "2026-09-13T14:52:20.889Z"
+          "versionId": "1ed45a3c-45b9-4790-99d3-e5c58dc0bd5a",
+          "lastUpdated": "2026-09-13T15:12:04.541Z"
         }
       },
       {
         "resourceType": "RelatedPerson",
         "active": true,
         "patient": {
-          "reference": "Patient/278b6995-fdc4-4d0a-9f35-be8f4748930b"
+          "reference": "Patient/f8c0cf49-01b6-40c7-80c8-4ed85f640e52"
         },
         "name": [
           {
@@ -506,12 +550,20 @@
           {
             "system": "phone",
             "use": "home",
+            "rank": 1,
             "value": "864-555-0101"
+          },
+          {
+            "system": "phone",
+            "use": "home",
+            "rank": 2,
+            "value": "864-555-0102"
           }
         ],
         "address": [
           {
             "use": "home",
+            "text": "1 Synthetic Way, Greenville SC 29601",
             "line": [
               "1 Synthetic Way"
             ],
@@ -547,28 +599,28 @@
             "valueString": "Unrelated 2"
           }
         ],
-        "id": "46893552-5384-43ba-862b-3d85c8a2b46f",
+        "id": "83a277cf-295c-4d5d-9137-586399ac0a6b",
         "meta": {
-          "versionId": "d1a6f198-aa6a-461f-8584-30a7b8db8a50",
-          "lastUpdated": "2026-09-13T14:52:19.834Z"
+          "versionId": "b210d11b-a1d0-4fac-abe4-a75ab733fa9b",
+          "lastUpdated": "2026-09-13T15:12:03.420Z"
         }
       }
     ]
   },
   "repeat": {
     "status": "unchanged",
-    "message": "Verified against guarantor generation 2fac3d15-270c-47d0-9659-9a7fbbce7b48.",
-    "generation": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
+    "message": "Verified against guarantor generation f3b3cb06-2cd2-48c2-ba33-6747646d3604.",
+    "generation": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
     "children": [
       {
-        "relatedPersonId": "891c5282-30b6-4745-901d-6cc776897cb3",
-        "patientId": "Patient/c1ec26eb-bab0-4f2d-a152-910b18668850",
+        "relatedPersonId": "a1f9b0ef-d5e5-4633-bff1-1074f67ac370",
+        "patientId": "Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801",
         "patientName": "Sam Synthetic",
         "classification": "verified"
       },
       {
-        "relatedPersonId": "b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
-        "patientId": "Patient/6983b5d3-b289-47a4-9c02-72d8caf064db",
+        "relatedPersonId": "3d20a35d-210d-403c-a1b0-28b63d7f55b5",
+        "patientId": "Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0",
         "patientName": "Leo Synthetic",
         "classification": "verified"
       }
@@ -589,7 +641,14 @@
           {
             "system": "phone",
             "use": "home",
+            "rank": 1,
             "value": "864-555-0123"
+          },
+          {
+            "system": "phone",
+            "use": "home",
+            "rank": 2,
+            "value": "864-555-0102"
           }
         ],
         "address": [
@@ -606,21 +665,21 @@
         "link": [
           {
             "target": {
-              "reference": "RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+              "reference": "RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
             },
             "assurance": "level2"
           },
           {
             "target": {
-              "reference": "RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+              "reference": "RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
             },
             "assurance": "level2"
           }
         ],
-        "id": "bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+        "id": "ead3157b-985e-46bf-ab32-e0ad1040da63",
         "meta": {
-          "versionId": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
-          "lastUpdated": "2026-09-13T14:52:20.547Z"
+          "versionId": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
+          "lastUpdated": "2026-09-13T15:12:04.233Z"
         }
       },
       "children": [
@@ -629,7 +688,7 @@
             "resourceType": "RelatedPerson",
             "active": true,
             "patient": {
-              "reference": "Patient/c1ec26eb-bab0-4f2d-a152-910b18668850"
+              "reference": "Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801"
             },
             "name": [
               {
@@ -643,7 +702,14 @@
               {
                 "system": "phone",
                 "use": "home",
+                "rank": 1,
                 "value": "864-555-0123"
+              },
+              {
+                "system": "phone",
+                "use": "home",
+                "rank": 2,
+                "value": "864-555-0102"
               }
             ],
             "address": [
@@ -684,10 +750,10 @@
                 "valueString": "Unrelated 0"
               }
             ],
-            "id": "891c5282-30b6-4745-901d-6cc776897cb3",
+            "id": "a1f9b0ef-d5e5-4633-bff1-1074f67ac370",
             "meta": {
-              "versionId": "5edd77f6-8bff-4d6b-9f7c-10067e1bdd23",
-              "lastUpdated": "2026-09-13T14:52:20.570Z"
+              "versionId": "4697b655-0c57-4b90-ab65-408e811ed9d6",
+              "lastUpdated": "2026-09-13T15:12:04.258Z"
             }
           },
           "patientName": "Sam Synthetic"
@@ -697,7 +763,7 @@
             "resourceType": "RelatedPerson",
             "active": true,
             "patient": {
-              "reference": "Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+              "reference": "Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
             },
             "name": [
               {
@@ -711,7 +777,14 @@
               {
                 "system": "phone",
                 "use": "home",
+                "rank": 1,
                 "value": "864-555-0123"
+              },
+              {
+                "system": "phone",
+                "use": "home",
+                "rank": 2,
+                "value": "864-555-0102"
               }
             ],
             "address": [
@@ -752,10 +825,10 @@
                 "valueString": "Unrelated 1"
               }
             ],
-            "id": "b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
+            "id": "3d20a35d-210d-403c-a1b0-28b63d7f55b5",
             "meta": {
-              "versionId": "d2a94ffd-5193-4002-95b7-d4f294fef340",
-              "lastUpdated": "2026-09-13T14:52:20.889Z"
+              "versionId": "1ed45a3c-45b9-4790-99d3-e5c58dc0bd5a",
+              "lastUpdated": "2026-09-13T15:12:04.541Z"
             }
           },
           "patientName": "Leo Synthetic"
@@ -769,7 +842,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Person/bd801a0e-30b2-4eee-88e4-156c8cbc5cad"
+        "path": "/fhir/R4/Person/ead3157b-985e-46bf-ab32-e0ad1040da63"
       },
       "response": {
         "status": 200,
@@ -788,7 +861,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -805,21 +885,21 @@
           "link": [
             {
               "target": {
-                "reference": "RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+                "reference": "RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
               },
               "assurance": "level2"
             },
             {
               "target": {
-                "reference": "RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+                "reference": "RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
               },
               "assurance": "level2"
             }
           ],
-          "id": "bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+          "id": "ead3157b-985e-46bf-ab32-e0ad1040da63",
           "meta": {
-            "versionId": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
-            "lastUpdated": "2026-09-13T14:52:20.547Z"
+            "versionId": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
+            "lastUpdated": "2026-09-13T15:12:04.233Z"
           }
         }
       }
@@ -829,7 +909,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+        "path": "/fhir/R4/RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
       },
       "response": {
         "status": 200,
@@ -837,7 +917,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/c1ec26eb-bab0-4f2d-a152-910b18668850"
+            "reference": "Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801"
           },
           "name": [
             {
@@ -851,7 +931,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -892,10 +979,10 @@
               "valueString": "Unrelated 0"
             }
           ],
-          "id": "891c5282-30b6-4745-901d-6cc776897cb3",
+          "id": "a1f9b0ef-d5e5-4633-bff1-1074f67ac370",
           "meta": {
-            "versionId": "5edd77f6-8bff-4d6b-9f7c-10067e1bdd23",
-            "lastUpdated": "2026-09-13T14:52:20.570Z"
+            "versionId": "4697b655-0c57-4b90-ab65-408e811ed9d6",
+            "lastUpdated": "2026-09-13T15:12:04.258Z"
           }
         }
       }
@@ -905,7 +992,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Patient/c1ec26eb-bab0-4f2d-a152-910b18668850"
+        "path": "/fhir/R4/Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801"
       },
       "response": {
         "status": 200,
@@ -922,10 +1009,10 @@
           ],
           "birthDate": "2015-01-01",
           "gender": "unknown",
-          "id": "c1ec26eb-bab0-4f2d-a152-910b18668850",
+          "id": "47d23c73-d612-4b43-b7da-8beaa2f1a801",
           "meta": {
-            "versionId": "491cc8a8-96ca-49ba-9dfb-9e727f81d49b",
-            "lastUpdated": "2026-09-13T14:52:19.785Z"
+            "versionId": "5f67f5b0-a102-4eb0-83a6-3b5350f79d70",
+            "lastUpdated": "2026-09-13T15:12:03.306Z"
           }
         }
       }
@@ -935,7 +1022,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+        "path": "/fhir/R4/RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
       },
       "response": {
         "status": 200,
@@ -943,7 +1030,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+            "reference": "Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
           },
           "name": [
             {
@@ -963,6 +1050,7 @@
           "address": [
             {
               "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
               "line": [
                 "1 Synthetic Way"
               ],
@@ -998,10 +1086,10 @@
               "valueString": "Unrelated 1"
             }
           ],
-          "id": "b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
+          "id": "3d20a35d-210d-403c-a1b0-28b63d7f55b5",
           "meta": {
-            "versionId": "3c5bb518-7e80-4a32-a58c-5668dd9cb36d",
-            "lastUpdated": "2026-09-13T14:52:20.559Z"
+            "versionId": "128458cb-00cb-4377-a946-969e6133b8f7",
+            "lastUpdated": "2026-09-13T15:12:04.246Z"
           }
         }
       }
@@ -1011,7 +1099,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+        "path": "/fhir/R4/Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
       },
       "response": {
         "status": 200,
@@ -1028,10 +1116,10 @@
           ],
           "birthDate": "2015-01-01",
           "gender": "unknown",
-          "id": "6983b5d3-b289-47a4-9c02-72d8caf064db",
+          "id": "437ba302-8fb0-41d3-ad34-399599fe7dd0",
           "meta": {
-            "versionId": "edb0f0da-f8e8-4d2e-9a52-3278f712a997",
-            "lastUpdated": "2026-09-13T14:52:19.805Z"
+            "versionId": "edaeb46d-c143-4f32-87bf-7600e4c339c5",
+            "lastUpdated": "2026-09-13T15:12:03.337Z"
           }
         }
       }
@@ -1041,7 +1129,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Person?link=RelatedPerson%2F891c5282-30b6-4745-901d-6cc776897cb3"
+        "path": "/fhir/R4/Person?link=RelatedPerson%2Fa1f9b0ef-d5e5-4633-bff1-1074f67ac370"
       },
       "response": {
         "status": 200,
@@ -1050,7 +1138,7 @@
           "type": "searchset",
           "entry": [
             {
-              "fullUrl": "http://127.0.0.1:19513/fhir/R4/Person/bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+              "fullUrl": "http://127.0.0.1:19513/fhir/R4/Person/ead3157b-985e-46bf-ab32-e0ad1040da63",
               "search": {
                 "mode": "match"
               },
@@ -1069,7 +1157,14 @@
                   {
                     "system": "phone",
                     "use": "home",
+                    "rank": 1,
                     "value": "864-555-0123"
+                  },
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 2,
+                    "value": "864-555-0102"
                   }
                 ],
                 "address": [
@@ -1086,21 +1181,21 @@
                 "link": [
                   {
                     "target": {
-                      "reference": "RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+                      "reference": "RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
                     },
                     "assurance": "level2"
                   },
                   {
                     "target": {
-                      "reference": "RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+                      "reference": "RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
                     },
                     "assurance": "level2"
                   }
                 ],
-                "id": "bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+                "id": "ead3157b-985e-46bf-ab32-e0ad1040da63",
                 "meta": {
-                  "versionId": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
-                  "lastUpdated": "2026-09-13T14:52:20.547Z"
+                  "versionId": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
+                  "lastUpdated": "2026-09-13T15:12:04.233Z"
                 }
               }
             }
@@ -1108,11 +1203,11 @@
           "link": [
             {
               "relation": "self",
-              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2F891c5282-30b6-4745-901d-6cc776897cb3"
+              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2Fa1f9b0ef-d5e5-4633-bff1-1074f67ac370"
             },
             {
               "relation": "first",
-              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2F891c5282-30b6-4745-901d-6cc776897cb3"
+              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2Fa1f9b0ef-d5e5-4633-bff1-1074f67ac370"
             }
           ]
         }
@@ -1123,7 +1218,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Person?link=RelatedPerson%2Fb1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+        "path": "/fhir/R4/Person?link=RelatedPerson%2F3d20a35d-210d-403c-a1b0-28b63d7f55b5"
       },
       "response": {
         "status": 200,
@@ -1132,7 +1227,7 @@
           "type": "searchset",
           "entry": [
             {
-              "fullUrl": "http://127.0.0.1:19513/fhir/R4/Person/bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+              "fullUrl": "http://127.0.0.1:19513/fhir/R4/Person/ead3157b-985e-46bf-ab32-e0ad1040da63",
               "search": {
                 "mode": "match"
               },
@@ -1151,7 +1246,14 @@
                   {
                     "system": "phone",
                     "use": "home",
+                    "rank": 1,
                     "value": "864-555-0123"
+                  },
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 2,
+                    "value": "864-555-0102"
                   }
                 ],
                 "address": [
@@ -1168,21 +1270,21 @@
                 "link": [
                   {
                     "target": {
-                      "reference": "RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+                      "reference": "RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
                     },
                     "assurance": "level2"
                   },
                   {
                     "target": {
-                      "reference": "RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+                      "reference": "RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
                     },
                     "assurance": "level2"
                   }
                 ],
-                "id": "bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+                "id": "ead3157b-985e-46bf-ab32-e0ad1040da63",
                 "meta": {
-                  "versionId": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
-                  "lastUpdated": "2026-09-13T14:52:20.547Z"
+                  "versionId": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
+                  "lastUpdated": "2026-09-13T15:12:04.233Z"
                 }
               }
             }
@@ -1190,11 +1292,11 @@
           "link": [
             {
               "relation": "self",
-              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2Fb1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2F3d20a35d-210d-403c-a1b0-28b63d7f55b5"
             },
             {
               "relation": "first",
-              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2Fb1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2F3d20a35d-210d-403c-a1b0-28b63d7f55b5"
             }
           ]
         }
@@ -1205,7 +1307,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+        "path": "/fhir/R4/RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
       },
       "response": {
         "status": 200,
@@ -1213,7 +1315,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+            "reference": "Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
           },
           "name": [
             {
@@ -1233,6 +1335,7 @@
           "address": [
             {
               "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
               "line": [
                 "1 Synthetic Way"
               ],
@@ -1268,10 +1371,10 @@
               "valueString": "Unrelated 1"
             }
           ],
-          "id": "b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
+          "id": "3d20a35d-210d-403c-a1b0-28b63d7f55b5",
           "meta": {
-            "versionId": "3c5bb518-7e80-4a32-a58c-5668dd9cb36d",
-            "lastUpdated": "2026-09-13T14:52:20.559Z"
+            "versionId": "128458cb-00cb-4377-a946-969e6133b8f7",
+            "lastUpdated": "2026-09-13T15:12:04.246Z"
           }
         }
       }
@@ -1281,13 +1384,13 @@
       "actor": "editor",
       "request": {
         "method": "PUT",
-        "path": "/fhir/R4/RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
-        "ifMatch": "W/\"3c5bb518-7e80-4a32-a58c-5668dd9cb36d\"",
+        "path": "/fhir/R4/RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5",
+        "ifMatch": "W/\"128458cb-00cb-4377-a946-969e6133b8f7\"",
         "body": {
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+            "reference": "Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
           },
           "name": [
             {
@@ -1301,7 +1404,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -1342,10 +1452,10 @@
               "valueString": "Unrelated 1"
             }
           ],
-          "id": "b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
+          "id": "3d20a35d-210d-403c-a1b0-28b63d7f55b5",
           "meta": {
-            "versionId": "3c5bb518-7e80-4a32-a58c-5668dd9cb36d",
-            "lastUpdated": "2026-09-13T14:52:20.559Z"
+            "versionId": "128458cb-00cb-4377-a946-969e6133b8f7",
+            "lastUpdated": "2026-09-13T15:12:04.246Z"
           }
         }
       },
@@ -1355,7 +1465,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+            "reference": "Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
           },
           "name": [
             {
@@ -1369,7 +1479,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -1410,10 +1527,10 @@
               "valueString": "Unrelated 1"
             }
           ],
-          "id": "b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
+          "id": "3d20a35d-210d-403c-a1b0-28b63d7f55b5",
           "meta": {
-            "versionId": "d2a94ffd-5193-4002-95b7-d4f294fef340",
-            "lastUpdated": "2026-09-13T14:52:20.889Z"
+            "versionId": "1ed45a3c-45b9-4790-99d3-e5c58dc0bd5a",
+            "lastUpdated": "2026-09-13T15:12:04.541Z"
           }
         }
       }
@@ -1423,7 +1540,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+        "path": "/fhir/R4/RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
       },
       "response": {
         "status": 200,
@@ -1431,7 +1548,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/c1ec26eb-bab0-4f2d-a152-910b18668850"
+            "reference": "Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801"
           },
           "name": [
             {
@@ -1445,7 +1562,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -1486,10 +1610,10 @@
               "valueString": "Unrelated 0"
             }
           ],
-          "id": "891c5282-30b6-4745-901d-6cc776897cb3",
+          "id": "a1f9b0ef-d5e5-4633-bff1-1074f67ac370",
           "meta": {
-            "versionId": "5edd77f6-8bff-4d6b-9f7c-10067e1bdd23",
-            "lastUpdated": "2026-09-13T14:52:20.570Z"
+            "versionId": "4697b655-0c57-4b90-ab65-408e811ed9d6",
+            "lastUpdated": "2026-09-13T15:12:04.258Z"
           }
         }
       }
@@ -1499,7 +1623,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+        "path": "/fhir/R4/RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
       },
       "response": {
         "status": 200,
@@ -1507,7 +1631,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+            "reference": "Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
           },
           "name": [
             {
@@ -1521,7 +1645,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -1562,10 +1693,10 @@
               "valueString": "Unrelated 1"
             }
           ],
-          "id": "b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
+          "id": "3d20a35d-210d-403c-a1b0-28b63d7f55b5",
           "meta": {
-            "versionId": "d2a94ffd-5193-4002-95b7-d4f294fef340",
-            "lastUpdated": "2026-09-13T14:52:20.889Z"
+            "versionId": "1ed45a3c-45b9-4790-99d3-e5c58dc0bd5a",
+            "lastUpdated": "2026-09-13T15:12:04.541Z"
           }
         }
       }
@@ -1575,7 +1706,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Person/bd801a0e-30b2-4eee-88e4-156c8cbc5cad"
+        "path": "/fhir/R4/Person/ead3157b-985e-46bf-ab32-e0ad1040da63"
       },
       "response": {
         "status": 200,
@@ -1594,7 +1725,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -1611,21 +1749,21 @@
           "link": [
             {
               "target": {
-                "reference": "RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+                "reference": "RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
               },
               "assurance": "level2"
             },
             {
               "target": {
-                "reference": "RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+                "reference": "RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
               },
               "assurance": "level2"
             }
           ],
-          "id": "bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+          "id": "ead3157b-985e-46bf-ab32-e0ad1040da63",
           "meta": {
-            "versionId": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
-            "lastUpdated": "2026-09-13T14:52:20.547Z"
+            "versionId": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
+            "lastUpdated": "2026-09-13T15:12:04.233Z"
           }
         }
       }
@@ -1635,7 +1773,7 @@
       "actor": "verification",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Person/bd801a0e-30b2-4eee-88e4-156c8cbc5cad"
+        "path": "/fhir/R4/Person/ead3157b-985e-46bf-ab32-e0ad1040da63"
       },
       "response": {
         "status": 200,
@@ -1654,7 +1792,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -1671,21 +1816,21 @@
           "link": [
             {
               "target": {
-                "reference": "RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+                "reference": "RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
               },
               "assurance": "level2"
             },
             {
               "target": {
-                "reference": "RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+                "reference": "RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
               },
               "assurance": "level2"
             }
           ],
-          "id": "bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+          "id": "ead3157b-985e-46bf-ab32-e0ad1040da63",
           "meta": {
-            "versionId": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
-            "lastUpdated": "2026-09-13T14:52:20.547Z"
+            "versionId": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
+            "lastUpdated": "2026-09-13T15:12:04.233Z"
           }
         }
       }
@@ -1695,7 +1840,7 @@
       "actor": "verification",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+        "path": "/fhir/R4/RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
       },
       "response": {
         "status": 200,
@@ -1703,7 +1848,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/c1ec26eb-bab0-4f2d-a152-910b18668850"
+            "reference": "Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801"
           },
           "name": [
             {
@@ -1717,7 +1862,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -1758,10 +1910,10 @@
               "valueString": "Unrelated 0"
             }
           ],
-          "id": "891c5282-30b6-4745-901d-6cc776897cb3",
+          "id": "a1f9b0ef-d5e5-4633-bff1-1074f67ac370",
           "meta": {
-            "versionId": "5edd77f6-8bff-4d6b-9f7c-10067e1bdd23",
-            "lastUpdated": "2026-09-13T14:52:20.570Z"
+            "versionId": "4697b655-0c57-4b90-ab65-408e811ed9d6",
+            "lastUpdated": "2026-09-13T15:12:04.258Z"
           }
         }
       }
@@ -1771,7 +1923,7 @@
       "actor": "verification",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+        "path": "/fhir/R4/RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
       },
       "response": {
         "status": 200,
@@ -1779,7 +1931,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+            "reference": "Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
           },
           "name": [
             {
@@ -1793,7 +1945,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -1834,10 +1993,10 @@
               "valueString": "Unrelated 1"
             }
           ],
-          "id": "b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
+          "id": "3d20a35d-210d-403c-a1b0-28b63d7f55b5",
           "meta": {
-            "versionId": "d2a94ffd-5193-4002-95b7-d4f294fef340",
-            "lastUpdated": "2026-09-13T14:52:20.889Z"
+            "versionId": "1ed45a3c-45b9-4790-99d3-e5c58dc0bd5a",
+            "lastUpdated": "2026-09-13T15:12:04.541Z"
           }
         }
       }
@@ -1847,7 +2006,7 @@
       "actor": "verification",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/46893552-5384-43ba-862b-3d85c8a2b46f"
+        "path": "/fhir/R4/RelatedPerson/83a277cf-295c-4d5d-9137-586399ac0a6b"
       },
       "response": {
         "status": 200,
@@ -1855,7 +2014,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/278b6995-fdc4-4d0a-9f35-be8f4748930b"
+            "reference": "Patient/f8c0cf49-01b6-40c7-80c8-4ed85f640e52"
           },
           "name": [
             {
@@ -1869,12 +2028,20 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0101"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
             {
               "use": "home",
+              "text": "1 Synthetic Way, Greenville SC 29601",
               "line": [
                 "1 Synthetic Way"
               ],
@@ -1910,10 +2077,10 @@
               "valueString": "Unrelated 2"
             }
           ],
-          "id": "46893552-5384-43ba-862b-3d85c8a2b46f",
+          "id": "83a277cf-295c-4d5d-9137-586399ac0a6b",
           "meta": {
-            "versionId": "d1a6f198-aa6a-461f-8584-30a7b8db8a50",
-            "lastUpdated": "2026-09-13T14:52:19.834Z"
+            "versionId": "b210d11b-a1d0-4fac-abe4-a75ab733fa9b",
+            "lastUpdated": "2026-09-13T15:12:03.420Z"
           }
         }
       }
@@ -1923,7 +2090,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+        "path": "/fhir/R4/RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
       },
       "response": {
         "status": 200,
@@ -1931,7 +2098,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/c1ec26eb-bab0-4f2d-a152-910b18668850"
+            "reference": "Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801"
           },
           "name": [
             {
@@ -1945,7 +2112,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -1986,10 +2160,10 @@
               "valueString": "Unrelated 0"
             }
           ],
-          "id": "891c5282-30b6-4745-901d-6cc776897cb3",
+          "id": "a1f9b0ef-d5e5-4633-bff1-1074f67ac370",
           "meta": {
-            "versionId": "5edd77f6-8bff-4d6b-9f7c-10067e1bdd23",
-            "lastUpdated": "2026-09-13T14:52:20.570Z"
+            "versionId": "4697b655-0c57-4b90-ab65-408e811ed9d6",
+            "lastUpdated": "2026-09-13T15:12:04.258Z"
           }
         }
       }
@@ -1999,7 +2173,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Person?link=RelatedPerson%2F891c5282-30b6-4745-901d-6cc776897cb3"
+        "path": "/fhir/R4/Person?link=RelatedPerson%2Fa1f9b0ef-d5e5-4633-bff1-1074f67ac370"
       },
       "response": {
         "status": 200,
@@ -2008,7 +2182,7 @@
           "type": "searchset",
           "entry": [
             {
-              "fullUrl": "http://127.0.0.1:19513/fhir/R4/Person/bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+              "fullUrl": "http://127.0.0.1:19513/fhir/R4/Person/ead3157b-985e-46bf-ab32-e0ad1040da63",
               "search": {
                 "mode": "match"
               },
@@ -2027,7 +2201,14 @@
                   {
                     "system": "phone",
                     "use": "home",
+                    "rank": 1,
                     "value": "864-555-0123"
+                  },
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 2,
+                    "value": "864-555-0102"
                   }
                 ],
                 "address": [
@@ -2044,21 +2225,21 @@
                 "link": [
                   {
                     "target": {
-                      "reference": "RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+                      "reference": "RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
                     },
                     "assurance": "level2"
                   },
                   {
                     "target": {
-                      "reference": "RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+                      "reference": "RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
                     },
                     "assurance": "level2"
                   }
                 ],
-                "id": "bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+                "id": "ead3157b-985e-46bf-ab32-e0ad1040da63",
                 "meta": {
-                  "versionId": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
-                  "lastUpdated": "2026-09-13T14:52:20.547Z"
+                  "versionId": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
+                  "lastUpdated": "2026-09-13T15:12:04.233Z"
                 }
               }
             }
@@ -2066,11 +2247,11 @@
           "link": [
             {
               "relation": "self",
-              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2F891c5282-30b6-4745-901d-6cc776897cb3"
+              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2Fa1f9b0ef-d5e5-4633-bff1-1074f67ac370"
             },
             {
               "relation": "first",
-              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2F891c5282-30b6-4745-901d-6cc776897cb3"
+              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2Fa1f9b0ef-d5e5-4633-bff1-1074f67ac370"
             }
           ]
         }
@@ -2081,7 +2262,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+        "path": "/fhir/R4/RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
       },
       "response": {
         "status": 200,
@@ -2089,7 +2270,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/c1ec26eb-bab0-4f2d-a152-910b18668850"
+            "reference": "Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801"
           },
           "name": [
             {
@@ -2103,7 +2284,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -2144,10 +2332,10 @@
               "valueString": "Unrelated 0"
             }
           ],
-          "id": "891c5282-30b6-4745-901d-6cc776897cb3",
+          "id": "a1f9b0ef-d5e5-4633-bff1-1074f67ac370",
           "meta": {
-            "versionId": "5edd77f6-8bff-4d6b-9f7c-10067e1bdd23",
-            "lastUpdated": "2026-09-13T14:52:20.570Z"
+            "versionId": "4697b655-0c57-4b90-ab65-408e811ed9d6",
+            "lastUpdated": "2026-09-13T15:12:04.258Z"
           }
         }
       }
@@ -2157,7 +2345,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Patient/c1ec26eb-bab0-4f2d-a152-910b18668850"
+        "path": "/fhir/R4/Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801"
       },
       "response": {
         "status": 200,
@@ -2174,10 +2362,10 @@
           ],
           "birthDate": "2015-01-01",
           "gender": "unknown",
-          "id": "c1ec26eb-bab0-4f2d-a152-910b18668850",
+          "id": "47d23c73-d612-4b43-b7da-8beaa2f1a801",
           "meta": {
-            "versionId": "491cc8a8-96ca-49ba-9dfb-9e727f81d49b",
-            "lastUpdated": "2026-09-13T14:52:19.785Z"
+            "versionId": "5f67f5b0-a102-4eb0-83a6-3b5350f79d70",
+            "lastUpdated": "2026-09-13T15:12:03.306Z"
           }
         }
       }
@@ -2187,7 +2375,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+        "path": "/fhir/R4/RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
       },
       "response": {
         "status": 200,
@@ -2195,7 +2383,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+            "reference": "Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
           },
           "name": [
             {
@@ -2209,7 +2397,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -2250,10 +2445,10 @@
               "valueString": "Unrelated 1"
             }
           ],
-          "id": "b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
+          "id": "3d20a35d-210d-403c-a1b0-28b63d7f55b5",
           "meta": {
-            "versionId": "d2a94ffd-5193-4002-95b7-d4f294fef340",
-            "lastUpdated": "2026-09-13T14:52:20.889Z"
+            "versionId": "1ed45a3c-45b9-4790-99d3-e5c58dc0bd5a",
+            "lastUpdated": "2026-09-13T15:12:04.541Z"
           }
         }
       }
@@ -2263,7 +2458,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+        "path": "/fhir/R4/Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
       },
       "response": {
         "status": 200,
@@ -2280,10 +2475,10 @@
           ],
           "birthDate": "2015-01-01",
           "gender": "unknown",
-          "id": "6983b5d3-b289-47a4-9c02-72d8caf064db",
+          "id": "437ba302-8fb0-41d3-ad34-399599fe7dd0",
           "meta": {
-            "versionId": "edb0f0da-f8e8-4d2e-9a52-3278f712a997",
-            "lastUpdated": "2026-09-13T14:52:19.805Z"
+            "versionId": "edaeb46d-c143-4f32-87bf-7600e4c339c5",
+            "lastUpdated": "2026-09-13T15:12:03.337Z"
           }
         }
       }
@@ -2293,7 +2488,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+        "path": "/fhir/R4/RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
       },
       "response": {
         "status": 200,
@@ -2301,7 +2496,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/c1ec26eb-bab0-4f2d-a152-910b18668850"
+            "reference": "Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801"
           },
           "name": [
             {
@@ -2315,7 +2510,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -2356,10 +2558,10 @@
               "valueString": "Unrelated 0"
             }
           ],
-          "id": "891c5282-30b6-4745-901d-6cc776897cb3",
+          "id": "a1f9b0ef-d5e5-4633-bff1-1074f67ac370",
           "meta": {
-            "versionId": "5edd77f6-8bff-4d6b-9f7c-10067e1bdd23",
-            "lastUpdated": "2026-09-13T14:52:20.570Z"
+            "versionId": "4697b655-0c57-4b90-ab65-408e811ed9d6",
+            "lastUpdated": "2026-09-13T15:12:04.258Z"
           }
         }
       }
@@ -2369,7 +2571,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+        "path": "/fhir/R4/RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
       },
       "response": {
         "status": 200,
@@ -2377,7 +2579,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+            "reference": "Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
           },
           "name": [
             {
@@ -2391,7 +2593,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -2432,10 +2641,10 @@
               "valueString": "Unrelated 1"
             }
           ],
-          "id": "b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
+          "id": "3d20a35d-210d-403c-a1b0-28b63d7f55b5",
           "meta": {
-            "versionId": "d2a94ffd-5193-4002-95b7-d4f294fef340",
-            "lastUpdated": "2026-09-13T14:52:20.889Z"
+            "versionId": "1ed45a3c-45b9-4790-99d3-e5c58dc0bd5a",
+            "lastUpdated": "2026-09-13T15:12:04.541Z"
           }
         }
       }
@@ -2445,7 +2654,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Person/bd801a0e-30b2-4eee-88e4-156c8cbc5cad"
+        "path": "/fhir/R4/Person/ead3157b-985e-46bf-ab32-e0ad1040da63"
       },
       "response": {
         "status": 200,
@@ -2464,7 +2673,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -2481,21 +2697,21 @@
           "link": [
             {
               "target": {
-                "reference": "RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+                "reference": "RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
               },
               "assurance": "level2"
             },
             {
               "target": {
-                "reference": "RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+                "reference": "RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
               },
               "assurance": "level2"
             }
           ],
-          "id": "bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+          "id": "ead3157b-985e-46bf-ab32-e0ad1040da63",
           "meta": {
-            "versionId": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
-            "lastUpdated": "2026-09-13T14:52:20.547Z"
+            "versionId": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
+            "lastUpdated": "2026-09-13T15:12:04.233Z"
           }
         }
       }
@@ -2505,7 +2721,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Person/bd801a0e-30b2-4eee-88e4-156c8cbc5cad"
+        "path": "/fhir/R4/Person/ead3157b-985e-46bf-ab32-e0ad1040da63"
       },
       "response": {
         "status": 200,
@@ -2524,7 +2740,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -2541,21 +2764,21 @@
           "link": [
             {
               "target": {
-                "reference": "RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+                "reference": "RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
               },
               "assurance": "level2"
             },
             {
               "target": {
-                "reference": "RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+                "reference": "RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
               },
               "assurance": "level2"
             }
           ],
-          "id": "bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+          "id": "ead3157b-985e-46bf-ab32-e0ad1040da63",
           "meta": {
-            "versionId": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
-            "lastUpdated": "2026-09-13T14:52:20.547Z"
+            "versionId": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
+            "lastUpdated": "2026-09-13T15:12:04.233Z"
           }
         }
       }
@@ -2565,7 +2788,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+        "path": "/fhir/R4/RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
       },
       "response": {
         "status": 200,
@@ -2573,7 +2796,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/c1ec26eb-bab0-4f2d-a152-910b18668850"
+            "reference": "Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801"
           },
           "name": [
             {
@@ -2587,7 +2810,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -2628,10 +2858,10 @@
               "valueString": "Unrelated 0"
             }
           ],
-          "id": "891c5282-30b6-4745-901d-6cc776897cb3",
+          "id": "a1f9b0ef-d5e5-4633-bff1-1074f67ac370",
           "meta": {
-            "versionId": "5edd77f6-8bff-4d6b-9f7c-10067e1bdd23",
-            "lastUpdated": "2026-09-13T14:52:20.570Z"
+            "versionId": "4697b655-0c57-4b90-ab65-408e811ed9d6",
+            "lastUpdated": "2026-09-13T15:12:04.258Z"
           }
         }
       }
@@ -2641,7 +2871,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Patient/c1ec26eb-bab0-4f2d-a152-910b18668850"
+        "path": "/fhir/R4/Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801"
       },
       "response": {
         "status": 200,
@@ -2658,10 +2888,10 @@
           ],
           "birthDate": "2015-01-01",
           "gender": "unknown",
-          "id": "c1ec26eb-bab0-4f2d-a152-910b18668850",
+          "id": "47d23c73-d612-4b43-b7da-8beaa2f1a801",
           "meta": {
-            "versionId": "491cc8a8-96ca-49ba-9dfb-9e727f81d49b",
-            "lastUpdated": "2026-09-13T14:52:19.785Z"
+            "versionId": "5f67f5b0-a102-4eb0-83a6-3b5350f79d70",
+            "lastUpdated": "2026-09-13T15:12:03.306Z"
           }
         }
       }
@@ -2671,7 +2901,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+        "path": "/fhir/R4/RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
       },
       "response": {
         "status": 200,
@@ -2679,7 +2909,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+            "reference": "Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
           },
           "name": [
             {
@@ -2693,7 +2923,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -2734,10 +2971,10 @@
               "valueString": "Unrelated 1"
             }
           ],
-          "id": "b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
+          "id": "3d20a35d-210d-403c-a1b0-28b63d7f55b5",
           "meta": {
-            "versionId": "d2a94ffd-5193-4002-95b7-d4f294fef340",
-            "lastUpdated": "2026-09-13T14:52:20.889Z"
+            "versionId": "1ed45a3c-45b9-4790-99d3-e5c58dc0bd5a",
+            "lastUpdated": "2026-09-13T15:12:04.541Z"
           }
         }
       }
@@ -2747,7 +2984,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+        "path": "/fhir/R4/Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
       },
       "response": {
         "status": 200,
@@ -2764,10 +3001,10 @@
           ],
           "birthDate": "2015-01-01",
           "gender": "unknown",
-          "id": "6983b5d3-b289-47a4-9c02-72d8caf064db",
+          "id": "437ba302-8fb0-41d3-ad34-399599fe7dd0",
           "meta": {
-            "versionId": "edb0f0da-f8e8-4d2e-9a52-3278f712a997",
-            "lastUpdated": "2026-09-13T14:52:19.805Z"
+            "versionId": "edaeb46d-c143-4f32-87bf-7600e4c339c5",
+            "lastUpdated": "2026-09-13T15:12:03.337Z"
           }
         }
       }
@@ -2777,7 +3014,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Person?link=RelatedPerson%2F891c5282-30b6-4745-901d-6cc776897cb3"
+        "path": "/fhir/R4/Person?link=RelatedPerson%2Fa1f9b0ef-d5e5-4633-bff1-1074f67ac370"
       },
       "response": {
         "status": 200,
@@ -2786,7 +3023,7 @@
           "type": "searchset",
           "entry": [
             {
-              "fullUrl": "http://127.0.0.1:19513/fhir/R4/Person/bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+              "fullUrl": "http://127.0.0.1:19513/fhir/R4/Person/ead3157b-985e-46bf-ab32-e0ad1040da63",
               "search": {
                 "mode": "match"
               },
@@ -2805,7 +3042,14 @@
                   {
                     "system": "phone",
                     "use": "home",
+                    "rank": 1,
                     "value": "864-555-0123"
+                  },
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 2,
+                    "value": "864-555-0102"
                   }
                 ],
                 "address": [
@@ -2822,21 +3066,21 @@
                 "link": [
                   {
                     "target": {
-                      "reference": "RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+                      "reference": "RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
                     },
                     "assurance": "level2"
                   },
                   {
                     "target": {
-                      "reference": "RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+                      "reference": "RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
                     },
                     "assurance": "level2"
                   }
                 ],
-                "id": "bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+                "id": "ead3157b-985e-46bf-ab32-e0ad1040da63",
                 "meta": {
-                  "versionId": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
-                  "lastUpdated": "2026-09-13T14:52:20.547Z"
+                  "versionId": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
+                  "lastUpdated": "2026-09-13T15:12:04.233Z"
                 }
               }
             }
@@ -2844,11 +3088,11 @@
           "link": [
             {
               "relation": "self",
-              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2F891c5282-30b6-4745-901d-6cc776897cb3"
+              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2Fa1f9b0ef-d5e5-4633-bff1-1074f67ac370"
             },
             {
               "relation": "first",
-              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2F891c5282-30b6-4745-901d-6cc776897cb3"
+              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2Fa1f9b0ef-d5e5-4633-bff1-1074f67ac370"
             }
           ]
         }
@@ -2859,7 +3103,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Person?link=RelatedPerson%2Fb1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+        "path": "/fhir/R4/Person?link=RelatedPerson%2F3d20a35d-210d-403c-a1b0-28b63d7f55b5"
       },
       "response": {
         "status": 200,
@@ -2868,7 +3112,7 @@
           "type": "searchset",
           "entry": [
             {
-              "fullUrl": "http://127.0.0.1:19513/fhir/R4/Person/bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+              "fullUrl": "http://127.0.0.1:19513/fhir/R4/Person/ead3157b-985e-46bf-ab32-e0ad1040da63",
               "search": {
                 "mode": "match"
               },
@@ -2887,7 +3131,14 @@
                   {
                     "system": "phone",
                     "use": "home",
+                    "rank": 1,
                     "value": "864-555-0123"
+                  },
+                  {
+                    "system": "phone",
+                    "use": "home",
+                    "rank": 2,
+                    "value": "864-555-0102"
                   }
                 ],
                 "address": [
@@ -2904,21 +3155,21 @@
                 "link": [
                   {
                     "target": {
-                      "reference": "RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+                      "reference": "RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
                     },
                     "assurance": "level2"
                   },
                   {
                     "target": {
-                      "reference": "RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+                      "reference": "RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
                     },
                     "assurance": "level2"
                   }
                 ],
-                "id": "bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+                "id": "ead3157b-985e-46bf-ab32-e0ad1040da63",
                 "meta": {
-                  "versionId": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
-                  "lastUpdated": "2026-09-13T14:52:20.547Z"
+                  "versionId": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
+                  "lastUpdated": "2026-09-13T15:12:04.233Z"
                 }
               }
             }
@@ -2926,11 +3177,11 @@
           "link": [
             {
               "relation": "self",
-              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2Fb1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2F3d20a35d-210d-403c-a1b0-28b63d7f55b5"
             },
             {
               "relation": "first",
-              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2Fb1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+              "url": "http://127.0.0.1:19513/fhir/R4/Person?_count=20&link=RelatedPerson%2F3d20a35d-210d-403c-a1b0-28b63d7f55b5"
             }
           ]
         }
@@ -2941,7 +3192,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+        "path": "/fhir/R4/RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
       },
       "response": {
         "status": 200,
@@ -2949,7 +3200,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/c1ec26eb-bab0-4f2d-a152-910b18668850"
+            "reference": "Patient/47d23c73-d612-4b43-b7da-8beaa2f1a801"
           },
           "name": [
             {
@@ -2963,7 +3214,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -3004,10 +3262,10 @@
               "valueString": "Unrelated 0"
             }
           ],
-          "id": "891c5282-30b6-4745-901d-6cc776897cb3",
+          "id": "a1f9b0ef-d5e5-4633-bff1-1074f67ac370",
           "meta": {
-            "versionId": "5edd77f6-8bff-4d6b-9f7c-10067e1bdd23",
-            "lastUpdated": "2026-09-13T14:52:20.570Z"
+            "versionId": "4697b655-0c57-4b90-ab65-408e811ed9d6",
+            "lastUpdated": "2026-09-13T15:12:04.258Z"
           }
         }
       }
@@ -3017,7 +3275,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+        "path": "/fhir/R4/RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
       },
       "response": {
         "status": 200,
@@ -3025,7 +3283,7 @@
           "resourceType": "RelatedPerson",
           "active": true,
           "patient": {
-            "reference": "Patient/6983b5d3-b289-47a4-9c02-72d8caf064db"
+            "reference": "Patient/437ba302-8fb0-41d3-ad34-399599fe7dd0"
           },
           "name": [
             {
@@ -3039,7 +3297,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -3080,10 +3345,10 @@
               "valueString": "Unrelated 1"
             }
           ],
-          "id": "b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8",
+          "id": "3d20a35d-210d-403c-a1b0-28b63d7f55b5",
           "meta": {
-            "versionId": "d2a94ffd-5193-4002-95b7-d4f294fef340",
-            "lastUpdated": "2026-09-13T14:52:20.889Z"
+            "versionId": "1ed45a3c-45b9-4790-99d3-e5c58dc0bd5a",
+            "lastUpdated": "2026-09-13T15:12:04.541Z"
           }
         }
       }
@@ -3093,7 +3358,7 @@
       "actor": "editor",
       "request": {
         "method": "GET",
-        "path": "/fhir/R4/Person/bd801a0e-30b2-4eee-88e4-156c8cbc5cad"
+        "path": "/fhir/R4/Person/ead3157b-985e-46bf-ab32-e0ad1040da63"
       },
       "response": {
         "status": 200,
@@ -3112,7 +3377,14 @@
             {
               "system": "phone",
               "use": "home",
+              "rank": 1,
               "value": "864-555-0123"
+            },
+            {
+              "system": "phone",
+              "use": "home",
+              "rank": 2,
+              "value": "864-555-0102"
             }
           ],
           "address": [
@@ -3129,21 +3401,21 @@
           "link": [
             {
               "target": {
-                "reference": "RelatedPerson/891c5282-30b6-4745-901d-6cc776897cb3"
+                "reference": "RelatedPerson/a1f9b0ef-d5e5-4633-bff1-1074f67ac370"
               },
               "assurance": "level2"
             },
             {
               "target": {
-                "reference": "RelatedPerson/b1ed36cb-95be-4b0f-b239-3b7bc7bd38f8"
+                "reference": "RelatedPerson/3d20a35d-210d-403c-a1b0-28b63d7f55b5"
               },
               "assurance": "level2"
             }
           ],
-          "id": "bd801a0e-30b2-4eee-88e4-156c8cbc5cad",
+          "id": "ead3157b-985e-46bf-ab32-e0ad1040da63",
           "meta": {
-            "versionId": "2fac3d15-270c-47d0-9659-9a7fbbce7b48",
-            "lastUpdated": "2026-09-13T14:52:20.547Z"
+            "versionId": "f3b3cb06-2cd2-48c2-ba33-6747646d3604",
+            "lastUpdated": "2026-09-13T15:12:04.233Z"
           }
         }
       }
