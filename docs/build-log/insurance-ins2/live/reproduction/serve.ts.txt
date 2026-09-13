@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {readFileSync,appendFileSync} from 'node:fs';
+import express from '../../mcp/node_modules/express/index.js';
+import {createServer} from '../../ui/node_modules/vite/dist/node/index.js';
+import react from '../../ui/node_modules/@vitejs/plugin-react/dist/index.js';
+import {resolve} from 'node:path';
+import {registerPatientInsuranceRoutes} from '../../mcp/src/insurance/patient-insurance-routes.ts';
+import {authenticateStaffRoute} from '../../mcp/src/payments/payment-endpoint.ts';
+import {createMedplumClient} from '../../mcp/src/fhir-client.ts';
+const dir='.odos/insurance-ins2';const runtime=JSON.parse(readFileSync(`${dir}/runtime.json`,'utf8'));const session=JSON.parse(readFileSync(`${dir}/session.json`,'utf8'));
+assert.equal(runtime.baseUrl,'http://127.0.0.1:19713');
+const audit={async record(row,operation){appendFileSync(`${dir}/audit.jsonl`,JSON.stringify(row)+'\n');return operation();},async recordDenied(row){appendFileSync(`${dir}/audit.jsonl`,JSON.stringify(row)+'\n');}};
+const serviceClient=createMedplumClient({baseUrl:runtime.baseUrl,accessToken:session.admin,audit,auditContext:{actorRole:'admin'}});
+const app=express();app.use(express.json());
+registerPatientInsuranceRoutes(app,async()=>{assert.equal(await serviceClient.getActiveProjectId(),session.projectId);},{authenticate:authHeader=>authenticateStaffRoute({baseUrl:runtime.baseUrl,authHeader,serviceClient,audit}),recordAudit:row=>audit.record(row,()=>undefined)});
+app.listen(19711,'127.0.0.1');

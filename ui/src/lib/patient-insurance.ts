@@ -22,6 +22,7 @@ import {
   type ClaimsApiOptions,
   type SubscriberRelationship,
 } from "./submit-claims";
+import { CONSENT_AUTHORITY_EXTENSION_URL, RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL } from "./patient-identity";
 
 export const ODOS_BENEFIT_LAST_USED_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/odos-benefit-last-used";
 export const ODOS_BENEFIT_FREQUENCY_MONTHS_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/odos-benefit-frequency-months";
@@ -179,6 +180,12 @@ export function validateCoverageDraft(draft: CoverageEditorDraft): string[] {
   return errors;
 }
 
+export function isGuardianRelatedPerson(person: RelatedPerson): boolean {
+  return person.extension?.some((extension) =>
+    extension.url === CONSENT_AUTHORITY_EXTENSION_URL || extension.url === RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL
+  ) ?? false;
+}
+
 export function buildCoverageSaveBundle(input: {
   draft: CoverageEditorDraft;
   existingCoverage?: Coverage;
@@ -190,15 +197,18 @@ export function buildCoverageSaveBundle(input: {
   const uuid = input.uuid ?? crypto.randomUUID.bind(crypto);
   const entries: BundleEntry[] = [];
   let subscriberReference = input.draft.relationship === "self" ? input.draft.patientReference : input.draft.subscriberReference;
-  if (input.draft.relationship !== "self" && hasSubscriberDemographics(input.draft.subscriber)) {
-    const relatedPerson = buildRelatedPersonResource(input.draft, input.existingRelatedPerson);
-    if (input.existingRelatedPerson?.id) {
-      subscriberReference = `RelatedPerson/${input.existingRelatedPerson.id}`;
+  if (input.draft.relationship !== "self" && /^RelatedPerson\/[^/]+$/.test(subscriberReference) &&
+      (!input.existingRelatedPerson?.id || subscriberReference !== `RelatedPerson/${input.existingRelatedPerson.id}`)) {
+    throw new Error("The subscriber record is not loaded. Reload before saving.");
+  }
+  const existingSubscriber = input.existingRelatedPerson && !isGuardianRelatedPerson(input.existingRelatedPerson)
+    ? input.existingRelatedPerson : undefined;
+  if (input.draft.relationship !== "self" && (hasSubscriberDemographics(input.draft.subscriber) ||
+      (input.existingRelatedPerson && isGuardianRelatedPerson(input.existingRelatedPerson)))) {
+    const relatedPerson = buildRelatedPersonResource(input.draft, existingSubscriber);
+    if (existingSubscriber?.id) {
+      subscriberReference = `RelatedPerson/${existingSubscriber.id}`;
       entries.push(updateEntry(relatedPerson));
-    } else if (/^RelatedPerson\/[^/]+$/.test(input.draft.subscriberReference)) {
-      subscriberReference = input.draft.subscriberReference;
-      const id = input.draft.subscriberReference.split("/")[1];
-      entries.push(updateEntry({ ...relatedPerson, id }));
     } else {
       const fullUrl = `urn:uuid:${uuid()}`;
       subscriberReference = fullUrl;
@@ -468,7 +478,7 @@ function buildRelatedPersonResource(draft: CoverageEditorDraft, existing?: Relat
     resourceType: "RelatedPerson",
     ...(existing ?? {}),
     ...(existing?.id ? { id: existing.id } : {}),
-    active: draft.active,
+    active: existing ? existing.active : true,
     patient: { reference: draft.patientReference },
     relationship: [{ coding: [{
       system: SUBSCRIBER_RELATIONSHIP_SYSTEM,

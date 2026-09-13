@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: exact \#57 legacy Coverage renders in the grid and editor, then upgrades in one transaction
+ok 1 - exact \#57 legacy Coverage renders in the grid and editor, then upgrades in one transaction
+  ---
+  duration_ms: 3.97175
+  type: 'test'
+  ...
+# Subtest: self Coverage keeps Patient demographics read-only and existing non-self subscribers update in place
+ok 2 - self Coverage keeps Patient demographics read-only and existing non-self subscribers update in place
+  ---
+  duration_ms: 0.598666
+  type: 'test'
+  ...
+# Subtest: manual benefit entry emits the required request-response history pair and benefit money/extensions
+ok 3 - manual benefit entry emits the required request-response history pair and benefit money/extensions
+  ---
+  duration_ms: 1.014625
+  type: 'test'
+  ...
+# Subtest: applying a plan template copies only plan-level facts and keeps the 7a bundle path unchanged
+ok 4 - applying a plan template copies only plan-level facts and keeps the 7a bundle path unchanged
+  ---
+  duration_ms: 0.515958
+  type: 'test'
+  ...
+# Subtest: applying an incomplete plan template leaves an undefined benefit kind untouched
+ok 5 - applying an incomplete plan template leaves an undefined benefit kind untouched
+  ---
+  duration_ms: 0.089958
+  type: 'test'
+  ...
+# Subtest: all six benefit statuses are derived from period, authorization, exclusion, and used facts
+ok 6 - all six benefit statuses are derived from period, authorization, exclusion, and used facts
+  ---
+  duration_ms: 0.094125
+  type: 'test'
+  ...
+# Subtest: claim context is active only when a current Coverage has an active applicable lens benefit
+ok 7 - claim context is active only when a current Coverage has an active applicable lens benefit
+  ---
+  duration_ms: 0.375875
+  type: 'test'
+  ...
+# Subtest: latest benefit selection treats malformed created timestamps as older than valid responses
+ok 8 - latest benefit selection treats malformed created timestamps as older than valid responses
+  ---
+  duration_ms: 0.051625
+  type: 'test'
+  ...
+# Subtest: both insurance clients use their dedicated routes and preserve transaction bodies
+ok 9 - both insurance clients use their dedicated routes and preserve transaction bodies
+  ---
+  duration_ms: 8.39525
+  type: 'test'
+  ...
+# Subtest: benefit table renders the exact column vocabulary, derived status, history, and detail view
+ok 10 - benefit table renders the exact column vocabulary, derived status, history, and detail view
+  ---
+  duration_ms: 9.92775
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 222.526792

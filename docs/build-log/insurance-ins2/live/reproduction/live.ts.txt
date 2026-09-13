@@ -1,0 +1,73 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync,mkdirSync,readdirSync} from 'node:fs';
+import {chromium} from '../../ui/node_modules/playwright-core/index.mjs';
+import {resolveSmsNumber} from '../../mcp/src/comms/suppression-gate.ts';
+const dir='.odos/insurance-ins2';const scenario=process.argv[2];assert.ok(['base','fixed'].includes(scenario));
+const runtime=JSON.parse(readFileSync(`${dir}/runtime.json`,'utf8'));const session=JSON.parse(readFileSync(`${dir}/session.json`,'utf8'));const fixture=JSON.parse(readFileSync(`${dir}/fixture.json`,'utf8'));
+assert.equal(runtime.baseUrl,'http://127.0.0.1:19713');
+const output='docs/build-log/insurance-ins2/live';mkdirSync(output,{recursive:true});
+const reads=[];const writes=[];
+async function request(method,path,body?){const r=await fetch(runtime.baseUrl+'/fhir/R4/'+path,{method,headers:{Authorization:`Bearer ${session.admin}`,'Content-Type':'application/fhir+json'},...(body?{body:JSON.stringify(body)}:{})});assert.ok(r.ok,`${method} ${path}: ${r.status}`);const resource=await r.json();if(method==='GET')reads.push({method,path,status:r.status,resource});return resource;}
+const guardianRef=`RelatedPerson/${fixture.guardian.id}`;
+const before=await request('GET',guardianRef);
+if(scenario==='fixed')await request('POST','Coverage',{resourceType:'Coverage',status:'active',beneficiary:{reference:`Patient/${fixture.patient.id}`},subscriber:{reference:guardianRef},subscriberId:'SYNTHETIC-MEMBER',relationship:{coding:[{code:'other'}]},payor:[{reference:`Organization/${fixture.payer.id}`,display:'Synthetic Insurance'}],period:{start:'2026-01-01'}});
+const browser=await chromium.launch({channel:'chrome',headless:true});
+try{
+ const page=await browser.newPage({viewport:{width:1440,height:1200}});
+ await page.addInitScript(token=>sessionStorage.setItem('odos.session.v1',JSON.stringify({accessToken:token,expiresAt:Date.now()+3600000})),session.staff);
+ page.on('response',async response=>{if(response.url().endsWith('/insurance/coverages')&&response.request().method()==='POST')writes.push({request:JSON.parse(response.request().postData()!),status:response.status(),response:await response.json()});});
+ await page.goto(`http://127.0.0.1:${scenario==='base'?19709:19710}/tests/fixtures/insurance-ins2-live.html?patientId=${fixture.patient.id}`);
+ await page.getByRole('button',{name:'Add coverage',exact:true}).waitFor();console.log('Patient loaded');
+ await page.getByText('Loading insurance…',{exact:true}).waitFor({state:'hidden'});
+ console.log('Insurance loaded');
+ if(scenario==='base'){
+  await page.getByRole('button',{name:'Add coverage',exact:true}).click();
+  await page.getByLabel('Carrier name',{exact:true}).fill('Synthetic Insurance');
+  await page.getByLabel('Carrier Organization reference',{exact:true}).fill(`Organization/${fixture.payer.id}`);
+  await page.getByLabel('Insured ID',{exact:true}).fill('SYNTHETIC-MEMBER');
+  await page.getByLabel('Effective date',{exact:true}).fill('2026-01-01');
+  await page.locator('label').filter({hasText:/^Relationship/}).locator('select').selectOption('other');
+  await page.locator('label').filter({hasText:/^Reuse existing subscriber/}).locator('select').selectOption(guardianRef);
+ }else await page.getByRole('button',{name:'Edit',exact:true}).click();
+ console.log('Editor opened');
+ const offered=await page.locator('label').filter({hasText:/^Reuse existing subscriber/}).locator('select').locator('option').evaluateAll(options=>options.map(o=>o.value));
+ assert.equal(offered.includes(guardianRef),scenario==='base');
+ assert.ok(offered.includes(`RelatedPerson/${fixture.subscriber.id}`));
+ await page.getByLabel('First name',{exact:true}).fill('Insurance');
+ await page.getByLabel('Address',{exact:true}).fill('2 Subscriber Way');
+ await page.getByLabel('Birth date',{exact:true}).fill('1978-03-04');
+ await page.getByLabel('Active',{exact:true}).uncheck();
+ await page.waitForLoadState('networkidle');
+ const cssFile=readdirSync('ui/dist/assets').find(name=>name.endsWith('.css'))!;
+ await page.addStyleTag({content:readFileSync('ui/dist/assets/'+cssFile,'utf8')});
+ await page.evaluate(()=>document.fonts.ready);
+ console.log('Fields filled');
+ await page.screenshot({path:`${output}/${scenario}-editor.png`});
+ const savedResponse=page.waitForResponse(r=>r.url().endsWith('/insurance/coverages')&&r.request().method()==='POST');
+ await page.getByRole('button',{name:'Save coverage',exact:true}).click();
+ const response=await savedResponse;assert.equal(response.status(),200,await response.text());
+ await page.getByRole('button',{name:'Save coverage',exact:true}).waitFor({state:'hidden'});
+ await page.getByText('Loading insurance…',{exact:true}).waitFor({state:'hidden'});
+ await page.screenshot({path:`${output}/${scenario}-saved.png`});
+ const after=await request('GET',guardianRef);
+ const coverages=await request('GET',`Coverage?beneficiary=Patient/${fixture.patient.id}`);
+ assert.equal(coverages.entry.length,1);
+ const coverage=coverages.entry[0].resource;assert.notEqual(coverage.status,'active');
+ const subscriber=await request('GET',coverage.subscriber.reference);
+ const sms=resolveSmsNumber(after,new Date('2026-09-13T12:00:00Z'));
+ if(scenario==='base'){
+  assert.equal(after.active,false);assert.equal(after.name[0].given[0],'Insurance');assert.equal(after.address[0].line[0],'2 Subscriber Way');
+  assert.notEqual(after.meta.versionId,before.meta.versionId);assert.equal(coverage.subscriber.reference,guardianRef);
+ }else{
+  assert.deepEqual(after,before);assert.equal(JSON.stringify(after),JSON.stringify(before));assert.notEqual(coverage.subscriber.reference,guardianRef);
+  assert.equal(subscriber.active,true);assert.equal(subscriber.name[0].given[0],'Insurance');assert.equal(subscriber.address[0].line[0],'2 Subscriber Way');
+  assert.equal(subscriber.extension,undefined);assert.equal(subscriber.telecom,undefined);assert.equal(subscriber.period,undefined);
+  assert.equal(sms,'864-555-0101');
+  const entries=writes[0].request.bundle.entry;
+  assert.equal(entries.filter(e=>[e.request?.url,e.fullUrl].some(v=>v?.includes(fixture.guardian.id))).length,0);
+  assert.equal(entries[0].request.method,'POST');assert.match(entries[0].fullUrl,/^urn:uuid:/);
+  assert.equal(entries[1].resource.subscriber.reference,entries[0].fullUrl);
+ }
+ writeFileSync(`${output}/${scenario}.json`,JSON.stringify({scenario,health:await(await fetch(runtime.baseUrl+'/healthcheck')).json(),transactionBundles:false,staffPolicy:fixture.policy,offered,before,after,coverage,subscriber,sms,writes,reads},null,2));
+ console.log(JSON.stringify({scenario,passed:true,guardianVersionBefore:before.meta.versionId,guardianVersionAfter:after.meta.versionId,guardianActive:after.active,subscriberReference:coverage.subscriber.reference,sms,postStatus:response.status()}));
+}finally{await browser.close();}

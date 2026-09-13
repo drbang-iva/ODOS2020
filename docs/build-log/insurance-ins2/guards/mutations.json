@@ -1,0 +1,71 @@
+[
+  {
+    "guard": "U1",
+    "red": {
+      "exit": 1,
+      "failed": [
+        "not ok 11 - INS2 U1 reuse offers only subscriber-only records",
+        "not ok 15 - INS2 U5 primary extension alone excludes reuse and prevents guardian writes"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "U2",
+    "red": {
+      "exit": 1,
+      "failed": [
+        "not ok 12 - INS2 U2 legacy guardian subscriber becomes a new record without a guardian write",
+        "not ok 15 - INS2 U5 primary extension alone excludes reuse and prevents guardian writes"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "U3",
+    "red": {
+      "exit": 1,
+      "failed": [
+        "not ok 12 - INS2 U2 legacy guardian subscriber becomes a new record without a guardian write",
+        "not ok 13 - INS2 U3 subscriber activity is independent of Coverage activity",
+        "not ok 15 - INS2 U5 primary extension alone excludes reuse and prevents guardian writes"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "U4",
+    "red": {
+      "exit": 1,
+      "failed": [
+        "not ok 14 - INS2 U4 unloaded or mismatched subscriber refuses to emit a bundle"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  },
+  {
+    "guard": "U5",
+    "red": {
+      "exit": 1,
+      "failed": [
+        "not ok 15 - INS2 U5 primary extension alone excludes reuse and prevents guardian writes"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failed": []
+    }
+  }
+]

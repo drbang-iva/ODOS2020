@@ -1,0 +1,100 @@
+TAP version 13
+# Subtest: exact \#57 legacy Coverage renders in the grid and editor, then upgrades in one transaction
+ok 1 - exact \#57 legacy Coverage renders in the grid and editor, then upgrades in one transaction
+  ---
+  duration_ms: 3.569333
+  type: 'test'
+  ...
+# Subtest: self Coverage keeps Patient demographics read-only and existing non-self subscribers update in place
+ok 2 - self Coverage keeps Patient demographics read-only and existing non-self subscribers update in place
+  ---
+  duration_ms: 0.616333
+  type: 'test'
+  ...
+# Subtest: manual benefit entry emits the required request-response history pair and benefit money/extensions
+ok 3 - manual benefit entry emits the required request-response history pair and benefit money/extensions
+  ---
+  duration_ms: 1.019708
+  type: 'test'
+  ...
+# Subtest: applying a plan template copies only plan-level facts and keeps the 7a bundle path unchanged
+ok 4 - applying a plan template copies only plan-level facts and keeps the 7a bundle path unchanged
+  ---
+  duration_ms: 0.50575
+  type: 'test'
+  ...
+# Subtest: applying an incomplete plan template leaves an undefined benefit kind untouched
+ok 5 - applying an incomplete plan template leaves an undefined benefit kind untouched
+  ---
+  duration_ms: 0.086625
+  type: 'test'
+  ...
+# Subtest: all six benefit statuses are derived from period, authorization, exclusion, and used facts
+ok 6 - all six benefit statuses are derived from period, authorization, exclusion, and used facts
+  ---
+  duration_ms: 0.111625
+  type: 'test'
+  ...
+# Subtest: claim context is active only when a current Coverage has an active applicable lens benefit
+ok 7 - claim context is active only when a current Coverage has an active applicable lens benefit
+  ---
+  duration_ms: 0.421916
+  type: 'test'
+  ...
+# Subtest: latest benefit selection treats malformed created timestamps as older than valid responses
+ok 8 - latest benefit selection treats malformed created timestamps as older than valid responses
+  ---
+  duration_ms: 0.059083
+  type: 'test'
+  ...
+# Subtest: both insurance clients use their dedicated routes and preserve transaction bodies
+ok 9 - both insurance clients use their dedicated routes and preserve transaction bodies
+  ---
+  duration_ms: 7.109625
+  type: 'test'
+  ...
+# Subtest: benefit table renders the exact column vocabulary, derived status, history, and detail view
+ok 10 - benefit table renders the exact column vocabulary, derived status, history, and detail view
+  ---
+  duration_ms: 9.040625
+  type: 'test'
+  ...
+# Subtest: INS2 U1 reuse offers only subscriber-only records
+ok 11 - INS2 U1 reuse offers only subscriber-only records
+  ---
+  duration_ms: 0.571917
+  type: 'test'
+  ...
+# Subtest: INS2 U2 legacy guardian subscriber becomes a new record without a guardian write
+ok 12 - INS2 U2 legacy guardian subscriber becomes a new record without a guardian write
+  ---
+  duration_ms: 0.219792
+  type: 'test'
+  ...
+# Subtest: INS2 U3 subscriber activity is independent of Coverage activity
+ok 13 - INS2 U3 subscriber activity is independent of Coverage activity
+  ---
+  duration_ms: 0.345167
+  type: 'test'
+  ...
+# Subtest: INS2 U4 unloaded or mismatched subscriber refuses to emit a bundle
+ok 14 - INS2 U4 unloaded or mismatched subscriber refuses to emit a bundle
+  ---
+  duration_ms: 0.184125
+  type: 'test'
+  ...
+# Subtest: INS2 U5 primary extension alone excludes reuse and prevents guardian writes
+ok 15 - INS2 U5 primary extension alone excludes reuse and prevents guardian writes
+  ---
+  duration_ms: 0.52
+  type: 'test'
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 209.077667
