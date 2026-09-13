@@ -1,3 +1,4 @@
+import { buildResponsiblePartyDemographics as buildGuarantorPersonDemographics } from "./responsible-party-demographics.js";
 import { resolvePractitionerReference } from "../authz/practitioner-reference.js";
 import { buildCommsConsent, communicationPreferencesInputSchema, parsePreferenceWriteInput } from "../comms/comms-preferences.js";
 import { replaceCommsPreferenceCells } from "../comms/suppression-gate.js";
@@ -277,7 +278,7 @@ function buildPatientIdentityTransaction(
       fullUrl: `urn:uuid:${randomUUID()}`,
       resource: registrationResourceInProject<Person>({
         resourceType: "Person",
-        ...buildResponsiblePartyDemographics(party),
+        ...buildGuarantorPersonDemographics(party),
         link: [{ target: { reference: fullUrl }, assurance: "level2" }],
       }, projectId),
       request: { method: "POST", url: "Person" },
@@ -329,6 +330,7 @@ function buildRelatedPerson(party: ResponsiblePartyInput, patientReference: stri
     ],
   };
 }
+
 
 function buildResponsiblePartyDemographics(party: ResponsiblePartyInput): Pick<RelatedPerson, "name" | "telecom" | "address"> {
   return {
