@@ -1,0 +1,132 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/patientInsuranceHonestSave.test.ts
+
+TAP version 13
+# Subtest: I1 stale subscriber stops before Coverage
+ok 1 - I1 stale subscriber stops before Coverage
+  ---
+  duration_ms: 3.067208
+  type: 'test'
+  ...
+# Subtest: I2 mixed create response reports surviving subscriber and denied audit
+ok 2 - I2 mixed create response reports surviving subscriber and denied audit
+  ---
+  duration_ms: 0.325
+  type: 'test'
+  ...
+# Subtest: I3 unversioned subscriber PUT submits nothing
+ok 3 - I3 unversioned subscriber PUT submits nothing
+  ---
+  duration_ms: 0.10075
+  type: 'test'
+  ...
+# Subtest: I4 primary extension alone fences guardian
+ok 4 - I4 primary extension alone fences guardian
+  ---
+  duration_ms: 0.2085
+  type: 'test'
+  ...
+# Subtest: I5 Person link alone fences guardian
+ok 5 - I5 Person link alone fences guardian
+  ---
+  duration_ms: 1.149667
+  type: 'test'
+  ...
+# Subtest: I6 current server extensions cannot be omitted by request body
+ok 6 - I6 current server extensions cannot be omitted by request body
+  ---
+  duration_ms: 0.130875
+  type: 'test'
+  ...
+# Subtest: I7 Coverage-only existing guardian reference is fenced
+ok 7 - I7 Coverage-only existing guardian reference is fenced
+  ---
+  duration_ms: 0.222
+  type: 'test'
+  ...
+# Subtest: I8 versioned subscriber-only update succeeds before Coverage
+ok 8 - I8 versioned subscriber-only update succeeds before Coverage
+  ---
+  duration_ms: 0.171208
+  type: 'test'
+  ...
+# Subtest: I9 mixed vision benefits response is denied with written locations
+ok 9 - I9 mixed vision benefits response is denied with written locations
+  ---
+  duration_ms: 0.421084
+  type: 'test'
+  ...
+# Subtest: Insurance entry URLs cannot disguise a guardian write as Coverage
+ok 10 - Insurance entry URLs cannot disguise a guardian write as Coverage
+  ---
+  duration_ms: 0.250333
+  type: 'test'
+  ...
+# Subtest: Subscriber PUT target must match its resource id
+ok 11 - Subscriber PUT target must match its resource id
+  ---
+  duration_ms: 0.054333
+  type: 'test'
+  ...
+# Subtest: Noncanonical subscriber references cannot bypass the guardian fence
+not ok 12 - Noncanonical subscriber references cannot bypass the guardian fence
+  ---
+  duration_ms: 1.515458
+  type: 'test'
+  location: 'mcp/tests/patientInsuranceHonestSave.test.ts:1:7488'
+  failureType: 'testCodeFailure'
+  error: |-
+    http://127.0.0.1:19813/fhir/R4/RelatedPerson/guardian
+
+    200 !== 400
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/patientInsuranceHonestSave.test.ts:108:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: A later Coverage failure reports the earlier successful subscriber PUT
+ok 13 - A later Coverage failure reports the earlier successful subscriber PUT
+  ---
+  duration_ms: 0.3135
+  type: 'test'
+  ...
+# Subtest: Bundled RelatedPerson must identify Coverage subscriber before any write
+ok 14 - Bundled RelatedPerson must identify Coverage subscriber before any write
+  ---
+  duration_ms: 0.103875
+  type: 'test'
+  ...
+# Subtest: I10 POST carrying primary role false refuses before server requests
+ok 15 - I10 POST carrying primary role false refuses before server requests
+  ---
+  duration_ms: 0.140167
+  type: 'test'
+  ...
+# Subtest: I11 PUT adding consent authority refuses before current-resource lookup
+ok 16 - I11 PUT adding consent authority refuses before current-resource lookup
+  ---
+  duration_ms: 0.085
+  type: 'test'
+  ...
+# Subtest: Subscriber-only POST stays one successful request
+ok 17 - Subscriber-only POST stays one successful request
+  ---
+  duration_ms: 0.073042
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 16
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 152.833625

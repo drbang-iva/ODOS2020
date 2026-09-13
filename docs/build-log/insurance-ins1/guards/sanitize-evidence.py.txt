@@ -1,0 +1,11 @@
+from pathlib import Path
+import re
+root=str(Path.cwd())
+for p in Path('docs/build-log/insurance-ins1').rglob('*'):
+ if p.is_file():
+  s=p.read_text();s=s.replace('file://'+root+'/', '').replace(root+'/', '')
+  s=re.sub(r'/private/var/folders/[^/]+/[^/]+/T/', '<temporary-directory>/', s)
+  p.write_text("\n".join(line.rstrip() for line in s.splitlines()) + ("\n" if s else ""))
+for p in Path('docs/build-log/insurance-ins1').rglob('*'):
+ if p.is_file() and p.name != 'sanitize-evidence.py.txt':assert '/Users/' not in p.read_text() and '/private/var/folders/' not in p.read_text(),p
+print('Evidence paths normalized; zero developer-specific absolute paths remain.')

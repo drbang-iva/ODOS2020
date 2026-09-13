@@ -1,0 +1,165 @@
+Command: npm --prefix mcp test
+Exit: 1
+Output excerpt: every failing top-level test and final counts. Successful-test detail omitted; local paths normalized.
+Full captured output SHA-256: 07d974b684dcc843a83ee2891222b4c34685d773f3f17a54d0fc0b3693b908bb
+
+not ok 693 - rebuild is atomic and server-side worklist grouping returns honest untouched facts
+  ---
+  duration_ms: 2.174625
+  type: 'test'
+  location: 'mcp/tests/claimReadModelStore.test.ts:1:1266'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+
+not ok 694 - never-paid-untouched aggregation is performed by payer and month in PostgreSQL
+  ---
+  duration_ms: 0.928833
+  type: 'test'
+  location: 'mcp/tests/claimReadModelStore.test.ts:1:2197'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+
+not ok 695 - reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth
+  ---
+  duration_ms: 0.030208
+  type: 'test'
+  location: 'mcp/tests/claimReadModelStore.test.ts:1:2852'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+
+not ok 696 - an older per-claim upsert cannot overwrite a newer completed rebuild
+  ---
+  duration_ms: 0.020834
+  type: 'test'
+  location: 'mcp/tests/claimReadModelStore.test.ts:1:3524'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+
+not ok 697 - an older rebuild snapshot fails loudly without publishing incomplete FHIR truth
+  ---
+  duration_ms: 0.026208
+  type: 'test'
+  location: 'mcp/tests/claimReadModelStore.test.ts:1:3875'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+
+not ok 698 - mcp/tests/claimReadModelStore.test.ts
+  ---
+  duration_ms: 2.822
+  location: 'mcp/tests/claimReadModelStore.test.ts:1:1135'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (mcp/tests/claimReadModelStore.test.ts:39:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+    async Test.runHook (node:internal/test_runner/test:965:9)
+    async after (node:internal/test_runner/test:1005:9)
+    async Test.run (node:internal/test_runner/test:1070:7)
+  ...
+
+not ok 1520 - drill child commands never inherit the persistent Redis password
+  ---
+  duration_ms: 36.635917
+  type: 'test'
+  location: 'mcp/tests/disasterRecoveryCredentials.test.ts:1:2044'
+  failureType: 'testCodeFailure'
+  error: |-
+    node:internal/modules/esm/resolve:275
+        throw new ERR_MODULE_NOT_FOUND(
+              ^
+
+    Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'node_modules/tsx/dist/loader.mjs' imported from <temporary-directory>/odos-dr-isolation-p7i8A4/
+        at finalizeResolution (node:internal/modules/esm/resolve:275:11)
+        at moduleResolve (node:internal/modules/esm/resolve:861:10)
+        at defaultResolve (node:internal/modules/esm/resolve:985:11)
+        at #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)
+        at ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)
+        at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)
+        at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:680:36)
+        at TracingChannel.tracePromise (node:diagnostics_channel:350:14)
+        at ModuleLoader.import (node:internal/modules/esm/loader:679:21)
+        at asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:112:36) {
+      code: 'ERR_MODULE_NOT_FOUND',
+      url: 'node_modules/tsx/dist/loader.mjs'
+    }
+
+    Node.js v22.22.3
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    finalizeResolution (node:internal/modules/esm/resolve:275:11)
+    moduleResolve (node:internal/modules/esm/resolve:861:10)
+    defaultResolve (node:internal/modules/esm/resolve:985:11)
+    #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)
+    ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)
+    ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)
+    onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:680:36)
+    TracingChannel.tracePromise (node:diagnostics_channel:350:14)
+    ModuleLoader.import (node:internal/modules/esm/loader:679:21)
+    asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:112:36) {
+    TestContext.<anonymous> (mcp/tests/disasterRecoveryCredentials.test.ts:90:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+
+  type: 'test'
+  ...
+1..4187
+# tests 4722
+# suites 0
+# pass 4655
+# fail 7
+# cancelled 0
+# skipped 60
+# todo 0
+# duration_ms 76199.43975
+⚠️  LIVE STACK NOT CONFIGURED — 41 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them.

@@ -1,0 +1,80 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/patientInsuranceRoutes.test.ts tests/insuranceBenefitExtensions.test.ts tests/insuranceConfig.test.ts tests/insuranceConfigParity.test.ts
+
+TAP version 13
+# Subtest: vision-benefit extensions are installable R4 item extensions with date and unsignedInt values
+ok 1 - vision-benefit extensions are installable R4 item extensions with date and unsignedInt values
+  ---
+  duration_ms: 4.3945
+  type: 'test'
+  ...
+# Subtest: buildInsuranceConfigResource round-trips the real singleton and preserves update identity
+ok 2 - buildInsuranceConfigResource round-trips the real singleton and preserves update identity
+  ---
+  duration_ms: 0.97825
+  type: 'test'
+  ...
+# Subtest: active templates omit active true while inactive templates persist false
+ok 3 - active templates omit active true while inactive templates persist false
+  ---
+  duration_ms: 0.131666
+  type: 'test'
+  ...
+# Subtest: insurance-config validators reject labels, money, and frequency with verbatim messages
+ok 4 - insurance-config validators reject labels, money, and frequency with verbatim messages
+  ---
+  duration_ms: 0.2305
+  type: 'test'
+  ...
+# Subtest: parseInsuranceConfig rejects the wrong singleton, missing payload, and malformed JSON
+ok 5 - parseInsuranceConfig rejects the wrong singleton, missing payload, and malformed JSON
+  ---
+  duration_ms: 0.083583
+  type: 'test'
+  ...
+# Subtest: UI insurance-config mirror constants and singleton wire shape match the kernel
+ok 6 - UI insurance-config mirror constants and singleton wire shape match the kernel
+  ---
+  duration_ms: 1.0185
+  type: 'test'
+  ...
+# Subtest: UI insurance-config validator messages match the kernel verbatim
+ok 7 - UI insurance-config validator messages match the kernel verbatim
+  ---
+  duration_ms: 0.271667
+  type: 'test'
+  ...
+# Subtest: all four patient-insurance HTTP routes reach their handlers
+ok 8 - all four patient-insurance HTTP routes reach their handlers
+  ---
+  duration_ms: 31.920042
+  type: 'test'
+  ...
+# Subtest: every patient-insurance HTTP route preserves 401 and claims.manage 403 gates
+ok 9 - every patient-insurance HTTP route preserves 401 and claims.manage 403 gates
+  ---
+  duration_ms: 11.4055
+  type: 'test'
+  ...
+# Subtest: patient-insurance uses a granting role from a clinician-primary multi-role caller
+ok 10 - patient-insurance uses a granting role from a clinician-primary multi-role caller
+  ---
+  duration_ms: 1.906875
+  type: 'test'
+  ...
+# Subtest: Coverage transactions reject dangling subscriber URNs and map concurrent edits to 409
+ok 11 - Coverage transactions reject dangling subscriber URNs and map concurrent edits to 409
+  ---
+  duration_ms: 5.440667
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 595.198875

@@ -29,8 +29,8 @@ import {
   type ReservedMrn,
 } from "./patient-mrn.js";
 
-const CONSENT_AUTHORITY_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority";
-const RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/related-person-primary";
+export const CONSENT_AUTHORITY_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority";
+export const RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/related-person-primary";
 const COURT_ORDER_NOTES_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes";
 
 const patientPhoneSchema = z.object({ value: z.string(), use: z.enum(["mobile", "home", "work"]) }).strict();

@@ -1,0 +1,385 @@
+{
+  "results": [
+    {
+      "put": false,
+      "request": {
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+          {
+            "resource": {
+              "resourceType": "Coverage",
+              "status": "active",
+              "beneficiary": {
+                "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+              },
+              "subscriber": {
+                "reference": "RelatedPerson/721e89d1-9372-40e9-b439-ae19f7516856"
+              },
+              "payor": [
+                {
+                  "reference": "Organization/da46a9e2-0b5c-4f18-88d1-f5341241e32e"
+                }
+              ]
+            },
+            "request": {
+              "method": "POST",
+              "url": "Coverage"
+            }
+          }
+        ]
+      },
+      "status": 422,
+      "body": {
+        "error": "This person is a responsible party. Save the subscriber as a separate record."
+      },
+      "audit": {
+        "id": "eff99877-3fd3-4088-ad55-c1612fcb956d",
+        "eventTime": "2026-09-13T21:57:56.302Z",
+        "eventType": "coverage.write",
+        "actorId": "4bee8d9e-c2e3-43db-87dd-d7f1ee0cfcbd",
+        "actorRole": "staff",
+        "patientId": "7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f",
+        "resourceType": "Coverage",
+        "resourceId": "uncreated",
+        "actionOutcome": "denied",
+        "actionReason": "coverage.write failure This person is a responsible party. Save the subscriber as a separate record.",
+        "breakGlass": false,
+        "ibActorClassification": "health-care-provider",
+        "ibException": "health-IT-performance",
+        "createdAt": "2026-09-13T21:57:56.302Z"
+      },
+      "before": {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+        },
+        "name": [
+          {
+            "given": [
+              "Guardian"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "1978-03-04",
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "value": "864-555-0101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Guardian Way"
+            ],
+            "city": "Greenville",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Parent"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01",
+          "end": "2035-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          }
+        ],
+        "id": "721e89d1-9372-40e9-b439-ae19f7516856",
+        "meta": {
+          "versionId": "0c11226c-c502-4ca7-b1aa-96e80df35308",
+          "lastUpdated": "2026-09-13T21:31:00.048Z"
+        }
+      },
+      "after": {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+        },
+        "name": [
+          {
+            "given": [
+              "Guardian"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "1978-03-04",
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "value": "864-555-0101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Guardian Way"
+            ],
+            "city": "Greenville",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Parent"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01",
+          "end": "2035-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          }
+        ],
+        "id": "721e89d1-9372-40e9-b439-ae19f7516856",
+        "meta": {
+          "versionId": "0c11226c-c502-4ca7-b1aa-96e80df35308",
+          "lastUpdated": "2026-09-13T21:31:00.048Z"
+        }
+      },
+      "newCoverages": 0
+    },
+    {
+      "put": true,
+      "request": {
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+          {
+            "resource": {
+              "resourceType": "RelatedPerson",
+              "active": true,
+              "patient": {
+                "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+              },
+              "name": [
+                {
+                  "family": "Blocked"
+                }
+              ],
+              "birthDate": "1978-03-04",
+              "telecom": [
+                {
+                  "system": "phone",
+                  "use": "home",
+                  "value": "864-555-0101"
+                }
+              ],
+              "address": [
+                {
+                  "line": [
+                    "1 Guardian Way"
+                  ],
+                  "city": "Greenville",
+                  "state": "SC",
+                  "postalCode": "29601"
+                }
+              ],
+              "relationship": [
+                {
+                  "text": "Parent"
+                }
+              ],
+              "period": {
+                "start": "2026-01-01",
+                "end": "2035-01-01"
+              },
+              "id": "721e89d1-9372-40e9-b439-ae19f7516856",
+              "meta": {
+                "versionId": "0c11226c-c502-4ca7-b1aa-96e80df35308",
+                "lastUpdated": "2026-09-13T21:31:00.048Z"
+              }
+            },
+            "request": {
+              "method": "PUT",
+              "url": "RelatedPerson/721e89d1-9372-40e9-b439-ae19f7516856",
+              "ifMatch": "W/\"0c11226c-c502-4ca7-b1aa-96e80df35308\""
+            }
+          },
+          {
+            "resource": {
+              "resourceType": "Coverage",
+              "status": "active",
+              "beneficiary": {
+                "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+              },
+              "subscriber": {
+                "reference": "RelatedPerson/721e89d1-9372-40e9-b439-ae19f7516856"
+              },
+              "payor": [
+                {
+                  "reference": "Organization/da46a9e2-0b5c-4f18-88d1-f5341241e32e"
+                }
+              ]
+            },
+            "request": {
+              "method": "POST",
+              "url": "Coverage"
+            }
+          }
+        ]
+      },
+      "status": 422,
+      "body": {
+        "error": "This person is a responsible party. Save the subscriber as a separate record."
+      },
+      "audit": {
+        "id": "bb26b039-7989-4fe4-9ad5-eebfffc6f143",
+        "eventTime": "2026-09-13T21:57:56.332Z",
+        "eventType": "coverage.write",
+        "actorId": "4bee8d9e-c2e3-43db-87dd-d7f1ee0cfcbd",
+        "actorRole": "staff",
+        "patientId": "7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f",
+        "resourceType": "Coverage",
+        "resourceId": "uncreated",
+        "actionOutcome": "denied",
+        "actionReason": "coverage.write failure This person is a responsible party. Save the subscriber as a separate record.",
+        "breakGlass": false,
+        "ibActorClassification": "health-care-provider",
+        "ibException": "health-IT-performance",
+        "createdAt": "2026-09-13T21:57:56.332Z"
+      },
+      "before": {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+        },
+        "name": [
+          {
+            "given": [
+              "Guardian"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "1978-03-04",
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "value": "864-555-0101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Guardian Way"
+            ],
+            "city": "Greenville",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Parent"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01",
+          "end": "2035-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          }
+        ],
+        "id": "721e89d1-9372-40e9-b439-ae19f7516856",
+        "meta": {
+          "versionId": "0c11226c-c502-4ca7-b1aa-96e80df35308",
+          "lastUpdated": "2026-09-13T21:31:00.048Z"
+        }
+      },
+      "after": {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+        },
+        "name": [
+          {
+            "given": [
+              "Guardian"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "1978-03-04",
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "value": "864-555-0101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Guardian Way"
+            ],
+            "city": "Greenville",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Parent"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01",
+          "end": "2035-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          }
+        ],
+        "id": "721e89d1-9372-40e9-b439-ae19f7516856",
+        "meta": {
+          "versionId": "0c11226c-c502-4ca7-b1aa-96e80df35308",
+          "lastUpdated": "2026-09-13T21:31:00.048Z"
+        }
+      },
+      "newCoverages": 0
+    }
+  ]
+}

@@ -1,0 +1,189 @@
+{
+  "mode": "base",
+  "health": {
+    "ok": true,
+    "version": "5.1.30-9b1bd92",
+    "platform": "linux",
+    "runtime": "v24.18.1",
+    "postgres": true,
+    "redis": true,
+    "redisInstances": {
+      "default": true
+    }
+  },
+  "request": {
+    "resourceType": "Bundle",
+    "type": "transaction",
+    "entry": [
+      {
+        "resource": {
+          "resourceType": "RelatedPerson",
+          "active": true,
+          "patient": {
+            "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+          },
+          "name": [
+            {
+              "family": "Synthetic",
+              "given": [
+                "Stale"
+              ]
+            }
+          ],
+          "id": "9fa96bda-341c-4165-a66f-e9d072614797",
+          "meta": {
+            "versionId": "807fca64-42fa-4992-9356-671bf8088f9a",
+            "lastUpdated": "2026-09-13T21:57:54.778Z"
+          }
+        },
+        "request": {
+          "method": "PUT",
+          "url": "RelatedPerson/9fa96bda-341c-4165-a66f-e9d072614797",
+          "ifMatch": "W/\"807fca64-42fa-4992-9356-671bf8088f9a\""
+        }
+      },
+      {
+        "resource": {
+          "resourceType": "Coverage",
+          "status": "active",
+          "beneficiary": {
+            "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+          },
+          "subscriber": {
+            "reference": "RelatedPerson/9fa96bda-341c-4165-a66f-e9d072614797"
+          },
+          "payor": [
+            {
+              "reference": "Organization/da46a9e2-0b5c-4f18-88d1-f5341241e32e"
+            }
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "url": "Coverage"
+        }
+      }
+    ]
+  },
+  "status": 200,
+  "body": {
+    "resourceType": "Bundle",
+    "type": "transaction-response",
+    "entry": [
+      {
+        "response": {
+          "outcome": {
+            "resourceType": "OperationOutcome",
+            "id": "precondition-failed",
+            "issue": [
+              {
+                "severity": "error",
+                "code": "processing",
+                "details": {
+                  "text": "Precondition Failed"
+                }
+              }
+            ]
+          },
+          "status": "412"
+        }
+      },
+      {
+        "response": {
+          "outcome": {
+            "resourceType": "OperationOutcome",
+            "id": "created",
+            "issue": [
+              {
+                "severity": "information",
+                "code": "informational",
+                "details": {
+                  "text": "Created"
+                }
+              }
+            ]
+          },
+          "status": "201",
+          "location": "Coverage/9a1b676f-104f-42df-b731-408eca8d2ba6"
+        },
+        "resource": {
+          "resourceType": "Coverage",
+          "status": "active",
+          "beneficiary": {
+            "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+          },
+          "subscriber": {
+            "reference": "RelatedPerson/9fa96bda-341c-4165-a66f-e9d072614797"
+          },
+          "payor": [
+            {
+              "reference": "Organization/da46a9e2-0b5c-4f18-88d1-f5341241e32e"
+            }
+          ],
+          "id": "9a1b676f-104f-42df-b731-408eca8d2ba6",
+          "meta": {
+            "versionId": "1db1a12a-ae09-4ebf-8f89-c1f99f0848d0",
+            "lastUpdated": "2026-09-13T21:57:54.875Z"
+          }
+        }
+      }
+    ]
+  },
+  "audit": {
+    "id": "734ccfe7-0fae-4c86-b47a-cc4514ff1624",
+    "eventTime": "2026-09-13T21:57:54.838Z",
+    "eventType": "coverage.write",
+    "actorId": "4bee8d9e-c2e3-43db-87dd-d7f1ee0cfcbd",
+    "actorRole": "staff",
+    "patientId": "7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f",
+    "resourceType": "Coverage",
+    "resourceId": "9a1b676f-104f-42df-b731-408eca8d2ba6",
+    "actionOutcome": "granted",
+    "actionReason": "coverage.write success",
+    "breakGlass": false,
+    "ibActorClassification": "health-care-provider",
+    "createdAt": "2026-09-13T21:57:54.838Z"
+  },
+  "newCoverages": [
+    {
+      "resourceType": "Coverage",
+      "status": "active",
+      "beneficiary": {
+        "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+      },
+      "subscriber": {
+        "reference": "RelatedPerson/9fa96bda-341c-4165-a66f-e9d072614797"
+      },
+      "payor": [
+        {
+          "reference": "Organization/da46a9e2-0b5c-4f18-88d1-f5341241e32e"
+        }
+      ],
+      "id": "9a1b676f-104f-42df-b731-408eca8d2ba6",
+      "meta": {
+        "versionId": "1db1a12a-ae09-4ebf-8f89-c1f99f0848d0",
+        "lastUpdated": "2026-09-13T21:57:54.875Z"
+      }
+    }
+  ],
+  "currentSubscriber": {
+    "resourceType": "RelatedPerson",
+    "active": true,
+    "patient": {
+      "reference": "Patient/7ddbf4e6-cf6d-4ed0-8aac-21ac33d23f5f"
+    },
+    "name": [
+      {
+        "family": "Synthetic",
+        "given": [
+          "Concurrent"
+        ]
+      }
+    ],
+    "id": "9fa96bda-341c-4165-a66f-e9d072614797",
+    "meta": {
+      "versionId": "c2672200-61cb-442a-8e99-3ca11dcad576",
+      "lastUpdated": "2026-09-13T21:57:54.812Z"
+    }
+  }
+}

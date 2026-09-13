@@ -1,0 +1,16 @@
+import {readFileSync,writeFileSync} from 'node:fs';
+import {generateKeyPairSync,randomBytes,randomUUID} from 'node:crypto';
+import {resolve} from 'node:path';
+const dir='.odos/insurance-ins1';
+const save=(file,data)=>writeFileSync(`${dir}/${file}`,JSON.stringify(data,null,2),{mode:0o600});
+const password=randomBytes(24).toString('hex');const db=randomBytes(24).toString('hex');
+const config=JSON.parse(readFileSync('medplum.config.json'));
+const passphrase=randomBytes(24).toString('hex');
+const {privateKey}=generateKeyPairSync('rsa',{modulusLength:2048,privateKeyEncoding:{type:'pkcs8',format:'pem',cipher:'aes-256-cbc',passphrase},publicKeyEncoding:{type:'spki',format:'pem'}});
+Object.assign(config,{baseUrl:'http://127.0.0.1:19813/',appBaseUrl:'http://127.0.0.1:19810/',storageBaseUrl:'http://127.0.0.1:19813/storage/',signingKey:privateKey,signingKeyId:randomUUID(),signingKeyPassphrase:passphrase});
+config.defaultSuperAdminEmail='ins1-admin@example.test';config.defaultSuperAdminPassword=password;
+config.database.password=db;config.redis={host:'redis',port:6379};
+save('medplum.config.json',config);
+const runtime={baseUrl:'http://127.0.0.1:19813',email:'ins1-admin@example.test',password};save('runtime.json',runtime);
+save('compose.json',{name:'odos-insurance-ins1',services:{postgres:{image:'postgres:16-alpine',environment:{POSTGRES_USER:'medplum',POSTGRES_PASSWORD:db,POSTGRES_DB:'medplum'},volumes:['ins1-postgres:/var/lib/postgresql/data'],healthcheck:{test:['CMD-SHELL','pg_isready -U medplum'],interval:'2s',timeout:'5s',retries:30}},redis:{image:'redis:7-alpine'},medplum:{image:'medplum/medplum-server:5.1.30',command:['file:/config/medplum.config.json'],ports:['127.0.0.1:19813:8103'],volumes:[resolve(dir,'medplum.config.json')+':/config/medplum.config.json:ro'],environment:{MEDPLUM_CONFIG:'/config/medplum.config.json',MEDPLUM_DEFAULT_SUPER_ADMIN_EMAIL:runtime.email,MEDPLUM_DEFAULT_SUPER_ADMIN_PASSWORD:password},depends_on:{postgres:{condition:'service_healthy'},redis:{condition:'service_started'}}}},volumes:{'ins1-postgres':{}}});
+console.log('Isolated configuration created; credentials not printed.');
