@@ -1,0 +1,130 @@
+TAP version 13
+# Subtest: registration uses the local calendar date and clears stale responsible-party errors
+ok 1 - registration uses the local calendar date and clears stale responsible-party errors
+  ---
+  duration_ms: 1.279083
+  type: 'test'
+  ...
+# Subtest: exact duplicate warning presents both safe choices
+ok 2 - exact duplicate warning presents both safe choices
+  ---
+  duration_ms: 2.254709
+  type: 'test'
+  ...
+# Subtest: a completed registration warning renders a terminal repair state without another create action
+ok 3 - a completed registration warning renders a terminal repair state without another create action
+  ---
+  duration_ms: 0.209333
+  type: 'test'
+  ...
+# Subtest: ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+ok 4 - ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+  ---
+  duration_ms: 0.112541
+  type: 'test'
+  ...
+# Subtest: minor registration validation refuses a missing consent authority
+ok 5 - minor registration validation refuses a missing consent authority
+  ---
+  duration_ms: 0.477666
+  type: 'test'
+  ...
+# Subtest: registration validation refuses missing and invalid birth dates
+ok 6 - registration validation refuses missing and invalid birth dates
+  ---
+  duration_ms: 0.139417
+  type: 'test'
+  ...
+# Subtest: responsible-party collection errors accumulate without hiding minor consent requirements
+ok 7 - responsible-party collection errors accumulate without hiding minor consent requirements
+  ---
+  duration_ms: 0.10625
+  type: 'test'
+  ...
+# Subtest: required fields block creation while address and email remain optional
+ok 8 - required fields block creation while address and email remain optional
+  ---
+  duration_ms: 0.158209
+  type: 'test'
+  ...
+# Subtest: demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+ok 9 - demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+  ---
+  duration_ms: 3.110875
+  type: 'test'
+  ...
+# Subtest: G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+ok 10 - G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+  ---
+  duration_ms: 1.077167
+  type: 'test'
+  ...
+# Subtest: G2: a changed mobile value stays at its original position with metadata intact
+ok 11 - G2: a changed mobile value stays at its original position with metadata intact
+  ---
+  duration_ms: 0.296792
+  type: 'test'
+  ...
+# Subtest: G3: the displayed home slot is updated in place even when it is not the first phone
+ok 12 - G3: the displayed home slot is updated in place even when it is not the first phone
+  ---
+  duration_ms: 0.193583
+  type: 'test'
+  ...
+# Subtest: G4: a missing phone appends exactly one entry with the chosen home use
+ok 13 - G4: a missing phone appends exactly one entry with the chosen home use
+  ---
+  duration_ms: 0.130958
+  type: 'test'
+  ...
+# Subtest: G5: the displayed home email changes in place or is removed when cleared without moving other entries
+ok 14 - G5: the displayed home email changes in place or is removed when cleared without moving other entries
+  ---
+  duration_ms: 0.273959
+  type: 'test'
+  ...
+# Subtest: G13: clearing the email box removes only the displayed entry from the real serialized PUT
+ok 15 - G13: clearing the email box removes only the displayed entry from the real serialized PUT
+  ---
+  duration_ms: 24.092792
+  type: 'test'
+  ...
+# Subtest: G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+ok 16 - G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+  ---
+  duration_ms: 0.275042
+  type: 'test'
+  ...
+# Subtest: H1: obsolete-only contact displays blank and appends a new home without editing history
+ok 17 - H1: obsolete-only contact displays blank and appends a new home without editing history
+  ---
+  duration_ms: 1.186375
+  type: 'test'
+  ...
+# Subtest: H2: obsolete then work displays and edits the same work contact in place
+ok 18 - H2: obsolete then work displays and edits the same work contact in place
+  ---
+  duration_ms: 1.241292
+  type: 'test'
+  ...
+# Subtest: H3: a current home contact retains its value and metadata on unchanged save
+ok 19 - H3: a current home contact retains its value and metadata on unchanged save
+  ---
+  duration_ms: 0.073458
+  type: 'test'
+  ...
+# Subtest: H14: blank phone saves remove the entry while email still exercises contact removal
+ok 20 - H14: blank phone saves remove the entry while email still exercises contact removal
+  ---
+  duration_ms: 0.184583
+  type: 'test'
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 303.476542

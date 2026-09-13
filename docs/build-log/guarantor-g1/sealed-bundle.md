@@ -2,7 +2,13 @@
 
 **NOT EVALUATED. P7 and P11a pass, with deliberate reds and restored greens.** The ten previously accepted guards and mutations are retained. P11b retains its accepted live evidence. The transaction feature remains off; stop 1 remains discharged.
 
-Branch: `drbang-iva/guarantor-g1`. Base: `6f8a45a110caeb369be98155a32d71908cb12cc2`. Application/test/ledger commit: `51adebb4`. The PR also contains this evidence commit; the PR head is the exact target for independent evaluation. [Source hashes and boundary checks](source-verification.json) bind the live mutations to the submitted production bytes.
+Branch: `drbang-iva/guarantor-g1`. Base: `e848450f93c4703c04f71187119a877b462a7408`. Application/test/ledger commit after rebase: `fbc97901`. The PR head, including evidence commits, is the exact target for independent evaluation. [Source hashes, rebase mapping, and boundary checks](rebase/source-verification.json) bind the refreshed live mutations to the submitted production bytes.
+
+## Rebase verification
+
+The branch was rebased from `6f8a45a1` onto `e848450f` without conflicts. All three existing commits replayed unchanged. The base delta contains only `mcp/package.json` and `mcp/package-lock.json`; both dependency files exactly match the new base. `npm ci` completed in the task worktree, installing direct csv-parse 7.0.2 and fast-uri 3.1.7. No application, test, or ledger bytes changed during the rebase.
+
+The nine base suites were freshly measured in an isolated checkout of `e848450f`: **49 / 99 / 32 / 29 / 20 / 3 / 4 / 8 / 17**, totaling **261 passed**, with no disagreement. [Commands, counts, and per-file output](rebase/base-counts.json). P7 and P11a were then replayed with fresh real-server captures, including a new constant-failure base capture at `e848450f`; both produced **0 / 1 / 0**. The ten other accepted mutation cycles remain valid against identical source/test hashes and were not rerun. [Reproduction and provenance](rebase/README.md).
 
 ## Change and accepted permission delta
 
@@ -24,7 +30,7 @@ Real staff ClientApplication, ProjectMembership, generated AccessPolicy, and HTT
 | Staff DELETE Person | 403 | 403 | 403 |
 | Staff PUT RelatedPerson control | 200 | 200 | 200 |
 
-The same live assertion exits **0 → 1 → 0**. Requests, responses, generated policies, and resolved Person links: [green](p7-ruled-green.json), [red](p7-ruled-red.json), [restored](p7-ruled-restored.json). The [mutation manifest](ruled-mutations.json) records exact commands and original/mutated source hashes. The revised declaration test also failed on the old compartment grant and passed with the ruled grant: [red](p7-ruled-unit-red.txt), [green](p7-ruled-unit-green.txt).
+The same live assertion exits **0 → 1 → 0**. Requests, responses, generated policies, and resolved Person links: [green](rebase/p7-ruled-green.json), [red](rebase/p7-ruled-red.json), [restored](rebase/p7-ruled-restored.json). The [mutation manifest](rebase/ruled-mutations.json) records exact commands and original/mutated source hashes. The revised declaration test also failed on the old compartment grant and passed with the ruled grant: [red](p7-ruled-unit-red.txt), [green](p7-ruled-unit-green.txt).
 
 ## Live P11a and accepted P11b
 
@@ -40,11 +46,11 @@ P11a holds the failing entry constant: RelatedPerson has the same invalid numeri
 | MRN on Patient | yes | yes | **no** | yes |
 | Pending allocation marker | absent | absent | absent | absent |
 
-Mutation: change the existing client option `autoRollbackCreatedEntries: false` to `true`. It removes the Patient after the failed entry and makes the parity assertion fail. This option is restored to false in the submitted code. Assertion exits **0 → 1 → 0**: [green](p11a-green.txt), [red](p11a-red.txt), [restored](p11a-restored.txt). Full captures: [base](base-residue.json), [current](p11a-green-residue.json), [mutant](p11a-red-residue.json), [restored](p11a-restored-residue.json).
+Mutation: change the existing client option `autoRollbackCreatedEntries: false` to `true`. It removes the Patient after the failed entry and makes the parity assertion fail. This option is restored to false in the submitted code. Assertion exits **0 → 1 → 0**: [green](rebase/p11a-green.txt), [red](rebase/p11a-red.txt), [restored](rebase/p11a-restored.txt). Full captures: [base](rebase/base-residue.json), [current](rebase/p11a-green-residue.json), [mutant](rebase/p11a-red-residue.json), [restored](rebase/p11a-restored-residue.json).
 
 P11b's previously accepted [Person-failure capture](current-residue.json) retains Patient, active Account, MRN, and the successful RelatedPerson, with no Person persisted. That evidence was not reclassified as a regression or unnecessarily rerun.
 
-A final direct database read confirms the Project feature remains absent: [feature state](final-feature-state.json). The earlier [preflight capture](feature-preflight.json) remains historical evidence of the discharged stop.
+A fresh post-rebase direct database read confirms the Project feature remains absent: [feature state](rebase/final-feature-state.json). The earlier [preflight capture](feature-preflight.json) remains historical evidence of the discharged stop.
 
 ## Accepted guards and mutation evidence
 
@@ -71,19 +77,19 @@ The existing registration fixture is **decorative for Person policy coverage**: 
 
 | Command | Actual result | Exit | Output |
 |---|---|---:|---|
-| `npm --prefix mcp test -- tests/guarantorPerson.test.ts tests/patientRegistrationAuthz.test.ts ../tests/preflight/fhir-read-grant-check.test.ts` | 54 tests, 54 pass, 0 fail, 0 skipped | 0 | [log](final-focused.txt) |
-| `npm --prefix ui test` | 1449 tests, 1449 pass, 0 fail, 0 skipped | 0 | [log](ui-full.txt) |
-| `npm --prefix mcp test`, task-owned PostgreSQL configured | 4704 tests, 4656 pass, 0 fail, 48 skipped | **1** | [log](mcp-full-configured-postgres.txt) |
-| `npm --prefix mcp run build` | TypeScript build completed | 0 | [log](mcp-build.txt) |
-| `npm --prefix ui run build` | 320 modules transformed; production assets built | 0 | [log](ui-build.txt) |
-| Accepted concurrency check | 3 tests, 3 pass, 0 fail | 0 | [log](final-concurrency.txt) |
+| `npm --prefix mcp test -- tests/guarantorPerson.test.ts tests/patientRegistrationAuthz.test.ts ../tests/preflight/fhir-read-grant-check.test.ts` | 54 tests, 54 pass, 0 fail, 0 skipped | 0 | [log](rebase/focused.txt) |
+| `npm --prefix ui test` | 1449 tests, 1449 pass, 0 fail, 0 skipped | 0 | [log](rebase/ui-full-summary.txt) |
+| `npm --prefix mcp test`, task-owned PostgreSQL configured | 4704 tests, 4656 pass, 0 fail, 48 skipped | **1** | [log](rebase/mcp-full-summary.txt) |
+| `npm --prefix mcp run build` | TypeScript build completed | 0 | [log](rebase/mcp-build.txt) |
+| `npm --prefix ui run build` | 320 modules transformed; production assets built | 0 | [log](rebase/ui-build.txt) |
+| New-base concurrency check | 3 tests, 3 pass, 0 fail | 0 | [log](rebase/base-demographicsConcurrency.txt) |
 | `git diff --check` | No whitespace errors | 0 | Checked before commits |
 
-**The full MCP gate is not green:** it retains exit 1 because 41 of the 48 skips belong to unconfigured general credentialed live lanes. No opt-out was used. The dedicated G-1 P7/P11a runs above are real-server proofs, not substitutes for every unrelated live lane. The UI build retains its large-chunk warning. The accepted pre-change floor is [261 passing tests across all nine requested files](base-counts.json); it was not re-established.
+**The full MCP gate is not green:** it retains exit 1 because 41 of the 48 skips belong to unconfigured general credentialed live lanes. No opt-out was used. The dedicated G-1 P7/P11a runs above are real-server proofs, not substitutes for every unrelated live lane. The UI build retains its large-chunk warning. The pre-change floor was freshly re-established at the new base: [261 passing tests across all nine requested files](rebase/base-counts.json).
 
 ## Reproduction and handoff
 
-The reproduction directory contains script text copies for the live probes and mutation runner; see its [restore instructions](reproduction/README.md). Published output is path-sanitized; the commands, assertion results, and source hashes are preserved. Restore the `.txt` source copies to ignored `.odos/guarantor-g1/` without the `.txt` suffix and use the existing task-owned runtime/Compose configuration there; it contains local synthetic credentials and is deliberately excluded. `ruled-mutations.mjs` runs the current P7 and P11a cycles. `mutations.mjs` is historical accepted-proof source, not the revised P7 runner. Manifest `output` names the local `.log` file, `publishedOutput` names the committed `.txt` export, and `env` records explicit non-secret run settings. The evidence preserves actual statuses and failing assertions, not just command exit summaries. Early observer attempts encountered a deleted-resource response and a login rate limit; neither was counted as a guard red. Final recorded cycles completed normally.
+The reproduction directory contains script text copies for the live probes and mutation runner; see its [restore instructions](reproduction/README.md) and the [refreshed base capture instructions](rebase/README.md). Published output is path-sanitized; the commands, assertion results, and source hashes are preserved. Restore the `.txt` source copies to ignored `.odos/guarantor-g1/` without the `.txt` suffix and use the existing task-owned runtime/Compose configuration there; it contains local synthetic credentials and is deliberately excluded. `ruled-mutations.mjs` runs the current P7 and P11a cycles. `mutations.mjs` is historical accepted-proof source, not the revised P7 runner. Manifest `output` names the local `.log` file, `publishedOutput` names the committed `.txt` export, and `env` records explicit non-secret run settings. The evidence preserves actual statuses and failing assertions, not just command exit summaries. Early observer attempts encountered a deleted-resource response and a login rate limit; neither was counted as a guard red. Final recorded cycles completed normally.
 
 F16 is byte-identical, the insurance writer is unchanged, and no If-Match assertion changed. Source hashes match the live mutation originals. No root-checkout dependencies, real practice, or production service was touched. The task-owned stack and synthetic volume are retained for review.
 

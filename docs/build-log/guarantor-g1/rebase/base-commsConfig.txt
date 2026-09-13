@@ -1,0 +1,208 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/commsConfig.test.ts
+
+TAP version 13
+# odos-mcp: Twilio HIPAA posture DISABLED; international destinations and senders are permitted.
+# odos-mcp: Twilio HIPAA posture ENABLED; US-only destinations and senders are enforced.
+# Subtest: tracked-link public base config treats blank values as unset and warns only for the legacy fallback
+ok 1 - tracked-link public base config treats blank values as unset and warns only for the legacy fallback
+  ---
+  duration_ms: 0.622166
+  type: 'test'
+  ...
+# Subtest: G9: configured conversation lookup selects the same mobile, current home, and explicit SMS numbers
+ok 2 - G9: configured conversation lookup selects the same mobile, current home, and explicit SMS numbers
+  ---
+  duration_ms: 4.129958
+  type: 'test'
+  ...
+# Subtest: G10: the conversation wrapper retains its no-active-phone error and reference fallback
+ok 3 - G10: the conversation wrapper retains its no-active-phone error and reference fallback
+  ---
+  duration_ms: 0.377625
+  type: 'test'
+  ...
+# Subtest: communications dispatch is inert without practice config and reports a clear resolution error
+ok 4 - communications dispatch is inert without practice config and reports a clear resolution error
+  ---
+  duration_ms: 0.204125
+  type: 'test'
+  ...
+# Subtest: scalar communications provider config selects exactly one SMS provider and one Voice provider
+ok 5 - scalar communications provider config selects exactly one SMS provider and one Voice provider
+  ---
+  duration_ms: 49.707625
+  type: 'test'
+  ...
+# Subtest: legacy scalar SMS config aliases transactional, marketing, and clinical roles without requiring new number config
+ok 6 - legacy scalar SMS config aliases transactional, marketing, and clinical roles without requiring new number config
+  ---
+  duration_ms: 0.0685
+  type: 'test'
+  ...
+# Subtest: two-lane SMS config resolves independent providers and E.164 sender numbers
+ok 7 - two-lane SMS config resolves independent providers and E.164 sender numbers
+  ---
+  duration_ms: 0.703208
+  type: 'test'
+  ...
+# Subtest: a clinical provider override does not borrow the transactional sender number
+ok 8 - a clinical provider override does not borrow the transactional sender number
+  ---
+  duration_ms: 0.046791
+  type: 'test'
+  ...
+# Subtest: role-aware Twilio dispatch sends from each resolved lane number
+ok 9 - role-aware Twilio dispatch sends from each resolved lane number
+  ---
+  duration_ms: 9.573708
+  type: 'test'
+  ...
+# Subtest: clinical SMS routed to GHL degrades only that role while MCP startup continues
+ok 10 - clinical SMS routed to GHL degrades only that role while MCP startup continues
+  ---
+  duration_ms: 0.380125
+  type: 'test'
+  ...
+# Subtest: an inherited GHL SMS provider leaves clinical SMS unassigned without a refusal warning
+ok 11 - an inherited GHL SMS provider leaves clinical SMS unassigned without a refusal warning
+  ---
+  duration_ms: 0.06875
+  type: 'test'
+  ...
+# Subtest: Twilio Messaging Service and lane sender number conflict degrades only affected SMS roles without stopping MCP
+ok 12 - Twilio Messaging Service and lane sender number conflict degrades only affected SMS roles without stopping MCP
+  ---
+  duration_ms: 0.724708
+  type: 'test'
+  ...
+# Subtest: clinical-only GHL degradation does not require an unusable adapter registration
+ok 13 - clinical-only GHL degradation does not require an unusable adapter registration
+  ---
+  duration_ms: 0.083333
+  type: 'test'
+  ...
+# Subtest: communications stop scope accepts global and rejects unknown values
+ok 14 - communications stop scope accepts global and rejects unknown values
+  ---
+  duration_ms: 0.096958
+  type: 'test'
+  ...
+# Subtest: scalar SMS selection rejects a second simultaneous provider
+ok 15 - scalar SMS selection rejects a second simultaneous provider
+  ---
+  duration_ms: 0.071458
+  type: 'test'
+  ...
+# Subtest: legacy list-shaped communications config fails as an explicit breaking migration
+ok 16 - legacy list-shaped communications config fails as an explicit breaking migration
+  ---
+  duration_ms: 0.113542
+  type: 'test'
+  ...
+# Subtest: scalar communications routing leaves omitted channels unassigned
+ok 17 - scalar communications routing leaves omitted channels unassigned
+  ---
+  duration_ms: 0.036375
+  type: 'test'
+  ...
+# Subtest: communications routing isolates synchronous provider validation failures from MCP boot
+ok 18 - communications routing isolates synchronous provider validation failures from MCP boot
+  ---
+  duration_ms: 0.308875
+  type: 'test'
+  ...
+# Subtest: communications dispatch resolves the configured Google Workspace provider behind the suppression gate
+ok 19 - communications dispatch resolves the configured Google Workspace provider behind the suppression gate
+  ---
+  duration_ms: 0.120791
+  type: 'test'
+  ...
+# Subtest: communications dispatch resolves configured Google Workspace and Twilio providers
+ok 20 - communications dispatch resolves configured Google Workspace and Twilio providers
+  ---
+  duration_ms: 0.368667
+  type: 'test'
+  ...
+# Subtest: communications dispatch resolves a configured GHL provider behind ODOS suppression
+ok 21 - communications dispatch resolves a configured GHL provider behind ODOS suppression
+  ---
+  duration_ms: 0.144583
+  type: 'test'
+  ...
+# Subtest: Twilio Voice env configuration is all-or-nothing and stays disabled for the existing SMS-only shape
+ok 22 - Twilio Voice env configuration is all-or-nothing and stays disabled for the existing SMS-only shape
+  ---
+  duration_ms: 0.102667
+  type: 'test'
+  ...
+# Subtest: communications env config fails closed when selected provider credentials are partial
+ok 23 - communications env config fails closed when selected provider credentials are partial
+  ---
+  duration_ms: 0.256958
+  type: 'test'
+  ...
+# Subtest: communications env config trims Twilio single-line secrets
+ok 24 - communications env config trims Twilio single-line secrets
+  ---
+  duration_ms: 0.046583
+  type: 'test'
+  ...
+# Subtest: communications startup logs whether Twilio HIPAA mode is enabled or disabled
+ok 25 - communications startup logs whether Twilio HIPAA mode is enabled or disabled
+  ---
+  duration_ms: 0.148625
+  type: 'test'
+  ...
+# Subtest: MCP boot continues when Twilio pool verification fails while SMS stays fail-closed
+ok 26 - MCP boot continues when Twilio pool verification fails while SMS stays fail-closed
+  ---
+  duration_ms: 0.346834
+  type: 'test'
+  ...
+# Subtest: communications dispatch reuses one Google adapter token cache across resolved sends
+ok 27 - communications dispatch reuses one Google adapter token cache across resolved sends
+  ---
+  duration_ms: 37.773292
+  type: 'test'
+  ...
+# Subtest: H8 / FB1: configured conversation history lists for a marked patient while SMS refuses
+ok 28 - H8 / FB1: configured conversation history lists for a marked patient while SMS refuses
+  ---
+  duration_ms: 0.742417
+  type: 'test'
+  ...
+# Subtest: FB2: GHL send uses the SMS resolver and never the lookup resolver
+ok 29 - FB2: GHL send uses the SMS resolver and never the lookup resolver
+  ---
+  duration_ms: 0.132584
+  type: 'test'
+  ...
+# Subtest: FB3: marked patient without a phone gets an accurate history lookup error
+ok 30 - FB3: marked patient without a phone gets an accurate history lookup error
+  ---
+  duration_ms: 0.084666
+  type: 'test'
+  ...
+# Subtest: J13 / J12: conversation history finds the marked work contact used by SMS
+ok 31 - J13 / J12: conversation history finds the marked work contact used by SMS
+  ---
+  duration_ms: 1.550334
+  type: 'test'
+  ...
+# Subtest: J14: conversation history finds the marked work contact despite refusal
+ok 32 - J14: conversation history finds the marked work contact despite refusal
+  ---
+  duration_ms: 0.507375
+  type: 'test'
+  ...
+1..32
+# tests 32
+# suites 0
+# pass 32
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 378.541209

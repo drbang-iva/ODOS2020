@@ -1,0 +1,217 @@
+{
+  "baseHead": "e848450f93c4703c04f71187119a877b462a7408",
+  "total": 261,
+  "suites": [
+    {
+      "command": [
+        "npm",
+        "--prefix",
+        "mcp",
+        "test",
+        "--",
+        "tests/commsSuppression.test.ts"
+      ],
+      "cwd": "<base-repo>",
+      "expected": 49,
+      "tests": 49,
+      "exitCode": 0,
+      "summary": [
+        "# tests 49",
+        "# suites 0",
+        "# pass 49",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 291.974084"
+      ]
+    },
+    {
+      "command": [
+        "npm",
+        "--prefix",
+        "mcp",
+        "test",
+        "--",
+        "tests/commsApi.test.ts"
+      ],
+      "cwd": "<base-repo>",
+      "expected": 99,
+      "tests": 99,
+      "exitCode": 0,
+      "summary": [
+        "# tests 99",
+        "# suites 0",
+        "# pass 99",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 712.762083"
+      ]
+    },
+    {
+      "command": [
+        "npm",
+        "--prefix",
+        "mcp",
+        "test",
+        "--",
+        "tests/commsConfig.test.ts"
+      ],
+      "cwd": "<base-repo>",
+      "expected": 32,
+      "tests": 32,
+      "exitCode": 0,
+      "summary": [
+        "# tests 32",
+        "# suites 0",
+        "# pass 32",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 378.541209"
+      ]
+    },
+    {
+      "command": [
+        "npm",
+        "--prefix",
+        "mcp",
+        "test",
+        "--",
+        "tests/patientRegistrationAuthz.test.ts"
+      ],
+      "cwd": "<base-repo>",
+      "expected": 29,
+      "tests": 29,
+      "exitCode": 0,
+      "summary": [
+        "# tests 29",
+        "# suites 0",
+        "# pass 29",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 419.572375"
+      ]
+    },
+    {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "tests/patientRegistration.test.tsx"
+      ],
+      "cwd": "<base-repo>/ui",
+      "expected": 20,
+      "tests": 20,
+      "exitCode": 0,
+      "summary": [
+        "# tests 20",
+        "# suites 0",
+        "# pass 20",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 303.476542"
+      ]
+    },
+    {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "tests/demographicsConcurrency.test.tsx"
+      ],
+      "cwd": "<base-repo>/ui",
+      "expected": 3,
+      "tests": 3,
+      "exitCode": 0,
+      "summary": [
+        "# tests 3",
+        "# suites 0",
+        "# pass 3",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 533.024708"
+      ]
+    },
+    {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "tests/patientRegistrationEndpoint.test.tsx"
+      ],
+      "cwd": "<base-repo>/ui",
+      "expected": 4,
+      "tests": 4,
+      "exitCode": 0,
+      "summary": [
+        "# tests 4",
+        "# suites 0",
+        "# pass 4",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 174.286"
+      ]
+    },
+    {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "tests/registrationCommunicationPreferences.test.tsx"
+      ],
+      "cwd": "<base-repo>/ui",
+      "expected": 8,
+      "tests": 8,
+      "exitCode": 0,
+      "summary": [
+        "# tests 8",
+        "# suites 0",
+        "# pass 8",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 256.520125"
+      ]
+    },
+    {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "tests/patientPhoneForm.test.tsx"
+      ],
+      "cwd": "<base-repo>/ui",
+      "expected": 17,
+      "tests": 17,
+      "exitCode": 0,
+      "summary": [
+        "# tests 17",
+        "# suites 0",
+        "# pass 17",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 372.434167"
+      ]
+    }
+  ]
+}
