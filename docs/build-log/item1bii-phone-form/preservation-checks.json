@@ -1,0 +1,9 @@
+{
+  "const responsiblePartySchema =": "byte-identical",
+  "function registrationResourceInProject": "byte-identical",
+  "function buildRelatedPerson": "byte-identical",
+  "mcp/src/comms/suppression-gate.ts": "byte-identical",
+  "ui/tests/demographicsConcurrency.test.tsx": "byte-identical",
+  "H14 email half": "byte-identical",
+  "If-Match diff lines": 0
+}

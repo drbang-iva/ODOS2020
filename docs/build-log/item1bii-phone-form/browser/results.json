@@ -1,0 +1,1107 @@
+{
+  "sourceHead": "ac39a41029a575650aa92c6cb230c2409372c3a9",
+  "base": "300462446fa2f908d4f614b2be7d0f371ef2794b",
+  "medplumVersion": "5.1.30",
+  "route": "/clinic",
+  "viewport": {
+    "width": 1440,
+    "height": 1100
+  },
+  "pageErrors": [],
+  "putCount": 5,
+  "R2WriteCount": 0,
+  "results": [
+    {
+      "state": "imported-no-edit",
+      "responseStatus": 200,
+      "serializedPut": {
+        "path": "/fhir/R4/Patient/fe3f5082-44a6-42d5-ac02-0fc3c0de89ac",
+        "ifMatch": "W/\"d6ce0166-b70d-43a9-a6a8-81cea2384f2f\"",
+        "body": {
+          "resourceType": "Patient",
+          "name": [
+            {
+              "use": "official",
+              "given": [
+                "Synthetic"
+              ],
+              "family": "Telecom"
+            }
+          ],
+          "birthDate": "1980-01-02",
+          "gender": "unknown",
+          "address": [
+            {
+              "use": "home",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Synthetic",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out",
+              "extension": [
+                {
+                  "url": "channel",
+                  "valueCode": "sms"
+                }
+              ]
+            }
+          ],
+          "telecom": [
+            {
+              "id": "synthetic-12025550102",
+              "system": "phone",
+              "value": "+12025550102",
+              "use": "home",
+              "rank": 2,
+              "period": {
+                "start": "2026-01-01",
+                "end": "2027-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                }
+              ]
+            },
+            {
+              "id": "synthetic-email",
+              "system": "email",
+              "use": "home",
+              "value": "synthetic@example.test",
+              "rank": 3,
+              "period": {
+                "start": "2026-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                }
+              ]
+            },
+            {
+              "id": "synthetic-12025550103",
+              "system": "phone",
+              "value": "+12025550103",
+              "use": "work",
+              "rank": 2,
+              "period": {
+                "start": "2026-01-01",
+                "end": "2027-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                }
+              ]
+            },
+            {
+              "id": "synthetic-12025550101",
+              "system": "phone",
+              "value": "+12025550101",
+              "use": "mobile",
+              "rank": 2,
+              "period": {
+                "start": "2026-01-01",
+                "end": "2027-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                }
+              ]
+            }
+          ],
+          "id": "fe3f5082-44a6-42d5-ac02-0fc3c0de89ac",
+          "meta": {
+            "versionId": "d6ce0166-b70d-43a9-a6a8-81cea2384f2f",
+            "lastUpdated": "2026-09-12T20:44:35.088Z"
+          }
+        }
+      },
+      "persisted": {
+        "resourceType": "Patient",
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Telecom"
+          }
+        ],
+        "birthDate": "1980-01-02",
+        "gender": "unknown",
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Synthetic",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out",
+            "extension": [
+              {
+                "url": "channel",
+                "valueCode": "sms"
+              }
+            ]
+          }
+        ],
+        "telecom": [
+          {
+            "id": "synthetic-12025550102",
+            "system": "phone",
+            "value": "+12025550102",
+            "use": "home",
+            "rank": 2,
+            "period": {
+              "start": "2026-01-01",
+              "end": "2027-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              }
+            ]
+          },
+          {
+            "id": "synthetic-email",
+            "system": "email",
+            "use": "home",
+            "value": "synthetic@example.test",
+            "rank": 3,
+            "period": {
+              "start": "2026-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              }
+            ]
+          },
+          {
+            "id": "synthetic-12025550103",
+            "system": "phone",
+            "value": "+12025550103",
+            "use": "work",
+            "rank": 2,
+            "period": {
+              "start": "2026-01-01",
+              "end": "2027-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              }
+            ]
+          },
+          {
+            "id": "synthetic-12025550101",
+            "system": "phone",
+            "value": "+12025550101",
+            "use": "mobile",
+            "rank": 2,
+            "period": {
+              "start": "2026-01-01",
+              "end": "2027-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              }
+            ]
+          }
+        ],
+        "id": "fe3f5082-44a6-42d5-ac02-0fc3c0de89ac",
+        "meta": {
+          "versionId": "d6ce0166-b70d-43a9-a6a8-81cea2384f2f",
+          "lastUpdated": "2026-09-12T20:44:35.088Z"
+        }
+      }
+    },
+    {
+      "state": "chosen-H",
+      "responseStatus": 200,
+      "serializedPut": {
+        "path": "/fhir/R4/Patient/fe3f5082-44a6-42d5-ac02-0fc3c0de89ac",
+        "ifMatch": "W/\"d6ce0166-b70d-43a9-a6a8-81cea2384f2f\"",
+        "body": {
+          "resourceType": "Patient",
+          "name": [
+            {
+              "use": "official",
+              "given": [
+                "Synthetic"
+              ],
+              "family": "Telecom"
+            }
+          ],
+          "birthDate": "1980-01-02",
+          "gender": "unknown",
+          "address": [
+            {
+              "use": "home",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Synthetic",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out",
+              "extension": [
+                {
+                  "url": "channel",
+                  "valueCode": "sms"
+                }
+              ]
+            }
+          ],
+          "telecom": [
+            {
+              "id": "synthetic-12025550102",
+              "system": "phone",
+              "value": "+12025550102",
+              "use": "home",
+              "rank": 2,
+              "period": {
+                "start": "2026-01-01",
+                "end": "2027-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                },
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                  "valueBoolean": true
+                }
+              ]
+            },
+            {
+              "id": "synthetic-email",
+              "system": "email",
+              "use": "home",
+              "value": "synthetic@example.test",
+              "rank": 3,
+              "period": {
+                "start": "2026-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                }
+              ]
+            },
+            {
+              "id": "synthetic-12025550103",
+              "system": "phone",
+              "value": "+12025550103",
+              "use": "work",
+              "rank": 2,
+              "period": {
+                "start": "2026-01-01",
+                "end": "2027-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                }
+              ]
+            },
+            {
+              "id": "synthetic-12025550101",
+              "system": "phone",
+              "value": "+12025550101",
+              "use": "mobile",
+              "rank": 2,
+              "period": {
+                "start": "2026-01-01",
+                "end": "2027-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                }
+              ]
+            }
+          ],
+          "id": "fe3f5082-44a6-42d5-ac02-0fc3c0de89ac",
+          "meta": {
+            "versionId": "d6ce0166-b70d-43a9-a6a8-81cea2384f2f",
+            "lastUpdated": "2026-09-12T20:44:35.088Z"
+          }
+        }
+      },
+      "persisted": {
+        "resourceType": "Patient",
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Telecom"
+          }
+        ],
+        "birthDate": "1980-01-02",
+        "gender": "unknown",
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Synthetic",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out",
+            "extension": [
+              {
+                "url": "channel",
+                "valueCode": "sms"
+              }
+            ]
+          }
+        ],
+        "telecom": [
+          {
+            "id": "synthetic-12025550102",
+            "system": "phone",
+            "value": "+12025550102",
+            "use": "home",
+            "rank": 2,
+            "period": {
+              "start": "2026-01-01",
+              "end": "2027-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              },
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                "valueBoolean": true
+              }
+            ]
+          },
+          {
+            "id": "synthetic-email",
+            "system": "email",
+            "use": "home",
+            "value": "synthetic@example.test",
+            "rank": 3,
+            "period": {
+              "start": "2026-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              }
+            ]
+          },
+          {
+            "id": "synthetic-12025550103",
+            "system": "phone",
+            "value": "+12025550103",
+            "use": "work",
+            "rank": 2,
+            "period": {
+              "start": "2026-01-01",
+              "end": "2027-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              }
+            ]
+          },
+          {
+            "id": "synthetic-12025550101",
+            "system": "phone",
+            "value": "+12025550101",
+            "use": "mobile",
+            "rank": 2,
+            "period": {
+              "start": "2026-01-01",
+              "end": "2027-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              }
+            ]
+          }
+        ],
+        "id": "fe3f5082-44a6-42d5-ac02-0fc3c0de89ac",
+        "meta": {
+          "versionId": "07835097-c831-4d06-9850-f3dd2786810d",
+          "lastUpdated": "2026-09-12T20:44:41.205Z"
+        }
+      },
+      "conversationResponse": {
+        "status": 200,
+        "body": {
+          "conversations": [
+            {
+              "id": "H-thread",
+              "patientReference": "Patient/fe3f5082-44a6-42d5-ac02-0fc3c0de89ac",
+              "unreadCount": 1,
+              "phone": "+12025550102",
+              "messages": [],
+              "provider": "ghl"
+            }
+          ],
+          "providerErrors": []
+        }
+      },
+      "lastProviderQuery": "+12025550102",
+      "sms": "+12025550102",
+      "voice": "+12025550101",
+      "history": "+12025550102"
+    },
+    {
+      "state": "neither",
+      "responseStatus": 200,
+      "serializedPut": {
+        "path": "/fhir/R4/Patient/fe3f5082-44a6-42d5-ac02-0fc3c0de89ac",
+        "ifMatch": "W/\"07835097-c831-4d06-9850-f3dd2786810d\"",
+        "body": {
+          "resourceType": "Patient",
+          "name": [
+            {
+              "use": "official",
+              "given": [
+                "Synthetic"
+              ],
+              "family": "Telecom"
+            }
+          ],
+          "birthDate": "1980-01-02",
+          "gender": "unknown",
+          "address": [
+            {
+              "use": "home",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Synthetic",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out",
+              "extension": [
+                {
+                  "url": "channel",
+                  "valueCode": "sms"
+                }
+              ]
+            },
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number",
+              "valueBoolean": true
+            }
+          ],
+          "telecom": [
+            {
+              "id": "synthetic-12025550102",
+              "system": "phone",
+              "value": "+12025550102",
+              "use": "home",
+              "rank": 2,
+              "period": {
+                "start": "2026-01-01",
+                "end": "2027-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                },
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                  "valueBoolean": true
+                }
+              ]
+            },
+            {
+              "id": "synthetic-email",
+              "system": "email",
+              "use": "home",
+              "value": "synthetic@example.test",
+              "rank": 3,
+              "period": {
+                "start": "2026-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                }
+              ]
+            },
+            {
+              "id": "synthetic-12025550103",
+              "system": "phone",
+              "value": "+12025550103",
+              "use": "work",
+              "rank": 2,
+              "period": {
+                "start": "2026-01-01",
+                "end": "2027-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                }
+              ]
+            },
+            {
+              "id": "synthetic-12025550101",
+              "system": "phone",
+              "value": "+12025550101",
+              "use": "mobile",
+              "rank": 2,
+              "period": {
+                "start": "2026-01-01",
+                "end": "2027-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                }
+              ]
+            }
+          ],
+          "id": "fe3f5082-44a6-42d5-ac02-0fc3c0de89ac",
+          "meta": {
+            "versionId": "07835097-c831-4d06-9850-f3dd2786810d",
+            "lastUpdated": "2026-09-12T20:44:41.205Z"
+          }
+        }
+      },
+      "persisted": {
+        "resourceType": "Patient",
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Telecom"
+          }
+        ],
+        "birthDate": "1980-01-02",
+        "gender": "unknown",
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Synthetic",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out",
+            "extension": [
+              {
+                "url": "channel",
+                "valueCode": "sms"
+              }
+            ]
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number",
+            "valueBoolean": true
+          }
+        ],
+        "telecom": [
+          {
+            "id": "synthetic-12025550102",
+            "system": "phone",
+            "value": "+12025550102",
+            "use": "home",
+            "rank": 2,
+            "period": {
+              "start": "2026-01-01",
+              "end": "2027-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              },
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                "valueBoolean": true
+              }
+            ]
+          },
+          {
+            "id": "synthetic-email",
+            "system": "email",
+            "use": "home",
+            "value": "synthetic@example.test",
+            "rank": 3,
+            "period": {
+              "start": "2026-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              }
+            ]
+          },
+          {
+            "id": "synthetic-12025550103",
+            "system": "phone",
+            "value": "+12025550103",
+            "use": "work",
+            "rank": 2,
+            "period": {
+              "start": "2026-01-01",
+              "end": "2027-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              }
+            ]
+          },
+          {
+            "id": "synthetic-12025550101",
+            "system": "phone",
+            "value": "+12025550101",
+            "use": "mobile",
+            "rank": 2,
+            "period": {
+              "start": "2026-01-01",
+              "end": "2027-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              }
+            ]
+          }
+        ],
+        "id": "fe3f5082-44a6-42d5-ac02-0fc3c0de89ac",
+        "meta": {
+          "versionId": "6ce15647-019c-4270-9de8-ff810b37c18f",
+          "lastUpdated": "2026-09-12T20:44:41.531Z"
+        }
+      },
+      "conversationResponse": {
+        "status": 200,
+        "body": {
+          "conversations": [
+            {
+              "id": "H-thread",
+              "patientReference": "Patient/fe3f5082-44a6-42d5-ac02-0fc3c0de89ac",
+              "unreadCount": 1,
+              "phone": "+12025550102",
+              "messages": [],
+              "provider": "ghl"
+            }
+          ],
+          "providerErrors": []
+        }
+      },
+      "lastProviderQuery": "+12025550102",
+      "sms": null,
+      "voice": "+12025550101",
+      "history": "+12025550102"
+    },
+    {
+      "state": "chosen-M",
+      "responseStatus": 200,
+      "serializedPut": {
+        "path": "/fhir/R4/Patient/fe3f5082-44a6-42d5-ac02-0fc3c0de89ac",
+        "ifMatch": "W/\"6ce15647-019c-4270-9de8-ff810b37c18f\"",
+        "body": {
+          "resourceType": "Patient",
+          "name": [
+            {
+              "use": "official",
+              "given": [
+                "Synthetic"
+              ],
+              "family": "Telecom"
+            }
+          ],
+          "birthDate": "1980-01-02",
+          "gender": "unknown",
+          "address": [
+            {
+              "use": "home",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Synthetic",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out",
+              "extension": [
+                {
+                  "url": "channel",
+                  "valueCode": "sms"
+                }
+              ]
+            }
+          ],
+          "telecom": [
+            {
+              "id": "synthetic-12025550102",
+              "system": "phone",
+              "value": "+12025550102",
+              "use": "home",
+              "rank": 2,
+              "period": {
+                "start": "2026-01-01",
+                "end": "2027-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                }
+              ]
+            },
+            {
+              "id": "synthetic-email",
+              "system": "email",
+              "use": "home",
+              "value": "synthetic@example.test",
+              "rank": 3,
+              "period": {
+                "start": "2026-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                }
+              ]
+            },
+            {
+              "id": "synthetic-12025550103",
+              "system": "phone",
+              "value": "+12025550103",
+              "use": "work",
+              "rank": 2,
+              "period": {
+                "start": "2026-01-01",
+                "end": "2027-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                }
+              ]
+            },
+            {
+              "id": "synthetic-12025550101",
+              "system": "phone",
+              "value": "+12025550101",
+              "use": "mobile",
+              "rank": 2,
+              "period": {
+                "start": "2026-01-01",
+                "end": "2027-01-01"
+              },
+              "extension": [
+                {
+                  "url": "urn:synthetic:contact-note",
+                  "valueString": "Synthetic retained metadata"
+                },
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                  "valueBoolean": true
+                }
+              ]
+            }
+          ],
+          "id": "fe3f5082-44a6-42d5-ac02-0fc3c0de89ac",
+          "meta": {
+            "versionId": "6ce15647-019c-4270-9de8-ff810b37c18f",
+            "lastUpdated": "2026-09-12T20:44:41.531Z"
+          }
+        }
+      },
+      "persisted": {
+        "resourceType": "Patient",
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Telecom"
+          }
+        ],
+        "birthDate": "1980-01-02",
+        "gender": "unknown",
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Synthetic",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out",
+            "extension": [
+              {
+                "url": "channel",
+                "valueCode": "sms"
+              }
+            ]
+          }
+        ],
+        "telecom": [
+          {
+            "id": "synthetic-12025550102",
+            "system": "phone",
+            "value": "+12025550102",
+            "use": "home",
+            "rank": 2,
+            "period": {
+              "start": "2026-01-01",
+              "end": "2027-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              }
+            ]
+          },
+          {
+            "id": "synthetic-email",
+            "system": "email",
+            "use": "home",
+            "value": "synthetic@example.test",
+            "rank": 3,
+            "period": {
+              "start": "2026-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              }
+            ]
+          },
+          {
+            "id": "synthetic-12025550103",
+            "system": "phone",
+            "value": "+12025550103",
+            "use": "work",
+            "rank": 2,
+            "period": {
+              "start": "2026-01-01",
+              "end": "2027-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              }
+            ]
+          },
+          {
+            "id": "synthetic-12025550101",
+            "system": "phone",
+            "value": "+12025550101",
+            "use": "mobile",
+            "rank": 2,
+            "period": {
+              "start": "2026-01-01",
+              "end": "2027-01-01"
+            },
+            "extension": [
+              {
+                "url": "urn:synthetic:contact-note",
+                "valueString": "Synthetic retained metadata"
+              },
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                "valueBoolean": true
+              }
+            ]
+          }
+        ],
+        "id": "fe3f5082-44a6-42d5-ac02-0fc3c0de89ac",
+        "meta": {
+          "versionId": "bbf2e07f-5863-44ed-84ba-36eef3edf4b3",
+          "lastUpdated": "2026-09-12T20:44:41.900Z"
+        }
+      },
+      "conversationResponse": {
+        "status": 200,
+        "body": {
+          "conversations": [],
+          "providerErrors": []
+        }
+      },
+      "lastProviderQuery": "+12025550101",
+      "sms": "+12025550101",
+      "voice": "+12025550101",
+      "history": "+12025550101"
+    },
+    {
+      "state": "blank-phone",
+      "responseStatus": 200,
+      "serializedPut": {
+        "path": "/fhir/R4/Patient/c1355367-347e-4a03-b302-7f33d0652edf",
+        "ifMatch": "W/\"c776205a-26c5-4605-904f-79c2de17e56e\"",
+        "body": {
+          "resourceType": "Patient",
+          "name": [
+            {
+              "use": "official",
+              "given": [
+                "Synthetic"
+              ],
+              "family": "Telecom"
+            }
+          ],
+          "birthDate": "1980-01-02",
+          "gender": "unknown",
+          "address": [
+            {
+              "use": "home",
+              "line": [
+                "1 Synthetic Way"
+              ],
+              "city": "Synthetic",
+              "state": "SC",
+              "postalCode": "29601"
+            }
+          ],
+          "extension": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out",
+              "extension": [
+                {
+                  "url": "channel",
+                  "valueCode": "sms"
+                }
+              ]
+            }
+          ],
+          "telecom": [],
+          "id": "c1355367-347e-4a03-b302-7f33d0652edf",
+          "meta": {
+            "versionId": "c776205a-26c5-4605-904f-79c2de17e56e",
+            "lastUpdated": "2026-09-12T20:44:42.133Z"
+          }
+        }
+      },
+      "persisted": {
+        "resourceType": "Patient",
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Telecom"
+          }
+        ],
+        "birthDate": "1980-01-02",
+        "gender": "unknown",
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Synthetic",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out",
+            "extension": [
+              {
+                "url": "channel",
+                "valueCode": "sms"
+              }
+            ]
+          }
+        ],
+        "id": "c1355367-347e-4a03-b302-7f33d0652edf",
+        "meta": {
+          "versionId": "86d42896-a831-4046-a258-4ea4d4d736f0",
+          "lastUpdated": "2026-09-12T20:44:42.350Z"
+        }
+      }
+    }
+  ],
+  "limits": [
+    "Local synthetic Medplum only; no external messages sent.",
+    "Real conversation API and configured GHL adapter; provider responses are synthetic H-only fixtures.",
+    "This head has no conversation panel; Neither screenshot and recorded API response are separate evidence.",
+    "Ancillary clinical endpoints are stubbed; application staff and audit dependencies are injected. This is not constrained-role AccessPolicy proof."
+  ]
+}

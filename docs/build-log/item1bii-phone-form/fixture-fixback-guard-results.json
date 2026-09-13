@@ -1,0 +1,86 @@
+[
+  {
+    "guard": "F1",
+    "fault": "Attach the marker by value instead of chosen entry identity",
+    "file": "mcp/src/clinic/patient-telecom.ts",
+    "original": "if (point === answer)",
+    "replacement": "if (typeof answer !== \"string\" && point.value === answer.value)",
+    "sourceSha256": "8fc61f5688e814ec4e8817431de1a404243f8fbb471f9fc397c0dd72d6c5f5b3",
+    "mutantSha256": "fa51de54de5b631a1911f5bc8ca6c2b3b1e5c1754b8bd9781e218ab71718659f",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/patientPhoneForm.test.tsx",
+      "tests/patientRegistration.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 37,
+      "pass": 37,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 37,
+      "pass": 36,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 37,
+      "pass": 37,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "guard": "F2",
+    "fault": "Treat a false marker as true by URL presence",
+    "file": "ui/src/lib/patient-registration.ts",
+    "original": "entry => entry.url === ODOS_TEXTABLE_NUMBER_EXTENSION_URL && entry.valueBoolean === true,",
+    "replacement": "entry => entry.url === ODOS_TEXTABLE_NUMBER_EXTENSION_URL,",
+    "sourceSha256": "cc04ad31c7032c9d1207f25859203cf64687885e0ac357895a69e7219af2fb55",
+    "mutantSha256": "4e94d1fb98d75b73b99767fae3aabca91333d8b67fe7cacc1b86b156f3177f72",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/patientPhoneForm.test.tsx",
+      "tests/patientRegistration.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "tests": 37,
+      "pass": 37,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 37,
+      "pass": 36,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 37,
+      "pass": 37,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  }
+]

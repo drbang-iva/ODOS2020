@@ -1,0 +1,1447 @@
+
+F1 / green
+TAP version 13
+# Subtest: K1: the real reader selects active slots in resolver order
+ok 1 - K1: the real reader selects active slots in resolver order
+  ---
+  duration_ms: 3.246625
+  type: 'test'
+  ...
+# Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+ok 2 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+  ---
+  duration_ms: 13.773041
+  type: 'test'
+  ...
+# Subtest: K3: clearing slot 2 removes only its original entry from one serialized PUT
+ok 3 - K3: clearing slot 2 removes only its original entry from one serialized PUT
+  ---
+  duration_ms: 0.226667
+  type: 'test'
+  ...
+# Subtest: K4: absent and empty telecom allow an address-only save without creating telecom
+ok 4 - K4: absent and empty telecom allow an address-only save without creating telecom
+  ---
+  duration_ms: 0.166166
+  type: 'test'
+  ...
+# Subtest: K6: a changed phone choice leaves exactly one marker across the entire resource
+ok 5 - K6: a changed phone choice leaves exactly one marker across the entire resource
+  ---
+  duration_ms: 0.771417
+  type: 'test'
+  ...
+# Subtest: K7: Neither writes one refusal and preserves every ContactPoint marker
+ok 6 - K7: Neither writes one refusal and preserves every ContactPoint marker
+  ---
+  duration_ms: 0.184125
+  type: 'test'
+  ...
+# Subtest: K8: choosing a phone removes refusal and switches the actual SMS resolver
+ok 7 - K8: choosing a phone removes refusal and switches the actual SMS resolver
+  ---
+  duration_ms: 0.20075
+  type: 'test'
+  ...
+# Subtest: K9: an ineffective inherited marker survives an address-only save
+ok 8 - K9: an ineffective inherited marker survives an address-only save
+  ---
+  duration_ms: 0.264791
+  type: 'test'
+  ...
+# Subtest: K10: a new mobile appends after obsolete history with the chosen use
+ok 9 - K10: a new mobile appends after obsolete history with the chosen use
+  ---
+  duration_ms: 0.241333
+  type: 'test'
+  ...
+# Subtest: K11: a use-only edit retains metadata and the other legacy use verbatim
+ok 10 - K11: a use-only edit retains metadata and the other legacy use verbatim
+  ---
+  duration_ms: 0.367542
+  type: 'test'
+  ...
+# Subtest: K12: blank and whitespace phone values save once without an empty ContactPoint
+ok 11 - K12: blank and whitespace phone values save once without an empty ContactPoint
+  ---
+  duration_ms: 0.206167
+  type: 'test'
+  ...
+# Subtest: K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+ok 12 - K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+  ---
+  duration_ms: 11.697042
+  type: 'test'
+  ...
+# Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
+ok 13 - K14: unrelated extensions and effective appointment suppression survive every transition
+  ---
+  duration_ms: 8.766125
+  type: 'test'
+  ...
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+ok 14 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 8.216792
+  type: 'test'
+  ...
+# Subtest: R2: choosing a blank or invalid slot blocks the real form on that slot
+ok 15 - R2: choosing a blank or invalid slot blocks the real form on that slot
+  ---
+  duration_ms: 4.795666
+  type: 'test'
+  ...
+# Subtest: F1: duplicate values mark only the chosen original entry
+ok 16 - F1: duplicate values mark only the chosen original entry
+  ---
+  duration_ms: 0.379292
+  type: 'test'
+  ...
+# Subtest: F2: a false marker gives neither a loaded answer nor slot priority
+ok 17 - F2: a false marker gives neither a loaded answer nor slot priority
+  ---
+  duration_ms: 0.117917
+  type: 'test'
+  ...
+# Subtest: registration uses the local calendar date and clears stale responsible-party errors
+ok 18 - registration uses the local calendar date and clears stale responsible-party errors
+  ---
+  duration_ms: 1.540917
+  type: 'test'
+  ...
+# Subtest: exact duplicate warning presents both safe choices
+ok 19 - exact duplicate warning presents both safe choices
+  ---
+  duration_ms: 2.3865
+  type: 'test'
+  ...
+# Subtest: a completed registration warning renders a terminal repair state without another create action
+ok 20 - a completed registration warning renders a terminal repair state without another create action
+  ---
+  duration_ms: 0.248792
+  type: 'test'
+  ...
+# Subtest: ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+ok 21 - ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+  ---
+  duration_ms: 0.120042
+  type: 'test'
+  ...
+# Subtest: minor registration validation refuses a missing consent authority
+ok 22 - minor registration validation refuses a missing consent authority
+  ---
+  duration_ms: 0.511541
+  type: 'test'
+  ...
+# Subtest: registration validation refuses missing and invalid birth dates
+ok 23 - registration validation refuses missing and invalid birth dates
+  ---
+  duration_ms: 0.143625
+  type: 'test'
+  ...
+# Subtest: responsible-party collection errors accumulate without hiding minor consent requirements
+ok 24 - responsible-party collection errors accumulate without hiding minor consent requirements
+  ---
+  duration_ms: 0.111625
+  type: 'test'
+  ...
+# Subtest: required fields block creation while address and email remain optional
+ok 25 - required fields block creation while address and email remain optional
+  ---
+  duration_ms: 0.210958
+  type: 'test'
+  ...
+# Subtest: demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+ok 26 - demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+  ---
+  duration_ms: 2.808834
+  type: 'test'
+  ...
+# Subtest: G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+ok 27 - G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+  ---
+  duration_ms: 0.886292
+  type: 'test'
+  ...
+# Subtest: G2: a changed mobile value stays at its original position with metadata intact
+ok 28 - G2: a changed mobile value stays at its original position with metadata intact
+  ---
+  duration_ms: 0.126875
+  type: 'test'
+  ...
+# Subtest: G3: the displayed home slot is updated in place even when it is not the first phone
+ok 29 - G3: the displayed home slot is updated in place even when it is not the first phone
+  ---
+  duration_ms: 0.116875
+  type: 'test'
+  ...
+# Subtest: G4: a missing phone appends exactly one entry with the chosen home use
+ok 30 - G4: a missing phone appends exactly one entry with the chosen home use
+  ---
+  duration_ms: 0.113917
+  type: 'test'
+  ...
+# Subtest: G5: the displayed home email changes in place or is removed when cleared without moving other entries
+ok 31 - G5: the displayed home email changes in place or is removed when cleared without moving other entries
+  ---
+  duration_ms: 0.247416
+  type: 'test'
+  ...
+# Subtest: G13: clearing the email box removes only the displayed entry from the real serialized PUT
+ok 32 - G13: clearing the email box removes only the displayed entry from the real serialized PUT
+  ---
+  duration_ms: 22.348375
+  type: 'test'
+  ...
+# Subtest: G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+ok 33 - G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+  ---
+  duration_ms: 0.233417
+  type: 'test'
+  ...
+# Subtest: H1: obsolete-only contact displays blank and appends a new home without editing history
+ok 34 - H1: obsolete-only contact displays blank and appends a new home without editing history
+  ---
+  duration_ms: 1.053416
+  type: 'test'
+  ...
+# Subtest: H2: obsolete then work displays and edits the same work contact in place
+ok 35 - H2: obsolete then work displays and edits the same work contact in place
+  ---
+  duration_ms: 1.187917
+  type: 'test'
+  ...
+# Subtest: H3: a current home contact retains its value and metadata on unchanged save
+ok 36 - H3: a current home contact retains its value and metadata on unchanged save
+  ---
+  duration_ms: 0.07025
+  type: 'test'
+  ...
+# Subtest: H14: blank phone saves remove the entry while email still exercises contact removal
+ok 37 - H14: blank phone saves remove the entry while email still exercises contact removal
+  ---
+  duration_ms: 0.164709
+  type: 'test'
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 433.999959
+
+F1 / red
+TAP version 13
+# Subtest: K1: the real reader selects active slots in resolver order
+ok 1 - K1: the real reader selects active slots in resolver order
+  ---
+  duration_ms: 3.49975
+  type: 'test'
+  ...
+# Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+ok 2 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+  ---
+  duration_ms: 14.51625
+  type: 'test'
+  ...
+# Subtest: K3: clearing slot 2 removes only its original entry from one serialized PUT
+ok 3 - K3: clearing slot 2 removes only its original entry from one serialized PUT
+  ---
+  duration_ms: 0.342666
+  type: 'test'
+  ...
+# Subtest: K4: absent and empty telecom allow an address-only save without creating telecom
+ok 4 - K4: absent and empty telecom allow an address-only save without creating telecom
+  ---
+  duration_ms: 0.278125
+  type: 'test'
+  ...
+# Subtest: K6: a changed phone choice leaves exactly one marker across the entire resource
+ok 5 - K6: a changed phone choice leaves exactly one marker across the entire resource
+  ---
+  duration_ms: 0.910584
+  type: 'test'
+  ...
+# Subtest: K7: Neither writes one refusal and preserves every ContactPoint marker
+ok 6 - K7: Neither writes one refusal and preserves every ContactPoint marker
+  ---
+  duration_ms: 0.206625
+  type: 'test'
+  ...
+# Subtest: K8: choosing a phone removes refusal and switches the actual SMS resolver
+ok 7 - K8: choosing a phone removes refusal and switches the actual SMS resolver
+  ---
+  duration_ms: 0.235917
+  type: 'test'
+  ...
+# Subtest: K9: an ineffective inherited marker survives an address-only save
+ok 8 - K9: an ineffective inherited marker survives an address-only save
+  ---
+  duration_ms: 0.275375
+  type: 'test'
+  ...
+# Subtest: K10: a new mobile appends after obsolete history with the chosen use
+ok 9 - K10: a new mobile appends after obsolete history with the chosen use
+  ---
+  duration_ms: 0.232375
+  type: 'test'
+  ...
+# Subtest: K11: a use-only edit retains metadata and the other legacy use verbatim
+ok 10 - K11: a use-only edit retains metadata and the other legacy use verbatim
+  ---
+  duration_ms: 0.335334
+  type: 'test'
+  ...
+# Subtest: K12: blank and whitespace phone values save once without an empty ContactPoint
+ok 11 - K12: blank and whitespace phone values save once without an empty ContactPoint
+  ---
+  duration_ms: 0.202458
+  type: 'test'
+  ...
+# Subtest: K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+ok 12 - K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+  ---
+  duration_ms: 11.537416
+  type: 'test'
+  ...
+# Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
+ok 13 - K14: unrelated extensions and effective appointment suppression survive every transition
+  ---
+  duration_ms: 9.724916
+  type: 'test'
+  ...
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+ok 14 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 8.91425
+  type: 'test'
+  ...
+# Subtest: R2: choosing a blank or invalid slot blocks the real form on that slot
+ok 15 - R2: choosing a blank or invalid slot blocks the real form on that slot
+  ---
+  duration_ms: 5.074125
+  type: 'test'
+  ...
+# Subtest: F1: duplicate values mark only the chosen original entry
+not ok 16 - F1: duplicate values mark only the chosen original entry
+  ---
+  duration_ms: 2.192167
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:15906'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        0,
+    +   1
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 0
+  actual:
+    0: 0
+    1: 1
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:338:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: F2: a false marker gives neither a loaded answer nor slot priority
+ok 17 - F2: a false marker gives neither a loaded answer nor slot priority
+  ---
+  duration_ms: 0.147458
+  type: 'test'
+  ...
+# Subtest: registration uses the local calendar date and clears stale responsible-party errors
+ok 18 - registration uses the local calendar date and clears stale responsible-party errors
+  ---
+  duration_ms: 1.182792
+  type: 'test'
+  ...
+# Subtest: exact duplicate warning presents both safe choices
+ok 19 - exact duplicate warning presents both safe choices
+  ---
+  duration_ms: 2.273125
+  type: 'test'
+  ...
+# Subtest: a completed registration warning renders a terminal repair state without another create action
+ok 20 - a completed registration warning renders a terminal repair state without another create action
+  ---
+  duration_ms: 0.224333
+  type: 'test'
+  ...
+# Subtest: ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+ok 21 - ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+  ---
+  duration_ms: 0.126708
+  type: 'test'
+  ...
+# Subtest: minor registration validation refuses a missing consent authority
+ok 22 - minor registration validation refuses a missing consent authority
+  ---
+  duration_ms: 0.45425
+  type: 'test'
+  ...
+# Subtest: registration validation refuses missing and invalid birth dates
+ok 23 - registration validation refuses missing and invalid birth dates
+  ---
+  duration_ms: 0.087917
+  type: 'test'
+  ...
+# Subtest: responsible-party collection errors accumulate without hiding minor consent requirements
+ok 24 - responsible-party collection errors accumulate without hiding minor consent requirements
+  ---
+  duration_ms: 0.161333
+  type: 'test'
+  ...
+# Subtest: required fields block creation while address and email remain optional
+ok 25 - required fields block creation while address and email remain optional
+  ---
+  duration_ms: 0.179792
+  type: 'test'
+  ...
+# Subtest: demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+ok 26 - demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+  ---
+  duration_ms: 2.503042
+  type: 'test'
+  ...
+# Subtest: G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+ok 27 - G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+  ---
+  duration_ms: 0.863833
+  type: 'test'
+  ...
+# Subtest: G2: a changed mobile value stays at its original position with metadata intact
+ok 28 - G2: a changed mobile value stays at its original position with metadata intact
+  ---
+  duration_ms: 0.12625
+  type: 'test'
+  ...
+# Subtest: G3: the displayed home slot is updated in place even when it is not the first phone
+ok 29 - G3: the displayed home slot is updated in place even when it is not the first phone
+  ---
+  duration_ms: 0.112209
+  type: 'test'
+  ...
+# Subtest: G4: a missing phone appends exactly one entry with the chosen home use
+ok 30 - G4: a missing phone appends exactly one entry with the chosen home use
+  ---
+  duration_ms: 0.104791
+  type: 'test'
+  ...
+# Subtest: G5: the displayed home email changes in place or is removed when cleared without moving other entries
+ok 31 - G5: the displayed home email changes in place or is removed when cleared without moving other entries
+  ---
+  duration_ms: 0.235208
+  type: 'test'
+  ...
+# Subtest: G13: clearing the email box removes only the displayed entry from the real serialized PUT
+ok 32 - G13: clearing the email box removes only the displayed entry from the real serialized PUT
+  ---
+  duration_ms: 21.708208
+  type: 'test'
+  ...
+# Subtest: G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+ok 33 - G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+  ---
+  duration_ms: 0.219083
+  type: 'test'
+  ...
+# Subtest: H1: obsolete-only contact displays blank and appends a new home without editing history
+ok 34 - H1: obsolete-only contact displays blank and appends a new home without editing history
+  ---
+  duration_ms: 1.09225
+  type: 'test'
+  ...
+# Subtest: H2: obsolete then work displays and edits the same work contact in place
+ok 35 - H2: obsolete then work displays and edits the same work contact in place
+  ---
+  duration_ms: 1.240333
+  type: 'test'
+  ...
+# Subtest: H3: a current home contact retains its value and metadata on unchanged save
+ok 36 - H3: a current home contact retains its value and metadata on unchanged save
+  ---
+  duration_ms: 0.064458
+  type: 'test'
+  ...
+# Subtest: H14: blank phone saves remove the entry while email still exercises contact removal
+ok 37 - H14: blank phone saves remove the entry while email still exercises contact removal
+  ---
+  duration_ms: 0.153416
+  type: 'test'
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 36
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 443.254916
+
+F1 / restored
+TAP version 13
+# Subtest: K1: the real reader selects active slots in resolver order
+ok 1 - K1: the real reader selects active slots in resolver order
+  ---
+  duration_ms: 3.630875
+  type: 'test'
+  ...
+# Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+ok 2 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+  ---
+  duration_ms: 13.703333
+  type: 'test'
+  ...
+# Subtest: K3: clearing slot 2 removes only its original entry from one serialized PUT
+ok 3 - K3: clearing slot 2 removes only its original entry from one serialized PUT
+  ---
+  duration_ms: 0.329041
+  type: 'test'
+  ...
+# Subtest: K4: absent and empty telecom allow an address-only save without creating telecom
+ok 4 - K4: absent and empty telecom allow an address-only save without creating telecom
+  ---
+  duration_ms: 0.198417
+  type: 'test'
+  ...
+# Subtest: K6: a changed phone choice leaves exactly one marker across the entire resource
+ok 5 - K6: a changed phone choice leaves exactly one marker across the entire resource
+  ---
+  duration_ms: 1.070084
+  type: 'test'
+  ...
+# Subtest: K7: Neither writes one refusal and preserves every ContactPoint marker
+ok 6 - K7: Neither writes one refusal and preserves every ContactPoint marker
+  ---
+  duration_ms: 0.256542
+  type: 'test'
+  ...
+# Subtest: K8: choosing a phone removes refusal and switches the actual SMS resolver
+ok 7 - K8: choosing a phone removes refusal and switches the actual SMS resolver
+  ---
+  duration_ms: 0.258459
+  type: 'test'
+  ...
+# Subtest: K9: an ineffective inherited marker survives an address-only save
+ok 8 - K9: an ineffective inherited marker survives an address-only save
+  ---
+  duration_ms: 0.339042
+  type: 'test'
+  ...
+# Subtest: K10: a new mobile appends after obsolete history with the chosen use
+ok 9 - K10: a new mobile appends after obsolete history with the chosen use
+  ---
+  duration_ms: 0.277042
+  type: 'test'
+  ...
+# Subtest: K11: a use-only edit retains metadata and the other legacy use verbatim
+ok 10 - K11: a use-only edit retains metadata and the other legacy use verbatim
+  ---
+  duration_ms: 0.376625
+  type: 'test'
+  ...
+# Subtest: K12: blank and whitespace phone values save once without an empty ContactPoint
+ok 11 - K12: blank and whitespace phone values save once without an empty ContactPoint
+  ---
+  duration_ms: 0.214875
+  type: 'test'
+  ...
+# Subtest: K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+ok 12 - K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+  ---
+  duration_ms: 12.867333
+  type: 'test'
+  ...
+# Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
+ok 13 - K14: unrelated extensions and effective appointment suppression survive every transition
+  ---
+  duration_ms: 9.854542
+  type: 'test'
+  ...
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+ok 14 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 9.501875
+  type: 'test'
+  ...
+# Subtest: R2: choosing a blank or invalid slot blocks the real form on that slot
+ok 15 - R2: choosing a blank or invalid slot blocks the real form on that slot
+  ---
+  duration_ms: 4.684875
+  type: 'test'
+  ...
+# Subtest: F1: duplicate values mark only the chosen original entry
+ok 16 - F1: duplicate values mark only the chosen original entry
+  ---
+  duration_ms: 0.537125
+  type: 'test'
+  ...
+# Subtest: F2: a false marker gives neither a loaded answer nor slot priority
+ok 17 - F2: a false marker gives neither a loaded answer nor slot priority
+  ---
+  duration_ms: 0.130875
+  type: 'test'
+  ...
+# Subtest: registration uses the local calendar date and clears stale responsible-party errors
+ok 18 - registration uses the local calendar date and clears stale responsible-party errors
+  ---
+  duration_ms: 1.439916
+  type: 'test'
+  ...
+# Subtest: exact duplicate warning presents both safe choices
+ok 19 - exact duplicate warning presents both safe choices
+  ---
+  duration_ms: 1.910291
+  type: 'test'
+  ...
+# Subtest: a completed registration warning renders a terminal repair state without another create action
+ok 20 - a completed registration warning renders a terminal repair state without another create action
+  ---
+  duration_ms: 0.183459
+  type: 'test'
+  ...
+# Subtest: ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+ok 21 - ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+  ---
+  duration_ms: 0.097542
+  type: 'test'
+  ...
+# Subtest: minor registration validation refuses a missing consent authority
+ok 22 - minor registration validation refuses a missing consent authority
+  ---
+  duration_ms: 0.389917
+  type: 'test'
+  ...
+# Subtest: registration validation refuses missing and invalid birth dates
+ok 23 - registration validation refuses missing and invalid birth dates
+  ---
+  duration_ms: 0.0675
+  type: 'test'
+  ...
+# Subtest: responsible-party collection errors accumulate without hiding minor consent requirements
+ok 24 - responsible-party collection errors accumulate without hiding minor consent requirements
+  ---
+  duration_ms: 0.060167
+  type: 'test'
+  ...
+# Subtest: required fields block creation while address and email remain optional
+ok 25 - required fields block creation while address and email remain optional
+  ---
+  duration_ms: 0.140334
+  type: 'test'
+  ...
+# Subtest: demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+ok 26 - demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+  ---
+  duration_ms: 2.438167
+  type: 'test'
+  ...
+# Subtest: G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+ok 27 - G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+  ---
+  duration_ms: 0.885625
+  type: 'test'
+  ...
+# Subtest: G2: a changed mobile value stays at its original position with metadata intact
+ok 28 - G2: a changed mobile value stays at its original position with metadata intact
+  ---
+  duration_ms: 0.124959
+  type: 'test'
+  ...
+# Subtest: G3: the displayed home slot is updated in place even when it is not the first phone
+ok 29 - G3: the displayed home slot is updated in place even when it is not the first phone
+  ---
+  duration_ms: 0.109584
+  type: 'test'
+  ...
+# Subtest: G4: a missing phone appends exactly one entry with the chosen home use
+ok 30 - G4: a missing phone appends exactly one entry with the chosen home use
+  ---
+  duration_ms: 0.164042
+  type: 'test'
+  ...
+# Subtest: G5: the displayed home email changes in place or is removed when cleared without moving other entries
+ok 31 - G5: the displayed home email changes in place or is removed when cleared without moving other entries
+  ---
+  duration_ms: 0.237959
+  type: 'test'
+  ...
+# Subtest: G13: clearing the email box removes only the displayed entry from the real serialized PUT
+ok 32 - G13: clearing the email box removes only the displayed entry from the real serialized PUT
+  ---
+  duration_ms: 22.382667
+  type: 'test'
+  ...
+# Subtest: G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+ok 33 - G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+  ---
+  duration_ms: 0.253125
+  type: 'test'
+  ...
+# Subtest: H1: obsolete-only contact displays blank and appends a new home without editing history
+ok 34 - H1: obsolete-only contact displays blank and appends a new home without editing history
+  ---
+  duration_ms: 1.343125
+  type: 'test'
+  ...
+# Subtest: H2: obsolete then work displays and edits the same work contact in place
+ok 35 - H2: obsolete then work displays and edits the same work contact in place
+  ---
+  duration_ms: 1.17125
+  type: 'test'
+  ...
+# Subtest: H3: a current home contact retains its value and metadata on unchanged save
+ok 36 - H3: a current home contact retains its value and metadata on unchanged save
+  ---
+  duration_ms: 0.067458
+  type: 'test'
+  ...
+# Subtest: H14: blank phone saves remove the entry while email still exercises contact removal
+ok 37 - H14: blank phone saves remove the entry while email still exercises contact removal
+  ---
+  duration_ms: 0.163416
+  type: 'test'
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 434.366458
+
+F2 / green
+TAP version 13
+# Subtest: K1: the real reader selects active slots in resolver order
+ok 1 - K1: the real reader selects active slots in resolver order
+  ---
+  duration_ms: 3.461708
+  type: 'test'
+  ...
+# Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+ok 2 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+  ---
+  duration_ms: 13.318083
+  type: 'test'
+  ...
+# Subtest: K3: clearing slot 2 removes only its original entry from one serialized PUT
+ok 3 - K3: clearing slot 2 removes only its original entry from one serialized PUT
+  ---
+  duration_ms: 0.246458
+  type: 'test'
+  ...
+# Subtest: K4: absent and empty telecom allow an address-only save without creating telecom
+ok 4 - K4: absent and empty telecom allow an address-only save without creating telecom
+  ---
+  duration_ms: 0.166
+  type: 'test'
+  ...
+# Subtest: K6: a changed phone choice leaves exactly one marker across the entire resource
+ok 5 - K6: a changed phone choice leaves exactly one marker across the entire resource
+  ---
+  duration_ms: 0.745959
+  type: 'test'
+  ...
+# Subtest: K7: Neither writes one refusal and preserves every ContactPoint marker
+ok 6 - K7: Neither writes one refusal and preserves every ContactPoint marker
+  ---
+  duration_ms: 0.1825
+  type: 'test'
+  ...
+# Subtest: K8: choosing a phone removes refusal and switches the actual SMS resolver
+ok 7 - K8: choosing a phone removes refusal and switches the actual SMS resolver
+  ---
+  duration_ms: 0.205875
+  type: 'test'
+  ...
+# Subtest: K9: an ineffective inherited marker survives an address-only save
+ok 8 - K9: an ineffective inherited marker survives an address-only save
+  ---
+  duration_ms: 0.31525
+  type: 'test'
+  ...
+# Subtest: K10: a new mobile appends after obsolete history with the chosen use
+ok 9 - K10: a new mobile appends after obsolete history with the chosen use
+  ---
+  duration_ms: 0.271084
+  type: 'test'
+  ...
+# Subtest: K11: a use-only edit retains metadata and the other legacy use verbatim
+ok 10 - K11: a use-only edit retains metadata and the other legacy use verbatim
+  ---
+  duration_ms: 0.363834
+  type: 'test'
+  ...
+# Subtest: K12: blank and whitespace phone values save once without an empty ContactPoint
+ok 11 - K12: blank and whitespace phone values save once without an empty ContactPoint
+  ---
+  duration_ms: 0.224041
+  type: 'test'
+  ...
+# Subtest: K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+ok 12 - K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+  ---
+  duration_ms: 12.636875
+  type: 'test'
+  ...
+# Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
+ok 13 - K14: unrelated extensions and effective appointment suppression survive every transition
+  ---
+  duration_ms: 8.718042
+  type: 'test'
+  ...
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+ok 14 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 8.104709
+  type: 'test'
+  ...
+# Subtest: R2: choosing a blank or invalid slot blocks the real form on that slot
+ok 15 - R2: choosing a blank or invalid slot blocks the real form on that slot
+  ---
+  duration_ms: 4.060041
+  type: 'test'
+  ...
+# Subtest: F1: duplicate values mark only the chosen original entry
+ok 16 - F1: duplicate values mark only the chosen original entry
+  ---
+  duration_ms: 0.3175
+  type: 'test'
+  ...
+# Subtest: F2: a false marker gives neither a loaded answer nor slot priority
+ok 17 - F2: a false marker gives neither a loaded answer nor slot priority
+  ---
+  duration_ms: 0.105417
+  type: 'test'
+  ...
+# Subtest: registration uses the local calendar date and clears stale responsible-party errors
+ok 18 - registration uses the local calendar date and clears stale responsible-party errors
+  ---
+  duration_ms: 1.319125
+  type: 'test'
+  ...
+# Subtest: exact duplicate warning presents both safe choices
+ok 19 - exact duplicate warning presents both safe choices
+  ---
+  duration_ms: 2.501375
+  type: 'test'
+  ...
+# Subtest: a completed registration warning renders a terminal repair state without another create action
+ok 20 - a completed registration warning renders a terminal repair state without another create action
+  ---
+  duration_ms: 0.249834
+  type: 'test'
+  ...
+# Subtest: ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+ok 21 - ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+  ---
+  duration_ms: 0.131125
+  type: 'test'
+  ...
+# Subtest: minor registration validation refuses a missing consent authority
+ok 22 - minor registration validation refuses a missing consent authority
+  ---
+  duration_ms: 0.594459
+  type: 'test'
+  ...
+# Subtest: registration validation refuses missing and invalid birth dates
+ok 23 - registration validation refuses missing and invalid birth dates
+  ---
+  duration_ms: 0.096958
+  type: 'test'
+  ...
+# Subtest: responsible-party collection errors accumulate without hiding minor consent requirements
+ok 24 - responsible-party collection errors accumulate without hiding minor consent requirements
+  ---
+  duration_ms: 0.061084
+  type: 'test'
+  ...
+# Subtest: required fields block creation while address and email remain optional
+ok 25 - required fields block creation while address and email remain optional
+  ---
+  duration_ms: 0.134083
+  type: 'test'
+  ...
+# Subtest: demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+ok 26 - demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+  ---
+  duration_ms: 2.443875
+  type: 'test'
+  ...
+# Subtest: G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+ok 27 - G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+  ---
+  duration_ms: 0.831833
+  type: 'test'
+  ...
+# Subtest: G2: a changed mobile value stays at its original position with metadata intact
+ok 28 - G2: a changed mobile value stays at its original position with metadata intact
+  ---
+  duration_ms: 0.12425
+  type: 'test'
+  ...
+# Subtest: G3: the displayed home slot is updated in place even when it is not the first phone
+ok 29 - G3: the displayed home slot is updated in place even when it is not the first phone
+  ---
+  duration_ms: 0.110375
+  type: 'test'
+  ...
+# Subtest: G4: a missing phone appends exactly one entry with the chosen home use
+ok 30 - G4: a missing phone appends exactly one entry with the chosen home use
+  ---
+  duration_ms: 0.103
+  type: 'test'
+  ...
+# Subtest: G5: the displayed home email changes in place or is removed when cleared without moving other entries
+ok 31 - G5: the displayed home email changes in place or is removed when cleared without moving other entries
+  ---
+  duration_ms: 0.231542
+  type: 'test'
+  ...
+# Subtest: G13: clearing the email box removes only the displayed entry from the real serialized PUT
+ok 32 - G13: clearing the email box removes only the displayed entry from the real serialized PUT
+  ---
+  duration_ms: 22.392542
+  type: 'test'
+  ...
+# Subtest: G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+ok 33 - G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+  ---
+  duration_ms: 0.2185
+  type: 'test'
+  ...
+# Subtest: H1: obsolete-only contact displays blank and appends a new home without editing history
+ok 34 - H1: obsolete-only contact displays blank and appends a new home without editing history
+  ---
+  duration_ms: 1.08275
+  type: 'test'
+  ...
+# Subtest: H2: obsolete then work displays and edits the same work contact in place
+ok 35 - H2: obsolete then work displays and edits the same work contact in place
+  ---
+  duration_ms: 1.211292
+  type: 'test'
+  ...
+# Subtest: H3: a current home contact retains its value and metadata on unchanged save
+ok 36 - H3: a current home contact retains its value and metadata on unchanged save
+  ---
+  duration_ms: 0.06475
+  type: 'test'
+  ...
+# Subtest: H14: blank phone saves remove the entry while email still exercises contact removal
+ok 37 - H14: blank phone saves remove the entry while email still exercises contact removal
+  ---
+  duration_ms: 0.147
+  type: 'test'
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 429.62675
+
+F2 / red
+TAP version 13
+# Subtest: K1: the real reader selects active slots in resolver order
+ok 1 - K1: the real reader selects active slots in resolver order
+  ---
+  duration_ms: 3.3865
+  type: 'test'
+  ...
+# Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+ok 2 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+  ---
+  duration_ms: 13.6565
+  type: 'test'
+  ...
+# Subtest: K3: clearing slot 2 removes only its original entry from one serialized PUT
+ok 3 - K3: clearing slot 2 removes only its original entry from one serialized PUT
+  ---
+  duration_ms: 0.276625
+  type: 'test'
+  ...
+# Subtest: K4: absent and empty telecom allow an address-only save without creating telecom
+ok 4 - K4: absent and empty telecom allow an address-only save without creating telecom
+  ---
+  duration_ms: 0.187542
+  type: 'test'
+  ...
+# Subtest: K6: a changed phone choice leaves exactly one marker across the entire resource
+ok 5 - K6: a changed phone choice leaves exactly one marker across the entire resource
+  ---
+  duration_ms: 0.723042
+  type: 'test'
+  ...
+# Subtest: K7: Neither writes one refusal and preserves every ContactPoint marker
+ok 6 - K7: Neither writes one refusal and preserves every ContactPoint marker
+  ---
+  duration_ms: 0.162958
+  type: 'test'
+  ...
+# Subtest: K8: choosing a phone removes refusal and switches the actual SMS resolver
+ok 7 - K8: choosing a phone removes refusal and switches the actual SMS resolver
+  ---
+  duration_ms: 0.196542
+  type: 'test'
+  ...
+# Subtest: K9: an ineffective inherited marker survives an address-only save
+ok 8 - K9: an ineffective inherited marker survives an address-only save
+  ---
+  duration_ms: 0.261875
+  type: 'test'
+  ...
+# Subtest: K10: a new mobile appends after obsolete history with the chosen use
+ok 9 - K10: a new mobile appends after obsolete history with the chosen use
+  ---
+  duration_ms: 0.232375
+  type: 'test'
+  ...
+# Subtest: K11: a use-only edit retains metadata and the other legacy use verbatim
+ok 10 - K11: a use-only edit retains metadata and the other legacy use verbatim
+  ---
+  duration_ms: 0.325625
+  type: 'test'
+  ...
+# Subtest: K12: blank and whitespace phone values save once without an empty ContactPoint
+ok 11 - K12: blank and whitespace phone values save once without an empty ContactPoint
+  ---
+  duration_ms: 0.176625
+  type: 'test'
+  ...
+# Subtest: K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+ok 12 - K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+  ---
+  duration_ms: 12.540333
+  type: 'test'
+  ...
+# Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
+ok 13 - K14: unrelated extensions and effective appointment suppression survive every transition
+  ---
+  duration_ms: 9.046
+  type: 'test'
+  ...
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+ok 14 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 7.65925
+  type: 'test'
+  ...
+# Subtest: R2: choosing a blank or invalid slot blocks the real form on that slot
+ok 15 - R2: choosing a blank or invalid slot blocks the real form on that slot
+  ---
+  duration_ms: 4.351083
+  type: 'test'
+  ...
+# Subtest: F1: duplicate values mark only the chosen original entry
+ok 16 - F1: duplicate values mark only the chosen original entry
+  ---
+  duration_ms: 0.412667
+  type: 'test'
+  ...
+# Subtest: F2: a false marker gives neither a loaded answer nor slot priority
+not ok 17 - F2: a false marker gives neither a loaded answer nor slot priority
+  ---
+  duration_ms: 1.870625
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:16572'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    'phone1' !== ''
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ''
+  actual: 'phone1'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:349:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: registration uses the local calendar date and clears stale responsible-party errors
+ok 18 - registration uses the local calendar date and clears stale responsible-party errors
+  ---
+  duration_ms: 1.366583
+  type: 'test'
+  ...
+# Subtest: exact duplicate warning presents both safe choices
+ok 19 - exact duplicate warning presents both safe choices
+  ---
+  duration_ms: 2.177833
+  type: 'test'
+  ...
+# Subtest: a completed registration warning renders a terminal repair state without another create action
+ok 20 - a completed registration warning renders a terminal repair state without another create action
+  ---
+  duration_ms: 0.225833
+  type: 'test'
+  ...
+# Subtest: ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+ok 21 - ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+  ---
+  duration_ms: 0.1245
+  type: 'test'
+  ...
+# Subtest: minor registration validation refuses a missing consent authority
+ok 22 - minor registration validation refuses a missing consent authority
+  ---
+  duration_ms: 0.462334
+  type: 'test'
+  ...
+# Subtest: registration validation refuses missing and invalid birth dates
+ok 23 - registration validation refuses missing and invalid birth dates
+  ---
+  duration_ms: 0.082
+  type: 'test'
+  ...
+# Subtest: responsible-party collection errors accumulate without hiding minor consent requirements
+ok 24 - responsible-party collection errors accumulate without hiding minor consent requirements
+  ---
+  duration_ms: 0.067209
+  type: 'test'
+  ...
+# Subtest: required fields block creation while address and email remain optional
+ok 25 - required fields block creation while address and email remain optional
+  ---
+  duration_ms: 0.148625
+  type: 'test'
+  ...
+# Subtest: demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+ok 26 - demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+  ---
+  duration_ms: 2.812917
+  type: 'test'
+  ...
+# Subtest: G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+ok 27 - G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+  ---
+  duration_ms: 1.044333
+  type: 'test'
+  ...
+# Subtest: G2: a changed mobile value stays at its original position with metadata intact
+ok 28 - G2: a changed mobile value stays at its original position with metadata intact
+  ---
+  duration_ms: 0.149209
+  type: 'test'
+  ...
+# Subtest: G3: the displayed home slot is updated in place even when it is not the first phone
+ok 29 - G3: the displayed home slot is updated in place even when it is not the first phone
+  ---
+  duration_ms: 0.128791
+  type: 'test'
+  ...
+# Subtest: G4: a missing phone appends exactly one entry with the chosen home use
+ok 30 - G4: a missing phone appends exactly one entry with the chosen home use
+  ---
+  duration_ms: 0.116
+  type: 'test'
+  ...
+# Subtest: G5: the displayed home email changes in place or is removed when cleared without moving other entries
+ok 31 - G5: the displayed home email changes in place or is removed when cleared without moving other entries
+  ---
+  duration_ms: 0.263625
+  type: 'test'
+  ...
+# Subtest: G13: clearing the email box removes only the displayed entry from the real serialized PUT
+ok 32 - G13: clearing the email box removes only the displayed entry from the real serialized PUT
+  ---
+  duration_ms: 21.397917
+  type: 'test'
+  ...
+# Subtest: G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+ok 33 - G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+  ---
+  duration_ms: 0.226084
+  type: 'test'
+  ...
+# Subtest: H1: obsolete-only contact displays blank and appends a new home without editing history
+ok 34 - H1: obsolete-only contact displays blank and appends a new home without editing history
+  ---
+  duration_ms: 1.058583
+  type: 'test'
+  ...
+# Subtest: H2: obsolete then work displays and edits the same work contact in place
+ok 35 - H2: obsolete then work displays and edits the same work contact in place
+  ---
+  duration_ms: 1.25075
+  type: 'test'
+  ...
+# Subtest: H3: a current home contact retains its value and metadata on unchanged save
+ok 36 - H3: a current home contact retains its value and metadata on unchanged save
+  ---
+  duration_ms: 0.07525
+  type: 'test'
+  ...
+# Subtest: H14: blank phone saves remove the entry while email still exercises contact removal
+ok 37 - H14: blank phone saves remove the entry while email still exercises contact removal
+  ---
+  duration_ms: 0.173833
+  type: 'test'
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 36
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 430.797458
+
+F2 / restored
+TAP version 13
+# Subtest: K1: the real reader selects active slots in resolver order
+ok 1 - K1: the real reader selects active slots in resolver order
+  ---
+  duration_ms: 3.294125
+  type: 'test'
+  ...
+# Subtest: K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+ok 2 - K2: every fixture round-trips untouched telecom and extensions, including a re-clicked loaded answer
+  ---
+  duration_ms: 13.93825
+  type: 'test'
+  ...
+# Subtest: K3: clearing slot 2 removes only its original entry from one serialized PUT
+ok 3 - K3: clearing slot 2 removes only its original entry from one serialized PUT
+  ---
+  duration_ms: 0.25625
+  type: 'test'
+  ...
+# Subtest: K4: absent and empty telecom allow an address-only save without creating telecom
+ok 4 - K4: absent and empty telecom allow an address-only save without creating telecom
+  ---
+  duration_ms: 0.186209
+  type: 'test'
+  ...
+# Subtest: K6: a changed phone choice leaves exactly one marker across the entire resource
+ok 5 - K6: a changed phone choice leaves exactly one marker across the entire resource
+  ---
+  duration_ms: 0.766125
+  type: 'test'
+  ...
+# Subtest: K7: Neither writes one refusal and preserves every ContactPoint marker
+ok 6 - K7: Neither writes one refusal and preserves every ContactPoint marker
+  ---
+  duration_ms: 0.176917
+  type: 'test'
+  ...
+# Subtest: K8: choosing a phone removes refusal and switches the actual SMS resolver
+ok 7 - K8: choosing a phone removes refusal and switches the actual SMS resolver
+  ---
+  duration_ms: 0.205833
+  type: 'test'
+  ...
+# Subtest: K9: an ineffective inherited marker survives an address-only save
+ok 8 - K9: an ineffective inherited marker survives an address-only save
+  ---
+  duration_ms: 0.255792
+  type: 'test'
+  ...
+# Subtest: K10: a new mobile appends after obsolete history with the chosen use
+ok 9 - K10: a new mobile appends after obsolete history with the chosen use
+  ---
+  duration_ms: 0.242917
+  type: 'test'
+  ...
+# Subtest: K11: a use-only edit retains metadata and the other legacy use verbatim
+ok 10 - K11: a use-only edit retains metadata and the other legacy use verbatim
+  ---
+  duration_ms: 0.355916
+  type: 'test'
+  ...
+# Subtest: K12: blank and whitespace phone values save once without an empty ContactPoint
+ok 11 - K12: blank and whitespace phone values save once without an empty ContactPoint
+  ---
+  duration_ms: 0.201167
+  type: 'test'
+  ...
+# Subtest: K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+ok 12 - K13: the rendered editor, serialized PUT, reload, resolvers and configured H-only history agree
+  ---
+  duration_ms: 11.265166
+  type: 'test'
+  ...
+# Subtest: K14: unrelated extensions and effective appointment suppression survive every transition
+ok 13 - K14: unrelated extensions and effective appointment suppression survive every transition
+  ---
+  duration_ms: 9.224875
+  type: 'test'
+  ...
+# Subtest: K15: preserve the remainder and validate the original snapshot through preference refresh
+ok 14 - K15: preserve the remainder and validate the original snapshot through preference refresh
+  ---
+  duration_ms: 8.83525
+  type: 'test'
+  ...
+# Subtest: R2: choosing a blank or invalid slot blocks the real form on that slot
+ok 15 - R2: choosing a blank or invalid slot blocks the real form on that slot
+  ---
+  duration_ms: 4.83625
+  type: 'test'
+  ...
+# Subtest: F1: duplicate values mark only the chosen original entry
+ok 16 - F1: duplicate values mark only the chosen original entry
+  ---
+  duration_ms: 0.345791
+  type: 'test'
+  ...
+# Subtest: F2: a false marker gives neither a loaded answer nor slot priority
+ok 17 - F2: a false marker gives neither a loaded answer nor slot priority
+  ---
+  duration_ms: 0.100125
+  type: 'test'
+  ...
+# Subtest: registration uses the local calendar date and clears stale responsible-party errors
+ok 18 - registration uses the local calendar date and clears stale responsible-party errors
+  ---
+  duration_ms: 1.347541
+  type: 'test'
+  ...
+# Subtest: exact duplicate warning presents both safe choices
+ok 19 - exact duplicate warning presents both safe choices
+  ---
+  duration_ms: 2.187166
+  type: 'test'
+  ...
+# Subtest: a completed registration warning renders a terminal repair state without another create action
+ok 20 - a completed registration warning renders a terminal repair state without another create action
+  ---
+  duration_ms: 0.218625
+  type: 'test'
+  ...
+# Subtest: ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+ok 21 - ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+  ---
+  duration_ms: 0.122292
+  type: 'test'
+  ...
+# Subtest: minor registration validation refuses a missing consent authority
+ok 22 - minor registration validation refuses a missing consent authority
+  ---
+  duration_ms: 0.464792
+  type: 'test'
+  ...
+# Subtest: registration validation refuses missing and invalid birth dates
+ok 23 - registration validation refuses missing and invalid birth dates
+  ---
+  duration_ms: 0.078458
+  type: 'test'
+  ...
+# Subtest: responsible-party collection errors accumulate without hiding minor consent requirements
+ok 24 - responsible-party collection errors accumulate without hiding minor consent requirements
+  ---
+  duration_ms: 0.061208
+  type: 'test'
+  ...
+# Subtest: required fields block creation while address and email remain optional
+ok 25 - required fields block creation while address and email remain optional
+  ---
+  duration_ms: 0.139125
+  type: 'test'
+  ...
+# Subtest: demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+ok 26 - demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+  ---
+  duration_ms: 2.997875
+  type: 'test'
+  ...
+# Subtest: G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+ok 27 - G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+  ---
+  duration_ms: 0.919583
+  type: 'test'
+  ...
+# Subtest: G2: a changed mobile value stays at its original position with metadata intact
+ok 28 - G2: a changed mobile value stays at its original position with metadata intact
+  ---
+  duration_ms: 0.132292
+  type: 'test'
+  ...
+# Subtest: G3: the displayed home slot is updated in place even when it is not the first phone
+ok 29 - G3: the displayed home slot is updated in place even when it is not the first phone
+  ---
+  duration_ms: 0.138708
+  type: 'test'
+  ...
+# Subtest: G4: a missing phone appends exactly one entry with the chosen home use
+ok 30 - G4: a missing phone appends exactly one entry with the chosen home use
+  ---
+  duration_ms: 0.111875
+  type: 'test'
+  ...
+# Subtest: G5: the displayed home email changes in place or is removed when cleared without moving other entries
+ok 31 - G5: the displayed home email changes in place or is removed when cleared without moving other entries
+  ---
+  duration_ms: 0.241334
+  type: 'test'
+  ...
+# Subtest: G13: clearing the email box removes only the displayed entry from the real serialized PUT
+ok 32 - G13: clearing the email box removes only the displayed entry from the real serialized PUT
+  ---
+  duration_ms: 23.241458
+  type: 'test'
+  ...
+# Subtest: G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+ok 33 - G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+  ---
+  duration_ms: 0.3675
+  type: 'test'
+  ...
+# Subtest: H1: obsolete-only contact displays blank and appends a new home without editing history
+ok 34 - H1: obsolete-only contact displays blank and appends a new home without editing history
+  ---
+  duration_ms: 1.146416
+  type: 'test'
+  ...
+# Subtest: H2: obsolete then work displays and edits the same work contact in place
+ok 35 - H2: obsolete then work displays and edits the same work contact in place
+  ---
+  duration_ms: 1.3045
+  type: 'test'
+  ...
+# Subtest: H3: a current home contact retains its value and metadata on unchanged save
+ok 36 - H3: a current home contact retains its value and metadata on unchanged save
+  ---
+  duration_ms: 0.111209
+  type: 'test'
+  ...
+# Subtest: H14: blank phone saves remove the entry while email still exercises contact removal
+ok 37 - H14: blank phone saves remove the entry while email still exercises contact removal
+  ---
+  duration_ms: 0.192542
+  type: 'test'
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 429.085458

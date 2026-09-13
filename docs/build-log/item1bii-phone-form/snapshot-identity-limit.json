@@ -1,0 +1,55 @@
+{
+  "finding": "Identical system/value/use triples hide a permutation during preference refresh",
+  "outcome": "FULL-ENTRY GUARD VERIFIED; not an independent verdict",
+  "originalIds": [
+    "duplicate-A",
+    "duplicate-B"
+  ],
+  "heldIds": [
+    "duplicate-B",
+    "duplicate-A"
+  ],
+  "snapshot": {
+    "now": "2026-09-12T15:00:00.000Z",
+    "loadedTextable": "",
+    "entries": [
+      {
+        "id": "duplicate-A",
+        "system": "phone",
+        "value": "+12025550101",
+        "use": "mobile",
+        "rank": 1,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "extension": [
+          {
+            "url": "urn:synthetic:contact-note",
+            "valueString": "Synthetic retained metadata"
+          }
+        ]
+      },
+      {
+        "id": "duplicate-B",
+        "system": "phone",
+        "value": "+12025550101",
+        "use": "mobile",
+        "rank": 2,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "extension": [
+          {
+            "url": "urn:synthetic:contact-note",
+            "valueString": "Synthetic retained metadata"
+          }
+        ]
+      }
+    ]
+  },
+  "originallySelectedId": "duplicate-A",
+  "writeCount": 0,
+  "error": "Contact information changed on the server. Reload before saving."
+}
