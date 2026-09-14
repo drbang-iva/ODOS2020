@@ -24,6 +24,7 @@ Each row lists command exit codes. Green/restored 0 means success; red 1 means t
 | K12-pending | 0 | 1 | 0 | K12 pending offers no Move Join or history Undo |
 | K13-correct-undo | 0 | 1 | 0 | K13 Undo only on completed non-correct and requires a reason |
 | K14-enabled | 0 | 1 | 0 | K14 create-new starts disabled before any keyed search<br>K14 matching cards require None of these before new guarantor |
+| K9/K13 retry id | 0 | 1 | 0 | K9 uncertain confirmation retry reuses the submitted operation id; K13 uncertain Undo retry reuses the submitted correction id |
 | K10 skip draft | 0 | 1 | 0 | K10 existing Move drafts before create; K10 new Move creates Person before draft and Review again reuses it |
 | Registry delete A2 entry | 0 | 1 | 0 | preflight refuses unregistered service-identity transaction write |
 

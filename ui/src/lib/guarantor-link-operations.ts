@@ -51,8 +51,8 @@ export function newGuarantorOperationId(): string {
   return operationId;
 }
 
-export async function correctGuarantorLinkOperation(taskId: string, reason: string): Promise<GuarantorLinkOperation> {
-  return readResponse(await request(taskId, "correct", { operationId: newGuarantorOperationId(), reason }));
+export async function correctGuarantorLinkOperation(taskId: string, reason: string, operationId = newGuarantorOperationId()): Promise<GuarantorLinkOperation> {
+  return readResponse(await request(taskId, "correct", { operationId, reason }));
 }
 
 export interface GuarantorSearchCard { personId: string; versionId: string; name: string; phones: string[]; city: string; postalCode: string }
