@@ -1,0 +1,21 @@
+{
+  "evidenceKind": "Pinned production handler and adapter, injected synthetic in-memory FHIR transport; no network or actual lab delivery",
+  "submitStatus": 200,
+  "operationUnchanged": true,
+  "createdCount": 1,
+  "createdCode": [
+    {
+      "system": "https://odos2020.com/fhir/CodeSystem/task-type",
+      "code": "lab-order-transmission",
+      "display": "Lab Order Transmission"
+    }
+  ],
+  "createdBasedOn": [
+    {
+      "reference": "Task/guarantor-operation-synthetic"
+    }
+  ],
+  "boardStatus": 200,
+  "boardItemCount": 1,
+  "limitation": "The lab transmission appears on the board; the operation Task itself is not a board row. The caller must explicitly supply its ID."
+}
