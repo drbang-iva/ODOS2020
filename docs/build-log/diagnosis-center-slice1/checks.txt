@@ -1,0 +1,103 @@
+$ cd ui && node --import tsx --test tests/diagnosisWorkspace.test.tsx (baseline)
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 417.970875
+
+$ cd mcp && node --import tsx --test tests/v035b-ui-view.test.ts tests/diagnosisVisitStatus.test.ts (baseline)
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 302.328125
+
+$ cd ui && node --import tsx --test tests/diagnosisWorkspace.test.tsx tests/diagnosisLinkL2.test.tsx tests/diagnosisRankSafety.test.tsx
+  ...
+1..66
+# tests 66
+# suites 0
+# pass 66
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 459.488834
+
+$ cd ui && npm test (final)
+  ...
+1..1488
+# tests 1501
+# suites 0
+# pass 1501
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 184804.95625
+
+$ cd mcp && node --import tsx --test tests/v035b-ui-view.test.ts tests/diagnosisVisitStatus.test.ts tests/diagnosisQuickList.test.ts tests/diagnosisOrder.test.ts tests/findingDefinitionStore.test.ts
+  ...
+1..64
+# tests 64
+# suites 0
+# pass 64
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 277.823875
+
+$ cd ui && npm run build
+
+> odos-ui@0.2.0 build
+> tsc --noEmit --skipLibCheck && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 324 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/version.json                   0.16 kB │ gzip:   0.14 kB
+dist/index.html                     0.95 kB │ gzip:   0.55 kB
+dist/assets/index-MgzHian6.css    226.50 kB │ gzip:  38.17 kB
+dist/assets/index-CjS0SvcE.js   1,906.61 kB │ gzip: 514.62 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.18s
+
+$ cd mcp && ./node_modules/.bin/tsc --noEmit
+exit 0; no diagnostics
+
+$ node .claude/skills/tier0-census/scripts/check-proxy-coverage.mjs
+Proxy-coverage census — 25 backend route families discovered, 28 proxy table entries.
+
+Every backend route family has a proxy table entry.
+
+Reporting only — CI annotates findings, but this check never fails the build.
+
+$ node docs/build-log/diagnosis-center-slice1/browser-proof.mjs
+PASS: 9 options; no New; visit-status PUT; Encounter complexity PATCH; both survive reload; 0 browser errors
+
+$ git diff --check
+exit 0; no output
+
+Mutation commands (each executed with deliberate break, then restoration):
+cd mcp && node --import tsx --test --test-name-pattern="No MDM" tests/v035b-ui-view.test.ts
+cd ui && node --import tsx --test --test-name-pattern="diagnosis header visit-status" tests/diagnosisWorkspace.test.tsx
+cd mcp && node --import tsx --test --test-name-pattern="all ten visit statuses" tests/diagnosisVisitStatus.test.ts
+cd mcp && node --import tsx --test --test-name-pattern="canonical artifacts" tests/v035b-ui-view.test.ts
+See paired *-broken.tap and *-restored.tap for exact failures, counts and exit-equivalent TAP summaries.

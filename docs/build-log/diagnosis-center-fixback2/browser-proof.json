@@ -1,0 +1,57 @@
+{
+  "scope": "Real EncounterCharting parent in Chromium; Assessment pointer to DiagnosisWorkspace; synthetic intercepted HTTP; not authenticated app route or live Medplum",
+  "labels": [
+    "Stable",
+    "Improved",
+    "Worsening",
+    "Resolved this visit",
+    "Well controlled",
+    "Resolving",
+    "Inadequately controlled",
+    "Unchanged",
+    "Not at treatment goal"
+  ],
+  "writes": [
+    {
+      "method": "PUT",
+      "pathname": "/clinical-graph/encounters/e1/diagnoses/a/newness",
+      "body": {
+        "value": "established"
+      }
+    },
+    {
+      "method": "PUT",
+      "pathname": "/clinical-graph/encounters/e1/diagnoses/a/status",
+      "body": {
+        "status": "well-controlled"
+      }
+    },
+    {
+      "method": "PATCH",
+      "pathname": "/fhir/R4/Encounter/e1",
+      "body": [
+        {
+          "op": "add",
+          "path": "/diagnosis/0/extension",
+          "value": [
+            {
+              "url": "https://odos2020.com/fhir/StructureDefinition/odos-encounter-diagnosis-problem-status",
+              "valueCodeableConcept": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/mdm-problem-status",
+                    "code": "not-addressed-no-mdm",
+                    "display": "Not addressed today / No MDM"
+                  }
+                ],
+                "text": "Not addressed today / No MDM"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "reload": "All three saved selections restored; signed controls locked; isolated status failure retained chart"
+}

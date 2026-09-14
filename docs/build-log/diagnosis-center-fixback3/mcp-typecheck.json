@@ -1,0 +1,9 @@
+{
+  "cwd": "mcp",
+  "command": [
+    "./node_modules/.bin/tsc",
+    "--noEmit",
+    "--skipLibCheck"
+  ],
+  "exit": 0
+}

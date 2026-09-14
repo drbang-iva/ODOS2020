@@ -10,7 +10,6 @@ import {
   updateConditionBodySite,
   updateConditionCode,
   updateConditionStatus,
-  updateEncounterDiagnosisProblemStatus,
   type DiagnosisTierChoice,
   type EyeChoice,
 } from "../../lib/clinical-actions";
@@ -24,12 +23,13 @@ import type { SectionSaveStatus } from "./types";
 import {
   authHeaders,
   clinicalGraphApiBase,
-  DIAGNOSIS_VISIT_STATUSES,
   procedureChargeApi,
   readDiagnosisVisitStatuses,
+  readDiagnosisNewness,
+  diagnosisProtocolVisitStatus,
+  type DiagnosisNewnessRow,
   submitDiagnosisPick,
   updateDiagnosisOrder,
-  updateDiagnosisVisitStatus,
   type AttachedProcedure,
   type DiagnosisDemotionImpact,
   type DiagnosisVisitStatus,
@@ -73,6 +73,7 @@ interface Props {
   encounterReference: string;
   onSaved: (status: SectionSaveStatus) => void;
   onRefer?: () => void;
+  onOpenDiagnosis?: (reference: string) => void;
   onEngageDiagnosis?: (diagnosis: { reference: string; code: string; display: string }) => void;
 }
 
@@ -116,13 +117,16 @@ const INITIAL_FORM: FormState = {
 const INPUT_CLASS = "h-10 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none transition placeholder:text-[color:var(--odos-faint)] focus:border-[color:var(--odos-accent-border)]";
 const BUTTON_CLASS = "rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-hi)] px-3 py-2 text-sm font-semibold text-[color:var(--odos-text)] outline-none transition hover:bg-[color:var(--odos-accent-tint-lo)] focus-visible:ring-2 focus-visible:ring-[color:var(--odos-accent-border)] disabled:cursor-not-allowed disabled:opacity-50";
 
-export function AssessmentSection({ patientReference, encounterReference, onSaved, onRefer, onEngageDiagnosis }: Props) {
+export function AssessmentSection({ patientReference, encounterReference, onSaved, onRefer, onEngageDiagnosis, onOpenDiagnosis }: Props) {
   const { role } = useRole();
   const canShowEditing = role !== "front-desk";
   const { onCleared } = useEncounterEdit();
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [provenanceLines, setProvenanceLines] = useState<Record<string, string>>({});
+  const [diagnosisNewness, setDiagnosisNewness] = useState<Record<string, DiagnosisNewnessRow>>({});
+  const [visitStatusError, setVisitStatusError] = useState<string>();
+  const [newnessError, setNewnessError] = useState<string>();
   const [diagnosisVisitStatuses, setDiagnosisVisitStatuses] = useState<Record<string, DiagnosisVisitStatus>>({});
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -156,12 +160,13 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     setDiagnosisDemotionImpact(undefined);
     setError(null);
     const loadedEncounter = await fhir.read<Encounter>("Encounter", encounterId);
-    const [conditionBundle, visitStatuses, procedureResult] = await Promise.all([
+    const [conditionBundle, visitStatuses, newness, procedureResult] = await Promise.all([
       fhir.search<Condition>("Condition", {
         encounter: encounterReference,
         _count: "40",
       }),
-      readDiagnosisVisitStatuses(encounterId),
+      readDiagnosisVisitStatuses(encounterId).then((rows) => ({ rows, error: undefined }), () => ({ rows: [], error: "Visit status could not be loaded." })),
+      readDiagnosisNewness(encounterId).then((rows) => ({ rows, error: undefined }), () => ({ rows: [], error: "New / Established could not be loaded." })),
       procedureChargeApi().read(encounterId).then(
         (response) => ({ response, error: undefined }),
         (caught) => ({
@@ -171,7 +176,10 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       ),
     ]);
     setEncounter(loadedEncounter);
-    setDiagnosisVisitStatuses(Object.fromEntries(visitStatuses.map((row) => [row.conditionReference, row.status])));
+    setDiagnosisVisitStatuses(Object.fromEntries(visitStatuses.rows.map((row) => [row.conditionReference, row.status])));
+    setDiagnosisNewness(Object.fromEntries(newness.rows.map((row) => [row.conditionReference, row])));
+    setVisitStatusError(visitStatuses.error);
+    setNewnessError(newness.error);
     setAttachedProcedures(procedureResult.response?.attachedProcedures ?? []);
     setProcedureAttachmentError(procedureResult.error ? "Attached procedures could not be loaded." : undefined);
     const loadedConditions = (conditionBundle.entry ?? [])
@@ -310,20 +318,6 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     });
   }
 
-  async function saveProblemStatus(condition: Condition, problemStatus: MdmProblemStatus) {
-    if (!encounter) return;
-    await runEdit("problem-status", async () => {
-      await updateEncounterDiagnosisProblemStatus({ encounter, condition, problemStatus });
-    });
-  }
-
-  async function saveVisitStatus(condition: Condition, status: DiagnosisVisitStatus) {
-    if (!condition.id) return;
-    await runEdit("visit-status", async () => {
-      await updateDiagnosisVisitStatus({ encounterId, conditionId: condition.id!, status });
-    });
-  }
-
   async function markEnteredInError(condition: Condition) {
     await runEdit("entered-in-error", async () => {
       await markConditionEnteredInError(condition);
@@ -374,7 +368,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       reference: `Condition/${condition.id}`,
       code: coding.code,
       confirmed: true as const,
-      visitStatus: diagnosisVisitStatuses[`Condition/${condition.id}`],
+      visitStatus: visitStatusError ? undefined : diagnosisProtocolVisitStatus(diagnosisVisitStatuses[`Condition/${condition.id}`], diagnosisNewness[`Condition/${condition.id}`]),
     }] : []);
   });
   const protocolOffer = protocolOffers.find((offer) => offer.id === selectedProtocolId) ?? protocolOffers[0];
@@ -550,6 +544,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
 
   return (
     <section className="h-full overflow-y-auto p-6">
+      {(visitStatusError || newnessError) && <p role="alert">{[visitStatusError, newnessError].filter(Boolean).join(" ")}{visitStatusError && " Status-based protocol ranking is unavailable."} <button type="button" onClick={() => void load().catch((err) => setError(String(err)))}>Retry</button></p>}
       <div className="max-w-5xl">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -751,17 +746,19 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                   busy={busy}
                   provenanceLine={condition.id ? provenanceLines[condition.id] : undefined}
                   possible={verificationStatus(condition) === "provisional"}
-                  visitStatus={condition.id ? diagnosisVisitStatuses[`Condition/${condition.id}`] : undefined}
-                  visitStatusDisabled={!canShowEditing || encounter?.status === "finished"}
-                  problemStatus={encounterProblemStatus(encounter, condition)}
-                  problemStatusDisabled={!canShowEditing || encounter?.status === "finished"}
+                  completionLink={<>
+                    {diagnosisNewness[`Condition/${condition.id}`]?.source === "unavailable" && <p role="alert">New / Established suggestion unavailable for this diagnosis.</p>}
+                    <DiagnosisCompletionLink
+                    conditionReference={`Condition/${condition.id}`}
+                    missingComplexity={!encounterDiagnosisProblemStatus(encounter?.diagnosis?.find((entry) => entry.condition.reference === `Condition/${condition.id}`) ?? { condition: {} })}
+                    missingVisitStatus={!diagnosisVisitStatuses[`Condition/${condition.id}`] || diagnosisVisitStatuses[`Condition/${condition.id}`] === "new"}
+                    onOpenDiagnosis={onOpenDiagnosis}
+                  /></>}
                   onToggle={() => setEditingId((current) => (current === condition.id ? null : condition.id ?? null))}
                   onLaterality={(laterality) => saveLaterality(condition, laterality)}
                   onCode={(code, display) => saveCode(condition, code, display)}
                   onMakePrincipal={() => savePrincipal(condition)}
                   onStatus={(status) => saveStatus(condition, status)}
-                  onVisitStatus={(status) => saveVisitStatus(condition, status)}
-                  onProblemStatus={(status) => saveProblemStatus(condition, status)}
                   onEnteredInError={() => markEnteredInError(condition)}
                   onConfirm={() => decidePossible(condition, "confirm")}
                   onDiscard={() => decidePossible(condition, "discard")}
@@ -804,6 +801,7 @@ export function protocolConfirmationLabel(acceptCharges: boolean): string {
 }
 
 function DiagnosisCard({
+  completionLink,
   condition,
   codeLabel,
   rank,
@@ -812,22 +810,17 @@ function DiagnosisCard({
   busy,
   provenanceLine,
   possible,
-  visitStatus,
-  visitStatusDisabled,
-  problemStatus,
-  problemStatusDisabled,
   onToggle,
   onLaterality,
   onCode,
   onMakePrincipal,
   onStatus,
-  onVisitStatus,
-  onProblemStatus,
   onEnteredInError,
   onConfirm,
   onDiscard,
   onEngage,
 }: {
+  completionLink?: React.ReactNode;
   condition: Condition;
   codeLabel: string;
   rank: number | undefined;
@@ -836,17 +829,11 @@ function DiagnosisCard({
   busy: string | null;
   provenanceLine?: string;
   possible: boolean;
-  visitStatus?: DiagnosisVisitStatus;
-  visitStatusDisabled: boolean;
-  problemStatus?: MdmProblemStatus;
-  problemStatusDisabled: boolean;
   onToggle: () => void;
   onLaterality: (laterality: EyeChoice) => void;
   onCode: (code: string, display: string) => void;
   onMakePrincipal: () => void;
   onStatus: (status: "active" | "recurrence" | "resolved") => void;
-  onVisitStatus: (status: DiagnosisVisitStatus) => void;
-  onProblemStatus: (status: MdmProblemStatus) => void;
   onEnteredInError: () => void;
   onConfirm: () => void;
   onDiscard: () => void;
@@ -861,6 +848,7 @@ function DiagnosisCard({
 
   return (
     <div data-testid="diagnosis-card" className={possible ? "rounded-full border border-[color:var(--odos-amber)] bg-[color:var(--odos-surface-2)] px-4 py-3" : "rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4"}>
+      {!possible && completionLink}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <button
           type="button"
@@ -875,27 +863,8 @@ function DiagnosisCard({
             {provenanceLine && <div className="mt-1 text-xs text-[color:var(--odos-accent)]">← from {provenanceLine}</div>}
           </div>
         </button>
-        {!possible && (
-          <div className="flex min-w-[18rem] flex-col gap-2">
-            <DiagnosisProblemStatusField
-              value={problemStatus}
-              disabled={problemStatusDisabled || busy !== null}
-              onChange={onProblemStatus}
-            />
-            <OdosSelect
-              value={visitStatus ?? ""}
-              disabled={visitStatusDisabled || busy !== null}
-              options={[
-                { value: "", label: "" },
-                ...DIAGNOSIS_VISIT_STATUSES.map((choice) => ({ value: choice, label: visitStatusLabel(choice) })),
-              ]}
-              onChange={(value) => {
-                if (value) onVisitStatus(value as DiagnosisVisitStatus);
-              }}
-              ariaLabel="Diagnosis visit status"
-            />
-            {canShowEditing && <button type="button" onClick={onToggle} className="text-xs text-[color:var(--odos-accent)]">Edit</button>}
-          </div>
+        {!possible && canShowEditing && (
+          <button type="button" onClick={onToggle} className="text-xs text-[color:var(--odos-accent)]">Edit</button>
         )}
         {onEngage && (
           <button type="button" className="sidebar-button" aria-label={`Engage ${displayCode(condition.code)}`} onClick={onEngage}>
@@ -1011,13 +980,6 @@ export function DiagnosisProblemStatusField({
   );
 }
 
-function encounterProblemStatus(encounter: Encounter | null, condition: Condition): MdmProblemStatus | undefined {
-  const diagnosis = encounter?.diagnosis?.find(
-    (entry) => entry.condition.reference === `Condition/${condition.id}`,
-  );
-  return diagnosis ? encounterDiagnosisProblemStatus(diagnosis) : undefined;
-}
-
 function notifyEncounterDiagnosisUpdated(encounterReference: string): void {
   window.dispatchEvent(new CustomEvent("odos:encounter-diagnosis-updated", {
     detail: { encounterReference },
@@ -1084,11 +1046,6 @@ function normalizeClinicalStatus(value: string): "active" | "recurrence" | "reso
   return "active";
 }
 
-function visitStatusLabel(status: DiagnosisVisitStatus): string {
-  if (status === "resolved-this-visit") return "Resolved this visit";
-  return status[0]!.toUpperCase() + status.slice(1);
-}
-
 function matchesProtocolCode(code: string, pattern: string): boolean {
   const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
   return new RegExp(`^${escaped}$`, "i").test(code);
@@ -1123,4 +1080,19 @@ function findingValue(observation: Observation): string | undefined {
   }
   const sphere = observation.component?.find((component) => component.code.coding?.some((coding) => coding.code === "SPHERE"))?.valueQuantity?.value;
   return sphere !== undefined ? `${sphere >= 0 ? "+" : ""}${sphere.toFixed(2)} D` : undefined;
+}
+
+
+export function DiagnosisCompletionLink({ conditionReference, missingComplexity, missingVisitStatus, onOpenDiagnosis }: {
+  conditionReference: string;
+  missingComplexity: boolean;
+  missingVisitStatus: boolean;
+  onOpenDiagnosis?: (reference: string) => void;
+}) {
+  if (!missingComplexity && !missingVisitStatus) return null;
+  const missing = [missingComplexity ? "complexity" : "", missingVisitStatus ? "visit status" : ""].filter(Boolean).join(" and ");
+  return <button type="button" className="mb-2 text-sm text-[color:var(--odos-accent)]" disabled={!onOpenDiagnosis}
+    onClick={() => onOpenDiagnosis?.(conditionReference)}>
+    Complete {missing} in By diagnosis →
+  </button>;
 }

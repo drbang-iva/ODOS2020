@@ -1,0 +1,74 @@
+TAP version 13
+# Subtest: newness read maps Encounter read 404 to 404
+not ok 1 - newness read maps Encounter read 404 to 404
+  ---
+  duration_ms: 2.389459
+  type: 'test'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:9288'
+  failureType: 'testCodeFailure'
+  error: 'Missing encounter'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Object.staff.fhir.read (mcp/tests/diagnosisNewness.test.ts:142:29)
+    handleDiagnosisNewnessReadRequest (mcp/src/clinical-graph/diagnosis-newness-endpoint.ts:59:38)
+    async TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:146:11)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: newness read maps Encounter read 403 to 404
+not ok 2 - newness read maps Encounter read 403 to 404
+  ---
+  duration_ms: 0.173875
+  type: 'test'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:9288'
+  failureType: 'testCodeFailure'
+  error: 'Unreadable encounter'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Object.staff.fhir.read (mcp/tests/diagnosisNewness.test.ts:142:29)
+    handleDiagnosisNewnessReadRequest (mcp/src/clinical-graph/diagnosis-newness-endpoint.ts:59:38)
+    async TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:146:11)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: newness update maps Encounter read 404 to 404
+not ok 3 - newness update maps Encounter read 404 to 404
+  ---
+  duration_ms: 0.263583
+  type: 'test'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:9288'
+  failureType: 'testCodeFailure'
+  error: 'Missing encounter'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Object.staff.fhir.read (mcp/tests/diagnosisNewness.test.ts:142:29)
+    handleDiagnosisNewnessUpdateRequest (mcp/src/clinical-graph/diagnosis-newness-endpoint.ts:33:38)
+    async TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:147:11)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: newness update maps Encounter read 403 to 404
+not ok 4 - newness update maps Encounter read 403 to 404
+  ---
+  duration_ms: 0.292875
+  type: 'test'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:9288'
+  failureType: 'testCodeFailure'
+  error: 'Unreadable encounter'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Object.staff.fhir.read (mcp/tests/diagnosisNewness.test.ts:142:29)
+    handleDiagnosisNewnessUpdateRequest (mcp/src/clinical-graph/diagnosis-newness-endpoint.ts:33:38)
+    async TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:147:11)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 242.922167

@@ -476,7 +476,8 @@ test("every definition-backed clinical-graph HTTP closure receives the persisten
   // (encounter-void-routes.ts), which receives clinicalGraphRouteDeps whole and is exercised
   // over HTTP by encounterVoidRoutes.test.ts — one inline route and one inline dependency
   // call fewer here.
-  assert.equal(clinicalRoutes.length, 99);
+  // GET diagnosis-newness and PUT diagnoses/:conditionId/newness use staff authentication and the status store, not definition-store route dependencies.
+  assert.equal(clinicalRoutes.length, 101);
   assert.equal(routeDependencies.length, 49);
   assert.equal(procedureRouteDependencies.length, 6);
   assert.match(source, /registerEncounterVoidRoutes\(app, authenticateWithMedplum, clinicalGraphRouteDeps\)/);
@@ -499,6 +500,8 @@ test("every definition-backed clinical-graph HTTP closure receives the persisten
   assert.match(source, /handleDiagnosisQuickListMutationRequest/);
   assert.match(source, /handleDiagnosisVisitStatusListRequest/);
   assert.match(source, /handleDiagnosisVisitStatusUpdateRequest/);
+  assert.match(source, /handleDiagnosisNewnessReadRequest/);
+  assert.match(source, /handleDiagnosisNewnessUpdateRequest/);
   assert.match(source, /handleDiagnosisOrderRequest/);
   assert.match(source, /handleComplaintDefinitionCatalogRequest/);
   assert.match(source, /handleComplaintDefinitionMutationRequest/);

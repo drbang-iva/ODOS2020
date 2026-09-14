@@ -1,0 +1,94 @@
+[
+  {
+    "guard": "newness-error-coupling",
+    "file": "ui/src/components/charting/AssessmentSection.tsx",
+    "occurrence": 1,
+    "old": "visitStatus: visitStatusError ? undefined",
+    "mutant": "visitStatus: (visitStatusError || newnessError) ? undefined",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=newness-read-failure",
+      "tests/diagnosisNewness.test.tsx"
+    ],
+    "brokenExit": 1,
+    "restoredExit": 0,
+    "sourceRestored": true
+  },
+  {
+    "guard": "visit-status-error-suppression",
+    "file": "ui/src/components/charting/AssessmentSection.tsx",
+    "occurrence": 1,
+    "old": "visitStatus: visitStatusError ? undefined : diagnosisProtocolVisitStatus",
+    "mutant": "visitStatus: diagnosisProtocolVisitStatus",
+    "cwd": "ui",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=visit-status-read-failure",
+      "tests/diagnosisNewness.test.tsx"
+    ],
+    "brokenExit": 1,
+    "restoredExit": 0,
+    "sourceRestored": true
+  },
+  {
+    "guard": "update-encounter-404",
+    "file": "mcp/src/clinical-graph/diagnosis-newness-endpoint.ts",
+    "occurrence": 1,
+    "old": "  let encounter: Encounter;\n  try {\n    encounter = await staff.fhir.read<Encounter>(\"Encounter\", params.data.encounterId);\n  } catch {\n    return { status: 404, body: { error: \"Encounter not found.\" } };\n  }",
+    "mutant": "  const encounter = await staff.fhir.read<Encounter>(\"Encounter\", params.data.encounterId);",
+    "cwd": "mcp",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=newness update maps Encounter read",
+      "tests/diagnosisNewness.test.ts"
+    ],
+    "brokenExit": 1,
+    "restoredExit": 0,
+    "sourceRestored": true
+  },
+  {
+    "guard": "read-encounter-404",
+    "file": "mcp/src/clinical-graph/diagnosis-newness-endpoint.ts",
+    "occurrence": 2,
+    "old": "  let encounter: Encounter;\n  try {\n    encounter = await staff.fhir.read<Encounter>(\"Encounter\", params.data.encounterId);\n  } catch {\n    return { status: 404, body: { error: \"Encounter not found.\" } };\n  }",
+    "mutant": "  const encounter = await staff.fhir.read<Encounter>(\"Encounter\", params.data.encounterId);",
+    "cwd": "mcp",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=newness read maps Encounter read",
+      "tests/diagnosisNewness.test.ts"
+    ],
+    "brokenExit": 1,
+    "restoredExit": 0,
+    "sourceRestored": true
+  },
+  {
+    "guard": "write-inventory-entry",
+    "file": "scripts/fhir-read-grant-check.ts",
+    "occurrence": 1,
+    "old": "  { path: \"mcp/src/index.ts\", line: 3247, callee: \"fhir.create\", resourceType: \"VisionPrescription\", reason: \"MCP process service client.\" },\n",
+    "mutant": "",
+    "cwd": ".",
+    "command": [
+      "npm",
+      "run",
+      "preflight"
+    ],
+    "brokenExit": 1,
+    "restoredExit": 0,
+    "sourceRestored": true
+  }
+]

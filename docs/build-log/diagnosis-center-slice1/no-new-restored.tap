@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: diagnosis header visit-status picker excludes new and saves the selected diagnosis
+ok 1 - diagnosis header visit-status picker excludes new and saves the selected diagnosis
+  ---
+  duration_ms: 33.383083
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 255.588875

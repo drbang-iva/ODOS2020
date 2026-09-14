@@ -1,0 +1,1114 @@
+TAP version 13
+# Subtest: GET previous exams returns 401 when unauthenticated
+ok 1 - GET previous exams returns 401 when unauthenticated
+  ---
+  duration_ms: 26.61475
+  type: 'test'
+  ...
+# Subtest: POST previous exams returns 401 when unauthenticated
+ok 2 - POST previous exams returns 401 when unauthenticated
+  ---
+  duration_ms: 9.667334
+  type: 'test'
+  ...
+# Subtest: POST previous exams returns 403 without chart.write
+ok 3 - POST previous exams returns 403 without chart.write
+  ---
+  duration_ms: 1.928083
+  type: 'test'
+  ...
+# Subtest: carry provenance walks the actual unedited Condition chain without a depth cap
+ok 4 - carry provenance walks the actual unedited Condition chain without a depth cap
+  ---
+  duration_ms: 13.199667
+  type: 'test'
+  ...
+# Subtest: a later Provenance on a middle Condition stops unchanged aging at that source encounter
+ok 5 - a later Provenance on a middle Condition stops unchanged aging at that source encounter
+  ---
+  duration_ms: 0.298375
+  type: 'test'
+  ...
+# Subtest: a later Provenance on a middle carried Observation also stops unchanged aging there
+ok 6 - a later Provenance on a middle carried Observation also stops unchanged aging there
+  ---
+  duration_ms: 0.2505
+  type: 'test'
+  ...
+# Subtest: a later finding Provenance edits the diagnosis and removes carried from only that finding
+ok 7 - a later finding Provenance edits the diagnosis and removes carried from only that finding
+  ---
+  duration_ms: 0.698167
+  type: 'test'
+  ...
+# Subtest: a later Provenance on a carried Observation still edits the diagnosis after that row leaves the active bundle
+ok 8 - a later Provenance on a carried Observation still edits the diagnosis after that row leaves the active bundle
+  ---
+  duration_ms: 0.1255
+  type: 'test'
+  ...
+# Subtest: carry provenance compares recorded instants and fails closed on tied or invalid target timestamps
+ok 9 - carry provenance compares recorded instants and fails closed on tied or invalid target timestamps
+  ---
+  duration_ms: 0.404875
+  type: 'test'
+  ...
+# Subtest: carry provenance follows every target-search Bundle page before deciding which record is latest
+ok 10 - carry provenance follows every target-search Bundle page before deciding which record is latest
+  ---
+  duration_ms: 0.449791
+  type: 'test'
+  ...
+# Subtest: carry provenance rejects wrong-code instead of relaxing its exact tuple and source-role contract
+ok 11 - carry provenance rejects wrong-code instead of relaxing its exact tuple and source-role contract
+  ---
+  duration_ms: 0.108834
+  type: 'test'
+  ...
+# Subtest: carry provenance rejects wrong-system instead of relaxing its exact tuple and source-role contract
+ok 12 - carry provenance rejects wrong-system instead of relaxing its exact tuple and source-role contract
+  ---
+  duration_ms: 0.0535
+  type: 'test'
+  ...
+# Subtest: carry provenance rejects wrong-text instead of relaxing its exact tuple and source-role contract
+ok 13 - carry provenance rejects wrong-text instead of relaxing its exact tuple and source-role contract
+  ---
+  duration_ms: 0.042
+  type: 'test'
+  ...
+# Subtest: carry provenance rejects wrong-role instead of relaxing its exact tuple and source-role contract
+ok 14 - carry provenance rejects wrong-role instead of relaxing its exact tuple and source-role contract
+  ---
+  duration_ms: 0.101791
+  type: 'test'
+  ...
+# Subtest: carry provenance rejects missing-condition instead of relaxing its exact tuple and source-role contract
+ok 15 - carry provenance rejects missing-condition instead of relaxing its exact tuple and source-role contract
+  ---
+  duration_ms: 0.058625
+  type: 'test'
+  ...
+# Subtest: only source-role Observation entities can become prior absent offers
+ok 16 - only source-role Observation entities can become prior absent offers
+  ---
+  duration_ms: 0.108584
+  type: 'test'
+  ...
+# Subtest: tied ancestor carry instant fails the strict lineage chronology
+ok 17 - tied ancestor carry instant fails the strict lineage chronology
+  ---
+  duration_ms: 0.092208
+  type: 'test'
+  ...
+# Subtest: reversed ancestor carry instant fails the strict lineage chronology
+ok 18 - reversed ancestor carry instant fails the strict lineage chronology
+  ---
+  duration_ms: 0.124
+  type: 'test'
+  ...
+# Subtest: 404 Condition/carry-condition-0 returns a visible edited integrity state
+ok 19 - 404 Condition/carry-condition-0 returns a visible edited integrity state
+  ---
+  duration_ms: 0.175292
+  type: 'test'
+  ...
+# Subtest: 404 Encounter/carry-encounter-0 returns a visible edited integrity state
+ok 20 - 404 Encounter/carry-encounter-0 returns a visible edited integrity state
+  ---
+  duration_ms: 0.146
+  type: 'test'
+  ...
+# Subtest: 404 Observation/prior-absent returns a visible edited integrity state
+ok 21 - 404 Observation/prior-absent returns a visible edited integrity state
+  ---
+  duration_ms: 0.085
+  type: 'test'
+  ...
+# Subtest: 410 Condition/carry-condition-0 returns a visible edited integrity state
+ok 22 - 410 Condition/carry-condition-0 returns a visible edited integrity state
+  ---
+  duration_ms: 0.054583
+  type: 'test'
+  ...
+# Subtest: 410 Encounter/carry-encounter-0 returns a visible edited integrity state
+ok 23 - 410 Encounter/carry-encounter-0 returns a visible edited integrity state
+  ---
+  duration_ms: 0.058625
+  type: 'test'
+  ...
+# Subtest: 410 Observation/prior-absent returns a visible edited integrity state
+ok 24 - 410 Observation/prior-absent returns a visible edited integrity state
+  ---
+  duration_ms: 0.063
+  type: 'test'
+  ...
+# Subtest: Provider AccessPolicy keeps Provenance reads and creates in separate practice-wide rules
+ok 25 - Provider AccessPolicy keeps Provenance reads and creates in separate practice-wide rules
+  ---
+  duration_ms: 0.198416
+  type: 'test'
+  ...
+# Subtest: carry provenance cycles terminate with a visible integrity warning
+ok 26 - carry provenance cycles terminate with a visible integrity warning
+  ---
+  duration_ms: 0.102417
+  type: 'test'
+  ...
+# Subtest: pull posts one present finding atomically while preserving absent source provenance and rank gaps
+ok 27 - pull posts one present finding atomically while preserving absent source provenance and rank gaps
+  ---
+  duration_ms: 7.419708
+  type: 'test'
+  ...
+# Subtest: pull-forward preserves an existing staged diagnosis code exactly
+ok 28 - pull-forward preserves an existing staged diagnosis code exactly
+  ---
+  duration_ms: 4.467417
+  type: 'test'
+  ...
+# Subtest: pull puts the optimistic Encounter version guard before every transaction create
+ok 29 - pull puts the optimistic Encounter version guard before every transaction create
+  ---
+  duration_ms: 2.059084
+  type: 'test'
+  ...
+# Subtest: all-success pull accepts representation-free create locations and an update without a location
+ok 30 - all-success pull accepts representation-free create locations and an update without a location
+  ---
+  duration_ms: 2.918416
+  type: 'test'
+  ...
+# Subtest: mixed conflict rolls back representation-free creates by their exact locations
+ok 31 - mixed conflict rolls back representation-free creates by their exact locations
+  ---
+  duration_ms: 2.397375
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: representation-free 201 without a parseable location fails without privileged rollback
+ok 32 - representation-free 201 without a parseable location fails without privileged rollback
+  ---
+  duration_ms: 5.740625
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: representation-free 201 with the wrong positional location type fails without privileged rollback
+ok 33 - representation-free 201 with the wrong positional location type fails without privileged rollback
+  ---
+  duration_ms: 2.776708
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: representation-free Observation 201 with the wrong location type fails without privileged rollback
+ok 34 - representation-free Observation 201 with the wrong location type fails without privileged rollback
+  ---
+  duration_ms: 1.822083
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: representation-free Observation create returning 200 fails without privileged rollback
+ok 35 - representation-free Observation create returning 200 fails without privileged rollback
+  ---
+  duration_ms: 1.850666
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: represented 201 with a mismatched location id still refuses privileged rollback
+ok 36 - represented 201 with a mismatched location id still refuses privileged rollback
+  ---
+  duration_ms: 1.563458
+  type: 'test'
+  ...
+# Subtest: mixed stale transaction uses only the service rollback for exact generated create locations
+ok 37 - mixed stale transaction uses only the service rollback for exact generated create locations
+  ---
+  duration_ms: 1.563667
+  type: 'test'
+  ...
+# Subtest: mixed 409 transaction also authorizes only the exact generated create rollback
+ok 38 - mixed 409 transaction also authorizes only the exact generated create rollback
+  ---
+  duration_ms: 1.963042
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction response was invalid: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:414:81)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: guarded Encounter conflict compensates only validated creates around a later POST failure
+ok 39 - guarded Encounter conflict compensates only validated creates around a later POST failure
+  ---
+  duration_ms: 1.629209
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for same-type-wrong-id
+ok 40 - mixed transaction makes zero service rollback calls for same-type-wrong-id
+  ---
+  duration_ms: 1.168833
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for non-mixed-invalid
+ok 41 - mixed transaction makes zero service rollback calls for non-mixed-invalid
+  ---
+  duration_ms: 1.754125
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for wrong-full-url
+ok 42 - mixed transaction makes zero service rollback calls for wrong-full-url
+  ---
+  duration_ms: 1.479625
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for wrong-response-order
+ok 43 - mixed transaction makes zero service rollback calls for wrong-response-order
+  ---
+  duration_ms: 1.168958
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for wrong-location-id
+ok 44 - mixed transaction makes zero service rollback calls for wrong-location-id
+  ---
+  duration_ms: 1.050667
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for invalid-fhir-id
+ok 45 - mixed transaction makes zero service rollback calls for invalid-fhir-id
+  ---
+  duration_ms: 1.39175
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for invalid-http-status
+ok 46 - mixed transaction makes zero service rollback calls for invalid-http-status
+  ---
+  duration_ms: 1.393125
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for encounter-200-before-later-500
+ok 47 - mixed transaction makes zero service rollback calls for encounter-200-before-later-500
+  ---
+  duration_ms: 1.152125
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for encounter-201-before-later-500
+ok 48 - mixed transaction makes zero service rollback calls for encounter-201-before-later-500
+  ---
+  duration_ms: 1.155959
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for encounter-1xx-before-later-500
+ok 49 - mixed transaction makes zero service rollback calls for encounter-1xx-before-later-500
+  ---
+  duration_ms: 1.035458
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for encounter-500
+ok 50 - mixed transaction makes zero service rollback calls for encounter-500
+  ---
+  duration_ms: 3.270458
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for later-1xx
+ok 51 - mixed transaction makes zero service rollback calls for later-1xx
+  ---
+  duration_ms: 1.622458
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for later-3xx
+ok 52 - mixed transaction makes zero service rollback calls for later-3xx
+  ---
+  duration_ms: 1.125416
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for later-missing-status
+ok 53 - mixed transaction makes zero service rollback calls for later-missing-status
+  ---
+  duration_ms: 1.040375
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed transaction makes zero service rollback calls for later-malformed-status
+ok 54 - mixed transaction makes zero service rollback calls for later-malformed-status
+  ---
+  duration_ms: 0.963666
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed stale transaction fails closed when privileged rollback is absent
+ok 55 - mixed stale transaction fails closed when privileged rollback is absent
+  ---
+  duration_ms: 1.582875
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed stale transaction fails closed for wrong-location-type rollback evidence
+ok 56 - mixed stale transaction fails closed for wrong-location-type rollback evidence
+  ---
+  duration_ms: 1.333625
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed stale transaction fails closed for delete-failure rollback evidence
+ok 57 - mixed stale transaction fails closed for delete-failure rollback evidence
+  ---
+  duration_ms: 1.217708
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed stale transaction fails closed for still-readable rollback evidence
+ok 58 - mixed stale transaction fails closed for still-readable rollback evidence
+  ---
+  duration_ms: 1.204417
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed stale transaction rejects rollback DELETE status 201 Created
+ok 59 - mixed stale transaction rejects rollback DELETE status 201 Created
+  ---
+  duration_ms: 1.070875
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed stale transaction rejects rollback DELETE status 202 Accepted
+ok 60 - mixed stale transaction rejects rollback DELETE status 202 Accepted
+  ---
+  duration_ms: 1.025042
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed stale transaction rejects rollback DELETE status 206 Partial Content
+ok 61 - mixed stale transaction rejects rollback DELETE status 206 Partial Content
+  ---
+  duration_ms: 0.93075
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed stale transaction rejects rollback DELETE status 226 IM Used
+ok 62 - mixed stale transaction rejects rollback DELETE status 226 IM Used
+  ---
+  duration_ms: 0.907917
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: mixed stale transaction rejects message-only 404 rollback verification
+ok 63 - mixed stale transaction rejects message-only 404 rollback verification
+  ---
+  duration_ms: 1.009083
+  type: 'test'
+  ...
+# Subtest: pull re-read catches a raced exact OD diagnosis and returns its current reference without a transaction
+ok 64 - pull re-read catches a raced exact OD diagnosis and returns its current reference without a transaction
+  ---
+  duration_ms: 0.844625
+  type: 'test'
+  ...
+# Subtest: pull does not treat an existing OD diagnosis as the requested OS identity
+ok 65 - pull does not treat an existing OD diagnosis as the requested OS identity
+  ---
+  duration_ms: 1.22925
+  type: 'test'
+  ...
+# Subtest: pull ignores a matching Condition that does not belong to the current Encounter
+ok 66 - pull ignores a matching Condition that does not belong to the current Encounter
+  ---
+  duration_ms: 0.921542
+  type: 'test'
+  ...
+# Subtest: pull treats a catalog stable key and recorded laterality as identity despite changed literal coding and text
+ok 67 - pull treats a catalog stable key and recorded laterality as identity despite changed literal coding and text
+  ---
+  duration_ms: 1.372542
+  type: 'test'
+  ...
+# Subtest: pull matches uncataloged literal coding text and laterality without a terminology mapping
+ok 68 - pull matches uncataloged literal coding text and laterality without a terminology mapping
+  ---
+  duration_ms: 6.846625
+  type: 'test'
+  ...
+# Subtest: pull keeps uncataloged diagnoses distinct when their literal text differs
+ok 69 - pull keeps uncataloged diagnoses distinct when their literal text differs
+  ---
+  duration_ms: 0.885375
+  type: 'test'
+  ...
+# Subtest: pull uses the recorded Condition bodySite instead of a stale catalog identifier laterality
+ok 70 - pull uses the recorded Condition bodySite instead of a stale catalog identifier laterality
+  ---
+  duration_ms: 0.752125
+  type: 'test'
+  ...
+# Subtest: pull rejects source Encounters that are not strictly prior full instants
+ok 71 - pull rejects source Encounters that are not strictly prior full instants
+  ---
+  duration_ms: 5.233541
+  type: 'test'
+  ...
+# Subtest: pull rejects a current Encounter without a valid full start instant before a transaction
+ok 72 - pull rejects a current Encounter without a valid full start instant before a transaction
+  ---
+  duration_ms: 2.155208
+  type: 'test'
+  ...
+# Subtest: pull rechecks the current Encounter start instant immediately before idempotency and the transaction
+ok 73 - pull rechecks the current Encounter start instant immediately before idempotency and the transaction
+  ---
+  duration_ms: 1.606916
+  type: 'test'
+  ...
+# Subtest: pull rejects source patient, diagnosis membership, and retracted-condition boundary failures
+ok 74 - pull rejects source patient, diagnosis membership, and retracted-condition boundary failures
+  ---
+  duration_ms: 2.341042
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction response was invalid: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:414:81)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: pull rejects failed transaction entries and maps precondition failures to 409
+ok 75 - pull rejects failed transaction entries and maps precondition failures to 409
+  ---
+  duration_ms: 2.454292
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: pull rejects a non-Bundle resource discriminator
+ok 76 - pull rejects a non-Bundle resource discriminator
+  ---
+  duration_ms: 1.233708
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: pull rejects a non-transaction-response Bundle
+ok 77 - pull rejects a non-transaction-response Bundle
+  ---
+  duration_ms: 0.954542
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: pull rejects a truncated transaction response
+ok 78 - pull rejects a truncated transaction response
+  ---
+  duration_ms: 1.152209
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: pull rejects a transaction entry without status
+ok 79 - pull rejects a transaction entry without status
+  ---
+  duration_ms: 1.137375
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: pull rejects a 3xx transaction entry
+ok 80 - pull rejects a 3xx transaction entry
+  ---
+  duration_ms: 1.555875
+  type: 'test'
+  ...
+# odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+# Subtest: pull rejects transaction entries in the wrong resource order
+ok 81 - pull rejects transaction entries in the wrong resource order
+  ---
+  duration_ms: 1.234791
+  type: 'test'
+  ...
+# Subtest: pull maps a missing current Encounter to a non-leaking 404
+ok 82 - pull maps a missing current Encounter to a non-leaking 404
+  ---
+  duration_ms: 1.082875
+  type: 'test'
+  ...
+# Subtest: pull maps a missing source Encounter to a non-leaking 404
+ok 83 - pull maps a missing source Encounter to a non-leaking 404
+  ---
+  duration_ms: 1.096667
+  type: 'test'
+  ...
+# Subtest: pull maps a missing source Condition to a non-leaking 404
+ok 84 - pull maps a missing source Condition to a non-leaking 404
+  ---
+  duration_ms: 0.892167
+  type: 'test'
+  ...
+# Subtest: pull maps a patient-compartment source read denial to a non-leaking 403
+ok 85 - pull maps a patient-compartment source read denial to a non-leaking 403
+  ---
+  duration_ms: 0.730791
+  type: 'test'
+  ...
+# Subtest: pull maps a missing source evidence Observation to a non-leaking 404
+ok 86 - pull maps a missing source evidence Observation to a non-leaking 404
+  ---
+  duration_ms: 0.716125
+  type: 'test'
+  ...
+# Subtest: pull maps a gone source Condition to the same non-leaking 404
+ok 87 - pull maps a gone source Condition to the same non-leaking 404
+  ---
+  duration_ms: 0.679916
+  type: 'test'
+  ...
+# Subtest: pull maps a current-identity Condition compartment denial to a non-leaking 403
+ok 88 - pull maps a current-identity Condition compartment denial to a non-leaking 403
+  ---
+  duration_ms: 0.743583
+  type: 'test'
+  ...
+# Subtest: pull rejects a source Encounter for another patient
+ok 89 - pull rejects a source Encounter for another patient
+  ---
+  duration_ms: 0.74875
+  type: 'test'
+  ...
+# Subtest: pull rejects a source Condition declaring another Encounter
+ok 90 - pull rejects a source Condition declaring another Encounter
+  ---
+  duration_ms: 0.661417
+  type: 'test'
+  ...
+# Subtest: pull rejects source evidence for another patient
+ok 91 - pull rejects source evidence for another patient
+  ---
+  duration_ms: 0.649166
+  type: 'test'
+  ...
+# Subtest: pull rejects source evidence declaring another Encounter
+ok 92 - pull rejects source evidence declaring another Encounter
+  ---
+  duration_ms: 0.628458
+  type: 'test'
+  ...
+# Subtest: pull rejects an entered-in-error source Condition
+ok 93 - pull rejects an entered-in-error source Condition
+  ---
+  duration_ms: 0.614334
+  type: 'test'
+  ...
+# Subtest: pull excludes an entered-in-error source Observation
+ok 94 - pull excludes an entered-in-error source Observation
+  ---
+  duration_ms: 0.883417
+  type: 'test'
+  ...
+# Subtest: pull rejects an entered-in-error source Encounter
+ok 95 - pull rejects an entered-in-error source Encounter
+  ---
+  duration_ms: 0.609375
+  type: 'test'
+  ...
+# Subtest: pull rejects an entered-in-error current Encounter
+ok 96 - pull rejects an entered-in-error current Encounter
+  ---
+  duration_ms: 0.612833
+  type: 'test'
+  ...
+# Subtest: pull rejects a current Encounter entering error on the mutation-time re-read
+ok 97 - pull rejects a current Encounter entering error on the mutation-time re-read
+  ---
+  duration_ms: 1.084041
+  type: 'test'
+  ...
+# Subtest: pull rejects a current patient change on the mutation-time re-read
+ok 98 - pull rejects a current patient change on the mutation-time re-read
+  ---
+  duration_ms: 3.595167
+  type: 'test'
+  ...
+# Subtest: pull rejects a current Encounter without a version
+ok 99 - pull rejects a current Encounter without a version
+  ---
+  duration_ms: 1.314
+  type: 'test'
+  ...
+# Subtest: a repeated exact pull returns the current Condition without a transaction
+ok 100 - a repeated exact pull returns the current Condition without a transaction
+  ---
+  duration_ms: 1.076541
+  type: 'test'
+  ...
+# Subtest: a transaction conflict re-read returns the concurrently created exact Condition
+ok 101 - a transaction conflict re-read returns the concurrently created exact Condition
+  ---
+  duration_ms: 1.080959
+  type: 'test'
+  ...
+# Subtest: a transaction conflict without the exact identity returns 409
+ok 102 - a transaction conflict without the exact identity returns 409
+  ---
+  duration_ms: 0.887
+  type: 'test'
+  ...
+# Subtest: a transaction conflict whose current Encounter disappeared returns 409
+ok 103 - a transaction conflict whose current Encounter disappeared returns 409
+  ---
+  duration_ms: 0.834917
+  type: 'test'
+  ...
+# Subtest: a conflict reread never returns an exact diagnosis from an entered-in-error current Encounter
+ok 104 - a conflict reread never returns an exact diagnosis from an entered-in-error current Encounter
+  ---
+  duration_ms: 0.839208
+  type: 'test'
+  ...
+# Subtest: live ordinary-clinician policy persists and reads diagnosis carry while preserving atomic conflict rollback
+ok 105 - live ordinary-clinician policy persists and reads diagnosis carry while preserving atomic conflict rollback # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the diagnosis pull integration proof.
+  ---
+  duration_ms: 0.290625
+  type: 'test'
+  ...
+# Subtest: synthetic cleanup attempts every exact reference and aggregates all failures
+ok 106 - synthetic cleanup attempts every exact reference and aggregates all failures
+  ---
+  duration_ms: 0.443708
+  type: 'test'
+  ...
+# Subtest: disposable client creation exposes its id before a later response assertion fails
+ok 107 - disposable client creation exposes its id before a later response assertion fails
+  ---
+  duration_ms: 2.7795
+  type: 'test'
+  ...
+# Subtest: early-failure cleanup rediscovers all unique auth artifacts and verifies every exact deletion
+ok 108 - early-failure cleanup rediscovers all unique auth artifacts and verifies every exact deletion
+  ---
+  duration_ms: 0.661833
+  type: 'test'
+  ...
+# Subtest: authorization cleanup still rediscovers memberships when another discovery search fails
+ok 109 - authorization cleanup still rediscovers memberships when another discovery search fails
+  ---
+  duration_ms: 0.256375
+  type: 'test'
+  ...
+# Subtest: synthetic cleanup verification attempts every read and rejects a resource that remains
+ok 110 - synthetic cleanup verification attempts every read and rejects a resource that remains
+  ---
+  duration_ms: 0.102
+  type: 'test'
+  ...
+# Subtest: synthetic cleanup captures transaction resource ids and versioned locations
+ok 111 - synthetic cleanup captures transaction resource ids and versioned locations
+  ---
+  duration_ms: 0.14575
+  type: 'test'
+  ...
+# Subtest: proof cleanup arbitration preserves the original primary error when cleanup succeeds
+ok 112 - proof cleanup arbitration preserves the original primary error when cleanup succeeds
+  ---
+  duration_ms: 0.080959
+  type: 'test'
+  ...
+# Subtest: proof cleanup arbitration returns the cleanup error alone when the proof succeeds
+ok 113 - proof cleanup arbitration returns the cleanup error alone when the proof succeeds
+  ---
+  duration_ms: 0.045333
+  type: 'test'
+  ...
+# Subtest: proof cleanup arbitration preserves primary then every cleanup failure with primary cause
+ok 114 - proof cleanup arbitration preserves primary then every cleanup failure with primary cause
+  ---
+  duration_ms: 0.169875
+  type: 'test'
+  ...
+# Subtest: previous exams preserves FHIR newest-first order across offsets and returns unbounded exact records
+ok 115 - previous exams preserves FHIR newest-first order across offsets and returns unbounded exact records
+  ---
+  duration_ms: 1.263583
+  type: 'test'
+  ...
+# Subtest: previous exams omits an entered-in-error Encounter from the GET page
+ok 116 - previous exams omits an entered-in-error Encounter from the GET page
+  ---
+  duration_ms: 0.497958
+  type: 'test'
+  ...
+# Subtest: previous exams omits a diagnosis whose Condition belongs to another Encounter
+ok 117 - previous exams omits a diagnosis whose Condition belongs to another Encounter
+  ---
+  duration_ms: 0.54525
+  type: 'test'
+  ...
+# Subtest: previous exams omits evidence whose Observation belongs to another Encounter
+ok 118 - previous exams omits evidence whose Observation belongs to another Encounter
+  ---
+  duration_ms: 0.462083
+  type: 'test'
+  ...
+# Subtest: previous exams enforces active visit and same-Encounter membership for diagnoses and evidence together
+ok 119 - previous exams enforces active visit and same-Encounter membership for diagnoses and evidence together
+  ---
+  duration_ms: 0.474
+  type: 'test'
+  ...
+# Subtest: previous exams cursor loads the next four-encounter page without accepting a URL
+ok 120 - previous exams cursor loads the next four-encounter page without accepting a URL
+  ---
+  duration_ms: 0.60375
+  type: 'test'
+  ...
+# Subtest: previous exams rejects forged legacy and tampered cursor payloads before FHIR pagination
+ok 121 - previous exams rejects forged legacy and tampered cursor payloads before FHIR pagination
+  ---
+  duration_ms: 0.821542
+  type: 'test'
+  ...
+# Subtest: previous exams binds an issued cursor to the current Encounter, patient, and start instant
+ok 122 - previous exams binds an issued cursor to the current Encounter, patient, and start instant
+  ---
+  duration_ms: 0.552625
+  type: 'test'
+  ...
+# Subtest: previous exams maps initial Encounter and Patient FHIR access failures at the direct boundary
+ok 123 - previous exams maps initial Encounter and Patient FHIR access failures at the direct boundary
+  ---
+  duration_ms: 0.469334
+  type: 'test'
+  ...
+# Subtest: previous exams maps page Condition and Observation FHIR access failures at the direct boundary
+ok 124 - previous exams maps page Condition and Observation FHIR access failures at the direct boundary
+  ---
+  duration_ms: 0.660125
+  type: 'test'
+  ...
+# odos-mcp: previous exams next link is invalid: InvalidCursorError
+#     at validatedNextPath (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:1025:20)
+#     at handlePreviousExamsReadRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:216:17)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async TestContext.<anonymous> (mcp/tests/diagnosisCarryForward.test.ts:2339:20)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# odos-mcp: previous exams next link is invalid: InvalidCursorError
+#     at validatedNextPath (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:1025:20)
+#     at handlePreviousExamsReadRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:216:17)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async TestContext.<anonymous> (mcp/tests/diagnosisCarryForward.test.ts:2353:20)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# Subtest: previous exams registered route maps cursor-page FHIR denials and missing history without a generic 500
+ok 125 - previous exams registered route maps cursor-page FHIR denials and missing history without a generic 500
+  ---
+  duration_ms: 6.114458
+  type: 'test'
+  ...
+# Subtest: previous exams rejects a cross-origin Bundle next link
+ok 126 - previous exams rejects a cross-origin Bundle next link
+  ---
+  duration_ms: 0.604625
+  type: 'test'
+  ...
+# Subtest: previous exams rejects a scheme-relative cross-origin Bundle next link
+ok 127 - previous exams rejects a scheme-relative cross-origin Bundle next link
+  ---
+  duration_ms: 0.467875
+  type: 'test'
+  ...
+# Subtest: previous exams accepts a same-origin absolute Bundle next link
+ok 128 - previous exams accepts a same-origin absolute Bundle next link
+  ---
+  duration_ms: 0.484917
+  type: 'test'
+  ...
+# Subtest: history identity handles current, legacy and bare catalog keys without laterality
+ok 129 - history identity handles current, legacy and bare catalog keys without laterality
+  ---
+  duration_ms: 0.720917
+  type: 'test'
+  ...
+# Subtest: explicit Established wins over legacy Doctor New
+ok 130 - explicit Established wins over legacy Doctor New
+  ---
+  duration_ms: 0.368709
+  type: 'test'
+  ...
+# Subtest: twelve months is a calendar window and clamps leap day
+ok 131 - twelve months is a calendar window and clamps leap day
+  ---
+  duration_ms: 0.650458
+  type: 'test'
+  ...
+# Subtest: Postgres migration preserves legacy New and the doctor's override survives independent reload
+ok 132 - Postgres migration preserves legacy New and the doctor's override survives independent reload # SKIP
+  ---
+  duration_ms: 0.047083
+  type: 'test'
+  ...
+# Subtest: newness endpoint locks signed encounters and persists a doctor choice only on the matching patient diagnosis
+ok 133 - newness endpoint locks signed encounters and persists a doctor choice only on the matching patient diagnosis
+  ---
+  duration_ms: 2.251209
+  type: 'test'
+  ...
+# Subtest: New / Established suggestion: most recent resolved supersedes older active
+ok 134 - New / Established suggestion: most recent resolved supersedes older active
+  ---
+  duration_ms: 0.801667
+  type: 'test'
+  ...
+# Subtest: New / Established suggestion: most recent active supersedes older resolved
+ok 135 - New / Established suggestion: most recent active supersedes older resolved
+  ---
+  duration_ms: 0.263542
+  type: 'test'
+  ...
+# Subtest: New / Established suggestion: outside twelve-month window
+ok 136 - New / Established suggestion: outside twelve-month window
+  ---
+  duration_ms: 0.140417
+  type: 'test'
+  ...
+# Subtest: New / Established suggestion: no prior
+ok 137 - New / Established suggestion: no prior
+  ---
+  duration_ms: 0.335708
+  type: 'test'
+  ...
+# Subtest: New / Established suggestion: resolved prior
+ok 138 - New / Established suggestion: resolved prior
+  ---
+  duration_ms: 0.356459
+  type: 'test'
+  ...
+# Subtest: New / Established suggestion: non-resolved prior
+ok 139 - New / Established suggestion: non-resolved prior
+  ---
+  duration_ms: 0.187916
+  type: 'test'
+  ...
+# Subtest: doctor Established beats computed New after reload; suggestion updates when prior resolution changes
+ok 140 - doctor Established beats computed New after reload; suggestion updates when prior resolution changes
+  ---
+  duration_ms: 0.515875
+  type: 'test'
+  ...
+# Subtest: confirm freezes the original setter and timestamp when a different clinician changes status
+ok 141 - confirm freezes the original setter and timestamp when a different clinician changes status
+  ---
+  duration_ms: 5.911292
+  type: 'test'
+  ...
+# Subtest: missing rows read as unset, signed encounters reject updates, and a later encounter gets a new Condition without copied status
+ok 142 - missing rows read as unset, signed encounters reject updates, and a later encounter gets a new Condition without copied status
+  ---
+  duration_ms: 2.831208
+  type: 'test'
+  ...
+# Subtest: all ten visit statuses agree across clients and pass the update endpoint
+ok 143 - all ten visit statuses agree across clients and pass the update endpoint
+  ---
+  duration_ms: 1.732584
+  type: 'test'
+  ...
+# Subtest: status vocabulary is application-validated and the SQL column remains extensible
+ok 144 - status vocabulary is application-validated and the SQL column remains extensible
+  ---
+  duration_ms: 0.137125
+  type: 'test'
+  ...
+# Subtest: role config is switchable presentation-only plumbing
+ok 145 - role config is switchable presentation-only plumbing
+  ---
+  duration_ms: 0.8565
+  type: 'test'
+  ...
+# Subtest: chart card registry keeps v0.35b sidebar cards visible to every role
+ok 146 - chart card registry keeps v0.35b sidebar cards visible to every role
+  ---
+  duration_ms: 0.135042
+  type: 'test'
+  ...
+# Subtest: start encounter bundle can attach a visit to a clinical Program
+ok 147 - start encounter bundle can attach a visit to a clinical Program
+  ---
+  duration_ms: 0.38875
+  type: 'test'
+  ...
+# Subtest: MDM blocks three unset encounter diagnoses instead of counting active problem-list rows
+ok 148 - MDM blocks three unset encounter diagnoses instead of counting active problem-list rows
+  ---
+  duration_ms: 0.243208
+  type: 'test'
+  ...
+# Subtest: MDM blocks an unset diagnosis even when its display contains severe exacerbation
+ok 149 - MDM blocks an unset diagnosis even when its display contains severe exacerbation
+  ---
+  duration_ms: 0.330791
+  type: 'test'
+  ...
+# Subtest: MDM tiers come only from coded per-diagnosis problem status
+ok 150 - MDM tiers come only from coded per-diagnosis problem status
+  ---
+  duration_ms: 0.351542
+  type: 'test'
+  ...
+# Subtest: No MDM is explicitly answered but excluded from every MDM bucket
+ok 151 - No MDM is explicitly answered but excluded from every MDM bucket
+  ---
+  duration_ms: 0.211084
+  type: 'test'
+  ...
+# Subtest: minimal problem set uses the billing-facing Straightforward level
+ok 152 - minimal problem set uses the billing-facing Straightforward level
+  ---
+  duration_ms: 0.123375
+  type: 'test'
+  ...
+# Subtest: MDM problem status canonical artifacts bind exactly the nine clinician choices
+ok 153 - MDM problem status canonical artifacts bind exactly the nine clinician choices
+  ---
+  duration_ms: 1.963709
+  type: 'test'
+  ...
+# Subtest: v0.35b UI write builders still match the equivalent MCP builders
+ok 154 - v0.35b UI write builders still match the equivalent MCP builders
+  ---
+  duration_ms: 1.010083
+  type: 'test'
+  ...
+# Subtest: diagnosis tier helper enforces one principal and secondary rank greater than one
+ok 155 - diagnosis tier helper enforces one principal and secondary rank greater than one
+  ---
+  duration_ms: 0.180208
+  type: 'test'
+  ...
+# Subtest: diagnosis tier patch path adds Encounter.diagnosis without delete-and-recreate semantics
+ok 156 - diagnosis tier patch path adds Encounter.diagnosis without delete-and-recreate semantics
+  ---
+  duration_ms: 0.074417
+  type: 'test'
+  ...
+# Subtest: chart sidebar view model recognizes v0.35a-built resources
+ok 157 - chart sidebar view model recognizes v0.35a-built resources
+  ---
+  duration_ms: 0.106583
+  type: 'test'
+  ...
+1..157
+# tests 157
+# suites 0
+# pass 155
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 0
+# duration_ms 493.010458

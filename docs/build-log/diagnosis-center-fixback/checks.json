@@ -1,0 +1,41 @@
+{
+  "uiFull": {
+    "exit": 0,
+    "tests": 1509,
+    "pass": 1509,
+    "fail": 0,
+    "skipped": 0
+  },
+  "mcpFocused": {
+    "exit": 0,
+    "tests": 157,
+    "pass": 155,
+    "fail": 0,
+    "skipped": 2
+  },
+  "postgres": {
+    "exit": 0,
+    "tests": 12,
+    "pass": 12,
+    "fail": 0,
+    "skipped": 0
+  },
+  "uiBuild": {
+    "exit": 0
+  },
+  "mcpTypecheck": {
+    "exit": 0,
+    "diagnostics": 0
+  },
+  "browser": {
+    "exit": 0,
+    "pageErrors": 0
+  },
+  "diffCheck": {
+    "exit": 0
+  },
+  "main": "6baea1d51666461e3de94ded1287ffe8817d2f70",
+  "branch": "drbang-iva/dx-status",
+  "independentlyEvaluated": false,
+  "pushed": false
+}

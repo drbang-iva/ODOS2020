@@ -191,6 +191,28 @@ test("MDM tiers come only from coded per-diagnosis problem status", () => {
   assert.doesNotMatch(headerSource, /9921[345]/);
 });
 
+test("No MDM is explicitly answered but excluded from every MDM bucket", () => {
+  const excluded = encounterDiagnosis("Condition/refractive", "not-addressed-no-mdm");
+  const empty = computeMdm(encounterWithDiagnosis([]));
+  const alone = computeMdm(encounterWithDiagnosis([excluded]));
+  assert.equal(alone.status, "ready");
+  assert.equal(alone.tier, "None");
+  assert.deepEqual(alone.counts, empty.counts);
+  assert.equal(alone.sourceDiagnosisCount, 1);
+
+  const stable = encounterDiagnosis("Condition/addressed", "stable-chronic");
+  const baseline = computeMdm(encounterWithDiagnosis([stable]));
+  const mixed = computeMdm(encounterWithDiagnosis([stable, excluded]));
+  assert.equal(mixed.status, "ready");
+  assert.equal(mixed.tier, "Low");
+  assert.deepEqual(mixed.counts, baseline.counts);
+
+  const missing = computeMdm(encounterWithDiagnosis([excluded, encounterDiagnosis("Condition/unanswered")]));
+  assert.equal(missing.status, "blocked");
+  assert.equal(missing.missingProblemStatusCount, 1);
+  assert.deepEqual(missing.counts, empty.counts);
+});
+
 test("minimal problem set uses the billing-facing Straightforward level", () => {
   const result = computeMdm(encounterWithDiagnosis([
     encounterDiagnosis("Condition/dx1", "minimal-self-limited"),
@@ -200,7 +222,7 @@ test("minimal problem set uses the billing-facing Straightforward level", () => 
   assert.equal(result.tier, "Straightforward");
 });
 
-test("MDM problem status canonical artifacts bind exactly the eight clinician choices", () => {
+test("MDM problem status canonical artifacts bind exactly the nine clinician choices", () => {
   const repoRoot = resolve(process.cwd(), "..");
   const artifactPaths = [
     resolve(repoRoot, "data/canonical-extensions/odos-encounter-diagnosis-problem-status.json"),
@@ -232,7 +254,7 @@ test("MDM problem status canonical artifacts bind exactly the eight clinician ch
   const codeSystem = JSON.parse(readFileSync(artifactPaths[1]!, "utf8")) as {
     concept?: Array<{ code?: string; display?: string }>;
   };
-  assert.equal(UI_MDM_PROBLEM_STATUSES.length, 8);
+  assert.equal(UI_MDM_PROBLEM_STATUSES.length, 9);
   assert.deepEqual(UI_MDM_PROBLEM_STATUSES[6], {
     code: "undiagnosed-new-problem-uncertain-prognosis",
     display: "Undiagnosed new problem with uncertain prognosis",

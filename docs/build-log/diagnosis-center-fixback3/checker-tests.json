@@ -1,0 +1,13 @@
+{
+  "cwd": ".",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-concurrency=1",
+    "tests/preflight/fhir-read-grant-check.test.ts",
+    "tests/preflight/fhir-service-transaction-check.test.ts"
+  ],
+  "exit": 0
+}

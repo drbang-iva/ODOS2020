@@ -1,0 +1,134 @@
+TAP version 13
+# Subtest: history identity handles current, legacy and bare catalog keys without laterality
+ok 1 - history identity handles current, legacy and bare catalog keys without laterality
+  ---
+  duration_ms: 0.523125
+  type: 'test'
+  ...
+# Subtest: explicit Established wins over legacy Doctor New
+ok 2 - explicit Established wins over legacy Doctor New
+  ---
+  duration_ms: 0.237958
+  type: 'test'
+  ...
+# Subtest: twelve months is a calendar window and clamps leap day
+ok 3 - twelve months is a calendar window and clamps leap day
+  ---
+  duration_ms: 0.6755
+  type: 'test'
+  ...
+# Subtest: Postgres migration preserves legacy New and the doctor's override survives independent reload
+ok 4 - Postgres migration preserves legacy New and the doctor's override survives independent reload # SKIP
+  ---
+  duration_ms: 0.040125
+  type: 'test'
+  ...
+# Subtest: newness endpoint locks signed encounters and persists a doctor choice only on the matching patient diagnosis
+ok 5 - newness endpoint locks signed encounters and persists a doctor choice only on the matching patient diagnosis
+  ---
+  duration_ms: 2.455209
+  type: 'test'
+  ...
+# Subtest: New / Established suggestion: most recent resolved supersedes older active
+ok 6 - New / Established suggestion: most recent resolved supersedes older active
+  ---
+  duration_ms: 0.837625
+  type: 'test'
+  ...
+# Subtest: New / Established suggestion: most recent active supersedes older resolved
+ok 7 - New / Established suggestion: most recent active supersedes older resolved
+  ---
+  duration_ms: 0.284125
+  type: 'test'
+  ...
+# Subtest: New / Established suggestion: outside twelve-month window
+ok 8 - New / Established suggestion: outside twelve-month window
+  ---
+  duration_ms: 0.148834
+  type: 'test'
+  ...
+# Subtest: New / Established suggestion: no prior
+ok 9 - New / Established suggestion: no prior
+  ---
+  duration_ms: 0.870916
+  type: 'test'
+  ...
+# Subtest: New / Established suggestion: resolved prior
+ok 10 - New / Established suggestion: resolved prior
+  ---
+  duration_ms: 0.318667
+  type: 'test'
+  ...
+# Subtest: New / Established suggestion: non-resolved prior
+ok 11 - New / Established suggestion: non-resolved prior
+  ---
+  duration_ms: 0.14
+  type: 'test'
+  ...
+# Subtest: doctor Established beats computed New after reload; suggestion updates when prior resolution changes
+ok 12 - doctor Established beats computed New after reload; suggestion updates when prior resolution changes
+  ---
+  duration_ms: 0.489083
+  type: 'test'
+  ...
+# Subtest: stye recurrence is New after Resolved this visit while clinical status stays active
+not ok 13 - stye recurrence is New after Resolved this visit while clinical status stays active
+  ---
+  duration_ms: 1.415125
+  type: 'test'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:11029'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'established'
+    - 'new'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'new'
+  actual: 'established'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:172:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: mixed-eye latest visit stays Established when only one matching eye is resolved
+ok 14 - mixed-eye latest visit stays Established when only one matching eye is resolved
+  ---
+  duration_ms: 0.176667
+  type: 'test'
+  ...
+# Subtest: history failure preserves doctor rows and marks only unsuggested rows unavailable
+not ok 15 - history failure preserves doctor rows and marks only unsuggested rows unavailable
+  ---
+  duration_ms: 0.266125
+  type: 'test'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:12394'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    503 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 503
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:197:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 12
+# fail 2
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 199.188583

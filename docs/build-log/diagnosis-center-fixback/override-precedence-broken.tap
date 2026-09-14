@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: explicit Established wins over legacy Doctor New
+not ok 1 - explicit Established wins over legacy Doctor New
+  ---
+  duration_ms: 2.081
+  type: 'test'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:1316'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      {
+        conditionReference: 'Condition/dx',
+        source: 'doctor',
+    +   value: 'new'
+    -   value: 'established'
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    conditionReference: 'Condition/dx'
+    value: 'established'
+    source: 'doctor'
+  actual:
+    conditionReference: 'Condition/dx'
+    value: 'new'
+    source: 'doctor'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:22:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 174.042083

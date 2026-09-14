@@ -1,0 +1,7 @@
+{
+  "postgres": "disposable postgres:16 container, random loopback port, no persistent volume",
+  "rootDependencies": "existing checkout dependencies linked into task worktree",
+  "ODOS_ALLOW_UNGATED_MCP": "1",
+  "exit": 0,
+  "containerCleanup": "performed in finally"
+}

@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: New / Established suggestion: outside twelve-month window
+ok 1 - New / Established suggestion: outside twelve-month window
+  ---
+  duration_ms: 3.102417
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 147.739291

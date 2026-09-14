@@ -1,0 +1,13 @@
+{
+  "cwd": "mcp",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-concurrency=1",
+    "tests/diagnosisNewness.test.ts",
+    "tests/diagnosisVisitStatus.test.ts"
+  ],
+  "exit": 0
+}

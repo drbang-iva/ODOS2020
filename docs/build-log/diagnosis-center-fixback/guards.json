@@ -1,0 +1,57 @@
+[
+  {
+    "guard": "most-recent-governs",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "guard": "resolved-history",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "guard": "history-window",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "guard": "computed-override-precedence",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "guard": "visit-signed",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "guard": "newness-signed",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "guard": "server-signed",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "guard": "ranking-feed",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "guard": "override-precedence",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "guard": "assessment-pointer",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "guard": "status-degradation",
+    "brokenExit": 1,
+    "restoredExit": 0
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "guard": "visit-resolution",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "guard": "mixed-eye",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "guard": "doctor-survives",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "guard": "unavailable-ui",
+    "brokenExit": 1,
+    "restoredExit": 0
+  }
+]

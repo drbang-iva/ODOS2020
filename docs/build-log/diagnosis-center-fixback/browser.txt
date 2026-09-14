@@ -1,0 +1,1 @@
+PASS: actual parent Assessment pointer selects diagnosis; 9 status options without New; three controls save/reload; signed locks; isolated status failure; 0 browser errors

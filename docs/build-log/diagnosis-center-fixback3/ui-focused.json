@@ -1,0 +1,14 @@
+{
+  "cwd": "ui",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-concurrency=1",
+    "tests/diagnosisNewness.test.tsx",
+    "tests/diagnosisWorkspace.test.tsx",
+    "tests/diagnosisLinkL2.test.tsx"
+  ],
+  "exit": 0
+}

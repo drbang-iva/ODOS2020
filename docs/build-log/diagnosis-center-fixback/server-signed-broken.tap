@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: newness endpoint locks signed encounters and persists a doctor choice only on the matching patient diagnosis
+not ok 1 - newness endpoint locks signed encounters and persists a doctor choice only on the matching patient diagnosis
+  ---
+  duration_ms: 28.1605
+  type: 'test'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:4574'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:77:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 177.931875

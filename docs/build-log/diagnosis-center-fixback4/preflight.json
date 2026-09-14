@@ -1,0 +1,9 @@
+{
+  "cwd": ".",
+  "command": [
+    "npm",
+    "run",
+    "preflight"
+  ],
+  "exit": 0
+}

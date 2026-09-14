@@ -1,0 +1,34 @@
+TAP version 13
+# Subtest: stye recurrence is New after Resolved this visit while clinical status stays active
+not ok 1 - stye recurrence is New after Resolved this visit while clinical status stays active
+  ---
+  duration_ms: 6.604542
+  type: 'test'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:11029'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'established'
+    - 'new'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'new'
+  actual: 'established'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:172:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 174.947208

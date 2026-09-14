@@ -1,0 +1,328 @@
+TAP version 13
+# Subtest: diagnosis picker stays collapsed until clicked and exposes paired Possible and Confirm actions plus catalog search
+ok 1 - diagnosis picker stays collapsed until clicked and exposes paired Possible and Confirm actions plus catalog search
+  ---
+  duration_ms: 0.434084
+  type: 'test'
+  ...
+# Subtest: cup-disc and refraction charted rows use the shared picker route
+ok 2 - cup-disc and refraction charted rows use the shared picker route
+  ---
+  duration_ms: 0.154125
+  type: 'test'
+  ...
+# Subtest: Assessment renders Possible decisions, hides refuted rows, and shows linked finding provenance only when present
+ok 3 - Assessment renders Possible decisions, hides refuted rows, and shows linked finding provenance only when present
+  ---
+  duration_ms: 0.239792
+  type: 'test'
+  ...
+# Subtest: Assessment hydrates protocol state, aborts stale offers, surfaces errors, and traps staging-sheet focus
+ok 4 - Assessment hydrates protocol state, aborts stale offers, surfaces errors, and traps staging-sheet focus
+  ---
+  duration_ms: 0.160375
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows suggested-new
+ok 5 - Assessment ranking feed follows suggested-new
+  ---
+  duration_ms: 19.962667
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows doctor-new
+ok 6 - Assessment ranking feed follows doctor-new
+  ---
+  duration_ms: 4.082167
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows doctor-established
+ok 7 - Assessment ranking feed follows doctor-established
+  ---
+  duration_ms: 9.589541
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows suggested-established
+ok 8 - Assessment ranking feed follows suggested-established
+  ---
+  duration_ms: 2.9435
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows newness-read-failure
+ok 9 - Assessment ranking feed follows newness-read-failure
+  ---
+  duration_ms: 3.666583
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows visit-status-read-failure
+ok 10 - Assessment ranking feed follows visit-status-read-failure
+  ---
+  duration_ms: 3.8425
+  type: 'test'
+  ...
+# Subtest: height-capped common diagnosis rows opt out of flex shrinking
+ok 11 - height-capped common diagnosis rows opt out of flex shrinking
+  ---
+  duration_ms: 0.733292
+  type: 'test'
+  ...
+# Subtest: diagnosis workspace preferences default safely and round-trip valid selections
+ok 12 - diagnosis workspace preferences default safely and round-trip valid selections
+  ---
+  duration_ms: 0.144291
+  type: 'test'
+  ...
+# Subtest: diagnosis rail follows Encounter.diagnosis rank order without normalizing gaps
+ok 13 - diagnosis rail follows Encounter.diagnosis rank order without normalizing gaps
+  ---
+  duration_ms: 0.400917
+  type: 'test'
+  ...
+# Subtest: lateralized structure, Assessment, and Common surfaces keep one resolved code
+ok 14 - lateralized structure, Assessment, and Common surfaces keep one resolved code
+  ---
+  duration_ms: 5.273375
+  type: 'test'
+  ...
+# Subtest: Common names both active proposal eyes instead of arbitrarily choosing one code
+ok 15 - Common names both active proposal eyes instead of arbitrarily choosing one code
+  ---
+  duration_ms: 0.365875
+  type: 'test'
+  ...
+# Subtest: a non-lateralized Possible preserves the Common catalog code
+ok 16 - a non-lateralized Possible preserves the Common catalog code
+  ---
+  duration_ms: 0.363
+  type: 'test'
+  ...
+# Subtest: Possible rows with identical recordedDate use id instead of FHIR search order
+ok 17 - Possible rows with identical recordedDate use id instead of FHIR search order
+  ---
+  duration_ms: 5.226417
+  type: 'test'
+  ...
+# Subtest: diagnosis door pages encounter Conditions and renders Possible provenance plus confirmed rank drift
+ok 18 - diagnosis door pages encounter Conditions and renders Possible provenance plus confirmed rank drift
+  ---
+  duration_ms: 21.709875
+  type: 'test'
+  ...
+# Subtest: excluded Encounter diagnosis references expose a disabled reorder explanation naming the condition
+ok 19 - excluded Encounter diagnosis references expose a disabled reorder explanation naming the condition
+  ---
+  duration_ms: 3.371792
+  type: 'test'
+  ...
+# Subtest: server-cleaned three-minus-one state renders two rows and submits their exact reorder
+ok 20 - server-cleaned three-minus-one state renders two rows and submits their exact reorder
+  ---
+  duration_ms: 9.032709
+  type: 'test'
+  ...
+# Subtest: catalog identity and pin reorder are explicit and stable
+ok 21 - catalog identity and pin reorder are explicit and stable
+  ---
+  duration_ms: 0.133416
+  type: 'test'
+  ...
+# Subtest: laterality-required diagnosis identity keeps OD, OS, and OU picks distinct
+ok 22 - laterality-required diagnosis identity keeps OD, OS, and OU picks distinct
+  ---
+  duration_ms: 0.058875
+  type: 'test'
+  ...
+# Subtest: diagnosis workspace remount identity changes at either patient or encounter boundary
+ok 23 - diagnosis workspace remount identity changes at either patient or encounter boundary
+  ---
+  duration_ms: 0.042542
+  type: 'test'
+  ...
+# Subtest: diagnosis rank actions are disabled for read-only users and while a write is busy
+ok 24 - diagnosis rank actions are disabled for read-only users and while a write is busy
+  ---
+  duration_ms: 0.026584
+  type: 'test'
+  ...
+# Subtest: workspace keeps one-click Make Principal on the complete reorder endpoint and opens grouped reorder rows
+ok 25 - workspace keeps one-click Make Principal on the complete reorder endpoint and opens grouped reorder rows
+  ---
+  duration_ms: 19.149458
+  type: 'test'
+  ...
+# Subtest: diagnosis pin moves require write access and respect the ordered-list edges
+ok 26 - diagnosis pin moves require write access and respect the ordered-list edges
+  ---
+  duration_ms: 0.092542
+  type: 'test'
+  ...
+# Subtest: Find dx searches the eligible catalog beyond bounded Common diagnoses
+ok 27 - Find dx searches the eligible catalog beyond bounded Common diagnoses
+  ---
+  duration_ms: 2.720208
+  type: 'test'
+  ...
+# Subtest: staged family search resolves an explicit member statement without exposing member rows
+ok 28 - staged family search resolves an explicit member statement without exposing member rows
+  ---
+  duration_ms: 0.292166
+  type: 'test'
+  ...
+# Subtest: staged family add uses segmented Stage then Scope and never offers unspecified
+ok 29 - staged family add uses segmented Stage then Scope and never offers unspecified
+  ---
+  duration_ms: 3.781833
+  type: 'test'
+  ...
+# Subtest: explicit stage search asks scope only and pending staged codes use the warning label
+ok 30 - explicit stage search asks scope only and pending staged codes use the warning label
+  ---
+  duration_ms: 3.823875
+  type: 'test'
+  ...
+# Subtest: selected pending family renders warning badges and re-stages from the header control
+ok 31 - selected pending family renders warning badges and re-stages from the header control
+  ---
+  duration_ms: 8.363708
+  type: 'test'
+  ...
+# Subtest: most recent prior stage is dated, excludes the selected Condition, and never supplies a default
+ok 32 - most recent prior stage is dated, excludes the selected Condition, and never supplies a default
+  ---
+  duration_ms: 0.141166
+  type: 'test'
+  ...
+# Subtest: bilateral eyelid diagnoses render both resolved codes while legacy unspecified-eyelid codes remain visible
+ok 33 - bilateral eyelid diagnoses render both resolved codes while legacy unspecified-eyelid codes remain visible
+  ---
+  duration_ms: 4.265667
+  type: 'test'
+  ...
+# Subtest: eyelid laterality edit fails closed before FHIR writes when its declared catalog row is unavailable
+ok 34 - eyelid laterality edit fails closed before FHIR writes when its declared catalog row is unavailable
+  ---
+  duration_ms: 4.852083
+  type: 'test'
+  ...
+# Subtest: selected diagnosis fails closed to edited when carry integrity is uncertain
+ok 35 - selected diagnosis fails closed to edited when carry integrity is uncertain
+  ---
+  duration_ms: 3.437833
+  type: 'test'
+  ...
+# Subtest: edited diagnosis carry is named distinctly without unchanged aging
+ok 36 - edited diagnosis carry is named distinctly without unchanged aging
+  ---
+  duration_ms: 3.454959
+  type: 'test'
+  ...
+# Subtest: ordinary unedited carry renders the immediate source and oldest unchanged exam
+ok 37 - ordinary unedited carry renders the immediate source and oldest unchanged exam
+  ---
+  duration_ms: 6.341166
+  type: 'test'
+  ...
+# Subtest: a failed same-diagnosis verification refresh cannot retain stale carry assertions
+ok 38 - a failed same-diagnosis verification refresh cannot retain stale carry assertions
+  ---
+  duration_ms: 5.098792
+  type: 'test'
+  ...
+# Subtest: switching diagnoses hides the prior findings payload while the new request is pending
+ok 39 - switching diagnoses hides the prior findings payload while the new request is pending
+  ---
+  duration_ms: 8.164667
+  type: 'test'
+  ...
+# Subtest: an older findings response cannot overwrite the newer selected diagnosis
+ok 40 - an older findings response cannot overwrite the newer selected diagnosis
+  ---
+  duration_ms: 5.362417
+  type: 'test'
+  ...
+# Subtest: finding rows sort charted before offered and search prioritizes selected-diagnosis candidates
+ok 41 - finding rows sort charted before offered and search prioritizes selected-diagnosis candidates
+  ---
+  duration_ms: 0.181667
+  type: 'test'
+  ...
+# Subtest: findings table keeps presence explicit, grade unanswered, laterality source visible, and re-click clears
+ok 42 - findings table keeps presence explicit, grade unanswered, laterality source visible, and re-click clears
+  ---
+  duration_ms: 0.634625
+  type: 'test'
+  ...
+# Subtest: unassigned tray offers current visit assignment and standalone without diagnosis creation
+ok 43 - unassigned tray offers current visit assignment and standalone without diagnosis creation
+  ---
+  duration_ms: 0.2285
+  type: 'test'
+  ...
+# Subtest: unassigned tray renders quiet equal-weight suggestions in endpoint order and delegates the clinician pick
+ok 44 - unassigned tray renders quiet equal-weight suggestions in endpoint order and delegates the clinician pick
+  ---
+  duration_ms: 0.159541
+  type: 'test'
+  ...
+# Subtest: tray leaf and family suggestions reuse the existing scope and stage prompt and persist only after explicit scope
+ok 45 - tray leaf and family suggestions reuse the existing scope and stage prompt and persist only after explicit scope
+  ---
+  duration_ms: 3.945916
+  type: 'test'
+  ...
+# Subtest: same-encounter finding refresh reloads diagnosis candidates for newly charted findings
+ok 46 - same-encounter finding refresh reloads diagnosis candidates for newly charted findings
+  ---
+  duration_ms: 3.290792
+  type: 'test'
+  ...
+# Subtest: imaging hides the prior patient's rows as soon as the patient reference changes
+ok 47 - imaging hides the prior patient's rows as soon as the patient reference changes
+  ---
+  duration_ms: 0.738875
+  type: 'test'
+  ...
+# Subtest: diagnosis header visit-status picker excludes new and saves the selected diagnosis
+ok 48 - diagnosis header visit-status picker excludes new and saves the selected diagnosis
+  ---
+  duration_ms: 7.16975
+  type: 'test'
+  ...
+# Subtest: diagnosis status controls: finished
+ok 49 - diagnosis status controls: finished
+  ---
+  duration_ms: 2.829833
+  type: 'test'
+  ...
+# Subtest: diagnosis status controls: status-read-failure
+ok 50 - diagnosis status controls: status-read-failure
+  ---
+  duration_ms: 2.583
+  type: 'test'
+  ...
+# Subtest: Assessment completion pointer targets the diagnosis and disappears when complete
+ok 51 - Assessment completion pointer targets the diagnosis and disappears when complete
+  ---
+  duration_ms: 0.357375
+  type: 'test'
+  ...
+# Subtest: doctor chooses Established with one tap and the header shows the saved choice after reload
+ok 52 - doctor chooses Established with one tap and the header shows the saved choice after reload
+  ---
+  duration_ms: 9.874667
+  type: 'test'
+  ...
+# Subtest: partial newness response keeps doctor choice visible and marks only unavailable diagnosis
+ok 53 - partial newness response keeps doctor choice visible and marks only unavailable diagnosis
+  ---
+  duration_ms: 5.645125
+  type: 'test'
+  ...
+1..53
+# tests 53
+# suites 0
+# pass 53
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 825.228167

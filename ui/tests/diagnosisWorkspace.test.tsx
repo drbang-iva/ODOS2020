@@ -22,6 +22,8 @@ import {
   mostRecentPriorStage,
   orderedEncounterConditions,
 } from "../src/components/charting/DiagnosisWorkspace";
+import { DiagnosisCompletionLink } from "../src/components/charting/AssessmentSection";
+import { OdosSelect } from "../src/components/inputs/OdosSelect";
 import { OdosSearchPicker } from "../src/components/inputs/OdosSearchPicker";
 import { DiagnosisImagingRegion } from "../src/components/charting/DiagnosisImagingRegion";
 import {
@@ -165,6 +167,7 @@ test("diagnosis door pages encounter Conditions and renders Possible provenance 
 
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
     }
@@ -237,6 +240,7 @@ test("excluded Encounter diagnosis references expose a disabled reorder explanat
   const discarded = visitCondition("discarded", "Discarded", "refuted");
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({
         resourceType: "Encounter",
@@ -284,6 +288,7 @@ test("server-cleaned three-minus-one state renders two rows and submits their ex
   const confirmedC = visitCondition("c", "Diagnosis C", "confirmed");
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({
         resourceType: "Encounter",
@@ -415,6 +420,7 @@ test("workspace keeps one-click Make Principal on the complete reorder endpoint 
   });
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/procedure-charges")) {
       return jsonResponse({
         options: [],
@@ -493,6 +499,7 @@ test("Find dx searches the eligible catalog beyond bounded Common diagnoses", as
   const catalogOnly = diagnosisRow("pseudophakia", "Pseudophakia");
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({
         resourceType: "Encounter",
@@ -639,6 +646,7 @@ test("selected pending family renders warning badges and re-stages from the head
   let patchOperations: Array<{ path: string; value?: unknown }> | undefined;
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [{ condition: { reference: "Condition/pending" }, rank: 1 }] });
     }
@@ -754,6 +762,7 @@ test("bilateral eyelid diagnoses render both resolved codes while legacy unspeci
   };
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({
         resourceType: "Encounter",
@@ -847,6 +856,7 @@ test("eyelid laterality edit fails closed before FHIR writes when its declared c
   };
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({
         resourceType: "Encounter",
@@ -902,6 +912,7 @@ test("selected diagnosis fails closed to edited when carry integrity is uncertai
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({
         resourceType: "Encounter",
@@ -966,6 +977,7 @@ test("edited diagnosis carry is named distinctly without unchanged aging", async
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [{ condition: { reference: "Condition/selected" }, rank: 1 }] });
     }
@@ -1035,6 +1047,7 @@ test("a failed same-diagnosis verification refresh cannot retain stale carry ass
   let findingWrites = 0;
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [{ condition: { reference: "Condition/selected" }, rank: 1 }] });
     }
@@ -1348,6 +1361,7 @@ test("tray leaf and family suggestions reuse the existing scope and stage prompt
   const pickBodies: unknown[] = [];
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
     if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
     if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [leaf, family] });
@@ -1409,6 +1423,7 @@ test("same-encounter finding refresh reloads diagnosis candidates for newly char
   let candidateReads = 0;
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
     if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
     if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [leaf] });
@@ -1451,6 +1466,7 @@ test("imaging hides the prior patient's rows as soon as the patient reference ch
   let resolveFirst!: (response: Response) => void;
   globalThis.fetch = ((input: string | URL | Request) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("Patient%2Fone")) {
       return new Promise<Response>((resolve) => { resolveFirst = resolve; });
     }
@@ -1639,6 +1655,7 @@ function stagedCondition(id: string, stableKey: string, recordedDate: string): C
 function stagedWorkspaceFetch(family: ReturnType<typeof stagedFamilyRow>): typeof fetch {
   return (async (input: string | URL | Request) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
     }
@@ -1683,6 +1700,8 @@ function workspaceRaceFetch({
 }): typeof fetch {
   return (async (input: string | URL | Request) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-newness")) return jsonResponse({ rows: [{ conditionReference: "Condition/a", value: "new", source: "suggestion" }] });
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({
         resourceType: "Encounter",
@@ -1838,3 +1857,157 @@ function findingsPayload(): DiagnosisFindingsPayload {
     }],
   };
 }
+
+
+test("diagnosis header visit-status picker excludes new and saves the selected diagnosis", async () => {
+  const originalFetch = globalThis.fetch;
+  let status = "new";
+  const writes: Array<{ url: string; body: unknown }> = [];
+  const baseFetch = workspaceRaceFetch({ findings: async () => jsonResponse(raceFindingsPayload("Condition/a", "A finding")) });
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [
+      { conditionReference: "Condition/a", status },
+      { conditionReference: "Condition/b", status: "stable" },
+    ] });
+    if (url.endsWith("/diagnoses/a/status") && init?.method === "PUT") {
+      const body = JSON.parse(String(init.body));
+      writes.push({ url, body });
+      status = body.status;
+      return jsonResponse({ status: { conditionReference: "Condition/a", status } });
+    }
+    return baseFetch(input, init);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/a" onSelectDiagnosis={() => undefined} />);
+    });
+    const picker = () => renderer.root.findAllByType(OdosSelect).find((node) => node.props.ariaLabel === "Diagnosis visit status")!;
+    assert.ok(picker(), "visit status belongs in the diagnosis header");
+    assert.equal(picker().props.options.some((option: { value: string }) => option.value === "new"), false);
+    assert.equal(picker().props.value, "");
+    assert.equal(picker().props.options.filter((option: { value: string }) => option.value).length, 9);
+    assert.ok(renderer.root.findAllByType(OdosSelect).find((node) => node.props.ariaLabel === "Problem status")?.props.options.some((option: { value: string }) => option.value === "not-addressed-no-mdm"));
+    await act(async () => { picker().props.onChange("well-controlled"); });
+    assert.equal(writes.length, 1);
+    assert.match(writes[0]!.url, /encounters\/e1\/diagnoses\/a\/status$/);
+    assert.deepEqual(writes[0]!.body, { status: "well-controlled" });
+    assert.equal(picker().props.value, "well-controlled", "saved status is reloaded");
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+for (const scenario of ["finished", "status-read-failure"] as const) {
+  test(`diagnosis status controls: ${scenario}`, async () => {
+    const originalFetch = globalThis.fetch;
+    const baseFetch = workspaceRaceFetch({ findings: async () => jsonResponse(raceFindingsPayload("Condition/a", "Retained finding", "2026-09-01T12:00:00Z")) });
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (scenario === "status-read-failure" && url.endsWith("/diagnosis-statuses")) return new Response(JSON.stringify({ error: "Status store unavailable" }), { status: 503 });
+      const response = await baseFetch(input, init);
+      if (scenario === "finished" && url.includes("/fhir/R4/Encounter/e1")) return jsonResponse({ ...await response.json(), status: "finished" });
+      return response;
+    }) as typeof fetch;
+    let renderer!: ReactTestRenderer;
+    try {
+      await act(async () => {
+        renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/a" onSelectDiagnosis={() => undefined} />);
+      });
+      const picker = renderer.root.findAllByType(OdosSelect).find((node) => node.props.ariaLabel === "Diagnosis visit status");
+      assert.ok(picker, "the diagnosis header remains available");
+      assert.equal(picker.props.disabled, true);
+      if (scenario === "finished") {
+        const buttons = renderer.root.findByProps({ "aria-label": "Diagnosis New or Established" }).findAllByType("button");
+        assert.equal(buttons.length, 2);
+        assert.ok(buttons.every((button) => button.props.disabled === true));
+      }
+      if (scenario === "status-read-failure") {
+        assert.match(JSON.stringify(renderer.toJSON()), /Retained finding/);
+        assert.ok(renderer.root.findByProps({ "data-testid": "diagnosis-status-error" }));
+        assert.equal(renderer.root.findAllByType(OdosSelect).find((node) => node.props.ariaLabel === "Problem status")?.props.disabled, false);
+      }
+    } finally {
+      act(() => renderer?.unmount());
+      globalThis.fetch = originalFetch;
+    }
+  });
+}
+
+
+test("Assessment completion pointer targets the diagnosis and disappears when complete", () => {
+  const selected: string[] = [];
+  const renderer = create(<DiagnosisCompletionLink conditionReference="Condition/a" missingComplexity missingVisitStatus onOpenDiagnosis={(reference) => selected.push(reference)} />);
+  assert.match(JSON.stringify(renderer.toJSON()), /complexity and visit status/);
+  act(() => renderer.root.findByType("button").props.onClick());
+  assert.deepEqual(selected, ["Condition/a"]);
+  act(() => renderer.update(<DiagnosisCompletionLink conditionReference="Condition/a" missingComplexity={false} missingVisitStatus={false} onOpenDiagnosis={() => undefined} />));
+  assert.equal(renderer.toJSON(), null);
+  act(() => renderer.unmount());
+  const scene = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
+  assert.match(scene, /onOpenDiagnosis=\{\(reference\) => selectChartView\("diagnosis", reference\)\}/);
+  assert.match(scene, /if \(diagnosisReference\) setSelectedDiagnosis\(\{ workspaceKey: diagnosisWorkspaceKey, reference: diagnosisReference \}\)/);
+});
+
+
+test("doctor chooses Established with one tap and the header shows the saved choice after reload", async () => {
+  const originalFetch = globalThis.fetch;
+  let value = "new";
+  let source = "suggestion";
+  let writes = 0;
+  const baseFetch = workspaceRaceFetch({ findings: async () => jsonResponse(raceFindingsPayload("Condition/a", "A finding", "2026-09-01T12:00:00Z")) });
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith("/diagnosis-newness")) return jsonResponse({ rows: [{ conditionReference: "Condition/a", value, source }] });
+    if (url.endsWith("/diagnoses/a/newness")) {
+      assert.equal(init?.method, "PUT");
+      assert.deepEqual(JSON.parse(String(init?.body)), { value: "established" });
+      writes += 1;
+      value = "established";
+      source = "doctor";
+      return jsonResponse({ newness: { conditionReference: "Condition/a", value, source } });
+    }
+    return baseFetch(input, init);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  const mount = () => create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/a" onSelectDiagnosis={() => undefined} />);
+  try {
+    await act(async () => { renderer = mount(); });
+    assert.match(JSON.stringify(renderer.toJSON()), /ODOS suggestion/);
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Diagnosis New or Established" }).findAllByType("button").find((button) => button.children.includes("Established"))!.props.onClick();
+    });
+    act(() => renderer.unmount());
+    await act(async () => { renderer = mount(); });
+    assert.equal(writes, 1);
+    assert.match(JSON.stringify(renderer.toJSON()), /Doctor's choice/);
+    assert.equal(renderer.root.findByProps({ "aria-label": "Diagnosis New or Established" }).findAllByType("button").find((button) => button.children.includes("Established"))!.props["aria-pressed"], true);
+  } finally { act(() => renderer?.unmount()); globalThis.fetch = originalFetch; }
+});
+
+test("partial newness response keeps doctor choice visible and marks only unavailable diagnosis", async () => {
+  const originalFetch = globalThis.fetch;
+  const baseFetch = workspaceRaceFetch({ findings: async () => jsonResponse(raceFindingsPayload("Condition/a", "Retained finding", "2026-09-01T12:00:00Z")) });
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    if (String(input).endsWith("/diagnosis-newness")) return jsonResponse({ rows: [
+      { conditionReference: "Condition/a", source: "doctor", value: "established" },
+      { conditionReference: "Condition/b", source: "unavailable" },
+    ] });
+    return baseFetch(input, init);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  const view = (reference: string) => <DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference={reference} onSelectDiagnosis={() => undefined} />;
+  try {
+    await act(async () => { renderer = create(view("Condition/a")); });
+    assert.match(JSON.stringify(renderer.toJSON()), /Doctor's choice/);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "diagnosis-newness-error" }).length, 0);
+    const buttons = () => renderer.root.findByProps({ "aria-label": "Diagnosis New or Established" }).findAllByType("button");
+    assert.equal(buttons().find((button) => button.children.includes("Established"))!.props["aria-pressed"], true);
+    await act(async () => { renderer.update(view("Condition/b")); });
+    assert.ok(renderer.root.findByProps({ "data-testid": "diagnosis-newness-error" }));
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /ODOS suggestion/);
+    assert.ok(buttons().every((button) => !button.props["aria-pressed"] && !button.props.disabled));
+  } finally { act(() => renderer?.unmount()); globalThis.fetch = originalFetch; }
+});

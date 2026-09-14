@@ -1,0 +1,83 @@
+{
+  "cases": [
+    {
+      "guard": "most-recent-governs",
+      "brokenExit": 1,
+      "restoredExit": 0
+    },
+    {
+      "guard": "resolved-history",
+      "brokenExit": 1,
+      "restoredExit": 0
+    },
+    {
+      "guard": "history-window",
+      "brokenExit": 1,
+      "restoredExit": 0
+    },
+    {
+      "guard": "computed-override-precedence",
+      "brokenExit": 1,
+      "restoredExit": 0
+    },
+    {
+      "guard": "visit-signed",
+      "brokenExit": 1,
+      "restoredExit": 0
+    },
+    {
+      "guard": "newness-signed",
+      "brokenExit": 1,
+      "restoredExit": 0
+    },
+    {
+      "guard": "server-signed",
+      "brokenExit": 1,
+      "restoredExit": 0
+    },
+    {
+      "guard": "ranking-feed",
+      "brokenExit": 1,
+      "restoredExit": 0
+    },
+    {
+      "guard": "override-precedence",
+      "brokenExit": 1,
+      "restoredExit": 0
+    },
+    {
+      "guard": "assessment-pointer",
+      "brokenExit": 1,
+      "restoredExit": 0
+    },
+    {
+      "guard": "status-degradation",
+      "brokenExit": 1,
+      "restoredExit": 0
+    },
+    {
+      "guard": "visit-resolution",
+      "brokenExit": 1,
+      "restoredExit": 0
+    },
+    {
+      "guard": "mixed-eye",
+      "brokenExit": 1,
+      "restoredExit": 0
+    },
+    {
+      "guard": "doctor-survives",
+      "brokenExit": 1,
+      "restoredExit": 0
+    },
+    {
+      "guard": "unavailable-ui",
+      "brokenExit": 1,
+      "restoredExit": 0
+    }
+  ],
+  "count": 15,
+  "absoluteUserPaths": 0,
+  "sourceRestored": true,
+  "historicalArtifactsPreserved": true
+}

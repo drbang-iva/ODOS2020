@@ -1,0 +1,26 @@
+TAP version 13
+# Subtest: partial newness response keeps doctor choice visible and marks only unavailable diagnosis
+not ok 1 - partial newness response keeps doctor choice visible and marks only unavailable diagnosis
+  ---
+  duration_ms: 38.761958
+  type: 'test'
+  location: 'ui/tests/diagnosisWorkspace.test.tsx:1:75740'
+  failureType: 'testCodeFailure'
+  error: 'No instances found with props: {"data-testid":"diagnosis-newness-error"}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    expectOne (ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:18499:9)
+    ReactTestInstance.findByProps (ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:18395:12)
+    TestContext.<anonymous> (ui/tests/diagnosisWorkspace.test.tsx:2009:29)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 271.605

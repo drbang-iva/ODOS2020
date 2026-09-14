@@ -1,0 +1,10 @@
+{
+  "cwd": ".",
+  "command": [
+    "npm",
+    "--prefix",
+    "mcp",
+    "test"
+  ],
+  "exit": 0
+}

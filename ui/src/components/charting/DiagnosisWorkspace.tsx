@@ -9,6 +9,13 @@ import {
   type EyeChoice,
 } from "../../lib/clinical-actions";
 import {
+  DIAGNOSIS_VISIT_STATUSES,
+  readDiagnosisVisitStatuses,
+  readDiagnosisNewness,
+  updateDiagnosisNewness,
+  type DiagnosisNewnessRow,
+  updateDiagnosisVisitStatus,
+  type DiagnosisVisitStatus,
   authHeaders,
   clinicalGraphApiBase,
   procedureChargeApi,
@@ -32,6 +39,7 @@ import {
 } from "../../lib/fhir-clinical/condition";
 import { searchAll } from "../../lib/fhir-search";
 import { OdosSearchPicker, type OdosSearchPickerOption } from "../inputs/OdosSearchPicker";
+import { OdosSelect } from "../inputs/OdosSelect";
 import { OdosChips } from "../inputs/OdosChips";
 import {
   DiagnosisProblemStatusField,
@@ -113,6 +121,10 @@ export function DiagnosisWorkspace({
 }: Props) {
   const encounterId = encounterReference.replace(/^Encounter\//, "");
   const [encounter, setEncounter] = useState<Encounter>();
+  const [newnessRows, setNewnessRows] = useState<Record<string, DiagnosisNewnessRow>>({});
+  const [newnessError, setNewnessError] = useState<string>();
+  const [visitStatusError, setVisitStatusError] = useState<string>();
+  const [visitStatuses, setVisitStatuses] = useState<Record<string, DiagnosisVisitStatus>>({});
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [provenanceLines, setProvenanceLines] = useState<Record<string, string>>({});
   const [quickList, setQuickList] = useState<DiagnosisQuickListRow[]>([]);
@@ -147,7 +159,7 @@ export function DiagnosisWorkspace({
     setLoading(true);
     setError(undefined);
     try {
-      const [nextEncounter, searchedConditions, quickResponse, nextFindings, nextCandidateFindings, procedureResult] = await Promise.all([
+      const [nextEncounter, searchedConditions, quickResponse, nextFindings, nextCandidateFindings, procedureResult, nextNewness, nextVisitStatuses] = await Promise.all([
         fhir.read<Encounter>("Encounter", encounterId),
         searchAll<Condition>(fhir, "Condition", { encounter: encounterReference }),
         fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-quick-list`, { headers: authHeaders() }),
@@ -159,6 +171,14 @@ export function DiagnosisWorkspace({
             response: undefined,
             error: caught instanceof Error ? caught.message : String(caught),
           }),
+        ),
+        readDiagnosisNewness(encounterId).then(
+          (rows) => ({ rows, error: undefined }),
+          () => ({ rows: [], error: "New / Established could not be loaded. Try again." }),
+        ),
+        readDiagnosisVisitStatuses(encounterId).then(
+          (rows) => ({ rows, error: undefined }),
+          () => ({ rows: [], error: "Visit status could not be loaded. Try again." }),
         ),
       ]);
       const quickBody = await quickResponse.json() as QuickListPayload;
@@ -184,6 +204,10 @@ export function DiagnosisWorkspace({
       }));
       if (loadGeneration.current !== requestGeneration) return;
       setEncounter(nextEncounter);
+      setVisitStatuses(Object.fromEntries(nextVisitStatuses.rows.map((row) => [row.conditionReference, row.status])));
+      setVisitStatusError(nextVisitStatuses.error);
+      setNewnessRows(Object.fromEntries(nextNewness.rows.map((row) => [row.conditionReference, row])));
+      setNewnessError(nextNewness.error);
       setConditions(searchedConditions);
       setProvenanceLines(nextProvenanceLines);
       setQuickList(quickBody.diagnoses ?? []);
@@ -656,13 +680,54 @@ export function DiagnosisWorkspace({
                 </div>
               </div>
             </div>
-            <DiagnosisProblemStatusField
-              value={encounterDiagnosisProblemStatus(selectedEntry)}
-              disabled={!canWrite || busy !== undefined}
-              onChange={(problemStatus) => void run("problem-status", async () => {
-                await updateEncounterDiagnosisProblemStatus({ encounter, condition: selectedCondition, problemStatus });
-              })}
-            />
+            <div className="flex flex-wrap items-start gap-2">
+              <DiagnosisProblemStatusField
+                value={encounterDiagnosisProblemStatus(selectedEntry)}
+                disabled={!canWrite || loading || busy !== undefined || encounter.status === "finished"}
+                onChange={(problemStatus) => void run("problem-status", async () => {
+                  await updateEncounterDiagnosisProblemStatus({ encounter, condition: selectedCondition, problemStatus });
+                })}
+              />
+              <div className="rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface-2)] p-2">
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">Visit status</div>
+                {visitStatusError && <div role="alert" data-testid="diagnosis-status-error">{visitStatusError} <button type="button" onClick={() => void load()}>Retry</button></div>}
+                <OdosSelect<DiagnosisVisitStatus | "">
+                  value={visitStatuses[selectedReference!] === "new" ? "" : visitStatuses[selectedReference!] ?? ""}
+                  disabled={!canWrite || loading || busy !== undefined || encounter.status === "finished" || Boolean(visitStatusError)}
+                  options={[
+                    { value: "", label: "Select visit status", disabled: true },
+                    ...DIAGNOSIS_VISIT_STATUSES.filter((status) => status !== "new").map((status) => ({
+                      value: status,
+                      label: status[0]!.toUpperCase() + status.slice(1).replaceAll("-", " "),
+                    })),
+                  ]}
+                  onChange={(status) => {
+                    if (status) void run("visit-status", async () => {
+                      await updateDiagnosisVisitStatus({ encounterId, conditionId: selectedCondition.id!, status });
+                    });
+                  }}
+                  ariaLabel="Diagnosis visit status"
+                />
+              </div>
+              <div className="rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface-2)] p-2">
+                <div className="mb-1 text-xs text-[color:var(--odos-muted)]">
+                  {newnessRows[selectedReference!]?.source === "doctor" ? "Doctor's choice" : newnessRows[selectedReference!]?.source === "suggestion" ? "ODOS suggestion" : "New / Established"}
+                </div>
+                {(newnessError || newnessRows[selectedReference!]?.source === "unavailable") && <div role="alert" data-testid="diagnosis-newness-error">{newnessError ?? "Suggestion unavailable. Retry or record a doctor’s choice."} <button type="button" onClick={() => void load()}>Retry</button></div>}
+                <div role="group" aria-label="Diagnosis New or Established" className="flex gap-2">
+                  {(["new", "established"] as const).map((value) => (
+                    <button key={value} type="button" aria-pressed={newnessRows[selectedReference!]?.value === value}
+                      disabled={!canWrite || loading || busy !== undefined || encounter.status === "finished"}
+                      className="min-h-11 rounded border border-[color:var(--odos-line-2)] px-3 text-sm aria-pressed:bg-[color:var(--odos-accent-tint-hi)]"
+                      onClick={() => void run("newness", async () => {
+                        await updateDiagnosisNewness({ encounterId, conditionId: selectedCondition.id!, value });
+                      })}>
+                      {value === "new" ? "New" : "Established"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
             {findings ? (
               <DiagnosisFindingsTable
                 payload={findings}

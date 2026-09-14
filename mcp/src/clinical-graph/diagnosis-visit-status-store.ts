@@ -1,3 +1,4 @@
+import type { DiagnosisNewnessOverride, DiagnosisNewnessStore } from "./diagnosis-newness-types.js";
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,12 +13,21 @@ const STATUS_SCHEMA_FILE = fileURLToPath(
   new URL("../../../data/migrations/2026-07-21-encounter-diagnosis-statuses.sql", import.meta.url),
 );
 
+const NEWNESS_SCHEMA_FILE = fileURLToPath(
+  new URL("../../../data/migrations/2026-09-14-diagnosis-newness-overrides.sql", import.meta.url),
+);
+
 export const DIAGNOSIS_VISIT_STATUSES = [
   "new",
   "stable",
   "improved",
   "worsening",
   "resolved-this-visit",
+  "well-controlled",
+  "resolving",
+  "inadequately-controlled",
+  "unchanged",
+  "not-at-treatment-goal",
 ] as const;
 
 export type DiagnosisVisitStatus = (typeof DIAGNOSIS_VISIT_STATUSES)[number];
@@ -42,7 +52,7 @@ export interface DiagnosisVisitStatusStore {
   }): Promise<DiagnosisVisitStatusRow>;
 }
 
-export class PgDiagnosisVisitStatusStore implements DiagnosisVisitStatusStore {
+export class PgDiagnosisVisitStatusStore implements DiagnosisVisitStatusStore, DiagnosisNewnessStore {
   private readonly pool: Pool;
   private schemaReady?: Promise<void>;
 
@@ -77,6 +87,12 @@ export class PgDiagnosisVisitStatusStore implements DiagnosisVisitStatusStore {
     assertVisitStatus(input.status);
     await this.ensureSchema();
     const result = await this.pool.query<DiagnosisVisitStatusDbRow>(`
+      WITH preserve_legacy_new AS (
+        INSERT INTO odos_encounter_diagnosis_newness_overrides (encounter_id, condition_reference, value, set_by, set_at)
+        SELECT encounter_id, condition_reference, 'new', set_by, set_at
+        FROM odos_encounter_diagnosis_statuses WHERE condition_reference = $1 AND status = 'new'
+        ON CONFLICT (encounter_id, condition_reference) DO NOTHING
+      )
       INSERT INTO odos_encounter_diagnosis_statuses (
         condition_reference, encounter_id, status, set_by, set_at, updated_at
       ) VALUES ($1, $2, $3, $4, $5::timestamptz, $5::timestamptz)
@@ -88,6 +104,29 @@ export class PgDiagnosisVisitStatusStore implements DiagnosisVisitStatusStore {
     `, [input.conditionReference, input.encounterId, input.status, input.setBy, input.at]);
     if (!result.rows[0]) throw new Error("Diagnosis visit status was not returned after persistence.");
     return rowFromDb(result.rows[0]);
+  }
+
+  async listNewnessOverrides(encounterId: string): Promise<DiagnosisNewnessOverride[]> {
+    await this.ensureSchema();
+    const result = await this.pool.query<DiagnosisNewnessOverride>(`
+      SELECT encounter_id AS "encounterId", condition_reference AS "conditionReference",
+        value, set_by AS "setBy", set_at::text AS "setAt"
+      FROM odos_encounter_diagnosis_newness_overrides WHERE encounter_id = $1
+    `, [encounterId]);
+    return result.rows;
+  }
+
+  async upsertNewnessOverride(input: Parameters<DiagnosisNewnessStore["upsertNewnessOverride"]>[0]): Promise<DiagnosisNewnessOverride> {
+    await this.ensureSchema();
+    const result = await this.pool.query<DiagnosisNewnessOverride>(`
+      INSERT INTO odos_encounter_diagnosis_newness_overrides (encounter_id, condition_reference, value, set_by, set_at)
+      VALUES ($1, $2, $3, $4, $5::timestamptz)
+      ON CONFLICT (encounter_id, condition_reference) DO UPDATE SET
+        value = EXCLUDED.value, set_by = EXCLUDED.set_by, set_at = EXCLUDED.set_at
+      RETURNING encounter_id AS "encounterId", condition_reference AS "conditionReference",
+        value, set_by AS "setBy", set_at::text AS "setAt"
+    `, [input.encounterId, input.conditionReference, input.value, input.setBy, input.at]);
+    return result.rows[0]!;
   }
 
   async close(): Promise<void> {
@@ -105,11 +144,13 @@ export class PgDiagnosisVisitStatusStore implements DiagnosisVisitStatusStore {
       await client.query(await readFile(SCHEMA_LEDGER_FILE, "utf8"));
       await client.query("BEGIN");
       await client.query("LOCK TABLE odos_schema_migrations IN SHARE ROW EXCLUSIVE MODE");
-      const filename = basename(STATUS_SCHEMA_FILE);
-      const applied = await client.query("SELECT 1 FROM odos_schema_migrations WHERE filename = $1", [filename]);
-      if (!applied.rowCount) {
-        await client.query(await readFile(STATUS_SCHEMA_FILE, "utf8"));
-        await client.query("INSERT INTO odos_schema_migrations (filename) VALUES ($1)", [filename]);
+      for (const schemaFile of [STATUS_SCHEMA_FILE, NEWNESS_SCHEMA_FILE]) {
+        const filename = basename(schemaFile);
+        const applied = await client.query("SELECT 1 FROM odos_schema_migrations WHERE filename = $1", [filename]);
+        if (!applied.rowCount) {
+          await client.query(await readFile(schemaFile, "utf8"));
+          await client.query("INSERT INTO odos_schema_migrations (filename) VALUES ($1)", [filename]);
+        }
       }
       await client.query("COMMIT");
     } catch (error) {

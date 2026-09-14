@@ -1,0 +1,65 @@
+TAP version 13
+# Subtest: all ten visit statuses agree across clients and pass the update endpoint
+not ok 1 - all ten visit statuses agree across clients and pass the update endpoint
+  ---
+  duration_ms: 1.97925
+  type: 'test'
+  location: 'mcp/tests/diagnosisVisitStatus.test.ts:1:8142'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        'new',
+        'stable',
+        'improved',
+        'worsening',
+        'resolved-this-visit',
+    -   'well-controlled',
+        'resolving',
+        'inadequately-controlled',
+        'unchanged',
+        'not-at-treatment-goal'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'new'
+    1: 'stable'
+    2: 'improved'
+    3: 'worsening'
+    4: 'resolved-this-visit'
+    5: 'well-controlled'
+    6: 'resolving'
+    7: 'inadequately-controlled'
+    8: 'unchanged'
+    9: 'not-at-treatment-goal'
+  actual:
+    0: 'new'
+    1: 'stable'
+    2: 'improved'
+    3: 'worsening'
+    4: 'resolved-this-visit'
+    5: 'resolving'
+    6: 'inadequately-controlled'
+    7: 'unchanged'
+    8: 'not-at-treatment-goal'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/diagnosisVisitStatus.test.ts:251:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 181.450083
