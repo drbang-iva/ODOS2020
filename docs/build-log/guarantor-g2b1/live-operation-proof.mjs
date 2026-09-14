@@ -10,7 +10,7 @@ import { sourceRoot, refreshFixtureTokens, successfulHttp, http, grantPatients, 
 const appOrigin = 'http://127.0.0.1:28765';
 const fixture = await refreshFixtureTokens();
 const startedAt = new Date().toISOString();
-const paths = ['mcp/src/clinic/guarantor-link-operation.ts', 'mcp/src/clinic/guarantor-routes.ts', 'mcp/src/fhir-client.ts', 'ui/src/lib/guarantor-editor.ts', 'ui/src/lib/guarantor-link-operations.ts'];
+const paths = ['mcp/src/clinic/guarantor-link-operation.ts', 'mcp/src/clinic/guarantor-routes.ts', 'mcp/src/fhir-client.ts', 'ui/src/lib/guarantor-editor.ts', 'ui/src/lib/guarantor-link-operations.ts', 'mcp/src/authz/role-grants.ts'];
 const provenance = () => ({ head: spawnSync('git', ['rev-parse', 'HEAD'], { cwd: sourceRoot, encoding: 'utf8' }).stdout.trim(), files: Object.fromEntries(paths.map(path => [path, createHash('sha256').update(readFileSync(resolve(sourceRoot, path))).digest('hex')])) });
 const beforeSource = provenance();
 const fromSource = path => import(pathToFileURL(resolve(sourceRoot, path)).href);
@@ -244,6 +244,11 @@ try {
     const siblingSaved = await context.run({ runner: 'editor-sibling' }, () => editor.saveGuarantor(sibling.snapshot, { name: name('L3 sibling source saved'), telecom: [], address: [] }));
     check('Sibling G2a save remains normal', siblingSaved.status, 'saved');
     check('Sibling child write lands', siblingSaved.children.map(child => child.writeStatus), ['updated']);
+    const foreignBasedOn = [];
+    for (const status of ['in-progress', 'completed']) foreignBasedOn.push(await make({ resourceType: 'Task', intent: 'order', status,
+      code: { coding: [{ system: 'https://odos2020.com/fhir/CodeSystem/task-type', code: 'lab-order-transmission' }] },
+      basedOn: [{ reference: `Task/${original.body.task.id}` }], description: 'Synthetic foreign-code step0 guard; no lab submit path invoked' }));
+    check('Foreign-code based-on fixtures are genuinely service authored', foreignBasedOn.map(task => task.meta.author.reference), [fixture.serviceReference, fixture.serviceReference]);
     const first = events.length;
     const complete = await route('A-complete', 'complete', undefined, original.body.task.id);
     check('Complete completes pending operation', [complete.status, complete.body.task?.status], [200, 'completed']);
@@ -255,7 +260,7 @@ try {
     check('Complete releases the claim', claimRefs(final.child), []);
     const siblingFinal = await read('RelatedPerson', family.sibling.id);
     check('Sibling remains under S', await owners(siblingFinal), [family.source.id]);
-    return { patientIds: [family.patient.id, family.siblingPatient.id], family, original, pending, editorPending: loaded, siblingSaved, complete, final, siblingFinal };
+    return { patientIds: [family.patient.id, family.siblingPatient.id], family, original, pending, editorPending: loaded, siblingSaved, foreignBasedOn, complete, final, siblingFinal };
   });
 
   await runCase('L4', async () => {

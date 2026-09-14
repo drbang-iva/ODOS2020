@@ -1,0 +1,834 @@
+{
+  "cause": "Grant entries and parameters had noncanonical ordering. Actual repository compiler proves identical grants before/after; actual sync normalized ordering only. Fixture grant helper now uses the same compiler.",
+  "before": {
+    "id": "a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+    "version": "32fcdc8d-7a6c-48ba-a792-d4a3dace1a11",
+    "access": [
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+          },
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/b5f77c99-d1ca-4288-97be-b07515a2ac5f"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/b5f77c99-d1ca-4288-97be-b07515a2ac5f"
+          },
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/b5f77c99-d1ca-4288-97be-b07515a2ac5f"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/f68f3f85-d162-4de6-8d3d-9b4d7f3963c1"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/f68f3f85-d162-4de6-8d3d-9b4d7f3963c1"
+          },
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/f68f3f85-d162-4de6-8d3d-9b4d7f3963c1"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/132d1986-1581-4f42-9f53-be5d5846899a"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/132d1986-1581-4f42-9f53-be5d5846899a"
+          },
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/132d1986-1581-4f42-9f53-be5d5846899a"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/e0e40830-0238-4e28-a853-4f1b29cbab88"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/e0e40830-0238-4e28-a853-4f1b29cbab88"
+          },
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/e0e40830-0238-4e28-a853-4f1b29cbab88"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/0a9ea84d-61ec-4d00-b10a-57530021b87e"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/0a9ea84d-61ec-4d00-b10a-57530021b87e"
+          },
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/0a9ea84d-61ec-4d00-b10a-57530021b87e"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/aba877e6-f110-4e7b-8b68-632a2a7824e5"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/aba877e6-f110-4e7b-8b68-632a2a7824e5"
+          },
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/aba877e6-f110-4e7b-8b68-632a2a7824e5"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/839e60ed-d842-4044-9106-4277da8f2f1f"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/839e60ed-d842-4044-9106-4277da8f2f1f"
+          },
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/839e60ed-d842-4044-9106-4277da8f2f1f"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/2ac60c42-a817-41b0-a648-93f57d58b7e4"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/2ac60c42-a817-41b0-a648-93f57d58b7e4"
+          },
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/2ac60c42-a817-41b0-a648-93f57d58b7e4"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/538f7ca3-4e02-4243-9061-65c34a913d5f"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/538f7ca3-4e02-4243-9061-65c34a913d5f"
+          },
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/538f7ca3-4e02-4243-9061-65c34a913d5f"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/415905c1-a711-4dfe-bc4e-e85eab863742"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/415905c1-a711-4dfe-bc4e-e85eab863742"
+          },
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/415905c1-a711-4dfe-bc4e-e85eab863742"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/3763b833-b6e4-4d40-ac15-f086868144bc"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/3763b833-b6e4-4d40-ac15-f086868144bc"
+          },
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/3763b833-b6e4-4d40-ac15-f086868144bc"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/ff234ca9-10b0-4172-8307-455db8e8e7f2"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/ff234ca9-10b0-4172-8307-455db8e8e7f2"
+          },
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/ff234ca9-10b0-4172-8307-455db8e8e7f2"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/ffdd6edc-5cc6-447b-a3d9-75f8951ef4e1"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/ffdd6edc-5cc6-447b-a3d9-75f8951ef4e1"
+          },
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/ffdd6edc-5cc6-447b-a3d9-75f8951ef4e1"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "after": {
+    "id": "a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+    "version": "4a36ce66-8208-4c10-850a-64ad001d16f3",
+    "access": [
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/0a9ea84d-61ec-4d00-b10a-57530021b87e"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/0a9ea84d-61ec-4d00-b10a-57530021b87e"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          },
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/0a9ea84d-61ec-4d00-b10a-57530021b87e"
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/132d1986-1581-4f42-9f53-be5d5846899a"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/132d1986-1581-4f42-9f53-be5d5846899a"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          },
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/132d1986-1581-4f42-9f53-be5d5846899a"
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/2ac60c42-a817-41b0-a648-93f57d58b7e4"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/2ac60c42-a817-41b0-a648-93f57d58b7e4"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          },
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/2ac60c42-a817-41b0-a648-93f57d58b7e4"
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/3763b833-b6e4-4d40-ac15-f086868144bc"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/3763b833-b6e4-4d40-ac15-f086868144bc"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          },
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/3763b833-b6e4-4d40-ac15-f086868144bc"
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/415905c1-a711-4dfe-bc4e-e85eab863742"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/415905c1-a711-4dfe-bc4e-e85eab863742"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          },
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/415905c1-a711-4dfe-bc4e-e85eab863742"
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/538f7ca3-4e02-4243-9061-65c34a913d5f"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/538f7ca3-4e02-4243-9061-65c34a913d5f"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          },
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/538f7ca3-4e02-4243-9061-65c34a913d5f"
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          },
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/839e60ed-d842-4044-9106-4277da8f2f1f"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/839e60ed-d842-4044-9106-4277da8f2f1f"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          },
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/839e60ed-d842-4044-9106-4277da8f2f1f"
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/aba877e6-f110-4e7b-8b68-632a2a7824e5"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/aba877e6-f110-4e7b-8b68-632a2a7824e5"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          },
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/aba877e6-f110-4e7b-8b68-632a2a7824e5"
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/b5f77c99-d1ca-4288-97be-b07515a2ac5f"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/b5f77c99-d1ca-4288-97be-b07515a2ac5f"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          },
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/b5f77c99-d1ca-4288-97be-b07515a2ac5f"
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/e0e40830-0238-4e28-a853-4f1b29cbab88"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/e0e40830-0238-4e28-a853-4f1b29cbab88"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          },
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/e0e40830-0238-4e28-a853-4f1b29cbab88"
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/f68f3f85-d162-4de6-8d3d-9b4d7f3963c1"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/f68f3f85-d162-4de6-8d3d-9b4d7f3963c1"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          },
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/f68f3f85-d162-4de6-8d3d-9b4d7f3963c1"
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/ff234ca9-10b0-4172-8307-455db8e8e7f2"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/ff234ca9-10b0-4172-8307-455db8e8e7f2"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          },
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/ff234ca9-10b0-4172-8307-455db8e8e7f2"
+          }
+        ]
+      },
+      {
+        "policy": {
+          "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+        },
+        "parameter": [
+          {
+            "name": "admin_patient_compartment",
+            "valueString": "Patient/ffdd6edc-5cc6-447b-a3d9-75f8951ef4e1"
+          },
+          {
+            "name": "provider_patient_compartment",
+            "valueString": "Patient/ffdd6edc-5cc6-447b-a3d9-75f8951ef4e1"
+          },
+          {
+            "name": "provider_provider_profile",
+            "valueReference": {
+              "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+            }
+          },
+          {
+            "name": "staff_patient_compartment",
+            "valueString": "Patient/ffdd6edc-5cc6-447b-a3d9-75f8951ef4e1"
+          }
+        ]
+      }
+    ]
+  },
+  "grantsEquivalent": true,
+  "applied": {
+    "mode": "apply",
+    "policiesCreated": 0,
+    "policiesUpdated": 0,
+    "compositesRequired": 0,
+    "membershipsDrifted": 1,
+    "membershipsUpdated": 1,
+    "policies": [
+      {
+        "role": "provider",
+        "roles": [
+          "provider"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/9b2a8eab-2b53-4f89-b808-bca18533dfa8",
+        "policyName": "ODOS Provider",
+        "versionId": "c1adf929-739b-449c-871b-5e01ff547306",
+        "missingRules": [],
+        "unexpectedRules": []
+      },
+      {
+        "role": "staff",
+        "roles": [
+          "staff"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+        "policyName": "ODOS Staff",
+        "versionId": "ef9471e1-858d-470a-8168-3b7421b74fce",
+        "missingRules": [],
+        "unexpectedRules": []
+      },
+      {
+        "role": "admin",
+        "roles": [
+          "admin"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/9cc4b108-95d7-4c8d-9670-da1dc7ad2dce",
+        "policyName": "ODOS Admin / Manager",
+        "versionId": "8d5d3029-86a8-480b-82ba-d3842d50acb4",
+        "missingRules": [],
+        "unexpectedRules": []
+      },
+      {
+        "roles": [
+          "provider",
+          "staff",
+          "admin"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
+        "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
+        "versionId": "b5f9d210-b847-4cf1-a061-130976731e18",
+        "missingRules": [],
+        "unexpectedRules": []
+      }
+    ]
+  },
+  "verified": {
+    "mode": "dry-run",
+    "policiesCreated": 0,
+    "policiesUpdated": 0,
+    "compositesRequired": 0,
+    "membershipsDrifted": 0,
+    "membershipsUpdated": 0,
+    "policies": [
+      {
+        "role": "provider",
+        "roles": [
+          "provider"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/9b2a8eab-2b53-4f89-b808-bca18533dfa8",
+        "policyName": "ODOS Provider",
+        "versionId": "c1adf929-739b-449c-871b-5e01ff547306",
+        "missingRules": [],
+        "unexpectedRules": []
+      },
+      {
+        "role": "staff",
+        "roles": [
+          "staff"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+        "policyName": "ODOS Staff",
+        "versionId": "ef9471e1-858d-470a-8168-3b7421b74fce",
+        "missingRules": [],
+        "unexpectedRules": []
+      },
+      {
+        "role": "admin",
+        "roles": [
+          "admin"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/9cc4b108-95d7-4c8d-9670-da1dc7ad2dce",
+        "policyName": "ODOS Admin / Manager",
+        "versionId": "8d5d3029-86a8-480b-82ba-d3842d50acb4",
+        "missingRules": [],
+        "unexpectedRules": []
+      },
+      {
+        "roles": [
+          "provider",
+          "staff",
+          "admin"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
+        "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
+        "versionId": "b5f9d210-b847-4cf1-a061-130976731e18",
+        "missingRules": [],
+        "unexpectedRules": []
+      }
+    ]
+  }
+}

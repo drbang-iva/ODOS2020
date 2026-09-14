@@ -1,0 +1,119 @@
+{
+  "checkedAt": "2026-09-14T10:42:10.603Z",
+  "composeProject": "g2b1-build-live",
+  "image": "medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de",
+  "health": {
+    "ok": true,
+    "version": "5.1.30-9b1bd92",
+    "platform": "linux",
+    "runtime": "v24.18.1",
+    "postgres": true,
+    "redis": true,
+    "redisInstances": {
+      "default": true
+    }
+  },
+  "projects": [
+    {
+      "id": "97d4724e-f504-4e3a-9879-dd809cde3167",
+      "name": "Super Admin",
+      "features": [],
+      "version": "924adae4-ed1e-4453-9454-becb7d0de790"
+    },
+    {
+      "id": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+      "name": "G2b1 build synthetic A",
+      "features": [],
+      "version": "3e26f868-b6f6-4705-81fe-a1de8afad29b"
+    },
+    {
+      "id": "cd1c78b4-f8f8-46fc-aacc-76c82a52ea10",
+      "name": "G2b1 build synthetic B",
+      "features": [],
+      "version": "bc3817d6-2620-439b-9306-0fd8f68e1052"
+    }
+  ],
+  "principals": {
+    "staff": {
+      "profileReference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "roles": [
+        "staff"
+      ],
+      "membershipId": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
+      "admin": false,
+      "policyId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "accessEntries": 4
+    },
+    "composite": {
+      "profileReference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89",
+      "roles": [
+        "staff",
+        "provider",
+        "admin"
+      ],
+      "membershipId": "a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+      "admin": false,
+      "policyId": "ca61bba9-d680-4ccb-b151-e44a6b587785",
+      "accessEntries": 14
+    }
+  },
+  "policySync": {
+    "mode": "dry-run",
+    "policiesCreated": 0,
+    "policiesUpdated": 0,
+    "compositesRequired": 0,
+    "membershipsDrifted": 0,
+    "membershipsUpdated": 0,
+    "policies": [
+      {
+        "role": "provider",
+        "roles": [
+          "provider"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/9b2a8eab-2b53-4f89-b808-bca18533dfa8",
+        "policyName": "ODOS Provider",
+        "versionId": "c1adf929-739b-449c-871b-5e01ff547306",
+        "missingRules": [],
+        "unexpectedRules": []
+      },
+      {
+        "role": "staff",
+        "roles": [
+          "staff"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+        "policyName": "ODOS Staff",
+        "versionId": "ef9471e1-858d-470a-8168-3b7421b74fce",
+        "missingRules": [],
+        "unexpectedRules": []
+      },
+      {
+        "role": "admin",
+        "roles": [
+          "admin"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/9cc4b108-95d7-4c8d-9670-da1dc7ad2dce",
+        "policyName": "ODOS Admin / Manager",
+        "versionId": "8d5d3029-86a8-480b-82ba-d3842d50acb4",
+        "missingRules": [],
+        "unexpectedRules": []
+      },
+      {
+        "roles": [
+          "provider",
+          "staff",
+          "admin"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
+        "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
+        "versionId": "b5f9d210-b847-4cf1-a061-130976731e18",
+        "missingRules": [],
+        "unexpectedRules": []
+      }
+    ]
+  }
+}

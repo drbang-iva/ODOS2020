@@ -134,7 +134,7 @@ export async function refreshFixtureTokens(fixture = loadPrivateFixture()) {
 export async function grantPatients(fixture, principalName, patientIds) {
   const principal = fixture.principals[principalName];
   const membership = await successfulHttp(fixture, 'GET', `/fhir/R4/ProjectMembership/${principal.membershipId}`);
-  const access = patientIds.map((id) => {
+  let access = patientIds.map((id) => {
     const parameter = principal.roles.map((role) => ({
       name: principal.roles.length === 1 ? 'patient_compartment' : `${role}_patient_compartment`,
       valueString: `Patient/${id}`,
@@ -145,6 +145,11 @@ export async function grantPatients(fixture, principalName, patientIds) {
     });
     return { policy: { reference: `AccessPolicy/${principal.policyId}` }, parameter };
   });
+  if (principal.roles.length > 1) {
+    const { compileCompositeMembershipAccess } = await import(pathToFileURL(resolve(sourceRoot, 'mcp/src/authz/role-grants.ts')).href);
+    const reference = `AccessPolicy/${principal.policyId}`;
+    access = compileCompositeMembershipAccess(access, new Map([[reference, principal.roles]]), reference);
+  }
   const { accessPolicy, ...envelope } = membership;
   await successfulHttp(fixture, 'PUT', `/fhir/R4/ProjectMembership/${membership.id}`, {
     body: { ...envelope, admin: false, access },

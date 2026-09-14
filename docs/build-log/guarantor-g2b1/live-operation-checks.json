@@ -1,0 +1,14 @@
+{
+  "files": 9,
+  "jsonFiles": 6,
+  "knownCredentialLeaks": 0,
+  "authSessionDetails": 0,
+  "credentialFileMode": "600",
+  "privateDirectoryMode": "700",
+  "scenarioCount": 13,
+  "assertions": 115,
+  "failed": 0,
+  "sourceDigestsUnchanged": true,
+  "policyDrift": 0,
+  "membershipDrift": 0
+}
