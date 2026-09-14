@@ -50,6 +50,8 @@ R1's mutant retains the claim and reports interference. R2's mutant leaves A com
 
 Raw per-control files are `<guard>-green.tap`, `<guard>-red.tap`, and `<guard>-restored.tap`.
 
+Large raw captures and full-suite transcripts are stored losslessly as `.gz` files so the PR diff stays reviewable. [evidence-archives.json](evidence-archives.json) records original sizes and hashes; `gzip -dc <file.gz>` prints the original bytes. Small red/green guard outputs remain directly readable.
+
 ## Regression results
 
 | Command / surface | Unchanged baseline | Final restored source |
@@ -77,14 +79,14 @@ The initial fresh-worktree run also lacked root `tsx`; installing the locked roo
 
 Own compose project `g2br-live`, loopback Medplum `127.0.0.1:29080`, Postgres `29081`, Redis `29082`. Health: **5.1.30-9b1bd92**, pinned image digest recorded in [live-runtime.json](live-runtime.json). `transaction-bundles` is absent on all three synthetic projects. The real service identity and two authenticated non-admin memberships are recorded in [live-resource-state.json](live-resource-state.json) and [live-staff-auth.json](live-staff-auth.json). The staff rules match the shipped policy compiler after policy sync.
 
-[Before](live-before.json): 41 assertions, 100 engine transactions. [After](live-after.json): 39 assertions, 125 engine transactions. **80 assertions total**, all matched. These are two bounded schedules per engine, not exhaustive concurrency coverage.
+[Before](live-before.json.gz): 41 assertions, 100 engine transactions. [After](live-after.json.gz): 39 assertions, 125 engine transactions. **80 assertions total**, all matched. These are two bounded schedules per engine, not exhaustive concurrency coverage.
 
 | Schedule | Real unchanged engine | Real repaired engine |
 |---|---|---|
 | X1 | Two Complete calls `409 / interfered`; owners `[]`; claim C retained | Complete `200 / linked`; C completed; owners `[S]`; no claim |
 | X2 | Two Complete calls `409 / interfered`; A completed; C in-progress | Complete `200 / linked`; A cancelled; C completed; owners `[D]`; B's child version preserved; zero child write attempts after B |
 
-Both cases use the actual registered HTTP routes with staff tokens. All FHIR traffic goes to the disposable server, through the actual service client and audit runtime. The loss is injected only after a successful committed target response, with no status on the thrown error. A fresh read must find exactly one unresolved intent and a moved target version. HTTP request/response sequences are in [live-before-http.json](live-before-http.json) and [live-after-http.json](live-after-http.json). The first harness attempt accidentally targeted a Task checkpoint; it was corrected to target the specified Person/RelatedPerson write before the accepted captures were run.
+Both cases use the actual registered HTTP routes with staff tokens. All FHIR traffic goes to the disposable server, through the actual service client and audit runtime. The loss is injected only after a successful committed target response, with no status on the thrown error. A fresh read must find exactly one unresolved intent and a moved target version. HTTP request/response sequences are in [live-before-http.json](live-before-http.json.gz) and [live-after-http.json](live-after-http.json.gz). The first harness attempt accidentally targeted a Task checkpoint; it was corrected to target the specified Person/RelatedPerson write before the accepted captures were run.
 
 [Browser proof](browser-proof.json) mounts the actual `GuarantorLinkScreens` component, calls the real history route through Vite's existing proxy, and uses the **same persisted X2 state** in separate base/fixed worktrees. A remains completed and C remains in-progress in both captures. Before: two Undo controls. After: only B's Undo remains; A's Undo reason and button are absent. No API response is mocked. This proves the mounted history surface, not a whole patient-route walkthrough. Both captures have zero page errors and identical 1440×1000 dimensions.
 

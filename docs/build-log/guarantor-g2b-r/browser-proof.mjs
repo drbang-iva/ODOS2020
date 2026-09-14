@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'node:net';
+import { gunzipSync } from 'node:zlib';
 import { chromium } from '../../../ui/node_modules/playwright-core/index.mjs';
 import { SESSION_STORAGE_KEY } from '../../../ui/src/lib/fhir.ts';
 
@@ -13,7 +14,8 @@ assert.notEqual(root, base);
 const output = resolve(root, 'docs/build-log/guarantor-g2b-r');
 const privateDirectory = resolve(root, '.odos/g2br-live');
 const fixture = JSON.parse(readFileSync(resolve(privateDirectory, 'fixture-private.json'), 'utf8'));
-const x2 = JSON.parse(readFileSync(resolve(output, 'live-before.json'), 'utf8')).cases.find(c => c.scenario === 'X2');
+const beforePath = resolve(output, 'live-before.json');
+const x2 = JSON.parse(existsSync(beforePath) ? readFileSync(beforePath, 'utf8') : gunzipSync(readFileSync(beforePath + '.gz')).toString()).cases.find(c => c.scenario === 'X2');
 assert.equal(x2.final.tasks[0].status, 'completed');
 assert.equal(x2.final.tasks[1].status, 'in-progress');
 const children = [], temporaryFiles = [];
