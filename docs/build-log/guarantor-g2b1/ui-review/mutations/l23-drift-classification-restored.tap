@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: L23 S7: an edit after release is ordinary drift and Repair converges to current D
+ok 1 - L23 S7: an edit after release is ordinary drift and Repair converges to current D
+  ---
+  duration_ms: 29.592292
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 257.837958

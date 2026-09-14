@@ -1,0 +1,116 @@
+{
+  "kind": "Author UI review fixback checks",
+  "implementationCommits": [
+    "7d47ca1d6e9bd99625e9fb3beec5792550d6bcf9",
+    "b54710c87efbca79159887e974d3217db14a9b57"
+  ],
+  "sourceSha256": {
+    "ui/src/lib/guarantor-editor.ts": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06",
+    "ui/src/components/patient/ResponsiblePartiesControl.tsx": "3c9883c78a7a403ce376deb47f04ba610dc6851e7e251673959375a5c9f4ea80",
+    "ui/tests/guarantorLinkOperations.test.tsx": "18d6565736768f5e77dfa3e16cb53cdc0433ed34e89cef917cf28a886f4a83cd"
+  },
+  "unchangedPriorTestsAndFixture": true,
+  "tdd": [
+    {
+      "finding": "matching child claim skipped before sibling repair",
+      "beforeFix": {
+        "exitCode": 1,
+        "observed": "RelatedPerson/b PUT returned 200 while matching child a had an active claim"
+      },
+      "final": "no child PUT; both children stopped; superseded"
+    },
+    {
+      "finding": "correction draft persisted after pending Task identity changed",
+      "beforeFix": {
+        "exitCode": 1,
+        "observed": "old explanation remained in new pending Task"
+      },
+      "final": "same-Task refusal retains explanation; new Task clears it and disables Correct"
+    }
+  ],
+  "focused": {
+    "command": "node --import tsx --test --test-concurrency=1 tests/guarantorLinkOperations.test.tsx tests/guarantorEditor.test.tsx tests/guarantorPropagation.test.tsx tests/demographicsConcurrency.test.tsx",
+    "cwd": "ui",
+    "exitCode": 0,
+    "tests": 46,
+    "pass": 46,
+    "fail": 0,
+    "newOperationTests": 12,
+    "unchangedEditorTests": 9,
+    "unchangedPropagationTests": 22,
+    "unchangedDemographicsConcurrencyTests": 3
+  },
+  "mutations": [
+    {
+      "name": "l3-pending-before-missing",
+      "pattern": "L3 S7:",
+      "exitCode": 1,
+      "restoredExitCode": 0
+    },
+    {
+      "name": "l4-repair-claim-check",
+      "pattern": "L4 S7:",
+      "exitCode": 1,
+      "restoredExitCode": 0
+    },
+    {
+      "name": "save-claim-check",
+      "pattern": "Save fresh-checks claims",
+      "exitCode": 1,
+      "restoredExitCode": 0
+    },
+    {
+      "name": "save-loaded-version",
+      "pattern": "Save keeps the loaded child version",
+      "exitCode": 1,
+      "restoredExitCode": 0
+    },
+    {
+      "name": "copied-claim-membership",
+      "pattern": "inert, missing, and copied claims",
+      "exitCode": 1,
+      "restoredExitCode": 0
+    },
+    {
+      "name": "pending-complete-wiring",
+      "pattern": "L3 S7:",
+      "exitCode": 1,
+      "restoredExitCode": 0
+    },
+    {
+      "name": "pending-correct-wiring",
+      "pattern": "Correct requires a reason",
+      "exitCode": 1,
+      "restoredExitCode": 0
+    },
+    {
+      "name": "l23-drift-classification",
+      "pattern": "L23 S7:",
+      "exitCode": 1,
+      "restoredExitCode": 0
+    },
+    {
+      "name": "review-matching-claim-shortcut",
+      "pattern": "Repair stops at a newly claimed matching child",
+      "exitCode": 1,
+      "restoredExitCode": 0
+    },
+    {
+      "name": "review-draft-task-reset",
+      "pattern": "correction reason survives same-Task refusal",
+      "exitCode": 1,
+      "restoredExitCode": 0
+    },
+    {
+      "name": "review-draft-same-task-preservation",
+      "pattern": "correction reason survives same-Task refusal",
+      "exitCode": 1,
+      "restoredExitCode": 0
+    }
+  ],
+  "scope": "No existing test bodies, policies, backend source, or shared runtime were changed. Full UI suite/build and final browser capture are coordinated in the parent task.",
+  "outputNormalization": [
+    "absolute worktree path replaced with <worktree>",
+    "whitespace-only diagnostic lines blanked; original TAP retained in ignored author logs"
+  ]
+}

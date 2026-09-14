@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+ok 1 - S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+  ---
+  duration_ms: 17.295708
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 232.619333

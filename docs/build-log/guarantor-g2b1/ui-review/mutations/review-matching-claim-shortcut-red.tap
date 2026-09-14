@@ -1,0 +1,115 @@
+TAP version 13
+# Subtest: S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+not ok 1 - S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+  ---
+  duration_ms: 19.524583
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:13391'
+  failureType: 'testCodeFailure'
+  error: |-
+    a matching child's active claim must prevent the later sibling PUT
+    + actual - expected
+
+    + [
+    +   {
+    +     body: {
+    +       active: false,
+    +       address: [
+    +         {
+    +           line: [
+    +             'Old street'
+    +           ]
+    +         }
+    +       ],
+    +       extension: [
+    +         {
+    +           url: 'https://example.test/sentinel',
+    +           valueString: 'b'
+    +         }
+    +       ],
+    +       id: 'b',
+    +       meta: {
+    +         versionId: '2'
+    +       },
+    +       name: [
+    +         {
+    +           family: 'Guardian',
+    +           given: [
+    +             'Old'
+    +           ]
+    +         }
+    +       ],
+    +       patient: {
+    +         reference: 'Patient/leo'
+    +       },
+    +       period: {
+    +         start: '2020-01-01'
+    +       },
+    +       resourceType: 'RelatedPerson',
+    +       telecom: [
+    +         {
+    +           system: 'phone',
+    +           value: '+15555550101'
+    +         }
+    +       ]
+    +     },
+    +     method: 'PUT',
+    +     path: 'RelatedPerson/b',
+    +     status: 200,
+    +     version: 'W/"2"'
+    +   }
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      path: 'RelatedPerson/b'
+      method: 'PUT'
+      version: 'W/"2"'
+      body:
+        resourceType: 'RelatedPerson'
+        id: 'b'
+        meta:
+          versionId: '2'
+        name:
+          0:
+            given:
+              0: 'Old'
+            family: 'Guardian'
+        telecom:
+          0:
+            system: 'phone'
+            value: '+15555550101'
+        address:
+          0:
+            line:
+              0: 'Old street'
+        patient:
+          reference: 'Patient/leo'
+        active: false
+        period:
+          start: '2020-01-01'
+        extension:
+          0:
+            url: 'https://example.test/sentinel'
+            valueString: 'b'
+      status: 200
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:261:10)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 247.750583

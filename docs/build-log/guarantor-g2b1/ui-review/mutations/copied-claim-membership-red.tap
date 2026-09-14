@@ -1,0 +1,36 @@
+TAP version 13
+# Subtest: S7: inert, missing, and copied claims do not suppress ordinary classification
+not ok 1 - S7: inert, missing, and copied claims do not suppress ordinary classification
+  ---
+  duration_ms: 20.704542
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:7255'
+  failureType: 'testCodeFailure'
+  error: |-
+    unlisted
+    + actual - expected
+
+    + 'pending'
+    - 'editable'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'editable'
+  actual: 'pending'
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:141:12)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    async TestContext.<anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:136:68)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 244.542333

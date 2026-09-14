@@ -1,0 +1,42 @@
+TAP version 13
+# Subtest: S7: Save fresh-checks claims after the Person save and stops every remaining child
+not ok 1 - S7: Save fresh-checks claims after the Person save and stops every remaining child
+  ---
+  duration_ms: 21.146834
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:10306'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+        'Person/source',
+    +   'RelatedPerson/a',
+    +   'RelatedPerson/b'
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'Person/source'
+  actual:
+    0: 'Person/source'
+    1: 'RelatedPerson/a'
+    2: 'RelatedPerson/b'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:203:10)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 250.170083

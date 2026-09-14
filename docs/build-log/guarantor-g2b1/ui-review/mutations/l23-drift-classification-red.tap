@@ -1,0 +1,43 @@
+TAP version 13
+# Subtest: L23 S7: an edit after release is ordinary drift and Repair converges to current D
+not ok 1 - L23 S7: an edit after release is ordinary drift and Repair converges to current D
+  ---
+  duration_ms: 13.8875
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:12389'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+    +   'verified',
+    +   'verified'
+    -   'mismatched',
+    -   'mismatched'
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'mismatched'
+    1: 'mismatched'
+  actual:
+    0: 'verified'
+    1: 'verified'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:242:10)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 253.162125
