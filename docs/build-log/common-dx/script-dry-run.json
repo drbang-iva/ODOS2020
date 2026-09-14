@@ -1,0 +1,30 @@
+{
+  "mode": "dry-run",
+  "changes": [
+    {
+      "recordReference": "Basic/7a0746e4-c10f-4f86-97f0-a12d37708ad6",
+      "practitionerReference": "Practitioner/a697c90e-a69b-4a41-ae7f-aac4308b31bb",
+      "action": "would-seed",
+      "pinnedDiagnosisKeys": [
+        "astigmatism",
+        "myopia",
+        "hyperopia",
+        "cataract_nuclear_sclerosis",
+        "kcs_not_sjogren",
+        "ocular_hypertension",
+        "pseudophakia",
+        "glaucoma_suspect_open_angle_low",
+        "glaucoma_suspect_open_angle_high",
+        "hypertensive_retinopathy",
+        "meibomian_gland_dysfunction",
+        "primary-open-angle-glaucoma",
+        "macular_drusen",
+        "optic_disc_drusen"
+      ]
+    }
+  ],
+  "skipped": 2,
+  "conflicts": [],
+  "missingStarter": [],
+  "exitCode": 0
+}

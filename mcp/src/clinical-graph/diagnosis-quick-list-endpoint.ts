@@ -53,7 +53,7 @@ interface DiagnosisQuickListDeps {
   now?: () => string;
 }
 
-const COMMON_DIAGNOSIS_TARGET_COUNT = 15;
+const COMMON_DIAGNOSIS_TARGET_COUNT = 20;
 
 const STARTER_DIAGNOSIS_PINS = [
   { name: "Astigmatism", stableKey: "astigmatism" },
@@ -93,7 +93,7 @@ export async function handleDiagnosisQuickListRequest(
   ]);
   const now = deps.now?.() ?? new Date().toISOString();
   let tally = storedTally;
-  if (!tally && staffHasBusinessAction(staff, "chart.write")) {
+  if ((!tally || tally.pinState === "unset") && staffHasBusinessAction(staff, "chart.write")) {
     const starter = resolveStarterDiagnosisPins(diagnoses);
     for (const missing of starter.missing) {
       console.error(
@@ -167,7 +167,7 @@ export function orderDiagnosisQuickList(
   return [
     ...pinnedRows,
     ...usageRows.slice(0, Math.max(0, COMMON_DIAGNOSIS_TARGET_COUNT - pinnedRows.length)),
-  ];
+  ].slice(0, COMMON_DIAGNOSIS_TARGET_COUNT);
 }
 
 function diagnosisCatalogRows(
@@ -199,7 +199,7 @@ function diagnosisCatalogRows(
   });
 }
 
-function resolveStarterDiagnosisPins(diagnoses: readonly DiagnosisCatalogRow[]): {
+export function resolveStarterDiagnosisPins(diagnoses: readonly DiagnosisCatalogRow[]): {
   pinnedDiagnosisKeys: string[];
   missing: Array<{ name: string; stableKey: string }>;
 } {

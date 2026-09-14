@@ -1,0 +1,982 @@
+
+=== G1 ===
+Command: node --import tsx --test --test-name-pattern='^G1 ' mcp/tests/diagnosisQuickList.test.ts
+RED exit 1
+[
+  {
+    "file": "mcp/src/clinical-graph/diagnosis-quick-list-endpoint.ts",
+    "old": "COMMON_DIAGNOSIS_TARGET_COUNT = 20",
+    "new": "COMMON_DIAGNOSIS_TARGET_COUNT = 15"
+  }
+]
+TAP version 13
+# Subtest: G1 Common returns 20 eligible usage rows
+not ok 1 - G1 Common returns 20 eligible usage rows
+  ---
+  duration_ms: 12.124416
+  type: 'test'
+  location: '<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:1:17706'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    15 !== 20
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 20
+  actual: 15
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:579:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 155.033625
+GREEN exit 0
+TAP version 13
+# Subtest: G1 Common returns 20 eligible usage rows
+ok 1 - G1 Common returns 20 eligible usage rows
+  ---
+  duration_ms: 10.064666
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 118.703458
+
+=== G2 ===
+Command: node --import tsx --test --test-name-pattern='^G2 ' mcp/tests/diagnosisQuickList.test.ts
+RED exit 1
+[
+  {
+    "file": "mcp/src/clinical-graph/diagnosis-quick-list-endpoint.ts",
+    "old": "(!tally || tally.pinState === \"unset\")",
+    "new": "(!tally)"
+  }
+]
+TAP version 13
+# Subtest: G2 first pick receives all starter pins in order and preserves usage
+not ok 1 - G2 first pick receives all starter pins in order and preserves usage
+  ---
+  duration_ms: 6.752042
+  type: 'test'
+  location: '<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:1:18253'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   'astigmatism',
+    -   'myopia',
+    -   'hyperopia',
+    -   'cataract_nuclear_sclerosis',
+    -   'kcs_not_sjogren',
+    -   'ocular_hypertension',
+    -   'pseudophakia',
+    -   'glaucoma_suspect_open_angle_low',
+    -   'glaucoma_suspect_open_angle_high',
+    -   'hypertensive_retinopathy',
+    -   'meibomian_gland_dysfunction',
+    -   'primary-open-angle-glaucoma',
+    -   'macular_drusen',
+    -   'optic_disc_drusen'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'astigmatism'
+    1: 'myopia'
+    2: 'hyperopia'
+    3: 'cataract_nuclear_sclerosis'
+    4: 'kcs_not_sjogren'
+    5: 'ocular_hypertension'
+    6: 'pseudophakia'
+    7: 'glaucoma_suspect_open_angle_low'
+    8: 'glaucoma_suspect_open_angle_high'
+    9: 'hypertensive_retinopathy'
+    10: 'meibomian_gland_dysfunction'
+    11: 'primary-open-angle-glaucoma'
+    12: 'macular_drusen'
+    13: 'optic_disc_drusen'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:588:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 119.52525
+GREEN exit 0
+TAP version 13
+# Subtest: G2 first pick receives all starter pins in order and preserves usage
+ok 1 - G2 first pick receives all starter pins in order and preserves usage
+  ---
+  duration_ms: 5.941041
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 114.833041
+
+=== G3 ===
+Command: node --import tsx --test --test-name-pattern='^G3 ' mcp/tests/diagnosisQuickList.test.ts
+RED exit 1
+[
+  {
+    "file": "mcp/src/clinical-graph/diagnosis-pick-tally-store.ts",
+    "old": "pinState: parsed.pinState === undefined ? \"unset\" : parsed.pinState",
+    "new": "pinState: parsed.pinState"
+  }
+]
+TAP version 13
+# Subtest: G3 pre-pin storage receives starter and preserves usage
+not ok 1 - G3 pre-pin storage receives starter and preserves usage
+  ---
+  duration_ms: 6.772458
+  type: 'test'
+  location: '<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:1:18911'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   'astigmatism',
+    -   'myopia',
+    -   'hyperopia',
+    -   'cataract_nuclear_sclerosis',
+    -   'kcs_not_sjogren',
+    -   'ocular_hypertension',
+    -   'pseudophakia',
+    -   'glaucoma_suspect_open_angle_low',
+    -   'glaucoma_suspect_open_angle_high',
+    -   'hypertensive_retinopathy',
+    -   'meibomian_gland_dysfunction',
+    -   'primary-open-angle-glaucoma',
+    -   'macular_drusen',
+    -   'optic_disc_drusen'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'astigmatism'
+    1: 'myopia'
+    2: 'hyperopia'
+    3: 'cataract_nuclear_sclerosis'
+    4: 'kcs_not_sjogren'
+    5: 'ocular_hypertension'
+    6: 'pseudophakia'
+    7: 'glaucoma_suspect_open_angle_low'
+    8: 'glaucoma_suspect_open_angle_high'
+    9: 'hypertensive_retinopathy'
+    10: 'meibomian_gland_dysfunction'
+    11: 'primary-open-angle-glaucoma'
+    12: 'macular_drusen'
+    13: 'optic_disc_drusen'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:600:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 144.367833
+GREEN exit 0
+TAP version 13
+# Subtest: G3 pre-pin storage receives starter and preserves usage
+ok 1 - G3 pre-pin storage receives starter and preserves usage
+  ---
+  duration_ms: 5.67
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 118.717333
+
+=== G4 ===
+Command: node --import tsx --test --test-name-pattern='^G4 ' mcp/tests/diagnosisQuickList.test.ts
+RED exit 1
+[
+  {
+    "file": "mcp/src/clinical-graph/diagnosis-quick-list-endpoint.ts",
+    "old": "(!tally || tally.pinState === \"unset\")",
+    "new": "(!tally || tally.pinnedDiagnosisKeys.length === 0)"
+  },
+  {
+    "file": "mcp/src/clinical-graph/diagnosis-pick-tally-store.ts",
+    "old": "if (existing && existing.row.pinState !== \"unset\")",
+    "new": "if (existing && existing.row.pinnedDiagnosisKeys.length > 0)"
+  }
+]
+TAP version 13
+# Subtest: G4 saved empty pins survive repeated reads and later picks
+not ok 1 - G4 saved empty pins survive repeated reads and later picks
+  ---
+  duration_ms: 10.263042
+  type: 'test'
+  location: '<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:1:19421'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'astigmatism',
+    +   'myopia',
+    +   'hyperopia',
+    +   'cataract_nuclear_sclerosis',
+    +   'kcs_not_sjogren',
+    +   'ocular_hypertension',
+    +   'pseudophakia',
+    +   'glaucoma_suspect_open_angle_low',
+    +   'glaucoma_suspect_open_angle_high',
+    +   'hypertensive_retinopathy',
+    +   'meibomian_gland_dysfunction',
+    +   'primary-open-angle-glaucoma',
+    +   'macular_drusen',
+    +   'optic_disc_drusen'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'astigmatism'
+    1: 'myopia'
+    2: 'hyperopia'
+    3: 'cataract_nuclear_sclerosis'
+    4: 'kcs_not_sjogren'
+    5: 'ocular_hypertension'
+    6: 'pseudophakia'
+    7: 'glaucoma_suspect_open_angle_low'
+    8: 'glaucoma_suspect_open_angle_high'
+    9: 'hypertensive_retinopathy'
+    10: 'meibomian_gland_dysfunction'
+    11: 'primary-open-angle-glaucoma'
+    12: 'macular_drusen'
+    13: 'optic_disc_drusen'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:613:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 150.313292
+GREEN exit 0
+TAP version 13
+# Subtest: G4 saved empty pins survive repeated reads and later picks
+ok 1 - G4 saved empty pins survive repeated reads and later picks
+  ---
+  duration_ms: 9.101333
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 127.293208
+
+=== G5 ===
+Command: node --import tsx --test --test-name-pattern='^G5 ' mcp/tests/diagnosisQuickList.test.ts
+RED exit 1
+[
+  {
+    "file": "mcp/src/clinical-graph/diagnosis-quick-list-endpoint.ts",
+    "old": "  tally ??= emptyTally(now);",
+    "new": "  tally ??= emptyTally(now);\n  tally.pinnedDiagnosisKeys = [...tally.pinnedDiagnosisKeys, ...resolveStarterDiagnosisPins(diagnoses).pinnedDiagnosisKeys.filter(key => !tally.pinnedDiagnosisKeys.includes(key))];"
+  }
+]
+TAP version 13
+# Subtest: G5 doctor pins remain unchanged in doctor order
+not ok 1 - G5 doctor pins remain unchanged in doctor order
+  ---
+  duration_ms: 7.477667
+  type: 'test'
+  location: '<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:1:20023'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        'presbyopia',
+        'myopia',
+    +   'astigmatism',
+    +   'hyperopia',
+    +   'cataract_nuclear_sclerosis',
+    +   'kcs_not_sjogren',
+    +   'ocular_hypertension',
+    +   'pseudophakia',
+    +   'glaucoma_suspect_open_angle_low',
+    +   'glaucoma_suspect_open_angle_high',
+    +   'hypertensive_retinopathy',
+    +   'meibomian_gland_dysfunction',
+    +   'primary-open-angle-glaucoma',
+    +   'macular_drusen',
+    +   'optic_disc_drusen'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'presbyopia'
+    1: 'myopia'
+  actual:
+    0: 'presbyopia'
+    1: 'myopia'
+    2: 'astigmatism'
+    3: 'hyperopia'
+    4: 'cataract_nuclear_sclerosis'
+    5: 'kcs_not_sjogren'
+    6: 'ocular_hypertension'
+    7: 'pseudophakia'
+    8: 'glaucoma_suspect_open_angle_low'
+    9: 'glaucoma_suspect_open_angle_high'
+    10: 'hypertensive_retinopathy'
+    11: 'meibomian_gland_dysfunction'
+    12: 'primary-open-angle-glaucoma'
+    13: 'macular_drusen'
+    14: 'optic_disc_drusen'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:624:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 123.313
+GREEN exit 0
+TAP version 13
+# Subtest: G5 doctor pins remain unchanged in doctor order
+ok 1 - G5 doctor pins remain unchanged in doctor order
+  ---
+  duration_ms: 6.103167
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 123.449167
+
+=== G6 ===
+Command: node --import tsx --test --test-name-pattern='^G6 ' mcp/tests/diagnosisQuickList.test.ts
+RED exit 1
+[
+  {
+    "file": "mcp/src/clinical-graph/diagnosis-quick-list-endpoint.ts",
+    "old": "if ((!tally || tally.pinState === \"unset\") && staffHasBusinessAction(staff, \"chart.write\"))",
+    "new": "if ((!tally || tally.pinState === \"unset\"))"
+  }
+]
+TAP version 13
+# Subtest: G6 chart reader causes no seed write for missing or unset records
+not ok 1 - G6 chart reader causes no seed write for missing or unset records
+  ---
+  duration_ms: 6.88025
+  type: 'test'
+  location: '<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:1:20432'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:636:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 124.478166
+GREEN exit 0
+TAP version 13
+# Subtest: G6 chart reader causes no seed write for missing or unset records
+ok 1 - G6 chart reader causes no seed write for missing or unset records
+  ---
+  duration_ms: 6.392
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 121.341083
+
+=== G7 ===
+Command: node --import tsx --test --test-name-pattern='^G7 ' mcp/tests/diagnosisQuickList.test.ts
+RED exit 1
+[
+  {
+    "file": "mcp/src/clinical-graph/diagnosis-quick-list-endpoint.ts",
+    "old": "(!tally || tally.pinState === \"unset\")",
+    "new": "(!tally || tally.pinState === \"unset\" || (tally.pinState === undefined && tally.pinnedDiagnosisKeys.length === 0))"
+  },
+  {
+    "file": "mcp/src/clinical-graph/diagnosis-pick-tally-store.ts",
+    "old": "if (existing && existing.row.pinState !== \"unset\")",
+    "new": "if (existing && existing.row.pinState !== \"unset\" && !(existing.row.pinState === undefined && existing.row.pinnedDiagnosisKeys.length === 0))"
+  }
+]
+TAP version 13
+# Subtest: G7 ambiguous legacy empty pins are preserved across reads and picks
+not ok 1 - G7 ambiguous legacy empty pins are preserved across reads and picks
+  ---
+  duration_ms: 7.737125
+  type: 'test'
+  location: '<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:1:20979'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'astigmatism',
+    +   'myopia',
+    +   'hyperopia',
+    +   'cataract_nuclear_sclerosis',
+    +   'kcs_not_sjogren',
+    +   'ocular_hypertension',
+    +   'pseudophakia',
+    +   'glaucoma_suspect_open_angle_low',
+    +   'glaucoma_suspect_open_angle_high',
+    +   'hypertensive_retinopathy',
+    +   'meibomian_gland_dysfunction',
+    +   'primary-open-angle-glaucoma',
+    +   'macular_drusen',
+    +   'optic_disc_drusen'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'astigmatism'
+    1: 'myopia'
+    2: 'hyperopia'
+    3: 'cataract_nuclear_sclerosis'
+    4: 'kcs_not_sjogren'
+    5: 'ocular_hypertension'
+    6: 'pseudophakia'
+    7: 'glaucoma_suspect_open_angle_low'
+    8: 'glaucoma_suspect_open_angle_high'
+    9: 'hypertensive_retinopathy'
+    10: 'meibomian_gland_dysfunction'
+    11: 'primary-open-angle-glaucoma'
+    12: 'macular_drusen'
+    13: 'optic_disc_drusen'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:648:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 145.385
+GREEN exit 0
+TAP version 13
+# Subtest: G7 ambiguous legacy empty pins are preserved across reads and picks
+ok 1 - G7 ambiguous legacy empty pins are preserved across reads and picks
+  ---
+  duration_ms: 6.305291
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 120.626959
+
+=== G8 ===
+Command: node --import tsx --test --test-name-pattern='^G8 ' mcp/tests/diagnosisQuickList.test.ts
+RED exit 1
+[
+  {
+    "file": "scripts/reseed-common-diagnosis-pins.ts",
+    "old": "if (options.apply) {",
+    "new": "if (true) {"
+  }
+]
+TAP version 13
+# Subtest: G8 operator dry run lists every ambiguous tally without writes
+not ok 1 - G8 operator dry run lists every ambiguous tally without writes
+  ---
+  duration_ms: 6.931917
+  type: 'test'
+  location: '<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:1:21481'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    4 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 4
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:665:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 121.487458
+GREEN exit 0
+TAP version 13
+# Subtest: G8 operator dry run lists every ambiguous tally without writes
+ok 1 - G8 operator dry run lists every ambiguous tally without writes
+  ---
+  duration_ms: 5.223458
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 121.734
+
+=== G9 ===
+Command: node --import tsx --test --test-name-pattern='^G9 ' mcp/tests/diagnosisQuickList.test.ts
+RED exit 1
+[
+  {
+    "file": "scripts/reseed-common-diagnosis-pins.ts",
+    "old": "if (row.pinState !== undefined || row.pinnedDiagnosisKeys.length !== 0)",
+    "new": "if (false)"
+  }
+]
+TAP version 13
+# Subtest: G9 operator apply seeds only ambiguous empties and is idempotent
+not ok 1 - G9 operator apply seeds only ambiguous empties and is idempotent
+  ---
+  duration_ms: 7.52
+  type: 'test'
+  location: '<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:1:22269'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        'Practitioner/ambiguous',
+    +   'Practitioner/legacy-pins',
+    +   'Practitioner/custom-empty',
+    +   'Practitioner/seeded',
+    +   'Practitioner/unset'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'Practitioner/ambiguous'
+  actual:
+    0: 'Practitioner/ambiguous'
+    1: 'Practitioner/legacy-pins'
+    2: 'Practitioner/custom-empty'
+    3: 'Practitioner/seeded'
+    4: 'Practitioner/unset'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:681:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 125.126334
+GREEN exit 0
+TAP version 13
+# Subtest: G9 operator apply seeds only ambiguous empties and is idempotent
+ok 1 - G9 operator apply seeds only ambiguous empties and is idempotent
+  ---
+  duration_ms: 6.604
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 124.46025
+
+=== starter retries ===
+Command: node --import tsx --test --test-name-pattern='^starter retries ' mcp/tests/diagnosisQuickList.test.ts
+RED exit 1
+[
+  {
+    "file": "mcp/src/clinical-graph/diagnosis-pick-tally-store.ts",
+    "old": "{ ...DX_PICK_TALLY_WRITE_HEADERS, \"If-Match\": `W/\"${meta.versionId}\"` }",
+    "new": "{ ...DX_PICK_TALLY_WRITE_HEADERS }"
+  }
+]
+TAP version 13
+# Subtest: starter retries preserve a concurrent doctor's empty save
+not ok 1 - starter retries preserve a concurrent doctor's empty save
+  ---
+  duration_ms: 7.356792
+  type: 'test'
+  location: '<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:1:23617'
+  failureType: 'testCodeFailure'
+  error: 'seed must be conditional'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    SaveRaceFhir.update (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:701:16)
+    async FhirDiagnosisPickTallyStore.initializePinnedIfAbsent (<mutation-worktree>/mcp/src/clinical-graph/diagnosis-pick-tally-store.ts:54:27)
+    async handleDiagnosisQuickListRequest (<mutation-worktree>/mcp/src/clinical-graph/diagnosis-quick-list-endpoint.ts:103:13)
+    async TestContext.<anonymous> (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:710:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 150.455334
+GREEN exit 0
+TAP version 13
+# Subtest: starter retries preserve a concurrent doctor's empty save
+ok 1 - starter retries preserve a concurrent doctor's empty save
+  ---
+  duration_ms: 6.217459
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 124.218291
+
+=== operator refuses ===
+Command: node --import tsx --test --test-name-pattern='^operator refuses ' mcp/tests/diagnosisQuickList.test.ts
+RED exit 1
+[
+  {
+    "file": "scripts/reseed-common-diagnosis-pins.ts",
+    "old": "\"If-Match\": `W/\"${resource.meta.versionId}\"`,",
+    "new": ""
+  }
+]
+TAP version 13
+# Subtest: operator refuses a concurrent pin edit instead of overwriting it
+not ok 1 - operator refuses a concurrent pin edit instead of overwriting it
+  ---
+  duration_ms: 6.770417
+  type: 'test'
+  location: '<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:1:24563'
+  failureType: 'testCodeFailure'
+  error: 'script must be conditional'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    SaveRaceFhir.update (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:723:16)
+    async reseedCommonDiagnosisPins (<mutation-worktree>/scripts/reseed-common-diagnosis-pins.ts:51:9)
+    async TestContext.<anonymous> (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:733:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 128.180333
+GREEN exit 0
+TAP version 13
+# Subtest: operator refuses a concurrent pin edit instead of overwriting it
+ok 1 - operator refuses a concurrent pin edit instead of overwriting it
+  ---
+  duration_ms: 5.406083
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 118.930041
+
+=== empty save records ===
+Command: node --import tsx --test --test-name-pattern='^empty save records ' mcp/tests/diagnosisQuickList.test.ts
+RED exit 1
+[
+  {
+    "file": "mcp/src/clinical-graph/diagnosis-pick-tally-store.ts",
+    "old": "persisted.pinState === \"custom\" && samePins",
+    "new": "samePins"
+  }
+]
+TAP version 13
+# Subtest: empty save records custom intent when a first pick wins conditional create
+not ok 1 - empty save records custom intent when a first pick wins conditional create
+  ---
+  duration_ms: 7.445375
+  type: 'test'
+  location: '<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:1:26082'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'astigmatism',
+    +   'myopia',
+    +   'hyperopia',
+    +   'cataract_nuclear_sclerosis',
+    +   'kcs_not_sjogren',
+    +   'ocular_hypertension',
+    +   'pseudophakia',
+    +   'glaucoma_suspect_open_angle_low',
+    +   'glaucoma_suspect_open_angle_high',
+    +   'hypertensive_retinopathy',
+    +   'meibomian_gland_dysfunction',
+    +   'primary-open-angle-glaucoma',
+    +   'macular_drusen',
+    +   'optic_disc_drusen'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'astigmatism'
+    1: 'myopia'
+    2: 'hyperopia'
+    3: 'cataract_nuclear_sclerosis'
+    4: 'kcs_not_sjogren'
+    5: 'ocular_hypertension'
+    6: 'pseudophakia'
+    7: 'glaucoma_suspect_open_angle_low'
+    8: 'glaucoma_suspect_open_angle_high'
+    9: 'hypertensive_retinopathy'
+    10: 'meibomian_gland_dysfunction'
+    11: 'primary-open-angle-glaucoma'
+    12: 'macular_drusen'
+    13: 'optic_disc_drusen'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:768:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 121.808333
+GREEN exit 0
+TAP version 13
+# Subtest: empty save records custom intent when a first pick wins conditional create
+ok 1 - empty save records custom intent when a first pick wins conditional create
+  ---
+  duration_ms: 5.610375
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 118.771791
+
+=== invalid persisted ===
+Command: node --import tsx --test --test-name-pattern='^invalid persisted ' mcp/tests/diagnosisQuickList.test.ts
+RED exit 1
+[
+  {
+    "file": "mcp/src/clinical-graph/diagnosis-pick-tally-store.ts",
+    "old": "typeof value.pinState !== \"string\" || ![\"unset\", \"seeded\", \"custom\"].includes(value.pinState)",
+    "new": "![\"unset\", \"seeded\", \"custom\"].includes(String(value.pinState))"
+  }
+]
+TAP version 13
+# Subtest: invalid persisted pin states are rejected instead of treated as unset
+not ok 1 - invalid persisted pin states are rejected instead of treated as unset
+  ---
+  duration_ms: 2.792417
+  type: 'test'
+  location: '<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:1:25560'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected exception.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'throws'
+  stack: |-
+    TestContext.<anonymous> (<mutation-worktree>/mcp/tests/diagnosisQuickList.test.ts:748:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 148.166625
+GREEN exit 0
+TAP version 13
+# Subtest: invalid persisted pin states are rejected instead of treated as unset
+ok 1 - invalid persisted pin states are rejected instead of treated as unset
+  ---
+  duration_ms: 0.923375
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 114.146042

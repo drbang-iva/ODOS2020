@@ -1,0 +1,136 @@
+{
+  "stage": "head",
+  "medplum": "http://127.0.0.1:19913",
+  "transport": "Real Medplum REST; HTTP handler harness with fixed synthetic provider context (not production auth/router proof)",
+  "staffReference": "Practitioner/1e6d086f-bc21-495a-90b9-e6289f28980f",
+  "pickStatus": 201,
+  "tallyBeforeRead": {
+    "counts": {
+      "cup_disc_ratio": {
+        "presbyopia": 1
+      }
+    },
+    "pinnedDiagnosisKeys": [],
+    "pinState": "unset",
+    "updatedAt": "2026-09-14T08:54:49.043Z"
+  },
+  "quickListStatus": 200,
+  "pinnedDiagnosisKeys": [
+    "astigmatism",
+    "myopia",
+    "hyperopia",
+    "cataract_nuclear_sclerosis",
+    "kcs_not_sjogren",
+    "ocular_hypertension",
+    "pseudophakia",
+    "glaucoma_suspect_open_angle_low",
+    "glaucoma_suspect_open_angle_high",
+    "hypertensive_retinopathy",
+    "meibomian_gland_dysfunction",
+    "primary-open-angle-glaucoma",
+    "macular_drusen",
+    "optic_disc_drusen"
+  ],
+  "diagnoses": [
+    {
+      "stableKey": "astigmatism",
+      "pinned": true,
+      "tallyCount": 0
+    },
+    {
+      "stableKey": "myopia",
+      "pinned": true,
+      "tallyCount": 0
+    },
+    {
+      "stableKey": "hyperopia",
+      "pinned": true,
+      "tallyCount": 0
+    },
+    {
+      "stableKey": "cataract_nuclear_sclerosis",
+      "pinned": true,
+      "tallyCount": 0
+    },
+    {
+      "stableKey": "kcs_not_sjogren",
+      "pinned": true,
+      "tallyCount": 0
+    },
+    {
+      "stableKey": "ocular_hypertension",
+      "pinned": true,
+      "tallyCount": 0
+    },
+    {
+      "stableKey": "pseudophakia",
+      "pinned": true,
+      "tallyCount": 0
+    },
+    {
+      "stableKey": "glaucoma_suspect_open_angle_low",
+      "pinned": true,
+      "tallyCount": 0
+    },
+    {
+      "stableKey": "glaucoma_suspect_open_angle_high",
+      "pinned": true,
+      "tallyCount": 0
+    },
+    {
+      "stableKey": "hypertensive_retinopathy",
+      "pinned": true,
+      "tallyCount": 0
+    },
+    {
+      "stableKey": "meibomian_gland_dysfunction",
+      "pinned": true,
+      "tallyCount": 0
+    },
+    {
+      "stableKey": "primary-open-angle-glaucoma",
+      "pinned": true,
+      "tallyCount": 0
+    },
+    {
+      "stableKey": "macular_drusen",
+      "pinned": true,
+      "tallyCount": 0
+    },
+    {
+      "stableKey": "optic_disc_drusen",
+      "pinned": true,
+      "tallyCount": 0
+    },
+    {
+      "stableKey": "presbyopia",
+      "pinned": false,
+      "tallyCount": 1
+    }
+  ],
+  "tallyAfterRead": {
+    "counts": {
+      "cup_disc_ratio": {
+        "presbyopia": 1
+      }
+    },
+    "pinnedDiagnosisKeys": [
+      "astigmatism",
+      "myopia",
+      "hyperopia",
+      "cataract_nuclear_sclerosis",
+      "kcs_not_sjogren",
+      "ocular_hypertension",
+      "pseudophakia",
+      "glaucoma_suspect_open_angle_low",
+      "glaucoma_suspect_open_angle_high",
+      "hypertensive_retinopathy",
+      "meibomian_gland_dysfunction",
+      "primary-open-angle-glaucoma",
+      "macular_drusen",
+      "optic_disc_drusen"
+    ],
+    "pinState": "seeded",
+    "updatedAt": "2026-09-14T08:54:49.094Z"
+  }
+}
