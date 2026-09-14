@@ -1,0 +1,40 @@
+[
+  {
+    "guard": "K6-search",
+    "green": 0,
+    "red": 1,
+    "failingTests": [
+      "not ok 14 - K6 search denies staff without guarantor.link before FHIR searches or writes"
+    ],
+    "restored": 0
+  },
+  {
+    "guard": "K6-create",
+    "green": 0,
+    "red": 1,
+    "failingTests": [
+      "not ok 15 - K6 create denies staff without guarantor.link before FHIR searches or writes"
+    ],
+    "restored": 0
+  },
+  {
+    "guard": "K6-draft-history",
+    "green": 0,
+    "red": 1,
+    "failingTests": [
+      "not ok 16 - K6 draft denies staff without guarantor.link before FHIR searches or writes",
+      "not ok 17 - K6 history denies staff without guarantor.link before FHIR searches or writes"
+    ],
+    "restored": 0
+  },
+  {
+    "guard": "K15-paused",
+    "green": 0,
+    "red": 1,
+    "failingTests": [
+      "not ok 16 - K15 paused create reloads once and closes without Review again or a second create",
+      "not ok 17 - K15 paused Undo reloads once and closes without a second correction"
+    ],
+    "restored": 0
+  }
+]

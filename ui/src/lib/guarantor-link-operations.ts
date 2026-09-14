@@ -23,8 +23,8 @@ async function request(taskId: string, action?: "complete" | "correct", body?: o
 
 async function readResponse(response: Response): Promise<GuarantorLinkOperation> {
   if (!response.ok) {
-    const body = await response.clone().json().catch(() => undefined) as { error?: unknown } | undefined;
-    throw typeof body?.error === "string" ? new Error(body.error) : await toError(response);
+    const body = await response.clone().json().catch(() => undefined) as { error?: unknown; task?: unknown } | undefined;
+    throw new GuarantorScreenError(typeof body?.error === "string" ? body.error : (await toError(response)).message, response.status, body);
   }
   return response.json() as Promise<GuarantorLinkOperation>;
 }
@@ -59,12 +59,12 @@ export interface GuarantorSearchCard { personId: string; versionId: string; name
 export interface GuarantorDraftInput { kind: "transfer" | "consolidate"; sourcePersonId: string; destinationPersonId: string; relatedPersonIds?: string[] }
 export interface GuarantorDraft { expected: Record<string, string>; relatedPersonIds: string[]; patients: { relatedPersonId: string; patientId: string; name?: import("@medplum/fhirtypes").HumanName[]; current: Pick<import("@medplum/fhirtypes").Person,"name"|"telecom"|"address">; resulting: Pick<import("@medplum/fhirtypes").Person,"name"|"telecom"|"address"> }[] }
 export type NewGuarantor = Record<"firstName"|"middleName"|"lastName"|"phone"|"address"|"city"|"state"|"postalCode",string>;
-export class GuarantorScreenError extends Error { constructor(message: string, readonly status: number) { super(message); } }
+export class GuarantorScreenError extends Error { constructor(message: string, readonly status: number, readonly body?: { task?: unknown }) { super(message); } }
 async function screenRequest<T>(path: string, body?: object): Promise<T> {
   const authorization = fhir.authHeader();
   const response = await fetch(`/guarantors${path}`, { method: body ? "POST" : "GET", headers: { ...(authorization ? { Authorization: authorization } : {}), ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
   const result = await response.json();
-  if (!response.ok) throw new GuarantorScreenError(typeof result.error === "string" ? result.error : "The guarantor result could not be confirmed. Reload before continuing.", response.status);
+  if (!response.ok) throw new GuarantorScreenError(typeof result.error === "string" ? result.error : "The guarantor result could not be confirmed. Reload before continuing.", response.status, result);
   return result as T;
 }
 export const searchGuarantors = (keys: { lastName: string; firstName?: string; phone?: string }) => screenRequest<GuarantorSearchCard[]>(`/search?${new URLSearchParams(keys)}`);

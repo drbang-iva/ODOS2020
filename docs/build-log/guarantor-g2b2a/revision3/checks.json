@@ -1,0 +1,68 @@
+[
+  {
+    "command": "npm --prefix mcp test",
+    "exit": 1,
+    "summary": [
+      "# tests 4815",
+      "# pass 4749",
+      "# fail 6",
+      "# skipped 60"
+    ],
+    "failingTests": [
+      "not ok 700 - rebuild is atomic and server-side worklist grouping returns honest untouched facts",
+      "not ok 701 - never-paid-untouched aggregation is performed by payer and month in PostgreSQL",
+      "not ok 702 - reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth",
+      "not ok 703 - an older per-claim upsert cannot overwrite a newer completed rebuild",
+      "not ok 704 - an older rebuild snapshot fails loudly without publishing incomplete FHIR truth",
+      "not ok 705 - /Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/claimReadModelStore.test.ts"
+    ]
+  },
+  {
+    "command": "npm --prefix ui test",
+    "exit": 0,
+    "summary": [
+      "# tests 1517",
+      "# pass 1517",
+      "# fail 0",
+      "# skipped 0"
+    ],
+    "failingTests": []
+  },
+  {
+    "command": "node --import tsx --test mcp/tests/guarantor{LinkOperation,LinkRoutes,LinkPolicy,Person,SearchScreens}.test.ts",
+    "exit": 0,
+    "summary": [
+      "# tests 73",
+      "# pass 73",
+      "# fail 0",
+      "# skipped 0"
+    ],
+    "failingTests": []
+  },
+  {
+    "command": "node --import tsx --test tests/guarantor{SearchScreens,LinkOperations,Editor}.test.tsx (cwd ui)",
+    "exit": 0,
+    "summary": [
+      "# tests 40",
+      "# pass 40",
+      "# fail 0",
+      "# skipped 0"
+    ],
+    "failingTests": []
+  },
+  {
+    "command": "npm run preflight",
+    "exit": 0,
+    "summary": [
+      "FHIR read grant check: PASS (48 literal/marked resourceTypes under mcp/src + ui/src)",
+      "ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md"
+    ]
+  },
+  {
+    "command": "npm --prefix ui run build",
+    "exit": 0,
+    "summary": [
+      "\u2713 built in 2.42s"
+    ]
+  }
+]

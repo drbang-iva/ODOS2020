@@ -1,5 +1,7 @@
 # Per-guard mutation evidence
 
+Revision 3 adds enforced K6 and K15 green/red/restored evidence in [revision3/README.md](revision3/README.md). It supersedes the historical K6 route-only limitation below.
+
 Each row lists command exit codes. Green/restored 0 means success; red 1 means the named test failed. These tests use persistent in-memory transport fixtures; separate real Medplum HTTP and Chromium runs are linked in README.md.
 
 | Control | Green | Red | Restored | Failing test |

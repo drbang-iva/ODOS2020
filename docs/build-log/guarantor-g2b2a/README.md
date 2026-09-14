@@ -1,5 +1,7 @@
 # Guarantor G-2b-2a — author evidence, NOT EVALUATED
 
+**Revision 3 fixback:** [revision3/README.md](revision3/README.md) is the current K6/K15 evidence. It supersedes the revision-2 K6 decorative-control limitation below. Paused task-bearing 409s now reload into the shipped pending controls. Earlier evidence remains historical.
+
 Staff can search existing guarantors, move this patient's responsible-party link, join duplicate guarantor records by choosing the survivor, and undo a completed operation from history. New guarantors are created before the zero-write draft; the Person id is reused after a stale confirmation. The confirmation names affected patients and requires a reason.
 
 ## Boundaries and promises
