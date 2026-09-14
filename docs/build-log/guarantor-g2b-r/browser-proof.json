@@ -1,0 +1,751 @@
+{
+  "scope": "Actual GuarantorLinkScreens component, actual history route, same persisted synthetic X2 state, staff token; no mocked API responses",
+  "checks": [
+    {
+      "variant": "before",
+      "originalStatus": "completed",
+      "originalUndoReasons": 1,
+      "undoButtons": 2,
+      "consoleErrors": [],
+      "history": [
+        {
+          "task": {
+            "resourceType": "Task",
+            "id": "c8ebb5b5-a234-4d77-8a65-dbde0ca0dad5",
+            "intent": "order",
+            "status": "in-progress",
+            "identifier": [
+              {
+                "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                "value": "a504c25a-948c-40f3-a208-270f717e69fe"
+              }
+            ],
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                  "code": "correct"
+                }
+              ]
+            },
+            "input": [
+              {
+                "type": {
+                  "text": "kind"
+                },
+                "valueCode": "correct"
+              },
+              {
+                "type": {
+                  "text": "source"
+                },
+                "valueReference": {
+                  "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                }
+              },
+              {
+                "type": {
+                  "text": "destination"
+                },
+                "valueReference": {
+                  "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                }
+              },
+              {
+                "type": {
+                  "text": "moved"
+                },
+                "valueReference": {
+                  "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                }
+              },
+              {
+                "type": {
+                  "text": "expected:Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                },
+                "valueString": "99947495-71b2-4304-9029-f41072c5886a"
+              },
+              {
+                "type": {
+                  "text": "expected:Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                },
+                "valueString": "40b779dc-edad-40a7-b077-1c825d35b1c1"
+              },
+              {
+                "type": {
+                  "text": "expected:RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                },
+                "valueString": "fc076fdd-28b8-4f95-8280-02196bc0d12d"
+              },
+              {
+                "type": {
+                  "text": "reason"
+                },
+                "valueString": "Synthetic Undo"
+              }
+            ],
+            "requester": {
+              "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0"
+            },
+            "basedOn": [
+              {
+                "reference": "Task/a3ce6179-2df5-49de-88a1-33d026da3641"
+              }
+            ],
+            "meta": {
+              "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+              "versionId": "bfc6539b-9bbd-4f86-a5f4-6a71d0783b52",
+              "lastUpdated": "2026-09-14T19:51:28.165Z",
+              "author": {
+                "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                "display": "Medplum Admin"
+              },
+              "compartment": [
+                {
+                  "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                }
+              ]
+            },
+            "businessStatus": {
+              "text": "interfered"
+            },
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                "valueString": "{\"intents\":[{\"id\":\"72ee8fa7-b5bb-4eef-bd98-34d32b7c0793\",\"phase\":\"fence-source\",\"target\":\"Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d\",\"expectedVersion\":\"99947495-71b2-4304-9029-f41072c5886a\",\"intendedContentHash\":\"e53e95b349ef3166e0f7e3c434e828f51dff60d4829e4318cba5b26a56d42629\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"f014b958-a2f3-43a0-829e-be2c9360dc47\",\"phase\":\"fence-destination\",\"target\":\"Person/d8894834-3aba-4ff9-908e-a2d65e0d6667\",\"expectedVersion\":\"40b779dc-edad-40a7-b077-1c825d35b1c1\",\"intendedContentHash\":\"8bf1ea317680e14aaa526f486b45ea12e6483da50abf2a49a3b6f408f3649ae9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"c5950d73-9349-4418-b679-d5234814bce1\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"fc076fdd-28b8-4f95-8280-02196bc0d12d\",\"intendedContentHash\":\"98b22a95f5a64afbfecfd182800dd3481d9c7ff6335ff36e3812f6389d4a12c9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"d5e9b8f1-d5d7-4385-b510-c1c2692c57ad\",\"phase\":\"detaching\",\"target\":\"Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d\",\"expectedVersion\":\"e1f44773-9ad5-47d2-a964-1b71bff82b74\",\"intendedContentHash\":\"81224e61e8aaf73891963bbb68f652853845484fd3f151485c97b48b6a7111eb\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"b6a72b2c-b9c0-4335-8023-74b913c59cf4\",\"phase\":\"attaching\",\"target\":\"Person/d8894834-3aba-4ff9-908e-a2d65e0d6667\",\"expectedVersion\":\"42842d52-83e8-4efc-9281-0575c5bd9df5\",\"intendedContentHash\":\"471629f3c5daaa24acdfecf79dd650dbcd5c0c8d5154bb7bc655c23f7058fcea\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"31dfcda3-3747-442c-a559-1c7106562e34\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"24b909cf-b703-4e8b-ad57-d4c68bace82a\",\"intendedContentHash\":\"55c4f8cfdb6c253dc5a0359386b3cc3181e2ea8545c486267cea8da1c3d54196\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"39a3279d-2d72-4d27-abf5-fef8fd999f8a\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"39d6f774-6172-4ff0-bdad-2b287e260500\",\"intendedContentHash\":\"1d465c6cf524185945501b86973b856561c5d7db0e51e8a9b5caaed0e88c8f2b\"}],\"generation\":\"b9a87d72-5466-424c-bd2e-af92ea068425\"}"
+              }
+            ]
+          },
+          "active": true,
+          "kind": "correct",
+          "phase": "interfered",
+          "sourcePersonId": "be1f57af-eb59-4be2-b86b-41a422a1cb3d",
+          "destinationPersonId": "d8894834-3aba-4ff9-908e-a2d65e0d6667",
+          "relatedPersonIds": [
+            "c6e4c679-9e41-4d06-b6a5-347cb767b026"
+          ],
+          "patients": [
+            {
+              "relatedPersonId": "c6e4c679-9e41-4d06-b6a5-347cb767b026",
+              "patientId": "cfe0c944-ba8f-4d2c-be9a-37d05a657940",
+              "name": "X2 before Synthetic"
+            }
+          ]
+        },
+        {
+          "task": {
+            "resourceType": "Task",
+            "id": "9c83ebf5-7875-43b7-8d68-bb814d21f2c2",
+            "intent": "order",
+            "status": "completed",
+            "identifier": [
+              {
+                "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                "value": "626703a1-aa59-4899-af5a-a1d474c0fa20"
+              }
+            ],
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                  "code": "transfer"
+                }
+              ]
+            },
+            "input": [
+              {
+                "type": {
+                  "text": "kind"
+                },
+                "valueCode": "transfer"
+              },
+              {
+                "type": {
+                  "text": "source"
+                },
+                "valueReference": {
+                  "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                }
+              },
+              {
+                "type": {
+                  "text": "destination"
+                },
+                "valueReference": {
+                  "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                }
+              },
+              {
+                "type": {
+                  "text": "moved"
+                },
+                "valueReference": {
+                  "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                }
+              },
+              {
+                "type": {
+                  "text": "expected:Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                },
+                "valueString": "b9a87d72-5466-424c-bd2e-af92ea068425"
+              },
+              {
+                "type": {
+                  "text": "expected:Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                },
+                "valueString": "13baee05-0c05-4857-9df8-b1af233c2742"
+              },
+              {
+                "type": {
+                  "text": "expected:RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                },
+                "valueString": "3530ecd5-6ed1-47fd-b0bf-d3d787110097"
+              },
+              {
+                "type": {
+                  "text": "reason"
+                },
+                "valueString": "Synthetic X2"
+              }
+            ],
+            "requester": {
+              "reference": "Practitioner/d0a6e159-6093-4dff-ae58-77e310d3767b"
+            },
+            "meta": {
+              "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+              "versionId": "fab7c588-5b76-4638-9e56-6765c69021c7",
+              "lastUpdated": "2026-09-14T19:51:27.925Z",
+              "author": {
+                "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                "display": "Medplum Admin"
+              },
+              "compartment": [
+                {
+                  "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                }
+              ]
+            },
+            "businessStatus": {
+              "text": "linked"
+            },
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                "valueString": "{\"intents\":[{\"id\":\"f0879f8b-c075-487b-9b7a-fd4e453adc06\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"3530ecd5-6ed1-47fd-b0bf-d3d787110097\",\"intendedContentHash\":\"1ccd7f2ad4b66c86568a633337796468f03cc12fc60fb03c3e3ae1725857d8a7\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"99172026-067f-4b43-8697-1fbb0e776cbb\",\"phase\":\"detaching\",\"target\":\"Person/d8894834-3aba-4ff9-908e-a2d65e0d6667\",\"expectedVersion\":\"b9a87d72-5466-424c-bd2e-af92ea068425\",\"intendedContentHash\":\"8bf1ea317680e14aaa526f486b45ea12e6483da50abf2a49a3b6f408f3649ae9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"99c0845c-e8bf-49ae-abca-3b330f8744c0\",\"phase\":\"attaching\",\"target\":\"Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d\",\"expectedVersion\":\"13baee05-0c05-4857-9df8-b1af233c2742\",\"intendedContentHash\":\"e53e95b349ef3166e0f7e3c434e828f51dff60d4829e4318cba5b26a56d42629\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"8bfdb62c-f23e-4d52-9d4f-c026c119eb34\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"47e94947-c353-4870-9f1f-d239bc629dba\",\"intendedContentHash\":\"43f5b2c847e9620ced602a376c124297b8dad6a75d8d617a637ee4df1ac13a49\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"63c8836e-13fe-4574-9776-ae6247f73a3e\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"0934a5b0-9f50-448a-a4c0-275f1815a6af\",\"intendedContentHash\":\"82aa7781c57816a128661c6d9727abbccdd506acf00c069e12104362bafb4a8d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"}],\"generation\":\"1393036c-c9ae-4f71-8391-7f32f91367b0\"}"
+              }
+            ]
+          },
+          "active": false,
+          "kind": "transfer",
+          "phase": "linked",
+          "sourcePersonId": "d8894834-3aba-4ff9-908e-a2d65e0d6667",
+          "destinationPersonId": "be1f57af-eb59-4be2-b86b-41a422a1cb3d",
+          "relatedPersonIds": [
+            "c6e4c679-9e41-4d06-b6a5-347cb767b026"
+          ],
+          "patients": [
+            {
+              "relatedPersonId": "c6e4c679-9e41-4d06-b6a5-347cb767b026",
+              "patientId": "cfe0c944-ba8f-4d2c-be9a-37d05a657940",
+              "name": "X2 before Synthetic"
+            }
+          ]
+        },
+        {
+          "task": {
+            "resourceType": "Task",
+            "id": "a3ce6179-2df5-49de-88a1-33d026da3641",
+            "intent": "order",
+            "status": "completed",
+            "identifier": [
+              {
+                "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                "value": "5c2f41d7-57c1-49a0-a093-2b26ab50f397"
+              }
+            ],
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                  "code": "transfer"
+                }
+              ]
+            },
+            "input": [
+              {
+                "type": {
+                  "text": "kind"
+                },
+                "valueCode": "transfer"
+              },
+              {
+                "type": {
+                  "text": "source"
+                },
+                "valueReference": {
+                  "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                }
+              },
+              {
+                "type": {
+                  "text": "destination"
+                },
+                "valueReference": {
+                  "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                }
+              },
+              {
+                "type": {
+                  "text": "moved"
+                },
+                "valueReference": {
+                  "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                }
+              },
+              {
+                "type": {
+                  "text": "expected:Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                },
+                "valueString": "162ae81d-3aa1-4cd1-a1b7-907b801dca64"
+              },
+              {
+                "type": {
+                  "text": "expected:Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                },
+                "valueString": "a0b25960-4e1f-4de5-ab25-95961e7ce1ba"
+              },
+              {
+                "type": {
+                  "text": "expected:RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                },
+                "valueString": "f365f30c-7705-47a5-823e-5e82d7590381"
+              },
+              {
+                "type": {
+                  "text": "reason"
+                },
+                "valueString": "Synthetic X2"
+              }
+            ],
+            "requester": {
+              "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0"
+            },
+            "meta": {
+              "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+              "versionId": "06560434-75e1-4070-868a-7d86757dff92",
+              "lastUpdated": "2026-09-14T19:51:26.361Z",
+              "author": {
+                "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                "display": "Medplum Admin"
+              },
+              "compartment": [
+                {
+                  "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                }
+              ]
+            },
+            "businessStatus": {
+              "text": "linked"
+            },
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                "valueString": "{\"intents\":[{\"id\":\"84b46810-fd24-4aec-b911-753592f8ac53\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"f365f30c-7705-47a5-823e-5e82d7590381\",\"intendedContentHash\":\"ccc6eb0f26939929e42ef356a11132f7b2d77d89a406dde7a3a5198aade01341\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"943a72f6-261c-435f-a403-4b26c1366fd5\",\"phase\":\"detaching\",\"target\":\"Person/d8894834-3aba-4ff9-908e-a2d65e0d6667\",\"expectedVersion\":\"162ae81d-3aa1-4cd1-a1b7-907b801dca64\",\"intendedContentHash\":\"8bf1ea317680e14aaa526f486b45ea12e6483da50abf2a49a3b6f408f3649ae9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"a87971ad-9180-46a1-beb5-c42c44b83a55\",\"phase\":\"attaching\",\"target\":\"Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d\",\"expectedVersion\":\"a0b25960-4e1f-4de5-ab25-95961e7ce1ba\",\"intendedContentHash\":\"e53e95b349ef3166e0f7e3c434e828f51dff60d4829e4318cba5b26a56d42629\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"1ec30b01-c4b9-46e2-951d-dc7b0bfbd582\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"ca7bbffb-8a48-4c13-a834-c7445a353e5d\",\"intendedContentHash\":\"f670be43d8ee2318699b5198f0002f1886984a6523a2f0c4aa9223d71728d30a\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"50103e50-0e82-4bee-85ca-832605a26c0c\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"77b4b83c-54ec-4058-906d-7c5deec60e86\",\"intendedContentHash\":\"82aa7781c57816a128661c6d9727abbccdd506acf00c069e12104362bafb4a8d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"}],\"generation\":\"99947495-71b2-4304-9029-f41072c5886a\"}"
+              }
+            ]
+          },
+          "active": false,
+          "kind": "transfer",
+          "phase": "linked",
+          "sourcePersonId": "d8894834-3aba-4ff9-908e-a2d65e0d6667",
+          "destinationPersonId": "be1f57af-eb59-4be2-b86b-41a422a1cb3d",
+          "relatedPersonIds": [
+            "c6e4c679-9e41-4d06-b6a5-347cb767b026"
+          ],
+          "patients": [
+            {
+              "relatedPersonId": "c6e4c679-9e41-4d06-b6a5-347cb767b026",
+              "patientId": "cfe0c944-ba8f-4d2c-be9a-37d05a657940",
+              "name": "X2 before Synthetic"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "variant": "after",
+      "originalStatus": "completed",
+      "correctionInProgress": true,
+      "originalUndoReasons": 0,
+      "undoButtons": 1,
+      "consoleErrors": [],
+      "history": [
+        {
+          "task": {
+            "resourceType": "Task",
+            "id": "c8ebb5b5-a234-4d77-8a65-dbde0ca0dad5",
+            "intent": "order",
+            "status": "in-progress",
+            "identifier": [
+              {
+                "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                "value": "a504c25a-948c-40f3-a208-270f717e69fe"
+              }
+            ],
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                  "code": "correct"
+                }
+              ]
+            },
+            "input": [
+              {
+                "type": {
+                  "text": "kind"
+                },
+                "valueCode": "correct"
+              },
+              {
+                "type": {
+                  "text": "source"
+                },
+                "valueReference": {
+                  "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                }
+              },
+              {
+                "type": {
+                  "text": "destination"
+                },
+                "valueReference": {
+                  "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                }
+              },
+              {
+                "type": {
+                  "text": "moved"
+                },
+                "valueReference": {
+                  "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                }
+              },
+              {
+                "type": {
+                  "text": "expected:Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                },
+                "valueString": "99947495-71b2-4304-9029-f41072c5886a"
+              },
+              {
+                "type": {
+                  "text": "expected:Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                },
+                "valueString": "40b779dc-edad-40a7-b077-1c825d35b1c1"
+              },
+              {
+                "type": {
+                  "text": "expected:RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                },
+                "valueString": "fc076fdd-28b8-4f95-8280-02196bc0d12d"
+              },
+              {
+                "type": {
+                  "text": "reason"
+                },
+                "valueString": "Synthetic Undo"
+              }
+            ],
+            "requester": {
+              "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0"
+            },
+            "basedOn": [
+              {
+                "reference": "Task/a3ce6179-2df5-49de-88a1-33d026da3641"
+              }
+            ],
+            "meta": {
+              "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+              "versionId": "bfc6539b-9bbd-4f86-a5f4-6a71d0783b52",
+              "lastUpdated": "2026-09-14T19:51:28.165Z",
+              "author": {
+                "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                "display": "Medplum Admin"
+              },
+              "compartment": [
+                {
+                  "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                }
+              ]
+            },
+            "businessStatus": {
+              "text": "interfered"
+            },
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                "valueString": "{\"intents\":[{\"id\":\"72ee8fa7-b5bb-4eef-bd98-34d32b7c0793\",\"phase\":\"fence-source\",\"target\":\"Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d\",\"expectedVersion\":\"99947495-71b2-4304-9029-f41072c5886a\",\"intendedContentHash\":\"e53e95b349ef3166e0f7e3c434e828f51dff60d4829e4318cba5b26a56d42629\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"f014b958-a2f3-43a0-829e-be2c9360dc47\",\"phase\":\"fence-destination\",\"target\":\"Person/d8894834-3aba-4ff9-908e-a2d65e0d6667\",\"expectedVersion\":\"40b779dc-edad-40a7-b077-1c825d35b1c1\",\"intendedContentHash\":\"8bf1ea317680e14aaa526f486b45ea12e6483da50abf2a49a3b6f408f3649ae9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"c5950d73-9349-4418-b679-d5234814bce1\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"fc076fdd-28b8-4f95-8280-02196bc0d12d\",\"intendedContentHash\":\"98b22a95f5a64afbfecfd182800dd3481d9c7ff6335ff36e3812f6389d4a12c9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"d5e9b8f1-d5d7-4385-b510-c1c2692c57ad\",\"phase\":\"detaching\",\"target\":\"Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d\",\"expectedVersion\":\"e1f44773-9ad5-47d2-a964-1b71bff82b74\",\"intendedContentHash\":\"81224e61e8aaf73891963bbb68f652853845484fd3f151485c97b48b6a7111eb\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"b6a72b2c-b9c0-4335-8023-74b913c59cf4\",\"phase\":\"attaching\",\"target\":\"Person/d8894834-3aba-4ff9-908e-a2d65e0d6667\",\"expectedVersion\":\"42842d52-83e8-4efc-9281-0575c5bd9df5\",\"intendedContentHash\":\"471629f3c5daaa24acdfecf79dd650dbcd5c0c8d5154bb7bc655c23f7058fcea\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"31dfcda3-3747-442c-a559-1c7106562e34\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"24b909cf-b703-4e8b-ad57-d4c68bace82a\",\"intendedContentHash\":\"55c4f8cfdb6c253dc5a0359386b3cc3181e2ea8545c486267cea8da1c3d54196\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"39a3279d-2d72-4d27-abf5-fef8fd999f8a\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"39d6f774-6172-4ff0-bdad-2b287e260500\",\"intendedContentHash\":\"1d465c6cf524185945501b86973b856561c5d7db0e51e8a9b5caaed0e88c8f2b\"}],\"generation\":\"b9a87d72-5466-424c-bd2e-af92ea068425\"}"
+              }
+            ]
+          },
+          "active": true,
+          "kind": "correct",
+          "phase": "interfered",
+          "sourcePersonId": "be1f57af-eb59-4be2-b86b-41a422a1cb3d",
+          "destinationPersonId": "d8894834-3aba-4ff9-908e-a2d65e0d6667",
+          "relatedPersonIds": [
+            "c6e4c679-9e41-4d06-b6a5-347cb767b026"
+          ],
+          "patients": [
+            {
+              "relatedPersonId": "c6e4c679-9e41-4d06-b6a5-347cb767b026",
+              "patientId": "cfe0c944-ba8f-4d2c-be9a-37d05a657940",
+              "name": "X2 before Synthetic"
+            }
+          ],
+          "correctionInProgress": false
+        },
+        {
+          "task": {
+            "resourceType": "Task",
+            "id": "9c83ebf5-7875-43b7-8d68-bb814d21f2c2",
+            "intent": "order",
+            "status": "completed",
+            "identifier": [
+              {
+                "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                "value": "626703a1-aa59-4899-af5a-a1d474c0fa20"
+              }
+            ],
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                  "code": "transfer"
+                }
+              ]
+            },
+            "input": [
+              {
+                "type": {
+                  "text": "kind"
+                },
+                "valueCode": "transfer"
+              },
+              {
+                "type": {
+                  "text": "source"
+                },
+                "valueReference": {
+                  "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                }
+              },
+              {
+                "type": {
+                  "text": "destination"
+                },
+                "valueReference": {
+                  "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                }
+              },
+              {
+                "type": {
+                  "text": "moved"
+                },
+                "valueReference": {
+                  "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                }
+              },
+              {
+                "type": {
+                  "text": "expected:Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                },
+                "valueString": "b9a87d72-5466-424c-bd2e-af92ea068425"
+              },
+              {
+                "type": {
+                  "text": "expected:Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                },
+                "valueString": "13baee05-0c05-4857-9df8-b1af233c2742"
+              },
+              {
+                "type": {
+                  "text": "expected:RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                },
+                "valueString": "3530ecd5-6ed1-47fd-b0bf-d3d787110097"
+              },
+              {
+                "type": {
+                  "text": "reason"
+                },
+                "valueString": "Synthetic X2"
+              }
+            ],
+            "requester": {
+              "reference": "Practitioner/d0a6e159-6093-4dff-ae58-77e310d3767b"
+            },
+            "meta": {
+              "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+              "versionId": "fab7c588-5b76-4638-9e56-6765c69021c7",
+              "lastUpdated": "2026-09-14T19:51:27.925Z",
+              "author": {
+                "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                "display": "Medplum Admin"
+              },
+              "compartment": [
+                {
+                  "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                }
+              ]
+            },
+            "businessStatus": {
+              "text": "linked"
+            },
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                "valueString": "{\"intents\":[{\"id\":\"f0879f8b-c075-487b-9b7a-fd4e453adc06\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"3530ecd5-6ed1-47fd-b0bf-d3d787110097\",\"intendedContentHash\":\"1ccd7f2ad4b66c86568a633337796468f03cc12fc60fb03c3e3ae1725857d8a7\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"99172026-067f-4b43-8697-1fbb0e776cbb\",\"phase\":\"detaching\",\"target\":\"Person/d8894834-3aba-4ff9-908e-a2d65e0d6667\",\"expectedVersion\":\"b9a87d72-5466-424c-bd2e-af92ea068425\",\"intendedContentHash\":\"8bf1ea317680e14aaa526f486b45ea12e6483da50abf2a49a3b6f408f3649ae9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"99c0845c-e8bf-49ae-abca-3b330f8744c0\",\"phase\":\"attaching\",\"target\":\"Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d\",\"expectedVersion\":\"13baee05-0c05-4857-9df8-b1af233c2742\",\"intendedContentHash\":\"e53e95b349ef3166e0f7e3c434e828f51dff60d4829e4318cba5b26a56d42629\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"8bfdb62c-f23e-4d52-9d4f-c026c119eb34\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"47e94947-c353-4870-9f1f-d239bc629dba\",\"intendedContentHash\":\"43f5b2c847e9620ced602a376c124297b8dad6a75d8d617a637ee4df1ac13a49\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"63c8836e-13fe-4574-9776-ae6247f73a3e\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"0934a5b0-9f50-448a-a4c0-275f1815a6af\",\"intendedContentHash\":\"82aa7781c57816a128661c6d9727abbccdd506acf00c069e12104362bafb4a8d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"}],\"generation\":\"1393036c-c9ae-4f71-8391-7f32f91367b0\"}"
+              }
+            ]
+          },
+          "active": false,
+          "kind": "transfer",
+          "phase": "linked",
+          "sourcePersonId": "d8894834-3aba-4ff9-908e-a2d65e0d6667",
+          "destinationPersonId": "be1f57af-eb59-4be2-b86b-41a422a1cb3d",
+          "relatedPersonIds": [
+            "c6e4c679-9e41-4d06-b6a5-347cb767b026"
+          ],
+          "patients": [
+            {
+              "relatedPersonId": "c6e4c679-9e41-4d06-b6a5-347cb767b026",
+              "patientId": "cfe0c944-ba8f-4d2c-be9a-37d05a657940",
+              "name": "X2 before Synthetic"
+            }
+          ],
+          "correctionInProgress": false
+        },
+        {
+          "task": {
+            "resourceType": "Task",
+            "id": "a3ce6179-2df5-49de-88a1-33d026da3641",
+            "intent": "order",
+            "status": "completed",
+            "identifier": [
+              {
+                "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                "value": "5c2f41d7-57c1-49a0-a093-2b26ab50f397"
+              }
+            ],
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                  "code": "transfer"
+                }
+              ]
+            },
+            "input": [
+              {
+                "type": {
+                  "text": "kind"
+                },
+                "valueCode": "transfer"
+              },
+              {
+                "type": {
+                  "text": "source"
+                },
+                "valueReference": {
+                  "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                }
+              },
+              {
+                "type": {
+                  "text": "destination"
+                },
+                "valueReference": {
+                  "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                }
+              },
+              {
+                "type": {
+                  "text": "moved"
+                },
+                "valueReference": {
+                  "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                }
+              },
+              {
+                "type": {
+                  "text": "expected:Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                },
+                "valueString": "162ae81d-3aa1-4cd1-a1b7-907b801dca64"
+              },
+              {
+                "type": {
+                  "text": "expected:Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                },
+                "valueString": "a0b25960-4e1f-4de5-ab25-95961e7ce1ba"
+              },
+              {
+                "type": {
+                  "text": "expected:RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                },
+                "valueString": "f365f30c-7705-47a5-823e-5e82d7590381"
+              },
+              {
+                "type": {
+                  "text": "reason"
+                },
+                "valueString": "Synthetic X2"
+              }
+            ],
+            "requester": {
+              "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0"
+            },
+            "meta": {
+              "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+              "versionId": "06560434-75e1-4070-868a-7d86757dff92",
+              "lastUpdated": "2026-09-14T19:51:26.361Z",
+              "author": {
+                "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                "display": "Medplum Admin"
+              },
+              "compartment": [
+                {
+                  "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                }
+              ]
+            },
+            "businessStatus": {
+              "text": "linked"
+            },
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                "valueString": "{\"intents\":[{\"id\":\"84b46810-fd24-4aec-b911-753592f8ac53\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"f365f30c-7705-47a5-823e-5e82d7590381\",\"intendedContentHash\":\"ccc6eb0f26939929e42ef356a11132f7b2d77d89a406dde7a3a5198aade01341\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"943a72f6-261c-435f-a403-4b26c1366fd5\",\"phase\":\"detaching\",\"target\":\"Person/d8894834-3aba-4ff9-908e-a2d65e0d6667\",\"expectedVersion\":\"162ae81d-3aa1-4cd1-a1b7-907b801dca64\",\"intendedContentHash\":\"8bf1ea317680e14aaa526f486b45ea12e6483da50abf2a49a3b6f408f3649ae9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"a87971ad-9180-46a1-beb5-c42c44b83a55\",\"phase\":\"attaching\",\"target\":\"Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d\",\"expectedVersion\":\"a0b25960-4e1f-4de5-ab25-95961e7ce1ba\",\"intendedContentHash\":\"e53e95b349ef3166e0f7e3c434e828f51dff60d4829e4318cba5b26a56d42629\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"1ec30b01-c4b9-46e2-951d-dc7b0bfbd582\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"ca7bbffb-8a48-4c13-a834-c7445a353e5d\",\"intendedContentHash\":\"f670be43d8ee2318699b5198f0002f1886984a6523a2f0c4aa9223d71728d30a\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"50103e50-0e82-4bee-85ca-832605a26c0c\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"77b4b83c-54ec-4058-906d-7c5deec60e86\",\"intendedContentHash\":\"82aa7781c57816a128661c6d9727abbccdd506acf00c069e12104362bafb4a8d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"}],\"generation\":\"99947495-71b2-4304-9029-f41072c5886a\"}"
+              }
+            ]
+          },
+          "active": false,
+          "kind": "transfer",
+          "phase": "linked",
+          "sourcePersonId": "d8894834-3aba-4ff9-908e-a2d65e0d6667",
+          "destinationPersonId": "be1f57af-eb59-4be2-b86b-41a422a1cb3d",
+          "relatedPersonIds": [
+            "c6e4c679-9e41-4d06-b6a5-347cb767b026"
+          ],
+          "patients": [
+            {
+              "relatedPersonId": "c6e4c679-9e41-4d06-b6a5-347cb767b026",
+              "patientId": "cfe0c944-ba8f-4d2c-be9a-37d05a657940",
+              "name": "X2 before Synthetic"
+            }
+          ],
+          "correctionInProgress": true
+        }
+      ]
+    }
+  ]
+}

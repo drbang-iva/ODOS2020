@@ -1,0 +1,30 @@
+TAP version 13
+# Subtest: R5: each phase hashes its owned fields and ignores non-owned changes
+not ok 1 - R5: each phase hashes its owned fields and ignores non-owned changes
+  ---
+  duration_ms: 1.852458
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:1:6043'
+  failureType: 'testCodeFailure'
+  error: 'detaching: active'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'b16ea12dca04b65e2c5559c23f647f038323ca0013586fdaa2b71e6d456f3048'
+  actual: 'b16ea12dca04b65e2c5559c23f647f038323ca0013586fdaa2b71e6d456f3048'
+  operator: 'notStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:134:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 126.667958

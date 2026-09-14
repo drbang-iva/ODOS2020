@@ -1,0 +1,472 @@
+[
+  {
+    "guard": "R1",
+    "file": "mcp/src/clinic/guarantor-link-operation.ts",
+    "before": "if (!intentMatches(fresh, intent))",
+    "after": "if (guarantorContentHash(fresh) !== intent.intendedContentHash)",
+    "sourceSha256": "c26b9c71008a53a7548e035797084aa0c013a330d4420de4bf67daae2e12bc3f",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R1",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": []
+    },
+    "mutantSha256": "beaae8201ce9076207afe2f7fa7b9e387b2aa30c59be6811bd4cc2ce281180b8",
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R1",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 1,
+      "counts": {
+        "tests": "1",
+        "pass": "0",
+        "fail": "1",
+        "skipped": "0"
+      },
+      "failingTests": [
+        "R1 X1: lost correction detach followed by a staff rename completes with source ownership and no claim"
+      ]
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R1",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": []
+    }
+  },
+  {
+    "guard": "R2",
+    "file": "mcp/src/clinic/guarantor-link-operation.ts",
+    "before": "else if (intentMatches(child, intent))",
+    "after": "else if (intent.phase === \"releasing\" ? guarantorContentHash(child) === intent.intendedContentHash : intentMatches(child, intent))",
+    "sourceSha256": "c26b9c71008a53a7548e035797084aa0c013a330d4420de4bf67daae2e12bc3f",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R2",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": []
+    },
+    "mutantSha256": "aaa0e29127ea8fce67bd3efac0893391a8228041725a29ee012363dccd3f8aaa",
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R2",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 1,
+      "counts": {
+        "tests": "1",
+        "pass": "0",
+        "fail": "1",
+        "skipped": "0"
+      },
+      "failingTests": [
+        "R2 X2: lost correction release followed by transfer B completes without rewriting B's child"
+      ]
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R2",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": []
+    }
+  },
+  {
+    "guard": "R3",
+    "file": "mcp/src/clinic/guarantor-link-operation.ts",
+    "before": "owned = { link: [...new Set((person.link ?? []).map(link => link.target.reference ?? \"\"))].sort(), active: person.active };",
+    "after": "owned = { active: person.active };",
+    "sourceSha256": "c26b9c71008a53a7548e035797084aa0c013a330d4420de4bf67daae2e12bc3f",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R3",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": []
+    },
+    "mutantSha256": "8351c0209ec81e6a917882431c9d1d2041f461a1e8e06c39c381762cafeb7cd5",
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R3",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 1,
+      "counts": {
+        "tests": "1",
+        "pass": "0",
+        "fail": "1",
+        "skipped": "0"
+      },
+      "failingTests": [
+        "R3: a service competitor changing an unresolved Person link intent remains interfered"
+      ]
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R3",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": []
+    }
+  },
+  {
+    "guard": "R4",
+    "file": "mcp/src/clinic/guarantor-link-operation.ts",
+    "before": ": guarantorContentHash(resource) === intent.intendedContentHash;",
+    "after": ": true;",
+    "sourceSha256": "c26b9c71008a53a7548e035797084aa0c013a330d4420de4bf67daae2e12bc3f",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R4",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": []
+    },
+    "mutantSha256": "10f15521624a7a0792d4f5b7b9b4300bbdf9cec75f03ae63ccfa860852f5d798",
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R4",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 1,
+      "counts": {
+        "tests": "1",
+        "pass": "0",
+        "fail": "1",
+        "skipped": "0"
+      },
+      "failingTests": [
+        "R4: an old journal without ownedHash retains full-content interference after a staff rename"
+      ]
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R4",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": []
+    }
+  },
+  {
+    "guard": "R5",
+    "file": "mcp/src/clinic/guarantor-link-operation.ts",
+    "before": "owned = { link: [...new Set((person.link ?? []).map(link => link.target.reference ?? \"\"))].sort(), active: person.active };",
+    "after": "owned = { link: [...new Set((person.link ?? []).map(link => link.target.reference ?? \"\"))].sort() };",
+    "sourceSha256": "c26b9c71008a53a7548e035797084aa0c013a330d4420de4bf67daae2e12bc3f",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R5",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": []
+    },
+    "mutantSha256": "e405e428ab4030dff5fff7298055d9d6aa50e404fb8376994f4e1c0cb71d95b7",
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R5",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 1,
+      "counts": {
+        "tests": "1",
+        "pass": "0",
+        "fail": "1",
+        "skipped": "0"
+      },
+      "failingTests": [
+        "R5: each phase hashes its owned fields and ignores non-owned changes"
+      ]
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R5",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": []
+    }
+  },
+  {
+    "guard": "R6",
+    "file": "mcp/src/clinic/guarantor-link-operation.ts",
+    "before": "      if (corrections.some(task => operation.trusted(task) && task.status === \"in-progress\" && task.basedOn?.some(r => r.reference === `Task/${original.id}`) && readPlan(task).kind === \"correct\")) throw new Refusal(409, \"A correction of this operation is already in progress.\");",
+    "after": "",
+    "sourceSha256": "c26b9c71008a53a7548e035797084aa0c013a330d4420de4bf67daae2e12bc3f",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R6: second",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "2",
+        "pass": "2",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": []
+    },
+    "mutantSha256": "96252b91e2784228d48076e9cd4af455af0b90d36b09e6b771fda5d72b8e96f0",
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R6: second",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 1,
+      "counts": {
+        "tests": "2",
+        "pass": "0",
+        "fail": "2",
+        "skipped": "0"
+      },
+      "failingTests": [
+        "R6: second Undo of completed original refuses without a write or a Task",
+        "R6: second Undo of pending original refuses without a write or a Task"
+      ]
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R6: second",
+        "tests/guarantorOwnedRecovery.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "2",
+        "pass": "2",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": []
+    }
+  },
+  {
+    "guard": "R6-UI",
+    "file": "ui/src/components/patient/GuarantorLinkScreens.tsx",
+    "before": "&&!op.correctionInProgress&&<>",
+    "after": "&&<>",
+    "sourceSha256": "6ad8e2cdafadc847443bc7b69b51bfa55519ee25b455ed7681ff91f62607a89f",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R6 UI",
+        "tests/guarantorRecoveryHistory.test.tsx"
+      ],
+      "cwd": "ui",
+      "exitCode": 0,
+      "counts": {
+        "tests": "2",
+        "pass": "2",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": []
+    },
+    "mutantSha256": "6c460129822bd5b11a56cd3c48b6b31bdac932908a665a8402e2d4a982e3f03d",
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R6 UI",
+        "tests/guarantorRecoveryHistory.test.tsx"
+      ],
+      "cwd": "ui",
+      "exitCode": 1,
+      "counts": {
+        "tests": "2",
+        "pass": "1",
+        "fail": "1",
+        "skipped": "0"
+      },
+      "failingTests": [
+        "R6 UI: history hides Undo when correctionInProgress is true"
+      ]
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R6 UI",
+        "tests/guarantorRecoveryHistory.test.tsx"
+      ],
+      "cwd": "ui",
+      "exitCode": 0,
+      "counts": {
+        "tests": "2",
+        "pass": "2",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": []
+    }
+  }
+]

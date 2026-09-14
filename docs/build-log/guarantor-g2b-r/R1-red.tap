@@ -1,0 +1,33 @@
+TAP version 13
+# Subtest: R1 X1: lost correction detach followed by a staff rename completes with source ownership and no claim
+not ok 1 - R1 X1: lost correction detach followed by a staff rename completes with source ownership and no claim
+  ---
+  duration_ms: 16.36325
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:1:1861'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    409 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:53:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# {"schedule":"X1","complete":[{"status":409,"phase":"interfered"},{"status":409,"phase":"interfered"}],"correct":422,"owners":[],"claims":["Task/50c2331c-ccff-41a0-bfd4-f263d9d13aeb"],"correctionStatus":"in-progress"}
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 139.456125

@@ -1,0 +1,6 @@
+ Container g2br-live-medplum-1 Stopping 
+ Container g2br-live-medplum-1 Stopped 
+ Container g2br-live-postgres-1 Stopping 
+ Container g2br-live-redis-1 Stopping 
+ Container g2br-live-postgres-1 Stopped 
+ Container g2br-live-redis-1 Stopped 

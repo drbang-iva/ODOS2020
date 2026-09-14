@@ -1,0 +1,60 @@
+TAP version 13
+# Subtest: R6: second Undo of completed original refuses without a write or a Task
+not ok 1 - R6: second Undo of completed original refuses without a write or a Task
+  ---
+  duration_ms: 14.594583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:1:10101'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'Pending: Complete or Correct.'
+    - 'A correction of this operation is already in progress.'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'A correction of this operation is already in progress.'
+  actual: 'Pending: Complete or Correct.'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:187:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# {"status":409,"phase":"interfered","writes":8,"newTasks":["Task/73bf5184-3790-4344-a851-355370f849b1"]}
+# Subtest: R6: second Undo of pending original refuses without a write or a Task
+not ok 2 - R6: second Undo of pending original refuses without a write or a Task
+  ---
+  duration_ms: 3.293417
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:1:10101'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'Pending: Complete or Correct.'
+    - 'A correction of this operation is already in progress.'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'A correction of this operation is already in progress.'
+  actual: 'Pending: Complete or Correct.'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:187:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"status":409,"phase":"interfered","writes":8,"newTasks":["Task/7569bdb9-1ee5-44f5-9d59-0ed23e632296"]}
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 143.975084

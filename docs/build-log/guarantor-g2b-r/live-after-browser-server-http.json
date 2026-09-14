@@ -1,0 +1,4668 @@
+{
+  "provenance": {
+    "head": "bd7029eb55435655f3e4332b2cc703bfd2d77e7e",
+    "files": {
+      "mcp/src/clinic/guarantor-link-operation.ts": "c26b9c71008a53a7548e035797084aa0c013a330d4420de4bf67daae2e12bc3f",
+      "mcp/src/clinic/guarantor-routes.ts": "0c18343b58ae8ac232652ebe90f0e803163c1c72999df667bfc444335b487e6b",
+      "mcp/src/authz/roles.ts": "afdd50b756f907121ccfeb965abdd72d8981739992c1d21f111d4568087cf114",
+      "mcp/src/fhir-client.ts": "57715549311950cbd1306173f71e1e98563d1c97421b3a578fce18e687bd925b"
+    },
+    "fixtureSourceSha256": "72b9a011e51518e2b41edea6ed50ea3cbdd9b34d9e2f50437170cd6bcb63b11d"
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/auth/me",
+      "status": 200,
+      "response": {
+        "project": {
+          "resourceType": "Project",
+          "id": "7d93a0c3-f712-445b-9bc5-8694cd9459fb",
+          "name": "Super Admin",
+          "strictMode": true,
+          "superAdmin": true
+        },
+        "profile": {
+          "resourceType": "Practitioner",
+          "meta": {
+            "project": "7d93a0c3-f712-445b-9bc5-8694cd9459fb",
+            "versionId": "1d5e82f7-e766-4dfe-ba0a-52a5abd921c2",
+            "lastUpdated": "2026-09-14T19:39:36.099Z",
+            "author": {
+              "reference": "system"
+            },
+            "compartment": [
+              {
+                "reference": "Project/7d93a0c3-f712-445b-9bc5-8694cd9459fb"
+              }
+            ]
+          },
+          "name": [
+            {
+              "given": [
+                "Medplum"
+              ],
+              "family": "Admin"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "email",
+              "use": "work",
+              "value": "g2b1-service@example.invalid"
+            }
+          ],
+          "id": "8894177f-d614-4139-9a69-7d893953dbac"
+        },
+        "membership": {
+          "resourceType": "ProjectMembership",
+          "id": "23d4da76-5267-4128-b933-4766f8e348b2",
+          "user": {
+            "reference": "User/a06d9ce0-64af-474b-a292-c31d2a57e913",
+            "display": "g2b1-service@example.invalid"
+          },
+          "profile": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "admin": true
+        },
+        "accessPolicy": {
+          "resourceType": "AccessPolicy",
+          "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+          "fullResourceSha256": "460a57f1a4e79b16287a5dd764c8ed767aa91d52685ed228cfb07a724abc41dc",
+          "resource": []
+        }
+      }
+    },
+    {
+      "sequence": 2,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/auth/me",
+      "status": 200,
+      "response": {
+        "project": {
+          "resourceType": "Project",
+          "id": "7d93a0c3-f712-445b-9bc5-8694cd9459fb",
+          "name": "Super Admin",
+          "strictMode": true,
+          "superAdmin": true
+        },
+        "profile": {
+          "resourceType": "Practitioner",
+          "meta": {
+            "project": "7d93a0c3-f712-445b-9bc5-8694cd9459fb",
+            "versionId": "1d5e82f7-e766-4dfe-ba0a-52a5abd921c2",
+            "lastUpdated": "2026-09-14T19:39:36.099Z",
+            "author": {
+              "reference": "system"
+            },
+            "compartment": [
+              {
+                "reference": "Project/7d93a0c3-f712-445b-9bc5-8694cd9459fb"
+              }
+            ]
+          },
+          "name": [
+            {
+              "given": [
+                "Medplum"
+              ],
+              "family": "Admin"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "email",
+              "use": "work",
+              "value": "g2b1-service@example.invalid"
+            }
+          ],
+          "id": "8894177f-d614-4139-9a69-7d893953dbac"
+        },
+        "membership": {
+          "resourceType": "ProjectMembership",
+          "id": "23d4da76-5267-4128-b933-4766f8e348b2",
+          "user": {
+            "reference": "User/a06d9ce0-64af-474b-a292-c31d2a57e913",
+            "display": "g2b1-service@example.invalid"
+          },
+          "profile": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "admin": true
+        },
+        "accessPolicy": {
+          "resourceType": "AccessPolicy",
+          "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+          "fullResourceSha256": "460a57f1a4e79b16287a5dd764c8ed767aa91d52685ed228cfb07a724abc41dc",
+          "resource": []
+        }
+      }
+    },
+    {
+      "sequence": 3,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "staff",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/auth/me",
+      "status": 200,
+      "response": {
+        "project": {
+          "resourceType": "Project",
+          "id": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+          "name": "G2b1 build synthetic A"
+        },
+        "profile": {
+          "resourceType": "Practitioner",
+          "meta": {
+            "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+            "versionId": "64f2779a-fa4e-458a-8739-283738c50951",
+            "lastUpdated": "2026-09-14T19:42:19.425Z",
+            "author": {
+              "reference": "system"
+            },
+            "compartment": [
+              {
+                "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+              }
+            ]
+          },
+          "name": [
+            {
+              "given": [
+                "ODOS"
+              ],
+              "family": "EXAMPLEV"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "email",
+              "use": "work",
+              "value": "g2b1-staff@example.invalid"
+            }
+          ],
+          "id": "863e0532-6045-468d-8d36-3403ae8c21f0"
+        },
+        "membership": {
+          "resourceType": "ProjectMembership",
+          "id": "61304325-98a0-4151-8df6-3661c27892f1",
+          "user": {
+            "reference": "User/dc5c0a22-6d9a-4a5a-931b-cce01403579e",
+            "display": "g2b1-staff@example.invalid"
+          },
+          "profile": {
+            "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0",
+            "display": "ODOS EXAMPLEV"
+          },
+          "admin": false
+        },
+        "accessPolicy": {
+          "resourceType": "AccessPolicy",
+          "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+          "fullResourceSha256": "7dd4c2a459c5b6bd7e3f1fef011c45f5171f9f35f6b882597b53e9c9c93e99f6",
+          "resource": [
+            {
+              "resourceType": "Person",
+              "interaction": [
+                "read",
+                "search",
+                "history",
+                "vread"
+              ]
+            },
+            {
+              "resourceType": "Task",
+              "interaction": [
+                "read",
+                "search",
+                "history",
+                "vread"
+              ]
+            },
+            {
+              "resourceType": "Person",
+              "interaction": [
+                "create",
+                "update"
+              ],
+              "writeConstraint": [
+                {
+                  "language": "text/fhirpath",
+                  "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                  "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())"
+                }
+              ]
+            },
+            {
+              "resourceType": "Task",
+              "interaction": [
+                "create",
+                "update"
+              ],
+              "writeConstraint": [
+                {
+                  "language": "text/fhirpath",
+                  "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                  "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+                }
+              ]
+            },
+            {
+              "resourceType": "Person",
+              "interaction": [
+                "read",
+                "search",
+                "history",
+                "vread"
+              ]
+            },
+            {
+              "resourceType": "Task",
+              "interaction": [
+                "read",
+                "search",
+                "history",
+                "vread"
+              ]
+            },
+            {
+              "resourceType": "Person",
+              "interaction": [
+                "create",
+                "update"
+              ],
+              "writeConstraint": [
+                {
+                  "language": "text/fhirpath",
+                  "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                  "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())"
+                }
+              ]
+            },
+            {
+              "resourceType": "Task",
+              "interaction": [
+                "create",
+                "update"
+              ],
+              "writeConstraint": [
+                {
+                  "language": "text/fhirpath",
+                  "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                  "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+                }
+              ]
+            },
+            {
+              "resourceType": "Person",
+              "interaction": [
+                "read",
+                "search",
+                "history",
+                "vread"
+              ]
+            },
+            {
+              "resourceType": "Task",
+              "interaction": [
+                "read",
+                "search",
+                "history",
+                "vread"
+              ]
+            },
+            {
+              "resourceType": "Person",
+              "interaction": [
+                "create",
+                "update"
+              ],
+              "writeConstraint": [
+                {
+                  "language": "text/fhirpath",
+                  "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                  "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())"
+                }
+              ]
+            },
+            {
+              "resourceType": "Task",
+              "interaction": [
+                "create",
+                "update"
+              ],
+              "writeConstraint": [
+                {
+                  "language": "text/fhirpath",
+                  "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                  "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+                }
+              ]
+            },
+            {
+              "resourceType": "Person",
+              "interaction": [
+                "read",
+                "search",
+                "history",
+                "vread"
+              ]
+            },
+            {
+              "resourceType": "Task",
+              "interaction": [
+                "read",
+                "search",
+                "history",
+                "vread"
+              ]
+            },
+            {
+              "resourceType": "Person",
+              "interaction": [
+                "create",
+                "update"
+              ],
+              "writeConstraint": [
+                {
+                  "language": "text/fhirpath",
+                  "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                  "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())"
+                }
+              ]
+            },
+            {
+              "resourceType": "Task",
+              "interaction": [
+                "create",
+                "update"
+              ],
+              "writeConstraint": [
+                {
+                  "language": "text/fhirpath",
+                  "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                  "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+                }
+              ]
+            },
+            {
+              "resourceType": "Person",
+              "interaction": [
+                "read",
+                "search",
+                "history",
+                "vread"
+              ]
+            },
+            {
+              "resourceType": "Task",
+              "interaction": [
+                "read",
+                "search",
+                "history",
+                "vread"
+              ]
+            },
+            {
+              "resourceType": "Person",
+              "interaction": [
+                "create",
+                "update"
+              ],
+              "writeConstraint": [
+                {
+                  "language": "text/fhirpath",
+                  "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                  "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())"
+                }
+              ]
+            },
+            {
+              "resourceType": "Task",
+              "interaction": [
+                "create",
+                "update"
+              ],
+              "writeConstraint": [
+                {
+                  "language": "text/fhirpath",
+                  "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                  "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 4,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership?profile=Practitioner%2F863e0532-6045-468d-8d36-3403ae8c21f0",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:29080/fhir/R4/ProjectMembership/61304325-98a0-4151-8df6-3661c27892f1",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "invitedBy": {
+                "reference": "User/a06d9ce0-64af-474b-a292-c31d2a57e913",
+                "display": "g2b1-service@example.invalid"
+              },
+              "resourceType": "ProjectMembership",
+              "project": {
+                "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a",
+                "display": "G2b1 build synthetic A"
+              },
+              "user": {
+                "reference": "User/dc5c0a22-6d9a-4a5a-931b-cce01403579e",
+                "display": "g2b1-staff@example.invalid"
+              },
+              "profile": {
+                "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0",
+                "display": "ODOS EXAMPLEV"
+              },
+              "id": "61304325-98a0-4151-8df6-3661c27892f1",
+              "meta": {
+                "versionId": "a27450c2-cb35-4613-8ed8-ac9108c2d284",
+                "lastUpdated": "2026-09-14T19:52:30.712Z",
+                "author": {
+                  "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                  "display": "Medplum Admin"
+                },
+                "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+                "compartment": [
+                  {
+                    "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                  }
+                ]
+              },
+              "admin": false,
+              "access": [
+                {
+                  "policy": {
+                    "reference": "AccessPolicy/a59829f7-7027-4806-981a-0efd95f8aad4"
+                  },
+                  "parameter": [
+                    {
+                      "name": "patient_compartment",
+                      "valueString": "Patient/23f26e2f-770d-4aee-8e95-76d29bb23dfd"
+                    }
+                  ]
+                },
+                {
+                  "policy": {
+                    "reference": "AccessPolicy/a59829f7-7027-4806-981a-0efd95f8aad4"
+                  },
+                  "parameter": [
+                    {
+                      "name": "patient_compartment",
+                      "valueString": "Patient/ab85b936-dc3f-4452-9f18-4a910a72c115"
+                    }
+                  ]
+                },
+                {
+                  "policy": {
+                    "reference": "AccessPolicy/a59829f7-7027-4806-981a-0efd95f8aad4"
+                  },
+                  "parameter": [
+                    {
+                      "name": "patient_compartment",
+                      "valueString": "Patient/b0a6843f-8f25-43f8-919d-3af9efa75701"
+                    }
+                  ]
+                },
+                {
+                  "policy": {
+                    "reference": "AccessPolicy/a59829f7-7027-4806-981a-0efd95f8aad4"
+                  },
+                  "parameter": [
+                    {
+                      "name": "patient_compartment",
+                      "valueString": "Patient/acb67ffa-534b-457f-8b03-f070f22a0b48"
+                    }
+                  ]
+                },
+                {
+                  "policy": {
+                    "reference": "AccessPolicy/a59829f7-7027-4806-981a-0efd95f8aad4"
+                  },
+                  "parameter": [
+                    {
+                      "name": "patient_compartment",
+                      "valueString": "Patient/8ffefe8a-7800-49af-b66f-f5f4565a852b"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:29080/fhir/R4/ProjectMembership?_count=20&profile=Practitioner%2F863e0532-6045-468d-8d36-3403ae8c21f0"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:29080/fhir/R4/ProjectMembership?_count=20&profile=Practitioner%2F863e0532-6045-468d-8d36-3403ae8c21f0"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 5,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "search",
+            "display": "search"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.578Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "e1544f6b-cc22-42cb-ab3c-9f8c2d770a59"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "search",
+            "display": "search"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.578Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "e1544f6b-cc22-42cb-ab3c-9f8c2d770a59"
+              }
+            ]
+          }
+        ],
+        "id": "00096dac-ee33-43bf-b4bd-d6d645ad2000",
+        "meta": {
+          "versionId": "1ded4a6e-83ba-49f7-a06f-06d2336be2bf",
+          "lastUpdated": "2026-09-14T19:58:21.685Z"
+        }
+      }
+    },
+    {
+      "sequence": 6,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/AccessPolicy/a59829f7-7027-4806-981a-0efd95f8aad4",
+      "status": 200,
+      "response": {
+        "resourceType": "AccessPolicy",
+        "id": "a59829f7-7027-4806-981a-0efd95f8aad4",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "staff"
+            }
+          ],
+          "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+          "versionId": "f784a673-94bf-4d1e-afca-d17c477fa4c1",
+          "lastUpdated": "2026-09-14T19:42:19.298Z",
+          "author": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+            }
+          ]
+        },
+        "name": "ODOS Staff",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "a076e43fb3a5e5116a4d31d8a6d4a0312e3d3bb41008f28f101bbbe8b535a134",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "create",
+              "update"
+            ],
+            "writeConstraint": [
+              {
+                "language": "text/fhirpath",
+                "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())"
+              }
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "create",
+              "update"
+            ],
+            "writeConstraint": [
+              {
+                "language": "text/fhirpath",
+                "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 7,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.666Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "AccessPolicy/a59829f7-7027-4806-981a-0efd95f8aad4"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "e058da7e-eae0-4cbe-8df0-e528f0e1806f"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.666Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "AccessPolicy/a59829f7-7027-4806-981a-0efd95f8aad4"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "e058da7e-eae0-4cbe-8df0-e528f0e1806f"
+              }
+            ]
+          }
+        ],
+        "id": "437b38f3-c314-40c1-bb8b-f7f7d41b2fb9",
+        "meta": {
+          "versionId": "9d485a90-e1a4-4fc4-ad0d-75265a115bc8",
+          "lastUpdated": "2026-09-14T19:58:21.699Z"
+        }
+      }
+    },
+    {
+      "sequence": 8,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/auth/me",
+      "status": 200,
+      "response": {
+        "project": {
+          "resourceType": "Project",
+          "id": "7d93a0c3-f712-445b-9bc5-8694cd9459fb",
+          "name": "Super Admin",
+          "strictMode": true,
+          "superAdmin": true
+        },
+        "profile": {
+          "resourceType": "Practitioner",
+          "meta": {
+            "project": "7d93a0c3-f712-445b-9bc5-8694cd9459fb",
+            "versionId": "1d5e82f7-e766-4dfe-ba0a-52a5abd921c2",
+            "lastUpdated": "2026-09-14T19:39:36.099Z",
+            "author": {
+              "reference": "system"
+            },
+            "compartment": [
+              {
+                "reference": "Project/7d93a0c3-f712-445b-9bc5-8694cd9459fb"
+              }
+            ]
+          },
+          "name": [
+            {
+              "given": [
+                "Medplum"
+              ],
+              "family": "Admin"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "email",
+              "use": "work",
+              "value": "g2b1-service@example.invalid"
+            }
+          ],
+          "id": "8894177f-d614-4139-9a69-7d893953dbac"
+        },
+        "membership": {
+          "resourceType": "ProjectMembership",
+          "id": "23d4da76-5267-4128-b933-4766f8e348b2",
+          "user": {
+            "reference": "User/a06d9ce0-64af-474b-a292-c31d2a57e913",
+            "display": "g2b1-service@example.invalid"
+          },
+          "profile": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "admin": true
+        },
+        "accessPolicy": {
+          "resourceType": "AccessPolicy",
+          "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+          "fullResourceSha256": "460a57f1a4e79b16287a5dd764c8ed767aa91d52685ed228cfb07a724abc41dc",
+          "resource": []
+        }
+      }
+    },
+    {
+      "sequence": 9,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/Task?code=https%3A%2F%2Fodos2020.com%2Ffhir%2FCodeSystem%2Fguarantor-link-operation%7C&_sort=-_lastUpdated&_count=50&_project=9a85be10-1fcd-4081-8627-77ad619f3f0a",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:29080/fhir/R4/Task/2d7e474f-a1ff-41ed-bd68-17525d1db4a4",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Task",
+              "id": "2d7e474f-a1ff-41ed-bd68-17525d1db4a4",
+              "intent": "order",
+              "status": "completed",
+              "identifier": [
+                {
+                  "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                  "value": "7911ab84-cc4f-40b1-a08d-32d201a42691"
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                    "code": "correct"
+                  }
+                ]
+              },
+              "input": [
+                {
+                  "type": {
+                    "text": "kind"
+                  },
+                  "valueCode": "correct"
+                },
+                {
+                  "type": {
+                    "text": "source"
+                  },
+                  "valueReference": {
+                    "reference": "Person/1d24f669-b0dc-47a2-8f26-5cd3eec0cc21"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "destination"
+                  },
+                  "valueReference": {
+                    "reference": "Person/72280e01-7f8c-49ab-ac31-49afe6bf0d79"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "moved"
+                  },
+                  "valueReference": {
+                    "reference": "RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/1d24f669-b0dc-47a2-8f26-5cd3eec0cc21"
+                  },
+                  "valueString": "0887cc20-5147-4957-ad83-fe29d8b321f7"
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/72280e01-7f8c-49ab-ac31-49afe6bf0d79"
+                  },
+                  "valueString": "9e75f237-66da-4ed6-bbea-918ac7ccc4c0"
+                },
+                {
+                  "type": {
+                    "text": "expected:RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69"
+                  },
+                  "valueString": "e1118a34-9227-4956-99a1-72f979ae870a"
+                },
+                {
+                  "type": {
+                    "text": "reason"
+                  },
+                  "valueString": "Synthetic Undo"
+                }
+              ],
+              "requester": {
+                "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0"
+              },
+              "basedOn": [
+                {
+                  "reference": "Task/0012703a-61c3-446f-bfad-25b415038a82"
+                }
+              ],
+              "meta": {
+                "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+                "versionId": "45d628b2-d4f4-4667-8407-976faa0b3597",
+                "lastUpdated": "2026-09-14T19:52:33.276Z",
+                "author": {
+                  "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                  }
+                ]
+              },
+              "businessStatus": {
+                "text": "linked"
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                  "valueString": "{\"intents\":[{\"id\":\"805f0641-3021-4e4b-95d7-490fe43de99a\",\"phase\":\"fence-source\",\"target\":\"Person/1d24f669-b0dc-47a2-8f26-5cd3eec0cc21\",\"expectedVersion\":\"0887cc20-5147-4957-ad83-fe29d8b321f7\",\"intendedContentHash\":\"a5a695a556eff87fc55072753fe72f797d3a6e4bfb4b5c2c040a475376fe9251\",\"ownedHash\":\"7c30c0d00fff2bf010f4bf01c621e5556b0feb15a793260f9d7ba89e7d811b87\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"4ae24b4d-ad6a-4a14-848b-0c724388f4bb\",\"phase\":\"fence-destination\",\"target\":\"Person/72280e01-7f8c-49ab-ac31-49afe6bf0d79\",\"expectedVersion\":\"9e75f237-66da-4ed6-bbea-918ac7ccc4c0\",\"intendedContentHash\":\"e34fa575411508d0f8114712ba548a7f109abefd7f3b6168d97c042162c4db14\",\"ownedHash\":\"7c30c0d00fff2bf010f4bf01c621e5556b0feb15a793260f9d7ba89e7d811b87\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"e982ebf1-0260-4035-8609-3d1184a7fc36\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69\",\"expectedVersion\":\"e1118a34-9227-4956-99a1-72f979ae870a\",\"intendedContentHash\":\"2ae5e38891a0b290eb4775993022f833900a34dfc96832d5bd7b7fbbffebd9f8\",\"ownedHash\":\"f8185b5d05d8a16386e445a1af94d3dec0bb95b63bae4ecdaff91e8dec0c21e9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"76565947-d7ba-44f0-8b05-7336be50ef8c\",\"phase\":\"detaching\",\"target\":\"Person/1d24f669-b0dc-47a2-8f26-5cd3eec0cc21\",\"expectedVersion\":\"97c91bb8-e62a-41a1-ae6b-a8dc102ca644\",\"intendedContentHash\":\"3814a08343660c9d9aadc3b95cc1fde23413ce1091289a49df2fc4cb75de7270\",\"ownedHash\":\"e8bc949fc4450f0fdae188926935a6f47f9c5ade25aa351eacca6563819b2f75\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"21770aea-889b-400a-9065-96f11a0a4a45\",\"phase\":\"attaching\",\"target\":\"Person/72280e01-7f8c-49ab-ac31-49afe6bf0d79\",\"expectedVersion\":\"571adefd-97e7-44b0-9662-f9e2dd4f271c\",\"intendedContentHash\":\"77ee1689b286dbad5947533f48aaa6fbc95ab226e302525cd108c1d087429d6b\",\"ownedHash\":\"d230cf7fa61ce763a40e70fc481190d76163ce02296c64e7575fdf5e8f3b2b70\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"db7af1ad-251a-44ed-9e2c-53bb4b7f42d6\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69\",\"expectedVersion\":\"e119141a-091a-4483-9e5a-db249cbe3050\",\"intendedContentHash\":\"b7b978ce5f44ae01f4d30bc62c8c77db2250aa7833dcf9a058b1e06e9b471045\",\"ownedHash\":\"1ead10f7b3805caf04413d6d7e174d2578af989f50ae2356bb0571e23a2671f6\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"b954440d-cba8-4d88-bc9a-7c468bdc83bc\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69\",\"expectedVersion\":\"ca939e39-4f1e-4fb8-860a-6df621c5b0a8\",\"intendedContentHash\":\"193f24962c93627f59540e7b80da12ddb8ba484fc8109b3870f42ee1e815f6c3\",\"ownedHash\":\"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b\",\"disposition\":\"landed\",\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"c720f1ac-af82-4b7d-98bd-8bfe916b45e2\",\"phase\":\"fence-source\",\"target\":\"Person/1d24f669-b0dc-47a2-8f26-5cd3eec0cc21\",\"expectedVersion\":\"fdd676c5-c4c9-4d73-b654-7a8d716a12a4\",\"intendedContentHash\":\"a5a695a556eff87fc55072753fe72f797d3a6e4bfb4b5c2c040a475376fe9251\",\"ownedHash\":\"311844dc2f414681a7b28b58c553c62b02482934929e18c157ce7ea6b6e178fd\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"b64a849c-7bf3-4abd-be70-ee6c39d3269f\",\"phase\":\"fence-destination\",\"target\":\"Person/72280e01-7f8c-49ab-ac31-49afe6bf0d79\",\"expectedVersion\":\"f5a70d7d-f870-403e-86cd-2a476c9d07b2\",\"intendedContentHash\":\"e34fa575411508d0f8114712ba548a7f109abefd7f3b6168d97c042162c4db14\",\"ownedHash\":\"311844dc2f414681a7b28b58c553c62b02482934929e18c157ce7ea6b6e178fd\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"7ed0e4e3-9a5c-4cc5-8b1e-fac4b998534e\",\"phase\":\"cancel-original\",\"target\":\"Task/0012703a-61c3-446f-bfad-25b415038a82\",\"expectedVersion\":\"f7462ae0-d2af-4697-a513-c054b10a14f5\",\"intendedContentHash\":\"5d14b87d96ac22f04480e4eea4e349c8813a7164ae10af3168a1862ff30c57d1\",\"ownedHash\":\"5d14b87d96ac22f04480e4eea4e349c8813a7164ae10af3168a1862ff30c57d1\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"}],\"generation\":\"321b673d-da28-44e6-a323-ebd6a278e925\"}"
+                }
+              ]
+            }
+          },
+          {
+            "fullUrl": "http://127.0.0.1:29080/fhir/R4/Task/0012703a-61c3-446f-bfad-25b415038a82",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Task",
+              "id": "0012703a-61c3-446f-bfad-25b415038a82",
+              "intent": "order",
+              "status": "cancelled",
+              "identifier": [
+                {
+                  "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                  "value": "71914a34-d42a-4e82-b0d4-5ad2a47fadc9"
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                    "code": "transfer"
+                  }
+                ]
+              },
+              "input": [
+                {
+                  "type": {
+                    "text": "kind"
+                  },
+                  "valueCode": "transfer"
+                },
+                {
+                  "type": {
+                    "text": "source"
+                  },
+                  "valueReference": {
+                    "reference": "Person/72280e01-7f8c-49ab-ac31-49afe6bf0d79"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "destination"
+                  },
+                  "valueReference": {
+                    "reference": "Person/1d24f669-b0dc-47a2-8f26-5cd3eec0cc21"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "moved"
+                  },
+                  "valueReference": {
+                    "reference": "RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/72280e01-7f8c-49ab-ac31-49afe6bf0d79"
+                  },
+                  "valueString": "b0634762-b444-4060-81cb-24a546e15079"
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/1d24f669-b0dc-47a2-8f26-5cd3eec0cc21"
+                  },
+                  "valueString": "bf8e8d89-ff97-4604-a077-f44f28ba7c0e"
+                },
+                {
+                  "type": {
+                    "text": "expected:RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69"
+                  },
+                  "valueString": "cb581285-3f15-4dfd-9ae0-9f2db19900d5"
+                },
+                {
+                  "type": {
+                    "text": "reason"
+                  },
+                  "valueString": "Synthetic X2"
+                }
+              ],
+              "requester": {
+                "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0"
+              },
+              "meta": {
+                "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+                "versionId": "16e18f9b-b22b-4cf1-8209-0b287a59dd70",
+                "lastUpdated": "2026-09-14T19:52:33.231Z",
+                "author": {
+                  "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                  }
+                ]
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                  "valueString": "{\"intents\":[{\"id\":\"8e6df743-9c1e-4240-b645-69f051113c47\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69\",\"expectedVersion\":\"cb581285-3f15-4dfd-9ae0-9f2db19900d5\",\"intendedContentHash\":\"91ad7038e794f1ab725af920f026d83acee8396a8c03118f945337a02fba9f27\",\"ownedHash\":\"05e2137f73fa9d5b9f6dc21f80f92f5103235608c425190df4e666c948827cd4\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"de2a0116-42cb-4f07-8480-c331de851f0e\",\"phase\":\"detaching\",\"target\":\"Person/72280e01-7f8c-49ab-ac31-49afe6bf0d79\",\"expectedVersion\":\"b0634762-b444-4060-81cb-24a546e15079\",\"intendedContentHash\":\"e34fa575411508d0f8114712ba548a7f109abefd7f3b6168d97c042162c4db14\",\"ownedHash\":\"78b558bd2357fbe7ad52804fb3af1b8664b23db096b1deb22d215dde25b152bf\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"6b8d228c-0aeb-435e-b4ba-04ecc5eb22cf\",\"phase\":\"attaching\",\"target\":\"Person/1d24f669-b0dc-47a2-8f26-5cd3eec0cc21\",\"expectedVersion\":\"bf8e8d89-ff97-4604-a077-f44f28ba7c0e\",\"intendedContentHash\":\"a5a695a556eff87fc55072753fe72f797d3a6e4bfb4b5c2c040a475376fe9251\",\"ownedHash\":\"4ff88574f6e7a12974b30141ddd0c6e9f1c930a796ebf3a980a7728682ef35d7\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"25d455a0-7522-4818-838d-c29a70d072bf\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69\",\"expectedVersion\":\"4c0c2cc7-ad82-4630-99fd-e570fafa8f2c\",\"intendedContentHash\":\"eafda6b9e5e21a2ba52d9c5f470b478e485734bb2fcc57c14c168341b03eb5ac\",\"ownedHash\":\"51f22677e6cd4ba24d4dfb0160545cf6c35be69293d38c1f78e0d97641b8a86c\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"059c7834-d568-4f5a-9230-dfaea6b6cecc\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69\",\"expectedVersion\":\"7e477867-b9d1-4c52-9217-40338bf77035\",\"intendedContentHash\":\"ece433df39ac516bb5d1770e7c1bec922f1cf0aefa7a6525f188dccaa87d815b\",\"ownedHash\":\"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"}],\"generation\":\"0887cc20-5147-4957-ad83-fe29d8b321f7\"}"
+                }
+              ],
+              "businessStatus": {
+                "text": "corrected"
+              }
+            }
+          },
+          {
+            "fullUrl": "http://127.0.0.1:29080/fhir/R4/Task/b969fa97-15bd-40d4-8a26-91b37e7a4735",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Task",
+              "id": "b969fa97-15bd-40d4-8a26-91b37e7a4735",
+              "intent": "order",
+              "status": "completed",
+              "identifier": [
+                {
+                  "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                  "value": "62628934-f53b-4a09-ab03-b8ca149fc196"
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                    "code": "transfer"
+                  }
+                ]
+              },
+              "input": [
+                {
+                  "type": {
+                    "text": "kind"
+                  },
+                  "valueCode": "transfer"
+                },
+                {
+                  "type": {
+                    "text": "source"
+                  },
+                  "valueReference": {
+                    "reference": "Person/72280e01-7f8c-49ab-ac31-49afe6bf0d79"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "destination"
+                  },
+                  "valueReference": {
+                    "reference": "Person/1d24f669-b0dc-47a2-8f26-5cd3eec0cc21"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "moved"
+                  },
+                  "valueReference": {
+                    "reference": "RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/72280e01-7f8c-49ab-ac31-49afe6bf0d79"
+                  },
+                  "valueString": "321b673d-da28-44e6-a323-ebd6a278e925"
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/1d24f669-b0dc-47a2-8f26-5cd3eec0cc21"
+                  },
+                  "valueString": "684b821b-82c5-4e2e-b3b2-40caac8fd113"
+                },
+                {
+                  "type": {
+                    "text": "expected:RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69"
+                  },
+                  "valueString": "3b3e31a4-d610-4882-b577-920a6328cdf5"
+                },
+                {
+                  "type": {
+                    "text": "reason"
+                  },
+                  "valueString": "Synthetic X2"
+                }
+              ],
+              "requester": {
+                "reference": "Practitioner/d0a6e159-6093-4dff-ae58-77e310d3767b"
+              },
+              "meta": {
+                "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+                "versionId": "ac5739bc-2e72-4e65-9021-c14d0df6aae8",
+                "lastUpdated": "2026-09-14T19:52:32.795Z",
+                "author": {
+                  "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                  }
+                ]
+              },
+              "businessStatus": {
+                "text": "linked"
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                  "valueString": "{\"intents\":[{\"id\":\"ae27d938-270c-4d5a-b509-66ad57f20f56\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69\",\"expectedVersion\":\"3b3e31a4-d610-4882-b577-920a6328cdf5\",\"intendedContentHash\":\"b607fd403df5f1c0afdf380e39f65603a656e5af24b3c5c7e13e38f1150812aa\",\"ownedHash\":\"815c55de4f7e067a3e52af511a90da5ab918c4c5113d38c313d682ff2b919497\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"df578718-cd50-4c36-8a27-f9e123687c9a\",\"phase\":\"detaching\",\"target\":\"Person/72280e01-7f8c-49ab-ac31-49afe6bf0d79\",\"expectedVersion\":\"321b673d-da28-44e6-a323-ebd6a278e925\",\"intendedContentHash\":\"e34fa575411508d0f8114712ba548a7f109abefd7f3b6168d97c042162c4db14\",\"ownedHash\":\"78b558bd2357fbe7ad52804fb3af1b8664b23db096b1deb22d215dde25b152bf\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"f378a4d8-d1f6-4ae1-bd2d-03f74c1630a7\",\"phase\":\"attaching\",\"target\":\"Person/1d24f669-b0dc-47a2-8f26-5cd3eec0cc21\",\"expectedVersion\":\"684b821b-82c5-4e2e-b3b2-40caac8fd113\",\"intendedContentHash\":\"a5a695a556eff87fc55072753fe72f797d3a6e4bfb4b5c2c040a475376fe9251\",\"ownedHash\":\"4ff88574f6e7a12974b30141ddd0c6e9f1c930a796ebf3a980a7728682ef35d7\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"a301e7ce-f0eb-4321-88d4-535886c95e25\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69\",\"expectedVersion\":\"80355eea-ce5c-474e-8df8-43f8ca70c43e\",\"intendedContentHash\":\"4e18dfde165c2a3865ea309e26f37a934e030fb6c8774dff70653f556769c156\",\"ownedHash\":\"4494adf2ba8de833b91bf9564292b9980421f771b0ea3c2ae4e794033b7f3109\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"809e8eb4-c7e7-4132-9025-4835fc06863b\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/43a7e093-1769-46b3-99b2-d8ea1ebfde69\",\"expectedVersion\":\"d9cb56ba-5d52-4dae-a72c-d3f667e1a890\",\"intendedContentHash\":\"ece433df39ac516bb5d1770e7c1bec922f1cf0aefa7a6525f188dccaa87d815b\",\"ownedHash\":\"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"}],\"generation\":\"fdd676c5-c4c9-4d73-b654-7a8d716a12a4\"}"
+                }
+              ]
+            }
+          },
+          {
+            "fullUrl": "http://127.0.0.1:29080/fhir/R4/Task/952b1a96-6def-48fc-b5ac-94eb819b3993",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Task",
+              "id": "952b1a96-6def-48fc-b5ac-94eb819b3993",
+              "intent": "order",
+              "status": "completed",
+              "identifier": [
+                {
+                  "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                  "value": "f0a61ced-6896-4c01-92d2-3caf73d4610b"
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                    "code": "correct"
+                  }
+                ]
+              },
+              "input": [
+                {
+                  "type": {
+                    "text": "kind"
+                  },
+                  "valueCode": "correct"
+                },
+                {
+                  "type": {
+                    "text": "source"
+                  },
+                  "valueReference": {
+                    "reference": "Person/5a639e89-6e78-4472-823d-8e761ca6cdaf"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "destination"
+                  },
+                  "valueReference": {
+                    "reference": "Person/259211a5-5970-490b-b277-0dc003277677"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "moved"
+                  },
+                  "valueReference": {
+                    "reference": "RelatedPerson/7676ab19-42d0-4951-81ec-19b69202ad56"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/5a639e89-6e78-4472-823d-8e761ca6cdaf"
+                  },
+                  "valueString": "0f7ed436-4c59-4a2d-bc0e-d65bc034ed20"
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/259211a5-5970-490b-b277-0dc003277677"
+                  },
+                  "valueString": "5adee49d-82de-416b-90b5-221cad9c886d"
+                },
+                {
+                  "type": {
+                    "text": "expected:RelatedPerson/7676ab19-42d0-4951-81ec-19b69202ad56"
+                  },
+                  "valueString": "12fe7aa4-4752-4805-9f8e-20467b7d95cb"
+                },
+                {
+                  "type": {
+                    "text": "reason"
+                  },
+                  "valueString": "Synthetic Undo"
+                }
+              ],
+              "requester": {
+                "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0"
+              },
+              "basedOn": [
+                {
+                  "reference": "Task/6b01cb20-3217-4dd9-9396-c45c27fd61c1"
+                }
+              ],
+              "meta": {
+                "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+                "versionId": "e6d60d9c-09cf-423b-a9ac-cda9486acd91",
+                "lastUpdated": "2026-09-14T19:52:30.521Z",
+                "author": {
+                  "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                  }
+                ]
+              },
+              "businessStatus": {
+                "text": "linked"
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                  "valueString": "{\"intents\":[{\"id\":\"ad3911cf-5813-4108-b229-49d1c5f82548\",\"phase\":\"fence-source\",\"target\":\"Person/5a639e89-6e78-4472-823d-8e761ca6cdaf\",\"expectedVersion\":\"0f7ed436-4c59-4a2d-bc0e-d65bc034ed20\",\"intendedContentHash\":\"135bc03efa5c6b69560ac2f17beffe610dd3fccec902df04b2c2372b50f5c23f\",\"ownedHash\":\"f6ddb9b34f6f2b878ded213ab489908b0da2ead854a16d15aedf29d51ee98d3f\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"0d4a37a6-65c6-498c-b387-f2f2f85c7ecc\",\"phase\":\"fence-destination\",\"target\":\"Person/259211a5-5970-490b-b277-0dc003277677\",\"expectedVersion\":\"5adee49d-82de-416b-90b5-221cad9c886d\",\"intendedContentHash\":\"17aa55d10acd0ea8b2172a2f43bef45c16606f8464922e47f143c6054f6a26ed\",\"ownedHash\":\"f6ddb9b34f6f2b878ded213ab489908b0da2ead854a16d15aedf29d51ee98d3f\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"28a533ec-0fb0-4066-a66a-25ec8626b63a\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/7676ab19-42d0-4951-81ec-19b69202ad56\",\"expectedVersion\":\"12fe7aa4-4752-4805-9f8e-20467b7d95cb\",\"intendedContentHash\":\"9e0bfa3f577e9500e18e7a4f6d9a16e44967a00044c2dee05f3f6296cc2c5a7c\",\"ownedHash\":\"b899e4e748f643e6694f617e0a35ee16fb2773f53fe234fc81bea96e66861923\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"6fd653cf-05db-4967-8f4f-80abcc871091\",\"phase\":\"detaching\",\"target\":\"Person/5a639e89-6e78-4472-823d-8e761ca6cdaf\",\"expectedVersion\":\"3200eb20-2e29-45b6-9d13-2780c0863697\",\"intendedContentHash\":\"e8ee1ca9d902e2e8b47fc7be576b5aa312a5e24b33ba3f02e53b2c6c94fa32c7\",\"ownedHash\":\"c952ed27c00fa8ccc9fbe54037909cdd46f09000984d27bc863da9d0a6c0cd2e\",\"disposition\":\"landed\",\"writer\":\"Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0\"},{\"id\":\"7d3e0302-5e00-4f61-b0ac-0ab3481689ee\",\"phase\":\"fence-source\",\"target\":\"Person/5a639e89-6e78-4472-823d-8e761ca6cdaf\",\"expectedVersion\":\"3200eb20-2e29-45b6-9d13-2780c0863697\",\"intendedContentHash\":\"2b2f7e572ab4c31bf14189bc9d318184408c3760bc74867d714058c954d97ff8\",\"ownedHash\":\"665f5a8f16be729f7d3646df326b999c5e11d8790d8ee6f1e2c503dcc06733fe\",\"disposition\":\"rejected\",\"responseStatus\":412},{\"id\":\"a051ac69-4ade-47a4-96ff-87298da555b0\",\"phase\":\"fence-source\",\"target\":\"Person/5a639e89-6e78-4472-823d-8e761ca6cdaf\",\"expectedVersion\":\"64595977-8931-4cc5-9ee1-97ccfa5e2599\",\"intendedContentHash\":\"2b2f7e572ab4c31bf14189bc9d318184408c3760bc74867d714058c954d97ff8\",\"ownedHash\":\"665f5a8f16be729f7d3646df326b999c5e11d8790d8ee6f1e2c503dcc06733fe\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"04b8891a-4542-496f-acfa-4abce5940109\",\"phase\":\"fence-destination\",\"target\":\"Person/259211a5-5970-490b-b277-0dc003277677\",\"expectedVersion\":\"54e96e6e-7ee4-426d-bbe5-b0bee4ade9f9\",\"intendedContentHash\":\"17aa55d10acd0ea8b2172a2f43bef45c16606f8464922e47f143c6054f6a26ed\",\"ownedHash\":\"665f5a8f16be729f7d3646df326b999c5e11d8790d8ee6f1e2c503dcc06733fe\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"8edf8c83-1aa8-4c28-abe2-9d266a369804\",\"phase\":\"attaching\",\"target\":\"Person/259211a5-5970-490b-b277-0dc003277677\",\"expectedVersion\":\"46707fe5-5a05-46ee-859c-4bd2eb285076\",\"intendedContentHash\":\"e6bd1aeb9067c99d1353d8ed656cce1a68a3ff832273df40a8df5916bdcdd18c\",\"ownedHash\":\"898ceba707b43b3fc5e29f0805f9ada7caaff897ead7e0a5fb983fe1d4970d1d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"3d05cb8b-e5b8-440e-86e4-a94467ad7381\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/7676ab19-42d0-4951-81ec-19b69202ad56\",\"expectedVersion\":\"4d9b7b35-2179-4b0d-89ca-e3d6514af03d\",\"intendedContentHash\":\"de01862cbe7ebb4ac30799d3192b7869481cb46951f579b2a3c062b0f898ed2e\",\"ownedHash\":\"f1b05456a52db17675fc7ef0469d2a6e5f71aec577452c1b4bebc61577f5c5f4\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"35874b3a-115d-49d9-8d9b-467537937164\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/7676ab19-42d0-4951-81ec-19b69202ad56\",\"expectedVersion\":\"c5782e89-1585-4ad7-b62f-efd4f333ebfb\",\"intendedContentHash\":\"d4bbb74e0e0fe23b942fef0dd9aceb2557da44124e8a9ea8fe8629e5f4bffce3\",\"ownedHash\":\"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"b428733a-c6e2-4ae2-ac00-6041e44f19b3\",\"phase\":\"cancel-original\",\"target\":\"Task/6b01cb20-3217-4dd9-9396-c45c27fd61c1\",\"expectedVersion\":\"ec6c3f78-a642-47a8-a715-0bbfb9e0620f\",\"intendedContentHash\":\"58497af2485255335161e1a05ac4927317515865f43d99a37708001bf1bedb99\",\"ownedHash\":\"58497af2485255335161e1a05ac4927317515865f43d99a37708001bf1bedb99\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"}],\"generation\":\"47285bba-c417-4d1d-af32-5a6a50615805\"}"
+                }
+              ]
+            }
+          },
+          {
+            "fullUrl": "http://127.0.0.1:29080/fhir/R4/Task/6b01cb20-3217-4dd9-9396-c45c27fd61c1",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Task",
+              "id": "6b01cb20-3217-4dd9-9396-c45c27fd61c1",
+              "intent": "order",
+              "status": "cancelled",
+              "identifier": [
+                {
+                  "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                  "value": "3cb3eb89-99b2-40b4-a701-9cd5d6804ba7"
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                    "code": "transfer"
+                  }
+                ]
+              },
+              "input": [
+                {
+                  "type": {
+                    "text": "kind"
+                  },
+                  "valueCode": "transfer"
+                },
+                {
+                  "type": {
+                    "text": "source"
+                  },
+                  "valueReference": {
+                    "reference": "Person/259211a5-5970-490b-b277-0dc003277677"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "destination"
+                  },
+                  "valueReference": {
+                    "reference": "Person/5a639e89-6e78-4472-823d-8e761ca6cdaf"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "moved"
+                  },
+                  "valueReference": {
+                    "reference": "RelatedPerson/7676ab19-42d0-4951-81ec-19b69202ad56"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/259211a5-5970-490b-b277-0dc003277677"
+                  },
+                  "valueString": "24cd9c7d-27eb-44e9-b6fc-af56e5167183"
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/5a639e89-6e78-4472-823d-8e761ca6cdaf"
+                  },
+                  "valueString": "89a3099b-ccb3-4240-911a-3adb3a3d2c13"
+                },
+                {
+                  "type": {
+                    "text": "expected:RelatedPerson/7676ab19-42d0-4951-81ec-19b69202ad56"
+                  },
+                  "valueString": "45cd006c-4a90-4aff-8136-43956d6ebe5c"
+                },
+                {
+                  "type": {
+                    "text": "reason"
+                  },
+                  "valueString": "Synthetic X1"
+                }
+              ],
+              "requester": {
+                "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0"
+              },
+              "meta": {
+                "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+                "versionId": "bbdabd41-227a-4f56-96b6-30b7e97adfe8",
+                "lastUpdated": "2026-09-14T19:52:30.476Z",
+                "author": {
+                  "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                  }
+                ]
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                  "valueString": "{\"intents\":[{\"id\":\"89c8e57b-8f2b-4fc2-8209-83ddb4f8bf23\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/7676ab19-42d0-4951-81ec-19b69202ad56\",\"expectedVersion\":\"45cd006c-4a90-4aff-8136-43956d6ebe5c\",\"intendedContentHash\":\"4bd926645eecce9455caa9e6b98bec3ef9bcb2678d34ae6c0add2d9fc0d84ad5\",\"ownedHash\":\"a5de9c6c3ec5758d5d56b5cb03a8ccc3c34486614d902b9de5e51aa7bccc7d1c\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"d799d9dc-bfed-43bc-9be8-b78af2f42ef9\",\"phase\":\"detaching\",\"target\":\"Person/259211a5-5970-490b-b277-0dc003277677\",\"expectedVersion\":\"24cd9c7d-27eb-44e9-b6fc-af56e5167183\",\"intendedContentHash\":\"17aa55d10acd0ea8b2172a2f43bef45c16606f8464922e47f143c6054f6a26ed\",\"ownedHash\":\"78b558bd2357fbe7ad52804fb3af1b8664b23db096b1deb22d215dde25b152bf\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"b5aeb272-da32-4c45-a849-c6bc2b648d87\",\"phase\":\"attaching\",\"target\":\"Person/5a639e89-6e78-4472-823d-8e761ca6cdaf\",\"expectedVersion\":\"89a3099b-ccb3-4240-911a-3adb3a3d2c13\",\"intendedContentHash\":\"135bc03efa5c6b69560ac2f17beffe610dd3fccec902df04b2c2372b50f5c23f\",\"ownedHash\":\"84a5a7e3f2689c626014e95c8873b32d8abbe68fd3c73a12c1255b2f6f03d750\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"366a4886-1da5-49b8-8cfb-807d7a7882c0\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/7676ab19-42d0-4951-81ec-19b69202ad56\",\"expectedVersion\":\"fc6a604f-21b8-433a-b75b-0f7670f89e31\",\"intendedContentHash\":\"74528371de80480f30c1028f198b537d7e45d9eab0ead9414701712a75601636\",\"ownedHash\":\"34132bc226974eee8e8731dafa9122859618327de97203ecfb164237d65fd300\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"f7d0e319-c84d-4d09-8ef4-132d1826ab49\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/7676ab19-42d0-4951-81ec-19b69202ad56\",\"expectedVersion\":\"91190291-0c00-426b-8816-ae65ce999103\",\"intendedContentHash\":\"5f77c492a2ad3cb3eea75d9a4ce77e25904aa1ec33bb50e6b3f0f2b437ff7f2f\",\"ownedHash\":\"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"}],\"generation\":\"0f7ed436-4c59-4a2d-bc0e-d65bc034ed20\"}"
+                }
+              ],
+              "businessStatus": {
+                "text": "corrected"
+              }
+            }
+          },
+          {
+            "fullUrl": "http://127.0.0.1:29080/fhir/R4/Task/c8ebb5b5-a234-4d77-8a65-dbde0ca0dad5",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Task",
+              "id": "c8ebb5b5-a234-4d77-8a65-dbde0ca0dad5",
+              "intent": "order",
+              "status": "in-progress",
+              "identifier": [
+                {
+                  "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                  "value": "a504c25a-948c-40f3-a208-270f717e69fe"
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                    "code": "correct"
+                  }
+                ]
+              },
+              "input": [
+                {
+                  "type": {
+                    "text": "kind"
+                  },
+                  "valueCode": "correct"
+                },
+                {
+                  "type": {
+                    "text": "source"
+                  },
+                  "valueReference": {
+                    "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "destination"
+                  },
+                  "valueReference": {
+                    "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "moved"
+                  },
+                  "valueReference": {
+                    "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                  },
+                  "valueString": "99947495-71b2-4304-9029-f41072c5886a"
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                  },
+                  "valueString": "40b779dc-edad-40a7-b077-1c825d35b1c1"
+                },
+                {
+                  "type": {
+                    "text": "expected:RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                  },
+                  "valueString": "fc076fdd-28b8-4f95-8280-02196bc0d12d"
+                },
+                {
+                  "type": {
+                    "text": "reason"
+                  },
+                  "valueString": "Synthetic Undo"
+                }
+              ],
+              "requester": {
+                "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0"
+              },
+              "basedOn": [
+                {
+                  "reference": "Task/a3ce6179-2df5-49de-88a1-33d026da3641"
+                }
+              ],
+              "meta": {
+                "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+                "versionId": "bfc6539b-9bbd-4f86-a5f4-6a71d0783b52",
+                "lastUpdated": "2026-09-14T19:51:28.165Z",
+                "author": {
+                  "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                  }
+                ]
+              },
+              "businessStatus": {
+                "text": "interfered"
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                  "valueString": "{\"intents\":[{\"id\":\"72ee8fa7-b5bb-4eef-bd98-34d32b7c0793\",\"phase\":\"fence-source\",\"target\":\"Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d\",\"expectedVersion\":\"99947495-71b2-4304-9029-f41072c5886a\",\"intendedContentHash\":\"e53e95b349ef3166e0f7e3c434e828f51dff60d4829e4318cba5b26a56d42629\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"f014b958-a2f3-43a0-829e-be2c9360dc47\",\"phase\":\"fence-destination\",\"target\":\"Person/d8894834-3aba-4ff9-908e-a2d65e0d6667\",\"expectedVersion\":\"40b779dc-edad-40a7-b077-1c825d35b1c1\",\"intendedContentHash\":\"8bf1ea317680e14aaa526f486b45ea12e6483da50abf2a49a3b6f408f3649ae9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"c5950d73-9349-4418-b679-d5234814bce1\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"fc076fdd-28b8-4f95-8280-02196bc0d12d\",\"intendedContentHash\":\"98b22a95f5a64afbfecfd182800dd3481d9c7ff6335ff36e3812f6389d4a12c9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"d5e9b8f1-d5d7-4385-b510-c1c2692c57ad\",\"phase\":\"detaching\",\"target\":\"Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d\",\"expectedVersion\":\"e1f44773-9ad5-47d2-a964-1b71bff82b74\",\"intendedContentHash\":\"81224e61e8aaf73891963bbb68f652853845484fd3f151485c97b48b6a7111eb\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"b6a72b2c-b9c0-4335-8023-74b913c59cf4\",\"phase\":\"attaching\",\"target\":\"Person/d8894834-3aba-4ff9-908e-a2d65e0d6667\",\"expectedVersion\":\"42842d52-83e8-4efc-9281-0575c5bd9df5\",\"intendedContentHash\":\"471629f3c5daaa24acdfecf79dd650dbcd5c0c8d5154bb7bc655c23f7058fcea\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"31dfcda3-3747-442c-a559-1c7106562e34\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"24b909cf-b703-4e8b-ad57-d4c68bace82a\",\"intendedContentHash\":\"55c4f8cfdb6c253dc5a0359386b3cc3181e2ea8545c486267cea8da1c3d54196\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"39a3279d-2d72-4d27-abf5-fef8fd999f8a\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"39d6f774-6172-4ff0-bdad-2b287e260500\",\"intendedContentHash\":\"1d465c6cf524185945501b86973b856561c5d7db0e51e8a9b5caaed0e88c8f2b\"}],\"generation\":\"b9a87d72-5466-424c-bd2e-af92ea068425\"}"
+                }
+              ]
+            }
+          },
+          {
+            "fullUrl": "http://127.0.0.1:29080/fhir/R4/Task/9c83ebf5-7875-43b7-8d68-bb814d21f2c2",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Task",
+              "id": "9c83ebf5-7875-43b7-8d68-bb814d21f2c2",
+              "intent": "order",
+              "status": "completed",
+              "identifier": [
+                {
+                  "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                  "value": "626703a1-aa59-4899-af5a-a1d474c0fa20"
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                    "code": "transfer"
+                  }
+                ]
+              },
+              "input": [
+                {
+                  "type": {
+                    "text": "kind"
+                  },
+                  "valueCode": "transfer"
+                },
+                {
+                  "type": {
+                    "text": "source"
+                  },
+                  "valueReference": {
+                    "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "destination"
+                  },
+                  "valueReference": {
+                    "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "moved"
+                  },
+                  "valueReference": {
+                    "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                  },
+                  "valueString": "b9a87d72-5466-424c-bd2e-af92ea068425"
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                  },
+                  "valueString": "13baee05-0c05-4857-9df8-b1af233c2742"
+                },
+                {
+                  "type": {
+                    "text": "expected:RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                  },
+                  "valueString": "3530ecd5-6ed1-47fd-b0bf-d3d787110097"
+                },
+                {
+                  "type": {
+                    "text": "reason"
+                  },
+                  "valueString": "Synthetic X2"
+                }
+              ],
+              "requester": {
+                "reference": "Practitioner/d0a6e159-6093-4dff-ae58-77e310d3767b"
+              },
+              "meta": {
+                "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+                "versionId": "fab7c588-5b76-4638-9e56-6765c69021c7",
+                "lastUpdated": "2026-09-14T19:51:27.925Z",
+                "author": {
+                  "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                  }
+                ]
+              },
+              "businessStatus": {
+                "text": "linked"
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                  "valueString": "{\"intents\":[{\"id\":\"f0879f8b-c075-487b-9b7a-fd4e453adc06\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"3530ecd5-6ed1-47fd-b0bf-d3d787110097\",\"intendedContentHash\":\"1ccd7f2ad4b66c86568a633337796468f03cc12fc60fb03c3e3ae1725857d8a7\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"99172026-067f-4b43-8697-1fbb0e776cbb\",\"phase\":\"detaching\",\"target\":\"Person/d8894834-3aba-4ff9-908e-a2d65e0d6667\",\"expectedVersion\":\"b9a87d72-5466-424c-bd2e-af92ea068425\",\"intendedContentHash\":\"8bf1ea317680e14aaa526f486b45ea12e6483da50abf2a49a3b6f408f3649ae9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"99c0845c-e8bf-49ae-abca-3b330f8744c0\",\"phase\":\"attaching\",\"target\":\"Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d\",\"expectedVersion\":\"13baee05-0c05-4857-9df8-b1af233c2742\",\"intendedContentHash\":\"e53e95b349ef3166e0f7e3c434e828f51dff60d4829e4318cba5b26a56d42629\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"8bfdb62c-f23e-4d52-9d4f-c026c119eb34\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"47e94947-c353-4870-9f1f-d239bc629dba\",\"intendedContentHash\":\"43f5b2c847e9620ced602a376c124297b8dad6a75d8d617a637ee4df1ac13a49\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"63c8836e-13fe-4574-9776-ae6247f73a3e\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"0934a5b0-9f50-448a-a4c0-275f1815a6af\",\"intendedContentHash\":\"82aa7781c57816a128661c6d9727abbccdd506acf00c069e12104362bafb4a8d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"}],\"generation\":\"1393036c-c9ae-4f71-8391-7f32f91367b0\"}"
+                }
+              ]
+            }
+          },
+          {
+            "fullUrl": "http://127.0.0.1:29080/fhir/R4/Task/a3ce6179-2df5-49de-88a1-33d026da3641",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Task",
+              "id": "a3ce6179-2df5-49de-88a1-33d026da3641",
+              "intent": "order",
+              "status": "completed",
+              "identifier": [
+                {
+                  "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                  "value": "5c2f41d7-57c1-49a0-a093-2b26ab50f397"
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                    "code": "transfer"
+                  }
+                ]
+              },
+              "input": [
+                {
+                  "type": {
+                    "text": "kind"
+                  },
+                  "valueCode": "transfer"
+                },
+                {
+                  "type": {
+                    "text": "source"
+                  },
+                  "valueReference": {
+                    "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "destination"
+                  },
+                  "valueReference": {
+                    "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "moved"
+                  },
+                  "valueReference": {
+                    "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+                  },
+                  "valueString": "162ae81d-3aa1-4cd1-a1b7-907b801dca64"
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+                  },
+                  "valueString": "a0b25960-4e1f-4de5-ab25-95961e7ce1ba"
+                },
+                {
+                  "type": {
+                    "text": "expected:RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+                  },
+                  "valueString": "f365f30c-7705-47a5-823e-5e82d7590381"
+                },
+                {
+                  "type": {
+                    "text": "reason"
+                  },
+                  "valueString": "Synthetic X2"
+                }
+              ],
+              "requester": {
+                "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0"
+              },
+              "meta": {
+                "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+                "versionId": "06560434-75e1-4070-868a-7d86757dff92",
+                "lastUpdated": "2026-09-14T19:51:26.361Z",
+                "author": {
+                  "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                  }
+                ]
+              },
+              "businessStatus": {
+                "text": "linked"
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                  "valueString": "{\"intents\":[{\"id\":\"84b46810-fd24-4aec-b911-753592f8ac53\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"f365f30c-7705-47a5-823e-5e82d7590381\",\"intendedContentHash\":\"ccc6eb0f26939929e42ef356a11132f7b2d77d89a406dde7a3a5198aade01341\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"943a72f6-261c-435f-a403-4b26c1366fd5\",\"phase\":\"detaching\",\"target\":\"Person/d8894834-3aba-4ff9-908e-a2d65e0d6667\",\"expectedVersion\":\"162ae81d-3aa1-4cd1-a1b7-907b801dca64\",\"intendedContentHash\":\"8bf1ea317680e14aaa526f486b45ea12e6483da50abf2a49a3b6f408f3649ae9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"a87971ad-9180-46a1-beb5-c42c44b83a55\",\"phase\":\"attaching\",\"target\":\"Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d\",\"expectedVersion\":\"a0b25960-4e1f-4de5-ab25-95961e7ce1ba\",\"intendedContentHash\":\"e53e95b349ef3166e0f7e3c434e828f51dff60d4829e4318cba5b26a56d42629\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"1ec30b01-c4b9-46e2-951d-dc7b0bfbd582\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"ca7bbffb-8a48-4c13-a834-c7445a353e5d\",\"intendedContentHash\":\"f670be43d8ee2318699b5198f0002f1886984a6523a2f0c4aa9223d71728d30a\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"50103e50-0e82-4bee-85ca-832605a26c0c\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026\",\"expectedVersion\":\"77b4b83c-54ec-4058-906d-7c5deec60e86\",\"intendedContentHash\":\"82aa7781c57816a128661c6d9727abbccdd506acf00c069e12104362bafb4a8d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"}],\"generation\":\"99947495-71b2-4304-9029-f41072c5886a\"}"
+                }
+              ]
+            }
+          },
+          {
+            "fullUrl": "http://127.0.0.1:29080/fhir/R4/Task/5b10b971-6bc6-41ff-b266-32e4ff8c608c",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Task",
+              "id": "5b10b971-6bc6-41ff-b266-32e4ff8c608c",
+              "intent": "order",
+              "status": "in-progress",
+              "identifier": [
+                {
+                  "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                  "value": "9cbb278b-54a7-4a14-9144-d738a19bf17b"
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                    "code": "correct"
+                  }
+                ]
+              },
+              "input": [
+                {
+                  "type": {
+                    "text": "kind"
+                  },
+                  "valueCode": "correct"
+                },
+                {
+                  "type": {
+                    "text": "source"
+                  },
+                  "valueReference": {
+                    "reference": "Person/b5f21a70-4cd7-4063-bd5d-50b096a9621b"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "destination"
+                  },
+                  "valueReference": {
+                    "reference": "Person/b0a642dd-d097-4f7b-a1f4-a5c503f4da4a"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "moved"
+                  },
+                  "valueReference": {
+                    "reference": "RelatedPerson/b6e393f5-d511-4613-a5aa-e40f919e2e3b"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/b5f21a70-4cd7-4063-bd5d-50b096a9621b"
+                  },
+                  "valueString": "35603e63-e230-4a2c-928f-d08020c42c0a"
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/b0a642dd-d097-4f7b-a1f4-a5c503f4da4a"
+                  },
+                  "valueString": "a4d9048e-c74d-4499-aa43-b48c69f331ce"
+                },
+                {
+                  "type": {
+                    "text": "expected:RelatedPerson/b6e393f5-d511-4613-a5aa-e40f919e2e3b"
+                  },
+                  "valueString": "e7070b1c-2794-4337-9aaf-11e239daf042"
+                },
+                {
+                  "type": {
+                    "text": "reason"
+                  },
+                  "valueString": "Synthetic Undo"
+                }
+              ],
+              "requester": {
+                "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0"
+              },
+              "basedOn": [
+                {
+                  "reference": "Task/866dbd05-2ebe-4ac7-b277-91d93b6814d8"
+                }
+              ],
+              "meta": {
+                "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+                "versionId": "8f988132-c572-4caa-b538-5712f6cc70ac",
+                "lastUpdated": "2026-09-14T19:51:25.515Z",
+                "author": {
+                  "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                  }
+                ]
+              },
+              "businessStatus": {
+                "text": "interfered"
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                  "valueString": "{\"intents\":[{\"id\":\"09d44075-8ac6-45ce-a4b2-e22a7cb16ed3\",\"phase\":\"fence-source\",\"target\":\"Person/b5f21a70-4cd7-4063-bd5d-50b096a9621b\",\"expectedVersion\":\"35603e63-e230-4a2c-928f-d08020c42c0a\",\"intendedContentHash\":\"d68f4f604bb9733d7435ee19f0781aebfd7c4959a2ec7483c2e0221f7a676886\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"f495916b-7d00-45b3-a6ea-d6a46546f230\",\"phase\":\"fence-destination\",\"target\":\"Person/b0a642dd-d097-4f7b-a1f4-a5c503f4da4a\",\"expectedVersion\":\"a4d9048e-c74d-4499-aa43-b48c69f331ce\",\"intendedContentHash\":\"16b3037cc1680089749b20b851366365eee5ae3702e200e51407bd8720f4f0ca\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"62f749f0-a431-47e7-ae7f-a5e5a0a978ab\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/b6e393f5-d511-4613-a5aa-e40f919e2e3b\",\"expectedVersion\":\"e7070b1c-2794-4337-9aaf-11e239daf042\",\"intendedContentHash\":\"df2d80806693cf55719cb46305de5d6a034562c927aa6081fc6c45799ea81e60\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"c50016ae-0007-49b7-bdc5-85bbbf33269f\",\"phase\":\"detaching\",\"target\":\"Person/b5f21a70-4cd7-4063-bd5d-50b096a9621b\",\"expectedVersion\":\"68a62e5b-9a21-48f8-8ff5-9483567fd311\",\"intendedContentHash\":\"de53ee2fb9bb12dbd7f3c7b4c6adc29d5487e91417240e0c7c62fb30d5d9f2ac\"},{\"id\":\"5af89362-cf03-4564-bfca-4de36b6a8812\",\"phase\":\"fence-source\",\"target\":\"Person/b5f21a70-4cd7-4063-bd5d-50b096a9621b\",\"expectedVersion\":\"68a62e5b-9a21-48f8-8ff5-9483567fd311\",\"intendedContentHash\":\"64017ac513f5a3526930d961af2815b4bdc4498edc7de292c37a048e5778ea09\",\"disposition\":\"rejected\",\"responseStatus\":412},{\"id\":\"1ae62ce1-239b-4bc3-9aab-993ba5d8a4c6\",\"phase\":\"fence-source\",\"target\":\"Person/b5f21a70-4cd7-4063-bd5d-50b096a9621b\",\"expectedVersion\":\"68a62e5b-9a21-48f8-8ff5-9483567fd311\",\"intendedContentHash\":\"64017ac513f5a3526930d961af2815b4bdc4498edc7de292c37a048e5778ea09\",\"disposition\":\"rejected\",\"responseStatus\":412}]}"
+                }
+              ]
+            }
+          },
+          {
+            "fullUrl": "http://127.0.0.1:29080/fhir/R4/Task/866dbd05-2ebe-4ac7-b277-91d93b6814d8",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Task",
+              "id": "866dbd05-2ebe-4ac7-b277-91d93b6814d8",
+              "intent": "order",
+              "status": "completed",
+              "identifier": [
+                {
+                  "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                  "value": "09b9b7db-36f4-45ae-aac9-1ac5f48e06bb"
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                    "code": "transfer"
+                  }
+                ]
+              },
+              "input": [
+                {
+                  "type": {
+                    "text": "kind"
+                  },
+                  "valueCode": "transfer"
+                },
+                {
+                  "type": {
+                    "text": "source"
+                  },
+                  "valueReference": {
+                    "reference": "Person/b0a642dd-d097-4f7b-a1f4-a5c503f4da4a"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "destination"
+                  },
+                  "valueReference": {
+                    "reference": "Person/b5f21a70-4cd7-4063-bd5d-50b096a9621b"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "moved"
+                  },
+                  "valueReference": {
+                    "reference": "RelatedPerson/b6e393f5-d511-4613-a5aa-e40f919e2e3b"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/b0a642dd-d097-4f7b-a1f4-a5c503f4da4a"
+                  },
+                  "valueString": "aa8317f4-1498-4c91-88d6-272bcac7a444"
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/b5f21a70-4cd7-4063-bd5d-50b096a9621b"
+                  },
+                  "valueString": "16e3e964-b513-4647-baaf-3e9f54c50830"
+                },
+                {
+                  "type": {
+                    "text": "expected:RelatedPerson/b6e393f5-d511-4613-a5aa-e40f919e2e3b"
+                  },
+                  "valueString": "edd6d130-a36c-4a92-b0c2-41c736f17dd7"
+                },
+                {
+                  "type": {
+                    "text": "reason"
+                  },
+                  "valueString": "Synthetic X1"
+                }
+              ],
+              "requester": {
+                "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0"
+              },
+              "meta": {
+                "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+                "versionId": "4d93e930-b8bb-410f-a3fb-1e22a340ae87",
+                "lastUpdated": "2026-09-14T19:51:24.244Z",
+                "author": {
+                  "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                  }
+                ]
+              },
+              "businessStatus": {
+                "text": "linked"
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                  "valueString": "{\"intents\":[{\"id\":\"c4450341-5dfb-45b5-a3e1-121eb62a93a7\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/b6e393f5-d511-4613-a5aa-e40f919e2e3b\",\"expectedVersion\":\"edd6d130-a36c-4a92-b0c2-41c736f17dd7\",\"intendedContentHash\":\"390178a187ceb5a115f96bb5b28f34bddb207a6a68a90802ee391d2eb077a5c7\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"87e673ad-d299-4d2e-ad0a-ab8060277f6e\",\"phase\":\"detaching\",\"target\":\"Person/b0a642dd-d097-4f7b-a1f4-a5c503f4da4a\",\"expectedVersion\":\"aa8317f4-1498-4c91-88d6-272bcac7a444\",\"intendedContentHash\":\"16b3037cc1680089749b20b851366365eee5ae3702e200e51407bd8720f4f0ca\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"ac66dc0f-9921-4dc7-a2ae-2b3dab657aad\",\"phase\":\"attaching\",\"target\":\"Person/b5f21a70-4cd7-4063-bd5d-50b096a9621b\",\"expectedVersion\":\"16e3e964-b513-4647-baaf-3e9f54c50830\",\"intendedContentHash\":\"d68f4f604bb9733d7435ee19f0781aebfd7c4959a2ec7483c2e0221f7a676886\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"7c9ffc5a-a2cb-4c40-bebe-0315c72ad059\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/b6e393f5-d511-4613-a5aa-e40f919e2e3b\",\"expectedVersion\":\"36bb5c44-3809-48a6-a072-4798443b6bc9\",\"intendedContentHash\":\"c7e32e63548b9ee82598e3da49c81a7072828c835320f815daacace4155ac7ed\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"e4025f98-fde6-4d57-94ca-d492210ff449\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/b6e393f5-d511-4613-a5aa-e40f919e2e3b\",\"expectedVersion\":\"a2bb3889-2979-4905-a3db-b44f0c170778\",\"intendedContentHash\":\"36f20bf01c1653362b3743fc14d362cddca2db7b781179582c21603b0c05cd54\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"}],\"generation\":\"35603e63-e230-4a2c-928f-d08020c42c0a\"}"
+                }
+              ]
+            }
+          },
+          {
+            "fullUrl": "http://127.0.0.1:29080/fhir/R4/Task/6217e7a4-6295-43e3-8229-c16d95e714dd",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Task",
+              "id": "6217e7a4-6295-43e3-8229-c16d95e714dd",
+              "intent": "order",
+              "status": "in-progress",
+              "identifier": [
+                {
+                  "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                  "value": "f0c9ce05-dc16-46b6-b99a-bb36efcbfc0f"
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                    "code": "correct"
+                  }
+                ]
+              },
+              "input": [
+                {
+                  "type": {
+                    "text": "kind"
+                  },
+                  "valueCode": "correct"
+                },
+                {
+                  "type": {
+                    "text": "source"
+                  },
+                  "valueReference": {
+                    "reference": "Person/7a47ab85-d455-4631-95b7-99eda33adc0f"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "destination"
+                  },
+                  "valueReference": {
+                    "reference": "Person/218b2d3b-c2da-4776-87a1-ba5b53c39cf7"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "moved"
+                  },
+                  "valueReference": {
+                    "reference": "RelatedPerson/32e55d03-d385-405e-8ca8-ef7e8b18f580"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/7a47ab85-d455-4631-95b7-99eda33adc0f"
+                  },
+                  "valueString": "7ad1dc36-a3fd-4744-9b07-c3af0f76d517"
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/218b2d3b-c2da-4776-87a1-ba5b53c39cf7"
+                  },
+                  "valueString": "c248870b-895d-4030-83b1-93faa60e27c3"
+                },
+                {
+                  "type": {
+                    "text": "expected:RelatedPerson/32e55d03-d385-405e-8ca8-ef7e8b18f580"
+                  },
+                  "valueString": "caf8b413-2572-450e-8819-b99fd3efd0d1"
+                },
+                {
+                  "type": {
+                    "text": "reason"
+                  },
+                  "valueString": "Synthetic Undo"
+                }
+              ],
+              "requester": {
+                "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0"
+              },
+              "basedOn": [
+                {
+                  "reference": "Task/7dfc3185-7e0d-43d2-b12e-0a5e066c5955"
+                }
+              ],
+              "meta": {
+                "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+                "versionId": "f80a2a1b-3973-4d73-a32e-e92fc706d44a",
+                "lastUpdated": "2026-09-14T19:50:34.647Z",
+                "author": {
+                  "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                  }
+                ]
+              },
+              "businessStatus": {
+                "text": "detaching"
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                  "valueString": "{\"intents\":[{\"id\":\"6ffa48ce-6fe9-429f-a8e3-70bd6add09f2\",\"phase\":\"fence-source\",\"target\":\"Person/7a47ab85-d455-4631-95b7-99eda33adc0f\",\"expectedVersion\":\"7ad1dc36-a3fd-4744-9b07-c3af0f76d517\",\"intendedContentHash\":\"6904028fb482fe811ea3a882dde9cbe869f536447e9e5f0c01ef136aad4739e1\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"36b7941a-eb4e-4cf3-9c3b-88e476b81eed\",\"phase\":\"fence-destination\",\"target\":\"Person/218b2d3b-c2da-4776-87a1-ba5b53c39cf7\",\"expectedVersion\":\"c248870b-895d-4030-83b1-93faa60e27c3\",\"intendedContentHash\":\"c716b516037fa15aa04954feb41b8224e4e4537a5230776b6877c66f7aa4265e\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"a77dd224-83f6-4413-804b-e3642dc9d0c0\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/32e55d03-d385-405e-8ca8-ef7e8b18f580\",\"expectedVersion\":\"caf8b413-2572-450e-8819-b99fd3efd0d1\",\"intendedContentHash\":\"229d03789607a653b98654eef7b295ee112a60e3c67250a6424ad33897e951d1\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"7ec2ba11-3214-43ef-980e-b5910e5d9598\",\"phase\":\"detaching\",\"target\":\"Person/7a47ab85-d455-4631-95b7-99eda33adc0f\",\"expectedVersion\":\"a8dd85e9-301c-4d67-b340-80c06d335f8d\",\"intendedContentHash\":\"28b238fd4c2f9b1a49847c21666cc910bbe9440fc61193955af2624e70fa81ba\"}]}"
+                }
+              ]
+            }
+          },
+          {
+            "fullUrl": "http://127.0.0.1:29080/fhir/R4/Task/7dfc3185-7e0d-43d2-b12e-0a5e066c5955",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Task",
+              "id": "7dfc3185-7e0d-43d2-b12e-0a5e066c5955",
+              "intent": "order",
+              "status": "completed",
+              "identifier": [
+                {
+                  "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+                  "value": "28065aa1-bb75-427e-9bd0-c54a89362a4c"
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+                    "code": "transfer"
+                  }
+                ]
+              },
+              "input": [
+                {
+                  "type": {
+                    "text": "kind"
+                  },
+                  "valueCode": "transfer"
+                },
+                {
+                  "type": {
+                    "text": "source"
+                  },
+                  "valueReference": {
+                    "reference": "Person/218b2d3b-c2da-4776-87a1-ba5b53c39cf7"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "destination"
+                  },
+                  "valueReference": {
+                    "reference": "Person/7a47ab85-d455-4631-95b7-99eda33adc0f"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "moved"
+                  },
+                  "valueReference": {
+                    "reference": "RelatedPerson/32e55d03-d385-405e-8ca8-ef7e8b18f580"
+                  }
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/218b2d3b-c2da-4776-87a1-ba5b53c39cf7"
+                  },
+                  "valueString": "c898bcee-3acf-4df6-bda4-04354a13f081"
+                },
+                {
+                  "type": {
+                    "text": "expected:Person/7a47ab85-d455-4631-95b7-99eda33adc0f"
+                  },
+                  "valueString": "fb630dc1-ffda-4686-b5f0-1007e8fb049d"
+                },
+                {
+                  "type": {
+                    "text": "expected:RelatedPerson/32e55d03-d385-405e-8ca8-ef7e8b18f580"
+                  },
+                  "valueString": "545156a4-a13a-415c-bf73-34759a519c9e"
+                },
+                {
+                  "type": {
+                    "text": "reason"
+                  },
+                  "valueString": "Synthetic X1"
+                }
+              ],
+              "requester": {
+                "reference": "Practitioner/863e0532-6045-468d-8d36-3403ae8c21f0"
+              },
+              "meta": {
+                "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+                "versionId": "4c610983-0710-4f75-a4f2-67177e7a2e48",
+                "lastUpdated": "2026-09-14T19:50:34.086Z",
+                "author": {
+                  "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+                  }
+                ]
+              },
+              "businessStatus": {
+                "text": "linked"
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+                  "valueString": "{\"intents\":[{\"id\":\"6ad1bbb8-feea-416d-a952-33a74e820fda\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/32e55d03-d385-405e-8ca8-ef7e8b18f580\",\"expectedVersion\":\"545156a4-a13a-415c-bf73-34759a519c9e\",\"intendedContentHash\":\"f150beeb02e9458d95fa901b7ebb118bcd9dc995b77ed312857b1e5ae372465d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"5e24b5b1-0e08-42f5-a47c-ae32f8df38f3\",\"phase\":\"detaching\",\"target\":\"Person/218b2d3b-c2da-4776-87a1-ba5b53c39cf7\",\"expectedVersion\":\"c898bcee-3acf-4df6-bda4-04354a13f081\",\"intendedContentHash\":\"c716b516037fa15aa04954feb41b8224e4e4537a5230776b6877c66f7aa4265e\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"12854086-a013-4d5c-be41-f77499123d25\",\"phase\":\"attaching\",\"target\":\"Person/7a47ab85-d455-4631-95b7-99eda33adc0f\",\"expectedVersion\":\"fb630dc1-ffda-4686-b5f0-1007e8fb049d\",\"intendedContentHash\":\"6904028fb482fe811ea3a882dde9cbe869f536447e9e5f0c01ef136aad4739e1\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"65b03d63-1e01-4127-9c98-c0c43bb169d7\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/32e55d03-d385-405e-8ca8-ef7e8b18f580\",\"expectedVersion\":\"c2403234-aa2e-4f30-826b-2543bd8e4f4b\",\"intendedContentHash\":\"a20dc046b53804edd76344e76a08adb93843110a0dd609f9ddccbe8c2d362859\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"},{\"id\":\"a5984a55-8e60-4b85-89a1-4f5b273ef211\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/32e55d03-d385-405e-8ca8-ef7e8b18f580\",\"expectedVersion\":\"2e79a8bf-cf8c-4fbd-be90-16a1dc9cfb7b\",\"intendedContentHash\":\"74d159bf4d809fbe1287f3b757d4a00e6fd066952a7f96809dd968de00185dae\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/8894177f-d614-4139-9a69-7d893953dbac\"}],\"generation\":\"7ad1dc36-a3fd-4744-9b07-c3af0f76d517\"}"
+                }
+              ]
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:29080/fhir/R4/Task?_count=50&_project=9a85be10-1fcd-4081-8627-77ad619f3f0a&_sort=-_lastUpdated&code=https%3A%2F%2Fodos2020.com%2Ffhir%2FCodeSystem%2Fguarantor-link-operation%7C"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:29080/fhir/R4/Task?_count=50&_project=9a85be10-1fcd-4081-8627-77ad619f3f0a&_sort=-_lastUpdated&code=https%3A%2F%2Fodos2020.com%2Ffhir%2FCodeSystem%2Fguarantor-link-operation%7C"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 10,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "search",
+            "display": "search"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.686Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "b93164a0-3a87-47c9-935e-df31105121d3"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "search",
+            "display": "search"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.686Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "b93164a0-3a87-47c9-935e-df31105121d3"
+              }
+            ]
+          }
+        ],
+        "id": "19ae24c4-0d1f-4d47-9f4b-1d9eda125148",
+        "meta": {
+          "versionId": "b7046db6-281e-4795-92e6-c5afdacfc6e3",
+          "lastUpdated": "2026-09-14T19:58:21.723Z"
+        }
+      }
+    },
+    {
+      "sequence": 11,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d",
+      "status": 200,
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "family": "Destination"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "202-555-0199"
+          }
+        ],
+        "address": [
+          {
+            "city": "Synthetic town"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/c0af5c2c-ea59-41f7-94c8-e6b424252673"
+            },
+            "assurance": "level2"
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+            },
+            "assurance": "level2"
+          }
+        ],
+        "meta": {
+          "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+          "versionId": "1393036c-c9ae-4f71-8391-7f32f91367b0",
+          "lastUpdated": "2026-09-14T19:51:27.661Z",
+          "author": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+            }
+          ]
+        },
+        "id": "be1f57af-eb59-4be2-b86b-41a422a1cb3d",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+            "valueString": "8d5078b0-6782-4489-be2e-c9453515f419"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 12,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.705Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "9e45b80c-c612-429a-8d2a-8e3221da5d0e"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.705Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "9e45b80c-c612-429a-8d2a-8e3221da5d0e"
+              }
+            ]
+          }
+        ],
+        "id": "912e9a84-bfe5-4707-bb4c-c825e5ed0f84",
+        "meta": {
+          "versionId": "19da1946-fc2d-4bb5-91ba-fe9f7b16fdcf",
+          "lastUpdated": "2026-09-14T19:58:21.739Z"
+        }
+      }
+    },
+    {
+      "sequence": 13,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/Person/d8894834-3aba-4ff9-908e-a2d65e0d6667",
+      "status": 200,
+      "response": {
+        "resourceType": "Person",
+        "active": false,
+        "name": [
+          {
+            "family": "Source"
+          }
+        ],
+        "meta": {
+          "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+          "versionId": "60af27a1-e792-480f-80d5-2cc54fd0aa71",
+          "lastUpdated": "2026-09-14T19:51:27.599Z",
+          "author": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+            }
+          ]
+        },
+        "id": "d8894834-3aba-4ff9-908e-a2d65e0d6667",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+            "valueString": "8d5078b0-6782-4489-be2e-c9453515f419"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 14,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/Person/d8894834-3aba-4ff9-908e-a2d65e0d6667",
+      "status": 200,
+      "response": {
+        "resourceType": "Person",
+        "active": false,
+        "name": [
+          {
+            "family": "Source"
+          }
+        ],
+        "meta": {
+          "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+          "versionId": "60af27a1-e792-480f-80d5-2cc54fd0aa71",
+          "lastUpdated": "2026-09-14T19:51:27.599Z",
+          "author": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+            }
+          ]
+        },
+        "id": "d8894834-3aba-4ff9-908e-a2d65e0d6667",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+            "valueString": "8d5078b0-6782-4489-be2e-c9453515f419"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 15,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.705Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "850d7b33-f76f-44f8-8fa7-d82efaa5cd99"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.705Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "850d7b33-f76f-44f8-8fa7-d82efaa5cd99"
+              }
+            ]
+          }
+        ],
+        "id": "f66ea236-57e1-4d47-a13c-2b165d8cc4d5",
+        "meta": {
+          "versionId": "b09bac6c-27e4-4f40-9c32-8a0ca81776b3",
+          "lastUpdated": "2026-09-14T19:58:21.745Z"
+        }
+      }
+    },
+    {
+      "sequence": 16,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.705Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "9b8ed0e1-528b-4eee-83c5-a602f7592114"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.705Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "9b8ed0e1-528b-4eee-83c5-a602f7592114"
+              }
+            ]
+          }
+        ],
+        "id": "f8881fd6-21c1-42fd-af6f-982f1639f048",
+        "meta": {
+          "versionId": "63fa84ad-daaa-4092-bfee-b5f612e5257f",
+          "lastUpdated": "2026-09-14T19:58:21.747Z"
+        }
+      }
+    },
+    {
+      "sequence": 17,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/Person/d8894834-3aba-4ff9-908e-a2d65e0d6667",
+      "status": 200,
+      "response": {
+        "resourceType": "Person",
+        "active": false,
+        "name": [
+          {
+            "family": "Source"
+          }
+        ],
+        "meta": {
+          "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+          "versionId": "60af27a1-e792-480f-80d5-2cc54fd0aa71",
+          "lastUpdated": "2026-09-14T19:51:27.599Z",
+          "author": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+            }
+          ]
+        },
+        "id": "d8894834-3aba-4ff9-908e-a2d65e0d6667",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+            "valueString": "8d5078b0-6782-4489-be2e-c9453515f419"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 18,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.719Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "465e512a-fdc8-48bb-ac7b-7ff3d93abb82"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.719Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Person/d8894834-3aba-4ff9-908e-a2d65e0d6667"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "465e512a-fdc8-48bb-ac7b-7ff3d93abb82"
+              }
+            ]
+          }
+        ],
+        "id": "8edbc5b6-70c7-462b-bad6-47ecae55c000",
+        "meta": {
+          "versionId": "c9b6b946-3017-4b5f-b585-2f703038e201",
+          "lastUpdated": "2026-09-14T19:58:21.752Z"
+        }
+      }
+    },
+    {
+      "sequence": 19,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d",
+      "status": 200,
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "family": "Destination"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "202-555-0199"
+          }
+        ],
+        "address": [
+          {
+            "city": "Synthetic town"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/c0af5c2c-ea59-41f7-94c8-e6b424252673"
+            },
+            "assurance": "level2"
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+            },
+            "assurance": "level2"
+          }
+        ],
+        "meta": {
+          "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+          "versionId": "1393036c-c9ae-4f71-8391-7f32f91367b0",
+          "lastUpdated": "2026-09-14T19:51:27.661Z",
+          "author": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+            }
+          ]
+        },
+        "id": "be1f57af-eb59-4be2-b86b-41a422a1cb3d",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+            "valueString": "8d5078b0-6782-4489-be2e-c9453515f419"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 20,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d",
+      "status": 200,
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "family": "Destination"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "202-555-0199"
+          }
+        ],
+        "address": [
+          {
+            "city": "Synthetic town"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/c0af5c2c-ea59-41f7-94c8-e6b424252673"
+            },
+            "assurance": "level2"
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+            },
+            "assurance": "level2"
+          }
+        ],
+        "meta": {
+          "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+          "versionId": "1393036c-c9ae-4f71-8391-7f32f91367b0",
+          "lastUpdated": "2026-09-14T19:51:27.661Z",
+          "author": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+            }
+          ]
+        },
+        "id": "be1f57af-eb59-4be2-b86b-41a422a1cb3d",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+            "valueString": "8d5078b0-6782-4489-be2e-c9453515f419"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 21,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.725Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "2978b615-6431-4495-8121-b6326312764b"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.725Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "2978b615-6431-4495-8121-b6326312764b"
+              }
+            ]
+          }
+        ],
+        "id": "98205c49-57ae-442a-a454-f923420fa3c5",
+        "meta": {
+          "versionId": "4ffd3701-93c0-4d45-9cf4-5b7d2c2d9973",
+          "lastUpdated": "2026-09-14T19:58:21.759Z"
+        }
+      }
+    },
+    {
+      "sequence": 22,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.726Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "6049a311-f044-4e5b-ad54-f29e3d7231a3"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.726Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Person/be1f57af-eb59-4be2-b86b-41a422a1cb3d"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "6049a311-f044-4e5b-ad54-f29e3d7231a3"
+              }
+            ]
+          }
+        ],
+        "id": "27991562-0f5a-4c58-af21-8c0c2f68191c",
+        "meta": {
+          "versionId": "90107f0e-aabe-4268-9cc3-18f5285a7475",
+          "lastUpdated": "2026-09-14T19:58:21.760Z"
+        }
+      }
+    },
+    {
+      "sequence": 23,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+        },
+        "name": [
+          {
+            "family": "Destination"
+          }
+        ],
+        "meta": {
+          "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+          "versionId": "64e23566-0ba4-4b24-a48f-7036b0c4c00f",
+          "lastUpdated": "2026-09-14T19:51:27.887Z",
+          "author": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+            },
+            {
+              "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+            }
+          ]
+        },
+        "id": "c6e4c679-9e41-4d06-b6a5-347cb767b026",
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "202-555-0199"
+          }
+        ],
+        "address": [
+          {
+            "city": "Synthetic town"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 24,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.732Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "6933a3e8-9f2c-4d05-bfff-3459c973a3f2"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.732Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "6933a3e8-9f2c-4d05-bfff-3459c973a3f2"
+              }
+            ]
+          }
+        ],
+        "id": "2f0e4fc4-ad0f-446f-804f-fc548793894e",
+        "meta": {
+          "versionId": "10a62522-30d3-4e25-ad9f-ec8ee19429af",
+          "lastUpdated": "2026-09-14T19:58:21.766Z"
+        }
+      }
+    },
+    {
+      "sequence": 25,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+        },
+        "name": [
+          {
+            "family": "Destination"
+          }
+        ],
+        "meta": {
+          "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+          "versionId": "64e23566-0ba4-4b24-a48f-7036b0c4c00f",
+          "lastUpdated": "2026-09-14T19:51:27.887Z",
+          "author": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+            },
+            {
+              "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+            }
+          ]
+        },
+        "id": "c6e4c679-9e41-4d06-b6a5-347cb767b026",
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "202-555-0199"
+          }
+        ],
+        "address": [
+          {
+            "city": "Synthetic town"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 26,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+        },
+        "name": [
+          {
+            "family": "Destination"
+          }
+        ],
+        "meta": {
+          "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+          "versionId": "64e23566-0ba4-4b24-a48f-7036b0c4c00f",
+          "lastUpdated": "2026-09-14T19:51:27.887Z",
+          "author": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+            },
+            {
+              "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+            }
+          ]
+        },
+        "id": "c6e4c679-9e41-4d06-b6a5-347cb767b026",
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "202-555-0199"
+          }
+        ],
+        "address": [
+          {
+            "city": "Synthetic town"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 27,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.739Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "9aa9da94-cae0-4aa5-abfe-f981e33b27a6"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.739Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "9aa9da94-cae0-4aa5-abfe-f981e33b27a6"
+              }
+            ]
+          }
+        ],
+        "id": "c9e16c8d-e68e-4ed4-b9aa-7e155cedb94d",
+        "meta": {
+          "versionId": "42989b6a-2af6-4cfb-931c-1d0bcf4d4c1d",
+          "lastUpdated": "2026-09-14T19:58:21.778Z"
+        }
+      }
+    },
+    {
+      "sequence": 28,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.739Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "361e389f-fc99-47d5-886d-d23e9b4011ac"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.739Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "RelatedPerson/c6e4c679-9e41-4d06-b6a5-347cb767b026"
+            },
+            "name": "resource"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "361e389f-fc99-47d5-886d-d23e9b4011ac"
+              }
+            ]
+          }
+        ],
+        "id": "7476d6af-d3a5-4ac3-8646-5bd39367dd22",
+        "meta": {
+          "versionId": "f954d9f4-0a68-417e-b30b-c0aa02ade299",
+          "lastUpdated": "2026-09-14T19:58:21.781Z"
+        }
+      }
+    },
+    {
+      "sequence": 29,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940",
+      "status": 200,
+      "response": {
+        "resourceType": "Patient",
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "X2",
+              "before"
+            ]
+          }
+        ],
+        "meta": {
+          "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+          "versionId": "fd25745e-e8ce-4332-8684-59c06cfb2522",
+          "lastUpdated": "2026-09-14T19:51:25.664Z",
+          "author": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+            },
+            {
+              "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+            }
+          ]
+        },
+        "id": "cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+      }
+    },
+    {
+      "sequence": 30,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.749Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+            },
+            "name": "patient"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "4a9493e9-d543-4d63-938b-ce0c9221f5a0"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.749Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+            },
+            "name": "patient"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "4a9493e9-d543-4d63-938b-ce0c9221f5a0"
+              }
+            ]
+          }
+        ],
+        "id": "a799f3d0-1015-4295-a451-c0247583d411",
+        "meta": {
+          "versionId": "4353dc59-b35c-4d46-b22b-56c441b2ebe3",
+          "lastUpdated": "2026-09-14T19:58:21.792Z"
+        }
+      }
+    },
+    {
+      "sequence": 31,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940",
+      "status": 200,
+      "response": {
+        "resourceType": "Patient",
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "X2",
+              "before"
+            ]
+          }
+        ],
+        "meta": {
+          "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+          "versionId": "fd25745e-e8ce-4332-8684-59c06cfb2522",
+          "lastUpdated": "2026-09-14T19:51:25.664Z",
+          "author": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+            },
+            {
+              "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+            }
+          ]
+        },
+        "id": "cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+      }
+    },
+    {
+      "sequence": 32,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "GET",
+      "path": "/fhir/R4/Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940",
+      "status": 200,
+      "response": {
+        "resourceType": "Patient",
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "X2",
+              "before"
+            ]
+          }
+        ],
+        "meta": {
+          "project": "9a85be10-1fcd-4081-8627-77ad619f3f0a",
+          "versionId": "fd25745e-e8ce-4332-8684-59c06cfb2522",
+          "lastUpdated": "2026-09-14T19:51:25.664Z",
+          "author": {
+            "reference": "Practitioner/8894177f-d614-4139-9a69-7d893953dbac",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/9a85be10-1fcd-4081-8627-77ad619f3f0a"
+            },
+            {
+              "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+            }
+          ]
+        },
+        "id": "cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+      }
+    },
+    {
+      "sequence": 33,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.761Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+            },
+            "name": "patient"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "817b9724-8e2d-4b45-af36-749735c005a4"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.761Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+            },
+            "name": "patient"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "817b9724-8e2d-4b45-af36-749735c005a4"
+              }
+            ]
+          }
+        ],
+        "id": "494f6f1b-ca7b-462a-bad2-6f843146ddc2",
+        "meta": {
+          "versionId": "3c7f101d-35e5-4c5b-b661-feaa9468acf6",
+          "lastUpdated": "2026-09-14T19:58:21.797Z"
+        }
+      }
+    },
+    {
+      "sequence": 34,
+      "scenario": "premise",
+      "runner": "browser",
+      "principal": "service",
+      "origin": "http://127.0.0.1:29080",
+      "method": "POST",
+      "path": "/fhir/R4/AuditEvent",
+      "request": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.761Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+            },
+            "name": "patient"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "26bfd821-a105-43f5-bf72-1e9551840fab"
+              }
+            ]
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "resourceType": "AuditEvent",
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "subtype": [
+          {
+            "system": "http://hl7.org/fhir/restful-interaction",
+            "code": "read",
+            "display": "read"
+          }
+        ],
+        "action": "R",
+        "recorded": "2026-09-14T19:58:21.761Z",
+        "outcome": "0",
+        "agent": [
+          {
+            "role": [
+              {
+                "text": "system",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "system",
+                    "display": "system"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/Practitioner/8894177f-d614-4139-9a69-7d893953dbac"
+            },
+            "requestor": false
+          }
+        ],
+        "source": {
+          "observer": {
+            "reference": "Device/odos-instance"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "Patient/cfe0c944-ba8f-4d2c-be9a-37d05a657940"
+            },
+            "name": "patient"
+          },
+          {
+            "name": "audit-details",
+            "detail": [
+              {
+                "type": "odos_audit_event_id",
+                "valueString": "26bfd821-a105-43f5-bf72-1e9551840fab"
+              }
+            ]
+          }
+        ],
+        "id": "19998592-20bf-4015-946a-1b8ca81f8627",
+        "meta": {
+          "versionId": "2372f1ab-e447-4bfd-8cd0-86d3fbd9916e",
+          "lastUpdated": "2026-09-14T19:58:21.797Z"
+        }
+      }
+    }
+  ]
+}

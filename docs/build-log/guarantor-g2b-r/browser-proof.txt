@@ -1,0 +1,1 @@
+[{"variant":"before","originalStatus":"completed","originalUndoReasons":1,"undoButtons":2,"consoleErrors":[]},{"variant":"after","originalStatus":"completed","correctionInProgress":true,"originalUndoReasons":0,"undoButtons":1,"consoleErrors":[]}]

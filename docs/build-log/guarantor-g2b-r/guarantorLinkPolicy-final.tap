@@ -1,0 +1,44 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/guarantorLinkPolicy.test.ts
+
+TAP version 13
+# Subtest: L17 staff: the Task fence refuses operation creation, mutation and code laundering
+ok 1 - L17 staff: the Task fence refuses operation creation, mutation and code laundering
+  ---
+  duration_ms: 12.416375
+  type: 'test'
+  ...
+# Subtest: L18 staff: the Person fence preserves name edits and refuses link mutations
+ok 2 - L18 staff: the Person fence preserves name edits and refuses link mutations
+  ---
+  duration_ms: 4.049708
+  type: 'test'
+  ...
+# Subtest: L17 composite: the Task fence refuses operation creation, mutation and code laundering
+ok 3 - L17 composite: the Task fence refuses operation creation, mutation and code laundering
+  ---
+  duration_ms: 1.944083
+  type: 'test'
+  ...
+# Subtest: L18 composite: the Person fence preserves name edits and refuses link mutations
+ok 4 - L18 composite: the Person fence preserves name edits and refuses link mutations
+  ---
+  duration_ms: 2.013417
+  type: 'test'
+  ...
+# Subtest: L19: each role grants guarantor.link and a membership revocation removes it
+ok 5 - L19: each role grants guarantor.link and a membership revocation removes it
+  ---
+  duration_ms: 0.571958
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 181.91025

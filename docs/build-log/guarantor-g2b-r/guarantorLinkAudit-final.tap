@@ -1,0 +1,44 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/guarantorLinkAudit.test.ts
+
+TAP version 13
+# Subtest: S9: guarantor.link.started produces a patient-attributed audit row and projection
+ok 1 - S9: guarantor.link.started produces a patient-attributed audit row and projection
+  ---
+  duration_ms: 1.342416
+  type: 'test'
+  ...
+# Subtest: S9: guarantor.link.completed produces a patient-attributed audit row and projection
+ok 2 - S9: guarantor.link.completed produces a patient-attributed audit row and projection
+  ---
+  duration_ms: 0.077833
+  type: 'test'
+  ...
+# Subtest: S9: guarantor.link.pending produces a patient-attributed audit row and projection
+ok 3 - S9: guarantor.link.pending produces a patient-attributed audit row and projection
+  ---
+  duration_ms: 0.109417
+  type: 'test'
+  ...
+# Subtest: S9: guarantor.link.failed produces a patient-attributed audit row and projection
+ok 4 - S9: guarantor.link.failed produces a patient-attributed audit row and projection
+  ---
+  duration_ms: 0.125125
+  type: 'test'
+  ...
+# Subtest: S9: guarantor.link.interfered produces a patient-attributed audit row and projection
+ok 5 - S9: guarantor.link.interfered produces a patient-attributed audit row and projection
+  ---
+  duration_ms: 0.062458
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 109.034833

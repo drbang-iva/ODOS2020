@@ -1,0 +1,20 @@
+{
+  "base": "bd7029eb55435655f3e4332b2cc703bfd2d77e7e",
+  "files": {
+    "mcp/src/clinic/guarantor-link-operation.ts": "c26b9c71008a53a7548e035797084aa0c013a330d4420de4bf67daae2e12bc3f",
+    "ui/src/components/patient/GuarantorLinkScreens.tsx": "6ad8e2cdafadc847443bc7b69b51bfa55519ee25b455ed7681ff91f62607a89f",
+    "ui/src/lib/guarantor-link-operations.ts": "4b6aac61d96c90d7b35ab899bda6451371b8e8885a631b22595b561008d64538",
+    "mcp/tests/guarantorOwnedRecovery.test.ts": "2b79f0fd55306af4fd9caa73c318559bd840047a72744cfd805a56915dfac893",
+    "ui/tests/guarantorRecoveryHistory.test.tsx": "a297f4d719ffa85367774a44912c666ec232077febbc2629b5e12dc969f5f1cc"
+  },
+  "unchangedTestsAndFixture": [
+    "mcp/tests/guarantorLinkOperation.test.ts",
+    "mcp/tests/guarantorLinkRoutes.test.ts",
+    "mcp/tests/guarantorLinkPolicy.test.ts",
+    "mcp/tests/guarantorLinkAudit.test.ts",
+    "mcp/tests/guarantorLinkedReaders.test.ts",
+    "mcp/tests/guarantorSearchScreens.test.ts",
+    "mcp/tests/guarantorScreensFixture.ts",
+    "ui/tests/guarantorSearchScreens.test.tsx"
+  ]
+}

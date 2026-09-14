@@ -20,7 +20,7 @@ const startSchema = z.object({
   relatedPersonIds: z.array(idSchema).min(1), expected: z.record(z.string().min(1)), reason: z.string().trim().min(1),
 }).strict();
 type Plan = Omit<z.infer<typeof startSchema>, "kind"> & { kind: "transfer" | "consolidate" | "correct"; originalTaskId?: string };
-type Intent = { id: string; phase: string; target: string; expectedVersion: string; intendedContentHash: string; disposition?: "landed" | "rejected" | "not-landed"; responseStatus?: number; writer?: string };
+type Intent = { id: string; phase: string; target: string; expectedVersion: string; intendedContentHash: string; ownedHash?: string; disposition?: "landed" | "rejected" | "not-landed"; responseStatus?: number; writer?: string };
 type Journal = { intents: Intent[]; generation?: string };
 type Loaded = { source: Person; destination: Person; children: RelatedPerson[]; patients: Patient[] };
 
@@ -197,6 +197,23 @@ class Operation {
   }
 }
 
+export function guarantorOwnedHash(resource: Resource, phase: string): string {
+  let owned: unknown;
+  if (phase.startsWith("fence-")) {
+    owned = (resource as Person).extension?.find(e => e.url === GUARANTOR_EPOCH_URL)?.valueString;
+  } else if (phase === "detaching" || phase === "attaching") {
+    const person = resource as Person;
+    owned = { link: [...new Set((person.link ?? []).map(link => link.target.reference ?? ""))].sort(), active: person.active };
+  } else if (phase === "claiming" || phase === "releasing" || phase === "projecting") {
+    const child = resource as RelatedPerson;
+    owned = { claims: [...new Set(claimReferences(child))].sort(), ...(phase === "projecting" ? { name: child.name, telecom: child.telecom, address: child.address } : {}) };
+  } else return guarantorContentHash(resource);
+  return createHash("sha256").update(JSON.stringify(canonical(owned) ?? null)).digest("hex");
+}
+function intentMatches(resource: Resource, intent: Intent): boolean {
+  return intent.ownedHash !== undefined ? guarantorOwnedHash(resource, intent.phase) === intent.ownedHash : guarantorContentHash(resource) === intent.intendedContentHash;
+}
+
 class Run {
   journal: Journal;
   readonly envelope: Task;
@@ -235,7 +252,7 @@ class Run {
     }));
   }
   async write<T extends Person | RelatedPerson | Task>(phase: string, resource: T, expected = version(resource)): Promise<T> {
-    const intent: Intent = { id: randomUUID(), phase, target: reference(resource), expectedVersion: expected, intendedContentHash: guarantorContentHash(resource) };
+    const intent: Intent = { id: randomUUID(), phase, target: reference(resource), expectedVersion: expected, intendedContentHash: guarantorContentHash(resource), ownedHash: guarantorOwnedHash(resource, phase) };
     this.journal.intents.push(intent);
     await this.checkpointTask("in-progress", phase);
     let accepted: T;
@@ -300,7 +317,7 @@ class Run {
     for (const intent of unresolved.filter(i => i.target.startsWith("RelatedPerson/"))) {
       const child = await this.operation.read<RelatedPerson>("RelatedPerson", intent.target.slice(14));
       if (version(child) === intent.expectedVersion) await this.resolve(intent, "not-landed");
-      else if (guarantorContentHash(child) === intent.intendedContentHash) await this.resolve(intent, "landed", child.meta?.author?.reference);
+      else if (intentMatches(child, intent)) await this.resolve(intent, "landed", child.meta?.author?.reference);
       else return this.pause("interfered", intent.target);
     }
     const epoch = randomUUID();
@@ -315,7 +332,7 @@ class Run {
       } catch (error) {
         if (!intent || definiteStatus(error) !== 412) return this.pause("recovery-conflict", reference(current));
         const fresh = await this.operation.read<Person>("Person", current.id!);
-        if (guarantorContentHash(fresh) !== intent.intendedContentHash) return this.pause("interfered", intent.target);
+        if (!intentMatches(fresh, intent)) return this.pause("interfered", intent.target);
         await this.resolve(intent, "landed", fresh.meta?.author?.reference);
         try { this.loaded[key] = await this.write(`fence-${key}`, fenced(fresh)); }
         catch { return this.pause("recovery-conflict", reference(fresh)); }
@@ -535,6 +552,8 @@ export async function handleGuarantorOperation(deps: GuarantorOperationDeps, sta
       const originalPlan = readPlan(original);
       if (originalPlan.kind === "correct") throw new Refusal(422, "A correction cannot itself be corrected; use a new transfer.");
       if (original.status !== "in-progress" && original.status !== "completed") throw new Refusal(409, "Only a pending or completed operation can be corrected.");
+      const corrections = await searchProjectAll<Task>(deps.serviceFhir, "Task", operation.project, { "based-on": `Task/${original.id}`, code: `${GUARANTOR_OPERATION_SYSTEM}|correct` });
+      if (corrections.some(task => operation.trusted(task) && task.status === "in-progress" && task.basedOn?.some(r => r.reference === `Task/${original.id}`) && readPlan(task).kind === "correct")) throw new Refusal(409, "A correction of this operation is already in progress.");
       const plan: Plan = { ...originalPlan, ...input.data, kind: "correct", sourcePersonId: originalPlan.destinationPersonId, destinationPersonId: originalPlan.sourcePersonId, originalTaskId: original.id };
       const loaded = await operation.load(plan); linkedIds(loaded.source); linkedIds(loaded.destination);
       for (const child of loaded.children) {
@@ -551,7 +570,8 @@ export async function handleGuarantorOperation(deps: GuarantorOperationDeps, sta
       const page = await deps.serviceFhir.searchProject<Task>("Task", operation.project, { code: `${GUARANTOR_OPERATION_SYSTEM}|`, _sort: "-_lastUpdated", _count: "50" });
       const tasks = (page.entry ?? []).flatMap(entry => entry.resource ? [entry.resource] : [])
         .filter(task => operation.trusted(task) && readPlan(task).relatedPersonIds.includes(relatedPersonId));
-      return { status: 200, body: await Promise.all(tasks.map(task => operation.summary(task))) };
+      const correcting = new Set(tasks.filter(task => task.status === "in-progress" && readPlan(task).kind === "correct").flatMap(task => task.basedOn?.map(r => r.reference) ?? []));
+      return { status: 200, body: await Promise.all(tasks.map(async task => ({ ...await operation.summary(task), correctionInProgress: correcting.has(`Task/${task.id}`) }))) };
     }
     if (request.action === "draft") {
       const input = z.discriminatedUnion("kind", [
