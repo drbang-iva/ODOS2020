@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: Q10: missing linked Person is read-only and direct save handler cannot create
+ok 1 - Q10: missing linked Person is read-only and direct save handler cannot create
+  ---
+  duration_ms: 14.681084
+  type: 'test'
+  ...
+# Subtest: Q11: reopening a clean editor offers repair by patient name and converges
+ok 2 - Q11: reopening a clean editor offers repair by patient name and converges
+  ---
+  duration_ms: 11.011833
+  type: 'test'
+  ...
+# Subtest: Q12: multiple linked Persons refuse editing and identify both records
+ok 3 - Q12: multiple linked Persons refuse editing and identify both records
+  ---
+  duration_ms: 1.136833
+  type: 'test'
+  ...
+# Subtest: editing one name preserves every loaded contact and address entry without a Patient write
+ok 4 - editing one name preserves every loaded contact and address entry without a Patient write
+  ---
+  duration_ms: 4.287209
+  type: 'test'
+  ...
+# Subtest: structured address edits clear stale display text only on the edited address
+ok 5 - structured address edits clear stale display text only on the edited address
+  ---
+  duration_ms: 15.079208
+  type: 'test'
+  ...
+# Subtest: clearing then replacing the first phone keeps the second phone in its original slot
+ok 6 - clearing then replacing the first phone keeps the second phone in its original slot
+  ---
+  duration_ms: 2.29975
+  type: 'test'
+  ...
+# Subtest: saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+ok 7 - saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+  ---
+  duration_ms: 1.911917
+  type: 'test'
+  ...
+# Subtest: per-patient results distinguish rejected child writes from lost update responses
+ok 8 - per-patient results distinguish rejected child writes from lost update responses
+  ---
+  duration_ms: 4.065917
+  type: 'test'
+  ...
+# Subtest: F1e superseded save reloads automatically and one Repair converges
+ok 9 - F1e superseded save reloads automatically and one Repair converges
+  ---
+  duration_ms: 3.137875
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 252.794833

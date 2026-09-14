@@ -1,0 +1,180 @@
+TAP version 13
+# Subtest: K14 create-new starts disabled before any keyed search
+ok 1 - K14 create-new starts disabled before any keyed search
+  ---
+  duration_ms: 20.191458
+  type: 'test'
+  ...
+# Subtest: K9 stale confirmation makes one create and requires Review again
+ok 2 - K9 stale confirmation makes one create and requires Review again
+  ---
+  duration_ms: 3.766209
+  type: 'test'
+  ...
+# Subtest: K10 existing Move drafts before create
+ok 3 - K10 existing Move drafts before create
+  ---
+  duration_ms: 2.161834
+  type: 'test'
+  ...
+# Subtest: K10 new Move creates Person before draft and Review again reuses it
+ok 4 - K10 new Move creates Person before draft and Review again reuses it
+  ---
+  duration_ms: 3.365041
+  type: 'test'
+  ...
+# Subtest: K11 Join keeps Loaded Ann and moves loser full set
+ok 5 - K11 Join keeps Loaded Ann and moves loser full set
+  ---
+  duration_ms: 2.164834
+  type: 'test'
+  ...
+# Subtest: K11 Join keeps Found Ann and moves loser full set
+ok 6 - K11 Join keeps Found Ann and moves loser full set
+  ---
+  duration_ms: 1.976542
+  type: 'test'
+  ...
+# Subtest: K13 Undo only on completed non-correct and requires a reason
+ok 7 - K13 Undo only on completed non-correct and requires a reason
+  ---
+  duration_ms: 1.47275
+  type: 'test'
+  ...
+# Subtest: K14 matching cards require None of these before new guarantor
+ok 8 - K14 matching cards require None of these before new guarantor
+  ---
+  duration_ms: 1.005625
+  type: 'test'
+  ...
+# Subtest: K12 missing offers no Move Join or history Undo
+ok 9 - K12 missing offers no Move Join or history Undo
+  ---
+  duration_ms: 0.823833
+  type: 'test'
+  ...
+# Subtest: K12 ambiguous offers no Move Join or history Undo
+ok 10 - K12 ambiguous offers no Move Join or history Undo
+  ---
+  duration_ms: 0.750125
+  type: 'test'
+  ...
+# Subtest: K12 dangling offers no Move Join or history Undo
+ok 11 - K12 dangling offers no Move Join or history Undo
+  ---
+  duration_ms: 0.575542
+  type: 'test'
+  ...
+# Subtest: K12 unknown offers no Move Join or history Undo
+ok 12 - K12 unknown offers no Move Join or history Undo
+  ---
+  duration_ms: 0.460625
+  type: 'test'
+  ...
+# Subtest: K12 pending offers no Move Join or history Undo
+ok 13 - K12 pending offers no Move Join or history Undo
+  ---
+  duration_ms: 0.450625
+  type: 'test'
+  ...
+# Subtest: K9 uncertain confirmation retry reuses the submitted operation id
+not ok 14 - K9 uncertain confirmation retry reuses the submitted operation id
+  ---
+  duration_ms: 3.774833
+  type: 'test'
+  location: 'ui/tests/guarantorSearchScreens.test.tsx:1:9417'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+
+      {
+        destinationPersonId: 'D',
+        expected: {
+          'Person/D': '1',
+          'Person/S': '1',
+    ...
+        kind: 'transfer',
+    +   operationId: '31571fce-574a-43ab-aa99-7ff8841a35dc',
+    -   operationId: 'a3e83675-3b73-47e5-aa6d-446bf725ab18',
+        reason: 'Move',
+        relatedPersonIds: [
+          'r'
+        ],
+        sourcePersonId: 'S'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    kind: 'transfer'
+    sourcePersonId: 'S'
+    destinationPersonId: 'D'
+    relatedPersonIds:
+      0: 'r'
+    expected:
+      Person/S: '1'
+      Person/D: '1'
+      RelatedPerson/r: '1'
+    reason: 'Move'
+    operationId: 'a3e83675-3b73-47e5-aa6d-446bf725ab18'
+  actual:
+    kind: 'transfer'
+    sourcePersonId: 'S'
+    destinationPersonId: 'D'
+    relatedPersonIds:
+      0: 'r'
+    expected:
+      Person/S: '1'
+      Person/D: '1'
+      RelatedPerson/r: '1'
+    reason: 'Move'
+    operationId: '31571fce-574a-43ab-aa99-7ff8841a35dc'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (ui/tests/guarantorSearchScreens.test.tsx:46:734)
+    async screen (ui/tests/guarantorSearchScreens.test.tsx:31:152)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: K13 uncertain Undo retry reuses the submitted correction id
+not ok 15 - K13 uncertain Undo retry reuses the submitted correction id
+  ---
+  duration_ms: 2.05075
+  type: 'test'
+  location: 'ui/tests/guarantorSearchScreens.test.tsx:1:10214'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      {
+    +   operationId: '4cb79505-9fb1-4363-8454-2bb254d650b1',
+    -   operationId: 'eaebfd90-1f7a-4900-b892-3f6fd4ebd743',
+        reason: 'Wrong move'
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    operationId: 'eaebfd90-1f7a-4900-b892-3f6fd4ebd743'
+    reason: 'Wrong move'
+  actual:
+    operationId: '4cb79505-9fb1-4363-8454-2bb254d650b1'
+    reason: 'Wrong move'
+  operator: 'deepStrictEqual'
+  stack: |-
+    screen.history.kind (ui/tests/guarantorSearchScreens.test.tsx:47:585)
+    async screen (ui/tests/guarantorSearchScreens.test.tsx:31:152)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 13
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 229.368208

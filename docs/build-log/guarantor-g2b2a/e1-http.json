@@ -1,0 +1,425 @@
+{
+  "sourceHead": "ca00df8b77de6df6906e137e5ac77073b0f0990c",
+  "events": [
+    {
+      "sequence": 1,
+      "scenario": "E1 name search",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?name=ZzeoneAnn&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/355d76fb-7abc-4abd-bf7c-64f50658e8ab",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "9f46dbf3-88ed-4315-a52a-569ba7a4d2f4",
+                "lastUpdated": "2026-09-14T15:29:09.547Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "active": true,
+              "name": [
+                {
+                  "family": "ZzeoneAnna",
+                  "given": [
+                    "ZzeoneCarl"
+                  ]
+                }
+              ],
+              "id": "355d76fb-7abc-4abd-bf7c-64f50658e8ab"
+            }
+          },
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/a3e8fb56-b81e-4fcf-83a7-1bb6a29b4b0f",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "4cbcdf30-2da4-4875-acb8-ee4c0fa57374",
+                "lastUpdated": "2026-09-14T15:29:09.527Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "active": true,
+              "name": [
+                {
+                  "family": "ZzeoneAnn",
+                  "given": [
+                    "ZzeoneBeth"
+                  ]
+                }
+              ],
+              "id": "a3e8fb56-b81e-4fcf-83a7-1bb6a29b4b0f"
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f&name=ZzeoneAnn"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f&name=ZzeoneAnn"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 2,
+      "scenario": "E1 name search",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?name=zzeoneann&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/355d76fb-7abc-4abd-bf7c-64f50658e8ab",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "9f46dbf3-88ed-4315-a52a-569ba7a4d2f4",
+                "lastUpdated": "2026-09-14T15:29:09.547Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "active": true,
+              "name": [
+                {
+                  "family": "ZzeoneAnna",
+                  "given": [
+                    "ZzeoneCarl"
+                  ]
+                }
+              ],
+              "id": "355d76fb-7abc-4abd-bf7c-64f50658e8ab"
+            }
+          },
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/a3e8fb56-b81e-4fcf-83a7-1bb6a29b4b0f",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "4cbcdf30-2da4-4875-acb8-ee4c0fa57374",
+                "lastUpdated": "2026-09-14T15:29:09.527Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "active": true,
+              "name": [
+                {
+                  "family": "ZzeoneAnn",
+                  "given": [
+                    "ZzeoneBeth"
+                  ]
+                }
+              ],
+              "id": "a3e8fb56-b81e-4fcf-83a7-1bb6a29b4b0f"
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f&name=zzeoneann"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f&name=zzeoneann"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 3,
+      "scenario": "E1 name search",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?name=ZZEONEANN&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/355d76fb-7abc-4abd-bf7c-64f50658e8ab",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "9f46dbf3-88ed-4315-a52a-569ba7a4d2f4",
+                "lastUpdated": "2026-09-14T15:29:09.547Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "active": true,
+              "name": [
+                {
+                  "family": "ZzeoneAnna",
+                  "given": [
+                    "ZzeoneCarl"
+                  ]
+                }
+              ],
+              "id": "355d76fb-7abc-4abd-bf7c-64f50658e8ab"
+            }
+          },
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/a3e8fb56-b81e-4fcf-83a7-1bb6a29b4b0f",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "4cbcdf30-2da4-4875-acb8-ee4c0fa57374",
+                "lastUpdated": "2026-09-14T15:29:09.527Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "active": true,
+              "name": [
+                {
+                  "family": "ZzeoneAnn",
+                  "given": [
+                    "ZzeoneBeth"
+                  ]
+                }
+              ],
+              "id": "a3e8fb56-b81e-4fcf-83a7-1bb6a29b4b0f"
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f&name=ZZEONEANN"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f&name=ZZEONEANN"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 4,
+      "scenario": "E1 name search",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?name=ZzeoneBeth&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/a3e8fb56-b81e-4fcf-83a7-1bb6a29b4b0f",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "4cbcdf30-2da4-4875-acb8-ee4c0fa57374",
+                "lastUpdated": "2026-09-14T15:29:09.527Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "active": true,
+              "name": [
+                {
+                  "family": "ZzeoneAnn",
+                  "given": [
+                    "ZzeoneBeth"
+                  ]
+                }
+              ],
+              "id": "a3e8fb56-b81e-4fcf-83a7-1bb6a29b4b0f"
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f&name=ZzeoneBeth"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f&name=ZzeoneBeth"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 5,
+      "scenario": "E1 name search",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?name=zzeonebe&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/a3e8fb56-b81e-4fcf-83a7-1bb6a29b4b0f",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "4cbcdf30-2da4-4875-acb8-ee4c0fa57374",
+                "lastUpdated": "2026-09-14T15:29:09.527Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "active": true,
+              "name": [
+                {
+                  "family": "ZzeoneAnn",
+                  "given": [
+                    "ZzeoneBeth"
+                  ]
+                }
+              ],
+              "id": "a3e8fb56-b81e-4fcf-83a7-1bb6a29b4b0f"
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f&name=zzeonebe"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f&name=zzeonebe"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 6,
+      "scenario": "E1 name search",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?name=eoneAnn&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f&name=eoneAnn"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 7,
+      "scenario": "E1 name search",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?name=ZzeoneAbsent&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&_project=250cd5bf-9cff-4cc9-bc82-b2515f94975f&name=ZzeoneAbsent"
+          }
+        ]
+      }
+    }
+  ]
+}

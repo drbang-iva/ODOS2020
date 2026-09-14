@@ -1,0 +1,181 @@
+[
+  {
+    "guard": "K1-unfiltered",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 1 - K1 search refuses a prefix-only family",
+      "not ok 2 - K2 phone compares digits and rejects a different digit",
+      "not ok 4 - K4 inactive excluded",
+      "not ok 5 - K4 zero-link excluded",
+      "not ok 6 - K4 non-RelatedPerson excluded"
+    ]
+  },
+  {
+    "guard": "K2-raw-phone",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 2 - K2 phone compares digits and rejects a different digit"
+    ]
+  },
+  {
+    "guard": "K3-resource",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 3 - K3 search card exposes exactly six keys"
+    ]
+  },
+  {
+    "guard": "K4-inactive",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 4 - K4 inactive excluded"
+    ]
+  },
+  {
+    "guard": "K4-zero-link",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 5 - K4 zero-link excluded"
+    ]
+  },
+  {
+    "guard": "K4-other-link",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 6 - K4 non-RelatedPerson excluded"
+    ]
+  },
+  {
+    "guard": "K5-cap",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 7 - K5 21 matches return 422"
+    ]
+  },
+  {
+    "guard": "K5-error-mapping",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 8 - K5 201 matches return 422"
+    ]
+  },
+  {
+    "guard": "K7-extra-patient",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 9 - K7 create writes exactly one active unlinked Person; missing surname writes nothing"
+    ]
+  },
+  {
+    "guard": "K7-name-check",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 9 - K7 create writes exactly one active unlinked Person; missing surname writes nothing"
+    ]
+  },
+  {
+    "guard": "K8-draft-record",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 10 - K8 draft includes every source link, writes nothing, refuses consolidate subset",
+      "not ok 11 - K9 draft versions reject changed child at create"
+    ]
+  },
+  {
+    "guard": "K8-subset",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 10 - K8 draft includes every source link, writes nothing, refuses consolidate subset"
+    ]
+  },
+  {
+    "guard": "K9-auto-retry",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 2 - K9 stale confirmation makes one create and requires Review again",
+      "not ok 4 - K10 new Move creates Person before draft and Review again reuses it"
+    ]
+  },
+  {
+    "guard": "K10-draft-before-person",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 4 - K10 new Move creates Person before draft and Review again reuses it"
+    ]
+  },
+  {
+    "guard": "K10-second-person",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 4 - K10 new Move creates Person before draft and Review again reuses it"
+    ]
+  },
+  {
+    "guard": "K11-swapped",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 5 - K11 Join keeps Loaded Ann and moves loser full set",
+      "not ok 6 - K11 Join keeps Found Ann and moves loser full set"
+    ]
+  },
+  {
+    "guard": "K12-pending",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 13 - K12 pending offers no Move Join or history Undo"
+    ]
+  },
+  {
+    "guard": "K13-correct-undo",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 7 - K13 Undo only on completed non-correct and requires a reason"
+    ]
+  },
+  {
+    "guard": "K14-enabled",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "failingTests": [
+      "not ok 1 - K14 create-new starts disabled before any keyed search",
+      "not ok 8 - K14 matching cards require None of these before new guarantor"
+    ]
+  }
+]

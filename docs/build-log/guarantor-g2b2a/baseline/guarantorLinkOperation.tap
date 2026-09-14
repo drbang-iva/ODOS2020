@@ -1,0 +1,238 @@
+TAP version 13
+# Subtest: S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+ok 1 - S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+  ---
+  duration_ms: 37.975458
+  type: 'test'
+  ...
+# Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
+ok 2 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
+  ---
+  duration_ms: 3.1615
+  type: 'test'
+  ...
+# Subtest: L9: stale confirmation refuses before any Task or resource write
+ok 3 - L9: stale confirmation refuses before any Task or resource write
+  ---
+  duration_ms: 0.477333
+  type: 'test'
+  ...
+# Subtest: L10: consolidate subset refuses before any write
+ok 4 - L10: consolidate subset refuses before any write
+  ---
+  duration_ms: 0.356375
+  type: 'test'
+  ...
+# Subtest: L11: foreign D and separately foreign child Patient refuse without writes
+ok 5 - L11: foreign D and separately foreign child Patient refuse without writes
+  ---
+  duration_ms: 0.672875
+  type: 'test'
+  ...
+# Subtest: L21: repeated operation identifier returns one Task and performs no second writes
+ok 6 - L21: repeated operation identifier returns one Task and performs no second writes
+  ---
+  duration_ms: 2.051583
+  type: 'test'
+  ...
+# Subtest: L3: detach-first leaves an unowned claimed child and Complete projects current D
+ok 7 - L3: detach-first leaves an unowned claimed child and Complete projects current D
+  ---
+  duration_ms: 3.863584
+  type: 'test'
+  ...
+# Subtest: L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
+ok 8 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
+  ---
+  duration_ms: 2.449625
+  type: 'test'
+  ...
+# Subtest: L24b: a live service-authored correction stops Complete before every write
+ok 9 - L24b: a live service-authored correction stops Complete before every write
+  ---
+  duration_ms: 1.299208
+  type: 'test'
+  ...
+# Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
+ok 10 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
+  ---
+  duration_ms: 3.833625
+  type: 'test'
+  ...
+# Subtest: L13: an unresolved changed child intent is interference with no further domain writes
+ok 11 - L13: an unresolved changed child intent is interference with no further domain writes
+  ---
+  duration_ms: 0.7385
+  type: 'test'
+  ...
+# Subtest: L26: pending Correct detaches a landed attachment before returning children to retained S
+ok 12 - L26: pending Correct detaches a landed attachment before returning children to retained S
+  ---
+  duration_ms: 3.364875
+  type: 'test'
+  ...
+# Subtest: S6: completed Correct restores retained S, preserves D sibling, and refuses a later owner
+ok 13 - S6: completed Correct restores retained S, preserves D sibling, and refuses a later owner
+  ---
+  duration_ms: 3.420542
+  type: 'test'
+  ...
+# Subtest: L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
+ok 14 - L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
+  ---
+  duration_ms: 3.2605
+  type: 'test'
+  ...
+# Subtest: L27/L29: one or two descent refusals resolve each intent; a later Complete is live
+ok 15 - L27/L29: one or two descent refusals resolve each intent; a later Complete is live
+  ---
+  duration_ms: 8.176958
+  type: 'test'
+  ...
+# Subtest: L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim
+ok 16 - L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim
+  ---
+  duration_ms: 3.434875
+  type: 'test'
+  ...
+# Subtest: L1: two admitted starters produce one source detach and one completed operation
+ok 17 - L1: two admitted starters produce one source detach and one completed operation
+  ---
+  duration_ms: 1.522167
+  type: 'test'
+  ...
+# Subtest: L2: sorted claims give a winner with two shared children and opposed request orders
+ok 18 - L2: sorted claims give a winner with two shared children and opposed request orders
+  ---
+  duration_ms: 3.175083
+  type: 'test'
+  ...
+# Subtest: L5: D changes after r1 projection so no stale r2 projection is submitted
+ok 19 - L5: D changes after r1 projection so no stale r2 projection is submitted
+  ---
+  duration_ms: 2.13325
+  type: 'test'
+  ...
+# Subtest: L16/L20: another claim or name edit after verification refuses release and completion audit
+ok 20 - L16/L20: another claim or name edit after verification refuses release and completion audit
+  ---
+  duration_ms: 4.813125
+  type: 'test'
+  ...
+# Subtest: L23: D editing after verify is later drift; conditional child release still completes
+ok 21 - L23: D editing after verify is later drift; conditional child release still completes
+  ---
+  duration_ms: 0.900416
+  type: 'test'
+  ...
+# Subtest: L19: a revoked business action refuses before any read or write
+ok 22 - L19: a revoked business action refuses before any read or write
+  ---
+  duration_ms: 0.174417
+  type: 'test'
+  ...
+# Subtest: S4/status: a missing operation is inert and a staff-authored copied Task cannot activate claims
+ok 23 - S4/status: a missing operation is inert and a staff-authored copied Task cannot activate claims
+  ---
+  duration_ms: 0.6875
+  type: 'test'
+  ...
+# Subtest: L15: correction fences a paused Complete before its already-intended destination PUT
+ok 24 - L15: correction fences a paused Complete before its already-intended destination PUT
+  ---
+  duration_ms: 2.359083
+  type: 'test'
+  ...
+# Subtest: L24c: completed correction causes one cancel attempt, never an attempted fence intent
+ok 25 - L24c: completed correction causes one cancel attempt, never an attempted fence intent
+  ---
+  duration_ms: 2.346583
+  type: 'test'
+  ...
+# Subtest: S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes
+ok 26 - S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes
+  ---
+  duration_ms: 3.116417
+  type: 'test'
+  ...
+# Subtest: S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response
+ok 27 - S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response
+  ---
+  duration_ms: 6.809041
+  type: 'test'
+  ...
+# Subtest: S6 resumed takeover refusal fails only the correction before ownership and preserves original recovery
+ok 28 - S6 resumed takeover refusal fails only the correction before ownership and preserves original recovery
+  ---
+  duration_ms: 5.002667
+  type: 'test'
+  ...
+# Subtest: L15 fresh retry: a partially running correction stops the old runner before a fresh destination write
+ok 29 - L15 fresh retry: a partially running correction stops the old runner before a fresh destination write
+  ---
+  duration_ms: 2.60425
+  type: 'test'
+  ...
+# Subtest: S3 released children: Complete preserves later transfers after partial release or an unsent terminal write
+ok 30 - S3 released children: Complete preserves later transfers after partial release or an unsent terminal write
+  ---
+  duration_ms: 12.16325
+  type: 'test'
+  ...
+# Subtest: L29: double re-claim refusals and a lost successful descent retry remain resumable
+ok 31 - L29: double re-claim refusals and a lost successful descent retry remain resumable
+  ---
+  duration_ms: 8.050167
+  type: 'test'
+  ...
+# Subtest: S3 intent rule: a definite server error is rejected history, not an unresolved response
+ok 32 - S3 intent rule: a definite server error is rejected history, not an unresolved response
+  ---
+  duration_ms: 0.458958
+  type: 'test'
+  ...
+# Subtest: S3 checkpoint refusal stops immediately without replaying a stale Task version
+ok 33 - S3 checkpoint refusal stops immediately without replaying a stale Task version
+  ---
+  duration_ms: 0.301667
+  type: 'test'
+  ...
+# Subtest: S3 late successful release checkpoints its result without completing or auditing twice
+ok 34 - S3 late successful release checkpoints its result without completing or auditing twice
+  ---
+  duration_ms: 1.292584
+  type: 'test'
+  ...
+# Subtest: S3 terminal response checkpoint refusal is reported and never replayed
+ok 35 - S3 terminal response checkpoint refusal is reported and never replayed
+  ---
+  duration_ms: 2.135667
+  type: 'test'
+  ...
+# Subtest: L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan
+ok 36 - L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan
+  ---
+  duration_ms: 1.014333
+  type: 'test'
+  ...
+# Subtest: S5 retry classification: a fresh foreign live claim stops a recovery Person retry
+ok 37 - S5 retry classification: a fresh foreign live claim stops a recovery Person retry
+  ---
+  duration_ms: 1.317084
+  type: 'test'
+  ...
+# Subtest: L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands
+ok 38 - L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands
+  ---
+  duration_ms: 2.328083
+  type: 'test'
+  ...
+1..38
+# tests 38
+# suites 0
+# pass 38
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 243.157625

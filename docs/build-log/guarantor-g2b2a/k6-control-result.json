@@ -1,0 +1,13 @@
+{
+  "baseHead": "6baea1d51666461e3de94ded1287ffe8817d2f70",
+  "genericAuthenticationSucceeded": true,
+  "guarantorLinkRevoked": true,
+  "result": {
+    "status": 403,
+    "body": {
+      "error": "guarantor.link action required."
+    }
+  },
+  "operationIO": 0,
+  "limitation": "Executes the shipped dispatcher constructor with action=draft; the new draft branch is not implemented. Its required insertion before start-schema parse is downstream of this constructor. Not a completed K6 route mutation proof."
+}
