@@ -1,11 +1,14 @@
 {
-  "scope": "Actual GuarantorLinkScreens component, actual history route, same persisted synthetic X2 state, staff token; no mocked API responses",
+  "scope": "Actual GuarantorLinkScreens component and history route at pre-fixback head 60323dac versus the fixback working tree, same persisted synthetic X2 state and staff token; no mocked API responses",
   "checks": [
     {
       "variant": "before",
+      "sourceHead": "60323dacf0b555a0f1722053f6e92b9cf846e68a",
       "originalStatus": "completed",
-      "originalUndoReasons": 1,
-      "undoButtons": 2,
+      "correctionInProgress": true,
+      "originalUndoReasons": 0,
+      "undoButtons": 1,
+      "completeButtons": 0,
       "consoleErrors": [],
       "history": [
         {
@@ -130,7 +133,8 @@
               "patientId": "cfe0c944-ba8f-4d2c-be9a-37d05a657940",
               "name": "X2 before Synthetic"
             }
-          ]
+          ],
+          "correctionInProgress": false
         },
         {
           "task": {
@@ -249,7 +253,8 @@
               "patientId": "cfe0c944-ba8f-4d2c-be9a-37d05a657940",
               "name": "X2 before Synthetic"
             }
-          ]
+          ],
+          "correctionInProgress": false
         },
         {
           "task": {
@@ -368,16 +373,19 @@
               "patientId": "cfe0c944-ba8f-4d2c-be9a-37d05a657940",
               "name": "X2 before Synthetic"
             }
-          ]
+          ],
+          "correctionInProgress": true
         }
       ]
     },
     {
       "variant": "after",
+      "sourceHead": "working tree",
       "originalStatus": "completed",
       "correctionInProgress": true,
       "originalUndoReasons": 0,
       "undoButtons": 1,
+      "completeButtons": 1,
       "consoleErrors": [],
       "history": [
         {

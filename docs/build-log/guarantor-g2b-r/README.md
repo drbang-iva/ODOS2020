@@ -1,6 +1,44 @@
 # G-2b-R author evidence — NOT EVALUATED
 
-A lost server reply followed by an ordinary guarantor edit or a later move no longer strands a correction. New write intents record a phase-specific owned-field hash. Recovery uses that hash at the two existing classification sites; older intents retain the full-content fallback. Correct refuses a second correction already in progress, before any write. History suppresses Undo for originals with a trusted in-progress correction in the returned history page.
+The fixback for the independent `NEEDS-WORK` verdict at `60323dacf0b555a0f1722053f6e92b9cf846e68a` makes a concurrently admitted correction inert when its original became inactive before the correction landed an ownership write. Complete checkpoints that correction as `cancelled / superseded`, writes one pending audit naming the original, and returns success without touching Person or RelatedPerson. History now offers Complete for an in-progress correction and uses the existing K15 reload path for a 409 carrying a Task.
+
+The original slice remains intact: a lost server reply followed by an ordinary guarantor edit or a later move no longer strands a correction. New write intents record a phase-specific owned-field hash. Recovery uses that hash at the two existing classification sites; older intents retain the full-content fallback. Correct refuses a second correction already in progress, before any write. History suppresses Undo for originals with a trusted in-progress correction in the returned history page.
+
+## NEEDS-WORK fixback
+
+Evaluator finding: [Independent evaluation at 60323dac — NEEDS-WORK](https://github.com/drbang-iva/ODOS2020/pull/595#issuecomment-5670443927). The companion addendum was read from the published `2026-09-14-odos-guarantor-g2b2b-adjudication.md`; PerformanceOD remained read-only.
+
+### Red before
+
+[Raw red output](R7-fixback-red.tap): `tests 1; pass 0; fail 1`. The exact R7 schedule returned 200 but left the losing correction `completed / linked`, moved ownership from D back to S, made seven Person/RelatedPerson writes, and wrote no superseded audit. This is both the recorded pre-repair failure and the R7 step-0′ deletion mutant; the diagnostic payload is byte-for-byte the same observed defect.
+
+### Fixback guards
+
+[fixback-mutations.json](fixback-mutations.json) records each exact replacement, mutant fingerprint, command, failing test, and restored fingerprint. Every control ran green → break → red → restore → green.
+
+| Guard and failing test name | Deliberate break | Green / red / restored |
+|---|---|---|
+| R7: Complete supersedes a pre-ownership correction after its original was cancelled and a later transfer completed | Delete step 0′ | 1 pass / 1 fail / 1 pass; mutant returns 200/completed, owners `[S]`, seven domain writes |
+| R8: Complete fails a pre-ownership correction when its completed original no longer owns the child | Remove the shipped completed-original owner check in `takeoverClaim` | 1 pass / 1 fail / 1 pass; mutant completes and writes claiming, detaching, attaching, projecting, and releasing phases |
+| R9: an in-progress correction alone renders Complete and success reloads the patient and history once; R9 K15: a 409 with a Task from Complete reloads once and closes history | Hide the Complete button | 2 pass / 2 fail / 2 pass |
+
+### Fixback regressions and runtime proof
+
+| Command / surface | Result |
+|---|---:|
+| Eight named backend files: shipped L1–L29, R1–R8, routes, policy, audit, readers, and screens | 81/81 |
+| UI search/history plus R9 | 23/23 |
+| `npm --prefix ui test` | 1,523 pass; 0 fail |
+| `npm --prefix mcp test` | 4,761 pass; same 6 local Postgres failures; 60 skip |
+| `npm --prefix mcp run build` | exit 0 |
+| `npm --prefix ui run build` | exit 0; 325 modules transformed |
+| `npm run preflight` | 0 warnings; 0 hard blocks |
+
+The six MCP failures are the unchanged five `claimReadModelStore` cases plus its teardown hook, still caused by `ECONNREFUSED 127.0.0.1:5433`; their names match the earlier baseline and pre-fixback final output. CI at the committed head is the regression gate.
+
+[Real-server R7](live-fixback.json.gz) ran 21 matching assertions against the owned loopback Medplum `5.1.30-9b1bd92` fixture with `transaction-bundles` absent. Two concurrent authenticated HTTP Correct requests were held only at their shared admission read and equal-version source fence: both were admitted, one completed, and one returned `409 / recovery-conflict` before any ownership write. Transfer B then completed. Complete on the loser returned 200; fresh reads showed `cancelled / superseded`, D still owned the child, zero Person/RelatedPerson transactions occurred after B, and exactly one `guarantor.link.pending` audit named original A. [HTTP evidence](live-fixback-http.json.gz) contains the bounded request/response sequence.
+
+The three owned `g2br-live` containers were stopped with exit 0 and retained; [final state](fixture-fixback-final-state.txt). No other stack was touched. The non-atomic admission window remains the accepted design. Step 0′ applies only to a correction with no landed ownership write and an original outside `completed`/`in-progress`; landed recovery, owned-field classification, verification, terminal and intent rules, R6 admission, fences, policy, registration, and 2b attach/unlink are unchanged.
 
 Branch: `drbang-iva/g2b-recovery`. Base: `bd7029eb55435655f3e4332b2cc703bfd2d77e7e`. Fresh `origin/main` was fetched in the task worktree and matched this base. The three premise paths had an empty diff. All four requested code anchors matched. PerformanceOD was read-only; the published ruling resolved through GitHub because the local companion checkout was behind it.
 
@@ -8,11 +46,13 @@ Source fingerprints in [source-sha256.json](source-sha256.json) bind these pre-c
 
 ## Files and scope
 
-- `mcp/src/clinic/guarantor-link-operation.ts`: exported pure projection/hash, optional intent hash, two classifier comparisons, correction admission, and the history flag.
+- `mcp/src/clinic/guarantor-link-operation.ts`: exported pure projection/hash, optional intent hash, two classifier comparisons, correction admission, the history flag, and fixback step 0′ on Complete for an ownership-free correction whose original is inactive.
 - `ui/src/lib/guarantor-link-operations.ts`: optional history flag.
-- `ui/src/components/patient/GuarantorLinkScreens.tsx`: hides the Undo reason and button when that flag is true.
+- `ui/src/components/patient/GuarantorLinkScreens.tsx`: hides Undo while a correction is in progress and offers the fixback Complete control for that correction.
 - `mcp/tests/guarantorOwnedRecovery.test.ts`: ten new tests for R1–R6, legacy behavior, and inert corrections.
 - `ui/tests/guarantorRecoveryHistory.test.tsx`: two new tests for Undo visibility.
+- `mcp/tests/guarantorRecoveryFixback.test.ts`: R7 and R8.
+- `ui/tests/guarantorRecoveryFixback.test.tsx`: R9 success and K15 conflict reload.
 - This directory: raw captures, regression output, mutation runner, live/browser proof runners, and this bundle.
 
 Verification (5a), terminal transitions, definite-response disposition, create/draft claim admission, fences, S8 expressions, registration, and attach/unlink were not changed. Existing test bodies and `guarantorScreensFixture.ts` are byte-identical to the base. The helper was placed after `Operation` so the existing line-pinned service-write inventory remains unchanged. History derives its flag from the existing trusted page, preserving K13's single newest-50 query contract; admission separately searches all correction pages.
@@ -88,10 +128,10 @@ Own compose project `g2br-live`, loopback Medplum `127.0.0.1:29080`, Postgres `2
 
 Both cases use the actual registered HTTP routes with staff tokens. All FHIR traffic goes to the disposable server, through the actual service client and audit runtime. The loss is injected only after a successful committed target response, with no status on the thrown error. A fresh read must find exactly one unresolved intent and a moved target version. HTTP request/response sequences are in [live-before-http.json](live-before-http.json.gz) and [live-after-http.json](live-after-http.json.gz). The first harness attempt accidentally targeted a Task checkpoint; it was corrected to target the specified Person/RelatedPerson write before the accepted captures were run.
 
-[Browser proof](browser-proof.json) mounts the actual `GuarantorLinkScreens` component, calls the real history route through Vite's existing proxy, and uses the **same persisted X2 state** in separate base/fixed worktrees. A remains completed and C remains in-progress in both captures. Before: two Undo controls. After: only B's Undo remains; A's Undo reason and button are absent. No API response is mocked. This proves the mounted history surface, not a whole patient-route walkthrough. Both captures have zero page errors and identical 1440×1000 dimensions.
+[Browser proof](browser-proof.json) mounts the actual `GuarantorLinkScreens` component, calls the real history route through Vite's existing proxy, and uses the **same persisted X2 state** at exact pre-fixback head `60323dac` and the repaired working tree. A remains completed and C remains in-progress in both captures. Both retain one valid Undo for B and suppress Undo for A. Before: no Complete. After: exactly one Complete on C. No API response is mocked. This proves the mounted history surface, not a whole patient-route walkthrough. Both captures have zero page errors and identical 1440×1000 dimensions.
 
-![Before: A and B both offer Undo](history-before.png)
-![After: only B offers Undo](history-after.png)
+![Before: the in-progress correction has no Complete control](history-before.png)
+![After: the in-progress correction offers Complete](history-after.png)
 
 Reproduction entrypoints: `live-proof.mjs fixture <action>`, `G2BR_PROOF_SOURCE=<unchanged-base-worktree> node --import tsx docs/build-log/guarantor-g2b-r/live-proof.mjs run before`, and the same command with `run after` using the task worktree. `browser-proof.mjs` takes `G2BR_BASE_ROOT=<unchanged-base-worktree>`. The fixture runner reuses the existing G-2b-1 helper with only isolated project/port/path substitutions; no shared fixture file is edited. Allow Medplum's login rate-limit window to clear between seed and credential refresh if necessary.
 

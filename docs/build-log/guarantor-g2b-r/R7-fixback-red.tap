@@ -1,0 +1,35 @@
+TAP version 13
+# Subtest: R7: Complete supersedes a pre-ownership correction after its original was cancelled and a later transfer completed
+not ok 1 - R7: Complete supersedes a pre-ownership correction after its original was cancelled and a later transfer completed
+  ---
+  duration_ms: 18.133
+  type: 'test'
+  location: 'mcp/tests/guarantorRecoveryFixback.test.ts:1:706'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'completed'
+    - 'cancelled'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'cancelled'
+  actual: 'completed'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/guarantorRecoveryFixback.test.ts:55:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# {"status":200,"taskStatus":"completed","businessStatus":"linked","owners":["S"],"domainWrites":["Person/D:200","Person/S:200","RelatedPerson/r1:200","Person/D:200","Person/S:200","RelatedPerson/r1:200","RelatedPerson/r1:200"],"pendingAudits":[]}
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 146.8565

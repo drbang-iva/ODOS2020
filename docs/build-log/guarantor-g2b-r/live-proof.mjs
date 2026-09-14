@@ -31,7 +31,7 @@ if (process.argv[2] === 'fixture') {
   process.exit(result.status ?? 1);
 }
 const variant = process.argv[3];
-assert.ok(['before', 'after'].includes(variant));
+assert.ok(['before', 'after', 'fixback'].includes(variant));
 const mode = process.argv[2];
 assert.ok(['run', 'serve'].includes(mode));
 const source = resolve(process.env.G2BR_PROOF_SOURCE ?? root);
@@ -49,7 +49,7 @@ const { audit, serviceFhir } = await createLiveClients(fixture);
 const context = new AsyncLocalStorage();
 const events = [], transactions = [], checks = [], cases = [];
 const patients = [fixture.patientId];
-let scenario = 'premise', afterTransaction;
+let scenario = 'premise', beforeTransaction, afterTransaction, afterHttp, afterSearchProject;
 const rawFetch = globalThis.fetch;
 function responseEvidence(body, path) {
   if (path === '/auth/me') return { project: resourceEvidence(body.project), profile: resourceEvidence(body.profile), membership: resourceEvidence(body.membership), accessPolicy: resourceEvidence(body.accessPolicy) };
@@ -69,9 +69,14 @@ globalThis.fetch = async (input, init) => {
   const response = await rawFetch(input, init);
   event.status = response.status;
   try { event.response = responseEvidence(await response.clone().json(), url.pathname); } catch { event.response = '<non-JSON>'; }
+  if (afterHttp) await afterHttp(event, url);
   return response;
 };
-const instrumentedFhir = { ...serviceFhir, executeTransactionAsActor: async (...args) => {
+const instrumentedFhir = { ...serviceFhir, searchProject: async (...args) => {
+  const result = await serviceFhir.searchProject(...args);
+  if (afterSearchProject) await afterSearchProject(context.getStore(), args, result);
+  return result;
+}, executeTransactionAsActor: async (...args) => {
   const entry = args[0].entry[0];
   const phase = args[1].actionReason.split(' ')[1];
   const frame = context.getStore();
@@ -79,6 +84,7 @@ const instrumentedFhir = { ...serviceFhir, executeTransactionAsActor: async (...
   transactions.push(transaction);
   return context.run({ ...frame, phase }, async () => {
     try {
+      if (beforeTransaction) await beforeTransaction(transaction);
       const result = await serviceFhir.executeTransactionAsActor(...args);
       transaction.status = Number.parseInt(result.entry?.[0]?.response?.status ?? '', 10);
       if (afterTransaction) await afterTransaction(transaction);
@@ -154,7 +160,77 @@ try {
     }
     const policy = await read('AccessPolicy', fixture.principals.staff.policyId);
     check('staff policy matches current compiler', policy.resource, buildMedplumAccessPolicy(getRoleDeclaration('staff')).resource);
-    for (scenario of ['X1', 'X2']) {
+    if (variant === 'fixback') {
+      scenario = 'R7';
+      const f = await family();
+      const original = await route('A', 'create', await inputFor(f));
+      check('transfer A completes', [original.status, original.body.task?.status], [200, 'completed']);
+      const originalId = original.body.task.id;
+      check('transfer A owners', await owners(f.child), [f.destination.id]);
+
+      const admitted = new Set();
+      let releaseAdmission;
+      let bothAdmitted;
+      const admissionGate = new Promise(done => { releaseAdmission = done; });
+      const admissionReady = new Promise(done => { bothAdmitted = done; });
+      afterSearchProject = async (frame, args) => {
+        const [resourceType, , params] = args;
+        if (!['C1', 'C2'].includes(frame?.runner) || resourceType !== 'Task' || params['based-on'] !== `Task/${originalId}` || !params.code.endsWith('|correct')) return;
+        admitted.add(frame.runner);
+        if (admitted.size === 2) {
+          bothAdmitted();
+          releaseAdmission();
+        }
+        await admissionGate;
+      };
+      const atFence = new Set();
+      let releaseFence;
+      const fenceGate = new Promise(done => { releaseFence = done; });
+      beforeTransaction = async transaction => {
+        if (!['C1', 'C2'].includes(transaction.runner) || transaction.phase !== 'fence-source' || transaction.method !== 'PUT' || transaction.target !== `Person/${f.destination.id}`) return;
+        atFence.add(transaction.runner);
+        if (atFence.size === 2) releaseFence();
+        await fenceGate;
+      };
+      const correctionsPromise = Promise.all([
+        route('C1', 'correct', { operationId: randomUUID(), reason: 'Concurrent correction one' }, originalId),
+        route('C2', 'correct', { operationId: randomUUID(), reason: 'Concurrent correction two' }, originalId),
+      ]);
+      await admissionReady;
+      check('both corrections admitted before either Task exists', [...admitted].sort(), ['C1', 'C2']);
+      const corrections = await correctionsPromise;
+      afterSearchProject = undefined;
+      beforeTransaction = undefined;
+      const completedCorrection = corrections.find(result => result.status === 200);
+      const pausedCorrection = corrections.find(result => result.status === 409);
+      check('both corrections reach the same pre-ownership fence', [...atFence].sort(), ['C1', 'C2']);
+      check('one correction completes', [completedCorrection?.status, completedCorrection?.body.task?.status], [200, 'completed']);
+      check('the other correction pauses before ownership', [pausedCorrection?.status, pausedCorrection?.body.phase], [409, 'recovery-conflict']);
+      const pausedId = pausedCorrection.body.task.id;
+      const pausedTask = await read('Task', pausedId);
+      const landedOwnership = journal(pausedTask).intents.some(intent => intent.disposition === 'landed' && ['detaching', 'attaching', 'projecting', 'releasing'].includes(intent.phase));
+      check('paused correction has no landed ownership write', landedOwnership, false);
+      check('original is cancelled by first correction', (await read('Task', originalId)).status, 'cancelled');
+      check('first correction restores source ownership', await owners(f.child), [f.source.id]);
+
+      const later = await route('B', 'create', await inputFor(f));
+      check('transfer B completes', [later.status, later.body.task?.status], [200, 'completed']);
+      const afterB = await snapshot(f, [originalId, pausedId, later.body.task.id]);
+      check('transfer B owns child', afterB.owners, [f.destination.id]);
+      const transactionOffset = transactions.length;
+      const eventOffset = events.length;
+      const complete = await route('C2', 'complete', undefined, pausedId);
+      const final = await snapshot(f, [originalId, pausedId, later.body.task.id]);
+      const domainWrites = transactions.slice(transactionOffset).filter(transaction => /^(?:Person|RelatedPerson)\//.test(transaction.target));
+      const pendingAudits = events.slice(eventOffset).filter(event => event.method === 'POST' && event.path === '/fhir/R4/AuditEvent' && event.request?.type?.code === 'guarantor.link.pending');
+      check('Complete returns success', complete.status, 200);
+      check('paused correction is cancelled and superseded', [final.tasks[1].status, final.tasks[1].businessStatus?.text], ['cancelled', 'superseded']);
+      check('Complete makes zero Person or RelatedPerson writes', domainWrites.length, 0);
+      check('fresh owner read preserves transfer B', final.owners, [f.destination.id]);
+      check('one pending audit names the original', pendingAudits.map(event => [event.request.outcomeDesc.includes('phase=superseded'), event.request.outcomeDesc.includes(`target=Task/${originalId}`)]), [[true, true]]);
+      cases.push({ scenario, family: f, original, corrections, pausedTask, later, afterB, complete, final, domainWrites, pendingAudits });
+      console.log(JSON.stringify({ variant, scenario, admitted: [...admitted].sort(), atFence: [...atFence].sort(), correctionStatuses: corrections.map(result => [result.status, result.body.phase]), complete: complete.status, taskStatus: final.tasks[1].status, businessStatus: final.tasks[1].businessStatus?.text, owners: final.owners, domainWrites: domainWrites.length, pendingAudits: pendingAudits.length }));
+    } else for (scenario of ['X1', 'X2']) {
       const f = await family();
       const original = await route('A', 'create', await inputFor(f));
       check('A completes', original.body.task?.status, 'completed');

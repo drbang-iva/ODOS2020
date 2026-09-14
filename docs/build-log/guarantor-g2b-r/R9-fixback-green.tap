@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: R9: an in-progress correction alone renders Complete and success reloads the patient and history once
+ok 1 - R9: an in-progress correction alone renders Complete and success reloads the patient and history once
+  ---
+  duration_ms: 14.620458
+  type: 'test'
+  ...
+# Subtest: R9 K15: a 409 with a Task from Complete reloads once and closes history
+ok 2 - R9 K15: a 409 with a Task from Complete reloads once and closes history
+  ---
+  duration_ms: 2.560167
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 227.485666

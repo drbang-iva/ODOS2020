@@ -1,0 +1,17 @@
+TAP version 13
+# Subtest: R7: Complete supersedes a pre-ownership correction after its original was cancelled and a later transfer completed
+ok 1 - R7: Complete supersedes a pre-ownership correction after its original was cancelled and a later transfer completed
+  ---
+  duration_ms: 15.78825
+  type: 'test'
+  ...
+# {"status":200,"taskStatus":"cancelled","businessStatus":"superseded","owners":["D"],"domainWrites":[],"pendingAudits":["correct Task/48e4fc43-e3db-4f30-bd78-d4fbc2f6ea36 S=Person/D D=Person/S phase=superseded target=Task/1f4a8afa-1242-49fb-8c32-b502c7df5168; Concurrent correction two"]}
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 160.979458

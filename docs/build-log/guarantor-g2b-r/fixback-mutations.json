@@ -1,0 +1,225 @@
+[
+  {
+    "guard": "R7",
+    "file": "mcp/src/clinic/guarantor-link-operation.ts",
+    "before": "    if (this.plan.kind === \"correct\" && !this.ownershipLanded()) {\n      const original = await this.operation.read<Task>(\"Task\", this.plan.originalTaskId!);\n      if (!this.operation.trusted(original)) return this.pause(\"interfered\", reference(original));\n      if (original.status !== \"completed\" && original.status !== \"in-progress\") {\n        await this.checkpointTask(\"cancelled\", \"superseded\");\n        await this.audit(\"pending\", \"superseded\", reference(original));\n        return true;\n      }\n    }\n",
+    "after": "",
+    "sourceSha256": "002a4c77b5b930ee08ceec46cc37e6941fef76152a1feeea9b44b2e7277838c6",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R7:",
+        "tests/guarantorRecoveryFixback.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": [],
+      "diagnostics": [
+        "{\"status\":200,\"taskStatus\":\"cancelled\",\"businessStatus\":\"superseded\",\"owners\":[\"D\"],\"domainWrites\":[],\"pendingAudits\":[\"correct Task/48e4fc43-e3db-4f30-bd78-d4fbc2f6ea36 S=Person/D D=Person/S phase=superseded target=Task/1f4a8afa-1242-49fb-8c32-b502c7df5168; Concurrent correction two\"]}"
+      ]
+    },
+    "mutantSha256": "c26b9c71008a53a7548e035797084aa0c013a330d4420de4bf67daae2e12bc3f",
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R7:",
+        "tests/guarantorRecoveryFixback.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 1,
+      "counts": {
+        "tests": "1",
+        "pass": "0",
+        "fail": "1",
+        "skipped": "0"
+      },
+      "failingTests": [
+        "R7: Complete supersedes a pre-ownership correction after its original was cancelled and a later transfer completed"
+      ],
+      "diagnostics": [
+        "{\"status\":200,\"taskStatus\":\"completed\",\"businessStatus\":\"linked\",\"owners\":[\"S\"],\"domainWrites\":[\"Person/D:200\",\"Person/S:200\",\"RelatedPerson/r1:200\",\"Person/D:200\",\"Person/S:200\",\"RelatedPerson/r1:200\",\"RelatedPerson/r1:200\"],\"pendingAudits\":[]}"
+      ]
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R7:",
+        "tests/guarantorRecoveryFixback.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": [],
+      "diagnostics": [
+        "{\"status\":200,\"taskStatus\":\"cancelled\",\"businessStatus\":\"superseded\",\"owners\":[\"D\"],\"domainWrites\":[],\"pendingAudits\":[\"correct Task/6158249d-3bf1-4827-bec1-cff5efe9acf0 S=Person/D D=Person/S phase=superseded target=Task/5336fae5-1c99-4a1b-9e3e-c3797418e669; Concurrent correction two\"]}"
+      ]
+    }
+  },
+  {
+    "guard": "R8",
+    "file": "mcp/src/clinic/guarantor-link-operation.ts",
+    "before": "if (owners.length > 1 || owners.some(p => ![this.plan.sourcePersonId, this.plan.destinationPersonId].includes(p.id!)) || (original.status === \"completed\" && !equalIds(owners.map(p => p.id!), [this.plan.sourcePersonId]))) return this.fail(\"correction-conflict\", reference(child));",
+    "after": "if (owners.length > 1 || owners.some(p => ![this.plan.sourcePersonId, this.plan.destinationPersonId].includes(p.id!))) return this.fail(\"correction-conflict\", reference(child));",
+    "sourceSha256": "002a4c77b5b930ee08ceec46cc37e6941fef76152a1feeea9b44b2e7277838c6",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R8:",
+        "tests/guarantorRecoveryFixback.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": [],
+      "diagnostics": [
+        "{\"status\":409,\"phase\":\"correction-conflict\",\"taskStatus\":\"failed\",\"businessStatus\":\"correction-conflict\",\"owners\":[\"S\"],\"domainWrites\":[]}"
+      ]
+    },
+    "mutantSha256": "687c2c8aeb8c41593e5449710888a58cf6c3be86489c489000abe255434b0217",
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R8:",
+        "tests/guarantorRecoveryFixback.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 1,
+      "counts": {
+        "tests": "1",
+        "pass": "0",
+        "fail": "1",
+        "skipped": "0"
+      },
+      "failingTests": [
+        "R8: Complete fails a pre-ownership correction when its completed original no longer owns the child"
+      ],
+      "diagnostics": [
+        "{\"status\":200,\"phase\":\"linked\",\"taskStatus\":\"completed\",\"businessStatus\":\"linked\",\"owners\":[\"S\"],\"domainWrites\":[\"guarantor.link claiming Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79\",\"guarantor.link claiming RelatedPerson/r1\",\"guarantor.link claiming Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79\",\"guarantor.link detaching Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79\",\"guarantor.link detaching Person/S\",\"guarantor.link detaching Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79\",\"guarantor.link attaching Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79\",\"guarantor.link attaching Person/S\",\"guarantor.link attaching Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79\",\"guarantor.link projecting Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79\",\"guarantor.link projecting RelatedPerson/r1\",\"guarantor.link projecting Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79\",\"guarantor.link releasing Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79\",\"guarantor.link releasing RelatedPerson/r1\",\"guarantor.link releasing Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79\"]}"
+      ]
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R8:",
+        "tests/guarantorRecoveryFixback.test.ts"
+      ],
+      "cwd": "mcp",
+      "exitCode": 0,
+      "counts": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": [],
+      "diagnostics": [
+        "{\"status\":409,\"phase\":\"correction-conflict\",\"taskStatus\":\"failed\",\"businessStatus\":\"correction-conflict\",\"owners\":[\"S\"],\"domainWrites\":[]}"
+      ]
+    }
+  },
+  {
+    "guard": "R9",
+    "file": "ui/src/components/patient/GuarantorLinkScreens.tsx",
+    "before": "op.kind===\"correct\"&&op.task.status===\"in-progress\"&&<button",
+    "after": "false&&<button",
+    "sourceSha256": "d4073db3583f18495d8dacd0a3c7ce1403590ba08bcc993e2c0b4a0173a1a0a6",
+    "green": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R9",
+        "tests/guarantorRecoveryFixback.test.tsx"
+      ],
+      "cwd": "ui",
+      "exitCode": 0,
+      "counts": {
+        "tests": "2",
+        "pass": "2",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": [],
+      "diagnostics": []
+    },
+    "mutantSha256": "eec304948f3e45851badc866a45a449b5bbdce86bed28b27135a98d7ee850d1f",
+    "red": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R9",
+        "tests/guarantorRecoveryFixback.test.tsx"
+      ],
+      "cwd": "ui",
+      "exitCode": 1,
+      "counts": {
+        "tests": "2",
+        "pass": "0",
+        "fail": "2",
+        "skipped": "0"
+      },
+      "failingTests": [
+        "R9: an in-progress correction alone renders Complete and success reloads the patient and history once",
+        "R9 K15: a 409 with a Task from Complete reloads once and closes history"
+      ],
+      "diagnostics": []
+    },
+    "restored": {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^R9",
+        "tests/guarantorRecoveryFixback.test.tsx"
+      ],
+      "cwd": "ui",
+      "exitCode": 0,
+      "counts": {
+        "tests": "2",
+        "pass": "2",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "failingTests": [],
+      "diagnostics": []
+    }
+  }
+]

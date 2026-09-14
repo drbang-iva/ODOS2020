@@ -67,15 +67,17 @@ try {
     assert.equal(history.find(op => op.task.id === x2.correction.body.task.id).task.status, 'in-progress');
     const originalUndoReasons = await page.getByText(`Reason to undo ${original.task.id}`, { exact: true }).count();
     const undoButtons = await page.getByRole('button', { name: 'Undo', exact: true }).count();
-    assert.equal(originalUndoReasons, variant === 'before' ? 1 : 0);
-    assert.equal(undoButtons, variant === 'before' ? 2 : 1);
+    const completeButtons = await page.getByRole('button', { name: 'Complete', exact: true }).count();
+    assert.equal(originalUndoReasons, 0);
+    assert.equal(undoButtons, 1);
+    assert.equal(completeButtons, variant === 'before' ? 0 : 1);
     assert.deepEqual(errors, []);
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({ path: resolve(output, `history-${variant}.png`), animations: 'disabled' });
-    checks.push({ variant, originalStatus: original.task.status, correctionInProgress: original.correctionInProgress, originalUndoReasons, undoButtons, consoleErrors: errors, history });
+    checks.push({ variant, sourceHead: variant === 'before' ? '60323dacf0b555a0f1722053f6e92b9cf846e68a' : 'working tree', originalStatus: original.task.status, correctionInProgress: original.correctionInProgress, originalUndoReasons, undoButtons, completeButtons, consoleErrors: errors, history });
     await context.close();
   }
-  writeFileSync(resolve(output, 'browser-proof.json'), JSON.stringify({ scope: 'Actual GuarantorLinkScreens component, actual history route, same persisted synthetic X2 state, staff token; no mocked API responses', checks }, null, 2) + '\n');
+  writeFileSync(resolve(output, 'browser-proof.json'), JSON.stringify({ scope: 'Actual GuarantorLinkScreens component and history route at pre-fixback head 60323dac versus the fixback working tree, same persisted synthetic X2 state and staff token; no mocked API responses', checks }, null, 2) + '\n');
   console.log(JSON.stringify(checks.map(({ history, ...check }) => check)));
 } finally {
   await browser?.close();

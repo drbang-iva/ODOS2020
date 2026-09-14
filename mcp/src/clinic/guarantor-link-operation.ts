@@ -297,6 +297,15 @@ class Run {
     return undefined;
   }
   async complete(): Promise<boolean> {
+    if (this.plan.kind === "correct" && !this.ownershipLanded()) {
+      const original = await this.operation.read<Task>("Task", this.plan.originalTaskId!);
+      if (!this.operation.trusted(original)) return this.pause("interfered", reference(original));
+      if (original.status !== "completed" && original.status !== "in-progress") {
+        await this.checkpointTask("cancelled", "superseded");
+        await this.audit("pending", "superseded", reference(original));
+        return true;
+      }
+    }
     const correction = await this.checkCorrections();
     if (correction) return correction === "cancelled";
     this.resuming = true;

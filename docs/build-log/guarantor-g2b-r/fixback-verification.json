@@ -1,0 +1,149 @@
+{
+  "redBefore": {
+    "tests": 1,
+    "pass": 0,
+    "fail": 1,
+    "diagnostic": "{\"status\":200,\"taskStatus\":\"completed\",\"businessStatus\":\"linked\",\"owners\":[\"S\"],\"domainWrites\":[\"Person/D:200\",\"Person/S:200\",\"RelatedPerson/r1:200\",\"Person/D:200\",\"Person/S:200\",\"RelatedPerson/r1:200\",\"RelatedPerson/r1:200\"],\"pendingAudits\":[]}"
+  },
+  "mutationControls": {
+    "R7": {
+      "green": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "red": {
+        "tests": "1",
+        "pass": "0",
+        "fail": "1",
+        "skipped": "0"
+      },
+      "failingTests": [
+        "R7: Complete supersedes a pre-ownership correction after its original was cancelled and a later transfer completed"
+      ],
+      "restored": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      }
+    },
+    "R8": {
+      "green": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "red": {
+        "tests": "1",
+        "pass": "0",
+        "fail": "1",
+        "skipped": "0"
+      },
+      "failingTests": [
+        "R8: Complete fails a pre-ownership correction when its completed original no longer owns the child"
+      ],
+      "restored": {
+        "tests": "1",
+        "pass": "1",
+        "fail": "0",
+        "skipped": "0"
+      }
+    },
+    "R9": {
+      "green": {
+        "tests": "2",
+        "pass": "2",
+        "fail": "0",
+        "skipped": "0"
+      },
+      "red": {
+        "tests": "2",
+        "pass": "0",
+        "fail": "2",
+        "skipped": "0"
+      },
+      "failingTests": [
+        "R9: an in-progress correction alone renders Complete and success reloads the patient and history once",
+        "R9 K15: a 409 with a Task from Complete reloads once and closes history"
+      ],
+      "restored": {
+        "tests": "2",
+        "pass": "2",
+        "fail": "0",
+        "skipped": "0"
+      }
+    }
+  },
+  "focused": {
+    "mcp": {
+      "tests": 81,
+      "pass": 81,
+      "fail": 0
+    },
+    "ui": {
+      "tests": 23,
+      "pass": 23,
+      "fail": 0
+    }
+  },
+  "full": {
+    "mcp": {
+      "tests": 4827,
+      "pass": 4761,
+      "fail": 6,
+      "skipped": 60
+    },
+    "ui": {
+      "tests": 1523,
+      "pass": 1523,
+      "fail": 0,
+      "skipped": 0
+    }
+  },
+  "live": {
+    "completed": true,
+    "assertions": 21,
+    "transactions": 69
+  },
+  "trackedExistingTestsChanged": [],
+  "newTestFiles": [
+    "mcp/tests/guarantorRecoveryFixback.test.ts",
+    "ui/tests/guarantorRecoveryFixback.test.tsx"
+  ],
+  "secretScan": {
+    "result": "no fixture credentials in fixback evidence",
+    "files": [
+      "R7-fixback-green.tap",
+      "R7-fixback-red.tap",
+      "R7-fixback-restored.tap",
+      "R8-fixback-green.tap",
+      "R8-fixback-red.tap",
+      "R8-fixback-restored.tap",
+      "R9-fixback-green.tap",
+      "R9-fixback-red.tap",
+      "R9-fixback-restored.tap",
+      "browser-proof.json",
+      "fixback-evidence-archives.json",
+      "fixback-focused-mcp.tap",
+      "fixback-focused-ui-direct.tap",
+      "fixback-mcp-build.txt",
+      "fixback-mcp-full.tap.gz",
+      "fixback-mutations.json",
+      "fixback-preflight.txt",
+      "fixback-source-sha256.json",
+      "fixback-ui-build.txt",
+      "fixback-ui-full.tap.gz",
+      "fixture-fixback-final-state.txt",
+      "fixture-fixback-stop.txt",
+      "history-after.png",
+      "history-before.png",
+      "live-fixback-http.json.gz",
+      "live-fixback.json.gz",
+      "live-fixback.txt",
+      "mutate-fixback-guards.py"
+    ]
+  }
+}

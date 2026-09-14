@@ -1,0 +1,3 @@
+g2br-live-medplum-1	Exited (0) Less than a second ago
+g2br-live-postgres-1	Exited (0) Less than a second ago
+g2br-live-redis-1	Exited (0) Less than a second ago

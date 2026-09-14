@@ -1,0 +1,55 @@
+TAP version 13
+# Subtest: R9: an in-progress correction alone renders Complete and success reloads the patient and history once
+not ok 1 - R9: an in-progress correction alone renders Complete and success reloads the patient and history once
+  ---
+  duration_ms: 13.941292
+  type: 'test'
+  location: 'ui/tests/guarantorRecoveryFixback.test.tsx:1:2255'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (ui/tests/guarantorRecoveryFixback.test.tsx:50:10)
+    screen (ui/tests/guarantorRecoveryFixback.test.tsx:41:11)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: R9 K15: a 409 with a Task from Complete reloads once and closes history
+not ok 2 - R9 K15: a 409 with a Task from Complete reloads once and closes history
+  ---
+  duration_ms: 3.750375
+  type: 'test'
+  location: 'ui/tests/guarantorRecoveryFixback.test.tsx:1:2951'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+
+      assert.ok(complete)
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    <anonymous> (ui/tests/guarantorRecoveryFixback.test.tsx:60:10)
+    screen (ui/tests/guarantorRecoveryFixback.test.tsx:41:11)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 240.878708
