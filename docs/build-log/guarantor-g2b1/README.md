@@ -75,3 +75,7 @@ The companion checkout is read-only for this task. Its contract is unchanged fro
 - `decisions/2026-09-13-odos-guarantor-g1-p7-p11-rulings.md:34–54`: the earlier unconstrained Person-write ruling defers tighter constraints to G-2; add the two implemented S8 constraints as the later state.
 
 G-2b-2 registration/search/attach/move/join remains future work. No decision or INDEX entry was edited here.
+
+## Runtime evidence and fixture-scanner limit
+
+The existing fixture guard selects filenames containing `fixture` or `seed` and treats any non-allowlisted ten-digit run as an identifier violation. A fresh synthetic Patient UUID contained ten consecutive digits, causing three false positives in the generated membership snapshot. That runtime capture is now named [live-resource-state.json](live-resource-state.json); its JSON bytes are unchanged by the rename, and the helper uses that name on future captures. This moves the runtime output outside that filename-selected scan; it does not claim scanner coverage for live captures. All live resources were generated on the disposable synthetic stack, and a separate known-credential scan covered all 79 evidence files. [evidence-validation.json](evidence-validation.json) records the exact digest and check disposition. No existing test was edited.

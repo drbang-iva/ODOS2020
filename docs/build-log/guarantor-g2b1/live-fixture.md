@@ -21,7 +21,7 @@ The bootstrap created canonical baseline policies at `a13fc1ea6322d29fa38216fbc0
 | `live-runtime.json` | Image, base head, and live health |
 | `live-bootstrap-http.json` | Synthetic resource creation and conditional membership writes |
 | `live-policy-sync.json` | Actual repository sync command and output at the policy SHA |
-| `live-fixture-state.json` | Fresh Project features, membership bindings, Person/Task policy rules |
+| `live-resource-state.json` | Fresh Project features, membership bindings, Person/Task policy rules |
 | `live-staff-auth.json` | Actual route-authentication results for both users |
 | `live-membership-compartments.json`, `live-membership-http.json` | Both memberships read and conditionally update RelatedPersons for two distinct patients; four PUTs returned 200 |
 | `live-audit-bootstrap.json` | A `noop` row persisted through the real audit runtime and was read back |

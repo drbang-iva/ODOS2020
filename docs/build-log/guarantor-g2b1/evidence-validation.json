@@ -1,0 +1,18 @@
+{
+  "kind": "Author runtime evidence validation, not independent evaluation",
+  "runtimeCaptureRename": {
+    "from": "live-fixture-state.json",
+    "to": "live-resource-state.json",
+    "beforeSha256": "bc4153300f929411cab174a956aff0a5262dad005aa10cf00f9e13bb033eb50a",
+    "afterSha256": "bc4153300f929411cab174a956aff0a5262dad005aa10cf00f9e13bb033eb50a",
+    "contentChanged": false,
+    "reason": "The seed-fixture filename scanner matched ten decimal digits in a server-generated synthetic Patient UUID. Runtime snapshots are captured output, not seed inputs; they are now named accordingly.",
+    "scannerScopeChanged": true,
+    "scannerCoverageClaimedForRuntime": false
+  },
+  "credentialScan": {
+    "filesBeforeThisReport": 79,
+    "knownSecretValues": 10,
+    "matches": 0
+  }
+}

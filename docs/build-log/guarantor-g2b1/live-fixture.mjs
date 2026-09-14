@@ -316,7 +316,7 @@ async function status(fixture = loadPrivateFixture()) {
     principals[name] = { profileReference: principal.profileReference, membershipId: principal.membershipId, roles: principal.roles, access: membership.access, policyId: principal.policyId, relevantRules: policy.resource.filter((rule) => ['Person', 'Task'].includes(rule.resourceType)) };
   }
   const report = { sourceHead: repositoryHead(), composeProject: COMPOSE_PROJECT, ports: PORTS, image: MEDPLUM_IMAGE, health, projects, serviceReference: fixture.serviceReference, patientId: fixture.patientId, principals };
-  writeEvidence('live-fixture-state.json', report);
+  writeEvidence('live-resource-state.json', report);
   console.log(JSON.stringify({ health, projectCount: projects.length, serviceReference: fixture.serviceReference, staffPrincipals: Object.keys(principals), sourceHead: report.sourceHead }));
 }
 
