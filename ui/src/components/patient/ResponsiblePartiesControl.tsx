@@ -4,8 +4,9 @@ import {
   listPatientResponsibleParties, loadGuarantor, saveGuarantor, repairGuarantor,
   type GuarantorLoad,
 } from "../../lib/guarantor-editor";
+import { completeGuarantorLinkOperation, correctGuarantorLinkOperation } from "../../lib/guarantor-link-operations";
 
-const writeStatusMessages = { stopped: "not updated — a newer edit to this guarantor landed", updated: "update accepted", conflict: "record changed while you were editing", error: "update failed", "no-response": "update response not received" };
+const writeStatusMessages = { stopped: "not updated — the guarantor changed or a link operation is pending", updated: "update accepted", conflict: "record changed while you were editing", error: "update failed", "no-response": "update response not received" };
 
 type Demographics = Pick<Person, "name" | "telecom" | "address">;
 const demographics = (person: Person): Demographics => structuredClone({ name: person.name, telecom: person.telecom, address: person.address });
@@ -37,6 +38,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
   const [editedContacts, setEditedContacts] = useState<Set<number>>(() => new Set());
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string>();
+  const [correctionReason, setCorrectionReason] = useState("");
   const editable = loaded.kind === "editable";
   const dirty = editable && JSON.stringify(draft) !== JSON.stringify(demographics(loaded.snapshot.person));
   const refresh = async () => {
@@ -55,7 +57,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
       setResult(next);
       setNotice(next.message);
       if (next.status === "superseded") {
-        setNotice("A newer edit to this guarantor landed while yours was being applied. Showing the current record.");
+        setNotice("A newer edit or guarantor link operation landed while yours was being applied. Showing the current record.");
         await refresh();
       } else if (next.snapshot) {
         setLoaded({ ...loaded, snapshot: next.snapshot });
@@ -77,6 +79,22 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
     } catch { setNotice("Could not reload this responsible party. Try again."); }
     finally { setBusy(false); }
   };
+  const recover = async (correct = false) => {
+    if (loaded.kind !== "pending" || busy || (correct && (loaded.operation.kind === "correct" || !correctionReason.trim()))) return;
+    setBusy(true);
+    setNotice(undefined);
+    try {
+      if (correct) await correctGuarantorLinkOperation(loaded.operation.task.id!, correctionReason.trim());
+      else await completeGuarantorLinkOperation(loaded.operation.task.id!);
+      setCorrectionReason("");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? cause.message : "The operation result could not be determined.");
+    } finally {
+      try { await refresh(); }
+      catch { setNotice("Could not reload this responsible party. Reload before continuing."); }
+      setBusy(false);
+    }
+  };
   if (!editable) return <section className="grid gap-2 rounded border border-[var(--odos-line)] p-3">
     <h3 className="font-semibold">{displayName(loaded.relatedPerson ?? {})}</h3>
     <p>{loaded.relatedPerson.telecom?.map(contact => `${contact.system ?? "Contact"}: ${contact.value ?? "Not recorded"}`).join(" · ") || "No contact details recorded."}</p>
@@ -85,6 +103,13 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
     {notice && <p role="status">{notice}</p>}
     {loaded.personIds?.length ? <p>Guarantor records: {loaded.personIds.join(", ")}</p> : null}
     <button type="button" disabled onClick={() => save()}>Save guarantor</button>
+    {loaded.kind === "pending" && <>
+      <ul aria-label="Patients affected by this operation">{loaded.operation.patients.map(patient => <li key={patient.relatedPersonId}>{patient.name || patient.patientId}</li>)}</ul>
+      <button type="button" disabled onClick={() => save(true)}>Repair guarantor</button>
+      <button type="button" disabled={busy} onClick={() => recover()}>Complete</button>
+      {loaded.operation.kind === "correct" ? <p>A correction cannot itself be corrected. Complete this operation before starting a new transfer.</p> : <fieldset disabled={busy}><Field label="Reason for correction" value={correctionReason} change={setCorrectionReason} /></fieldset>}
+      <button type="button" disabled={busy || loaded.operation.kind === "correct" || !correctionReason.trim()} onClick={() => recover(true)}>Correct</button>
+    </>}
     <button type="button" disabled={busy} onClick={() => void reload()}>Reload guarantor</button>
   </section>;
   const names = draft.name?.length ? draft.name : [{}];
