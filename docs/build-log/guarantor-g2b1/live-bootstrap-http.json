@@ -1,0 +1,1076 @@
+{
+  "sourceHead": "a13fc1ea6322d29fa38216fbc06d03dffd079175",
+  "events": [
+    {
+      "sequence": 1,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/auth/me",
+      "status": 200
+    },
+    {
+      "sequence": 2,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Project",
+      "status": 201,
+      "request": {
+        "resourceType": "Project",
+        "name": "G2b1 build synthetic A",
+        "features": [],
+        "link": []
+      },
+      "response": {
+        "resourceType": "Project",
+        "name": "G2b1 build synthetic A",
+        "id": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+        "meta": {
+          "versionId": "3e26f868-b6f6-4705-81fe-a1de8afad29b",
+          "lastUpdated": "2026-09-14T09:49:36.222Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 3,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Project",
+      "status": 201,
+      "request": {
+        "resourceType": "Project",
+        "name": "G2b1 build synthetic B",
+        "features": [],
+        "link": []
+      },
+      "response": {
+        "resourceType": "Project",
+        "name": "G2b1 build synthetic B",
+        "id": "cd1c78b4-f8f8-46fc-aacc-76c82a52ea10",
+        "meta": {
+          "versionId": "bc3817d6-2620-439b-9306-0fd8f68e1052",
+          "lastUpdated": "2026-09-14T09:49:36.233Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "project": "cd1c78b4-f8f8-46fc-aacc-76c82a52ea10",
+          "compartment": [
+            {
+              "reference": "Project/cd1c78b4-f8f8-46fc-aacc-76c82a52ea10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 4,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        },
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "G2b1",
+              "Bootstrap"
+            ]
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Patient",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "b95d8f05-bcdc-4363-a6e0-fa2618c19617",
+          "lastUpdated": "2026-09-14T09:49:36.240Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+            }
+          ]
+        },
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "G2b1",
+              "Bootstrap"
+            ]
+          }
+        ],
+        "id": "6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+      }
+    },
+    {
+      "sequence": 5,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/AccessPolicy",
+      "status": 201,
+      "request": {
+        "resourceType": "AccessPolicy",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "staff"
+            }
+          ],
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        },
+        "name": "ODOS Staff",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "07ece90bd2506cf79870ea37d5a34dae4328aaf8f3ed226b8b1981c8398079e1",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "create",
+              "update"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "create",
+              "update"
+            ]
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "AccessPolicy",
+        "id": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "staff"
+            }
+          ],
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "34123693-2e19-4e30-ba32-3b0b4cfa3978",
+          "lastUpdated": "2026-09-14T09:49:36.256Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "name": "ODOS Staff",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "9d0c8cf57dbf85e75c96608808e755bf996a06d3faed6f816f2f91129670268e",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "create",
+              "update"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "create",
+              "update"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 6,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/AccessPolicy",
+      "status": 201,
+      "request": {
+        "resourceType": "AccessPolicy",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "provider"
+            }
+          ],
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        },
+        "name": "ODOS Provider",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "4962c0c59f76b74de62f9d04a818fe02f8362032e3e8cc285db9a2590266ecb9",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "AccessPolicy",
+        "id": "9b2a8eab-2b53-4f89-b808-bca18533dfa8",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "provider"
+            }
+          ],
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "c1adf929-739b-449c-871b-5e01ff547306",
+          "lastUpdated": "2026-09-14T09:49:36.272Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "name": "ODOS Provider",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "7aeb08799998232f551b7b9bbbce2090bdb4705e18a1ef991a1a8d5a205c0331",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 7,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/AccessPolicy",
+      "status": 201,
+      "request": {
+        "resourceType": "AccessPolicy",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "admin"
+            }
+          ],
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        },
+        "name": "ODOS Admin / Manager",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "801ccb808bdfeeab21e4097feb3e45729117c63171e59e9ee6183d2b9042c558",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "AccessPolicy",
+        "id": "9cc4b108-95d7-4c8d-9670-da1dc7ad2dce",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "admin"
+            }
+          ],
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "8d5d3029-86a8-480b-82ba-d3842d50acb4",
+          "lastUpdated": "2026-09-14T09:49:36.284Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "name": "ODOS Admin / Manager",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "a4c4722ab2c3b83b15fde4db573e2d8497756ebc500465238dae54f853fc9a34",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 8,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/AccessPolicy",
+      "status": 201,
+      "request": {
+        "resourceType": "AccessPolicy",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "provider"
+            },
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "staff"
+            },
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "admin"
+            }
+          ],
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        },
+        "name": "ODOS Composite Provider + Staff + Admin / Manager",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "d2d4ad44b673ba129a21558631b0ace2ca3cc12a585f0131d7bb42ec41241168",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "search"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "history"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "search"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "history"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "create"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "update"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "create"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "update"
+            ]
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "AccessPolicy",
+        "id": "ca61bba9-d680-4ccb-b151-e44a6b587785",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "provider"
+            },
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "staff"
+            },
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "admin"
+            }
+          ],
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "9e90a9b9-261c-4b74-84f2-7d2a42a6f949",
+          "lastUpdated": "2026-09-14T09:49:36.300Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "name": "ODOS Composite Provider + Staff + Admin / Manager",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "3fee1a99dd4a1053e9e2aa68a21ef2b779bf4b8a9d75527e606dbab3add8a10d",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "search"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "history"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "search"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "history"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "create"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "update"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "create"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "update"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 9,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/admin/projects/1650ce6d-c50a-4fbd-b30f-324514f7f57b/invite",
+      "status": 200
+    },
+    {
+      "sequence": 10,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/a56de48d-cd4b-49db-981a-0a8abba7c8de",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/03e1f451-6126-49ce-8566-509ff760df87",
+          "display": "g2b1-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+          "display": "Synthetic G2b1 staff"
+        },
+        "id": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
+        "meta": {
+          "versionId": "11594134-2ad1-4459-8703-358480ec06a0",
+          "lastUpdated": "2026-09-14T09:49:36.388Z",
+          "author": {
+            "reference": "system"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 11,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/admin/super/setpassword",
+      "status": 200
+    },
+    {
+      "sequence": 12,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/a56de48d-cd4b-49db-981a-0a8abba7c8de",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/03e1f451-6126-49ce-8566-509ff760df87",
+          "display": "g2b1-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+          "display": "Synthetic G2b1 staff"
+        },
+        "id": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
+        "meta": {
+          "versionId": "11594134-2ad1-4459-8703-358480ec06a0",
+          "lastUpdated": "2026-09-14T09:49:36.388Z",
+          "author": {
+            "reference": "system"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 13,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "PUT",
+      "path": "/fhir/R4/ProjectMembership/a56de48d-cd4b-49db-981a-0a8abba7c8de",
+      "status": 200,
+      "ifMatch": "W/\"11594134-2ad1-4459-8703-358480ec06a0\"",
+      "request": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/03e1f451-6126-49ce-8566-509ff760df87",
+          "display": "g2b1-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+          "display": "Synthetic G2b1 staff"
+        },
+        "id": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
+        "meta": {
+          "versionId": "11594134-2ad1-4459-8703-358480ec06a0",
+          "lastUpdated": "2026-09-14T09:49:36.388Z",
+          "author": {
+            "reference": "system"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              }
+            ]
+          }
+        ]
+      },
+      "response": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/03e1f451-6126-49ce-8566-509ff760df87",
+          "display": "g2b1-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+          "display": "Synthetic G2b1 staff"
+        },
+        "id": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
+        "meta": {
+          "versionId": "703d074f-58db-47a8-9c52-5542a5458100",
+          "lastUpdated": "2026-09-14T09:49:36.662Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 14,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/admin/projects/1650ce6d-c50a-4fbd-b30f-324514f7f57b/invite",
+      "status": 200
+    },
+    {
+      "sequence": 15,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/30bccb70-8421-4a42-acf3-b351832ca1f5",
+          "display": "g2b1-composite@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89",
+          "display": "Synthetic G2b1 composite"
+        },
+        "id": "a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+        "meta": {
+          "versionId": "29b98f45-68c2-4862-96db-1b093e3ab592",
+          "lastUpdated": "2026-09-14T09:49:36.723Z",
+          "author": {
+            "reference": "system"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 16,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/admin/super/setpassword",
+      "status": 200
+    },
+    {
+      "sequence": 17,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/30bccb70-8421-4a42-acf3-b351832ca1f5",
+          "display": "g2b1-composite@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89",
+          "display": "Synthetic G2b1 composite"
+        },
+        "id": "a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+        "meta": {
+          "versionId": "29b98f45-68c2-4862-96db-1b093e3ab592",
+          "lastUpdated": "2026-09-14T09:49:36.723Z",
+          "author": {
+            "reference": "system"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 18,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "PUT",
+      "path": "/fhir/R4/ProjectMembership/a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+      "status": 200,
+      "ifMatch": "W/\"29b98f45-68c2-4862-96db-1b093e3ab592\"",
+      "request": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/30bccb70-8421-4a42-acf3-b351832ca1f5",
+          "display": "g2b1-composite@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89",
+          "display": "Synthetic G2b1 composite"
+        },
+        "id": "a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+        "meta": {
+          "versionId": "29b98f45-68c2-4862-96db-1b093e3ab592",
+          "lastUpdated": "2026-09-14T09:49:36.723Z",
+          "author": {
+            "reference": "system"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+            },
+            "parameter": [
+              {
+                "name": "staff_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              },
+              {
+                "name": "provider_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              },
+              {
+                "name": "admin_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              },
+              {
+                "name": "provider_provider_profile",
+                "valueReference": {
+                  "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "response": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/30bccb70-8421-4a42-acf3-b351832ca1f5",
+          "display": "g2b1-composite@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89",
+          "display": "Synthetic G2b1 composite"
+        },
+        "id": "a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+        "meta": {
+          "versionId": "7ee48fed-0077-45cb-a5b6-cdbf2b188b6c",
+          "lastUpdated": "2026-09-14T09:49:36.844Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+            },
+            "parameter": [
+              {
+                "name": "staff_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              },
+              {
+                "name": "provider_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              },
+              {
+                "name": "admin_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              },
+              {
+                "name": "provider_provider_profile",
+                "valueReference": {
+                  "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

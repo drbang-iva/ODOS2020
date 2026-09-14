@@ -1,0 +1,288 @@
+{
+  "sourceHead": "d0cb07d81f22624f7c616105222271f3bcb8f759",
+  "composeProject": "g2b1-build-live",
+  "ports": {
+    "medplum": 28760,
+    "postgres": 28761,
+    "redis": 28762,
+    "odos": 28763,
+    "ui": 28764
+  },
+  "image": "medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de",
+  "health": {
+    "ok": true,
+    "version": "5.1.30-9b1bd92",
+    "platform": "linux",
+    "runtime": "v24.18.1",
+    "postgres": true,
+    "redis": true,
+    "redisInstances": {
+      "default": true
+    }
+  },
+  "projects": [
+    {
+      "id": "97d4724e-f504-4e3a-9879-dd809cde3167",
+      "name": "Super Admin",
+      "features": []
+    },
+    {
+      "id": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+      "name": "G2b1 build synthetic A",
+      "features": []
+    },
+    {
+      "id": "cd1c78b4-f8f8-46fc-aacc-76c82a52ea10",
+      "name": "G2b1 build synthetic B",
+      "features": []
+    }
+  ],
+  "serviceReference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+  "patientId": "6101c1ff-3ed4-4afd-96d1-6c708ca91d54",
+  "principals": {
+    "staff": {
+      "profileReference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "membershipId": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
+      "roles": [
+        "staff"
+      ],
+      "access": [
+        {
+          "policy": {
+            "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+          },
+          "parameter": [
+            {
+              "name": "patient_compartment",
+              "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+            }
+          ]
+        },
+        {
+          "policy": {
+            "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+          },
+          "parameter": [
+            {
+              "name": "patient_compartment",
+              "valueString": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+            }
+          ]
+        }
+      ],
+      "policyId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "relevantRules": [
+        {
+          "resourceType": "Person",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Task",
+          "interaction": [
+            "read",
+            "search",
+            "history",
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Person",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "writeConstraint": [
+            {
+              "language": "text/fhirpath",
+              "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+              "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())"
+            }
+          ]
+        },
+        {
+          "resourceType": "Task",
+          "interaction": [
+            "create",
+            "update"
+          ],
+          "writeConstraint": [
+            {
+              "language": "text/fhirpath",
+              "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+              "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+            }
+          ]
+        }
+      ]
+    },
+    "composite": {
+      "profileReference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89",
+      "membershipId": "a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+      "roles": [
+        "staff",
+        "provider",
+        "admin"
+      ],
+      "access": [
+        {
+          "policy": {
+            "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+          },
+          "parameter": [
+            {
+              "name": "staff_patient_compartment",
+              "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+            },
+            {
+              "name": "provider_patient_compartment",
+              "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+            },
+            {
+              "name": "admin_patient_compartment",
+              "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+            },
+            {
+              "name": "provider_provider_profile",
+              "valueReference": {
+                "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+              }
+            }
+          ]
+        },
+        {
+          "policy": {
+            "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+          },
+          "parameter": [
+            {
+              "name": "staff_patient_compartment",
+              "valueString": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+            },
+            {
+              "name": "provider_patient_compartment",
+              "valueString": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+            },
+            {
+              "name": "admin_patient_compartment",
+              "valueString": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+            },
+            {
+              "name": "provider_provider_profile",
+              "valueReference": {
+                "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+              }
+            }
+          ]
+        }
+      ],
+      "policyId": "ca61bba9-d680-4ccb-b151-e44a6b587785",
+      "relevantRules": [
+        {
+          "resourceType": "Person",
+          "interaction": [
+            "read"
+          ]
+        },
+        {
+          "resourceType": "Person",
+          "interaction": [
+            "search"
+          ]
+        },
+        {
+          "resourceType": "Person",
+          "interaction": [
+            "history"
+          ]
+        },
+        {
+          "resourceType": "Person",
+          "interaction": [
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Task",
+          "interaction": [
+            "read"
+          ]
+        },
+        {
+          "resourceType": "Task",
+          "interaction": [
+            "search"
+          ]
+        },
+        {
+          "resourceType": "Task",
+          "interaction": [
+            "history"
+          ]
+        },
+        {
+          "resourceType": "Task",
+          "interaction": [
+            "vread"
+          ]
+        },
+        {
+          "resourceType": "Person",
+          "interaction": [
+            "create"
+          ],
+          "writeConstraint": [
+            {
+              "language": "text/fhirpath",
+              "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+              "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())"
+            }
+          ]
+        },
+        {
+          "resourceType": "Person",
+          "interaction": [
+            "update"
+          ],
+          "writeConstraint": [
+            {
+              "language": "text/fhirpath",
+              "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+              "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())"
+            }
+          ]
+        },
+        {
+          "resourceType": "Task",
+          "interaction": [
+            "create"
+          ],
+          "writeConstraint": [
+            {
+              "language": "text/fhirpath",
+              "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+              "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+            }
+          ]
+        },
+        {
+          "resourceType": "Task",
+          "interaction": [
+            "update"
+          ],
+          "writeConstraint": [
+            {
+              "language": "text/fhirpath",
+              "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+              "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

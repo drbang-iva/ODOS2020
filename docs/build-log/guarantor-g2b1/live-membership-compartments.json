@@ -1,0 +1,29 @@
+{
+  "policySourceHead": "d0cb07d81f22624f7c616105222271f3bcb8f759",
+  "results": [
+    {
+      "principal": "staff",
+      "patientId": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54",
+      "relatedPersonId": "08544233-49d4-4622-9745-ad3d3347d71c",
+      "status": 200
+    },
+    {
+      "principal": "staff",
+      "patientId": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662",
+      "relatedPersonId": "929b4748-ed25-4d1d-a7c6-851fdd9248a4",
+      "status": 200
+    },
+    {
+      "principal": "composite",
+      "patientId": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54",
+      "relatedPersonId": "08544233-49d4-4622-9745-ad3d3347d71c",
+      "status": 200
+    },
+    {
+      "principal": "composite",
+      "patientId": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662",
+      "relatedPersonId": "929b4748-ed25-4d1d-a7c6-851fdd9248a4",
+      "status": 200
+    }
+  ]
+}
