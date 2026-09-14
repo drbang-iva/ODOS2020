@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 export const COMPOSE_PROJECT = 'g2b1-build-live';
 export const PRIVATE_SUBNET = '10.249.60.0/24';
 export const MEDPLUM_IMAGE = 'medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de';
-export const PORTS = { medplum: 28760, postgres: 28761, redis: 28762, odos: 28763, ui: 28764 };
+export const PORTS = { medplum: 28760, postgres: 28761, redis: 28762, odos: 28763, ui: 28764, proof: 28765 };
 const fixtureRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 export const sourceRoot = resolve(process.env.G2B1_SOURCE_ROOT ?? fixtureRoot);
 export const privateDirectory = resolve(process.env.G2B1_LIVE_DIR ?? `${fixtureRoot}/.odos/g2b1-build-live`);

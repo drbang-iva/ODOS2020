@@ -5,9 +5,9 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { sourceRoot, refreshFixtureTokens, successfulHttp, http, grantPatients, createLiveClients, resourceEvidence, writeEvidence } from './live-fixture.mjs';
+import { PORTS, sourceRoot, refreshFixtureTokens, successfulHttp, http, grantPatients, createLiveClients, resourceEvidence, writeEvidence } from './live-fixture.mjs';
 
-const appOrigin = 'http://127.0.0.1:28765';
+const appOrigin = `http://127.0.0.1:${PORTS.proof}`;
 const fixture = await refreshFixtureTokens();
 const startedAt = new Date().toISOString();
 const paths = ['mcp/src/clinic/guarantor-link-operation.ts', 'mcp/src/clinic/guarantor-routes.ts', 'mcp/src/fhir-client.ts', 'ui/src/lib/guarantor-editor.ts', 'ui/src/lib/guarantor-link-operations.ts', 'mcp/src/authz/role-grants.ts'];
@@ -90,7 +90,8 @@ registerGuarantorRoutes(app, {
   serviceFhir: instrumentedFhir,
   recordAudit: row => audit.record(row, () => undefined),
 });
-const server = await new Promise((accept, reject) => { const server = app.listen(28765, '127.0.0.1', () => accept(server)); server.once('error', reject); });
+const server = await new Promise((accept, reject) => { const server = app.listen(PORTS.proof, '127.0.0.1', () => accept(server)); server.once('error', reject); })
+  .catch(async error => { await audit.close(); globalThis.fetch = originalFetch; throw error; });
 const session = JSON.stringify({ accessToken: fixture.principals.composite.token, expiresAt: Date.now() + 3_600_000 });
 browserFhir.rehydrateSession({ getItem: key => key === SESSION_STORAGE_KEY ? session : null, setItem() {}, removeItem() {} });
 
@@ -482,7 +483,7 @@ finally {
     const operationRows = record.auditRows.filter(row => row.eventType.startsWith('guarantor.link.'));
     if (record.scenario.startsWith('L11-')) check('Scope refusal has zero operation audit starts', operationRows.filter(row => row.eventType === 'guarantor.link.started').length, 0);
     else check('Actual operation audit rows persisted for this patient', operationRows.length > 0, true);
-    if (record.scenario === 'L13') check('Interference audit names the target child', operationRows.some(row => row.eventType === 'guarantor.link.interfered' && row.actionReason.includes(`target=RelatedPerson/${record.family.child.id}`)), true);
+    if (record.scenario === 'L13' && record.family) check('Interference audit names the target child', operationRows.some(row => row.eventType === 'guarantor.link.interfered' && row.actionReason.includes(`target=RelatedPerson/${record.family.child.id}`)), true);
   }
   scenario = 'seal';
   const afterSource = provenance();

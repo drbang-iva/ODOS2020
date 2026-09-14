@@ -60,6 +60,7 @@ def case(name, pattern, transform, file=SOURCE, command=None, cwd='mcp'):
     return dict(name=name, pattern=pattern, transform=transform, file=file, command=command, cwd=cwd)
 
 cases = [
+    case('S9-transaction-resource-reference', 'S9 transaction reasons', replace('actionReason: `guarantor.link ${phase}${resource.id ? ` ${reference(resource)}` : ""}`', 'actionReason: `guarantor.link ${phase} ${reference(resource)}`')),
     case('L1-claim-required', 'L1:', skip_claims),
     case('L2-sorted-claims', 'L2:', replace('async original(): Promise<void> {\n    for (const id of [...this.plan.relatedPersonIds].sort())', 'async original(): Promise<void> {\n    for (const id of this.plan.relatedPersonIds)')),
     case('L3a-pending-after-detach', 'L3:', replace('return this.pause("attach-pending", reference(destination));', 'await this.checkpointTask("failed", "attach-conflict"); throw new Paused("attach-conflict");')),

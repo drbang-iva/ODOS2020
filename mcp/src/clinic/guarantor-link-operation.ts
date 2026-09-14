@@ -168,7 +168,7 @@ class Operation {
     // fhir-service-write: Task, Person, RelatedPerson
     const response = await this.deps.serviceFhir.executeTransactionAsActor(bundle, {
       actorReference: this.staff.staffReference, actorRole: this.staff.actorRole,
-      actionReason: `guarantor.link ${phase} ${reference(resource)}`,
+      actionReason: `guarantor.link ${phase}${resource.id ? ` ${reference(resource)}` : ""}`,
     }, { "X-ODOS-Source": "mcp/guarantor-link-operation", "X-Medplum": "extended" }, { autoRollbackCreatedEntries: false, validateResponse });
     const entry = response.entry![0];
     if (resultStatus) resultStatus.value = Number.parseInt(entry.response!.status!, 10);

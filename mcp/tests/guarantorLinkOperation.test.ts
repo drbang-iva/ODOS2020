@@ -90,6 +90,17 @@ async function run(f: ReturnType<typeof fixture>, action: string, body?: unknown
   return api.handleGuarantorOperation(f.deps, staff, { action, body, taskId });
 }
 
+test("S9 transaction reasons omit an unassigned Task id and retain assigned resource references", async () => {
+  const f = fixture(1); const result = await run(f, "create", f.input());
+  assert.equal(result.status, 200); assert.equal(result.body.task.status, "completed");
+  const created = f.writes.filter(write => write.method === "POST");
+  assert.equal(created.length, 1);
+  assert.equal((created[0].actor as { actionReason: string }).actionReason, "guarantor.link record");
+  const updated = f.writes.filter(write => write.method === "PUT");
+  assert.ok(updated.some(write => write.resource.resourceType === "Task"));
+  assert.ok(updated.every(write => (write.actor as { actionReason: string }).actionReason.endsWith(` ${write.resource.resourceType}/${write.resource.id}`)));
+});
+
 test("L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced", async () => {
   const f = fixture(); const before = f.ids.map(id => f.get<RelatedPerson>(`RelatedPerson/${id}`));
   const result = await run(f, "create", f.input("consolidate"));

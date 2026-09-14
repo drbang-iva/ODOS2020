@@ -25,6 +25,7 @@ export function registerGuarantorRoutes(app: Pick<Application, "get" | "post">, 
         serviceReference: await deps.serviceFhir.getAuthenticatedProfileReference(), recordAudit: deps.recordAudit, now: deps.now }, staff, { action, taskId, body: req.body });
       res.status(result.status).json(result.body);
     } catch {
+      console.error(`odos-mcp: guarantor link-operation ${action} setup failed; result unconfirmed.`);
       if (!res.headersSent) res.status(500).json({ error: "The guarantor operation result could not be confirmed. Reload before continuing." });
     }
   };

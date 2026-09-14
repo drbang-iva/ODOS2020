@@ -6,7 +6,7 @@ This fixture supports the G-2b-1 implementation proof. It is author-side infrast
 
 - Compose project: `g2b1-build-live`.
 - Medplum: `5.1.30-9b1bd92`, image digest `sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de`.
-- Loopback ports: Medplum `28760`, PostgreSQL `28761`, Redis `28762`; `28763` and `28764` were checked free and reserved for the application and browser proof.
+- Loopback ports: Medplum `28760`, PostgreSQL `28761`, Redis `28762`; `28763` and `28764` are reserved for the application and browser proof, and `28765` for operation HTTP proof. Fixture creation checks all six ports; each proof server also refuses an occupied port.
 - Separate Docker subnet `10.249.60.0/24`, checked against existing Docker networks. Docker's default address pools were exhausted; no existing network was altered.
 - The initial seed was killed by the shared Docker VM's memory pressure. This fixture alone uses a 384 MiB Node heap and a 768 MiB container limit. Initialization then completed and health reports PostgreSQL and Redis available.
 - Two synthetic practice Projects and the separate bootstrap service Project all lack `transaction-bundles`.
