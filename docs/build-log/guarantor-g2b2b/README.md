@@ -2,7 +2,7 @@
 
 This build implements Revision 4 B0-B4: attach an unowned responsible party to an existing guarantor from registration or the chart, and undo that attach as a correction that leaves the responsible party unowned. It does not change transfer, consolidate, correct-of-transfer, insurance, statements, communications, transaction-bundle policy, or the G-2b-R owned-field classifier and terminal rules.
 
-This is author-side evidence at code head `22b190d93cb62701b9f2690f6547e015524022bd`; the later evidence commit changes only this build log. **NOT EVALUATED.** Claude must evaluate the final PR head independently.
+This is author-side evidence at code head `3912021dea94e5fcf9a16c9e24294c04bf12756a`; the later evidence commit changes only this build log. **NOT EVALUATED.** Claude must evaluate the final PR head independently.
 
 ## Premise and anchors
 
@@ -10,9 +10,13 @@ This is author-side evidence at code head `22b190d93cb62701b9f2690f6547e01552402
 - ODOS base: `44afa37c37fc269bd89688c7dc90417f3b473ec0`.
 - G-2b-R premise passed: intents carry `ownedHash`; recovery classifies against owned fields; a second in-progress correction is refused; `Run.complete` begins with step 0-prime.
 - P6 at the built head: plan schemas `21-29`; endpoint-shape validation `99-117`; optional source/destination loading `160-170`; attach admission `172-183`; step 0-prime and the destination-only fence path `331-348`; correction admission `620-649`; attach/unlink movement and verification `467-546` in `mcp/src/clinic/guarantor-link-operation.ts`.
-- P7 at the built head: strict `existing` schema `47-65`; pre-write authorization/read/shape checks `203-251`; ordered post-grant attach `254-285`; bundle emits a RelatedPerson but no Person for `existing` `370-419` in `mcp/src/clinic/patient-registration-endpoint.ts`.
+- P7 at the built head: strict `existing` schema `58-66`; pre-write authorization/read/shape checks `213-255`; ordered post-grant attach `258-290`; bundle emits a RelatedPerson but no Person for `existing` `327-425` in `mcp/src/clinic/patient-registration-endpoint.ts`.
 
 Baseline dependency installs: MCP added 262 packages and audited 263 (7 moderate and 2 high advisories); UI added 150 and audited 151 (0 advisories). Baseline MCP was 4,848 tests: 4,780 pass, 7 fail, 61 skipped. The seven local failures were the pre-existing PostgreSQL hook refusals in claims read-model tests 700-705 and the DR child-process missing-root-loader test 1560; CI is authoritative. Baseline UI was 1,535/1,535 passing. Baseline preflight reported 48 grants, 902 operations, 38 service-write call sites, 0 warnings, and 0 blockers. Baseline guarantor files were MCP 92 tests and UI 69 tests.
+
+## Review fixback proof
+
+CodeRabbit's four findings were reproduced before their repairs. The lost committed-registration reply test returned 500 instead of 201; the older-failed-attach test rendered the stale failure sentence; the array-valued status test failed to reject the response; and the edited relationship test restored `parent` instead of `legal-guardian`. After the fixes, the focused MCP registration file is 10/10 and the two focused UI files are 7/7. Committed-state recovery now reconstructs unambiguous RelatedPerson response entries; an ambiguous match preserves the registered Patient and 201 without guessing or starting an attach.
 
 ## Mandate 17
 
