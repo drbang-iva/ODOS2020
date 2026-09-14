@@ -39,7 +39,7 @@ The initial built guard run was MCP 19/19 and UI 5/5. Each mutation below was ap
 | A17 | Used full-resource equality for Person detach-intent recovery; `A17: lost unlink detach plus a staff rename completes...` returned 409, expected 200. | 1/1 pass |
 | A18 | Made transfer/consolidate source optional in both schema and `readPlan`; `A18: only attach and correct-of-attach may omit...` read the malformed transfer far enough to return 500, expected 422. | 1/1 pass |
 
-The registry inventory remains at 38 service-write call sites. The new registration wiring calls the already-registered guarantor engine; it adds no `executeTransactionAsActor` call site and no audit event type. No registry count pin changed.
+The registry inventory remains at 38 service-write call sites. The new registration wiring calls the already-registered guarantor engine; it adds no `executeTransactionAsActor` call site and no audit event type. The registry-forced exact line pins changed for the existing guarantor engine transaction and for nine later `mcp/src/index.ts` entries displaced by the new route registration; no inventory count or classification changed.
 
 ## Real-server HTTP proof
 
