@@ -15,6 +15,7 @@ Each row is command exit codes: green 0, deliberate break red 1, restored 0. All
 | Remove search handler action check | 0 | 1 | 0 | K6 search denies staff without guarantor.link before FHIR searches or writes |
 | Remove create handler action check | 0 | 1 | 0 | K6 create denies staff without guarantor.link before FHIR searches or writes |
 | Remove Operation constructor action check | 0 | 1 | 0 | K6 draft denies staff without guarantor.link before FHIR searches or writes; K6 history denies staff without guarantor.link before FHIR searches or writes |
+| Remove failed-reload lock | 0 | 1 | 0 | K15 failed paused create reload locks the screen and reports reload required; K15 failed paused Undo reload locks the screen and reports reload required |
 | Treat task-bearing 409 as stale | 0 | 1 | 0 | K15 paused create reloads once and closes without Review again or a second create; K15 paused Undo reloads once and closes without a second correction |
 
 `mutation-results.json` and matching TAP files retain exact outcomes. K6 is now an enforced automated guard; this supersedes the revision-2 decorative route-only control. No registry entry, policy or audit event type was added.
@@ -35,4 +36,8 @@ Final CI, bot results and fixture shutdown are reported in the PR and delivery b
 
 ## Final local checks
 
-Full UI: 1517 passed, 0 failed, 0 skipped; UI build and preflight pass (0 warnings, 0 hard blocks). Full MCP: 4815 total, 4749 passed, the same 6 baseline claimReadModelStore database-hook failures, 60 skipped. Focused backend 73/73; focused UI 40/40. Named shipped counts: operation 38, routes 2, policy 5, Person 11, editor 9, UI operations 14; all unchanged. `checks.json` and `named-counts.json` retain commands and actual output counts.
+Full UI: 1519 passed, 0 failed, 0 skipped; UI build and preflight pass (0 warnings, 0 hard blocks). Full MCP: 4815 total, 4749 passed, the same 6 baseline claimReadModelStore database-hook failures, 60 skipped. Focused backend 73/73; focused UI 42/42. Named shipped counts: operation 38, routes 2, policy 5, Person 11, editor 9, UI operations 14; all unchanged. `checks.json` and `named-counts.json` retain commands and actual output counts.
+
+## Bot review fixback
+
+The initial RelatedPerson read in onReload can reject. A task-bearing pause now catches that failure, keeps every new workflow action locked, and displays a patient-page reload instruction. It adds no new write or recovery route and changes no existing pending control. Two additional tests reproduce the rejected callback and prove no second create/correct request, including a direct callback attempt while locked. Removing the lock makes both tests red; restoration passes. The full K6/K15 mutation script was rerun after this change. One local path in checks.json was normalized without altering the recorded failure.

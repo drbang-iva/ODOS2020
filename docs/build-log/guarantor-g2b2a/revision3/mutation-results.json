@@ -33,7 +33,19 @@
     "red": 1,
     "failingTests": [
       "not ok 16 - K15 paused create reloads once and closes without Review again or a second create",
-      "not ok 17 - K15 paused Undo reloads once and closes without a second correction"
+      "not ok 17 - K15 paused Undo reloads once and closes without a second correction",
+      "not ok 18 - K15 failed paused create reload locks the screen and reports reload required",
+      "not ok 19 - K15 failed paused Undo reload locks the screen and reports reload required"
+    ],
+    "restored": 0
+  },
+  {
+    "guard": "K15-reload-failure",
+    "green": 0,
+    "red": 1,
+    "failingTests": [
+      "not ok 18 - K15 failed paused create reload locks the screen and reports reload required",
+      "not ok 19 - K15 failed paused Undo reload locks the screen and reports reload required"
     ],
     "restored": 0
   }

@@ -5,8 +5,8 @@ out=Path(__file__).resolve().parent
 search='mcp/src/clinic/guarantor-search.ts';engine='mcp/src/clinic/guarantor-link-operation.ts';ui='ui/src/components/patient/GuarantorLinkScreens.tsx'
 check='  if (!staffHasBusinessAction(staff, "guarantor.link")) return { status: 403, body: { error: "guarantor.link action required." } };\n'
 constructor='    if (!staffHasBusinessAction(staff, "guarantor.link")) throw new Refusal(403, "guarantor.link action required.");\n'
-pause='if(e instanceof GuarantorScreenError&&e.status===409&&e.body?.task){await onReload();reset();setHistory(undefined);setHistoryOpen(false);return;}'
-cases=[('K6-search',search,check,0),('K6-create',search,check,1),('K6-draft-history',engine,constructor,0),('K15-paused',ui,pause,0)]
+pause='if(e instanceof GuarantorScreenError&&e.status===409&&e.body?.task){setReview(false);try{await onReload();reset();setHistory(undefined);setHistoryOpen(false);}catch{setReloadRequired(true);setNotice("The paused operation could not be reloaded. Reload the patient page before continuing.");}return;}'
+cases=[('K6-search',search,check,0),('K6-create',search,check,1),('K6-draft-history',engine,constructor,0),('K15-paused',ui,pause,0),('K15-reload-failure',ui,'setReloadRequired(true);',0)]
 results=[]
 for name,path,needle,index in cases:
  p=root/path;original=p.read_text();positions=[m.start() for m in re.finditer(re.escape(needle),original)];assert len(positions)>index

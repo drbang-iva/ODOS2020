@@ -14,15 +14,15 @@
       "not ok 702 - reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth",
       "not ok 703 - an older per-claim upsert cannot overwrite a newer completed rebuild",
       "not ok 704 - an older rebuild snapshot fails loudly without publishing incomplete FHIR truth",
-      "not ok 705 - /Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/claimReadModelStore.test.ts"
+      "not ok 705 - mcp/tests/claimReadModelStore.test.ts"
     ]
   },
   {
     "command": "npm --prefix ui test",
     "exit": 0,
     "summary": [
-      "# tests 1517",
-      "# pass 1517",
+      "# tests 1519",
+      "# pass 1519",
       "# fail 0",
       "# skipped 0"
     ],
@@ -43,8 +43,8 @@
     "command": "node --import tsx --test tests/guarantor{SearchScreens,LinkOperations,Editor}.test.tsx (cwd ui)",
     "exit": 0,
     "summary": [
-      "# tests 40",
-      "# pass 40",
+      "# tests 42",
+      "# pass 42",
       "# fail 0",
       "# skipped 0"
     ],

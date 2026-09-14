@@ -2,91 +2,91 @@ TAP version 13
 # Subtest: K1 search refuses a prefix-only family
 ok 1 - K1 search refuses a prefix-only family
   ---
-  duration_ms: 29.09475
+  duration_ms: 25.914416
   type: 'test'
   ...
 # Subtest: K2 phone compares digits and rejects a different digit
 ok 2 - K2 phone compares digits and rejects a different digit
   ---
-  duration_ms: 5.308667
+  duration_ms: 4.569167
   type: 'test'
   ...
 # Subtest: K3 search card exposes exactly six keys
 ok 3 - K3 search card exposes exactly six keys
   ---
-  duration_ms: 2.099167
+  duration_ms: 1.845166
   type: 'test'
   ...
 # Subtest: K4 inactive excluded
 ok 4 - K4 inactive excluded
   ---
-  duration_ms: 2.252083
+  duration_ms: 2.446625
   type: 'test'
   ...
 # Subtest: K4 zero-link excluded
 ok 5 - K4 zero-link excluded
   ---
-  duration_ms: 1.907708
+  duration_ms: 1.960167
   type: 'test'
   ...
 # Subtest: K4 non-RelatedPerson excluded
 ok 6 - K4 non-RelatedPerson excluded
   ---
-  duration_ms: 1.525334
+  duration_ms: 1.348875
   type: 'test'
   ...
 # Subtest: K5 21 matches return 422
 ok 7 - K5 21 matches return 422
   ---
-  duration_ms: 1.282416
+  duration_ms: 1.187292
   type: 'test'
   ...
 # Subtest: K5 201 matches return 422
 ok 8 - K5 201 matches return 422
   ---
-  duration_ms: 3.90125
+  duration_ms: 2.642791
   type: 'test'
   ...
 # Subtest: K7 create writes exactly one active unlinked Person; missing surname writes nothing
 ok 9 - K7 create writes exactly one active unlinked Person; missing surname writes nothing
   ---
-  duration_ms: 10.11175
+  duration_ms: 11.228666
   type: 'test'
   ...
 # Subtest: K8 draft includes every source link, writes nothing, refuses consolidate subset
 ok 10 - K8 draft includes every source link, writes nothing, refuses consolidate subset
   ---
-  duration_ms: 1.832333
+  duration_ms: 1.991833
   type: 'test'
   ...
 # Subtest: K9 draft versions reject changed child at create
 ok 11 - K9 draft versions reject changed child at create
   ---
-  duration_ms: 0.836333
+  duration_ms: 0.811959
   type: 'test'
   ...
 # Subtest: K13 history filters trusted child plans and queries newest 50 once
 ok 12 - K13 history filters trusted child plans and queries newest 50 once
   ---
-  duration_ms: 10.088084
+  duration_ms: 9.461792
   type: 'test'
   ...
 # Subtest: K8 empty consolidation draft refuses with zero writes
 ok 13 - K8 empty consolidation draft refuses with zero writes
   ---
-  duration_ms: 0.256042
+  duration_ms: 0.277958
   type: 'test'
   ...
 # Subtest: K6 search denies staff without guarantor.link before FHIR searches or writes
 ok 14 - K6 search denies staff without guarantor.link before FHIR searches or writes
   ---
-  duration_ms: 1.709167
+  duration_ms: 2.005625
   type: 'test'
   ...
 # Subtest: K6 create denies staff without guarantor.link before FHIR searches or writes
 not ok 15 - K6 create denies staff without guarantor.link before FHIR searches or writes
   ---
-  duration_ms: 1.523542
+  duration_ms: 1.922083
   type: 'test'
   location: 'mcp/tests/guarantorSearchScreens.test.ts:1:7259'
   failureType: 'testCodeFailure'
@@ -122,13 +122,13 @@ not ok 15 - K6 create denies staff without guarantor.link before FHIR searches o
 # Subtest: K6 draft denies staff without guarantor.link before FHIR searches or writes
 ok 16 - K6 draft denies staff without guarantor.link before FHIR searches or writes
   ---
-  duration_ms: 1.326792
+  duration_ms: 1.37875
   type: 'test'
   ...
 # Subtest: K6 history denies staff without guarantor.link before FHIR searches or writes
 ok 17 - K6 history denies staff without guarantor.link before FHIR searches or writes
   ---
-  duration_ms: 1.451833
+  duration_ms: 1.191666
   type: 'test'
   ...
 1..17
@@ -139,4 +139,4 @@ ok 17 - K6 history denies staff without guarantor.link before FHIR searches or w
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 265.902791
+# duration_ms 227.955
