@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Patient } from "@medplum/fhirtypes";
 import { CommunicationPreferencesControl, communicationPreferencesInput, type CommunicationPreferencesDraft } from "../components/patient/CommunicationPreferencesControl";
 import { PatientDemographicsFields } from "../components/patient/PatientDemographicsEditor";
@@ -10,13 +10,16 @@ import {
   validatePatientRegistration,
   type PatientDemographicsDraft,
   type PatientRegistrationOptions,
+  type CreatedPatientRegistrationResult,
 } from "../lib/patient-registration";
 import {
   emptyRelatedResponsibleParty,
   emptySelfResponsibleParty,
   type ResponsiblePartyDraft,
   type ResponsiblePartyRelationship,
+  type PersonResponsiblePartyDraft,
 } from "../lib/patient-identity";
+import { searchGuarantors, type GuarantorSearchCard } from "../lib/guarantor-link-operations";
 import { patientName } from "../lib/scheduler-appointment-ui";
 import { openPatientOverview, useViewState } from "../lib/view-state";
 
@@ -33,7 +36,7 @@ export function NewPatient() {
   const [duplicates, setDuplicates] = useState<Patient[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>();
-  const [repairWarning, setRepairWarning] = useState<{ message: string }>();
+  const [registrationComplete, setRegistrationComplete] = useState<CreatedPatientRegistrationResult>();
 
   const openPatient = (patient: Patient) => {
     if (patient.id) {
@@ -53,6 +56,11 @@ export function NewPatient() {
     return { responsibleParties, today, ...(communicationPreferences.cells.length ? { communicationPreferences } : {}) };
   };
 
+  const acceptCreated = (result: CreatedPatientRegistrationResult) => {
+    if (result.warning || result.guarantorLinks?.some(link => link.status !== "linked")) setRegistrationComplete(result);
+    else openPatient(result.patient);
+  };
+
   const submit = async () => {
     let options: PatientRegistrationOptions;
     try { options = registrationOptions(); }
@@ -66,11 +74,7 @@ export function NewPatient() {
       const result = await registerPatient(draft, options);
       if (result.kind === "duplicates") {
         setDuplicates(result.patients);
-      } else if (result.warning) {
-        setRepairWarning({ message: result.warning.message });
-      } else {
-        openPatient(result.patient);
-      }
+      } else acceptCreated(result);
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -83,12 +87,8 @@ export function NewPatient() {
     setSaveError(undefined);
     try {
       const result = await createPatient(draft, registrationOptions());
-      if (result.warning) {
-        setDuplicates([]);
-        setRepairWarning({ message: result.warning.message });
-      } else {
-        openPatient(result.patient);
-      }
+      setDuplicates([]);
+      acceptCreated(result);
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -96,8 +96,8 @@ export function NewPatient() {
     }
   };
 
-  if (repairWarning) {
-    return <RegistrationRepairNotice warning={repairWarning} onBack={returnToSearch} />;
+  if (registrationComplete) {
+    return <RegistrationRepairNotice warning={registrationComplete.warning} guarantorLinks={registrationComplete.guarantorLinks} patient={registrationComplete.patient} onOpenPatient={openPatient} onBack={returnToSearch} />;
   }
 
   return (
@@ -132,9 +132,15 @@ export function NewPatient() {
 
 export function RegistrationRepairNotice({
   warning,
+  guarantorLinks,
+  patient,
+  onOpenPatient,
   onBack,
 }: {
-  warning: { message: string };
+  warning?: { message: string };
+  guarantorLinks?: CreatedPatientRegistrationResult["guarantorLinks"];
+  patient?: Patient;
+  onOpenPatient?: (patient: Patient) => void;
   onBack: () => void;
 }) {
   return (
@@ -142,16 +148,12 @@ export function RegistrationRepairNotice({
       <section className="mx-auto max-w-xl rounded border border-[color:var(--odos-accent-border)] bg-bg-panel p-6">
         <p className="text-xs uppercase tracking-widest text-[color:var(--odos-muted)]">Registration complete</p>
         <h1 className="mt-2 text-2xl font-semibold">Patient registered</h1>
-        <p role="alert" className="mt-4 text-sm text-[color:var(--odos-text)]">
-          {warning.message}
-        </p>
-        <button
-          type="button"
-          onClick={onBack}
-          className="mt-6 rounded border border-[color:var(--odos-line-2)] px-4 py-2 text-sm text-[color:var(--odos-muted)]"
-        >
-          Back to patient search
-        </button>
+        {warning && <p role="alert" className="mt-4 text-sm text-[color:var(--odos-text)]">{warning.message}</p>}
+        {guarantorLinks?.length ? <ul className="mt-4 grid gap-2">{guarantorLinks.map(link => <li key={link.relatedPersonId} className="rounded border border-[color:var(--odos-line)] p-3"><strong className="capitalize">{link.status}</strong> — {link.message}</li>)}</ul> : null}
+        <div className="mt-6 flex flex-wrap gap-3">
+          {patient?.id && onOpenPatient && <button type="button" onClick={() => onOpenPatient(patient)} className="rounded bg-blue-500 px-4 py-2 text-sm font-semibold">Open patient chart</button>}
+          <button type="button" onClick={onBack} className="rounded border border-[color:var(--odos-line-2)] px-4 py-2 text-sm text-[color:var(--odos-muted)]">Back to patient search</button>
+        </div>
       </section>
     </main>
   );
@@ -197,8 +199,9 @@ function ResponsiblePartiesEditor({
   onChange: (parties: ResponsiblePartyDraft[]) => void;
 }) {
   const update = (index: number, patch: Partial<ResponsiblePartyDraft>) => {
-    onChange(parties.map((party, partyIndex) => partyIndex === index ? { ...party, ...patch } : party));
+    onChange(parties.map((party, partyIndex) => partyIndex === index ? { ...party, ...patch } as ResponsiblePartyDraft : party));
   };
+  const replace = (index: number, next: ResponsiblePartyDraft) => onChange(parties.map((party, partyIndex) => partyIndex === index ? next : party));
   const remove = (index: number) => onChange(parties.filter((_, partyIndex) => partyIndex !== index));
   return (
     <fieldset className="mt-6 grid gap-4 rounded-lg border border-[color:var(--odos-line)] bg-[color:var(--odos-surface-2)] p-4">
@@ -230,11 +233,13 @@ function ResponsiblePartiesEditor({
               <ResponsibleInput label="Effective date" type="date" value={party.effectiveDate} error={partyError(errors, index, "effectiveDate")} onChange={(value) => update(index, { effectiveDate: value })} />
               <ResponsibleInput label="End date" type="date" value={party.endDate} error={partyError(errors, index, "endDate")} onChange={(value) => update(index, { endDate: value })} />
             </div>
-            <label className="grid gap-1 text-sm font-medium text-[color:var(--odos-muted)]">Court order / custody notes<textarea className="scheduler-input min-h-24" value={party.courtOrderNotes} onChange={(event) => update(index, { courtOrderNotes: event.target.value })} /></label>
+            <ExistingGuarantorOffer party={party} onSelect={card => replace(index, existingPartySelection(party, card))} />
           </>}
+          {party.kind === "existing" && <div className="grid gap-3 rounded border border-blue-300/30 p-3"><p className="text-sm font-semibold">Already on file</p><p>{party.card.name}</p><p>{party.card.phones.join(" · ") || "No phone recorded"}</p><p>{party.card.city} {party.card.postalCode}</p><button type="button" onClick={() => replace(index, party.previous)} className="w-fit rounded border border-[color:var(--odos-line-2)] px-3 py-2 text-sm">Not this person</button><div className="grid gap-4 md:grid-cols-3"><label className="grid gap-1 text-sm font-medium text-[color:var(--odos-muted)]">Relationship<select className="scheduler-input" value={party.relationship} onChange={(event) => update(index, { relationship: event.target.value as ResponsiblePartyRelationship })}><option value="parent">Parent</option><option value="legal-guardian">Legal guardian</option><option value="spouse">Spouse</option><option value="other">Other</option></select></label><ResponsibleInput label="Effective date" type="date" value={party.effectiveDate} error={partyError(errors, index, "effectiveDate")} onChange={(value) => update(index, { effectiveDate: value })} /><ResponsibleInput label="End date" type="date" value={party.endDate} error={partyError(errors, index, "endDate")} onChange={(value) => update(index, { endDate: value })} /></div></div>}
+          {party.kind !== "self" && <label className="grid gap-1 text-sm font-medium text-[color:var(--odos-muted)]">Court order / custody notes<textarea className="scheduler-input min-h-24" value={party.courtOrderNotes} onChange={(event) => update(index, { courtOrderNotes: event.target.value })} /></label>}
           <div className="flex flex-wrap gap-5 text-sm text-[color:var(--odos-muted)]">
             <ResponsibleCheckbox label="Financially responsible" checked={party.financialResponsible} onChange={(checked) => update(index, { financialResponsible: checked })} />
-            {party.kind === "person" && <>
+            {party.kind !== "self" && <>
               <ResponsibleCheckbox label="Consent authority" checked={party.consentAuthority} onChange={(checked) => update(index, { consentAuthority: checked })} />
               <ResponsibleCheckbox label="Primary related person" checked={party.primary} onChange={(checked) => update(index, { primary: checked })} />
             </>}
@@ -247,6 +252,33 @@ function ResponsiblePartiesEditor({
       </div>
     </fieldset>
   );
+}
+
+function existingPartySelection(party: PersonResponsiblePartyDraft, card: GuarantorSearchCard): ResponsiblePartyDraft {
+  return {
+    localId: party.localId, kind: "existing", personId: card.personId, card, previous: party,
+    relationship: party.relationship, financialResponsible: party.financialResponsible,
+    consentAuthority: party.consentAuthority, primary: party.primary, courtOrderNotes: party.courtOrderNotes,
+    effectiveDate: party.effectiveDate, endDate: party.endDate,
+  };
+}
+
+function ExistingGuarantorOffer({ party, onSelect }: { party: PersonResponsiblePartyDraft; onSelect: (card: GuarantorSearchCard) => void }) {
+  const [cards, setCards] = useState<GuarantorSearchCard[]>();
+  const [error, setError] = useState<string>();
+  useEffect(() => {
+    const lastName = party.lastName.trim();
+    const firstName = party.firstName.trim();
+    const phone = party.phone.trim();
+    if (!lastName || (!firstName && phone.replace(/\D/g, "").length < 10)) { setCards(undefined); setError(undefined); return; }
+    let active = true;
+    setCards(undefined);
+    setError(undefined);
+    void searchGuarantors({ lastName, ...(firstName ? { firstName } : { phone }) }).then(found => { if (active) setCards(found); }).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : "Existing guarantors could not be checked."); });
+    return () => { active = false; };
+  }, [party.lastName, party.firstName, party.phone]);
+  if (!cards?.length && !error) return null;
+  return <section aria-label="Already on file" className="grid gap-2 rounded border border-blue-300/30 p-3"><strong>Already on file?</strong>{error ? <p role="status">{error}</p> : <ul>{cards!.map(card => <li key={card.personId} className="grid gap-1 border-t border-[color:var(--odos-line)] py-2"><span>{card.name}</span><span>{card.phones.join(" · ") || "No phone recorded"}</span><span>{card.city} {card.postalCode}</span><button type="button" className="w-fit rounded border border-blue-300/30 px-3 py-2 text-sm" onClick={() => onSelect(card)}>Use {card.name}</button></li>)}</ul>}</section>;
 }
 
 function ResponsibleInput({

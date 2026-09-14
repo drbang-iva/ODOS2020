@@ -1,4 +1,5 @@
 import type { Patient } from "@medplum/fhirtypes";
+import type { GuarantorSearchCard } from "./guarantor-link-operations";
 
 export const ODOS_MRN_SYSTEM = "https://odos2020.com/fhir/NamingSystem/odos-mrn";
 export const EYEFINITY_EPM_PATIENT_ID_SYSTEM =
@@ -20,18 +21,9 @@ export type ResponsiblePartyRelationship =
   | "spouse"
   | "other";
 
-export interface ResponsiblePartyDraft {
+interface ResponsiblePartyCommon {
   localId: string;
-  kind: "self" | "person";
   relationship: ResponsiblePartyRelationship;
-  firstName: string;
-  middleName: string;
-  lastName: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
-  postalCode: string;
   financialResponsible: boolean;
   consentAuthority: boolean;
   primary: boolean;
@@ -40,7 +32,22 @@ export interface ResponsiblePartyDraft {
   endDate: string;
 }
 
-export function emptySelfResponsibleParty(localId: string): ResponsiblePartyDraft {
+export interface PersonResponsiblePartyDraft extends ResponsiblePartyCommon {
+  kind: "self" | "person";
+  firstName: string; middleName: string; lastName: string; phone: string;
+  address: string; city: string; state: string; postalCode: string;
+}
+
+export interface ExistingResponsiblePartyDraft extends ResponsiblePartyCommon {
+  kind: "existing";
+  personId: string;
+  card: GuarantorSearchCard;
+  previous: PersonResponsiblePartyDraft;
+}
+
+export type ResponsiblePartyDraft = PersonResponsiblePartyDraft | ExistingResponsiblePartyDraft;
+
+export function emptySelfResponsibleParty(localId: string): PersonResponsiblePartyDraft {
   return {
     localId,
     kind: "self",
@@ -65,7 +72,7 @@ export function emptySelfResponsibleParty(localId: string): ResponsiblePartyDraf
 export function emptyRelatedResponsibleParty(
   localId: string,
   today: string,
-): ResponsiblePartyDraft {
+): PersonResponsiblePartyDraft {
   return {
     ...emptySelfResponsibleParty(localId),
     kind: "person",
@@ -162,15 +169,15 @@ export function validateResponsibleParties(
       if (party.financialResponsible) activeFinancial += 1;
       return;
     }
-    if (!party.firstName.trim()) errors[key("firstName")] = "First name is required.";
-    if (!party.lastName.trim()) errors[key("lastName")] = "Last name is required.";
+    if (party.kind === "person" && !party.firstName.trim()) errors[key("firstName")] = "First name is required.";
+    if (party.kind === "person" && !party.lastName.trim()) errors[key("lastName")] = "Last name is required.";
     if (!party.relationship) errors[key("relationship")] = "Relationship is required.";
     if (!isR4Date(party.effectiveDate)) errors[key("effectiveDate")] = "A valid effective date is required.";
     if (party.endDate && !isR4Date(party.endDate)) errors[key("endDate")] = "End date must be valid.";
     if (party.endDate && party.endDate < party.effectiveDate) {
       errors[key("endDate")] = "End date cannot precede the effective date.";
     }
-    if (party.financialResponsible) {
+    if (party.kind === "person" && party.financialResponsible) {
       if (!party.address.trim()) errors[key("address")] = "Mailing address is required for a guarantor.";
       if (!party.city.trim()) errors[key("city")] = "City is required for a guarantor.";
       if (!party.state.trim()) errors[key("state")] = "State is required for a guarantor.";
@@ -192,7 +199,7 @@ export function validateResponsibleParties(
     collectionErrors.push("A minor must have at least one current consent-authority party.");
   }
   const activePeople = parties.filter(
-    (party) => party.kind === "person" && responsiblePartyActiveOn(party, today),
+    (party) => party.kind !== "self" && responsiblePartyActiveOn(party, today),
   );
   if (activePeople.length > 0 && activePrimaryPeople !== 1) {
     collectionErrors.push("Choose exactly one current related person as primary.");
