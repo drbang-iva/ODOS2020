@@ -1,0 +1,62 @@
+{
+  "mode": "Actual repository sync dry run after all fixture mutations",
+  "result": {
+    "mode": "dry-run",
+    "policiesCreated": 0,
+    "policiesUpdated": 0,
+    "compositesRequired": 0,
+    "membershipsDrifted": 0,
+    "membershipsUpdated": 0,
+    "policies": [
+      {
+        "role": "provider",
+        "roles": [
+          "provider"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/9b2a8eab-2b53-4f89-b808-bca18533dfa8",
+        "policyName": "ODOS Provider",
+        "versionId": "c1adf929-739b-449c-871b-5e01ff547306",
+        "missingRules": [],
+        "unexpectedRules": []
+      },
+      {
+        "role": "staff",
+        "roles": [
+          "staff"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+        "policyName": "ODOS Staff",
+        "versionId": "ef9471e1-858d-470a-8168-3b7421b74fce",
+        "missingRules": [],
+        "unexpectedRules": []
+      },
+      {
+        "role": "admin",
+        "roles": [
+          "admin"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/9cc4b108-95d7-4c8d-9670-da1dc7ad2dce",
+        "policyName": "ODOS Admin / Manager",
+        "versionId": "8d5d3029-86a8-480b-82ba-d3842d50acb4",
+        "missingRules": [],
+        "unexpectedRules": []
+      },
+      {
+        "roles": [
+          "provider",
+          "staff",
+          "admin"
+        ],
+        "status": "match",
+        "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
+        "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
+        "versionId": "b5f9d210-b847-4cf1-a061-130976731e18",
+        "missingRules": [],
+        "unexpectedRules": []
+      }
+    ]
+  }
+}

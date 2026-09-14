@@ -31,9 +31,9 @@ function privateJson(name, value) {
   chmodSync(path, 0o600);
 }
 
-export function writeEvidence(name, value) {
+export function writeEvidence(name, value, spacing = 2) {
   mkdirSync(evidenceDirectory, { recursive: true });
-  let serialized = JSON.stringify(redact(value), null, 2) + '\n';
+  let serialized = JSON.stringify(redact(value), null, spacing) + '\n';
   if (existsSync(resolve(privateDirectory, 'fixture-private.json'))) {
     const removeSecrets = (object) => {
       for (const [key, item] of Object.entries(object)) {
@@ -56,7 +56,16 @@ export function loadPrivateFixture() {
   return value;
 }
 
-export function resourceEvidence(resource) {
+export function resourceEvidence(resource, path = '') {
+  if (Array.isArray(resource) && path.startsWith('/fhir/R4/AccessPolicy/')) {
+    return resource.map((operation) => operation.path === '/resource' && Array.isArray(operation.value) ? {
+      ...operation, evidenceProjection: 'Person and Task rules only; digest covers the full value',
+      fullValueSha256: createHash('sha256').update(JSON.stringify(operation.value)).digest('hex'),
+      value: operation.value.filter((rule) => ['Person', 'Task'].includes(rule.resourceType)),
+    } : redact(operation));
+  }
+  if (resource?.resourceType === 'Bundle') return { ...resource, entry: resource.entry?.map((entry) => ({ ...entry, ...(entry.resource ? { resource: resourceEvidence(entry.resource) } : {}) })) };
+  if (resource?.evidenceProjection) return redact(resource);
   if (resource?.resourceType !== 'AccessPolicy') return redact(resource);
   return {
     resourceType: resource.resourceType, id: resource.id, meta: resource.meta, name: resource.name,
@@ -96,7 +105,7 @@ export async function http(fixture, method, path, { body, token = fixture.servic
   trace.push({
     sequence: trace.length + 1, scenario, principal, method, path, status: response.status,
     ...(headers['If-Match'] ? { ifMatch: headers['If-Match'] } : {}),
-    ...(path.startsWith('/fhir/') ? { request: resourceEvidence(body), response: resourceEvidence(resource) } : {}),
+    ...(path.startsWith('/fhir/') ? { request: resourceEvidence(body, path), response: resourceEvidence(resource, path) } : {}),
   });
   return { status: response.status, body: resource };
 }
