@@ -437,5 +437,21 @@
     },
     "failureDisposition": "Two inventory counts and four migration pins; no local PostgreSQL or HTTP transport failures in this CI run.",
     "runUrl": "https://github.com/drbang-iva/ODOS2020/actions/runs/34837439526"
+  },
+  "finalEvidenceChecks": {
+    "sourceMatchesApplicationHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
+    "fixtureScannerAfterRuntimeCaptureRename": {
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "credentialScan": {
+      "files": 79,
+      "secretValues": 10,
+      "matches": 0
+    },
+    "finalPreflight": "0 warnings, 0 hard blocks",
+    "scopeNote": "The filename-based fixture scanner does not cover runtime captures. See evidence-validation.json."
   }
 }

@@ -14,5 +14,13 @@
     "filesBeforeThisReport": 79,
     "knownSecretValues": 10,
     "matches": 0
+  },
+  "fixtureScannerAfterRename": {
+    "command": "node --import ./mcp/node_modules/tsx/dist/loader.mjs --test mcp/tests/fixturePhiGuard.test.ts",
+    "exitCode": 0,
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "skipped": 0
   }
 }
