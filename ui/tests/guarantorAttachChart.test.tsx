@@ -62,6 +62,7 @@ test("A14/B4: only missing ownership offers Attach and a failed attach is explai
 test("A14: ambiguous ownership never offers Attach", async () => {
   const original = globalThis.fetch;
   let renderer!: ReactTestRenderer;
+  let attachOffered = false;
   globalThis.fetch = async input => {
     const url = new URL(String(input), "http://synthetic.test");
     if (url.pathname.endsWith("/RelatedPerson")) return Response.json({ resourceType: "Bundle", entry: [{ resource: related }] });
@@ -71,8 +72,9 @@ test("A14: ambiguous ownership never offers Attach", async () => {
   try {
     await act(async () => { renderer = create(<ResponsiblePartiesControl patientId="p" />); });
     assert.match(text(renderer), /Ambiguous guarantor/);
-    assert.equal(findButton(renderer, "Attach a guarantor"), undefined);
+    attachOffered = Boolean(findButton(renderer, "Attach a guarantor"));
   } finally { if (renderer) await act(async () => renderer.unmount()); globalThis.fetch = original; }
+  assert.equal(attachOffered, false);
 });
 
 test("A3: an attach-pending child renders pending without a source Person", async () => {

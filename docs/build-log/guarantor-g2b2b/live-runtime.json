@@ -1,0 +1,24 @@
+{
+  "composeProject": "g2b2b-attach",
+  "ports": {
+    "medplum": 29190,
+    "postgres": 29191,
+    "redis": 29192,
+    "odos": 29193,
+    "ui": 29194,
+    "proof": 29195
+  },
+  "image": "medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de",
+  "health": {
+    "ok": true,
+    "version": "5.1.30-9b1bd92",
+    "platform": "linux",
+    "runtime": "v24.18.1",
+    "postgres": true,
+    "redis": true,
+    "redisInstances": {
+      "default": true
+    }
+  },
+  "baseHead": "22b190d93cb62701b9f2690f6547e015524022bd"
+}
