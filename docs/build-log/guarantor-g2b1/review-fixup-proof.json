@@ -1,0 +1,115 @@
+{
+  "sourceParent": "ae81ca5bc082e2d3dd07863fe42ec5f8e749e6a6",
+  "authorEvidence": true,
+  "controls": [
+    {
+      "guard": "S9-transaction-resource-reference",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S9 transaction reasons omit an unassigned Task id and retain assigned resource references"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "S9 transaction reasons omit an unassigned Task id and retain assigned resource references"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S9 transaction reasons omit an unassigned Task id and retain assigned resource references"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S9 transaction reasons omit an unassigned Task id and retain assigned resource references"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "guard": "S1-rate-limit",
+      "source": "mcp/src/clinic/guarantor-routes.ts",
+      "sourceSha256": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
+      "mutatedSha256": "3be8e9e405d1c715a1f4d208fe9bd22403c2f05b23200d4c1c8425ccebb3f5b4",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ]
+      },
+      "killed": true
+    }
+  ],
+  "checks": {
+    "mcpTypecheckExit": 0,
+    "operationHarnessSyntaxExit": 0,
+    "fixtureSyntaxExit": 0,
+    "evidenceAbsolutePathScanMatches": 0
+  },
+  "reviewDispositions": {
+    "TaskUndefined": "Task create omits unassigned resource reference; subsequent PUT reasons retain actual identifiers.",
+    "setupDiagnostic": "Route setup failure logs action and unconfirmed outcome without logging raw authentication errors or request data.",
+    "L13FailureCapture": "A fatal case without family data cannot mask its original failure during the interference audit check.",
+    "proofPort": "Port 28765 is in the fixture port inventory; bind failure closes the audit runtime.",
+    "historicalTrace": "Workstation path redacted in the historical RED output; assertion result unchanged."
+  }
+}

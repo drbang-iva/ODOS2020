@@ -1,0 +1,37 @@
+TAP version 13
+# Subtest: S7: a correction reason survives same-Task refusal and clears when another Task takes over
+not ok 1 - S7: a correction reason survives same-Task refusal and clears when another Task takes over
+  ---
+  duration_ms: 19.214208
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:14125'
+  failureType: 'testCodeFailure'
+  error: |-
+    a new Task must not inherit the previous operation's explanation
+    + actual - expected
+
+    + 'Reason for the original operation'
+    - ''
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ''
+  actual: 'Reason for the original operation'
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:283:12)
+    async usingEditor (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:98:9)
+    async <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:271:3)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 247.0265

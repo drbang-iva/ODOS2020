@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+not ok 1 - L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+  ---
+  duration_ms: 17.998167
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:5470'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + []
+    - [
+    -   'POST /guarantors/link-operations/06b18b36-e59d-4aaf-8d32-59cbce7abf86/complete'
+    - ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'POST /guarantors/link-operations/06b18b36-e59d-4aaf-8d32-59cbce7abf86/complete'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:121:12)
+    async usingEditor (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:98:9)
+    async <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:109:3)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 243.140375

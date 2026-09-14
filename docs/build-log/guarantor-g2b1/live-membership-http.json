@@ -1,0 +1,1092 @@
+{
+  "sourceHead": "d0cb07d81f22624f7c616105222271f3bcb8f759",
+  "events": [
+    {
+      "sequence": 1,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        },
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Probe"
+            ]
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Patient",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "b264972e-38a4-490a-88fb-9512b1b08c0b",
+          "lastUpdated": "2026-09-14T09:57:25.712Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+            }
+          ]
+        },
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Probe"
+            ]
+          }
+        ],
+        "id": "e191e7e1-8c67-474e-a3c1-cc17045fe662"
+      }
+    },
+    {
+      "sequence": 2,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        },
+        "patient": {
+          "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+        },
+        "active": true,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "7d40c011-13ec-414f-b5cb-5ef4df73fac1",
+          "lastUpdated": "2026-09-14T09:57:25.756Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+        },
+        "active": true,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ],
+        "id": "08544233-49d4-4622-9745-ad3d3347d71c"
+      }
+    },
+    {
+      "sequence": 3,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        },
+        "patient": {
+          "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+        },
+        "active": true,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "eebb545d-f780-434b-9b16-cc2ee099b7b8",
+          "lastUpdated": "2026-09-14T09:57:25.776Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+        },
+        "active": true,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ],
+        "id": "929b4748-ed25-4d1d-a7c6-851fdd9248a4"
+      }
+    },
+    {
+      "sequence": 4,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/a56de48d-cd4b-49db-981a-0a8abba7c8de",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/03e1f451-6126-49ce-8566-509ff760df87",
+          "display": "g2b1-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+          "display": "Synthetic G2b1 staff"
+        },
+        "id": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
+        "meta": {
+          "versionId": "703d074f-58db-47a8-9c52-5542a5458100",
+          "lastUpdated": "2026-09-14T09:49:36.662Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 5,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "PUT",
+      "path": "/fhir/R4/ProjectMembership/a56de48d-cd4b-49db-981a-0a8abba7c8de",
+      "status": 200,
+      "ifMatch": "W/\"703d074f-58db-47a8-9c52-5542a5458100\"",
+      "request": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/03e1f451-6126-49ce-8566-509ff760df87",
+          "display": "g2b1-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+          "display": "Synthetic G2b1 staff"
+        },
+        "id": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
+        "meta": {
+          "versionId": "703d074f-58db-47a8-9c52-5542a5458100",
+          "lastUpdated": "2026-09-14T09:49:36.662Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+              }
+            ]
+          }
+        ]
+      },
+      "response": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/03e1f451-6126-49ce-8566-509ff760df87",
+          "display": "g2b1-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+          "display": "Synthetic G2b1 staff"
+        },
+        "id": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
+        "meta": {
+          "versionId": "cbfa1229-6cbc-437b-af1a-e16586e53e5d",
+          "lastUpdated": "2026-09-14T09:57:25.797Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 6,
+      "scenario": "fixture",
+      "principal": "staff",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/08544233-49d4-4622-9745-ad3d3347d71c",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "7d40c011-13ec-414f-b5cb-5ef4df73fac1",
+          "lastUpdated": "2026-09-14T09:57:25.756Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+        },
+        "active": true,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ],
+        "id": "08544233-49d4-4622-9745-ad3d3347d71c"
+      }
+    },
+    {
+      "sequence": 7,
+      "scenario": "fixture",
+      "principal": "staff",
+      "method": "PUT",
+      "path": "/fhir/R4/RelatedPerson/08544233-49d4-4622-9745-ad3d3347d71c",
+      "status": 200,
+      "ifMatch": "W/\"7d40c011-13ec-414f-b5cb-5ef4df73fac1\"",
+      "request": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "7d40c011-13ec-414f-b5cb-5ef4df73fac1",
+          "lastUpdated": "2026-09-14T09:57:25.756Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+        },
+        "active": false,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ],
+        "id": "08544233-49d4-4622-9745-ad3d3347d71c"
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "01edcd94-4898-45b6-aaa4-083046ee3db8",
+          "lastUpdated": "2026-09-14T09:57:25.819Z",
+          "author": {
+            "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+            "display": "Synthetic G2b1 staff"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+        },
+        "active": false,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ],
+        "id": "08544233-49d4-4622-9745-ad3d3347d71c"
+      }
+    },
+    {
+      "sequence": 8,
+      "scenario": "fixture",
+      "principal": "staff",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/929b4748-ed25-4d1d-a7c6-851fdd9248a4",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "eebb545d-f780-434b-9b16-cc2ee099b7b8",
+          "lastUpdated": "2026-09-14T09:57:25.776Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+        },
+        "active": true,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ],
+        "id": "929b4748-ed25-4d1d-a7c6-851fdd9248a4"
+      }
+    },
+    {
+      "sequence": 9,
+      "scenario": "fixture",
+      "principal": "staff",
+      "method": "PUT",
+      "path": "/fhir/R4/RelatedPerson/929b4748-ed25-4d1d-a7c6-851fdd9248a4",
+      "status": 200,
+      "ifMatch": "W/\"eebb545d-f780-434b-9b16-cc2ee099b7b8\"",
+      "request": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "eebb545d-f780-434b-9b16-cc2ee099b7b8",
+          "lastUpdated": "2026-09-14T09:57:25.776Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+        },
+        "active": false,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ],
+        "id": "929b4748-ed25-4d1d-a7c6-851fdd9248a4"
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "64e366b0-b078-4870-bbfa-75a16fbdbd5d",
+          "lastUpdated": "2026-09-14T09:57:25.893Z",
+          "author": {
+            "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+            "display": "Synthetic G2b1 staff"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+        },
+        "active": false,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ],
+        "id": "929b4748-ed25-4d1d-a7c6-851fdd9248a4"
+      }
+    },
+    {
+      "sequence": 10,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/30bccb70-8421-4a42-acf3-b351832ca1f5",
+          "display": "g2b1-composite@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89",
+          "display": "Synthetic G2b1 composite"
+        },
+        "id": "a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+        "meta": {
+          "versionId": "b96e6c77-28fd-4c03-97a4-6f9c5f20ab9d",
+          "lastUpdated": "2026-09-14T09:50:52.159Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+            },
+            "parameter": [
+              {
+                "name": "admin_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              },
+              {
+                "name": "provider_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              },
+              {
+                "name": "provider_provider_profile",
+                "valueReference": {
+                  "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+                }
+              },
+              {
+                "name": "staff_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 11,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "PUT",
+      "path": "/fhir/R4/ProjectMembership/a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+      "status": 200,
+      "ifMatch": "W/\"b96e6c77-28fd-4c03-97a4-6f9c5f20ab9d\"",
+      "request": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/30bccb70-8421-4a42-acf3-b351832ca1f5",
+          "display": "g2b1-composite@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89",
+          "display": "Synthetic G2b1 composite"
+        },
+        "id": "a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+        "meta": {
+          "versionId": "b96e6c77-28fd-4c03-97a4-6f9c5f20ab9d",
+          "lastUpdated": "2026-09-14T09:50:52.159Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+            },
+            "parameter": [
+              {
+                "name": "staff_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              },
+              {
+                "name": "provider_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              },
+              {
+                "name": "admin_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              },
+              {
+                "name": "provider_provider_profile",
+                "valueReference": {
+                  "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+                }
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+            },
+            "parameter": [
+              {
+                "name": "staff_patient_compartment",
+                "valueString": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+              },
+              {
+                "name": "provider_patient_compartment",
+                "valueString": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+              },
+              {
+                "name": "admin_patient_compartment",
+                "valueString": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+              },
+              {
+                "name": "provider_provider_profile",
+                "valueReference": {
+                  "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "response": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/30bccb70-8421-4a42-acf3-b351832ca1f5",
+          "display": "g2b1-composite@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89",
+          "display": "Synthetic G2b1 composite"
+        },
+        "id": "a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
+        "meta": {
+          "versionId": "6dbe7ab4-e9a3-45dc-9e68-3c6d1e9e91dd",
+          "lastUpdated": "2026-09-14T09:57:25.910Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+            },
+            "parameter": [
+              {
+                "name": "staff_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              },
+              {
+                "name": "provider_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              },
+              {
+                "name": "admin_patient_compartment",
+                "valueString": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+              },
+              {
+                "name": "provider_provider_profile",
+                "valueReference": {
+                  "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+                }
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785"
+            },
+            "parameter": [
+              {
+                "name": "staff_patient_compartment",
+                "valueString": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+              },
+              {
+                "name": "provider_patient_compartment",
+                "valueString": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+              },
+              {
+                "name": "admin_patient_compartment",
+                "valueString": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+              },
+              {
+                "name": "provider_provider_profile",
+                "valueReference": {
+                  "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 12,
+      "scenario": "fixture",
+      "principal": "composite",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/08544233-49d4-4622-9745-ad3d3347d71c",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "01edcd94-4898-45b6-aaa4-083046ee3db8",
+          "lastUpdated": "2026-09-14T09:57:25.819Z",
+          "author": {
+            "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+            "display": "Synthetic G2b1 staff"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+        },
+        "active": false,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ],
+        "id": "08544233-49d4-4622-9745-ad3d3347d71c"
+      }
+    },
+    {
+      "sequence": 13,
+      "scenario": "fixture",
+      "principal": "composite",
+      "method": "PUT",
+      "path": "/fhir/R4/RelatedPerson/08544233-49d4-4622-9745-ad3d3347d71c",
+      "status": 200,
+      "ifMatch": "W/\"01edcd94-4898-45b6-aaa4-083046ee3db8\"",
+      "request": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "01edcd94-4898-45b6-aaa4-083046ee3db8",
+          "lastUpdated": "2026-09-14T09:57:25.819Z",
+          "author": {
+            "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+            "display": "Synthetic G2b1 staff"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+        },
+        "active": true,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ],
+        "id": "08544233-49d4-4622-9745-ad3d3347d71c"
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "336553c8-c677-4a73-a65c-8436f20b01b3",
+          "lastUpdated": "2026-09-14T09:57:25.944Z",
+          "author": {
+            "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89",
+            "display": "Synthetic G2b1 composite"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/6101c1ff-3ed4-4afd-96d1-6c708ca91d54"
+        },
+        "active": true,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ],
+        "id": "08544233-49d4-4622-9745-ad3d3347d71c"
+      }
+    },
+    {
+      "sequence": 14,
+      "scenario": "fixture",
+      "principal": "composite",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/929b4748-ed25-4d1d-a7c6-851fdd9248a4",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "64e366b0-b078-4870-bbfa-75a16fbdbd5d",
+          "lastUpdated": "2026-09-14T09:57:25.893Z",
+          "author": {
+            "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+            "display": "Synthetic G2b1 staff"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+        },
+        "active": false,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ],
+        "id": "929b4748-ed25-4d1d-a7c6-851fdd9248a4"
+      }
+    },
+    {
+      "sequence": 15,
+      "scenario": "fixture",
+      "principal": "composite",
+      "method": "PUT",
+      "path": "/fhir/R4/RelatedPerson/929b4748-ed25-4d1d-a7c6-851fdd9248a4",
+      "status": 200,
+      "ifMatch": "W/\"64e366b0-b078-4870-bbfa-75a16fbdbd5d\"",
+      "request": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "64e366b0-b078-4870-bbfa-75a16fbdbd5d",
+          "lastUpdated": "2026-09-14T09:57:25.893Z",
+          "author": {
+            "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+            "display": "Synthetic G2b1 staff"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+        },
+        "active": true,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ],
+        "id": "929b4748-ed25-4d1d-a7c6-851fdd9248a4"
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "c6344356-7cbc-4ba4-9d26-1657362a5d30",
+          "lastUpdated": "2026-09-14T09:57:25.963Z",
+          "author": {
+            "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89",
+            "display": "Synthetic G2b1 composite"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/e191e7e1-8c67-474e-a3c1-cc17045fe662"
+        },
+        "active": true,
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Compartment",
+              "Contact"
+            ]
+          }
+        ],
+        "id": "929b4748-ed25-4d1d-a7c6-851fdd9248a4"
+      }
+    }
+  ]
+}

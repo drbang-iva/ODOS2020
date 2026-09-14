@@ -1009,6 +1009,24 @@
       "namespace": "communications",
       "status": "active",
       "sliceConsumer": "item-1b-i"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim",
+      "namespace": "guarantor",
+      "status": "active",
+      "sliceConsumer": "guarantor-g2b1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+      "namespace": "guarantor",
+      "status": "active",
+      "sliceConsumer": "guarantor-g2b1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+      "namespace": "guarantor",
+      "status": "active",
+      "sliceConsumer": "guarantor-g2b1"
     }
   ]
 }

@@ -1,0 +1,18 @@
+{
+  "sourceHead": "d0cb07d81f22624f7c616105222271f3bcb8f759",
+  "rows": [
+    {
+      "id": "fe96844c-137a-4174-8bef-efb7394c9708",
+      "eventTime": "2026-09-14T09:51:13.832Z",
+      "eventType": "noop",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "6101c1ff-3ed4-4afd-96d1-6c708ca91d54",
+      "actionOutcome": "granted",
+      "actionReason": "Synthetic G2b1 fixture audit connectivity proof",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T09:51:13.832Z"
+    }
+  ]
+}

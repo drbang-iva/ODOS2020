@@ -1,0 +1,212 @@
+===== audit-reason-before =====
+TAP version 13
+# Subtest: S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+not ok 1 - S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+  ---
+  duration_ms: 61.026916
+  type: 'test'
+  location: '<task-worktree>/mcp/tests/guarantorLinkOperation.test.ts:1:6169'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'guarantor.link record Task/undefined'
+    - 'guarantor.link record'
+                            ^
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'guarantor.link record'
+  actual: 'guarantor.link record Task/undefined'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<task-worktree>/mcp/tests/guarantorLinkOperation.test.ts:98:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 250.341167
+
+
+===== audit-reason-green =====
+TAP version 13
+# Subtest: S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+ok 1 - S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+  ---
+  duration_ms: 116.104583
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 246.873042
+
+
+===== mcp-build-current =====
+
+> odos-mcp@0.1.0 build
+> tsc
+
+
+
+===== S1-rate-limit-green.log =====
+TAP version 13
+# Subtest: S1 rate limit: all five routes share a budget before service or staff authentication
+ok 1 - S1 rate limit: all five routes share a budget before service or staff authentication
+  ---
+  duration_ms: 112.838833
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 331.842542
+
+
+===== S1-rate-limit-red.log =====
+TAP version 13
+# Subtest: S1 rate limit: all five routes share a budget before service or staff authentication
+not ok 1 - S1 rate limit: all five routes share a budget before service or staff authentication
+  ---
+  duration_ms: 131.172291
+  type: 'test'
+  location: '<task-worktree>/.odos/g2b1-mutants-tic4st2m/mcp/tests/guarantorLinkRoutes.test.ts:1:1413'
+  failureType: 'testCodeFailure'
+  error: |-
+    /preview
+
+    401 !== 429
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 429
+  actual: 401
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-tic4st2m/mcp/tests/guarantorLinkRoutes.test.ts:32:74)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 268.012
+
+
+===== S1-rate-limit-restored.log =====
+TAP version 13
+# Subtest: S1 rate limit: all five routes share a budget before service or staff authentication
+ok 1 - S1 rate limit: all five routes share a budget before service or staff authentication
+  ---
+  duration_ms: 104.218083
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 249.109708
+
+
+===== S9-transaction-resource-reference-green.log =====
+TAP version 13
+# Subtest: S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+ok 1 - S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+  ---
+  duration_ms: 76.812791
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 266.128625
+
+
+===== S9-transaction-resource-reference-red.log =====
+TAP version 13
+# Subtest: S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+not ok 1 - S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+  ---
+  duration_ms: 72.629833
+  type: 'test'
+  location: '<task-worktree>/.odos/g2b1-mutants-tic4st2m/mcp/tests/guarantorLinkOperation.test.ts:1:6169'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'guarantor.link record Task/undefined'
+    - 'guarantor.link record'
+                            ^
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'guarantor.link record'
+  actual: 'guarantor.link record Task/undefined'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-tic4st2m/mcp/tests/guarantorLinkOperation.test.ts:98:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 181.963833
+
+
+===== S9-transaction-resource-reference-restored.log =====
+TAP version 13
+# Subtest: S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+ok 1 - S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+  ---
+  duration_ms: 38.818417
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 139.50225

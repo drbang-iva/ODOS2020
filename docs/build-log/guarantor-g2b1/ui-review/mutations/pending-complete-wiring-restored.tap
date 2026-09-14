@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+ok 1 - L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+  ---
+  duration_ms: 26.149417
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 240.4685

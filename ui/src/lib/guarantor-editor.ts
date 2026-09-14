@@ -1,6 +1,7 @@
 import type { Bundle, Patient, Person, RelatedPerson, Resource } from "@medplum/fhirtypes";
 import { projectResponsiblePartyDemographics, type ResponsiblePartyDemographics } from "../../../mcp/src/clinic/responsible-party-demographics";
 import { CONCURRENT_EDIT_MESSAGE, fhir } from "./fhir";
+import { getGuarantorLinkOperation, type GuarantorLinkOperation } from "./guarantor-link-operations";
 
 export type GuarantorDemographics = ResponsiblePartyDemographics;
 export interface GuarantorChild { resource: RelatedPerson; patientName: string }
@@ -19,8 +20,11 @@ export type GuarantorLoad = {
   kind: "editable"; relatedPerson: RelatedPerson; snapshot: GuarantorSnapshot; verification: GuarantorResult;
 } | {
   kind: "missing" | "ambiguous" | "unknown" | "dangling"; relatedPerson: RelatedPerson; message: string; personIds: string[];
+} | {
+  kind: "pending"; relatedPerson: RelatedPerson; message: string; personIds: string[]; operation: GuarantorLinkOperation;
 };
 const source = "guarantor-editor";
+const claimUrl = "https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim";
 const same = (a: unknown, b: unknown): boolean => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 function canonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonical);
@@ -92,12 +96,31 @@ export async function listPatientResponsibleParties(patientId: string): Promise<
 export async function loadGuarantor(relatedPersonId: string): Promise<GuarantorLoad> {
   return resolveGuarantor(await fhir.read<RelatedPerson>("RelatedPerson", relatedPersonId));
 }
+async function activeOperation(resource: RelatedPerson): Promise<GuarantorLinkOperation | undefined> {
+  for (const extension of resource.extension ?? []) {
+    if (extension.url !== claimUrl) continue;
+    const reference = extension.valueReference?.reference;
+    if (!reference || !/^Task\/[A-Za-z0-9.-]+$/.test(reference)) continue;
+    const operation = await getGuarantorLinkOperation(reference.slice(5));
+    if (operation?.active && operation.relatedPersonIds.includes(resource.id!)) return operation;
+  }
+}
+function pending(relatedPerson: RelatedPerson, operation: GuarantorLinkOperation): GuarantorLoad {
+  return { kind: "pending", relatedPerson, operation, personIds: [operation.sourcePersonId, operation.destinationPersonId],
+    message: `Guarantor ${operation.kind === "correct" ? "correction" : operation.kind} ${operation.task.id} is pending. ${operation.kind === "correct" ? "Complete the correction" : "Complete or correct the operation"} before editing contact details.` };
+}
 async function resolveGuarantor(relatedPerson: RelatedPerson): Promise<GuarantorLoad> {
   try {
+    const operation = await activeOperation(relatedPerson);
+    if (operation) return pending(relatedPerson, operation);
     const persons = await searchAll<Person>("Person", { link: `RelatedPerson/${relatedPerson.id}` });
     if (!persons.length) return { kind: "missing", relatedPerson, personIds: [], message: "No linked guarantor record — pre-migration." };
     if (persons.length !== 1) return { kind: "ambiguous", relatedPerson, personIds: persons.map(p => p.id!), message: `Ambiguous guarantor for ${relatedPerson.patient.reference}, RelatedPerson/${relatedPerson.id}: ${persons.map(p => `Person/${p.id}`).join(", ")}. Editing refused.` };
     const snapshot = await readSnapshot(persons[0]);
+    for (const item of snapshot.children) {
+      const linkedOperation = await activeOperation(item.resource);
+      if (linkedOperation) return pending(relatedPerson, linkedOperation);
+    }
     return { kind: "editable", relatedPerson, snapshot, verification: await verifyGuarantor(snapshot) };
   } catch (error) {
     if (error instanceof DanglingGuarantorLink) return { kind: "dangling", relatedPerson, personIds: [error.personId], message: error.message };
@@ -182,11 +205,17 @@ export async function saveGuarantor(snapshot: GuarantorSnapshot, demographics: G
   const writes = new Map<string, GuarantorChildResult["writeStatus"]>();
   let halted: "stopped" | "no-response" | undefined;
   for (const item of snapshot.children) {
+    if (!halted) {
+      try {
+        const fresh = await fhir.read<RelatedPerson>("RelatedPerson", item.resource.id!);
+        if (await activeOperation(fresh)) halted = "stopped";
+      } catch { halted = "no-response"; }
+    }
     halted ??= await checkGeneration(accepted);
     writes.set(item.resource.id!, halted ?? await writeChild(item, accepted));
   }
   const verification = await verifyGuarantor({ ...snapshot, person: accepted });
-  return { ...verification, ...(halted === "stopped" ? { status: "superseded" as const, message: "A newer guarantor edit superseded this generation. Reload to see the current record." } : {}), children: verification.children.map(c => ({ ...c, writeStatus: writes.get(c.relatedPersonId) })) };
+  return { ...verification, ...(halted === "stopped" ? { status: "superseded" as const, message: "The guarantor changed or a link operation is pending. Reload to see the current record." } : {}), children: verification.children.map(c => ({ ...c, writeStatus: writes.get(c.relatedPersonId) })) };
 }
 export async function repairGuarantor(previous: GuarantorSnapshot): Promise<GuarantorResult> {
   let current: GuarantorSnapshot;
@@ -199,16 +228,15 @@ export async function repairGuarantor(previous: GuarantorSnapshot): Promise<Guar
   let halted: "stopped" | "no-response" | undefined;
   for (const item of current.children) {
     if (halted) { writes.set(item.resource.id!, halted); continue; }
-    if (demographicsMatch(item.resource, current.person)) continue;
     try {
       const fresh = await fhir.read<RelatedPerson>("RelatedPerson", item.resource.id!);
-      halted = await checkGeneration(current.person);
+      halted = await activeOperation(fresh) ? "stopped" : await checkGeneration(current.person);
       if (halted) { writes.set(item.resource.id!, halted); continue; }
       if (!demographicsMatch(fresh, current.person)) writes.set(fresh.id!, await writeChild({ ...item, resource: fresh }, current.person));
     } catch { writes.set(item.resource.id!, "no-response"); }
   }
   const verification = await verifyGuarantor(current);
   return { ...verification, status: superseded || halted === "stopped" ? "superseded" : !writes.size && verification.status === "saved" ? "unchanged" : verification.status,
-    message: halted === "stopped" ? "A newer guarantor edit superseded this generation. Reload to see the current record." : superseded ? `The earlier generation was superseded. Reconciled against current generation ${version(current.person)}. ${verification.message}` : verification.message,
+    message: halted === "stopped" ? "The guarantor changed or a link operation is pending. Reload to see the current record." : superseded ? `The earlier generation was superseded. Reconciled against current generation ${version(current.person)}. ${verification.message}` : verification.message,
     children: verification.children.map(c => ({ ...c, writeStatus: writes.get(c.relatedPersonId) })) };
 }

@@ -1,0 +1,1533 @@
+{
+  "createdAt": "2026-09-14T12:22:15.091Z",
+  "kind": "author Chromium proof on the actual patient route",
+  "source": {
+    "backendHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
+    "uiHead": "5cbe81d8651b4bc34b6932bed41e26275e563666",
+    "backendOrigin": "http://127.0.0.1:28763",
+    "uiOrigin": "http://127.0.0.1:28764",
+    "entry": "ui/index.html -> ui/src/main.tsx -> App -> RouteSwitch -> PatientRoute -> PatientOverview -> PatientDemographicsEditor -> ResponsiblePartiesControl",
+    "route": "/clinic?patientId=<synthetic patient id>",
+    "serving": "Vite development server; unchanged full App and actual route registrars; disposable proxy targets only",
+    "hashes": {
+      "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
+      "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mcp/src/payments/payment-endpoint.ts": "0d397b9f9590123e0aabb564b330572f71201a5db8cfc8b6d745f204138f9cbb",
+      "ui/src/main.tsx": "d45932ec0e79a2444ba6bdd31ae808b309914d71e26c6269d6cf440fc6594904",
+      "ui/src/App.tsx": "036b51873d9e043bbf35f734e628da71b40d344aef7f4109eb079d7e85428b76",
+      "ui/src/components/patient/PatientDemographicsEditor.tsx": "21f81eec807444bc7cf77a0769b82d99faf5b1482c4c6e34840bdd1f91ee5fed",
+      "ui/src/components/patient/ResponsiblePartiesControl.tsx": "3c9883c78a7a403ce376deb47f04ba610dc6851e7e251673959375a5c9f4ea80",
+      "ui/src/lib/guarantor-editor.ts": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06",
+      "ui/src/lib/guarantor-link-operations.ts": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+      "docs/build-log/guarantor-g2b1/browser-proof.mjs": "f50273ea4c6e90f82cea0d227a2066056bb0f1c992983b4cd76c721898a86117"
+    },
+    "process": {
+      "pid": 3704,
+      "cwd": "<proof-root>/ui",
+      "backendPort": 28763,
+      "uiPort": 28764
+    },
+    "browserCapabilityOverride": {
+      "scenario": "Correct",
+      "method": "Test-only page init script removes randomUUID; native getRandomValues is unchanged",
+      "observed": {
+        "randomUUID": "undefined",
+        "getRandomValues": "function"
+      }
+    }
+  },
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/guarantors/link-operations",
+      "status": 409,
+      "phase": "attach-pending",
+      "taskStatus": "in-progress",
+      "taskId": "af6e341d-4116-46ae-bc07-82eeb704d9e7"
+    },
+    {
+      "method": "POST",
+      "path": "/guarantors/link-operations",
+      "status": 409,
+      "phase": "attach-pending",
+      "taskStatus": "in-progress",
+      "taskId": "c397cba3-0f8b-4c29-a300-57c1ce9ad562"
+    },
+    {
+      "action": "browser Correct",
+      "originalTaskId": "c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "correctionTaskId": "95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "reason": "Synthetic proof: retain the original guarantor",
+      "operationId": "a901610f-fe54-44bd-aae9-d0e4c21fab53"
+    }
+  ],
+  "scenarios": [
+    {
+      "label": "Complete",
+      "originalTaskId": "af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "pendingPhase": "attach-pending",
+      "actualAttach412": [
+        {
+          "id": "ee2882c6-0957-40bc-8a31-d6c47d45db42",
+          "phase": "attaching",
+          "target": "Person/34597250-1590-4656-b9ad-432bba442ed7",
+          "expectedVersion": "edb69ae1-73a4-4cf9-9835-2dd11a43b9f1",
+          "intendedContentHash": "77af4d4ef1217e51f8cd8fefc07d3df413bbba93e60a8c7d4cc3a7982c609fe1",
+          "disposition": "rejected",
+          "responseStatus": 412
+        }
+      ],
+      "originalStatus": "completed",
+      "finalChildren": [
+        {
+          "reference": "RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6",
+          "version": "dbce7cdf-bf2b-48bd-9e0a-8191febc4115",
+          "owner": "Person/34597250-1590-4656-b9ad-432bba442ed7",
+          "sentinelPreserved": true,
+          "noClaim": true,
+          "name": [
+            {
+              "given": [
+                "Complete",
+                "Current"
+              ],
+              "family": "Guarantor"
+            }
+          ]
+        },
+        {
+          "reference": "RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e",
+          "version": "44417fb8-7467-4dad-aa7e-1820bd95e78f",
+          "owner": "Person/34597250-1590-4656-b9ad-432bba442ed7",
+          "sentinelPreserved": true,
+          "noClaim": true,
+          "name": [
+            {
+              "given": [
+                "Complete",
+                "Current"
+              ],
+              "family": "Guarantor"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Correct",
+      "originalTaskId": "c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "pendingPhase": "attach-pending",
+      "actualAttach412": [
+        {
+          "id": "63a65a40-2f9d-43e6-adaf-83fb517eec10",
+          "phase": "attaching",
+          "target": "Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0",
+          "expectedVersion": "18546415-341c-45a0-9fc0-0e593d56634b",
+          "intendedContentHash": "093604645d31e2b32d5968b1200397e66ef9086bb3c9f5057a7d285e3e80a876",
+          "disposition": "rejected",
+          "responseStatus": 412
+        }
+      ],
+      "originalStatus": "cancelled",
+      "finalChildren": [
+        {
+          "reference": "RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+          "version": "a582758a-f91a-4d18-900c-3c7f5809b9a9",
+          "owner": "Person/d28331fe-2856-4e6a-9017-6d34ed59a978",
+          "sentinelPreserved": true,
+          "noClaim": true,
+          "name": [
+            {
+              "given": [
+                "Correct",
+                "Source"
+              ],
+              "family": "Guarantor"
+            }
+          ]
+        },
+        {
+          "reference": "RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5",
+          "version": "bc3156a4-7c3b-4620-984c-5442556f1065",
+          "owner": "Person/d28331fe-2856-4e6a-9017-6d34ed59a978",
+          "sentinelPreserved": true,
+          "noClaim": true,
+          "name": [
+            {
+              "given": [
+                "Correct",
+                "Source"
+              ],
+              "family": "Guarantor"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "writes": [
+    {
+      "target": "Task",
+      "phase": "guarantor.link record",
+      "status": "201"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"d34311fd-5156-4efb-bd42-f7387e030969\"",
+      "phase": "guarantor.link claiming Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e",
+      "ifMatch": "W/\"6b11888a-d04f-4d93-8308-e6b4a6fa4b31\"",
+      "phase": "guarantor.link claiming RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"25de1e0b-68c7-40f7-9a16-57056638cfae\"",
+      "phase": "guarantor.link claiming Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"cec7743c-9760-437f-92b2-b8bdf77bfb95\"",
+      "phase": "guarantor.link claiming Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6",
+      "ifMatch": "W/\"c4f6037b-4a13-4fd2-9405-dba96e300175\"",
+      "phase": "guarantor.link claiming RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"b3977fae-53bb-40dc-888e-61520bf86b80\"",
+      "phase": "guarantor.link claiming Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"e1d08da2-3245-4421-a6f3-631257a0b532\"",
+      "phase": "guarantor.link detaching Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063",
+      "ifMatch": "W/\"6703dd76-30c0-48e1-9420-5541f8069e45\"",
+      "phase": "guarantor.link detaching Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"ea6caa33-e379-4ffe-b9e9-c8ccecbad1a5\"",
+      "phase": "guarantor.link detaching Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"4c15e1c0-7480-42f5-9f62-1531d3da0320\"",
+      "phase": "guarantor.link attaching Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Person/34597250-1590-4656-b9ad-432bba442ed7",
+      "ifMatch": "W/\"edb69ae1-73a4-4cf9-9835-2dd11a43b9f1\"",
+      "phase": "guarantor.link attaching Person/34597250-1590-4656-b9ad-432bba442ed7",
+      "error": "FHIR 412: operation write refused."
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"4ea30c98-a013-44b1-8565-287c2ff800cb\"",
+      "phase": "guarantor.link attaching Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"67718f9a-ab0d-4775-86fc-d2981d782059\"",
+      "phase": "guarantor.link attach-pending Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Task",
+      "phase": "guarantor.link record",
+      "status": "201"
+    },
+    {
+      "target": "Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "ifMatch": "W/\"98c06937-cb5d-4070-9bc1-74268dca2bde\"",
+      "phase": "guarantor.link claiming Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "status": "200"
+    },
+    {
+      "target": "RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5",
+      "ifMatch": "W/\"9dfb384d-378e-45e0-aa89-b5885be3c0e3\"",
+      "phase": "guarantor.link claiming RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5",
+      "status": "200"
+    },
+    {
+      "target": "Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "ifMatch": "W/\"b49b82b9-1d6e-4969-bc2f-1dc22d28a232\"",
+      "phase": "guarantor.link claiming Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "status": "200"
+    },
+    {
+      "target": "Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "ifMatch": "W/\"df90946e-f3d6-423f-9041-9d4499e50f50\"",
+      "phase": "guarantor.link claiming Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "status": "200"
+    },
+    {
+      "target": "RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "ifMatch": "W/\"a3c07428-1a2e-41ca-888e-817e2c2fc70b\"",
+      "phase": "guarantor.link claiming RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "status": "200"
+    },
+    {
+      "target": "Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "ifMatch": "W/\"a62988d0-f31f-429a-81d1-817cd966f8a4\"",
+      "phase": "guarantor.link claiming Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "status": "200"
+    },
+    {
+      "target": "Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "ifMatch": "W/\"2acecc93-2530-4092-9349-43478181263a\"",
+      "phase": "guarantor.link detaching Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "status": "200"
+    },
+    {
+      "target": "Person/d28331fe-2856-4e6a-9017-6d34ed59a978",
+      "ifMatch": "W/\"53da3891-c169-4896-bbcd-fb8fdaab3732\"",
+      "phase": "guarantor.link detaching Person/d28331fe-2856-4e6a-9017-6d34ed59a978",
+      "status": "200"
+    },
+    {
+      "target": "Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "ifMatch": "W/\"c8613fdb-e7fb-4c49-8af8-19bc3bdfc39f\"",
+      "phase": "guarantor.link detaching Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "status": "200"
+    },
+    {
+      "target": "Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "ifMatch": "W/\"aeb7ae8b-9654-4f0a-900f-539e4e047174\"",
+      "phase": "guarantor.link attaching Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "status": "200"
+    },
+    {
+      "target": "Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0",
+      "ifMatch": "W/\"18546415-341c-45a0-9fc0-0e593d56634b\"",
+      "phase": "guarantor.link attaching Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0",
+      "error": "FHIR 412: operation write refused."
+    },
+    {
+      "target": "Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "ifMatch": "W/\"48447ce2-ce85-43bc-9b21-6880904fc65f\"",
+      "phase": "guarantor.link attaching Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "status": "200"
+    },
+    {
+      "target": "Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "ifMatch": "W/\"50f38883-9830-48ed-94c9-5beec9bafc30\"",
+      "phase": "guarantor.link attach-pending Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"7dce0cb3-03cc-4c95-909e-8181a24e0789\"",
+      "phase": "guarantor.link fence-source Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063",
+      "ifMatch": "W/\"9cded7f4-9074-47e6-8e79-ae769c8991ea\"",
+      "phase": "guarantor.link fence-source Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"2d05552a-1ca4-4564-a91c-47ba22363a42\"",
+      "phase": "guarantor.link fence-source Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"5340206c-7e83-4a2a-82f5-5109e06d318c\"",
+      "phase": "guarantor.link fence-destination Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Person/34597250-1590-4656-b9ad-432bba442ed7",
+      "ifMatch": "W/\"50fe7aa1-6a77-4e05-a73b-75bd58570925\"",
+      "phase": "guarantor.link fence-destination Person/34597250-1590-4656-b9ad-432bba442ed7",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"fc184d72-4151-4d4e-ae42-7c8d91aad4dd\"",
+      "phase": "guarantor.link fence-destination Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"e05b98a0-4f2a-44db-a66f-43f57f2035ee\"",
+      "phase": "guarantor.link attaching Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Person/34597250-1590-4656-b9ad-432bba442ed7",
+      "ifMatch": "W/\"64720a60-d282-4330-816b-9d5082c017b2\"",
+      "phase": "guarantor.link attaching Person/34597250-1590-4656-b9ad-432bba442ed7",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"a1419c8a-b093-4e74-ab6c-4eb9f4d5e879\"",
+      "phase": "guarantor.link attaching Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"9ee70189-10db-4e67-834a-457113655488\"",
+      "phase": "guarantor.link projecting Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e",
+      "ifMatch": "W/\"2c6746af-384f-4857-b738-78e610179b9f\"",
+      "phase": "guarantor.link projecting RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"746f3bc7-f591-48e9-a664-7024779bbcb1\"",
+      "phase": "guarantor.link projecting Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"333f8266-3134-498b-b01a-1c68fdb60a4d\"",
+      "phase": "guarantor.link projecting Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6",
+      "ifMatch": "W/\"e654622c-0681-4608-a50f-6d67513e19f9\"",
+      "phase": "guarantor.link projecting RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"f2d013c1-061f-4ed8-a797-eac188fa76c6\"",
+      "phase": "guarantor.link projecting Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"69a22b18-2da5-42a1-a8e6-498862eaaf51\"",
+      "phase": "guarantor.link verified Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"c6709c86-1141-49a9-94b8-dc554ff79851\"",
+      "phase": "guarantor.link releasing Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e",
+      "ifMatch": "W/\"2ed0dce7-07bf-4892-a92d-11b8e913c91d\"",
+      "phase": "guarantor.link releasing RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"dc1a86ac-bbf9-4fe5-ac60-e12da8bf6011\"",
+      "phase": "guarantor.link releasing Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"9f034559-e0cc-406d-afcb-305b766c0531\"",
+      "phase": "guarantor.link releasing Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6",
+      "ifMatch": "W/\"4d760ba3-9493-49ad-8034-9b22f62842d5\"",
+      "phase": "guarantor.link releasing RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"1325e97f-5e75-420a-8443-9e110423f1b3\"",
+      "phase": "guarantor.link releasing Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "ifMatch": "W/\"8a7a8b12-0473-4933-8654-e382da0b3be0\"",
+      "phase": "guarantor.link linked Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": "200"
+    },
+    {
+      "target": "Task",
+      "phase": "guarantor.link record",
+      "status": "201"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"86a883f1-0f20-43d7-856c-357c547b8ead\"",
+      "phase": "guarantor.link fence-source Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0",
+      "ifMatch": "W/\"868216e3-6380-4c7e-bde0-fefc8d08ea9a\"",
+      "phase": "guarantor.link fence-source Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"ac9d84c8-b5e7-474f-a4d4-27fd9b4b010d\"",
+      "phase": "guarantor.link fence-source Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"c0450b9a-0f26-4b59-933e-5434a40a5f97\"",
+      "phase": "guarantor.link fence-destination Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Person/d28331fe-2856-4e6a-9017-6d34ed59a978",
+      "ifMatch": "W/\"1778681f-c5f3-41d4-81fd-1278419ef3a6\"",
+      "phase": "guarantor.link fence-destination Person/d28331fe-2856-4e6a-9017-6d34ed59a978",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"f8486b04-c2ac-4bdb-ada5-2ab9de77650e\"",
+      "phase": "guarantor.link fence-destination Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"168122a0-a1a4-46e2-92ba-09fcdf0f3e26\"",
+      "phase": "guarantor.link claiming Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5",
+      "ifMatch": "W/\"80c1c8aa-ae53-456b-bb70-8727a7188523\"",
+      "phase": "guarantor.link claiming RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"8d1bbc0a-1a40-4a7b-a397-594b1cedc1ad\"",
+      "phase": "guarantor.link claiming Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"fc2a0e51-4b2a-4ff6-9f34-9a310a84e375\"",
+      "phase": "guarantor.link claiming Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "ifMatch": "W/\"372e3998-d3bb-4781-87f6-b0bca367734e\"",
+      "phase": "guarantor.link claiming RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"e3c84c8f-f2d0-429d-8c20-f79e940b058b\"",
+      "phase": "guarantor.link claiming Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"b4848ac1-4512-46ca-9486-7b6d88173b0c\"",
+      "phase": "guarantor.link attaching Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Person/d28331fe-2856-4e6a-9017-6d34ed59a978",
+      "ifMatch": "W/\"31328548-fd32-4efd-ba90-bef6d0e0c9d7\"",
+      "phase": "guarantor.link attaching Person/d28331fe-2856-4e6a-9017-6d34ed59a978",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"fbe6187d-78b6-4b8c-83cf-840776017e23\"",
+      "phase": "guarantor.link attaching Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"77c46095-62c8-4f48-95cf-3794b4024704\"",
+      "phase": "guarantor.link projecting Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5",
+      "ifMatch": "W/\"28ac5c89-a704-4788-9b88-7b6a1096716a\"",
+      "phase": "guarantor.link projecting RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"d98d00a6-f4c0-422c-9e5a-e12fde1d8f31\"",
+      "phase": "guarantor.link projecting Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"5f719517-c7de-42c1-9d66-3c707cc8ab24\"",
+      "phase": "guarantor.link projecting Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "ifMatch": "W/\"3a273914-0170-4a9e-b071-3d01757240f2\"",
+      "phase": "guarantor.link projecting RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"75843a4a-2d02-4639-a7bd-9137dacca2d2\"",
+      "phase": "guarantor.link projecting Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"91d5eada-afdd-41f0-ab45-72c5aee435f2\"",
+      "phase": "guarantor.link verified Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"ef2cec5d-848b-4ab3-bd94-975671e27eca\"",
+      "phase": "guarantor.link releasing Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5",
+      "ifMatch": "W/\"28ac5c89-a704-4788-9b88-7b6a1096716a\"",
+      "phase": "guarantor.link releasing RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"862c81f5-94a5-42e0-ab73-b2dad4c975ba\"",
+      "phase": "guarantor.link releasing Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"1d7a929e-1d69-46e6-9d42-0cff3d2bf1a5\"",
+      "phase": "guarantor.link releasing Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "ifMatch": "W/\"3a273914-0170-4a9e-b071-3d01757240f2\"",
+      "phase": "guarantor.link releasing RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"f1e046d6-8145-45bd-8c58-88b504beefc6\"",
+      "phase": "guarantor.link releasing Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"b3add220-2ac7-4abc-9cd3-6090096b9742\"",
+      "phase": "guarantor.link cancel-original Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "ifMatch": "W/\"be0a86c6-9a40-475c-bcb7-976b5c579ce8\"",
+      "phase": "guarantor.link cancel-original Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"b66def02-4be8-495d-a29b-99a7371fc785\"",
+      "phase": "guarantor.link cancel-original Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    },
+    {
+      "target": "Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "ifMatch": "W/\"1a76bb87-8d1e-492b-9742-4cff595fa0ed\"",
+      "phase": "guarantor.link linked Task/95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "status": "200"
+    }
+  ],
+  "audits": [
+    {
+      "id": "c0cc7373-0b13-4c21-b032-e28c489cc893",
+      "eventTime": "2026-09-14T12:22:15.950Z",
+      "eventType": "guarantor.link.started",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "resourceType": "Task",
+      "resourceId": "af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "actionOutcome": "granted",
+      "actionReason": "transfer Task/af6e341d-4116-46ae-bc07-82eeb704d9e7 S=Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063 D=Person/34597250-1590-4656-b9ad-432bba442ed7 phase=claiming; Synthetic browser recovery proof",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:22:15.950Z"
+    },
+    {
+      "id": "4e37a151-2f3c-4fd6-a6e0-659284b70fa6",
+      "eventTime": "2026-09-14T12:22:15.960Z",
+      "eventType": "guarantor.link.started",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "d41d57bd-3138-4044-b6f8-0b8acb933457",
+      "resourceType": "Task",
+      "resourceId": "af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "actionOutcome": "granted",
+      "actionReason": "transfer Task/af6e341d-4116-46ae-bc07-82eeb704d9e7 S=Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063 D=Person/34597250-1590-4656-b9ad-432bba442ed7 phase=claiming; Synthetic browser recovery proof",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:22:15.960Z"
+    },
+    {
+      "id": "bc0fc782-dd04-4d3a-97ed-6edd7a58d4e7",
+      "eventTime": "2026-09-14T12:22:16.355Z",
+      "eventType": "guarantor.link.pending",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "resourceType": "Task",
+      "resourceId": "af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "actionOutcome": "granted",
+      "actionReason": "transfer Task/af6e341d-4116-46ae-bc07-82eeb704d9e7 S=Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063 D=Person/34597250-1590-4656-b9ad-432bba442ed7 phase=attach-pending target=Person/34597250-1590-4656-b9ad-432bba442ed7; Synthetic browser recovery proof",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:22:16.355Z"
+    },
+    {
+      "id": "ad6073f3-d2f2-4e63-b4cd-0e93e0a170f4",
+      "eventTime": "2026-09-14T12:22:16.367Z",
+      "eventType": "guarantor.link.pending",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "d41d57bd-3138-4044-b6f8-0b8acb933457",
+      "resourceType": "Task",
+      "resourceId": "af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "actionOutcome": "granted",
+      "actionReason": "transfer Task/af6e341d-4116-46ae-bc07-82eeb704d9e7 S=Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063 D=Person/34597250-1590-4656-b9ad-432bba442ed7 phase=attach-pending target=Person/34597250-1590-4656-b9ad-432bba442ed7; Synthetic browser recovery proof",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:22:16.367Z"
+    },
+    {
+      "id": "24f12ad3-427f-453b-9a3e-6599da83e176",
+      "eventTime": "2026-09-14T12:22:16.766Z",
+      "eventType": "guarantor.link.started",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "resourceType": "Task",
+      "resourceId": "c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "actionOutcome": "granted",
+      "actionReason": "transfer Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562 S=Person/d28331fe-2856-4e6a-9017-6d34ed59a978 D=Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0 phase=claiming; Synthetic browser recovery proof",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:22:16.766Z"
+    },
+    {
+      "id": "07886535-0a3f-4d15-b6c7-e52f79afbee2",
+      "eventTime": "2026-09-14T12:22:16.778Z",
+      "eventType": "guarantor.link.started",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "cd6c0e58-041a-49fd-9b13-41bd0ecfd683",
+      "resourceType": "Task",
+      "resourceId": "c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "actionOutcome": "granted",
+      "actionReason": "transfer Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562 S=Person/d28331fe-2856-4e6a-9017-6d34ed59a978 D=Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0 phase=claiming; Synthetic browser recovery proof",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:22:16.778Z"
+    },
+    {
+      "id": "e7308ffc-3efe-47ea-a78d-aba70aca317a",
+      "eventTime": "2026-09-14T12:22:17.190Z",
+      "eventType": "guarantor.link.pending",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "resourceType": "Task",
+      "resourceId": "c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "actionOutcome": "granted",
+      "actionReason": "transfer Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562 S=Person/d28331fe-2856-4e6a-9017-6d34ed59a978 D=Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0 phase=attach-pending target=Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0; Synthetic browser recovery proof",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:22:17.190Z"
+    },
+    {
+      "id": "f385d07e-4acb-4503-96f1-3741a3032482",
+      "eventTime": "2026-09-14T12:22:17.201Z",
+      "eventType": "guarantor.link.pending",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "cd6c0e58-041a-49fd-9b13-41bd0ecfd683",
+      "resourceType": "Task",
+      "resourceId": "c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "actionOutcome": "granted",
+      "actionReason": "transfer Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562 S=Person/d28331fe-2856-4e6a-9017-6d34ed59a978 D=Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0 phase=attach-pending target=Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0; Synthetic browser recovery proof",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:22:17.201Z"
+    },
+    {
+      "id": "a6a7f027-e87a-45a5-ba15-bc2ca5ef0e40",
+      "eventTime": "2026-09-14T12:22:25.551Z",
+      "eventType": "guarantor.link.completed",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "resourceType": "Task",
+      "resourceId": "af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "actionOutcome": "granted",
+      "actionReason": "transfer Task/af6e341d-4116-46ae-bc07-82eeb704d9e7 S=Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063 D=Person/34597250-1590-4656-b9ad-432bba442ed7 phase=linked; Synthetic browser recovery proof",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:22:25.551Z"
+    },
+    {
+      "id": "c0bacf95-c0fd-4c35-ae0d-e6b60789865d",
+      "eventTime": "2026-09-14T12:22:25.563Z",
+      "eventType": "guarantor.link.completed",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "d41d57bd-3138-4044-b6f8-0b8acb933457",
+      "resourceType": "Task",
+      "resourceId": "af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "actionOutcome": "granted",
+      "actionReason": "transfer Task/af6e341d-4116-46ae-bc07-82eeb704d9e7 S=Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063 D=Person/34597250-1590-4656-b9ad-432bba442ed7 phase=linked; Synthetic browser recovery proof",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:22:25.563Z"
+    },
+    {
+      "id": "9676c0ca-0fcb-491c-90e6-ee75190165a9",
+      "eventTime": "2026-09-14T12:22:27.440Z",
+      "eventType": "guarantor.link.started",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "resourceType": "Task",
+      "resourceId": "95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "actionOutcome": "granted",
+      "actionReason": "correct Task/95959b7b-af23-45b2-8c29-8a34b66e3bff S=Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0 D=Person/d28331fe-2856-4e6a-9017-6d34ed59a978 phase=claiming; Synthetic proof: retain the original guarantor",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:22:27.440Z"
+    },
+    {
+      "id": "ce97e729-2305-4f3d-84b4-cddd58f3b48e",
+      "eventTime": "2026-09-14T12:22:27.455Z",
+      "eventType": "guarantor.link.started",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "cd6c0e58-041a-49fd-9b13-41bd0ecfd683",
+      "resourceType": "Task",
+      "resourceId": "95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "actionOutcome": "granted",
+      "actionReason": "correct Task/95959b7b-af23-45b2-8c29-8a34b66e3bff S=Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0 D=Person/d28331fe-2856-4e6a-9017-6d34ed59a978 phase=claiming; Synthetic proof: retain the original guarantor",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:22:27.455Z"
+    },
+    {
+      "id": "9f1437c3-977b-4132-945a-0ac08608c1b4",
+      "eventTime": "2026-09-14T12:22:28.851Z",
+      "eventType": "guarantor.link.completed",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "resourceType": "Task",
+      "resourceId": "95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "actionOutcome": "granted",
+      "actionReason": "correct Task/95959b7b-af23-45b2-8c29-8a34b66e3bff S=Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0 D=Person/d28331fe-2856-4e6a-9017-6d34ed59a978 phase=linked; Synthetic proof: retain the original guarantor",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:22:28.851Z"
+    },
+    {
+      "id": "51bf8ccd-d4fd-446b-bd66-c9782f29497a",
+      "eventTime": "2026-09-14T12:22:28.875Z",
+      "eventType": "guarantor.link.completed",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "cd6c0e58-041a-49fd-9b13-41bd0ecfd683",
+      "resourceType": "Task",
+      "resourceId": "95959b7b-af23-45b2-8c29-8a34b66e3bff",
+      "actionOutcome": "granted",
+      "actionReason": "correct Task/95959b7b-af23-45b2-8c29-8a34b66e3bff S=Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0 D=Person/d28331fe-2856-4e6a-9017-6d34ed59a978 phase=linked; Synthetic proof: retain the original guarantor",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:22:28.875Z"
+    }
+  ],
+  "browserRequests": [
+    {
+      "method": "GET",
+      "path": "/clinic?patientId=ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/office/messages",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/office/messages",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Basic?code=https%3A%2F%2Fodos2020.com%2Ffhir%2FCodeSystem%2Fappearance-config%7Codos-appearance-config&_count=10",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Basic?code=https%3A%2F%2Fodos2020.com%2Ffhir%2FCodeSystem%2Fappearance-config%7Codos-appearance-config&_count=10",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/desk/whoami",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Patient/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/summary",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Patient/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/communications/opt-out?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/communications/opt-out?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/VisionPrescription?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a&status=active&_count=20&_sort=-datewritten",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/VisionPrescription?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a&status=active&_count=20&_sort=-datewritten",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/summary",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/patients/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a/overview?filter=all",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/patients/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a/overview?filter=all",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/series-tracker/patients/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/series-tracker/protocols?includeArchived=false",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/clinical-graph/procedure-definitions",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/series-tracker/patients/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/series-tracker/protocols?includeArchived=false",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/clinical-graph/procedure-definitions",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/communications/opt-out?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/communications/preferences?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/communications/opt-out?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/communications/preferences?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/guarantors/link-operations/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/guarantors/link-operations/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/guarantors/link-operations/af6e341d-4116-46ae-bc07-82eeb704d9e7/complete",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2Faa6e025a-c5f5-4046-8202-7ef50bfe1fa6",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Patient/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Patient/d41d57bd-3138-4044-b6f8-0b8acb933457",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Person/34597250-1590-4656-b9ad-432bba442ed7",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/clinic?patientId=1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/office/messages",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/office/messages",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Basic?code=https%3A%2F%2Fodos2020.com%2Ffhir%2FCodeSystem%2Fappearance-config%7Codos-appearance-config&_count=10",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Basic?code=https%3A%2F%2Fodos2020.com%2Ffhir%2FCodeSystem%2Fappearance-config%7Codos-appearance-config&_count=10",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/desk/whoami",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Patient/1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Patient/1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/summary",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/communications/opt-out?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/communications/opt-out?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/VisionPrescription?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8&status=active&_count=20&_sort=-datewritten",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/VisionPrescription?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8&status=active&_count=20&_sort=-datewritten",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/communications/opt-out?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/communications/preferences?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/communications/opt-out?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/communications/preferences?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/summary",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/patients/1e33d159-6daa-48b3-9f59-f4ea348987d8/overview?filter=all",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/patients/1e33d159-6daa-48b3-9f59-f4ea348987d8/overview?filter=all",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/series-tracker/patients/1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/series-tracker/protocols?includeArchived=false",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/clinical-graph/procedure-definitions",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/series-tracker/patients/1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/series-tracker/protocols?includeArchived=false",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/clinical-graph/procedure-definitions",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/guarantors/link-operations/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/guarantors/link-operations/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/guarantors/link-operations/c397cba3-0f8b-4c29-a300-57c1ce9ad562/correct",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Patient/1e33d159-6daa-48b3-9f59-f4ea348987d8",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Patient/cd6c0e58-041a-49fd-9b13-41bd0ecfd683",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Person/d28331fe-2856-4e6a-9017-6d34ed59a978",
+      "status": 200
+    }
+  ],
+  "browserErrors": [],
+  "screenshots": [
+    {
+      "name": "pending-complete.png",
+      "width": 982,
+      "height": 584,
+      "sha256": "c10da0d380305e3df42e29e81284aa644c5ba875187b37b9260aa7cd1671f73b"
+    },
+    {
+      "name": "patient-route-pending.png",
+      "width": 1440,
+      "height": 1100,
+      "sha256": "b52b53099cbc7b873664a3d94c2593ab626cfd1a4e1eae281ea0afd41602d2da"
+    },
+    {
+      "name": "complete-reloaded.png",
+      "width": 982,
+      "height": 820,
+      "sha256": "53f07595e720600ffce99b27c159fca9c87c6a24cb7a379f8e35d1bf3538da20"
+    },
+    {
+      "name": "pending-correct.png",
+      "width": 982,
+      "height": 584,
+      "sha256": "a0b2af369f260f02100b6983ba25b4753b9ac5d54c432d07ea2652e32423d7be"
+    },
+    {
+      "name": "correct-reloaded.png",
+      "width": 982,
+      "height": 820,
+      "sha256": "c89700bd7bce1ea318adef09f61f5d022b1b55912b9af9a9c22be724cd058fbd"
+    }
+  ],
+  "result": "PASS",
+  "checks": {
+    "recoveryClicks": 2,
+    "claimedUnlinkedChildrenShownPending": 4,
+    "disabledSaveAndRepairClickAttempts": 4,
+    "protectedChildSentinelsPreserved": 4,
+    "directBrowserFhirPuts": 0,
+    "pageErrors": 0,
+    "correctWithoutNativeRandomUUID": true,
+    "correctOperationIdValidV4": true,
+    "scope": "Author route wiring and real local FHIR state proof; independent evaluation and policy proof are separate.",
+    "unmountedBackgroundRoutes": [
+      {
+        "method": "GET",
+        "path": "/clinic/office/messages",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/clinic/office/messages",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/communications/opt-out?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/communications/opt-out?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/series-tracker/patients/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/series-tracker/protocols?includeArchived=false",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/clinical-graph/procedure-definitions",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/series-tracker/patients/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/series-tracker/protocols?includeArchived=false",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/clinical-graph/procedure-definitions",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/communications/opt-out?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/communications/preferences?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/communications/opt-out?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/communications/preferences?patient=Patient%2Fef70be2f-9e12-4c0d-a86c-2f8a3d23a61a",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/clinic/office/messages",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/clinic/office/messages",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/communications/opt-out?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/communications/opt-out?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/communications/opt-out?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/communications/preferences?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/communications/opt-out?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/communications/preferences?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/series-tracker/patients/1e33d159-6daa-48b3-9f59-f4ea348987d8",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/series-tracker/protocols?includeArchived=false",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/clinical-graph/procedure-definitions",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/series-tracker/patients/1e33d159-6daa-48b3-9f59-f4ea348987d8",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/series-tracker/protocols?includeArchived=false",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/clinical-graph/procedure-definitions",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2F1e33d159-6daa-48b3-9f59-f4ea348987d8",
+        "status": 404
+      }
+    ]
+  },
+  "completedAt": "2026-09-14T12:22:29.459Z"
+}

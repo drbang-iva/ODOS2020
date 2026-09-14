@@ -1,0 +1,1171 @@
+{
+  "source": {
+    "head": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
+    "files": {
+      "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
+      "mcp/src/fhir-client.ts": "57715549311950cbd1306173f71e1e98563d1c97421b3a578fce18e687bd925b",
+      "ui/src/lib/guarantor-editor.ts": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06",
+      "ui/src/lib/guarantor-link-operations.ts": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+      "mcp/src/authz/role-grants.ts": "7b69b7ea07156dc97cafcf2e1225841bca66c72cf30be8b8d5cbffc283ec18f5"
+    }
+  },
+  "checks": [
+    {
+      "scenario": "L1",
+      "name": "A completed",
+      "actual": [
+        200,
+        "completed"
+      ],
+      "expected": [
+        200,
+        "completed"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L1",
+      "name": "B failed/claim-conflict",
+      "actual": [
+        409,
+        "failed",
+        "claim-conflict"
+      ],
+      "expected": [
+        409,
+        "failed",
+        "claim-conflict"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L1",
+      "name": "B attempts exactly one child claim, refused412",
+      "actual": [
+        412
+      ],
+      "expected": [
+        412
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L1",
+      "name": "Losing starter sends zero Person writes",
+      "actual": 0,
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "scenario": "L1",
+      "name": "Child has exactly A destination owner",
+      "actual": [
+        "ad932d66-71a7-42e3-9b04-4cf9279f9d30"
+      ],
+      "expected": [
+        "ad932d66-71a7-42e3-9b04-4cf9279f9d30"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L1",
+      "name": "Winning child claim released",
+      "actual": [],
+      "expected": [],
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Competing D demographic edit lands before phase 3 PUT",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Original attach conflict is HTTP409",
+      "actual": 409,
+      "expected": 409,
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Original Task is in-progress/attach-pending",
+      "actual": [
+        "in-progress",
+        "attach-pending"
+      ],
+      "expected": [
+        "in-progress",
+        "attach-pending"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Detach precedes refused attach: child is unowned",
+      "actual": [],
+      "expected": [],
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Pending child still claimed by A",
+      "actual": [
+        "Task/cbc56b2d-a4f9-4ac7-b901-ffa42ce75539"
+      ],
+      "expected": [
+        "Task/cbc56b2d-a4f9-4ac7-b901-ffa42ce75539"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Actual editor loads pending state",
+      "actual": "pending",
+      "expected": "pending",
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Pending editor names active operation for Complete/Correct",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Sibling remaining under S loads editable",
+      "actual": "editable",
+      "expected": "editable",
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Sibling G2a save remains normal",
+      "actual": "saved",
+      "expected": "saved",
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Sibling child write lands",
+      "actual": [
+        "updated"
+      ],
+      "expected": [
+        "updated"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Foreign-code based-on fixtures are genuinely service authored",
+      "actual": [
+        "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+        "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2"
+      ],
+      "expected": [
+        "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+        "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Complete completes pending operation",
+      "actual": [
+        200,
+        "completed"
+      ],
+      "expected": [
+        200,
+        "completed"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Complete fences S and D before attaching D",
+      "actual": [
+        "fence-source",
+        "fence-destination",
+        "attaching"
+      ],
+      "expected": [
+        "fence-source",
+        "fence-destination",
+        "attaching"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Complete gives one destination owner",
+      "actual": [
+        "4c33dd75-a0f4-4c55-aad3-d6bc46d244e9"
+      ],
+      "expected": [
+        "4c33dd75-a0f4-4c55-aad3-d6bc46d244e9"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Complete projects current competitor-edited D",
+      "actual": [
+        {
+          "family": "Synthetic",
+          "given": [
+            "L3 current destination"
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "family": "Synthetic",
+          "given": [
+            "L3 current destination"
+          ]
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Complete releases the claim",
+      "actual": [],
+      "expected": [],
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Sibling remains under S",
+      "actual": [
+        "d1c5b0d0-5a6c-45a8-b20e-f7b3d5535034"
+      ],
+      "expected": [
+        "d1c5b0d0-5a6c-45a8-b20e-f7b3d5535034"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L4",
+      "name": "Divergent child fixture edit lands",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L4",
+      "name": "Repair fixture is actually mismatched",
+      "actual": "mismatched",
+      "expected": "mismatched",
+      "passed": true
+    },
+    {
+      "scenario": "L4",
+      "name": "Repair runs after real claim200",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L4",
+      "name": "Repair stops on the fresh claim",
+      "actual": [
+        "stopped"
+      ],
+      "expected": [
+        "stopped"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L4",
+      "name": "Repair sends zero RelatedPerson PUTs",
+      "actual": 0,
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "scenario": "L4",
+      "name": "Operation completes after blocked repair",
+      "actual": [
+        200,
+        "completed"
+      ],
+      "expected": [
+        200,
+        "completed"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L4",
+      "name": "Completed child has D details",
+      "actual": [
+        {
+          "family": "Synthetic",
+          "given": [
+            "L4 destination"
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "family": "Synthetic",
+          "given": [
+            "L4 destination"
+          ]
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L11-Destination",
+      "name": "Foreign Destination refused422",
+      "actual": 422,
+      "expected": 422,
+      "passed": true
+    },
+    {
+      "scenario": "L11-Destination",
+      "name": "Scope refusal sends zero operation writes",
+      "actual": 0,
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "scenario": "L11-Patient",
+      "name": "Foreign Patient refused422",
+      "actual": 422,
+      "expected": 422,
+      "passed": true
+    },
+    {
+      "scenario": "L11-Patient",
+      "name": "Scope refusal sends zero operation writes",
+      "actual": 0,
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "scenario": "L13",
+      "name": "Claim200 response was dropped",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L13",
+      "name": "Unconfirmed original remains pending",
+      "actual": [
+        409,
+        "in-progress"
+      ],
+      "expected": [
+        409,
+        "in-progress"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L13",
+      "name": "Pending claim intent is unresolved",
+      "actual": 1,
+      "expected": 1,
+      "passed": true
+    },
+    {
+      "scenario": "L13",
+      "name": "Staff removes landed claim200",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L13",
+      "name": "Complete classifies changed content as interfered",
+      "actual": [
+        409,
+        "in-progress",
+        "interfered"
+      ],
+      "expected": [
+        409,
+        "in-progress",
+        "interfered"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L13",
+      "name": "Interference allows zero further domain writes",
+      "actual": 0,
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "scenario": "L13",
+      "name": "Interference response names the child",
+      "actual": "RelatedPerson/bb771393-70d4-4500-939f-f9d4016a8bff",
+      "expected": "RelatedPerson/bb771393-70d4-4500-939f-f9d4016a8bff",
+      "passed": true
+    },
+    {
+      "scenario": "L14-landed",
+      "name": "Detach crash prefix was reached",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L14-landed",
+      "name": "Original retains pending Task",
+      "actual": [
+        409,
+        "in-progress"
+      ],
+      "expected": [
+        409,
+        "in-progress"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L14-landed",
+      "name": "Detach intent remains unresolved before recovery",
+      "actual": 1,
+      "expected": 1,
+      "passed": true
+    },
+    {
+      "scenario": "L14-landed",
+      "name": "Prefix ownership matches delivery",
+      "actual": [],
+      "expected": [],
+      "passed": true
+    },
+    {
+      "scenario": "L14-landed",
+      "name": "First source fence uses original intent expectedVersion",
+      "actual": "W/\"b7dca8da-d576-4bc5-8299-a1ce00cd7984\"",
+      "expected": "W/\"b7dca8da-d576-4bc5-8299-a1ce00cd7984\"",
+      "passed": true
+    },
+    {
+      "scenario": "L14-landed",
+      "name": "Source fence observes contract delivery statuses",
+      "actual": [
+        412,
+        200
+      ],
+      "expected": [
+        412,
+        200
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L14-landed",
+      "name": "Recovery completes",
+      "actual": [
+        200,
+        "completed"
+      ],
+      "expected": [
+        200,
+        "completed"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L14-landed",
+      "name": "Recovered child has one D owner",
+      "actual": [
+        "1b6fd916-8eec-4ab6-94bb-3c24dbf744dd"
+      ],
+      "expected": [
+        "1b6fd916-8eec-4ab6-94bb-3c24dbf744dd"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L14-landed",
+      "name": "Original detach classified from fresh content",
+      "actual": "landed",
+      "expected": "landed",
+      "passed": true
+    },
+    {
+      "scenario": "L14-unsent",
+      "name": "Detach crash prefix was reached",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L14-unsent",
+      "name": "Original retains pending Task",
+      "actual": [
+        409,
+        "in-progress"
+      ],
+      "expected": [
+        409,
+        "in-progress"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L14-unsent",
+      "name": "Detach intent remains unresolved before recovery",
+      "actual": 1,
+      "expected": 1,
+      "passed": true
+    },
+    {
+      "scenario": "L14-unsent",
+      "name": "Prefix ownership matches delivery",
+      "actual": [
+        "3170e96c-af00-4edb-b43d-f410c55e297d"
+      ],
+      "expected": [
+        "3170e96c-af00-4edb-b43d-f410c55e297d"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L14-unsent",
+      "name": "First source fence uses original intent expectedVersion",
+      "actual": "W/\"eea88af2-b934-4426-97d2-274ede3df373\"",
+      "expected": "W/\"eea88af2-b934-4426-97d2-274ede3df373\"",
+      "passed": true
+    },
+    {
+      "scenario": "L14-unsent",
+      "name": "Source fence observes contract delivery statuses",
+      "actual": [
+        200
+      ],
+      "expected": [
+        200
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L14-unsent",
+      "name": "Recovery completes",
+      "actual": [
+        200,
+        "completed"
+      ],
+      "expected": [
+        200,
+        "completed"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L14-unsent",
+      "name": "Recovered child has one D owner",
+      "actual": [
+        "574fcc75-b61f-4338-bd19-7f8a26ddeaa2"
+      ],
+      "expected": [
+        "574fcc75-b61f-4338-bd19-7f8a26ddeaa2"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L14-unsent",
+      "name": "Original detach classified from fresh content",
+      "actual": "not-landed",
+      "expected": "not-landed",
+      "passed": true
+    },
+    {
+      "scenario": "L15-paused",
+      "name": "Competing D demographic edit lands before phase 3 PUT",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L15-paused",
+      "name": "Original attach conflict is HTTP409",
+      "actual": 409,
+      "expected": 409,
+      "passed": true
+    },
+    {
+      "scenario": "L15-paused",
+      "name": "Original Task is in-progress/attach-pending",
+      "actual": [
+        "in-progress",
+        "attach-pending"
+      ],
+      "expected": [
+        "in-progress",
+        "attach-pending"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-paused",
+      "name": "Correct completes while A is paused",
+      "actual": [
+        200,
+        "completed"
+      ],
+      "expected": [
+        200,
+        "completed"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-paused",
+      "name": "Paused A stale D PUT is refused412",
+      "actual": [
+        412
+      ],
+      "expected": [
+        412
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-paused",
+      "name": "A cancelled and C completed",
+      "actual": [
+        "cancelled",
+        "completed"
+      ],
+      "expected": [
+        "cancelled",
+        "completed"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-paused",
+      "name": "Correct leaves exactly original S as owner",
+      "actual": [
+        "ed75ff11-0d3a-479e-8b4f-fee0d8380a47"
+      ],
+      "expected": [
+        "ed75ff11-0d3a-479e-8b4f-fee0d8380a47"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-paused",
+      "name": "Correction releases claim",
+      "actual": [],
+      "expected": [],
+      "passed": true
+    },
+    {
+      "scenario": "L15-paused",
+      "name": "Late definite A refusal is persisted as rejected",
+      "actual": [
+        "rejected",
+        412
+      ],
+      "expected": [
+        "rejected",
+        412
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-takeover-fail",
+      "name": "Competing D demographic edit lands before phase 3 PUT",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L15-takeover-fail",
+      "name": "Original attach conflict is HTTP409",
+      "actual": 409,
+      "expected": 409,
+      "passed": true
+    },
+    {
+      "scenario": "L15-takeover-fail",
+      "name": "Original Task is in-progress/attach-pending",
+      "actual": [
+        "in-progress",
+        "attach-pending"
+      ],
+      "expected": [
+        "in-progress",
+        "attach-pending"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-takeover-fail",
+      "name": "Staff edit after C fences and before takeover lands200",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L15-takeover-fail",
+      "name": "C fails only takeover-conflict",
+      "actual": [
+        409,
+        "failed",
+        "takeover-conflict"
+      ],
+      "expected": [
+        409,
+        "failed",
+        "takeover-conflict"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-takeover-fail",
+      "name": "Failed takeover leaves A in-progress",
+      "actual": "in-progress",
+      "expected": "in-progress",
+      "passed": true
+    },
+    {
+      "scenario": "L15-takeover-fail",
+      "name": "Failed takeover retains A claim",
+      "actual": [
+        "Task/2ee0b7db-7260-4e13-83ec-fe6d7e4f4a3d"
+      ],
+      "expected": [
+        "Task/2ee0b7db-7260-4e13-83ec-fe6d7e4f4a3d"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-takeover-fail",
+      "name": "C fences both Persons before refused takeover",
+      "actual": [
+        [
+          "fence-source",
+          200
+        ],
+        [
+          "fence-destination",
+          200
+        ],
+        [
+          "claiming",
+          412
+        ]
+      ],
+      "expected": [
+        [
+          "fence-source",
+          200
+        ],
+        [
+          "fence-destination",
+          200
+        ],
+        [
+          "claiming",
+          412
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-takeover-fail",
+      "name": "A remains completable",
+      "actual": [
+        200,
+        "completed"
+      ],
+      "expected": [
+        200,
+        "completed"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-takeover-fail",
+      "name": "A completion leaves one D owner",
+      "actual": [
+        "e0dc3d09-c414-4b21-af34-51e07df180ec"
+      ],
+      "expected": [
+        "e0dc3d09-c414-4b21-af34-51e07df180ec"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-partial-correction",
+      "name": "Competing D demographic edit lands before phase 3 PUT",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L15-partial-correction",
+      "name": "Original attach conflict is HTTP409",
+      "actual": 409,
+      "expected": 409,
+      "passed": true
+    },
+    {
+      "scenario": "L15-partial-correction",
+      "name": "Original Task is in-progress/attach-pending",
+      "actual": [
+        "in-progress",
+        "attach-pending"
+      ],
+      "expected": [
+        "in-progress",
+        "attach-pending"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-partial-correction",
+      "name": "A yields takeover-in-progress while C is paused",
+      "actual": [
+        409,
+        "takeover-in-progress"
+      ],
+      "expected": [
+        409,
+        "takeover-in-progress"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-partial-correction",
+      "name": "A sends only its fenced stale D attempt",
+      "actual": [
+        412
+      ],
+      "expected": [
+        412
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-partial-correction",
+      "name": "Paused C has not attached and A cannot create an owner",
+      "actual": [],
+      "expected": [],
+      "passed": true
+    },
+    {
+      "scenario": "L15-partial-correction",
+      "name": "C completes after A yields",
+      "actual": [
+        200,
+        "completed"
+      ],
+      "expected": [
+        200,
+        "completed"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-partial-correction",
+      "name": "Stronger paused correction leaves one original S owner",
+      "actual": [
+        "cd965a28-ae15-4c67-854d-48c663b86525"
+      ],
+      "expected": [
+        "cd965a28-ae15-4c67-854d-48c663b86525"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L15-partial-correction",
+      "name": "Stronger paused correction cancels A and completes C",
+      "actual": [
+        "cancelled",
+        "completed"
+      ],
+      "expected": [
+        "cancelled",
+        "completed"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L16-claim",
+      "name": "B is genuine service-authored pending operation",
+      "actual": [
+        "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+        "in-progress"
+      ],
+      "expected": [
+        "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+        "in-progress"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L16-claim",
+      "name": "Competitor claim write after5a and before release lands200",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L16-claim",
+      "name": "Release competitor moment reached",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L16-claim",
+      "name": "A release was refused412",
+      "actual": [
+        412
+      ],
+      "expected": [
+        412
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L16-claim",
+      "name": "A returns project-pending, not completed",
+      "actual": [
+        409,
+        "in-progress",
+        "project-pending"
+      ],
+      "expected": [
+        409,
+        "in-progress",
+        "project-pending"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L16-claim",
+      "name": "Verification race preserves single D ownership",
+      "actual": [
+        "5781d4e5-ea74-4c85-8cc3-d1577342e94f"
+      ],
+      "expected": [
+        "5781d4e5-ea74-4c85-8cc3-d1577342e94f"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L16-claim",
+      "name": "B claim remains visible on pending child",
+      "actual": [
+        "Task/2463e9cb-676b-4bad-919a-5e588400f135"
+      ],
+      "expected": [
+        "Task/2463e9cb-676b-4bad-919a-5e588400f135"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L16-demographics",
+      "name": "Competitor demographics write after5a and before release lands200",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L16-demographics",
+      "name": "Release competitor moment reached",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L16-demographics",
+      "name": "A release was refused412",
+      "actual": [
+        412
+      ],
+      "expected": [
+        412
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L16-demographics",
+      "name": "A returns project-pending, not completed",
+      "actual": [
+        409,
+        "in-progress",
+        "project-pending"
+      ],
+      "expected": [
+        409,
+        "in-progress",
+        "project-pending"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L16-demographics",
+      "name": "Verification race preserves single D ownership",
+      "actual": [
+        "bd5401bd-73e4-4518-9734-97d2998d0248"
+      ],
+      "expected": [
+        "bd5401bd-73e4-4518-9734-97d2998d0248"
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L16-demographics",
+      "name": "Staff overwritten name remains visible with pending status",
+      "actual": [
+        {
+          "family": "Synthetic",
+          "given": [
+            "L16 staff overwritten after verification"
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "family": "Synthetic",
+          "given": [
+            "L16 staff overwritten after verification"
+          ]
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "L1",
+      "name": "Actual operation audit rows persisted for this patient",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L3",
+      "name": "Actual operation audit rows persisted for this patient",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L4",
+      "name": "Actual operation audit rows persisted for this patient",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L11-Destination",
+      "name": "Scope refusal has zero operation audit starts",
+      "actual": 0,
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "scenario": "L11-Patient",
+      "name": "Scope refusal has zero operation audit starts",
+      "actual": 0,
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "scenario": "L13",
+      "name": "Actual operation audit rows persisted for this patient",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L13",
+      "name": "Interference audit names the target child",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L14-landed",
+      "name": "Actual operation audit rows persisted for this patient",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L14-unsent",
+      "name": "Actual operation audit rows persisted for this patient",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L15-paused",
+      "name": "Actual operation audit rows persisted for this patient",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L15-takeover-fail",
+      "name": "Actual operation audit rows persisted for this patient",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L15-partial-correction",
+      "name": "Actual operation audit rows persisted for this patient",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L16-claim",
+      "name": "Actual operation audit rows persisted for this patient",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "L16-demographics",
+      "name": "Actual operation audit rows persisted for this patient",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "scenario": "seal",
+      "name": "Source digests unchanged during capture",
+      "actual": {
+        "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+        "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
+        "mcp/src/fhir-client.ts": "57715549311950cbd1306173f71e1e98563d1c97421b3a578fce18e687bd925b",
+        "ui/src/lib/guarantor-editor.ts": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06",
+        "ui/src/lib/guarantor-link-operations.ts": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+        "mcp/src/authz/role-grants.ts": "7b69b7ea07156dc97cafcf2e1225841bca66c72cf30be8b8d5cbffc283ec18f5"
+      },
+      "expected": {
+        "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+        "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
+        "mcp/src/fhir-client.ts": "57715549311950cbd1306173f71e1e98563d1c97421b3a578fce18e687bd925b",
+        "ui/src/lib/guarantor-editor.ts": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06",
+        "ui/src/lib/guarantor-link-operations.ts": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+        "mcp/src/authz/role-grants.ts": "7b69b7ea07156dc97cafcf2e1225841bca66c72cf30be8b8d5cbffc283ec18f5"
+      },
+      "passed": true
+    }
+  ],
+  "failed": 0
+}

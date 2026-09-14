@@ -1,0 +1,33 @@
+TAP version 13
+# Subtest: S7: Save keeps the loaded child version after its fresh claim-only read
+not ok 1 - S7: Save keeps the loaded child version after its fresh claim-only read
+  ---
+  duration_ms: 18.680625
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:10935'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    'W/"2"' !== 'W/"1"'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'W/"1"'
+  actual: 'W/"2"'
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:216:10)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 249.766167

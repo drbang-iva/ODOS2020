@@ -1,0 +1,204 @@
+TAP version 13
+# Subtest: L4 S7: Repair sees a claim in its fresh read and submits no child PUT
+not ok 1 - L4 S7: Repair sees a claim in its fresh read and submits no child PUT
+  ---
+  duration_ms: 21.014291
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:9632'
+  failureType: 'testCodeFailure'
+  error: |-
+    claim check removal must expose a successful repair PUT in this transport list
+    + actual - expected
+
+    + [
+    +   {
+    +     body: {
+    +       active: true,
+    +       address: [
+    +         {
+    +           line: [
+    +             'Destination street'
+    +           ]
+    +         }
+    +       ],
+    +       extension: [
+    +         {
+    +           url: 'https://example.test/sentinel',
+    +           valueString: 'a'
+    +         },
+    +         {
+    +           url: 'https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim',
+    +           valueReference: {
+    +             reference: 'Task/06b18b36-e59d-4aaf-8d32-59cbce7abf86'
+    +           }
+    +         }
+    +       ],
+    +       id: 'a',
+    +       meta: {
+    +         versionId: '2'
+    +       },
+    +       name: [
+    +         {
+    +           family: 'Guardian',
+    +           given: [
+    +             'Destination'
+    +           ]
+    +         }
+    +       ],
+    +       patient: {
+    +         reference: 'Patient/sam'
+    +       },
+    +       period: {
+    +         start: '2020-01-01'
+    +       },
+    +       resourceType: 'RelatedPerson',
+    +       telecom: [
+    +         {
+    +           system: 'phone',
+    +           value: '+15555550102'
+    +         }
+    +       ]
+    +     },
+    +     method: 'PUT',
+    +     path: 'RelatedPerson/a',
+    +     status: 200,
+    +     version: 'W/"2"'
+    +   },
+    +   {
+    +     body: {
+    +       active: false,
+    +       address: [
+    +         {
+    +           line: [
+    +             'Destination street'
+    +           ]
+    +         }
+    +       ],
+    +       extension: [
+    +         {
+    +           url: 'https://example.test/sentinel',
+    +           valueString: 'b'
+    +         }
+    +       ],
+    +       id: 'b',
+    +       meta: {
+    +         versionId: '1'
+    +       },
+    +       name: [
+    +         {
+    +           family: 'Guardian',
+    +           given: [
+    +             'Destination'
+    +           ]
+    +         }
+    +       ],
+    +       patient: {
+    +         reference: 'Patient/leo'
+    +       },
+    +       period: {
+    +         start: '2020-01-01'
+    +       },
+    +       resourceType: 'RelatedPerson',
+    +       telecom: [
+    +         {
+    +           system: 'phone',
+    +           value: '+15555550102'
+    +         }
+    +       ]
+    +     },
+    +     method: 'PUT',
+    +     path: 'RelatedPerson/b',
+    +     status: 200,
+    +     version: 'W/"1"'
+    +   }
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      path: 'RelatedPerson/a'
+      method: 'PUT'
+      version: 'W/"2"'
+      body:
+        resourceType: 'RelatedPerson'
+        id: 'a'
+        meta:
+          versionId: '2'
+        name:
+          0:
+            given:
+              0: 'Destination'
+            family: 'Guardian'
+        telecom:
+          0:
+            system: 'phone'
+            value: '+15555550102'
+        address:
+          0:
+            line:
+              0: 'Destination street'
+        patient:
+          reference: 'Patient/sam'
+        active: true
+        period:
+          start: '2020-01-01'
+        extension:
+          0:
+            url: 'https://example.test/sentinel'
+            valueString: 'a'
+          1:
+            url: 'https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim'
+            valueReference:
+              reference: 'Task/06b18b36-e59d-4aaf-8d32-59cbce7abf86'
+      status: 200
+    1:
+      path: 'RelatedPerson/b'
+      method: 'PUT'
+      version: 'W/"1"'
+      body:
+        resourceType: 'RelatedPerson'
+        id: 'b'
+        meta:
+          versionId: '1'
+        name:
+          0:
+            given:
+              0: 'Destination'
+            family: 'Guardian'
+        telecom:
+          0:
+            system: 'phone'
+            value: '+15555550102'
+        address:
+          0:
+            line:
+              0: 'Destination street'
+        patient:
+          reference: 'Patient/leo'
+        active: false
+        period:
+          start: '2020-01-01'
+        extension:
+          0:
+            url: 'https://example.test/sentinel'
+            valueString: 'b'
+      status: 200
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:191:10)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 245.617542

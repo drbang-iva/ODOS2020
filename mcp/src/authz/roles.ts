@@ -34,6 +34,7 @@ export const BUSINESS_ACTIONS = [
   "clinical.sign",
   "scheduling.manage",
   "demographics.update",
+  "guarantor.link",
   "billing-context.read",
   "watchers.manage",
   "audit.read",
@@ -360,7 +361,15 @@ const STAFF_DISPENSARY_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
   { resourceType: "DeviceRequest", interactions: CREATE_ONLY_INTERACTIONS, scope: { kind: "practice" } },
   { resourceType: "ChargeItem", interactions: CREATE_ONLY_INTERACTIONS, scope: { kind: "practice" } },
   { resourceType: "PaymentReconciliation", interactions: CREATE_ONLY_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "Task", interactions: CREATE_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+  {
+    resourceType: "Task",
+    interactions: CREATE_UPDATE_INTERACTIONS,
+    scope: { kind: "practice" },
+    writeConstraint: [{
+      description: "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+      expression: "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()",
+    }],
+  },
   { resourceType: "Invoice", interactions: CREATE_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
 ];
 
@@ -942,6 +951,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       "chart.write",
       "patients.register",
       "clinical.sign",
+      "guarantor.link",
       "billing-context.read",
       "aesthetics.procedure.write",
       "break-glass.invoke",
@@ -1005,6 +1015,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       "patients.register",
       "scheduling.manage",
       "demographics.update",
+      "guarantor.link",
       "billing-context.read",
       "watchers.manage",
       "payment.charge",
@@ -1030,7 +1041,15 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       ...STAFF_PATIENT_WRITE_RESOURCE_RULES,
       ...STAFF_CORRESPONDENCE_RESOURCE_RULES,
       ...SCHEDULING_RESOURCE_RULES,
-      { resourceType: "Person", interactions: CREATE_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+      {
+        resourceType: "Person",
+        interactions: CREATE_UPDATE_INTERACTIONS,
+        scope: { kind: "practice" },
+        writeConstraint: [{
+          description: "Person links are managed by service operations; staff may edit demographics without changing links.",
+          expression: "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())",
+        }],
+      },
       APPEARANCE_CONFIG_READ_RULE,
       ...STAFF_DISPENSARY_WRITE_RESOURCE_RULES,
       ...CLAIMS_RESOURCE_RULES,
@@ -1054,6 +1073,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     businessActions: [
       "identity.manage",
       "role.review",
+      "guarantor.link",
       "chart.read",
       "patients.register",
       "scheduling.manage",

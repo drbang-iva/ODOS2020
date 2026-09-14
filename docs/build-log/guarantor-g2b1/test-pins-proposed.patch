@@ -1,0 +1,34 @@
+--- a/mcp/tests/liveAuditSchema.test.ts
++++ b/mcp/tests/liveAuditSchema.test.ts
+@@ -38,8 +38,10 @@
+   "2026-07-22-era-integrity-event.validate.sql",
+   "2026-07-31-document-print-events.sql",
+   "2026-07-31-document-print-events.validate.sql",
++  "2026-09-14-guarantor-link-events.sql",
++  "2026-09-14-guarantor-link-events.validate.sql",
+ ] as const;
+-const VALIDATE_MIGRATION_FILENAME = "2026-07-31-document-print-events.validate.sql";
++const VALIDATE_MIGRATION_FILENAME = "2026-09-14-guarantor-link-events.validate.sql";
+ const COMMERCIAL_MIGRATION_FILENAMES = [
+   "2026-07-18-commercial-engine-schema.sql",
+   "2026-07-18-commercial-engine-redemption-recovery.sql",
+--- a/tests/preflight/fhir-read-grant-check.test.ts
++++ b/tests/preflight/fhir-read-grant-check.test.ts
+@@ -291,7 +291,7 @@
+   assert.deepEqual(result.missingResourceTypes, []);
+   assert.deepEqual(result.excludedServiceIdentityResourceTypes, ["CodeSystem", "Project", "ProjectMembership", "User"]);
+   assert.equal(result.excludedNonFhirCallSites.length, 7);
+-  assert.equal(result.excludedServiceIdentityWriteCallSites?.length, 34);
++  assert.equal(result.excludedServiceIdentityWriteCallSites?.length, 37);
+   assert.equal(
+     result.excludedServiceIdentityWriteCallSites?.filter((entry) =>
+       entry.startsWith("mcp/src/weno/weno-search-routes.ts:")
+@@ -374,7 +374,7 @@
+   assert.match(result.stdout, /Excluded source extensions: all except \.ts, \.tsx/);
+   assert.match(result.stdout, /ProjectMembership — service identity authorization context/);
+   assert.match(result.stdout, /User — service identity account resolution/);
+-  assert.match(result.stdout, /Service-identity FHIR write call sites excluded \(34\):/);
++  assert.match(result.stdout, /Service-identity FHIR write call sites excluded \(37\):/);
+   assert.match(result.stdout, /SUSPECTED BROKEN FEATURE — known ungranted practice-role write call sites \(0\):/);
+   assert.match(result.stdout, /Non-FHIR literal call sites excluded:\n- mcp\/src\/bulk-data\/router\.ts:141 router\.delete/);
+   assert.match(result.stdout, /other names escape because receiver-independent matching would misclassify non-FHIR search APIs/);

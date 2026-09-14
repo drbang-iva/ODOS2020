@@ -1,0 +1,2053 @@
+{
+  "mode": "author development capture; not final-head evaluation",
+  "startedAt": "2026-09-14T12:19:28.938Z",
+  "beforeSource": {
+    "head": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
+    "files": {
+      "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
+      "mcp/src/authz/roles.ts": "afdd50b756f907121ccfeb965abdd72d8981739992c1d21f111d4568087cf114",
+      "mcp/src/authz/liveAudit.ts": "2d65d97951d365a3621310a89a88ef47587741fa67eb498e4f933f21c1295ddb",
+      "scripts/sync-practice-role-policy-rules.ts": "dab88bd2b33d81e2535e1f0459fc47696e85e9bad6a5154e255de5775bbb860f",
+      "ui/src/lib/guarantor-editor.ts": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06"
+    }
+  },
+  "afterSource": {
+    "head": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
+    "files": {
+      "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
+      "mcp/src/authz/roles.ts": "afdd50b756f907121ccfeb965abdd72d8981739992c1d21f111d4568087cf114",
+      "mcp/src/authz/liveAudit.ts": "2d65d97951d365a3621310a89a88ef47587741fa67eb498e4f933f21c1295ddb",
+      "scripts/sync-practice-role-policy-rules.ts": "dab88bd2b33d81e2535e1f0459fc47696e85e9bad6a5154e255de5775bbb860f",
+      "ui/src/lib/guarantor-editor.ts": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06"
+    }
+  },
+  "checks": [
+    {
+      "scenario": "L17 genuine operation",
+      "name": "Original run stops at a real conditional conflict",
+      "actual": 409,
+      "expected": 409,
+      "passed": true
+    },
+    {
+      "scenario": "L17 genuine operation",
+      "name": "Genuine Task remains active",
+      "actual": "in-progress",
+      "expected": "in-progress",
+      "passed": true
+    },
+    {
+      "scenario": "L17 genuine operation",
+      "name": "Genuine Task is service authored",
+      "actual": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "expected": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "passed": true
+    },
+    {
+      "scenario": "L17 staff Task fence baseline",
+      "name": "L17 staff status mutation",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 staff Task fence baseline",
+      "name": "L17 staff input mutation",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 staff Task fence baseline",
+      "name": "L17 staff code removal",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 staff Task fence baseline",
+      "name": "L17 staff completed creation",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 staff Task fence baseline",
+      "name": "Ordinary staff Task remains writable",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L17 composite Task fence baseline",
+      "name": "L17 composite status mutation",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 composite Task fence baseline",
+      "name": "L17 composite input mutation",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 composite Task fence baseline",
+      "name": "L17 composite code removal",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 composite Task fence baseline",
+      "name": "L17 composite completed creation",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 composite Task fence baseline",
+      "name": "Ordinary composite Task remains writable",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L17 staff-authored legacy fake fixture",
+      "name": "Legacy fake is actually staff authored",
+      "actual": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "expected": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "passed": true
+    },
+    {
+      "scenario": "L17(i) staff fake is inert",
+      "name": "Actual S4 preview ignores a staff-authored fake",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L17(vii) Correct refuses staff-authored Task",
+      "name": "Actual Correct refuses non-service author",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17(vii) Correct refuses staff-authored Task",
+      "name": "Refused Correct writes no operation resources",
+      "actual": 0,
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "scenario": "L17(ii) copied genuine claim is inert",
+      "name": "Actual S4 preview ignores genuine claim on an unlisted child",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L17 Task fence mutation",
+      "name": "L17 staff status mutation",
+      "actual": 200,
+      "expected": 403,
+      "passed": false,
+      "expectedFailure": true
+    },
+    {
+      "scenario": "L17 Task fence mutation",
+      "name": "L17 staff input mutation",
+      "actual": 200,
+      "expected": 403,
+      "passed": false,
+      "expectedFailure": true
+    },
+    {
+      "scenario": "L17 Task fence mutation",
+      "name": "L17 staff code removal",
+      "actual": 200,
+      "expected": 403,
+      "passed": false,
+      "expectedFailure": true
+    },
+    {
+      "scenario": "L17 Task fence mutation",
+      "name": "L17 staff completed creation",
+      "actual": 201,
+      "expected": 403,
+      "passed": false,
+      "expectedFailure": true
+    },
+    {
+      "scenario": "L17 Task fence mutation",
+      "name": "L17 composite status mutation",
+      "actual": 200,
+      "expected": 403,
+      "passed": false,
+      "expectedFailure": true
+    },
+    {
+      "scenario": "L17 Task fence mutation",
+      "name": "L17 composite input mutation",
+      "actual": 200,
+      "expected": 403,
+      "passed": false,
+      "expectedFailure": true
+    },
+    {
+      "scenario": "L17 Task fence mutation",
+      "name": "L17 composite code removal",
+      "actual": 200,
+      "expected": 403,
+      "passed": false,
+      "expectedFailure": true
+    },
+    {
+      "scenario": "L17 Task fence mutation",
+      "name": "L17 composite completed creation",
+      "actual": 201,
+      "expected": 403,
+      "passed": false,
+      "expectedFailure": true
+    },
+    {
+      "scenario": "L17 restored Task fence",
+      "name": "L17 staff status mutation",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 restored Task fence",
+      "name": "L17 staff input mutation",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 restored Task fence",
+      "name": "L17 staff code removal",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 restored Task fence",
+      "name": "L17 staff completed creation",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 restored Task fence",
+      "name": "L17 composite status mutation",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 restored Task fence",
+      "name": "L17 composite input mutation",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 restored Task fence",
+      "name": "L17 composite code removal",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L17 restored Task fence",
+      "name": "L17 composite completed creation",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff baseline",
+      "name": "L18 staff link change",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff baseline",
+      "name": "L18 staff linked name edit",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff baseline",
+      "name": "L18 staff empty-link name edit",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff baseline",
+      "name": "L18 staff create with link",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff baseline",
+      "name": "L18 staff create without link",
+      "actual": 201,
+      "expected": 201,
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff baseline",
+      "name": "L18 staff G2a loaded editor",
+      "actual": "editable",
+      "expected": "editable",
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff baseline",
+      "name": "L18 staff G2a save",
+      "actual": "saved",
+      "expected": "saved",
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff baseline",
+      "name": "L18 staff G2a child write",
+      "actual": "updated",
+      "expected": "updated",
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite baseline",
+      "name": "L18 composite link change",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite baseline",
+      "name": "L18 composite linked name edit",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite baseline",
+      "name": "L18 composite empty-link name edit",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite baseline",
+      "name": "L18 composite create with link",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite baseline",
+      "name": "L18 composite create without link",
+      "actual": 201,
+      "expected": 201,
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite baseline",
+      "name": "L18 composite G2a loaded editor",
+      "actual": "editable",
+      "expected": "editable",
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite baseline",
+      "name": "L18 composite G2a save",
+      "actual": "saved",
+      "expected": "saved",
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite baseline",
+      "name": "L18 composite G2a child write",
+      "actual": "updated",
+      "expected": "updated",
+      "passed": true
+    },
+    {
+      "scenario": "L18 Person fence removed",
+      "name": "L18 staff link change",
+      "actual": 200,
+      "expected": 403,
+      "passed": false,
+      "expectedFailure": true
+    },
+    {
+      "scenario": "L18 Person fence removed",
+      "name": "L18 composite link change",
+      "actual": 200,
+      "expected": 403,
+      "passed": false,
+      "expectedFailure": true
+    },
+    {
+      "scenario": "L18 revision 1 empty-link expression",
+      "name": "L18 staff empty-link name edit",
+      "actual": 403,
+      "expected": 200,
+      "passed": false,
+      "expectedFailure": true
+    },
+    {
+      "scenario": "L18 revision 1 empty-link expression",
+      "name": "L18 composite empty-link name edit",
+      "actual": 403,
+      "expected": 200,
+      "passed": false,
+      "expectedFailure": true
+    },
+    {
+      "scenario": "L18 staff restored",
+      "name": "L18 staff link change",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff restored",
+      "name": "L18 staff linked name edit",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff restored",
+      "name": "L18 staff empty-link name edit",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff restored",
+      "name": "L18 staff create with link",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff restored",
+      "name": "L18 staff create without link",
+      "actual": 201,
+      "expected": 201,
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff restored",
+      "name": "L18 staff G2a loaded editor",
+      "actual": "editable",
+      "expected": "editable",
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff restored",
+      "name": "L18 staff G2a save",
+      "actual": "saved",
+      "expected": "saved",
+      "passed": true
+    },
+    {
+      "scenario": "L18 staff restored",
+      "name": "L18 staff G2a child write",
+      "actual": "updated",
+      "expected": "updated",
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite restored",
+      "name": "L18 composite link change",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite restored",
+      "name": "L18 composite linked name edit",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite restored",
+      "name": "L18 composite empty-link name edit",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite restored",
+      "name": "L18 composite create with link",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite restored",
+      "name": "L18 composite create without link",
+      "actual": 201,
+      "expected": 201,
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite restored",
+      "name": "L18 composite G2a loaded editor",
+      "actual": "editable",
+      "expected": "editable",
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite restored",
+      "name": "L18 composite G2a save",
+      "actual": "saved",
+      "expected": "saved",
+      "passed": true
+    },
+    {
+      "scenario": "L18 composite restored",
+      "name": "L18 composite G2a child write",
+      "actual": "updated",
+      "expected": "updated",
+      "passed": true
+    }
+  ],
+  "mutations": [
+    {
+      "name": "Task constraint removed",
+      "observations": [
+        {
+          "scenario": "L17 Task fence mutation",
+          "name": "L17 staff status mutation",
+          "actual": 200,
+          "expected": 403,
+          "passed": false,
+          "expectedFailure": true
+        },
+        {
+          "scenario": "L17 Task fence mutation",
+          "name": "L17 staff input mutation",
+          "actual": 200,
+          "expected": 403,
+          "passed": false,
+          "expectedFailure": true
+        },
+        {
+          "scenario": "L17 Task fence mutation",
+          "name": "L17 staff code removal",
+          "actual": 200,
+          "expected": 403,
+          "passed": false,
+          "expectedFailure": true
+        },
+        {
+          "scenario": "L17 Task fence mutation",
+          "name": "L17 staff completed creation",
+          "actual": 201,
+          "expected": 403,
+          "passed": false,
+          "expectedFailure": true
+        },
+        {
+          "scenario": "L17 Task fence mutation",
+          "name": "L17 composite status mutation",
+          "actual": 200,
+          "expected": 403,
+          "passed": false,
+          "expectedFailure": true
+        },
+        {
+          "scenario": "L17 Task fence mutation",
+          "name": "L17 composite input mutation",
+          "actual": 200,
+          "expected": 403,
+          "passed": false,
+          "expectedFailure": true
+        },
+        {
+          "scenario": "L17 Task fence mutation",
+          "name": "L17 composite code removal",
+          "actual": 200,
+          "expected": 403,
+          "passed": false,
+          "expectedFailure": true
+        },
+        {
+          "scenario": "L17 Task fence mutation",
+          "name": "L17 composite completed creation",
+          "actual": 201,
+          "expected": 403,
+          "passed": false,
+          "expectedFailure": true
+        }
+      ],
+      "redExitCode": 1,
+      "redOutput": "node:internal/modules/run_main:123\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n+   200,\n+   200,\n+   200,\n+   201,\n+   200,\n+   200,\n+   200,\n+   201\n-   403,\n-   403,\n-   403,\n-   403,\n-   403,\n-   403,\n-   403,\n-   403\n  ]\n\n    at file://<source-root>/[eval1]:1:136\n    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:282:26)\n    at async ModuleLoader.executeModuleJob (node:internal/modules/esm/loader:278:20)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: [\n    200, 200, 200,\n    201, 200, 200,\n    200, 201\n  ],\n  expected: [\n    403, 403, 403,\n    403, 403, 403,\n    403, 403\n  ],\n  operator: 'deepStrictEqual',\n  diff: 'simple'\n}\n\nNode.js v22.22.3\n",
+      "caught": true
+    },
+    {
+      "name": "Person constraint removed",
+      "observations": [
+        {
+          "scenario": "L18 Person fence removed",
+          "name": "L18 staff link change",
+          "actual": 200,
+          "expected": 403,
+          "passed": false,
+          "expectedFailure": true
+        },
+        {
+          "scenario": "L18 Person fence removed",
+          "name": "L18 composite link change",
+          "actual": 200,
+          "expected": 403,
+          "passed": false,
+          "expectedFailure": true
+        }
+      ],
+      "redExitCode": 1,
+      "redOutput": "node:internal/modules/run_main:123\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n+   200,\n+   200\n-   403,\n-   403\n  ]\n\n    at file://<source-root>/[eval1]:1:136\n    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:282:26)\n    at async ModuleLoader.executeModuleJob (node:internal/modules/esm/loader:278:20)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: [ 200, 200 ],\n  expected: [ 403, 403 ],\n  operator: 'deepStrictEqual',\n  diff: 'simple'\n}\n\nNode.js v22.22.3\n",
+      "caught": true
+    },
+    {
+      "name": "Revision 1 Person expression",
+      "observations": [
+        {
+          "scenario": "L18 revision 1 empty-link expression",
+          "name": "L18 staff empty-link name edit",
+          "actual": 403,
+          "expected": 200,
+          "passed": false,
+          "expectedFailure": true
+        },
+        {
+          "scenario": "L18 revision 1 empty-link expression",
+          "name": "L18 composite empty-link name edit",
+          "actual": 403,
+          "expected": 200,
+          "passed": false,
+          "expectedFailure": true
+        }
+      ],
+      "redExitCode": 1,
+      "redOutput": "node:internal/modules/run_main:123\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n+   403,\n+   403\n-   200,\n-   200\n  ]\n\n    at file://<source-root>/[eval1]:1:136\n    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:282:26)\n    at async ModuleLoader.executeModuleJob (node:internal/modules/esm/loader:278:20)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: [ 403, 403 ],\n  expected: [ 200, 200 ],\n  operator: 'deepStrictEqual',\n  diff: 'simple'\n}\n\nNode.js v22.22.3\n",
+      "caught": true
+    }
+  ],
+  "checksFailed": 0,
+  "auditRows": [
+    {
+      "id": "9eb6ec77-b8f5-4adf-bf2b-0f1eb8a8d68d",
+      "eventTime": "2026-09-14T12:19:32.415Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "ProjectMembership",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:32.415Z"
+    },
+    {
+      "id": "c23b887f-0f55-462c-a74b-6fa496d7b978",
+      "eventTime": "2026-09-14T12:19:32.370Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:32.370Z"
+    },
+    {
+      "id": "53fc1edd-d97d-4039-bd73-88430c723528",
+      "eventTime": "2026-09-14T12:19:31.816Z",
+      "eventType": "policy-change",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "ca61bba9-d680-4ccb-b151-e44a6b587785",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:31.816Z"
+    },
+    {
+      "id": "073d4816-ce65-46db-9874-8462d15537ba",
+      "eventTime": "2026-09-14T12:19:31.795Z",
+      "eventType": "policy-change",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:31.795Z"
+    },
+    {
+      "id": "361a8433-4264-4ece-be29-b169f1784c39",
+      "eventTime": "2026-09-14T12:19:31.770Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "ProjectMembership",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:31.770Z"
+    },
+    {
+      "id": "e619ad17-2191-4cd2-a4e0-dc7d58342f00",
+      "eventTime": "2026-09-14T12:19:31.747Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:31.747Z"
+    },
+    {
+      "id": "4c589ba5-1238-4ac3-bf93-f5160382610a",
+      "eventTime": "2026-09-14T12:19:31.608Z",
+      "eventType": "policy-change",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "ca61bba9-d680-4ccb-b151-e44a6b587785",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:31.608Z"
+    },
+    {
+      "id": "98efe32f-9793-4e4a-924d-756e3d0d07c7",
+      "eventTime": "2026-09-14T12:19:31.584Z",
+      "eventType": "policy-change",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:31.584Z"
+    },
+    {
+      "id": "b92a6c00-315f-45d7-a54f-e6c98737fa92",
+      "eventTime": "2026-09-14T12:19:31.551Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "ProjectMembership",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:31.551Z"
+    },
+    {
+      "id": "3f3cc5f9-34fb-4067-9413-1b96534025d2",
+      "eventTime": "2026-09-14T12:19:31.527Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:31.527Z"
+    },
+    {
+      "id": "a71b192c-96c4-46b1-b271-fb135b8024cd",
+      "eventTime": "2026-09-14T12:19:30.595Z",
+      "eventType": "policy-change",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "ca61bba9-d680-4ccb-b151-e44a6b587785",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.595Z"
+    },
+    {
+      "id": "be892b09-6943-494e-915c-8a86ca0705fa",
+      "eventTime": "2026-09-14T12:19:30.572Z",
+      "eventType": "policy-change",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.572Z"
+    },
+    {
+      "id": "01f5d600-1741-4738-ba69-6b14e0d4b9f0",
+      "eventTime": "2026-09-14T12:19:30.542Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "ProjectMembership",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.542Z"
+    },
+    {
+      "id": "b8257239-1afb-40e3-a499-d07610684ee1",
+      "eventTime": "2026-09-14T12:19:30.522Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.522Z"
+    },
+    {
+      "id": "9f3f449a-d4e3-49b4-aa67-f9335cbeda0a",
+      "eventTime": "2026-09-14T12:19:30.338Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Task",
+      "resourceId": "04c43ba7-2faf-4e7d-a8fc-c53982421d18",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.338Z"
+    },
+    {
+      "id": "6cd3ffd1-9746-496c-80ba-d1a05eb0f0e8",
+      "eventTime": "2026-09-14T12:19:30.319Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.319Z"
+    },
+    {
+      "id": "ff96b4ab-0404-472b-b11a-3b63e04d0ab6",
+      "eventTime": "2026-09-14T12:19:30.304Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "patientId": "ef1d4b6f-7b44-4746-b3a7-200fdd3cec5d",
+      "resourceType": "Patient",
+      "resourceId": "ef1d4b6f-7b44-4746-b3a7-200fdd3cec5d",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.304Z"
+    },
+    {
+      "id": "ef421055-a31a-43cc-b3ac-e71e4ce98556",
+      "eventTime": "2026-09-14T12:19:30.290Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "RelatedPerson",
+      "resourceId": "a329f4be-19ad-4678-a004-426a4ea2be2e",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.290Z"
+    },
+    {
+      "id": "a23bb32a-cbe8-4c1e-9dc5-982261d4c20e",
+      "eventTime": "2026-09-14T12:19:30.275Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "resourceId": "5de10f42-9d41-4f77-8b7c-3c0c842731d2",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.275Z"
+    },
+    {
+      "id": "5eda638b-4d1c-48eb-9164-a060233fa2cd",
+      "eventTime": "2026-09-14T12:19:30.261Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "resourceId": "12722221-d517-4d8e-9525-cd2498309781",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.261Z"
+    },
+    {
+      "id": "9aacdf2b-a0e8-4c43-b8e4-74185d1dd5f6",
+      "eventTime": "2026-09-14T12:19:30.245Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.245Z"
+    },
+    {
+      "id": "f5c8012c-0cb5-4712-893e-28b1d8093cb3",
+      "eventTime": "2026-09-14T12:19:30.231Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "ProjectMembership",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.231Z"
+    },
+    {
+      "id": "542845bd-5643-45f0-910e-88fcfea67038",
+      "eventTime": "2026-09-14T12:19:30.197Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Task",
+      "resourceId": "309211f7-7ed4-47ab-8158-f6acea35049a",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.197Z"
+    },
+    {
+      "id": "9294cfe9-debe-4d40-b29e-477291da79b2",
+      "eventTime": "2026-09-14T12:19:30.182Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Task",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.182Z"
+    },
+    {
+      "id": "0c739069-5cc4-4407-ba77-9dd892f99f88",
+      "eventTime": "2026-09-14T12:19:30.170Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.170Z"
+    },
+    {
+      "id": "b591dcbd-c4b1-4673-84fd-fbbc9ee816d4",
+      "eventTime": "2026-09-14T12:19:30.161Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "ProjectMembership",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.161Z"
+    },
+    {
+      "id": "6fa8eb1c-f913-4bc5-815d-ca4c0481562e",
+      "eventTime": "2026-09-14T12:19:30.146Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Task",
+      "resourceId": "309211f7-7ed4-47ab-8158-f6acea35049a",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.146Z"
+    },
+    {
+      "id": "dae8ec31-7433-412e-ba15-bb6e557a6565",
+      "eventTime": "2026-09-14T12:19:30.135Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.135Z"
+    },
+    {
+      "id": "7a476aba-6beb-4b34-9543-a2e9a6869f61",
+      "eventTime": "2026-09-14T12:19:30.124Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "patientId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
+      "resourceType": "Patient",
+      "resourceId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.124Z"
+    },
+    {
+      "id": "85a10f42-ee0e-4f1a-a7cd-d46bf04b4d49",
+      "eventTime": "2026-09-14T12:19:30.111Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "RelatedPerson",
+      "resourceId": "6588592b-13d9-48b6-be1b-3b50e630606c",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.111Z"
+    },
+    {
+      "id": "92caf19f-32ca-4647-8a33-47bc0bc052b4",
+      "eventTime": "2026-09-14T12:19:30.100Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "resourceId": "af823f84-8d3b-44e3-b958-ef83cf80cb18",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.100Z"
+    },
+    {
+      "id": "c2c169a2-0ca2-40a6-827f-c2c668b1a578",
+      "eventTime": "2026-09-14T12:19:30.089Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "resourceId": "1b9cffb4-f6da-44ff-8dc4-eb58a16939c7",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.089Z"
+    },
+    {
+      "id": "7aefd583-6c3c-4717-9486-e05ce6fec679",
+      "eventTime": "2026-09-14T12:19:30.075Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.075Z"
+    },
+    {
+      "id": "35fed6df-75c4-4f31-b873-617306084df7",
+      "eventTime": "2026-09-14T12:19:30.063Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "ProjectMembership",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.063Z"
+    },
+    {
+      "id": "275d6bf2-842d-4f85-8325-6e45515de238",
+      "eventTime": "2026-09-14T12:19:30.004Z",
+      "eventType": "policy-change",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.004Z"
+    },
+    {
+      "id": "0f980b4e-f09c-447c-89e9-aa6037c9afd3",
+      "eventTime": "2026-09-14T12:19:29.969Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "ProjectMembership",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.969Z"
+    },
+    {
+      "id": "6ea24729-7eac-46ee-81b0-ef2b6601ce03",
+      "eventTime": "2026-09-14T12:19:29.933Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.933Z"
+    },
+    {
+      "id": "81e46044-3079-4a5d-a115-a69d5078151d",
+      "eventTime": "2026-09-14T12:19:29.671Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "patientId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
+      "resourceType": "Patient",
+      "resourceId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.671Z"
+    },
+    {
+      "id": "ed099b35-8019-40b4-8f7d-07e42b0568d0",
+      "eventTime": "2026-09-14T12:19:29.661Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "RelatedPerson",
+      "resourceId": "6588592b-13d9-48b6-be1b-3b50e630606c",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.661Z"
+    },
+    {
+      "id": "110abbfd-cba6-4558-972d-e645e88350df",
+      "eventTime": "2026-09-14T12:19:29.651Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "resourceId": "af823f84-8d3b-44e3-b958-ef83cf80cb18",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.651Z"
+    },
+    {
+      "id": "8a8ca15e-ebe5-47ce-a40d-be119c3122d8",
+      "eventTime": "2026-09-14T12:19:29.643Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "resourceId": "1b9cffb4-f6da-44ff-8dc4-eb58a16939c7",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.643Z"
+    },
+    {
+      "id": "ecd9bca8-9af7-4c45-a36b-d7184793bf28",
+      "eventTime": "2026-09-14T12:19:29.635Z",
+      "eventType": "guarantor.link.pending",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
+      "resourceType": "Task",
+      "resourceId": "04c43ba7-2faf-4e7d-a8fc-c53982421d18",
+      "actionOutcome": "granted",
+      "actionReason": "transfer Task/04c43ba7-2faf-4e7d-a8fc-c53982421d18 S=Person/1b9cffb4-f6da-44ff-8dc4-eb58a16939c7 D=Person/af823f84-8d3b-44e3-b958-ef83cf80cb18 phase=detach-pending target=Person/1b9cffb4-f6da-44ff-8dc4-eb58a16939c7; Synthetic L17 genuine operation proof",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.635Z"
+    },
+    {
+      "id": "5fda76cb-f31d-4845-9186-2074fd2ce0d1",
+      "eventTime": "2026-09-14T12:19:29.620Z",
+      "eventType": "transaction",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "resourceType": "Task",
+      "actionOutcome": "granted",
+      "actionReason": "guarantor.link detach-pending Task/04c43ba7-2faf-4e7d-a8fc-c53982421d18",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.620Z"
+    },
+    {
+      "id": "f48f769e-a080-40da-8fa3-c293f3908e57",
+      "eventTime": "2026-09-14T12:19:29.601Z",
+      "eventType": "transaction",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "resourceType": "Task",
+      "actionOutcome": "granted",
+      "actionReason": "guarantor.link detaching Task/04c43ba7-2faf-4e7d-a8fc-c53982421d18",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.601Z"
+    },
+    {
+      "id": "38408b41-f7d9-46fd-bd8e-07001eb2daca",
+      "eventTime": "2026-09-14T12:19:29.583Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Task",
+      "resourceId": "04c43ba7-2faf-4e7d-a8fc-c53982421d18",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.583Z"
+    },
+    {
+      "id": "b344b38a-5d53-4ce1-8cd1-d4552c8b372b",
+      "eventTime": "2026-09-14T12:19:29.551Z",
+      "eventType": "transaction",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "resourceType": "Task",
+      "actionOutcome": "granted",
+      "actionReason": "guarantor.link detaching Task/04c43ba7-2faf-4e7d-a8fc-c53982421d18",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.551Z"
+    },
+    {
+      "id": "37af0edd-05e5-4742-a61a-464829a6c11e",
+      "eventTime": "2026-09-14T12:19:29.531Z",
+      "eventType": "transaction",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "resourceType": "Task",
+      "actionOutcome": "granted",
+      "actionReason": "guarantor.link claiming Task/04c43ba7-2faf-4e7d-a8fc-c53982421d18",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.531Z"
+    },
+    {
+      "id": "2d1db46d-468f-44a9-b5c8-15143ba58bff",
+      "eventTime": "2026-09-14T12:19:29.514Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Task",
+      "resourceId": "04c43ba7-2faf-4e7d-a8fc-c53982421d18",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.514Z"
+    },
+    {
+      "id": "403d6568-69f0-485c-a6ac-b8b41d424ac1",
+      "eventTime": "2026-09-14T12:19:29.492Z",
+      "eventType": "transaction",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
+      "resourceType": "RelatedPerson",
+      "actionOutcome": "granted",
+      "actionReason": "guarantor.link claiming RelatedPerson/6588592b-13d9-48b6-be1b-3b50e630606c",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.492Z"
+    },
+    {
+      "id": "a8ea97b1-d50e-4f36-9939-0fed4d24905e",
+      "eventTime": "2026-09-14T12:19:29.473Z",
+      "eventType": "transaction",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "resourceType": "Task",
+      "actionOutcome": "granted",
+      "actionReason": "guarantor.link claiming Task/04c43ba7-2faf-4e7d-a8fc-c53982421d18",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.473Z"
+    },
+    {
+      "id": "18eb6acb-a287-4e49-9007-c03a3717538c",
+      "eventTime": "2026-09-14T12:19:29.463Z",
+      "eventType": "guarantor.link.started",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "patientId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
+      "resourceType": "Task",
+      "resourceId": "04c43ba7-2faf-4e7d-a8fc-c53982421d18",
+      "actionOutcome": "granted",
+      "actionReason": "transfer Task/04c43ba7-2faf-4e7d-a8fc-c53982421d18 S=Person/1b9cffb4-f6da-44ff-8dc4-eb58a16939c7 D=Person/af823f84-8d3b-44e3-b958-ef83cf80cb18 phase=claiming; Synthetic L17 genuine operation proof",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.463Z"
+    },
+    {
+      "id": "7a07504f-96ba-40b0-ad41-b70177c77e22",
+      "eventTime": "2026-09-14T12:19:29.444Z",
+      "eventType": "transaction",
+      "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "actorRole": "staff",
+      "resourceType": "Task",
+      "actionOutcome": "granted",
+      "actionReason": "guarantor.link record",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.444Z"
+    },
+    {
+      "id": "fddbd78a-75df-43e2-858a-d5d1421570df",
+      "eventTime": "2026-09-14T12:19:29.433Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.433Z"
+    },
+    {
+      "id": "17b202d5-0b5a-4918-9887-43a18c9b0cdc",
+      "eventTime": "2026-09-14T12:19:29.422Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "patientId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
+      "resourceType": "Patient",
+      "resourceId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.422Z"
+    },
+    {
+      "id": "b7fd0b48-5e0b-4935-96f2-7ff216571a8b",
+      "eventTime": "2026-09-14T12:19:29.410Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "RelatedPerson",
+      "resourceId": "6588592b-13d9-48b6-be1b-3b50e630606c",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.410Z"
+    },
+    {
+      "id": "05f946b3-a09d-4b14-8ad6-f0c3e71e1cd9",
+      "eventTime": "2026-09-14T12:19:29.400Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "resourceId": "af823f84-8d3b-44e3-b958-ef83cf80cb18",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.400Z"
+    },
+    {
+      "id": "cd79eea9-540e-408f-bd18-7798e9b83b14",
+      "eventTime": "2026-09-14T12:19:29.390Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "resourceId": "1b9cffb4-f6da-44ff-8dc4-eb58a16939c7",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.390Z"
+    },
+    {
+      "id": "7428726c-52a7-4d6c-ad33-4eb59839cece",
+      "eventTime": "2026-09-14T12:19:29.377Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Task",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.377Z"
+    },
+    {
+      "id": "e812ddaf-ff76-4854-a451-43cd02358d37",
+      "eventTime": "2026-09-14T12:19:29.362Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.362Z"
+    },
+    {
+      "id": "36eafa3d-14dd-462a-a2ff-3b6f7607b685",
+      "eventTime": "2026-09-14T12:19:29.348Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "ProjectMembership",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.348Z"
+    },
+    {
+      "id": "a2db3a28-d052-4008-b0c0-e0f821718784",
+      "eventTime": "2026-09-14T12:19:29.186Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "ProjectMembership",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.186Z"
+    },
+    {
+      "id": "f5ecc374-ce92-442a-88eb-4c766131fd1d",
+      "eventTime": "2026-09-14T12:19:28.995Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:28.995Z"
+    }
+  ],
+  "restoreRuns": [
+    {
+      "scenario": "policy restore before baseline",
+      "result": {
+        "mode": "apply",
+        "policiesCreated": 0,
+        "policiesUpdated": 0,
+        "compositesRequired": 0,
+        "membershipsDrifted": 0,
+        "membershipsUpdated": 0,
+        "policies": [
+          {
+            "role": "provider",
+            "roles": [
+              "provider"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/9b2a8eab-2b53-4f89-b808-bca18533dfa8",
+            "policyName": "ODOS Provider",
+            "versionId": "c1adf929-739b-449c-871b-5e01ff547306",
+            "missingRules": [],
+            "unexpectedRules": []
+          },
+          {
+            "role": "staff",
+            "roles": [
+              "staff"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+            "policyName": "ODOS Staff",
+            "versionId": "002c8c9b-68c6-4c2a-9c7e-6bbf9158d199",
+            "missingRules": [],
+            "unexpectedRules": []
+          },
+          {
+            "role": "admin",
+            "roles": [
+              "admin"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/9cc4b108-95d7-4c8d-9670-da1dc7ad2dce",
+            "policyName": "ODOS Admin / Manager",
+            "versionId": "8d5d3029-86a8-480b-82ba-d3842d50acb4",
+            "missingRules": [],
+            "unexpectedRules": []
+          },
+          {
+            "roles": [
+              "provider",
+              "staff",
+              "admin"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
+            "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
+            "versionId": "83adae74-82ac-4992-9648-5e8d54e7de5e",
+            "missingRules": [],
+            "unexpectedRules": []
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "L17 staff-authored legacy fake fixture",
+      "result": {
+        "mode": "apply",
+        "policiesCreated": 0,
+        "policiesUpdated": 1,
+        "compositesRequired": 0,
+        "membershipsDrifted": 0,
+        "membershipsUpdated": 0,
+        "policies": [
+          {
+            "role": "provider",
+            "roles": [
+              "provider"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/9b2a8eab-2b53-4f89-b808-bca18533dfa8",
+            "policyName": "ODOS Provider",
+            "versionId": "c1adf929-739b-449c-871b-5e01ff547306",
+            "missingRules": [],
+            "unexpectedRules": []
+          },
+          {
+            "role": "staff",
+            "roles": [
+              "staff"
+            ],
+            "status": "drift",
+            "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+            "policyName": "ODOS Staff",
+            "versionId": "e80a716b-85fb-455d-a96a-f26190e331bc",
+            "missingRules": [
+              {
+                "interaction": [
+                  "create",
+                  "update"
+                ],
+                "resourceType": "Task",
+                "writeConstraint": [
+                  {
+                    "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                    "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()",
+                    "language": "text/fhirpath"
+                  }
+                ]
+              }
+            ],
+            "unexpectedRules": [
+              {
+                "interaction": [
+                  "create",
+                  "update"
+                ],
+                "resourceType": "Task"
+              }
+            ]
+          },
+          {
+            "role": "admin",
+            "roles": [
+              "admin"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/9cc4b108-95d7-4c8d-9670-da1dc7ad2dce",
+            "policyName": "ODOS Admin / Manager",
+            "versionId": "8d5d3029-86a8-480b-82ba-d3842d50acb4",
+            "missingRules": [],
+            "unexpectedRules": []
+          },
+          {
+            "roles": [
+              "provider",
+              "staff",
+              "admin"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
+            "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
+            "versionId": "83adae74-82ac-4992-9648-5e8d54e7de5e",
+            "missingRules": [],
+            "unexpectedRules": []
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "L17 Task fence mutation",
+      "result": {
+        "mode": "apply",
+        "policiesCreated": 0,
+        "policiesUpdated": 2,
+        "compositesRequired": 0,
+        "membershipsDrifted": 0,
+        "membershipsUpdated": 0,
+        "policies": [
+          {
+            "role": "provider",
+            "roles": [
+              "provider"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/9b2a8eab-2b53-4f89-b808-bca18533dfa8",
+            "policyName": "ODOS Provider",
+            "versionId": "c1adf929-739b-449c-871b-5e01ff547306",
+            "missingRules": [],
+            "unexpectedRules": []
+          },
+          {
+            "role": "staff",
+            "roles": [
+              "staff"
+            ],
+            "status": "drift",
+            "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+            "policyName": "ODOS Staff",
+            "versionId": "4689e0e7-6dfd-413e-9842-3a350d297473",
+            "missingRules": [
+              {
+                "interaction": [
+                  "create",
+                  "update"
+                ],
+                "resourceType": "Task",
+                "writeConstraint": [
+                  {
+                    "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                    "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()",
+                    "language": "text/fhirpath"
+                  }
+                ]
+              }
+            ],
+            "unexpectedRules": [
+              {
+                "interaction": [
+                  "create",
+                  "update"
+                ],
+                "resourceType": "Task"
+              }
+            ]
+          },
+          {
+            "role": "admin",
+            "roles": [
+              "admin"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/9cc4b108-95d7-4c8d-9670-da1dc7ad2dce",
+            "policyName": "ODOS Admin / Manager",
+            "versionId": "8d5d3029-86a8-480b-82ba-d3842d50acb4",
+            "missingRules": [],
+            "unexpectedRules": []
+          },
+          {
+            "roles": [
+              "provider",
+              "staff",
+              "admin"
+            ],
+            "status": "drift",
+            "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
+            "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
+            "versionId": "4be1dcb5-d475-4883-bbfe-fae46742ba33",
+            "missingRules": [
+              {
+                "interaction": [
+                  "create"
+                ],
+                "resourceType": "Task",
+                "writeConstraint": [
+                  {
+                    "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                    "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()",
+                    "language": "text/fhirpath"
+                  }
+                ]
+              },
+              {
+                "interaction": [
+                  "update"
+                ],
+                "resourceType": "Task",
+                "writeConstraint": [
+                  {
+                    "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                    "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()",
+                    "language": "text/fhirpath"
+                  }
+                ]
+              }
+            ],
+            "unexpectedRules": [
+              {
+                "interaction": [
+                  "create"
+                ],
+                "resourceType": "Task"
+              },
+              {
+                "interaction": [
+                  "update"
+                ],
+                "resourceType": "Task"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "L18 Person fence removed",
+      "result": {
+        "mode": "apply",
+        "policiesCreated": 0,
+        "policiesUpdated": 2,
+        "compositesRequired": 0,
+        "membershipsDrifted": 0,
+        "membershipsUpdated": 0,
+        "policies": [
+          {
+            "role": "provider",
+            "roles": [
+              "provider"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/9b2a8eab-2b53-4f89-b808-bca18533dfa8",
+            "policyName": "ODOS Provider",
+            "versionId": "c1adf929-739b-449c-871b-5e01ff547306",
+            "missingRules": [],
+            "unexpectedRules": []
+          },
+          {
+            "role": "staff",
+            "roles": [
+              "staff"
+            ],
+            "status": "drift",
+            "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+            "policyName": "ODOS Staff",
+            "versionId": "dd7a6972-ece1-41c5-9f33-bad6166bc7fc",
+            "missingRules": [
+              {
+                "interaction": [
+                  "create",
+                  "update"
+                ],
+                "resourceType": "Person",
+                "writeConstraint": [
+                  {
+                    "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                    "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())",
+                    "language": "text/fhirpath"
+                  }
+                ]
+              }
+            ],
+            "unexpectedRules": [
+              {
+                "interaction": [
+                  "create",
+                  "update"
+                ],
+                "resourceType": "Person"
+              }
+            ]
+          },
+          {
+            "role": "admin",
+            "roles": [
+              "admin"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/9cc4b108-95d7-4c8d-9670-da1dc7ad2dce",
+            "policyName": "ODOS Admin / Manager",
+            "versionId": "8d5d3029-86a8-480b-82ba-d3842d50acb4",
+            "missingRules": [],
+            "unexpectedRules": []
+          },
+          {
+            "roles": [
+              "provider",
+              "staff",
+              "admin"
+            ],
+            "status": "drift",
+            "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
+            "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
+            "versionId": "55d65761-9c87-4845-95e9-0c8dc7833d09",
+            "missingRules": [
+              {
+                "interaction": [
+                  "create"
+                ],
+                "resourceType": "Person",
+                "writeConstraint": [
+                  {
+                    "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                    "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())",
+                    "language": "text/fhirpath"
+                  }
+                ]
+              },
+              {
+                "interaction": [
+                  "update"
+                ],
+                "resourceType": "Person",
+                "writeConstraint": [
+                  {
+                    "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                    "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())",
+                    "language": "text/fhirpath"
+                  }
+                ]
+              }
+            ],
+            "unexpectedRules": [
+              {
+                "interaction": [
+                  "create"
+                ],
+                "resourceType": "Person"
+              },
+              {
+                "interaction": [
+                  "update"
+                ],
+                "resourceType": "Person"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "L18 revision 1 empty-link expression",
+      "result": {
+        "mode": "apply",
+        "policiesCreated": 0,
+        "policiesUpdated": 2,
+        "compositesRequired": 0,
+        "membershipsDrifted": 0,
+        "membershipsUpdated": 0,
+        "policies": [
+          {
+            "role": "provider",
+            "roles": [
+              "provider"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/9b2a8eab-2b53-4f89-b808-bca18533dfa8",
+            "policyName": "ODOS Provider",
+            "versionId": "c1adf929-739b-449c-871b-5e01ff547306",
+            "missingRules": [],
+            "unexpectedRules": []
+          },
+          {
+            "role": "staff",
+            "roles": [
+              "staff"
+            ],
+            "status": "drift",
+            "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+            "policyName": "ODOS Staff",
+            "versionId": "4ba275a8-e797-47d7-a412-97546fd3ca5c",
+            "missingRules": [
+              {
+                "interaction": [
+                  "create",
+                  "update"
+                ],
+                "resourceType": "Person",
+                "writeConstraint": [
+                  {
+                    "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                    "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())",
+                    "language": "text/fhirpath"
+                  }
+                ]
+              }
+            ],
+            "unexpectedRules": [
+              {
+                "interaction": [
+                  "create",
+                  "update"
+                ],
+                "resourceType": "Person",
+                "writeConstraint": [
+                  {
+                    "expression": "(%before.exists() implies (%before.link = %after.link)) and (%before.empty() implies %after.link.empty())",
+                    "language": "text/fhirpath"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "role": "admin",
+            "roles": [
+              "admin"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/9cc4b108-95d7-4c8d-9670-da1dc7ad2dce",
+            "policyName": "ODOS Admin / Manager",
+            "versionId": "8d5d3029-86a8-480b-82ba-d3842d50acb4",
+            "missingRules": [],
+            "unexpectedRules": []
+          },
+          {
+            "roles": [
+              "provider",
+              "staff",
+              "admin"
+            ],
+            "status": "drift",
+            "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
+            "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
+            "versionId": "b0b0d689-d37a-46df-b877-cda5389c0e61",
+            "missingRules": [
+              {
+                "interaction": [
+                  "create"
+                ],
+                "resourceType": "Person",
+                "writeConstraint": [
+                  {
+                    "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                    "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())",
+                    "language": "text/fhirpath"
+                  }
+                ]
+              },
+              {
+                "interaction": [
+                  "update"
+                ],
+                "resourceType": "Person",
+                "writeConstraint": [
+                  {
+                    "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                    "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())",
+                    "language": "text/fhirpath"
+                  }
+                ]
+              }
+            ],
+            "unexpectedRules": [
+              {
+                "interaction": [
+                  "create"
+                ],
+                "resourceType": "Person",
+                "writeConstraint": [
+                  {
+                    "expression": "(%before.exists() implies (%before.link = %after.link)) and (%before.empty() implies %after.link.empty())",
+                    "language": "text/fhirpath"
+                  }
+                ]
+              },
+              {
+                "interaction": [
+                  "update"
+                ],
+                "resourceType": "Person",
+                "writeConstraint": [
+                  {
+                    "expression": "(%before.exists() implies (%before.link = %after.link)) and (%before.empty() implies %after.link.empty())",
+                    "language": "text/fhirpath"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "final canonical policy restore",
+      "result": {
+        "mode": "apply",
+        "policiesCreated": 0,
+        "policiesUpdated": 0,
+        "compositesRequired": 0,
+        "membershipsDrifted": 0,
+        "membershipsUpdated": 0,
+        "policies": [
+          {
+            "role": "provider",
+            "roles": [
+              "provider"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/9b2a8eab-2b53-4f89-b808-bca18533dfa8",
+            "policyName": "ODOS Provider",
+            "versionId": "c1adf929-739b-449c-871b-5e01ff547306",
+            "missingRules": [],
+            "unexpectedRules": []
+          },
+          {
+            "role": "staff",
+            "roles": [
+              "staff"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+            "policyName": "ODOS Staff",
+            "versionId": "3a934c4d-700b-47bc-b4d3-b8d3baab3c15",
+            "missingRules": [],
+            "unexpectedRules": []
+          },
+          {
+            "role": "admin",
+            "roles": [
+              "admin"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/9cc4b108-95d7-4c8d-9670-da1dc7ad2dce",
+            "policyName": "ODOS Admin / Manager",
+            "versionId": "8d5d3029-86a8-480b-82ba-d3842d50acb4",
+            "missingRules": [],
+            "unexpectedRules": []
+          },
+          {
+            "roles": [
+              "provider",
+              "staff",
+              "admin"
+            ],
+            "status": "match",
+            "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
+            "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
+            "versionId": "b047a210-5de4-4166-aabd-4e461f4a286e",
+            "missingRules": [],
+            "unexpectedRules": []
+          }
+        ]
+      }
+    }
+  ]
+}

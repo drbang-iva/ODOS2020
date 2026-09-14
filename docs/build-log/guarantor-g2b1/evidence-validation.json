@@ -1,0 +1,79 @@
+{
+  "kind": "Author runtime evidence validation, not independent evaluation",
+  "runtimeCaptureRename": {
+    "from": "live-fixture-state.json",
+    "to": "live-resource-state.json",
+    "beforeSha256": "bc4153300f929411cab174a956aff0a5262dad005aa10cf00f9e13bb033eb50a",
+    "afterSha256": "bc4153300f929411cab174a956aff0a5262dad005aa10cf00f9e13bb033eb50a",
+    "contentChanged": false,
+    "reason": "The seed-fixture filename scanner matched ten decimal digits in a server-generated synthetic Patient UUID. Runtime snapshots are captured output, not seed inputs; they are now named accordingly.",
+    "scannerScopeChanged": true,
+    "scannerCoverageClaimedForRuntime": false
+  },
+  "credentialScan": {
+    "files": 98,
+    "scope": "Evidence directory plus guarantor-g2b1-ledger.md",
+    "knownSecretValues": 10,
+    "matches": 0
+  },
+  "fixtureScannerAfterRename": {
+    "command": "node --import ./mcp/node_modules/tsx/dist/loader.mjs --test mcp/tests/fixturePhiGuard.test.ts",
+    "exitCode": 0,
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "skipped": 0
+  },
+  "latestRuntimeCapture": {
+    "sourceHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
+    "sha256": "e1fe5b35b28513e2e49a64d39fee34bcd039fa55dfc60492b098548b4bce6e1f",
+    "capturedAfterBrowser": true
+  },
+  "latestVerification": {
+    "applicationHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
+    "fixtureScanner": {
+      "command": "node --import ./mcp/node_modules/tsx/dist/loader.mjs --test mcp/tests/fixturePhiGuard.test.ts",
+      "exitCode": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "preflight": "0 warnings, 0 hard blocks",
+    "allRecordedSourceHashesMatch": true
+  },
+  "collectionReview": {
+    "head": "b67a9395d1b4a0e150a8ee1bfc259301aaae82f3",
+    "observations": 10,
+    "unexpectedResults": 0,
+    "policyMutation": false,
+    "probeSyntaxCheckExit": 0,
+    "sourceStabilityGuard": {
+      "kind": "Extracted actual summary predicate with synthetic before/after digests; no policy or application source mutation",
+      "command": [
+        "node",
+        "--input-type=module",
+        "-e",
+        "import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import vm from 'node:vm';let expression=readFileSync('docs/build-log/guarantor-g2b1/person-collection-review-proof.mjs','utf8').match(/^const checks=(.+);$/m)[1];if(process.argv[1]==='red')expression=expression.replace('beforeHash===afterHash&&','');const values={beforeHash:'original',afterHash:'changed',observations:[{status:403,expectedStatus:403,linksUnchanged:true,versionUnchanged:true}]};assert.equal(vm.runInNewContext(expression,values),false,'A changed source digest must prevent a passed proof result');console.log('source-stability guard caught changed digest');",
+        "<phase>"
+      ],
+      "runs": [
+        {
+          "phase": "green",
+          "exitCode": 0,
+          "output": "source-stability guard caught changed digest\n"
+        },
+        {
+          "phase": "red",
+          "exitCode": 1,
+          "output": "node:internal/modules/run_main:123\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: A changed source digest must prevent a passed proof result\n\ntrue !== false\n\n    at file://<task-worktree>/[eval1]:1:481\n    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:282:26)\n    at async ModuleLoader.executeModuleJob (node:internal/modules/esm/loader:278:20)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: true,\n  expected: false,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v22.22.3\n"
+        },
+        {
+          "phase": "restored",
+          "exitCode": 0,
+          "output": "source-stability guard caught changed digest\n"
+        }
+      ]
+    }
+  }
+}

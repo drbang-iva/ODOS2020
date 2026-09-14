@@ -307,7 +307,7 @@ function buildPatientIdentityTransaction(
   return { resourceType: "Bundle", type: "transaction", entry: entries };
 }
 
-function registrationResourceInProject<T extends Resource>(resource: T, projectId: string): T {
+export function registrationResourceInProject<T extends Resource>(resource: T, projectId: string): T {
   const existingProjectId = resource.meta?.project?.replace(/^Project\//, "");
   if (existingProjectId && existingProjectId !== projectId) {
     throw new Error(`Registration resource belongs to Project/${existingProjectId}, not Project/${projectId}.`);
@@ -350,7 +350,7 @@ async function findExactDuplicates(
   });
 }
 
-function registrationProjectId(project: Reference<Project>): string {
+export function registrationProjectId(project: Reference<Project>): string {
   const projectId = project.reference?.match(/^Project\/([A-Za-z0-9.-]{1,64})$/)?.[1];
   if (!projectId) throw new Error("Registration caller is missing a valid project reference.");
   return projectId;

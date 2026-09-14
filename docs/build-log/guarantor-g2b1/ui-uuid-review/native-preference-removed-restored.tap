@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+ok 1 - S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+  ---
+  duration_ms: 18.730459
+  type: 'test'
+  ...
+# Subtest: S7: Correct keeps native randomUUID when available
+ok 2 - S7: Correct keeps native randomUUID when available
+  ---
+  duration_ms: 1.275042
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 221.584625

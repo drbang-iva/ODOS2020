@@ -123,7 +123,11 @@ test("P7 declaration: staff Person writes are practice-scoped create/update only
     const persons = policy.resource?.filter(rule => rule.resourceType === "Person") ?? [];
     assert.deepEqual(persons, [
       { resourceType: "Person", interaction: ["read", "search", "history", "vread"] },
-      ...(role === "staff" ? [{ resourceType: "Person", interaction: ["create", "update"] }] : []),
+      ...(role === "staff" ? [{ resourceType: "Person", interaction: ["create", "update"], writeConstraint: [{
+        language: "text/fhirpath",
+        description: "Person links are managed by service operations; staff may edit demographics without changing links.",
+        expression: "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())",
+      }] }] : []),
     ]);
     const relatedWrites = policy.resource?.filter(rule => rule.resourceType === "RelatedPerson" && rule.interaction?.includes("create")) ?? [];
     if (role === "staff") assert.deepEqual(relatedWrites.map(rule => rule.criteria), ["RelatedPerson?_compartment=%patient_compartment"]);

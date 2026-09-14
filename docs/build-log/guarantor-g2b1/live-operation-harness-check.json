@@ -1,0 +1,202 @@
+{
+  "cause": "First instrument version inspected only direct PUT HTTP requests. Actual service writes use one-entry transaction Bundles; normalization and lost-response hooks were corrected to inspect their entry method, URL, If-Match and status. No application source changed for this repair.",
+  "source": {
+    "head": "5e7c2aef7f6b59432deb6046fda8e65056796b10",
+    "files": {
+      "mcp/src/clinic/guarantor-link-operation.ts": "de9e923cdd1695b3669194e6b2d54fbe3e0b2491015bcea772f762e600a49ec8",
+      "mcp/src/clinic/guarantor-routes.ts": "b3af98597b9bdd7c1023ba1638f63e491ad47e8c7731b2482c990d0ec9f46d09",
+      "mcp/src/fhir-client.ts": "57715549311950cbd1306173f71e1e98563d1c97421b3a578fce18e687bd925b",
+      "ui/src/lib/guarantor-editor.ts": "9ccc86563866afed1a47cb7eeae5d0c56b6619efffcd76e0e8e81a0b3ebd9c67",
+      "ui/src/lib/guarantor-link-operations.ts": "ba364ee486beb2744527e13953270ed4ce5d7f30b104012b06efba221d93756f"
+    }
+  },
+  "failed": 19,
+  "failedChecks": [
+    {
+      "scenario": "L1",
+      "name": "B attempts exactly one child claim, refused412",
+      "actual": [],
+      "expected": [
+        412
+      ],
+      "passed": false
+    },
+    {
+      "scenario": "L3",
+      "name": "Complete fences S and D before attaching D",
+      "actual": [],
+      "expected": [
+        "fence-source",
+        "fence-destination",
+        "attaching"
+      ],
+      "passed": false
+    },
+    {
+      "scenario": "L13",
+      "name": "Claim200 response was dropped",
+      "actual": false,
+      "expected": true,
+      "passed": false
+    },
+    {
+      "scenario": "L13",
+      "name": "Unconfirmed original remains pending",
+      "actual": [
+        200,
+        "completed"
+      ],
+      "expected": [
+        409,
+        "in-progress"
+      ],
+      "passed": false
+    },
+    {
+      "scenario": "L13",
+      "name": "Pending claim intent is unresolved",
+      "actual": 0,
+      "expected": 1,
+      "passed": false
+    },
+    {
+      "scenario": "L13",
+      "name": "Complete classifies changed content as interfered",
+      "actual": [
+        409,
+        null,
+        null
+      ],
+      "expected": [
+        409,
+        "in-progress",
+        "interfered"
+      ],
+      "passed": false
+    },
+    {
+      "scenario": "L13",
+      "name": "Interference response names the child",
+      "expected": "RelatedPerson/4c807ccc-f9d5-488a-b777-73ce26b8643c",
+      "passed": false
+    },
+    {
+      "scenario": "L14-landed",
+      "name": "Detach crash prefix was reached",
+      "actual": false,
+      "expected": true,
+      "passed": false
+    },
+    {
+      "scenario": "L14-landed",
+      "name": "Original retains pending Task",
+      "actual": [
+        200,
+        "completed"
+      ],
+      "expected": [
+        409,
+        "in-progress"
+      ],
+      "passed": false
+    },
+    {
+      "scenario": "L14-landed",
+      "name": "Detach intent remains unresolved before recovery",
+      "actual": 0,
+      "expected": 1,
+      "passed": false
+    },
+    {
+      "scenario": "L14-landed",
+      "name": "Prefix ownership matches delivery",
+      "actual": [
+        "3f27f4dc-bd70-44ba-8697-fe1a92bfcced"
+      ],
+      "expected": [],
+      "passed": false
+    },
+    {
+      "scenario": "L14-unsent",
+      "name": "First source fence uses original intent expectedVersion",
+      "expected": "W/\"eb770f4b-57c6-432d-9aca-b8e870e926ec\"",
+      "passed": false
+    },
+    {
+      "scenario": "L14-unsent",
+      "name": "Source fence observes contract delivery statuses",
+      "actual": [],
+      "expected": [
+        200
+      ],
+      "passed": false
+    },
+    {
+      "scenario": "L15-paused",
+      "name": "Paused A stale D PUT is refused412",
+      "actual": [],
+      "expected": [
+        412
+      ],
+      "passed": false
+    },
+    {
+      "scenario": "L15-takeover-fail",
+      "name": "C fences both Persons before refused takeover",
+      "actual": [],
+      "expected": [
+        [
+          "fence-source",
+          200
+        ],
+        [
+          "fence-destination",
+          200
+        ],
+        [
+          "claiming",
+          412
+        ]
+      ],
+      "passed": false
+    },
+    {
+      "scenario": "L15-partial-correction",
+      "name": "A sends only its fenced stale D attempt",
+      "actual": [],
+      "expected": [
+        412
+      ],
+      "passed": false
+    },
+    {
+      "scenario": "L16-claim",
+      "name": "A release was refused412",
+      "actual": [],
+      "expected": [
+        412
+      ],
+      "passed": false
+    },
+    {
+      "scenario": "L16-demographics",
+      "name": "A release was refused412",
+      "actual": [],
+      "expected": [
+        412
+      ],
+      "passed": false
+    }
+  ],
+  "caseFatals": [
+    {
+      "scenario": "L14-landed",
+      "fatal": {
+        "name": "TypeError",
+        "message": "Cannot read properties of undefined (reading 'expectedVersion')",
+        "stack": "TypeError: Cannot read properties of undefined (reading 'expectedVersion')\n    at <anonymous> (<source-root>-live/docs/build-log/guarantor-g2b1/live-operation-proof.mjs:317:110)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async runCase (<source-root>-live/docs/build-log/guarantor-g2b1/live-operation-proof.mjs:163:31)\n    at async <anonymous> (<source-root>-live/docs/build-log/guarantor-g2b1/live-operation-proof.mjs:293:48)"
+      }
+    }
+  ],
+  "rawCaptureRetainedLocally": true
+}

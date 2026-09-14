@@ -1,0 +1,29 @@
+# Guarantor G-2b-1 source-verification ledger
+
+Source verification was performed on **2026-09-14**. Both primary sources in every row were accessed on that date and agree on the stated claim. The Medplum source pin is **5.1.30 / `9b1bd92e987aecdd338ac690b1d368ff11d7ceba`**.
+
+This is **documentary evidence, not a test-enforced registry**. Removing a row does not fail a test. These rows verify the selected FHIR/FHIRPath facts; they do not prove live AccessPolicy enforcement, operation recovery, or a published ODOS canonical artifact. No clinical terminology code is introduced by this ledger.
+
+| ID | Verified claim | Primary source 1 | Primary source 2 | Access date, both | Agreement and limit |
+|---|---|---|---|---|---|
+| G2B-M1 | `Task.intent` is required; `order` is permitted; intent is immutable. | [HL7 R4 Task.intent definition](https://hl7.org/fhir/R4/task-definitions.html#Task.intent) | [HL7 R4 formal Task profile](https://hl7.org/fhir/R4/task.profile.json.html) | 2026-09-14 | Agree. The [pinned Task declaration](https://raw.githubusercontent.com/medplum/medplum/9b1bd92e987aecdd338ac690b1d368ff11d7ceba/packages/fhirtypes/dist/Task.d.ts) also requires intent and permits `order`. |
+| G2B-M2 | `Task.status` is required; `in-progress`, `failed`, `completed`, and `cancelled` are permitted. | [HL7 R4 Task status value set](https://hl7.org/fhir/R4/valueset-task-status.html) | [Pinned Medplum Task declaration](https://raw.githubusercontent.com/medplum/medplum/9b1bd92e987aecdd338ac690b1d368ff11d7ceba/packages/fhirtypes/dist/Task.d.ts) | 2026-09-14 | Agree. The formal Task definition supplies the cardinality and required binding. |
+| G2B-M3 | `Task.businessStatus` is optional `CodeableConcept`, cardinality `0..1`, with an example binding for the workflow substate. | [HL7 R4 Task.businessStatus definition](https://hl7.org/fhir/R4/task-definitions.html#Task.businessStatus) | [HL7 R4 formal Task profile](https://hl7.org/fhir/R4/task.profile.json.html) | 2026-09-14 | Agree. The pinned Task declaration also marks it optional. |
+| G2B-M4 | `Task.input` repeats `0..*`; each input requires a `CodeableConcept` type and exactly one `value[x]`. `valueCode`, `valueReference`, `valueString`, and `valueInteger` are permitted. | [HL7 R4 Task.input definition](https://hl7.org/fhir/R4/task-definitions.html#Task.input) | [HL7 R4 formal Task profile](https://hl7.org/fhir/R4/task.profile.json.html) | 2026-09-14 | Agree. The pinned TaskInput declaration permits these choices, but TypeScript alone does not enforce exactly one choice. |
+| G2B-M5 | `Person.link.assurance` is optional with a required binding to `level1`–`level4`; the existing registration value `level2` is permitted. | [HL7 R4 Person.link.assurance definition](https://hl7.org/fhir/R4/person-definitions.html#Person.link.assurance) | [Pinned Medplum Person declaration](https://raw.githubusercontent.com/medplum/medplum/9b1bd92e987aecdd338ac690b1d368ff11d7ceba/packages/fhirtypes/dist/Person.d.ts) | 2026-09-14 | Agree; see also the [HL7 identity-assurance value set](https://hl7.org/fhir/R4/valueset-identity-assuranceLevel.html). Registration already writes `level2` at base `a13fc1ea`, `patient-registration-endpoint.ts:282`. |
+| G2B-M6 | FHIRPath `implies`: a false left operand returns true; a true left operand returns the right operand; an empty left operand returns true only for a true right operand, otherwise empty. | [HL7 normative FHIRPath implies](https://hl7.org/fhirpath/N1/index.html#implies) | [Pinned Medplum FHIRPath atom tests](https://raw.githubusercontent.com/medplum/medplum/9b1bd92e987aecdd338ac690b1d368ff11d7ceba/packages/core/src/fhirpath/atoms.test.ts) | 2026-09-14 | All nine operand combinations agree. The executable `ImpliesAtom` in [pinned atoms.ts](https://raw.githubusercontent.com/medplum/medplum/9b1bd92e987aecdd338ac690b1d368ff11d7ceba/packages/core/src/fhirpath/atoms.ts), lines 417–425, agrees; its prose comment overstates the empty-left case and is not used as evidence. |
+| G2B-M7 | FHIRPath collection `=` is ordered equality of every item and rejects different nonempty cardinalities; one shared link does not make two link collections equal. | [HL7 normative FHIRPath equality](https://hl7.org/fhirpath/N1/index.html#equals) | [Pinned Medplum array equality](https://github.com/medplum/medplum/blob/9b1bd92e987aecdd338ac690b1d368ff11d7ceba/packages/core/src/fhirpath/utils.ts#L282-L290) | 2026-09-14 | Agree. The pinned `EqualsAtom` delegates to `fhirPathArrayEquals`, which checks lengths then every corresponding item. The separate real-server overlap probe records eight 403 refusals and two allowed name-only edits; no expression change was needed. |
+
+## Local namespaces and enforcement
+
+The operation uses locally defined identifiers below. A URL shaped like a CodeSystem or StructureDefinition is not a claim that an independently verified artifact has been published at that URL.
+
+| Namespace | Use |
+|---|---|
+| `https://odos2020.com/fhir/CodeSystem/guarantor-link-operation` | Operation Task coding and local workflow phase vocabulary. |
+| `https://odos2020.com/fhir/identifier/guarantor-link-operation` | Client operation identifier. |
+| `https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim` | RelatedPerson claim referencing the operation Task. |
+| `https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch` | Person fence epoch. |
+| `https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal` | Operation Task write-ahead journal. |
+
+The five `guarantor.link.*` audit event values are executable registrations in `mcp/src/authz/odosAudit.ts`, the dated SQL migration/validation pair, and `mcp/src/authz/liveAudit.ts`. Service-write call sites are checked separately by `scripts/fhir-read-grant-check.ts`. Their registry and mutation evidence belongs to the implementation checks; this ledger is not a substitute for either check.

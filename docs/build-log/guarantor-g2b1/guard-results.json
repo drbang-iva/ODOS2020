@@ -1,0 +1,3674 @@
+{
+  "kind": "Author mutation evidence; not independent evaluation",
+  "sourceHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
+  "sourceSha256": {
+    "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+    "mcp/src/authz/roles.ts": "afdd50b756f907121ccfeb965abdd72d8981739992c1d21f111d4568087cf114",
+    "mcp/src/authz/odosAudit.ts": "741d7c5d6d0eb0b8d3328a08e0055307cd3e1b0c979afdad08d332658d78b2e9",
+    "mcp/src/authz/liveAudit.ts": "2d65d97951d365a3621310a89a88ef47587741fa67eb498e4f933f21c1295ddb",
+    "mcp/src/fhir-client.ts": "57715549311950cbd1306173f71e1e98563d1c97421b3a578fce18e687bd925b",
+    "scripts/fhir-read-grant-check.ts": "ac8bec19ca4e5aed2f219cbbd7c53fa34b19da2bb85dd8f2c9493df384ce4bc3",
+    "ui/src/lib/guarantor-editor.ts": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06",
+    "ui/src/components/patient/ResponsiblePartiesControl.tsx": "3c9883c78a7a403ce376deb47f04ba610dc6851e7e251673959375a5c9f4ea80",
+    "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
+    "ui/src/lib/guarantor-link-operations.ts": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de"
+  },
+  "controls": [
+    {
+      "lane": "core-and-registries",
+      "guard": "S9-transaction-resource-reference",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S9 transaction reasons omit an unassigned Task id and retain assigned resource references"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "S9 transaction reasons omit an unassigned Task id and retain assigned resource references"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S9 transaction reasons omit an unassigned Task id and retain assigned resource references"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S9 transaction reasons omit an unassigned Task id and retain assigned resource references"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L1-claim-required",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "fe25ca056a19073c34739d6383f1185863bd4e8507305ba3eda87861ab48e6c1",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L1: two admitted starters produce one source detach and one completed operation"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L1: two admitted starters produce one source detach and one completed operation"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L1: two admitted starters produce one source detach and one completed operation"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L1: two admitted starters produce one source detach and one completed operation"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L2-sorted-claims",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "49cf53eee5b6941900f4aa820d31f3faa465dc7c7d2cf575985546e905842edb",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L2: sorted claims give a winner with two shared children and opposed request orders"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L2: sorted claims give a winner with two shared children and opposed request orders"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L2: sorted claims give a winner with two shared children and opposed request orders"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L2: sorted claims give a winner with two shared children and opposed request orders"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L3a-pending-after-detach",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "429f98d914b2245436a1aca0e18d2414e65bfecff003bf4c461129813614a9f1",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L3: detach-first leaves an unowned claimed child and Complete projects current D"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L3: detach-first leaves an unowned claimed child and Complete projects current D"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L3: detach-first leaves an unowned claimed child and Complete projects current D"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L3: detach-first leaves an unowned claimed child and Complete projects current D"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L3b-detach-first",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "d1f16d746af7af3e8c36e7e326c7302e165ef8c1f31c6ffcb96edf1418373e51",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L3: detach-first leaves an unowned claimed child and Complete projects current D"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L3: detach-first leaves an unowned claimed child and Complete projects current D"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L3: detach-first leaves an unowned claimed child and Complete projects current D"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L3: detach-first leaves an unowned claimed child and Complete projects current D"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L5-generation",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "01d6f4897cc31965fba676a6737640419140dd84cd1f18e501205d8c2b95e28f",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L5: D changes after r1 projection so no stale r2 projection is submitted"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L5: D changes after r1 projection so no stale r2 projection is submitted"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L5: D changes after r1 projection so no stale r2 projection is submitted"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L5: D changes after r1 projection so no stale r2 projection is submitted"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L6-destination-details",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "34f2d947ee9bf67d081e383469765f975772d63d18e05c34efcb55b4e2518d24",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L6-retain-source",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "f9a3f38d9b2f11dd157e1acd37108a75a295d2c6b42c0631cb0f6976c0b9eb75",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L7-child-extension-fence",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "5be42042a8e4e43f29c3b785739087fd20deafb22b10c11add982c55fd8f6004",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L7-child-active-fence",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "9cd5d00d2ed3c0743f645155b74b8ea4d0cd85bfd82f8b73a940c99d2ced5d51",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L8-write-set",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "1b16f3e67d87c636827942528c973b31f5ac3b48d071bcf9ee3df50ccfcf6c94",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L9-expected-version",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "1bede0dbcd6c204571daa2102198827265eaa6f02c0246d9ea4a90d5297ee4a2",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L9: stale confirmation refuses before any Task or resource write"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L9: stale confirmation refuses before any Task or resource write"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L9: stale confirmation refuses before any Task or resource write"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L9: stale confirmation refuses before any Task or resource write"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L10-complete-consolidation-set",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "694e51343d64e03ddc9dca7a9c2a1c2eeb02727ad455f1bc1aee961fad2e93f9",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L10: consolidate subset refuses before any write"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L10: consolidate subset refuses before any write"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L10: consolidate subset refuses before any write"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L10: consolidate subset refuses before any write"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L11-practice-scope",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "1f1064845993b637108f519dd59e5f4ebfd499b21565789145b5c2c0937f7c89",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L11: foreign D and separately foreign child Patient refuse without writes"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L11: foreign D and separately foreign child Patient refuse without writes"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L11: foreign D and separately foreign child Patient refuse without writes"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L11: foreign D and separately foreign child Patient refuse without writes"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L12-landed-intent",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "98591a569819bd676e32b559f611ad34e85dbad2d1df2e8b3f0a4b5a258edf64",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L13-interference",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "beb53c0347a8bd1ae0ebbeed94e941364d60faa2734910b8ef4ce0d13c2534d7",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L13: an unresolved changed child intent is interference with no further domain writes"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L13: an unresolved changed child intent is interference with no further domain writes"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L13: an unresolved changed child intent is interference with no further domain writes"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L13: an unresolved changed child intent is interference with no further domain writes"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L14a-full-old-comparator",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "78cda6e2b9e8c78efab1166a58246d62fc673349cd28dbc3d6f2b36cc61086e5",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L14b-epoch-in-comparison",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "bc828a318983e5960794b98b2d4c88388ba48354b440a0a3001fe18faf808f73",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L14c-classify-before-fence",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "a733f96d534867e6bf552305cce5effafe2cdde0beb0d1174188b0cf61944c1a",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L12/L14: landed and unsent detach intents use the expected-version fence classifier"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L15a-person-fence",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "3964b91fbc3114e1d331effbbef9907edaf51ca5a688c2af0d0625e8dbdc6d66",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15: correction fences a paused Complete before its already-intended destination PUT"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L15: correction fences a paused Complete before its already-intended destination PUT"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15: correction fences a paused Complete before its already-intended destination PUT"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15: correction fences a paused Complete before its already-intended destination PUT"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L15b-cancel-last",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "4b57d1bdd69f98bf1dca9388ec9d5ab8b87dc7462fcd6addf49b34561ad01fba",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L15-fresh-retry-correction-check",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "3ca2dff0efba908a08cfd226e31d191efc9f1541e7bab300860794d0530aa704",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L16-release-required",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "e616d64aac0b009388c4e86e63b50750bbac5695f7835b6b7de01c1f250935ac",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L16/L20: another claim or name edit after verification refuses release and completion audit"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L16/L20: another claim or name edit after verification refuses release and completion audit"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L16/L20: another claim or name edit after verification refuses release and completion audit"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L16/L20: another claim or name edit after verification refuses release and completion audit"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L17-moved-set-binding",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "0d94b439137e54ed8dcc7927c7917d039458c365fe177e31b329d08ac4301126",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L19-action-required",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "db585d4e97b6b7541ed9ed93eb633caec22f13de1fd958214f4b2d26436de210",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L19: a revoked business action refuses before any read or write"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L19: a revoked business action refuses before any read or write"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L19: a revoked business action refuses before any read or write"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L19: a revoked business action refuses before any read or write"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L20-completed-audit-after-release",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "5b31cfdd1a760bf62ff82322631f8ffc2fee49ce5f778e07982ea708e17b508a",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L16/L20: another claim or name edit after verification refuses release and completion audit"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L16/L20: another claim or name edit after verification refuses release and completion audit"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L16/L20: another claim or name edit after verification refuses release and completion audit"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L16/L20: another claim or name edit after verification refuses release and completion audit"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L21-idempotency",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "b0b3621e892a10222ff33c6c02d856247b25887cce5ebbe90cab9d73a6744f1c",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L21: repeated operation identifier returns one Task and performs no second writes"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L21: repeated operation identifier returns one Task and performs no second writes"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L21: repeated operation identifier returns one Task and performs no second writes"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L21: repeated operation identifier returns one Task and performs no second writes"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L24-code-filter",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "a8bc0285dd16dca7596d4417bbd08490b307bf1afc031737cf98d7a4a061dafb",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L24-service-authorship",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "37b6cd4aec60a415e42d3c68adea966f7181da48d114a6d72816f8fecca234b0",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L24a-claim-descent",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "9ec6c80f6272412b83a0dc2e33f24e80711744429b320f7e30d6b59d0a3e3063",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L24b-step-zero-before-writes",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "1ebd83abdedb2e98a800f72eb6461c7eb43c2ea08402f7c999f4158f5787f694",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L24b: a live service-authored correction stops Complete before every write"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L24b: a live service-authored correction stops Complete before every write"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L24b: a live service-authored correction stops Complete before every write"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L24b: a live service-authored correction stops Complete before every write"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L24c-completed-correction",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "d45e444bad187dfc67604915a52790b4795466f703d76ef85602c763d59a89eb",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L24c: completed correction causes one cancel attempt, never an attempted fence intent"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L24c: completed correction causes one cancel attempt, never an attempted fence intent"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L24c: completed correction causes one cancel attempt, never an attempted fence intent"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L24c: completed correction causes one cancel attempt, never an attempted fence intent"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L25-live-correction-never-self-cancels",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "9eee7699ad8278ffcbb5b2b4ecbdd45c06ce7e279806e6ed8a62aa1e27905279",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L26-correction-detaches-current-owner",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "40346dc1313d21071d5c182817cbdd4396980442a6b322431b39b8ef582aaba2",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L26: pending Correct detaches a landed attachment before returning children to retained S"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L26: pending Correct detaches a landed attachment before returning children to retained S"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L26: pending Correct detaches a landed attachment before returning children to retained S"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L26: pending Correct detaches a landed attachment before returning children to retained S"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L27-terminal-rule-at-ownership-check",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "e4768f500796f6c8e1803e426f32ac0bf0d7f79732ea9a99a90e812288d39b37",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L27/L29: one or two descent refusals resolve each intent; a later Complete is live"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L27/L29: one or two descent refusals resolve each intent; a later Complete is live"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L27/L29: one or two descent refusals resolve each intent; a later Complete is live"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L27/L29: one or two descent refusals resolve each intent; a later Complete is live"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L28-reclaim-checkpointed-claim",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "bfc7cf5b3e77def772953535ff0325d575a3ebf9d44f59f5975c0b78a57d406b",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "L29-definite-response-intent-rule",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "36af699c58a834ca562ea567f7f1e352f6fe1247618208398d6a54ac0d7ca38b",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 3,
+          "pass": 3,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L27/L29: one or two descent refusals resolve each intent; a later Complete is live",
+          "L29: double re-claim refusals and a lost successful descent retry remain resumable",
+          "S3 intent rule: a definite server error is rejected history, not an unresolved response"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L27/L29: one or two descent refusals resolve each intent; a later Complete is live",
+          "L29: double re-claim refusals and a lost successful descent retry remain resumable",
+          "S3 intent rule: a definite server error is rejected history, not an unresolved response"
+        ],
+        "counts": {
+          "tests": 3,
+          "pass": 0,
+          "fail": 3,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L27/L29: one or two descent refusals resolve each intent; a later Complete is live",
+          "L29: double re-claim refusals and a lost successful descent retry remain resumable",
+          "S3 intent rule: a definite server error is rejected history, not an unresolved response"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 3,
+          "pass": 3,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L27/L29: one or two descent refusals resolve each intent; a later Complete is live",
+          "L29: double re-claim refusals and a lost successful descent retry remain resumable",
+          "S3 intent rule: a definite server error is rejected history, not an unresolved response"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "S6-cancel-attempt-bound",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "ce4c4939c39cc53e26615a286eefe34d2b8715518bdc566d6b48aadea976f606",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "S6-pending-takeover-prefix",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "7e9766cce1c7ef0d3f104a4311b29746fd46d93769ef3636989b9212c490f5ae",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "S3-post-release-activity",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "7313094c172639ff1e90391bb7c7ee6635b76d24af7a5f9e0173e919c3e88a06",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S3 released children: Complete preserves later transfers after partial release or an unsent terminal write"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "S3 released children: Complete preserves later transfers after partial release or an unsent terminal write"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S3 released children: Complete preserves later transfers after partial release or an unsent terminal write"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S3 released children: Complete preserves later transfers after partial release or an unsent terminal write"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "S3-no-checkpoint-replay",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "6c33eaab4c71887ffae94785f29ca1e8a69dbe838f648cd168d07b43522f47b4",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S3 checkpoint refusal stops immediately without replaying a stale Task version"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "S3 checkpoint refusal stops immediately without replaying a stale Task version"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S3 checkpoint refusal stops immediately without replaying a stale Task version"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S3 checkpoint refusal stops immediately without replaying a stale Task version"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "S5-fresh-claim-classification",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "88ac5c2e22c3338d8e0e56c619f50998ce83d450b337d9996495f7d1cd78d9c3",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S5 retry classification: a fresh foreign live claim stops a recovery Person retry"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "S5 retry classification: a fresh foreign live claim stops a recovery Person retry"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S5 retry classification: a fresh foreign live claim stops a recovery Person retry"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S5 retry classification: a fresh foreign live claim stops a recovery Person retry"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "S3-terminal-journal-checkpoint",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "8b5f3852a315ff15fe252fa88dc41463f203e0dc9afcc82da1395de7b6ba3cfa",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15: correction fences a paused Complete before its already-intended destination PUT"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "L15: correction fences a paused Complete before its already-intended destination PUT"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15: correction fences a paused Complete before its already-intended destination PUT"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "L15: correction fences a paused Complete before its already-intended destination PUT"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "S3-terminal-response-stops-runner",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "bdbcef79ea865f639230fb54c2fa4632823725d7b5f1a7b81f916fe58dc8c697",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S3 late successful release checkpoints its result without completing or auditing twice"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "S3 late successful release checkpoints its result without completing or auditing twice"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S3 late successful release checkpoints its result without completing or auditing twice"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S3 late successful release checkpoints its result without completing or auditing twice"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "S3-terminal-checkpoint-refusal",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "99c52d8fd08b9f190a007446357721599ccdf5d188b18f4f986af38761e5b4ae",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S3 terminal response checkpoint refusal is reported and never replayed"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "S3 terminal response checkpoint refusal is reported and never replayed"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S3 terminal response checkpoint refusal is reported and never replayed"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S3 terminal response checkpoint refusal is reported and never replayed"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "S1-rate-limit",
+      "source": "mcp/src/clinic/guarantor-routes.ts",
+      "sourceSha256": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
+      "mutatedSha256": "3be8e9e405d1c715a1f4d208fe9bd22403c2f05b23200d4c1c8425ccebb3f5b4",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "Registry-service-write",
+      "source": "scripts/fhir-read-grant-check.ts",
+      "sourceSha256": "ac8bec19ca4e5aed2f219cbbd7c53fa34b19da2bb85dd8f2c9493df384ce4bc3",
+      "mutatedSha256": "b94ce771489abc34bfa46a67ad060f9ff8b6075c71507b488b7c28d60f5da59d",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {},
+        "namedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [],
+        "counts": {},
+        "namedTests": []
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {},
+        "namedTests": []
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "Registry-audit-event",
+      "source": "data/migrations/2026-09-14-guarantor-link-events.sql",
+      "sourceSha256": "0c0b7583bcaecde7cbc356b4a8e7f0fb4022799920ab518285306d1f3b7edde0",
+      "mutatedSha256": "54005101691e2037857e484ce38e5bda52b64f2634beb76083af3b72e58059dc",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 5,
+          "pass": 5,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "the 10 payment.* audit event types are registered \u2014 count and enumeration match (v0.55c Lesson 10)",
+          "the latest audit migration pair matches the TypeScript union and separates validation",
+          "buildPaymentAuditRecord attributes a completed charge to the staff member and the payment record",
+          "a failed charge audits as denied against the Invoice it attempted to settle (no PaymentReconciliation exists)",
+          "a manual cash charge audits against the tendered Invoice (the manual path's payment record)"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "the latest audit migration pair matches the TypeScript union and separates validation"
+        ],
+        "counts": {
+          "tests": 5,
+          "pass": 4,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "the 10 payment.* audit event types are registered \u2014 count and enumeration match (v0.55c Lesson 10)",
+          "the latest audit migration pair matches the TypeScript union and separates validation",
+          "buildPaymentAuditRecord attributes a completed charge to the staff member and the payment record",
+          "a failed charge audits as denied against the Invoice it attempted to settle (no PaymentReconciliation exists)",
+          "a manual cash charge audits against the tendered Invoice (the manual path's payment record)"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 5,
+          "pass": 5,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "the 10 payment.* audit event types are registered \u2014 count and enumeration match (v0.55c Lesson 10)",
+          "the latest audit migration pair matches the TypeScript union and separates validation",
+          "buildPaymentAuditRecord attributes a completed charge to the staff member and the payment record",
+          "a failed charge audits as denied against the Invoice it attempted to settle (no PaymentReconciliation exists)",
+          "a manual cash charge audits against the tendered Invoice (the manual path's payment record)"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "Registry-canonical-extension",
+      "source": "data/canonical-extensions/registry.json",
+      "sourceSha256": "0fe62dfd144893248645479c7727f96eeea7cdf3bd248db7f9248ca1747b9857",
+      "mutatedSha256": "405a45c227160e26ac959e8038013440320fd5236a794e9743d59a37d5409454",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {},
+        "namedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [],
+        "counts": {},
+        "namedTests": []
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {},
+        "namedTests": []
+      },
+      "killed": true
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "L17-task-fence-removed",
+      "file": "mcp/src/authz/roles.ts",
+      "command": "node --import tsx --test tests/guarantorLinkPolicy.test.ts tests/guarantorPerson.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "16",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "14",
+        "fail": "2",
+        "failedTests": [
+          "L17 staff: the Task fence refuses operation creation, mutation and code laundering",
+          "L17 composite: the Task fence refuses operation creation, mutation and code laundering"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "16",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "L18-person-fence-removed",
+      "file": "mcp/src/authz/roles.ts",
+      "command": "node --import tsx --test tests/guarantorLinkPolicy.test.ts tests/guarantorPerson.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "16",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "13",
+        "fail": "3",
+        "failedTests": [
+          "L18 staff: the Person fence preserves name edits and refuses link mutations",
+          "L18 composite: the Person fence preserves name edits and refuses link mutations",
+          "P7 declaration: staff Person writes are practice-scoped create/update only"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "16",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "L18-revision1-empty-link-refusal",
+      "file": "mcp/src/authz/roles.ts",
+      "command": "node --import tsx --test tests/guarantorLinkPolicy.test.ts tests/guarantorPerson.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "16",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "13",
+        "fail": "3",
+        "failedTests": [
+          "L18 staff: the Person fence preserves name edits and refuses link mutations",
+          "L18 composite: the Person fence preserves name edits and refuses link mutations",
+          "P7 declaration: staff Person writes are practice-scoped create/update only"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "16",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "L19-action-added-to-baseline",
+      "file": "mcp/src/authz/roles.ts",
+      "command": "node --import tsx --test tests/guarantorLinkPolicy.test.ts tests/businessActions.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "16",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "14",
+        "fail": "2",
+        "failedTests": [
+          "the baseline is the explicit eight-action intersection of the three role declarations",
+          "L19: each role grants guarantor.link and a membership revocation removes it"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "16",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "S9-typescript-event-started-removed",
+      "file": "mcp/src/authz/odosAudit.ts",
+      "command": "node --import tsx --test tests/guarantorLinkAudit.test.ts tests/paymentAudit.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "8",
+        "fail": "2",
+        "failedTests": [
+          "S9: guarantor.link.started produces a patient-attributed audit row and projection",
+          "the latest audit migration pair matches the TypeScript union and separates validation"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "S9-sql-event-started-removed",
+      "file": "data/migrations/2026-09-14-guarantor-link-events.sql",
+      "command": "node --import tsx --test tests/guarantorLinkAudit.test.ts tests/paymentAudit.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "9",
+        "fail": "1",
+        "failedTests": [
+          "the latest audit migration pair matches the TypeScript union and separates validation"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "S9-typescript-event-completed-removed",
+      "file": "mcp/src/authz/odosAudit.ts",
+      "command": "node --import tsx --test tests/guarantorLinkAudit.test.ts tests/paymentAudit.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "8",
+        "fail": "2",
+        "failedTests": [
+          "S9: guarantor.link.completed produces a patient-attributed audit row and projection",
+          "the latest audit migration pair matches the TypeScript union and separates validation"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "S9-sql-event-completed-removed",
+      "file": "data/migrations/2026-09-14-guarantor-link-events.sql",
+      "command": "node --import tsx --test tests/guarantorLinkAudit.test.ts tests/paymentAudit.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "9",
+        "fail": "1",
+        "failedTests": [
+          "the latest audit migration pair matches the TypeScript union and separates validation"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "S9-typescript-event-pending-removed",
+      "file": "mcp/src/authz/odosAudit.ts",
+      "command": "node --import tsx --test tests/guarantorLinkAudit.test.ts tests/paymentAudit.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "8",
+        "fail": "2",
+        "failedTests": [
+          "S9: guarantor.link.pending produces a patient-attributed audit row and projection",
+          "the latest audit migration pair matches the TypeScript union and separates validation"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "S9-sql-event-pending-removed",
+      "file": "data/migrations/2026-09-14-guarantor-link-events.sql",
+      "command": "node --import tsx --test tests/guarantorLinkAudit.test.ts tests/paymentAudit.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "9",
+        "fail": "1",
+        "failedTests": [
+          "the latest audit migration pair matches the TypeScript union and separates validation"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "S9-typescript-event-failed-removed",
+      "file": "mcp/src/authz/odosAudit.ts",
+      "command": "node --import tsx --test tests/guarantorLinkAudit.test.ts tests/paymentAudit.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "8",
+        "fail": "2",
+        "failedTests": [
+          "S9: guarantor.link.failed produces a patient-attributed audit row and projection",
+          "the latest audit migration pair matches the TypeScript union and separates validation"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "S9-sql-event-failed-removed",
+      "file": "data/migrations/2026-09-14-guarantor-link-events.sql",
+      "command": "node --import tsx --test tests/guarantorLinkAudit.test.ts tests/paymentAudit.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "9",
+        "fail": "1",
+        "failedTests": [
+          "the latest audit migration pair matches the TypeScript union and separates validation"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "S9-typescript-event-interfered-removed",
+      "file": "mcp/src/authz/odosAudit.ts",
+      "command": "node --import tsx --test tests/guarantorLinkAudit.test.ts tests/paymentAudit.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "8",
+        "fail": "2",
+        "failedTests": [
+          "S9: guarantor.link.interfered produces a patient-attributed audit row and projection",
+          "the latest audit migration pair matches the TypeScript union and separates validation"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "S9-sql-event-interfered-removed",
+      "file": "data/migrations/2026-09-14-guarantor-link-events.sql",
+      "command": "node --import tsx --test tests/guarantorLinkAudit.test.ts tests/paymentAudit.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "9",
+        "fail": "1",
+        "failedTests": [
+          "the latest audit migration pair matches the TypeScript union and separates validation"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "S9-runtime-migration-removed",
+      "file": "mcp/src/authz/liveAudit.ts",
+      "command": "node --import tsx --test tests/guarantorLinkAudit.test.ts tests/paymentAudit.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "9",
+        "fail": "1",
+        "failedTests": [
+          "the latest audit migration pair matches the TypeScript union and separates validation"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "S9-runtime-validation-removed",
+      "file": "mcp/src/authz/liveAudit.ts",
+      "command": "node --import tsx --test tests/guarantorLinkAudit.test.ts tests/paymentAudit.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "9",
+        "fail": "1",
+        "failedTests": [
+          "the latest audit migration pair matches the TypeScript union and separates validation"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "10",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "extended-header-removed",
+      "file": "mcp/src/fhir-client.ts",
+      "command": "node --import tsx --test tests/fhirExtendedRead.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "4",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "3",
+        "fail": "1",
+        "failedTests": [
+          "extended read requests author and project metadata while ordinary reads keep their header behavior"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "4",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "policy-audit-client",
+      "mutation": "profile-returned-as-wrong-identity",
+      "file": "mcp/src/fhir-client.ts",
+      "command": "node --import tsx --test tests/fhirExtendedRead.test.ts",
+      "green": {
+        "exit": 0,
+        "pass": "4",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "3",
+        "fail": "1",
+        "failedTests": [
+          "authenticated profile reference comes from the current session for client and practitioner identities"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "4",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "scanner",
+      "mutation": "service-annotation-discovery-removed",
+      "green": {
+        "exit": 0,
+        "pass": "7",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "2",
+        "fail": "5",
+        "failedTests": [
+          "a service-write annotation scans the actual attributed transaction once per resource type",
+          "annotated transactions need exact service registry entries despite existing staff write grants",
+          "an annotated transaction registry entry remains bound to path, line, callee and resource type",
+          "a service-write annotation stays on its statement and does not annotate later calls",
+          "malformed service transaction annotations fail instead of dropping declared resource types"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "7",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "scanner",
+      "mutation": "service-exact-registration-requirement-removed",
+      "green": {
+        "exit": 0,
+        "pass": "7",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "6",
+        "fail": "1",
+        "failedTests": [
+          "annotated transactions need exact service registry entries despite existing staff write grants"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "7",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "scanner",
+      "mutation": "service-resource-type-binding-removed",
+      "green": {
+        "exit": 0,
+        "pass": "7",
+        "fail": "0",
+        "failedTests": []
+      },
+      "red": {
+        "exit": 1,
+        "pass": "5",
+        "fail": "2",
+        "failedTests": [
+          "annotated transactions need exact service registry entries despite existing staff write grants",
+          "an annotated transaction registry entry remains bound to path, line, callee and resource type"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "pass": "7",
+        "fail": "0",
+        "failedTests": []
+      }
+    },
+    {
+      "lane": "editor",
+      "guard": "l3-pending-before-missing",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "L3 S7:",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
+        },
+        "scope": "46-test focused suite before mutation wave"
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor",
+      "guard": "l4-repair-claim-check",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "L4 S7:",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
+        },
+        "scope": "46-test focused suite before mutation wave"
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "L4 S7: Repair sees a claim in its fresh read and submits no child PUT"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor",
+      "guard": "save-claim-check",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "Save fresh-checks claims",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
+        },
+        "scope": "46-test focused suite before mutation wave"
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: Save fresh-checks claims after the Person save and stops every remaining child"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor",
+      "guard": "save-loaded-version",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "Save keeps the loaded child version",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
+        },
+        "scope": "46-test focused suite before mutation wave"
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: Save keeps the loaded child version after its fresh claim-only read"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor",
+      "guard": "copied-claim-membership",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "inert, missing, and copied claims",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
+        },
+        "scope": "46-test focused suite before mutation wave"
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: inert, missing, and copied claims do not suppress ordinary classification"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor",
+      "guard": "pending-complete-wiring",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "L3 S7:",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
+        },
+        "scope": "46-test focused suite before mutation wave"
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor",
+      "guard": "pending-correct-wiring",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "Correct requires a reason",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
+        },
+        "scope": "46-test focused suite before mutation wave"
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: Correct requires a reason, sends one new operation id, and reloads after a refusal"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor",
+      "guard": "l23-drift-classification",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "L23 S7:",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
+        },
+        "scope": "46-test focused suite before mutation wave"
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "L23 S7: an edit after release is ordinary drift and Repair converges to current D"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor",
+      "guard": "review-matching-claim-shortcut",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "Repair stops at a newly claimed matching child",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
+        },
+        "scope": "46-test focused suite before mutation wave"
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor",
+      "guard": "review-draft-task-reset",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "correction reason survives same-Task refusal",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
+        },
+        "scope": "46-test focused suite before mutation wave"
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: a correction reason survives same-Task refusal and clears when another Task takes over"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor",
+      "guard": "review-draft-same-task-preservation",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "correction reason survives same-Task refusal",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
+        },
+        "scope": "46-test focused suite before mutation wave"
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: a correction reason survives same-Task refusal and clears when another Task takes over"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor-uuid",
+      "guard": "fallback-removed",
+      "source": "ui/src/lib/guarantor-link-operations.ts",
+      "sourceSha256": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+      "mutatedSha256": "d1b11446cad6fba2d7b14e0f69359006d82917bb5b4a1840c7bc5d8642948d36",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "Correct (sends fresh v4|keeps native)",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        }
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 2,
+          "pass": 1,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor-uuid",
+      "guard": "version-mask-removed",
+      "source": "ui/src/lib/guarantor-link-operations.ts",
+      "sourceSha256": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+      "mutatedSha256": "c4dda7e5ff57a598545289e69f2acafa4b3287667a372eb35eecb51969155ea5",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "Correct (sends fresh v4|keeps native)",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        }
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 2,
+          "pass": 1,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor-uuid",
+      "guard": "variant-mask-removed",
+      "source": "ui/src/lib/guarantor-link-operations.ts",
+      "sourceSha256": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+      "mutatedSha256": "3aba57c4d0876bd2f4ca0c3917b75ac8aef3ee11827c5820b95f5702d64d6bdc",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "Correct (sends fresh v4|keeps native)",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        }
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 2,
+          "pass": 1,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor-uuid",
+      "guard": "native-preference-removed",
+      "source": "ui/src/lib/guarantor-link-operations.ts",
+      "sourceSha256": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+      "mutatedSha256": "cfb903a623d8e66c9335fccbb6716f989a53a1d91d1b3c47ebc28996a6f91369",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "Correct (sends fresh v4|keeps native)",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        }
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 2,
+          "pass": 1,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: Correct keeps native randomUUID when available"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    }
+  ],
+  "policyEvidenceCommit": "d282472f",
+  "editorEvidenceCommit": "e16b524e6402a6c333b8af459794b0387e4978e5",
+  "note": "Core controls ran at bc0569be; every mutated source file is byte-identical at the integrated head. S7 controls ran at the recorded contribution with byte-identical integrated UI files. Policy/audit/client/scanner contribution sources remain unchanged. Browser and live policy controls are separate. UUID controls ran at the recorded contribution; its operation API helper and two appended tests match the integrated application. Existing editor/component and server bytes remain unchanged.",
+  "contributionFileVerification": [
+    {
+      "source": "mcp/src/authz/roles.ts",
+      "contributionCommit": "d282472f",
+      "sha256": "afdd50b756f907121ccfeb965abdd72d8981739992c1d21f111d4568087cf114",
+      "matches": true
+    },
+    {
+      "source": "mcp/src/authz/odosAudit.ts",
+      "contributionCommit": "d282472f",
+      "sha256": "741d7c5d6d0eb0b8d3328a08e0055307cd3e1b0c979afdad08d332658d78b2e9",
+      "matches": true
+    },
+    {
+      "source": "mcp/src/authz/liveAudit.ts",
+      "contributionCommit": "d282472f",
+      "sha256": "2d65d97951d365a3621310a89a88ef47587741fa67eb498e4f933f21c1295ddb",
+      "matches": true
+    },
+    {
+      "source": "mcp/src/fhir-client.ts",
+      "contributionCommit": "d282472f",
+      "sha256": "57715549311950cbd1306173f71e1e98563d1c97421b3a578fce18e687bd925b",
+      "matches": true
+    },
+    {
+      "source": "ui/src/lib/guarantor-editor.ts",
+      "contributionCommit": "b54710c87efbca79159887e974d3217db14a9b57",
+      "sha256": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06",
+      "matches": true
+    },
+    {
+      "source": "ui/src/components/patient/ResponsiblePartiesControl.tsx",
+      "contributionCommit": "b54710c87efbca79159887e974d3217db14a9b57",
+      "sha256": "3c9883c78a7a403ce376deb47f04ba610dc6851e7e251673959375a5c9f4ea80",
+      "matches": true
+    },
+    {
+      "source": "ui/src/lib/guarantor-link-operations.ts",
+      "contributionCommit": "4bc9091d7849fb6c96e558d4c4bdd12c37f0a7cc",
+      "sha256": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+      "matches": true
+    }
+  ],
+  "coreExecutionHead": "bc0569be",
+  "outputNormalization": [
+    "absolute task and mutation roots replaced with placeholders",
+    "whitespace-only diagnostic lines blanked; raw outputs retained in ignored author logs"
+  ],
+  "uuidEvidenceCommit": "5cbe81d8651b4bc34b6932bed41e26275e563666"
+}

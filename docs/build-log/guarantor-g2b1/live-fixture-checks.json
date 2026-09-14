@@ -1,0 +1,10 @@
+{
+  "syntax": "passed",
+  "publicFilesChecked": 11,
+  "jsonFilesParsed": 9,
+  "knownCredentialLeakage": 0,
+  "privateKeyLeakage": 0,
+  "privateFileMode": "0600",
+  "privateDirectoryMode": "0700",
+  "redactionCheck": "passed"
+}

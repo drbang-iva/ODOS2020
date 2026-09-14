@@ -1,0 +1,35 @@
+TAP version 13
+# Subtest: S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
+not ok 1 - S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
+  ---
+  duration_ms: 17.882083
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:8278'
+  failureType: 'testCodeFailure'
+  error: |-
+    the UI must never retry an operation request
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:176:12)
+    async usingEditor (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:98:9)
+    async <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:166:3)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 241.336459

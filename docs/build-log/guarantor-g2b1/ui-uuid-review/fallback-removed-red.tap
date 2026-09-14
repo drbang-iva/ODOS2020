@@ -1,0 +1,41 @@
+TAP version 13
+# Subtest: S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+not ok 1 - S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+  ---
+  duration_ms: 19.988708
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:15616'
+  failureType: 'testCodeFailure'
+  error: |-
+    each Correct click must send its request without native randomUUID
+
+    0 !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:310:14)
+    async usingEditor (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:98:9)
+    async <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:304:5)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: S7: Correct keeps native randomUUID when available
+ok 2 - S7: Correct keeps native randomUUID when available
+  ---
+  duration_ms: 1.829709
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 270.518375

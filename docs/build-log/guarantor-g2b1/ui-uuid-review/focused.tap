@@ -1,0 +1,298 @@
+TAP version 13
+# Subtest: A1: a stale demographics PUT shows the concurrent-edit alert without retrying
+ok 1 - A1: a stale demographics PUT shows the concurrent-edit alert without retrying
+  ---
+  duration_ms: 20.046125
+  type: 'test'
+  ...
+# Subtest: A2: missing Patient version refuses before any network call
+ok 2 - A2: missing Patient version refuses before any network call
+  ---
+  duration_ms: 0.3215
+  type: 'test'
+  ...
+# Subtest: A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
+ok 3 - A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
+  ---
+  duration_ms: 17.269834
+  type: 'test'
+  ...
+# Subtest: Q10: missing linked Person is read-only and direct save handler cannot create
+ok 4 - Q10: missing linked Person is read-only and direct save handler cannot create
+  ---
+  duration_ms: 14.937583
+  type: 'test'
+  ...
+# Subtest: Q11: reopening a clean editor offers repair by patient name and converges
+ok 5 - Q11: reopening a clean editor offers repair by patient name and converges
+  ---
+  duration_ms: 11.956958
+  type: 'test'
+  ...
+# Subtest: Q12: multiple linked Persons refuse editing and identify both records
+ok 6 - Q12: multiple linked Persons refuse editing and identify both records
+  ---
+  duration_ms: 0.98825
+  type: 'test'
+  ...
+# Subtest: editing one name preserves every loaded contact and address entry without a Patient write
+ok 7 - editing one name preserves every loaded contact and address entry without a Patient write
+  ---
+  duration_ms: 4.524083
+  type: 'test'
+  ...
+# Subtest: structured address edits clear stale display text only on the edited address
+ok 8 - structured address edits clear stale display text only on the edited address
+  ---
+  duration_ms: 17.791542
+  type: 'test'
+  ...
+# Subtest: clearing then replacing the first phone keeps the second phone in its original slot
+ok 9 - clearing then replacing the first phone keeps the second phone in its original slot
+  ---
+  duration_ms: 2.576625
+  type: 'test'
+  ...
+# Subtest: saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+ok 10 - saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+  ---
+  duration_ms: 2.283916
+  type: 'test'
+  ...
+# Subtest: per-patient results distinguish rejected child writes from lost update responses
+ok 11 - per-patient results distinguish rejected child writes from lost update responses
+  ---
+  duration_ms: 4.0675
+  type: 'test'
+  ...
+# Subtest: F1e superseded save reloads automatically and one Repair converges
+ok 12 - F1e superseded save reloads automatically and one Repair converges
+  ---
+  duration_ms: 3.256584
+  type: 'test'
+  ...
+# Subtest: L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+ok 13 - L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+  ---
+  duration_ms: 25.782583
+  type: 'test'
+  ...
+# Subtest: S7: a claim on another linked child makes the guarantor pending
+ok 14 - S7: a claim on another linked child makes the guarantor pending
+  ---
+  duration_ms: 0.652792
+  type: 'test'
+  ...
+# Subtest: S7: inert, missing, and copied claims do not suppress ordinary classification
+ok 15 - S7: inert, missing, and copied claims do not suppress ordinary classification
+  ---
+  duration_ms: 1.721625
+  type: 'test'
+  ...
+# Subtest: S7: unreadable operation status remains unknown and does not offer editing
+ok 16 - S7: unreadable operation status remains unknown and does not offer editing
+  ---
+  duration_ms: 1.22525
+  type: 'test'
+  ...
+# Subtest: S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
+ok 17 - S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
+  ---
+  duration_ms: 2.822375
+  type: 'test'
+  ...
+# Subtest: L4 S7: Repair sees a claim in its fresh read and submits no child PUT
+ok 18 - L4 S7: Repair sees a claim in its fresh read and submits no child PUT
+  ---
+  duration_ms: 1.6835
+  type: 'test'
+  ...
+# Subtest: S7: Save fresh-checks claims after the Person save and stops every remaining child
+ok 19 - S7: Save fresh-checks claims after the Person save and stops every remaining child
+  ---
+  duration_ms: 1.446834
+  type: 'test'
+  ...
+# Subtest: S7: Save keeps the loaded child version after its fresh claim-only read
+ok 20 - S7: Save keeps the loaded child version after its fresh claim-only read
+  ---
+  duration_ms: 1.452083
+  type: 'test'
+  ...
+# Subtest: S7: Save checks each child and reloads pending after a late claim
+ok 21 - S7: Save checks each child and reloads pending after a late claim
+  ---
+  duration_ms: 4.158375
+  type: 'test'
+  ...
+# Subtest: L23 S7: an edit after release is ordinary drift and Repair converges to current D
+ok 22 - L23 S7: an edit after release is ordinary drift and Repair converges to current D
+  ---
+  duration_ms: 3.900125
+  type: 'test'
+  ...
+# Subtest: S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+ok 23 - S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+  ---
+  duration_ms: 1.026458
+  type: 'test'
+  ...
+# Subtest: S7: a correction reason survives same-Task refusal and clears when another Task takes over
+ok 24 - S7: a correction reason survives same-Task refusal and clears when another Task takes over
+  ---
+  duration_ms: 4.108833
+  type: 'test'
+  ...
+# Subtest: S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+ok 25 - S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+  ---
+  duration_ms: 2.453625
+  type: 'test'
+  ...
+# Subtest: S7: Correct keeps native randomUUID when available
+ok 26 - S7: Correct keeps native randomUUID when available
+  ---
+  duration_ms: 0.584583
+  type: 'test'
+  ...
+# Subtest: Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+ok 27 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+  ---
+  duration_ms: 19.398458
+  type: 'test'
+  ...
+# Subtest: Q5a Q6a preflight mismatch zero writes reload
+ok 28 - Q5a Q6a preflight mismatch zero writes reload
+  ---
+  duration_ms: 1.930584
+  type: 'test'
+  ...
+# Subtest: Q5b parent stale after preflight prevents children
+ok 29 - Q5b parent stale after preflight prevents children
+  ---
+  duration_ms: 1.048291
+  type: 'test'
+  ...
+# Subtest: Q6b Q8 late child conflict preserves competitor and labels correct patient
+ok 30 - Q6b Q8 late child conflict preserves competitor and labels correct patient
+  ---
+  duration_ms: 2.926875
+  type: 'test'
+  ...
+# Subtest: Q8 failed re-read and unresolved lost response are unknown
+ok 31 - Q8 failed re-read and unresolved lost response are unknown
+  ---
+  duration_ms: 2.142417
+  type: 'test'
+  ...
+# Subtest: lost parent response confirmed landed proceeds once
+ok 32 - lost parent response confirmed landed proceeds once
+  ---
+  duration_ms: 1.454
+  type: 'test'
+  ...
+# Subtest: Q9a converged repeat zero writes and unchanged versions
+ok 33 - Q9a converged repeat zero writes and unchanged versions
+  ---
+  duration_ms: 1.716583
+  type: 'test'
+  ...
+# Subtest: Q9b repair only failed child fresh ETag and second pass zero writes
+ok 34 - Q9b repair only failed child fresh ETag and second pass zero writes
+  ---
+  duration_ms: 2.732958
+  type: 'test'
+  ...
+# Subtest: Q9c repair superseded generation uses newest values
+ok 35 - Q9c repair superseded generation uses newest values
+  ---
+  duration_ms: 1.983375
+  type: 'test'
+  ...
+# Subtest: Q10 Q12 missing or many matches refuse direct save
+ok 36 - Q10 Q12 missing or many matches refuse direct save
+  ---
+  duration_ms: 1.304125
+  type: 'test'
+  ...
+# Subtest: Q13 trailing parent catches torn verification
+ok 37 - Q13 trailing parent catches torn verification
+  ---
+  duration_ms: 1.888833
+  type: 'test'
+  ...
+# Subtest: Q2 fresh SMS resolver independently observes propagated phone
+ok 38 - Q2 fresh SMS resolver independently observes propagated phone
+  ---
+  duration_ms: 0.885292
+  type: 'test'
+  ...
+# Subtest: Q6a independently stale child preflight zero writes
+ok 39 - Q6a independently stale child preflight zero writes
+  ---
+  duration_ms: 0.51625
+  type: 'test'
+  ...
+# Subtest: Q10 directly supplied unlinked snapshot refuses create or update
+ok 40 - Q10 directly supplied unlinked snapshot refuses create or update
+  ---
+  duration_ms: 0.1885
+  type: 'test'
+  ...
+# Subtest: Q8 child lost response and verification failure remain unknown
+ok 41 - Q8 child lost response and verification failure remain unknown
+  ---
+  duration_ms: 0.761625
+  type: 'test'
+  ...
+# Subtest: F1a repair fences generation after fresh child read
+ok 42 - F1a repair fences generation after fresh child read
+  ---
+  duration_ms: 1.136458
+  type: 'test'
+  ...
+# Subtest: F1b repair fences moved ownership after fresh child read
+ok 43 - F1b repair fences moved ownership after fresh child read
+  ---
+  duration_ms: 1.013875
+  type: 'test'
+  ...
+# Subtest: F1c save stops Leo after competitor on Sam PUT
+ok 44 - F1c save stops Leo after competitor on Sam PUT
+  ---
+  duration_ms: 0.969333
+  type: 'test'
+  ...
+# Subtest: F1d failed generation check stops child submission
+ok 45 - F1d failed generation check stops child submission
+  ---
+  duration_ms: 0.93525
+  type: 'test'
+  ...
+# Subtest: F1e superseded message does not promise absent Repair
+ok 46 - F1e superseded message does not promise absent Repair
+  ---
+  duration_ms: 0.66475
+  type: 'test'
+  ...
+# Subtest: F1f dangling 410 and 404 are named but 403 stays unknown
+ok 47 - F1f dangling 410 and 404 are named but 403 stays unknown
+  ---
+  duration_ms: 0.765334
+  type: 'test'
+  ...
+# Subtest: F1 moved generation stays superseded if trailing verification fails
+ok 48 - F1 moved generation stays superseded if trailing verification fails
+  ---
+  duration_ms: 2.134667
+  type: 'test'
+  ...
+1..48
+# tests 48
+# suites 0
+# pass 48
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1315.66175

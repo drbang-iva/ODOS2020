@@ -1,0 +1,3075 @@
+{
+  "sourceHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
+  "events": [
+    {
+      "sequence": 1,
+      "scenario": "browser seed",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "One"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "2015-01-01",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        }
+      },
+      "response": {
+        "resourceType": "Patient",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "One"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "2015-01-01",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "9eed932d-14f5-45c1-8994-964a57d6a727",
+          "lastUpdated": "2026-09-14T12:22:15.222Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a"
+            }
+          ]
+        },
+        "id": "ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a"
+      }
+    },
+    {
+      "sequence": 2,
+      "scenario": "browser seed",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Synthetic guardian"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "urn:synthetic:browser-sentinel",
+            "valueString": "Complete One"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Synthetic guardian"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "urn:synthetic:browser-sentinel",
+            "valueString": "Complete One"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "c4f6037b-4a13-4fd2-9405-dba96e300175",
+          "lastUpdated": "2026-09-14T12:22:15.261Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a"
+            }
+          ]
+        },
+        "id": "aa6e025a-c5f5-4046-8202-7ef50bfe1fa6"
+      }
+    },
+    {
+      "sequence": 3,
+      "scenario": "browser seed",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Two"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "2015-01-01",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        }
+      },
+      "response": {
+        "resourceType": "Patient",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Two"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "2015-01-01",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "da3f8904-426d-4099-8466-40452340f965",
+          "lastUpdated": "2026-09-14T12:22:15.282Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/d41d57bd-3138-4044-b6f8-0b8acb933457"
+            }
+          ]
+        },
+        "id": "d41d57bd-3138-4044-b6f8-0b8acb933457"
+      }
+    },
+    {
+      "sequence": 4,
+      "scenario": "browser seed",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/d41d57bd-3138-4044-b6f8-0b8acb933457"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Synthetic guardian"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "urn:synthetic:browser-sentinel",
+            "valueString": "Complete Two"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/d41d57bd-3138-4044-b6f8-0b8acb933457"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Synthetic guardian"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "urn:synthetic:browser-sentinel",
+            "valueString": "Complete Two"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "6b11888a-d04f-4d93-8308-e6b4a6fa4b31",
+          "lastUpdated": "2026-09-14T12:22:15.295Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/d41d57bd-3138-4044-b6f8-0b8acb933457"
+            }
+          ]
+        },
+        "id": "00c1bf42-7de4-46ff-a6f2-f6509975b27e"
+      }
+    },
+    {
+      "sequence": 5,
+      "scenario": "browser seed",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Person",
+      "status": 201,
+      "request": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6"
+            },
+            "assurance": "level2"
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e"
+            },
+            "assurance": "level2"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        }
+      },
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6"
+            },
+            "assurance": "level2"
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e"
+            },
+            "assurance": "level2"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "6703dd76-30c0-48e1-9420-5541f8069e45",
+          "lastUpdated": "2026-09-14T12:22:15.303Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "id": "c96e9f8d-7058-467c-b457-7a4a5b4eb063"
+      }
+    },
+    {
+      "sequence": 6,
+      "scenario": "browser seed",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Person",
+      "status": 201,
+      "request": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Destination"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550199"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        }
+      },
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Destination"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550199"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "edb69ae1-73a4-4cf9-9835-2dd11a43b9f1",
+          "lastUpdated": "2026-09-14T12:22:15.312Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "id": "34597250-1590-4656-b9ad-432bba442ed7"
+      }
+    },
+    {
+      "sequence": 7,
+      "scenario": "browser seed",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "One"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "2015-01-01",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        }
+      },
+      "response": {
+        "resourceType": "Patient",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "One"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "2015-01-01",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "4af97256-d454-45e4-966d-a5443aae34e0",
+          "lastUpdated": "2026-09-14T12:22:15.320Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/1e33d159-6daa-48b3-9f59-f4ea348987d8"
+            }
+          ]
+        },
+        "id": "1e33d159-6daa-48b3-9f59-f4ea348987d8"
+      }
+    },
+    {
+      "sequence": 8,
+      "scenario": "browser seed",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/1e33d159-6daa-48b3-9f59-f4ea348987d8"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Synthetic guardian"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "urn:synthetic:browser-sentinel",
+            "valueString": "Correct One"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/1e33d159-6daa-48b3-9f59-f4ea348987d8"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Synthetic guardian"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "urn:synthetic:browser-sentinel",
+            "valueString": "Correct One"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "a3c07428-1a2e-41ca-888e-817e2c2fc70b",
+          "lastUpdated": "2026-09-14T12:22:15.326Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/1e33d159-6daa-48b3-9f59-f4ea348987d8"
+            }
+          ]
+        },
+        "id": "3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4"
+      }
+    },
+    {
+      "sequence": 9,
+      "scenario": "browser seed",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Two"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "2015-01-01",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        }
+      },
+      "response": {
+        "resourceType": "Patient",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Two"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "birthDate": "2015-01-01",
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "6934b30d-c0d5-443a-a9a7-6fd405acd069",
+          "lastUpdated": "2026-09-14T12:22:15.335Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/cd6c0e58-041a-49fd-9b13-41bd0ecfd683"
+            }
+          ]
+        },
+        "id": "cd6c0e58-041a-49fd-9b13-41bd0ecfd683"
+      }
+    },
+    {
+      "sequence": 10,
+      "scenario": "browser seed",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/cd6c0e58-041a-49fd-9b13-41bd0ecfd683"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Synthetic guardian"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "urn:synthetic:browser-sentinel",
+            "valueString": "Correct Two"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/cd6c0e58-041a-49fd-9b13-41bd0ecfd683"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Synthetic guardian"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "urn:synthetic:browser-sentinel",
+            "valueString": "Correct Two"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "9dfb384d-378e-45e0-aa89-b5885be3c0e3",
+          "lastUpdated": "2026-09-14T12:22:15.342Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/cd6c0e58-041a-49fd-9b13-41bd0ecfd683"
+            }
+          ]
+        },
+        "id": "1d9c9ea5-42ea-4e55-bafb-13ec38337df5"
+      }
+    },
+    {
+      "sequence": 11,
+      "scenario": "browser seed",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Person",
+      "status": 201,
+      "request": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4"
+            },
+            "assurance": "level2"
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5"
+            },
+            "assurance": "level2"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        }
+      },
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4"
+            },
+            "assurance": "level2"
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5"
+            },
+            "assurance": "level2"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "53da3891-c169-4896-bbcd-fb8fdaab3732",
+          "lastUpdated": "2026-09-14T12:22:15.350Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "id": "d28331fe-2856-4e6a-9017-6d34ed59a978"
+      }
+    },
+    {
+      "sequence": 12,
+      "scenario": "browser seed",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Person",
+      "status": 201,
+      "request": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Destination"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550199"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        }
+      },
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Destination"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550199"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "18546415-341c-45a0-9fc0-0e593d56634b",
+          "lastUpdated": "2026-09-14T12:22:15.357Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "id": "7b75aab3-99d8-40eb-bc99-11c48b89e7a0"
+      }
+    },
+    {
+      "sequence": 13,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/a56de48d-cd4b-49db-981a-0a8abba7c8de",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/03e1f451-6126-49ce-8566-509ff760df87",
+          "display": "g2b1-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+          "display": "Synthetic G2b1 staff"
+        },
+        "id": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
+        "meta": {
+          "versionId": "56de8cdf-6dea-4218-a968-33bde13df5de",
+          "lastUpdated": "2026-09-14T12:21:50.834Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/237c95fc-73c1-4914-a19e-66601d2447a0"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/95dd0c84-64c6-4dd6-954c-f2247ee9fc55"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/f718a052-d438-4622-b5e0-b6ad73474b28"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/345750b1-246e-4895-aeba-2ab85a13d151"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 14,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "PUT",
+      "path": "/fhir/R4/ProjectMembership/a56de48d-cd4b-49db-981a-0a8abba7c8de",
+      "status": 200,
+      "ifMatch": "W/\"56de8cdf-6dea-4218-a968-33bde13df5de\"",
+      "request": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/03e1f451-6126-49ce-8566-509ff760df87",
+          "display": "g2b1-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+          "display": "Synthetic G2b1 staff"
+        },
+        "id": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
+        "meta": {
+          "versionId": "56de8cdf-6dea-4218-a968-33bde13df5de",
+          "lastUpdated": "2026-09-14T12:21:50.834Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/d41d57bd-3138-4044-b6f8-0b8acb933457"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/1e33d159-6daa-48b3-9f59-f4ea348987d8"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/cd6c0e58-041a-49fd-9b13-41bd0ecfd683"
+              }
+            ]
+          }
+        ]
+      },
+      "response": {
+        "invitedBy": {
+          "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/03e1f451-6126-49ce-8566-509ff760df87",
+          "display": "g2b1-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+          "display": "Synthetic G2b1 staff"
+        },
+        "id": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
+        "meta": {
+          "versionId": "999e1322-6875-4d23-8196-985783b9f892",
+          "lastUpdated": "2026-09-14T12:22:15.368Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/d41d57bd-3138-4044-b6f8-0b8acb933457"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/1e33d159-6daa-48b3-9f59-f4ea348987d8"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/cd6c0e58-041a-49fd-9b13-41bd0ecfd683"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 15,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person/34597250-1590-4656-b9ad-432bba442ed7",
+      "status": 200,
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Destination"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550199"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "edb69ae1-73a4-4cf9-9835-2dd11a43b9f1",
+          "lastUpdated": "2026-09-14T12:22:15.312Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "id": "34597250-1590-4656-b9ad-432bba442ed7"
+      }
+    },
+    {
+      "sequence": 16,
+      "scenario": "Complete: genuine competing destination edit after detach",
+      "principal": "staff",
+      "method": "PUT",
+      "path": "/fhir/R4/Person/34597250-1590-4656-b9ad-432bba442ed7",
+      "status": 200,
+      "ifMatch": "W/\"edb69ae1-73a4-4cf9-9835-2dd11a43b9f1\"",
+      "request": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Current"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550199"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "edb69ae1-73a4-4cf9-9835-2dd11a43b9f1",
+          "lastUpdated": "2026-09-14T12:22:15.312Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "id": "34597250-1590-4656-b9ad-432bba442ed7"
+      },
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Current"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550199"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "50fe7aa1-6a77-4e05-a73b-75bd58570925",
+          "lastUpdated": "2026-09-14T12:22:16.258Z",
+          "author": {
+            "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+            "display": "Synthetic G2b1 staff"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "id": "34597250-1590-4656-b9ad-432bba442ed7"
+      }
+    },
+    {
+      "sequence": 17,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": 200,
+      "response": {
+        "resourceType": "Task",
+        "id": "af6e341d-4116-46ae-bc07-82eeb704d9e7",
+        "intent": "order",
+        "status": "in-progress",
+        "identifier": [
+          {
+            "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+            "value": "759739ee-129c-40c4-a273-8c68eea50bd3"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+              "code": "transfer"
+            }
+          ]
+        },
+        "input": [
+          {
+            "type": {
+              "text": "kind"
+            },
+            "valueCode": "transfer"
+          },
+          {
+            "type": {
+              "text": "source"
+            },
+            "valueReference": {
+              "reference": "Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063"
+            }
+          },
+          {
+            "type": {
+              "text": "destination"
+            },
+            "valueReference": {
+              "reference": "Person/34597250-1590-4656-b9ad-432bba442ed7"
+            }
+          },
+          {
+            "type": {
+              "text": "moved"
+            },
+            "valueReference": {
+              "reference": "RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6"
+            }
+          },
+          {
+            "type": {
+              "text": "moved"
+            },
+            "valueReference": {
+              "reference": "RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e"
+            }
+          },
+          {
+            "type": {
+              "text": "expected:Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063"
+            },
+            "valueString": "6703dd76-30c0-48e1-9420-5541f8069e45"
+          },
+          {
+            "type": {
+              "text": "expected:Person/34597250-1590-4656-b9ad-432bba442ed7"
+            },
+            "valueString": "edb69ae1-73a4-4cf9-9835-2dd11a43b9f1"
+          },
+          {
+            "type": {
+              "text": "expected:RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6"
+            },
+            "valueString": "c4f6037b-4a13-4fd2-9405-dba96e300175"
+          },
+          {
+            "type": {
+              "text": "expected:RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e"
+            },
+            "valueString": "6b11888a-d04f-4d93-8308-e6b4a6fa4b31"
+          },
+          {
+            "type": {
+              "text": "reason"
+            },
+            "valueString": "Synthetic browser recovery proof"
+          }
+        ],
+        "requester": {
+          "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a"
+        },
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "7dce0cb3-03cc-4c95-909e-8181a24e0789",
+          "lastUpdated": "2026-09-14T12:22:16.420Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "businessStatus": {
+          "text": "attach-pending"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+            "valueString": "{\"intents\":[{\"id\":\"a2f1a5cb-820d-4838-b522-29f4e67d95c2\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e\",\"expectedVersion\":\"6b11888a-d04f-4d93-8308-e6b4a6fa4b31\",\"intendedContentHash\":\"d8f62946ee596a0f5a5b8bc0305afce263558d0478b99c7af28b08111062d45c\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"97064f4f-8908-420f-ad9f-2da35e62d6c4\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6\",\"expectedVersion\":\"c4f6037b-4a13-4fd2-9405-dba96e300175\",\"intendedContentHash\":\"aebd38d18db6415f2a78b1f9a6ff5b73a0c97ffae5ee3348e6f7018b60750aff\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"c4e97397-8e93-43d3-82a8-306269409293\",\"phase\":\"detaching\",\"target\":\"Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063\",\"expectedVersion\":\"6703dd76-30c0-48e1-9420-5541f8069e45\",\"intendedContentHash\":\"4b4b7b37fd235b5fc8a8b94211f31d07823c10be8d4c3ca92b10d6a201971f2d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"ee2882c6-0957-40bc-8a31-d6c47d45db42\",\"phase\":\"attaching\",\"target\":\"Person/34597250-1590-4656-b9ad-432bba442ed7\",\"expectedVersion\":\"edb69ae1-73a4-4cf9-9835-2dd11a43b9f1\",\"intendedContentHash\":\"77af4d4ef1217e51f8cd8fefc07d3df413bbba93e60a8c7d4cc3a7982c609fe1\",\"disposition\":\"rejected\",\"responseStatus\":412}]}"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 18,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2Faa6e025a-c5f5-4046-8202-7ef50bfe1fa6",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2Faa6e025a-c5f5-4046-8202-7ef50bfe1fa6"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 19,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F00c1bf42-7de4-46ff-a6f2-f6509975b27e",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F00c1bf42-7de4-46ff-a6f2-f6509975b27e"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 20,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0",
+      "status": 200,
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Destination"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550199"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "18546415-341c-45a0-9fc0-0e593d56634b",
+          "lastUpdated": "2026-09-14T12:22:15.357Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "id": "7b75aab3-99d8-40eb-bc99-11c48b89e7a0"
+      }
+    },
+    {
+      "sequence": 21,
+      "scenario": "Correct: genuine competing destination edit after detach",
+      "principal": "staff",
+      "method": "PUT",
+      "path": "/fhir/R4/Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0",
+      "status": 200,
+      "ifMatch": "W/\"18546415-341c-45a0-9fc0-0e593d56634b\"",
+      "request": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Current"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550199"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "18546415-341c-45a0-9fc0-0e593d56634b",
+          "lastUpdated": "2026-09-14T12:22:15.357Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "id": "7b75aab3-99d8-40eb-bc99-11c48b89e7a0"
+      },
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Current"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550199"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "868216e3-6380-4c7e-bde0-fefc8d08ea9a",
+          "lastUpdated": "2026-09-14T12:22:17.100Z",
+          "author": {
+            "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+            "display": "Synthetic G2b1 staff"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "id": "7b75aab3-99d8-40eb-bc99-11c48b89e7a0"
+      }
+    },
+    {
+      "sequence": 22,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "status": 200,
+      "response": {
+        "resourceType": "Task",
+        "id": "c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+        "intent": "order",
+        "status": "in-progress",
+        "identifier": [
+          {
+            "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+            "value": "66867e37-1344-4a6a-b03d-0201692f518f"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+              "code": "transfer"
+            }
+          ]
+        },
+        "input": [
+          {
+            "type": {
+              "text": "kind"
+            },
+            "valueCode": "transfer"
+          },
+          {
+            "type": {
+              "text": "source"
+            },
+            "valueReference": {
+              "reference": "Person/d28331fe-2856-4e6a-9017-6d34ed59a978"
+            }
+          },
+          {
+            "type": {
+              "text": "destination"
+            },
+            "valueReference": {
+              "reference": "Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0"
+            }
+          },
+          {
+            "type": {
+              "text": "moved"
+            },
+            "valueReference": {
+              "reference": "RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4"
+            }
+          },
+          {
+            "type": {
+              "text": "moved"
+            },
+            "valueReference": {
+              "reference": "RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5"
+            }
+          },
+          {
+            "type": {
+              "text": "expected:Person/d28331fe-2856-4e6a-9017-6d34ed59a978"
+            },
+            "valueString": "53da3891-c169-4896-bbcd-fb8fdaab3732"
+          },
+          {
+            "type": {
+              "text": "expected:Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0"
+            },
+            "valueString": "18546415-341c-45a0-9fc0-0e593d56634b"
+          },
+          {
+            "type": {
+              "text": "expected:RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4"
+            },
+            "valueString": "a3c07428-1a2e-41ca-888e-817e2c2fc70b"
+          },
+          {
+            "type": {
+              "text": "expected:RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5"
+            },
+            "valueString": "9dfb384d-378e-45e0-aa89-b5885be3c0e3"
+          },
+          {
+            "type": {
+              "text": "reason"
+            },
+            "valueString": "Synthetic browser recovery proof"
+          }
+        ],
+        "requester": {
+          "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a"
+        },
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "be0a86c6-9a40-475c-bcb7-976b5c579ce8",
+          "lastUpdated": "2026-09-14T12:22:17.258Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "businessStatus": {
+          "text": "attach-pending"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+            "valueString": "{\"intents\":[{\"id\":\"d0cc94d0-b052-4461-bac7-a49a0e9ac6a2\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5\",\"expectedVersion\":\"9dfb384d-378e-45e0-aa89-b5885be3c0e3\",\"intendedContentHash\":\"11c79d75f84349fa7e1c43e281da28db74a0b855d1f479c8d49018e0995e42a5\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"be2a6cc8-3883-4763-b612-bdf356fbcc8d\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4\",\"expectedVersion\":\"a3c07428-1a2e-41ca-888e-817e2c2fc70b\",\"intendedContentHash\":\"447b86b706c7d5de869bcfa6a8285fb682fb3ed8d9f2d8ba8a483358cd129c08\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"1897c2bc-633e-4372-8c12-70e8a69d5b0b\",\"phase\":\"detaching\",\"target\":\"Person/d28331fe-2856-4e6a-9017-6d34ed59a978\",\"expectedVersion\":\"53da3891-c169-4896-bbcd-fb8fdaab3732\",\"intendedContentHash\":\"672cb5210733c884b5d3f8fc3b44432ab376117cc826681a7a3dba3aa0892c87\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"63a65a40-2f9d-43e6-adaf-83fb517eec10\",\"phase\":\"attaching\",\"target\":\"Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0\",\"expectedVersion\":\"18546415-341c-45a0-9fc0-0e593d56634b\",\"intendedContentHash\":\"093604645d31e2b32d5968b1200397e66ef9086bb3c9f5057a7d285e3e80a876\",\"disposition\":\"rejected\",\"responseStatus\":412}]}"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 23,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 24,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F1d9c9ea5-42ea-4e55-bafb-13ec38337df5",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F1d9c9ea5-42ea-4e55-bafb-13ec38337df5"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 25,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person/34597250-1590-4656-b9ad-432bba442ed7",
+      "status": 200,
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Current"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550199"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "6ee9b9e4-9fa5-4e44-8d2e-a6d317177f8d",
+          "lastUpdated": "2026-09-14T12:22:25.131Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "id": "34597250-1590-4656-b9ad-432bba442ed7",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+            "valueString": "48fdb5ef-65fb-4ce0-bb32-447b58876a08"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6"
+            },
+            "assurance": "level2"
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e"
+            },
+            "assurance": "level2"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 26,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Task/af6e341d-4116-46ae-bc07-82eeb704d9e7",
+      "status": 200,
+      "response": {
+        "resourceType": "Task",
+        "id": "af6e341d-4116-46ae-bc07-82eeb704d9e7",
+        "intent": "order",
+        "status": "completed",
+        "identifier": [
+          {
+            "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+            "value": "759739ee-129c-40c4-a273-8c68eea50bd3"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+              "code": "transfer"
+            }
+          ]
+        },
+        "input": [
+          {
+            "type": {
+              "text": "kind"
+            },
+            "valueCode": "transfer"
+          },
+          {
+            "type": {
+              "text": "source"
+            },
+            "valueReference": {
+              "reference": "Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063"
+            }
+          },
+          {
+            "type": {
+              "text": "destination"
+            },
+            "valueReference": {
+              "reference": "Person/34597250-1590-4656-b9ad-432bba442ed7"
+            }
+          },
+          {
+            "type": {
+              "text": "moved"
+            },
+            "valueReference": {
+              "reference": "RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6"
+            }
+          },
+          {
+            "type": {
+              "text": "moved"
+            },
+            "valueReference": {
+              "reference": "RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e"
+            }
+          },
+          {
+            "type": {
+              "text": "expected:Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063"
+            },
+            "valueString": "6703dd76-30c0-48e1-9420-5541f8069e45"
+          },
+          {
+            "type": {
+              "text": "expected:Person/34597250-1590-4656-b9ad-432bba442ed7"
+            },
+            "valueString": "edb69ae1-73a4-4cf9-9835-2dd11a43b9f1"
+          },
+          {
+            "type": {
+              "text": "expected:RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6"
+            },
+            "valueString": "c4f6037b-4a13-4fd2-9405-dba96e300175"
+          },
+          {
+            "type": {
+              "text": "expected:RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e"
+            },
+            "valueString": "6b11888a-d04f-4d93-8308-e6b4a6fa4b31"
+          },
+          {
+            "type": {
+              "text": "reason"
+            },
+            "valueString": "Synthetic browser recovery proof"
+          }
+        ],
+        "requester": {
+          "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a"
+        },
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "6e2317ff-8bbe-4cdc-a851-30fba9e74c23",
+          "lastUpdated": "2026-09-14T12:22:25.625Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "businessStatus": {
+          "text": "linked"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+            "valueString": "{\"intents\":[{\"id\":\"a2f1a5cb-820d-4838-b522-29f4e67d95c2\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e\",\"expectedVersion\":\"6b11888a-d04f-4d93-8308-e6b4a6fa4b31\",\"intendedContentHash\":\"d8f62946ee596a0f5a5b8bc0305afce263558d0478b99c7af28b08111062d45c\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"97064f4f-8908-420f-ad9f-2da35e62d6c4\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6\",\"expectedVersion\":\"c4f6037b-4a13-4fd2-9405-dba96e300175\",\"intendedContentHash\":\"aebd38d18db6415f2a78b1f9a6ff5b73a0c97ffae5ee3348e6f7018b60750aff\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"c4e97397-8e93-43d3-82a8-306269409293\",\"phase\":\"detaching\",\"target\":\"Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063\",\"expectedVersion\":\"6703dd76-30c0-48e1-9420-5541f8069e45\",\"intendedContentHash\":\"4b4b7b37fd235b5fc8a8b94211f31d07823c10be8d4c3ca92b10d6a201971f2d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"ee2882c6-0957-40bc-8a31-d6c47d45db42\",\"phase\":\"attaching\",\"target\":\"Person/34597250-1590-4656-b9ad-432bba442ed7\",\"expectedVersion\":\"edb69ae1-73a4-4cf9-9835-2dd11a43b9f1\",\"intendedContentHash\":\"77af4d4ef1217e51f8cd8fefc07d3df413bbba93e60a8c7d4cc3a7982c609fe1\",\"disposition\":\"rejected\",\"responseStatus\":412},{\"id\":\"396cb9a2-273e-489f-a33e-822af8c56f5d\",\"phase\":\"fence-source\",\"target\":\"Person/c96e9f8d-7058-467c-b457-7a4a5b4eb063\",\"expectedVersion\":\"9cded7f4-9074-47e6-8e79-ae769c8991ea\",\"intendedContentHash\":\"4b4b7b37fd235b5fc8a8b94211f31d07823c10be8d4c3ca92b10d6a201971f2d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"cad14402-172b-4ffe-a0f2-6b7c6d7e42c7\",\"phase\":\"fence-destination\",\"target\":\"Person/34597250-1590-4656-b9ad-432bba442ed7\",\"expectedVersion\":\"50fe7aa1-6a77-4e05-a73b-75bd58570925\",\"intendedContentHash\":\"aba5ffa67f5ffdc9798746396552bd8e3e59c68b0209ce004c9a2b2649536b02\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"1858abd4-5ed9-4351-b3de-081ac0da3a0c\",\"phase\":\"attaching\",\"target\":\"Person/34597250-1590-4656-b9ad-432bba442ed7\",\"expectedVersion\":\"64720a60-d282-4330-816b-9d5082c017b2\",\"intendedContentHash\":\"6547b663f223bafd39303f8bc22dfdbbdbf613a99363f63b51b5909a8ce8cebe\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"d7dd19bd-01b4-46fe-8dcf-4862bc0132b7\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e\",\"expectedVersion\":\"2c6746af-384f-4857-b738-78e610179b9f\",\"intendedContentHash\":\"84900dd011ae0bd6743cf1a75aeaae969247069c2cfca84e6235eef613d4ccc3\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"1d228521-58f8-4e33-82fb-111953e8a25c\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6\",\"expectedVersion\":\"e654622c-0681-4608-a50f-6d67513e19f9\",\"intendedContentHash\":\"bbfd1fe1306fcfd3740524bcab1857ae43c308792f0d1a7c5a0bd3b22ef9853c\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"139a8c69-d13e-4600-b68c-2f48edfe9000\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e\",\"expectedVersion\":\"2ed0dce7-07bf-4892-a92d-11b8e913c91d\",\"intendedContentHash\":\"5032b7f142661960bc9fed546cec391ba4db7f318a19b149f1a9ad6615a7c1cc\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"54e82e17-1b66-4646-af44-53067351b0c0\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6\",\"expectedVersion\":\"4d760ba3-9493-49ad-8034-9b22f62842d5\",\"intendedContentHash\":\"d54faa79e84a1ede47db74a25836b2c354153c650af568b320a6d30779038581\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"}],\"generation\":\"6ee9b9e4-9fa5-4e44-8d2e-a6d317177f8d\"}"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 27,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Current"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550199"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Synthetic guardian"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "urn:synthetic:browser-sentinel",
+            "valueString": "Complete One"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "dbce7cdf-bf2b-48bd-9e0a-8191febc4115",
+          "lastUpdated": "2026-09-14T12:22:25.571Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/ef70be2f-9e12-4c0d-a86c-2f8a3d23a61a"
+            }
+          ]
+        },
+        "id": "aa6e025a-c5f5-4046-8202-7ef50bfe1fa6"
+      }
+    },
+    {
+      "sequence": 28,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2Faa6e025a-c5f5-4046-8202-7ef50bfe1fa6",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28760/fhir/R4/Person/34597250-1590-4656-b9ad-432bba442ed7",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "active": true,
+              "name": [
+                {
+                  "given": [
+                    "Complete",
+                    "Current"
+                  ],
+                  "family": "Guarantor"
+                }
+              ],
+              "telecom": [
+                {
+                  "system": "phone",
+                  "value": "+15555550199"
+                }
+              ],
+              "address": [
+                {
+                  "line": [
+                    "2 Synthetic Street"
+                  ],
+                  "city": "Testville"
+                }
+              ],
+              "meta": {
+                "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+                "versionId": "6ee9b9e4-9fa5-4e44-8d2e-a6d317177f8d",
+                "lastUpdated": "2026-09-14T12:22:25.131Z",
+                "author": {
+                  "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+                  }
+                ]
+              },
+              "id": "34597250-1590-4656-b9ad-432bba442ed7",
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+                  "valueString": "48fdb5ef-65fb-4ce0-bb32-447b58876a08"
+                }
+              ],
+              "link": [
+                {
+                  "target": {
+                    "reference": "RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6"
+                  },
+                  "assurance": "level2"
+                },
+                {
+                  "target": {
+                    "reference": "RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e"
+                  },
+                  "assurance": "level2"
+                }
+              ]
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2Faa6e025a-c5f5-4046-8202-7ef50bfe1fa6"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2Faa6e025a-c5f5-4046-8202-7ef50bfe1fa6"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 29,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/d41d57bd-3138-4044-b6f8-0b8acb933457"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Complete",
+              "Current"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550199"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Synthetic guardian"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "urn:synthetic:browser-sentinel",
+            "valueString": "Complete Two"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "44417fb8-7467-4dad-aa7e-1820bd95e78f",
+          "lastUpdated": "2026-09-14T12:22:25.501Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/d41d57bd-3138-4044-b6f8-0b8acb933457"
+            }
+          ]
+        },
+        "id": "00c1bf42-7de4-46ff-a6f2-f6509975b27e"
+      }
+    },
+    {
+      "sequence": 30,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F00c1bf42-7de4-46ff-a6f2-f6509975b27e",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28760/fhir/R4/Person/34597250-1590-4656-b9ad-432bba442ed7",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "active": true,
+              "name": [
+                {
+                  "given": [
+                    "Complete",
+                    "Current"
+                  ],
+                  "family": "Guarantor"
+                }
+              ],
+              "telecom": [
+                {
+                  "system": "phone",
+                  "value": "+15555550199"
+                }
+              ],
+              "address": [
+                {
+                  "line": [
+                    "2 Synthetic Street"
+                  ],
+                  "city": "Testville"
+                }
+              ],
+              "meta": {
+                "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+                "versionId": "6ee9b9e4-9fa5-4e44-8d2e-a6d317177f8d",
+                "lastUpdated": "2026-09-14T12:22:25.131Z",
+                "author": {
+                  "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+                  }
+                ]
+              },
+              "id": "34597250-1590-4656-b9ad-432bba442ed7",
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+                  "valueString": "48fdb5ef-65fb-4ce0-bb32-447b58876a08"
+                }
+              ],
+              "link": [
+                {
+                  "target": {
+                    "reference": "RelatedPerson/aa6e025a-c5f5-4046-8202-7ef50bfe1fa6"
+                  },
+                  "assurance": "level2"
+                },
+                {
+                  "target": {
+                    "reference": "RelatedPerson/00c1bf42-7de4-46ff-a6f2-f6509975b27e"
+                  },
+                  "assurance": "level2"
+                }
+              ]
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F00c1bf42-7de4-46ff-a6f2-f6509975b27e"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F00c1bf42-7de4-46ff-a6f2-f6509975b27e"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 31,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person/d28331fe-2856-4e6a-9017-6d34ed59a978",
+      "status": 200,
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "d72752e6-2abc-4104-af07-d8e31d4bd19c",
+          "lastUpdated": "2026-09-14T12:22:28.217Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "id": "d28331fe-2856-4e6a-9017-6d34ed59a978",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+            "valueString": "c00afc15-8b31-48bf-86df-376bfe89a967"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4"
+            },
+            "assurance": "level2"
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5"
+            },
+            "assurance": "level2"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 32,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Task/c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+      "status": 200,
+      "response": {
+        "resourceType": "Task",
+        "id": "c397cba3-0f8b-4c29-a300-57c1ce9ad562",
+        "intent": "order",
+        "status": "cancelled",
+        "identifier": [
+          {
+            "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+            "value": "66867e37-1344-4a6a-b03d-0201692f518f"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+              "code": "transfer"
+            }
+          ]
+        },
+        "input": [
+          {
+            "type": {
+              "text": "kind"
+            },
+            "valueCode": "transfer"
+          },
+          {
+            "type": {
+              "text": "source"
+            },
+            "valueReference": {
+              "reference": "Person/d28331fe-2856-4e6a-9017-6d34ed59a978"
+            }
+          },
+          {
+            "type": {
+              "text": "destination"
+            },
+            "valueReference": {
+              "reference": "Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0"
+            }
+          },
+          {
+            "type": {
+              "text": "moved"
+            },
+            "valueReference": {
+              "reference": "RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4"
+            }
+          },
+          {
+            "type": {
+              "text": "moved"
+            },
+            "valueReference": {
+              "reference": "RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5"
+            }
+          },
+          {
+            "type": {
+              "text": "expected:Person/d28331fe-2856-4e6a-9017-6d34ed59a978"
+            },
+            "valueString": "53da3891-c169-4896-bbcd-fb8fdaab3732"
+          },
+          {
+            "type": {
+              "text": "expected:Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0"
+            },
+            "valueString": "18546415-341c-45a0-9fc0-0e593d56634b"
+          },
+          {
+            "type": {
+              "text": "expected:RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4"
+            },
+            "valueString": "a3c07428-1a2e-41ca-888e-817e2c2fc70b"
+          },
+          {
+            "type": {
+              "text": "expected:RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5"
+            },
+            "valueString": "9dfb384d-378e-45e0-aa89-b5885be3c0e3"
+          },
+          {
+            "type": {
+              "text": "reason"
+            },
+            "valueString": "Synthetic browser recovery proof"
+          }
+        ],
+        "requester": {
+          "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a"
+        },
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "c6705564-ea83-4702-8ffa-baba100b72c5",
+          "lastUpdated": "2026-09-14T12:22:28.850Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+            "valueString": "{\"intents\":[{\"id\":\"d0cc94d0-b052-4461-bac7-a49a0e9ac6a2\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5\",\"expectedVersion\":\"9dfb384d-378e-45e0-aa89-b5885be3c0e3\",\"intendedContentHash\":\"11c79d75f84349fa7e1c43e281da28db74a0b855d1f479c8d49018e0995e42a5\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"be2a6cc8-3883-4763-b612-bdf356fbcc8d\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4\",\"expectedVersion\":\"a3c07428-1a2e-41ca-888e-817e2c2fc70b\",\"intendedContentHash\":\"447b86b706c7d5de869bcfa6a8285fb682fb3ed8d9f2d8ba8a483358cd129c08\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"1897c2bc-633e-4372-8c12-70e8a69d5b0b\",\"phase\":\"detaching\",\"target\":\"Person/d28331fe-2856-4e6a-9017-6d34ed59a978\",\"expectedVersion\":\"53da3891-c169-4896-bbcd-fb8fdaab3732\",\"intendedContentHash\":\"672cb5210733c884b5d3f8fc3b44432ab376117cc826681a7a3dba3aa0892c87\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"63a65a40-2f9d-43e6-adaf-83fb517eec10\",\"phase\":\"attaching\",\"target\":\"Person/7b75aab3-99d8-40eb-bc99-11c48b89e7a0\",\"expectedVersion\":\"18546415-341c-45a0-9fc0-0e593d56634b\",\"intendedContentHash\":\"093604645d31e2b32d5968b1200397e66ef9086bb3c9f5057a7d285e3e80a876\",\"disposition\":\"rejected\",\"responseStatus\":412}]}"
+          }
+        ],
+        "businessStatus": {
+          "text": "corrected"
+        }
+      }
+    },
+    {
+      "sequence": 33,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/1e33d159-6daa-48b3-9f59-f4ea348987d8"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Synthetic guardian"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "urn:synthetic:browser-sentinel",
+            "valueString": "Correct One"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "a582758a-f91a-4d18-900c-3c7f5809b9a9",
+          "lastUpdated": "2026-09-14T12:22:28.759Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/1e33d159-6daa-48b3-9f59-f4ea348987d8"
+            }
+          ]
+        },
+        "id": "3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4"
+      }
+    },
+    {
+      "sequence": 34,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28760/fhir/R4/Person/d28331fe-2856-4e6a-9017-6d34ed59a978",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "active": true,
+              "name": [
+                {
+                  "given": [
+                    "Correct",
+                    "Source"
+                  ],
+                  "family": "Guarantor"
+                }
+              ],
+              "telecom": [
+                {
+                  "system": "phone",
+                  "value": "+15555550101"
+                }
+              ],
+              "address": [
+                {
+                  "line": [
+                    "1 Synthetic Street"
+                  ],
+                  "city": "Testville"
+                }
+              ],
+              "meta": {
+                "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+                "versionId": "d72752e6-2abc-4104-af07-d8e31d4bd19c",
+                "lastUpdated": "2026-09-14T12:22:28.217Z",
+                "author": {
+                  "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+                  }
+                ]
+              },
+              "id": "d28331fe-2856-4e6a-9017-6d34ed59a978",
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+                  "valueString": "c00afc15-8b31-48bf-86df-376bfe89a967"
+                }
+              ],
+              "link": [
+                {
+                  "target": {
+                    "reference": "RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4"
+                  },
+                  "assurance": "level2"
+                },
+                {
+                  "target": {
+                    "reference": "RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5"
+                  },
+                  "assurance": "level2"
+                }
+              ]
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 35,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/cd6c0e58-041a-49fd-9b13-41bd0ecfd683"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Correct",
+              "Source"
+            ],
+            "family": "Guarantor"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+15555550101"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "1 Synthetic Street"
+            ],
+            "city": "Testville"
+          }
+        ],
+        "relationship": [
+          {
+            "text": "Synthetic guardian"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "urn:synthetic:browser-sentinel",
+            "valueString": "Correct Two"
+          }
+        ],
+        "meta": {
+          "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+          "versionId": "bc3156a4-7c3b-4620-984c-5442556f1065",
+          "lastUpdated": "2026-09-14T12:22:28.664Z",
+          "author": {
+            "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+            },
+            {
+              "reference": "Patient/cd6c0e58-041a-49fd-9b13-41bd0ecfd683"
+            }
+          ]
+        },
+        "id": "1d9c9ea5-42ea-4e55-bafb-13ec38337df5"
+      }
+    },
+    {
+      "sequence": 36,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F1d9c9ea5-42ea-4e55-bafb-13ec38337df5",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28760/fhir/R4/Person/d28331fe-2856-4e6a-9017-6d34ed59a978",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "active": true,
+              "name": [
+                {
+                  "given": [
+                    "Correct",
+                    "Source"
+                  ],
+                  "family": "Guarantor"
+                }
+              ],
+              "telecom": [
+                {
+                  "system": "phone",
+                  "value": "+15555550101"
+                }
+              ],
+              "address": [
+                {
+                  "line": [
+                    "1 Synthetic Street"
+                  ],
+                  "city": "Testville"
+                }
+              ],
+              "meta": {
+                "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+                "versionId": "d72752e6-2abc-4104-af07-d8e31d4bd19c",
+                "lastUpdated": "2026-09-14T12:22:28.217Z",
+                "author": {
+                  "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+                  }
+                ]
+              },
+              "id": "d28331fe-2856-4e6a-9017-6d34ed59a978",
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+                  "valueString": "c00afc15-8b31-48bf-86df-376bfe89a967"
+                }
+              ],
+              "link": [
+                {
+                  "target": {
+                    "reference": "RelatedPerson/3ab733a8-6f8e-4ef2-b8b7-c8b7ba96caf4"
+                  },
+                  "assurance": "level2"
+                },
+                {
+                  "target": {
+                    "reference": "RelatedPerson/1d9c9ea5-42ea-4e55-bafb-13ec38337df5"
+                  },
+                  "assurance": "level2"
+                }
+              ]
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F1d9c9ea5-42ea-4e55-bafb-13ec38337df5"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F1d9c9ea5-42ea-4e55-bafb-13ec38337df5"
+          }
+        ]
+      }
+    }
+  ]
+}

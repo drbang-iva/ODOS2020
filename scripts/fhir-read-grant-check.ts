@@ -15,7 +15,7 @@ export interface FhirReadSourceFile {
   readonly text: string;
 }
 
-export type ScannedFhirInteraction = "read" | "search" | "create" | "update" | "delete" | "patch";
+export type ScannedFhirInteraction = "read" | "search" | "create" | "update" | "delete" | "patch" | "transaction";
 export type RequiredFhirInteraction = Exclude<ScannedFhirInteraction, "patch">;
 
 export interface FhirOperation {
@@ -126,21 +126,24 @@ export const NON_FHIR_LITERAL_CALL_SITES = [
 ] as const satisfies readonly NonFhirLiteralCallSite[];
 
 export const SERVICE_IDENTITY_FHIR_WRITE_CALL_SITES = [
-  { path: "mcp/src/authz/liveAudit.ts", line: 459, callee: "client.create", resourceType: "AuditEvent", reason: "Dedicated audit projection client." },
+  { path: "mcp/src/clinic/guarantor-link-operation.ts", line: 169, callee: "this.deps.serviceFhir.executeTransactionAsActor", resourceType: "Task", reason: "Guarantor operation uses the explicit service client with staff attribution." },
+  { path: "mcp/src/clinic/guarantor-link-operation.ts", line: 169, callee: "this.deps.serviceFhir.executeTransactionAsActor", resourceType: "Person", reason: "Guarantor operation uses the explicit service client with staff attribution." },
+  { path: "mcp/src/clinic/guarantor-link-operation.ts", line: 169, callee: "this.deps.serviceFhir.executeTransactionAsActor", resourceType: "RelatedPerson", reason: "Guarantor operation uses the explicit service client with staff attribution." },
+  { path: "mcp/src/authz/liveAudit.ts", line: 468, callee: "client.create", resourceType: "AuditEvent", reason: "Dedicated audit projection client." },
   { path: "mcp/src/clinical-graph/protocol-store.ts", line: 139, callee: "this.fhir.delete", resourceType: "Basic", reason: "ProtocolDefinitionStore is constructed with the process service client." },
   { path: "mcp/src/fax/inbound-fax.ts", line: 328, callee: "this.fhir.create", resourceType: "AuditEvent", reason: "Inbound fax triage service receives the explicit serviceFhir client." },
   { path: "mcp/src/fax/inbound-fax.ts", line: 426, callee: "this.fhir.create", resourceType: "AuditEvent", reason: "Inbound fax triage service receives the explicit serviceFhir client." },
   { path: "mcp/src/fax/inbound-fax.ts", line: 446, callee: "this.fhir.create", resourceType: "AuditEvent", reason: "Inbound fax triage service receives the explicit serviceFhir client." },
   { path: "mcp/src/fax/inbound-fax.ts", line: 472, callee: "this.fhir.create", resourceType: "AuditEvent", reason: "Inbound fax triage service receives the explicit serviceFhir client." },
-  { path: "mcp/src/index.ts", line: 3245, callee: "fhir.create", resourceType: "VisionPrescription", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 3627, callee: "fhir.create", resourceType: "AllergyIntolerance", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 3681, callee: "fhir.create", resourceType: "CareTeam", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 3830, callee: "fhir.create", resourceType: "DeviceDefinition", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 3858, callee: "fhir.create", resourceType: "ConceptMap", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 3881, callee: "fhir.create", resourceType: "Substance", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 4211, callee: "fhir.create", resourceType: "AdverseEvent", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 5312, callee: "fhir.create", resourceType: "BodyStructure", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 7810, callee: "fhir.patch", resourceType: "AccessPolicy", reason: "Policy sync uses the MCP process service client." },
+  { path: "mcp/src/index.ts", line: 3246, callee: "fhir.create", resourceType: "VisionPrescription", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 3628, callee: "fhir.create", resourceType: "AllergyIntolerance", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 3682, callee: "fhir.create", resourceType: "CareTeam", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 3831, callee: "fhir.create", resourceType: "DeviceDefinition", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 3859, callee: "fhir.create", resourceType: "ConceptMap", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 3882, callee: "fhir.create", resourceType: "Substance", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 4212, callee: "fhir.create", resourceType: "AdverseEvent", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 5313, callee: "fhir.create", resourceType: "BodyStructure", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 7811, callee: "fhir.patch", resourceType: "AccessPolicy", reason: "Policy sync uses the MCP process service client." },
   { path: "mcp/src/legacy-import/appointment-encounter-import.ts", line: 657, callee: "input.fhir.create", resourceType: "Practitioner", reason: "Operator migration importer service identity." },
   { path: "mcp/src/legacy-import/appointment-encounter-import.ts", line: 674, callee: "input.fhir.update", resourceType: "Practitioner", reason: "Operator migration importer service identity." },
   { path: "mcp/src/legacy-import/ccda-import.ts", line: 394, callee: "input.fhir.create", resourceType: "ImportableResource", reason: "Operator legacy C-CDA importer service identity; generic resolves to the imported resource union." },
@@ -182,7 +185,7 @@ const EXCLUDED_DIRECTORY_NAMES = ["__tests__"] as const;
 const SCANNED_INTERACTIONS = new Set<ScannedFhirInteraction>([
   "read", "search", "create", "update", "delete", "patch",
 ]);
-const WRITE_INTERACTIONS = new Set<ScannedFhirInteraction>(["create", "update", "delete", "patch"]);
+const WRITE_INTERACTIONS = new Set<ScannedFhirInteraction>(["create", "update", "delete", "patch", "transaction"]);
 let excludedNonFhirCallSitesFromLastScan: string[] = [];
 
 export function collectLiteralFhirReadResourceTypes(
@@ -220,6 +223,15 @@ export function collectFhirOperations(
     function visit(node: ts.Node): void {
       if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
         const interaction = node.expression.name.text as ScannedFhirInteraction;
+        if (node.expression.name.text === "executeTransactionAsActor") {
+          for (const resourceType of serviceTransactionResourceTypes(node, source)) {
+            addOperation({
+              file, source, node, interaction: "transaction", resourceType, scopeContract: undefined,
+              nonFhirCallSites: [], matchedNonFhirCallSites, excludedNonFhirCallSites,
+              operations, operationKeys,
+            });
+          }
+        }
         if (SCANNED_INTERACTIONS.has(interaction)) {
           const scopeContract = fhirScopeContract(node, source);
           const resourceType = operationResourceType(node, interaction, scopeContract);
@@ -304,11 +316,14 @@ export function findMissingFhirOperationGrants(
   operations: readonly FhirOperation[],
   grantedRules: readonly AccessPolicyResource[],
 ): readonly FhirOperation[] {
-  return operations.filter((operation) => !grantedRules.some((rule) =>
-    rule.resourceType === operation.resourceType
-    && rule.interaction?.includes(operation.requiredInteraction)
-    && (!operation.scopeContract || rule.criteria === operation.scopeContract)
-  ));
+  return operations.filter((operation) => {
+    const interaction = operation.requiredInteraction;
+    return interaction === "transaction" || !grantedRules.some((rule) =>
+      rule.resourceType === operation.resourceType
+      && rule.interaction?.includes(interaction)
+      && (!operation.scopeContract || rule.criteria === operation.scopeContract)
+    );
+  });
 }
 
 export function runFhirReadGrantCheck(): FhirReadGrantCheckResult {
@@ -417,6 +432,16 @@ export function matchExactWriteInventory<T extends ExactFhirWriteCallSite>(
   });
   if (new Set(matched).size !== matched.length) {
     throw new Error(`${inventoryName} contains duplicate entries for the same call site.`);
+  }
+  if (inventoryName === "Service-identity FHIR write exclusion") {
+    const unregistered = missingOperations.find((operation) =>
+      operation.interaction === "transaction" && !matched.includes(operation)
+    );
+    if (unregistered) {
+      throw new Error(
+        `Annotated service transaction requires an exact registry entry: ${unregistered.path}:${unregistered.line} ${unregistered.callee} ${unregistered.resourceType}.`,
+      );
+    }
   }
   return matched;
 }
@@ -537,9 +562,11 @@ function interactionDependsOnCriteria(
   operation: FhirOperation,
   grantedRules: readonly AccessPolicyResource[],
 ): boolean {
+  const interaction = operation.requiredInteraction;
+  if (interaction === "transaction") return false;
   const matchingRules = grantedRules.filter((rule) =>
     rule.resourceType === operation.resourceType
-    && rule.interaction?.includes(operation.requiredInteraction)
+    && rule.interaction?.includes(interaction)
   );
   return matchingRules.length > 0 && matchingRules.every((rule) => Boolean(rule.criteria));
 }
@@ -589,6 +616,24 @@ function searchContractKey(node: ts.CallExpression, source: ts.SourceFile): stri
 
 function fhirScopeContract(node: ts.CallExpression, source: ts.SourceFile): string | undefined {
   return markerValue(node, source, "fhir-scope-contract");
+}
+
+function serviceTransactionResourceTypes(node: ts.CallExpression, source: ts.SourceFile): readonly string[] {
+  let statement: ts.Node = node;
+  while (statement.parent && !ts.isStatement(statement)) statement = statement.parent;
+  const comments = ts.getLeadingCommentRanges(source.text, statement.getFullStart()) ?? [];
+  const annotations = comments.map(({ pos, end }) => source.text.slice(pos, end))
+    .filter(comment => /^\/\/\s*fhir-service-write:/.test(comment));
+  if (!annotations.length) return [];
+  const resourceTypes = annotations[0].replace(/^\/\/\s*fhir-service-write:\s*/, "").split(",").map(value => value.trim());
+  if (
+    annotations.length !== 1 || new Set(resourceTypes).size !== resourceTypes.length ||
+    resourceTypes.some(resourceType => !/^[A-Z][A-Za-z0-9]+$/.test(resourceType))
+  ) {
+    const position = source.getLineAndCharacterOfPosition(node.getStart(source));
+    throw new Error(`Invalid fhir-service-write annotation: ${repoRelativePath(source.fileName)}:${position.line + 1}.`);
+  }
+  return resourceTypes;
 }
 
 function forwardingSearchHelper(

@@ -1,0 +1,31 @@
+{
+  "sourceHead": "d0cb07d81f22624f7c616105222271f3bcb8f759",
+  "results": [
+    {
+      "principal": "staff",
+      "staffReference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
+      "roles": [
+        "staff"
+      ],
+      "project": {
+        "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+        "display": "G2b1 build synthetic A"
+      },
+      "guarantorLinkAuthorized": true
+    },
+    {
+      "principal": "composite",
+      "staffReference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89",
+      "roles": [
+        "provider",
+        "staff",
+        "admin"
+      ],
+      "project": {
+        "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+        "display": "G2b1 build synthetic A"
+      },
+      "guarantorLinkAuthorized": true
+    }
+  ]
+}
