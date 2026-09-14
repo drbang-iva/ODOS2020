@@ -33,7 +33,7 @@ not ok 5 - K4 zero-link excluded
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   {
     +     city: '',
@@ -47,7 +47,7 @@ not ok 5 - K4 zero-link excluded
     +   }
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

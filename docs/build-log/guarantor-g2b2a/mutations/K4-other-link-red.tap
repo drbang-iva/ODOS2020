@@ -39,7 +39,7 @@ not ok 6 - K4 non-RelatedPerson excluded
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   {
     +     city: '',
@@ -53,7 +53,7 @@ not ok 6 - K4 non-RelatedPerson excluded
     +   }
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

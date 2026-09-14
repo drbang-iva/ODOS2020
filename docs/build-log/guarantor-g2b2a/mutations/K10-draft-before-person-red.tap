@@ -27,7 +27,7 @@ not ok 4 - K10 new Move creates Person before draft and Review again reuses it
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
     +   '/guarantors/link-operations/draft',
         '/guarantors',
@@ -35,7 +35,7 @@ not ok 4 - K10 new Move creates Person before draft and Review again reuses it
         '/guarantors/link-operations',
         '/guarantors/link-operations/draft'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

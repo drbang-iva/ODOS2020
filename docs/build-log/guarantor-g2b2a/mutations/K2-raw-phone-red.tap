@@ -14,9 +14,9 @@ not ok 2 - K2 phone compares digits and rejects a different digit
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1

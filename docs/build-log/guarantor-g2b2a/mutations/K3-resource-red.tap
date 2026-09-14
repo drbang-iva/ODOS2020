@@ -21,7 +21,7 @@ not ok 3 - K3 search card exposes exactly six keys
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
     +   'active',
     +   'address',
@@ -38,7 +38,7 @@ not ok 3 - K3 search card exposes exactly six keys
     +   'telecom',
         'versionId'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

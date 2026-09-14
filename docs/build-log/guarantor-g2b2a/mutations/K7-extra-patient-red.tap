@@ -56,9 +56,9 @@ not ok 9 - K7 create writes exactly one active unlinked Person; missing surname 
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     2 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1

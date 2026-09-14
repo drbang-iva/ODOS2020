@@ -62,9 +62,9 @@ not ok 10 - K8 draft includes every source link, writes nothing, refuses consoli
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0
@@ -85,9 +85,9 @@ not ok 11 - K9 draft versions reject changed child at create
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0

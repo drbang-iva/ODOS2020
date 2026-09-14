@@ -27,7 +27,7 @@ not ok 4 - K4 inactive excluded
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   {
     +     city: '',
@@ -41,7 +41,7 @@ not ok 4 - K4 inactive excluded
     +   }
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

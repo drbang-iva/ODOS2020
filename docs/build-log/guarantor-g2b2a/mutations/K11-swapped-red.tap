@@ -32,9 +32,9 @@ not ok 5 - K11 Join keeps Loaded Ann and moves loser full set
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     'D' !== 'S'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'S'
@@ -55,9 +55,9 @@ not ok 6 - K11 Join keeps Found Ann and moves loser full set
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     'S' !== 'D'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'D'

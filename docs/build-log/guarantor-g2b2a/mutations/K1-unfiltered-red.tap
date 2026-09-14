@@ -9,12 +9,12 @@ not ok 1 - K1 search refuses a prefix-only family
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
         'ann',
     +   'anna'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -39,9 +39,9 @@ not ok 2 - K2 phone compares digits and rejects a different digit
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0
@@ -70,7 +70,7 @@ not ok 4 - K4 inactive excluded
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   {
     +     city: '',
@@ -84,7 +84,7 @@ not ok 4 - K4 inactive excluded
     +   }
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -115,7 +115,7 @@ not ok 5 - K4 zero-link excluded
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   {
     +     city: '',
@@ -129,7 +129,7 @@ not ok 5 - K4 zero-link excluded
     +   }
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -160,7 +160,7 @@ not ok 6 - K4 non-RelatedPerson excluded
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   {
     +     city: '',
@@ -174,7 +174,7 @@ not ok 6 - K4 non-RelatedPerson excluded
     +   }
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

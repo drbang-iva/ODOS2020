@@ -8,9 +8,9 @@ not ok 1 - K1 search refuses a prefix-only family
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     404 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -32,9 +32,9 @@ not ok 2 - K2 phone compares digits and rejects a different digit
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     404 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -56,9 +56,9 @@ not ok 3 - K3 search card exposes exactly six keys
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     404 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -80,9 +80,9 @@ not ok 4 - K4 inactive excluded
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     404 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -104,9 +104,9 @@ not ok 5 - K4 zero-link excluded
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     404 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -128,9 +128,9 @@ not ok 6 - K4 non-RelatedPerson excluded
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     404 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -152,9 +152,9 @@ not ok 7 - K5 21 matches return 422
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     404 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -176,9 +176,9 @@ not ok 8 - K5 201 matches return 422
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     404 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -200,9 +200,9 @@ not ok 9 - K7 create writes exactly one active unlinked Person; missing surname 
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     404 !== 201
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 201

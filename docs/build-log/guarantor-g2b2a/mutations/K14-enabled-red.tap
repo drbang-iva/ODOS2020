@@ -8,9 +8,9 @@ not ok 1 - K14 create-new starts disabled before any keyed search
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     false !== true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -66,9 +66,9 @@ not ok 8 - K14 matching cards require None of these before new guarantor
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     false !== true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true

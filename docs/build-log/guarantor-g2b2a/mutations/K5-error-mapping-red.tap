@@ -51,9 +51,9 @@ not ok 8 - K5 201 matches return 422
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     500 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422

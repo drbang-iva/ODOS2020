@@ -14,9 +14,9 @@ not ok 2 - K9 stale confirmation makes one create and requires Review again
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     2 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -44,7 +44,7 @@ not ok 4 - K10 new Move creates Person before draft and Review again reuses it
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
         '/guarantors',
         '/guarantors/link-operations/draft',
@@ -53,7 +53,7 @@ not ok 4 - K10 new Move creates Person before draft and Review again reuses it
     +   '/guarantors/link-operations',
     +   '/guarantors/link-operations/draft'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

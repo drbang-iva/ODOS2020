@@ -44,9 +44,9 @@ not ok 7 - K13 Undo only on completed non-correct and requires a reason
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     2 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
