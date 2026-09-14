@@ -1,0 +1,311 @@
+{
+  "source": {
+    "head": "5e7c2aef7f6b59432deb6046fda8e65056796b10",
+    "files": {
+      "mcp/src/clinic/guarantor-link-operation.ts": "de9e923cdd1695b3669194e6b2d54fbe3e0b2491015bcea772f762e600a49ec8",
+      "mcp/src/clinic/guarantor-routes.ts": "b3af98597b9bdd7c1023ba1638f63e491ad47e8c7731b2482c990d0ec9f46d09",
+      "mcp/src/fhir-client.ts": "57715549311950cbd1306173f71e1e98563d1c97421b3a578fce18e687bd925b",
+      "ui/src/lib/guarantor-editor.ts": "9ccc86563866afed1a47cb7eeae5d0c56b6619efffcd76e0e8e81a0b3ebd9c67",
+      "ui/src/lib/guarantor-link-operations.ts": "ba364ee486beb2744527e13953270ed4ce5d7f30b104012b06efba221d93756f"
+    }
+  },
+  "scenario": "L15-paused",
+  "claim": "The stale D PUT receives412 after C cancels A; A checkpoint also412 and final A journal retains unresolved intent.",
+  "taskA": {
+    "resourceType": "Task",
+    "id": "3f532683-0263-4142-949e-531e58f61377",
+    "intent": "order",
+    "status": "cancelled",
+    "identifier": [
+      {
+        "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+        "value": "aeb7c96e-6f98-4b50-81fc-ec1e91fdffda"
+      }
+    ],
+    "code": {
+      "coding": [
+        {
+          "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+          "code": "transfer"
+        }
+      ]
+    },
+    "input": [
+      {
+        "type": {
+          "text": "kind"
+        },
+        "valueCode": "transfer"
+      },
+      {
+        "type": {
+          "text": "source"
+        },
+        "valueReference": {
+          "reference": "Person/2db4c9a3-1756-47e1-886f-5e80da9621ed"
+        }
+      },
+      {
+        "type": {
+          "text": "destination"
+        },
+        "valueReference": {
+          "reference": "Person/c5935086-f7c3-4e2e-afb8-7563d0fd3101"
+        }
+      },
+      {
+        "type": {
+          "text": "moved"
+        },
+        "valueReference": {
+          "reference": "RelatedPerson/728ac7a4-515a-428a-9fbe-cb1f556cd7ce"
+        }
+      },
+      {
+        "type": {
+          "text": "expected:Person/2db4c9a3-1756-47e1-886f-5e80da9621ed"
+        },
+        "valueString": "1efc366d-06dc-46b9-8e3e-b8fe39b314e1"
+      },
+      {
+        "type": {
+          "text": "expected:Person/c5935086-f7c3-4e2e-afb8-7563d0fd3101"
+        },
+        "valueString": "f14f9ab8-ef33-4148-998f-1a52e9e93018"
+      },
+      {
+        "type": {
+          "text": "expected:RelatedPerson/728ac7a4-515a-428a-9fbe-cb1f556cd7ce"
+        },
+        "valueString": "c9b4d1e4-a8d2-4655-9c39-07aa64573671"
+      },
+      {
+        "type": {
+          "text": "reason"
+        },
+        "valueString": "Synthetic L15-paused proof"
+      }
+    ],
+    "requester": {
+      "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+    },
+    "meta": {
+      "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+      "versionId": "794799ff-7975-4beb-8117-41152f0df3b2",
+      "lastUpdated": "2026-09-14T10:29:39.054Z",
+      "author": {
+        "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+        "display": "Medplum Admin"
+      },
+      "compartment": [
+        {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        }
+      ]
+    },
+    "extension": [
+      {
+        "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+        "valueString": "{\"intents\":[{\"id\":\"657f172c-0fca-484a-b3fe-07a00b600dfd\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/728ac7a4-515a-428a-9fbe-cb1f556cd7ce\",\"expectedVersion\":\"c9b4d1e4-a8d2-4655-9c39-07aa64573671\",\"intendedContentHash\":\"d3604d6db63c169448da15c468d3f7624cdec735d2cef241fb9ad753c9465c6a\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"a9e8a41a-df3b-45e6-b592-79d476f05937\",\"phase\":\"detaching\",\"target\":\"Person/2db4c9a3-1756-47e1-886f-5e80da9621ed\",\"expectedVersion\":\"1efc366d-06dc-46b9-8e3e-b8fe39b314e1\",\"intendedContentHash\":\"9e7d12e5ab453400d78d176a2ba3f6b887e552de7616a3a3d7f690f283a992ed\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"c13aee3f-9f4f-4fb1-8799-af3626d739d8\",\"phase\":\"attaching\",\"target\":\"Person/c5935086-f7c3-4e2e-afb8-7563d0fd3101\",\"expectedVersion\":\"f14f9ab8-ef33-4148-998f-1a52e9e93018\",\"intendedContentHash\":\"834b9cc16f3c5c6f032a4cf32f2e7d680168fa9e38eb0a38dca757cc70998ee3\",\"disposition\":\"rejected\",\"responseStatus\":412},{\"id\":\"ea488fa9-b996-480b-85bc-f226de278fe8\",\"phase\":\"fence-source\",\"target\":\"Person/2db4c9a3-1756-47e1-886f-5e80da9621ed\",\"expectedVersion\":\"ee6dba53-31bf-4eba-b154-91a9e385c28d\",\"intendedContentHash\":\"9e7d12e5ab453400d78d176a2ba3f6b887e552de7616a3a3d7f690f283a992ed\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"474436b7-995c-4ed0-aca9-7303a2f6fd12\",\"phase\":\"fence-destination\",\"target\":\"Person/c5935086-f7c3-4e2e-afb8-7563d0fd3101\",\"expectedVersion\":\"29133b6d-d8ba-4fb9-8e39-e7cc348153be\",\"intendedContentHash\":\"5d51a3766dff2c04deabf4477a4d9e2cc82f38f874e2ce6f24626c6bfc3e0178\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"337c6289-0af4-483f-a899-3c7e330d747b\",\"phase\":\"attaching\",\"target\":\"Person/c5935086-f7c3-4e2e-afb8-7563d0fd3101\",\"expectedVersion\":\"4a325a23-35cc-499e-afdf-6fe8fb28a7b4\",\"intendedContentHash\":\"15f28ab6dec50202b93ad804cf4245703aaeef587e8d34bdd54f616c86f97394\"}]}"
+      }
+    ],
+    "businessStatus": {
+      "text": "corrected"
+    }
+  },
+  "taskC": {
+    "resourceType": "Task",
+    "id": "e3fa05da-ca0c-4e1e-a83f-44851759aa7b",
+    "intent": "order",
+    "status": "completed",
+    "identifier": [
+      {
+        "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+        "value": "ca4c64ef-397f-4b9c-ac6b-5851ae9d3bec"
+      }
+    ],
+    "code": {
+      "coding": [
+        {
+          "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+          "code": "correct"
+        }
+      ]
+    },
+    "input": [
+      {
+        "type": {
+          "text": "kind"
+        },
+        "valueCode": "correct"
+      },
+      {
+        "type": {
+          "text": "source"
+        },
+        "valueReference": {
+          "reference": "Person/c5935086-f7c3-4e2e-afb8-7563d0fd3101"
+        }
+      },
+      {
+        "type": {
+          "text": "destination"
+        },
+        "valueReference": {
+          "reference": "Person/2db4c9a3-1756-47e1-886f-5e80da9621ed"
+        }
+      },
+      {
+        "type": {
+          "text": "moved"
+        },
+        "valueReference": {
+          "reference": "RelatedPerson/728ac7a4-515a-428a-9fbe-cb1f556cd7ce"
+        }
+      },
+      {
+        "type": {
+          "text": "expected:Person/c5935086-f7c3-4e2e-afb8-7563d0fd3101"
+        },
+        "valueString": "4a325a23-35cc-499e-afdf-6fe8fb28a7b4"
+      },
+      {
+        "type": {
+          "text": "expected:Person/2db4c9a3-1756-47e1-886f-5e80da9621ed"
+        },
+        "valueString": "929ede14-5b32-4d99-a6a1-8d579031ed1b"
+      },
+      {
+        "type": {
+          "text": "expected:RelatedPerson/728ac7a4-515a-428a-9fbe-cb1f556cd7ce"
+        },
+        "valueString": "82748b65-69c4-4bd0-b22a-588d9ff7e6d9"
+      },
+      {
+        "type": {
+          "text": "reason"
+        },
+        "valueString": "Synthetic paused-runner correction"
+      }
+    ],
+    "requester": {
+      "reference": "Practitioner/a326fd73-3ab7-44be-a7e2-3c0107dbca89"
+    },
+    "basedOn": [
+      {
+        "reference": "Task/3f532683-0263-4142-949e-531e58f61377"
+      }
+    ],
+    "meta": {
+      "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
+      "versionId": "70516bfd-024a-4aab-af7c-7879fbc819e0",
+      "lastUpdated": "2026-09-14T10:29:39.087Z",
+      "author": {
+        "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+        "display": "Medplum Admin"
+      },
+      "compartment": [
+        {
+          "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
+        }
+      ]
+    },
+    "businessStatus": {
+      "text": "linked"
+    },
+    "extension": [
+      {
+        "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+        "valueString": "{\"intents\":[{\"id\":\"162f73d7-2455-498a-80f5-a7196bdb1976\",\"phase\":\"fence-source\",\"target\":\"Person/c5935086-f7c3-4e2e-afb8-7563d0fd3101\",\"expectedVersion\":\"4a325a23-35cc-499e-afdf-6fe8fb28a7b4\",\"intendedContentHash\":\"5d51a3766dff2c04deabf4477a4d9e2cc82f38f874e2ce6f24626c6bfc3e0178\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"aa05074a-6a7e-4d27-995b-6b48ac2c1cef\",\"phase\":\"fence-destination\",\"target\":\"Person/2db4c9a3-1756-47e1-886f-5e80da9621ed\",\"expectedVersion\":\"929ede14-5b32-4d99-a6a1-8d579031ed1b\",\"intendedContentHash\":\"9e7d12e5ab453400d78d176a2ba3f6b887e552de7616a3a3d7f690f283a992ed\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"ce96c2a7-5b3a-4b20-9f92-2bf151407163\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/728ac7a4-515a-428a-9fbe-cb1f556cd7ce\",\"expectedVersion\":\"82748b65-69c4-4bd0-b22a-588d9ff7e6d9\",\"intendedContentHash\":\"92777095c26251f4bb5357b740d2a6e2f272163ffa378cc178db205d9181e24d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"9cc5b722-709a-4bae-bfbf-0f770587532e\",\"phase\":\"attaching\",\"target\":\"Person/2db4c9a3-1756-47e1-886f-5e80da9621ed\",\"expectedVersion\":\"73c3e9e8-1a79-4036-80cb-1a2c7c581427\",\"intendedContentHash\":\"8df6405919646c6e6e4dbe2bd112d41ce9504ae2ba9a94241e803396e8aa12af\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"25dd3080-cd02-4d99-8aa9-16fd9d416a68\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/728ac7a4-515a-428a-9fbe-cb1f556cd7ce\",\"expectedVersion\":\"955a481e-9a91-4780-a592-7312d043c80e\",\"intendedContentHash\":\"92777095c26251f4bb5357b740d2a6e2f272163ffa378cc178db205d9181e24d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"e3aff448-9351-4bc6-b8a7-06a931cd0cae\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/728ac7a4-515a-428a-9fbe-cb1f556cd7ce\",\"expectedVersion\":\"955a481e-9a91-4780-a592-7312d043c80e\",\"intendedContentHash\":\"f4234372f8fae0ddfa77a3159598ac5432a3c8c209a089546a40f1eceab2105f\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"df4a9778-dba5-426a-8e80-d2e15e0afb93\",\"phase\":\"cancel-original\",\"target\":\"Task/3f532683-0263-4142-949e-531e58f61377\",\"expectedVersion\":\"0280688b-3db7-4ae1-ae32-f01fdfb71794\",\"intendedContentHash\":\"0bfcf4046c3360b35cb01d9a8bba5142faf7d86240fe468908a69b1b3546738f\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"}],\"generation\":\"4d3cc2a8-1d0c-498a-91f2-666d838a97a6\"}"
+      }
+    ]
+  },
+  "resumed": {
+    "status": 412,
+    "body": {
+      "error": "FHIR 412: operation write refused."
+    }
+  },
+  "failedIntent": {
+    "id": "337c6289-0af4-483f-a899-3c7e330d747b",
+    "phase": "attaching",
+    "target": "Person/c5935086-f7c3-4e2e-afb8-7563d0fd3101",
+    "expectedVersion": "4a325a23-35cc-499e-afdf-6fe8fb28a7b4",
+    "intendedContentHash": "15f28ab6dec50202b93ad804cf4245703aaeef587e8d34bdd54f616c86f97394"
+  },
+  "transport": [
+    {
+      "sequence": 143,
+      "scenario": "L15-paused",
+      "runner": "A-complete",
+      "phase": "fence-source",
+      "method": "PUT",
+      "target": "Person/2db4c9a3-1756-47e1-886f-5e80da9621ed",
+      "ifMatch": "W/\"ee6dba53-31bf-4eba-b154-91a9e385c28d\"",
+      "status": 200
+    },
+    {
+      "sequence": 146,
+      "scenario": "L15-paused",
+      "runner": "A-complete",
+      "phase": "fence-destination",
+      "method": "PUT",
+      "target": "Person/c5935086-f7c3-4e2e-afb8-7563d0fd3101",
+      "ifMatch": "W/\"29133b6d-d8ba-4fb9-8e39-e7cc348153be\"",
+      "status": 200
+    },
+    {
+      "sequence": 149,
+      "scenario": "L15-paused",
+      "runner": "A-complete",
+      "phase": "attaching",
+      "method": "PUT",
+      "target": "Person/c5935086-f7c3-4e2e-afb8-7563d0fd3101",
+      "ifMatch": "W/\"4a325a23-35cc-499e-afdf-6fe8fb28a7b4\"",
+      "schedule": "A has read claim, owners and D; paused immediately before its D PUT",
+      "error": {
+        "name": "Error",
+        "message": "FHIR 412: operation write refused."
+      }
+    },
+    {
+      "sequence": 174,
+      "scenario": "L15-paused",
+      "runner": "A-complete",
+      "phase": "attaching",
+      "method": "PUT",
+      "target": "Task/3f532683-0263-4142-949e-531e58f61377",
+      "ifMatch": "W/\"0280688b-3db7-4ae1-ae32-f01fdfb71794\"",
+      "error": {
+        "name": "Error",
+        "message": "FHIR 412: operation write refused."
+      }
+    },
+    {
+      "sequence": 175,
+      "scenario": "L15-paused",
+      "runner": "A-complete",
+      "phase": "corrected",
+      "method": "PUT",
+      "target": "Task/3f532683-0263-4142-949e-531e58f61377",
+      "ifMatch": "W/\"0280688b-3db7-4ae1-ae32-f01fdfb71794\"",
+      "error": {
+        "name": "Error",
+        "message": "FHIR 412: operation write refused."
+      }
+    }
+  ],
+  "guard": {
+    "expected": [
+      "rejected",
+      412
+    ],
+    "actual": [
+      null,
+      null
+    ],
+    "passed": false,
+    "redExitCode": 1,
+    "redOutput": "node:internal/modules/run_main:123\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n+   null,\n+   null\n-   'rejected',\n-   412\n  ]\n\n    at file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b1-live/[eval1]:1:140\n    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:282:26)\n    at async ModuleLoader.executeModuleJob (node:internal/modules/esm/loader:278:20)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: [ null, null ],\n  expected: [ 'rejected', 412 ],\n  operator: 'deepStrictEqual',\n  diff: 'simple'\n}\n\nNode.js v22.22.3\n"
+  }
+}
