@@ -38,8 +38,10 @@ const AUDIT_MIGRATION_FILENAMES = [
   "2026-07-22-era-integrity-event.validate.sql",
   "2026-07-31-document-print-events.sql",
   "2026-07-31-document-print-events.validate.sql",
+  "2026-09-14-guarantor-link-events.sql",
+  "2026-09-14-guarantor-link-events.validate.sql",
 ] as const;
-const VALIDATE_MIGRATION_FILENAME = "2026-07-31-document-print-events.validate.sql";
+const VALIDATE_MIGRATION_FILENAME = "2026-09-14-guarantor-link-events.validate.sql";
 const COMMERCIAL_MIGRATION_FILENAMES = [
   "2026-07-18-commercial-engine-schema.sql",
   "2026-07-18-commercial-engine-redemption-recovery.sql",
