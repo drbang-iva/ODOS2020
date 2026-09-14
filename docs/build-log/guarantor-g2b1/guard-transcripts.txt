@@ -1,9 +1,9 @@
-===== L1-claim-required / green =====
+===== S9-transaction-resource-reference / green =====
 TAP version 13
-# Subtest: L1: two admitted starters produce one source detach and one completed operation
-ok 1 - L1: two admitted starters produce one source detach and one completed operation
+# Subtest: S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+ok 1 - S9 transaction reasons omit an unassigned Task id and retain assigned resource references
   ---
-  duration_ms: 74.291875
+  duration_ms: 70.057584
   type: 'test'
   ...
 1..1
@@ -14,29 +14,102 @@ ok 1 - L1: two admitted starters produce one source detach and one completed ope
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 225.335541
+# duration_ms 218.400083
+
+===== S9-transaction-resource-reference / red =====
+TAP version 13
+# Subtest: S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+not ok 1 - S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+  ---
+  duration_ms: 69.265333
+  type: 'test'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:6169'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'guarantor.link record Task/undefined'
+    - 'guarantor.link record'
+                            ^
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'guarantor.link record'
+  actual: 'guarantor.link record Task/undefined'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:98:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 163.26075
+
+===== S9-transaction-resource-reference / restored =====
+TAP version 13
+# Subtest: S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+ok 1 - S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+  ---
+  duration_ms: 38.348917
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 133.391792
+
+===== L1-claim-required / green =====
+TAP version 13
+# Subtest: L1: two admitted starters produce one source detach and one completed operation
+ok 1 - L1: two admitted starters produce one source detach and one completed operation
+  ---
+  duration_ms: 38.521542
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 133.518334
 
 ===== L1-claim-required / red =====
 TAP version 13
 # Subtest: L1: two admitted starters produce one source detach and one completed operation
 not ok 1 - L1: two admitted starters produce one source detach and one completed operation
   ---
-  duration_ms: 68.384666
+  duration_ms: 68.034042
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:19273'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:19938'
   failureType: 'testCodeFailure'
   error: |-
     loser never reaches source detach
-    
+
     2 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
   actual: 2
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:270:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:281:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -48,14 +121,14 @@ not ok 1 - L1: two admitted starters produce one source detach and one completed
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 171.137
+# duration_ms 167.476667
 
 ===== L1-claim-required / restored =====
 TAP version 13
 # Subtest: L1: two admitted starters produce one source detach and one completed operation
 ok 1 - L1: two admitted starters produce one source detach and one completed operation
   ---
-  duration_ms: 38.147375
+  duration_ms: 37.746416
   type: 'test'
   ...
 1..1
@@ -66,14 +139,14 @@ ok 1 - L1: two admitted starters produce one source detach and one completed ope
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 139.534583
+# duration_ms 132.910875
 
 ===== L2-sorted-claims / green =====
 TAP version 13
 # Subtest: L2: sorted claims give a winner with two shared children and opposed request orders
 ok 1 - L2: sorted claims give a winner with two shared children and opposed request orders
   ---
-  duration_ms: 44.992584
+  duration_ms: 41.940875
   type: 'test'
   ...
 1..1
@@ -84,29 +157,29 @@ ok 1 - L2: sorted claims give a winner with two shared children and opposed requ
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 143.72525
+# duration_ms 135.597292
 
 ===== L2-sorted-claims / red =====
 TAP version 13
 # Subtest: L2: sorted claims give a winner with two shared children and opposed request orders
 not ok 1 - L2: sorted claims give a winner with two shared children and opposed request orders
   ---
-  duration_ms: 74.093667
+  duration_ms: 69.393375
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:20453'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:21118'
   failureType: 'testCodeFailure'
   error: |-
     one operation wins rather than both failing
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
   actual: 0
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:285:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:296:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -118,14 +191,14 @@ not ok 1 - L2: sorted claims give a winner with two shared children and opposed 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 182.587625
+# duration_ms 168.395125
 
 ===== L2-sorted-claims / restored =====
 TAP version 13
 # Subtest: L2: sorted claims give a winner with two shared children and opposed request orders
 ok 1 - L2: sorted claims give a winner with two shared children and opposed request orders
   ---
-  duration_ms: 45.576708
+  duration_ms: 45.331917
   type: 'test'
   ...
 1..1
@@ -136,14 +209,14 @@ ok 1 - L2: sorted claims give a winner with two shared children and opposed requ
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 157.238667
+# duration_ms 175.967416
 
 ===== L3a-pending-after-detach / green =====
 TAP version 13
 # Subtest: L3: detach-first leaves an unowned claimed child and Complete projects current D
 ok 1 - L3: detach-first leaves an unowned claimed child and Complete projects current D
   ---
-  duration_ms: 41.627708
+  duration_ms: 43.537167
   type: 'test'
   ...
 1..1
@@ -154,33 +227,33 @@ ok 1 - L3: detach-first leaves an unowned claimed child and Complete projects cu
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 144.647583
+# duration_ms 143.172291
 
 ===== L3a-pending-after-detach / red =====
 TAP version 13
 # Subtest: L3: detach-first leaves an unowned claimed child and Complete projects current D
 not ok 1 - L3: detach-first leaves an unowned claimed child and Complete projects current D
   ---
-  duration_ms: 69.689583
+  duration_ms: 69.103208
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:9416'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:10081'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'attach-conflict'
     - 'attach-pending'
               ^
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'attach-pending'
   actual: 'attach-conflict'
   operator: 'strictEqual'
   stack: |-
-    attachPending (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:136:44)
-    async TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:140:37)
+    attachPending (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:147:44)
+    async TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:151:37)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -192,14 +265,14 @@ not ok 1 - L3: detach-first leaves an unowned claimed child and Complete project
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 177.395666
+# duration_ms 164.265209
 
 ===== L3a-pending-after-detach / restored =====
 TAP version 13
 # Subtest: L3: detach-first leaves an unowned claimed child and Complete projects current D
 ok 1 - L3: detach-first leaves an unowned claimed child and Complete projects current D
   ---
-  duration_ms: 43.421708
+  duration_ms: 41.795166
   type: 'test'
   ...
 1..1
@@ -210,14 +283,14 @@ ok 1 - L3: detach-first leaves an unowned claimed child and Complete projects cu
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 145.058917
+# duration_ms 138.107875
 
 ===== L3b-detach-first / green =====
 TAP version 13
 # Subtest: L3: detach-first leaves an unowned claimed child and Complete projects current D
 ok 1 - L3: detach-first leaves an unowned claimed child and Complete projects current D
   ---
-  duration_ms: 42.254458
+  duration_ms: 41.782166
   type: 'test'
   ...
 1..1
@@ -228,26 +301,26 @@ ok 1 - L3: detach-first leaves an unowned claimed child and Complete projects cu
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 147.092541
+# duration_ms 137.041625
 
 ===== L3b-detach-first / red =====
 TAP version 13
 # Subtest: L3: detach-first leaves an unowned claimed child and Complete projects current D
 not ok 1 - L3: detach-first leaves an unowned claimed child and Complete projects current D
   ---
-  duration_ms: 71.0545
+  duration_ms: 67.296333
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:9416'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:10081'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'S'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -255,7 +328,7 @@ not ok 1 - L3: detach-first leaves an unowned claimed child and Complete project
     0: 'S'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:141:36)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:152:36)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -267,14 +340,14 @@ not ok 1 - L3: detach-first leaves an unowned claimed child and Complete project
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 176.630625
+# duration_ms 166.173333
 
 ===== L3b-detach-first / restored =====
 TAP version 13
 # Subtest: L3: detach-first leaves an unowned claimed child and Complete projects current D
 ok 1 - L3: detach-first leaves an unowned claimed child and Complete projects current D
   ---
-  duration_ms: 42.95275
+  duration_ms: 54.566542
   type: 'test'
   ...
 1..1
@@ -285,14 +358,14 @@ ok 1 - L3: detach-first leaves an unowned claimed child and Complete projects cu
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 147.129375
+# duration_ms 147.75675
 
 ===== L5-generation / green =====
 TAP version 13
 # Subtest: L5: D changes after r1 projection so no stale r2 projection is submitted
 ok 1 - L5: D changes after r1 projection so no stale r2 projection is submitted
   ---
-  duration_ms: 41.997625
+  duration_ms: 44.571958
   type: 'test'
   ...
 1..1
@@ -303,29 +376,29 @@ ok 1 - L5: D changes after r1 projection so no stale r2 projection is submitted
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 142.592
+# duration_ms 140.71125
 
 ===== L5-generation / red =====
 TAP version 13
 # Subtest: L5: D changes after r1 projection so no stale r2 projection is submitted
 not ok 1 - L5: D changes after r1 projection so no stale r2 projection is submitted
   ---
-  duration_ms: 72.677792
+  duration_ms: 68.447166
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:21970'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:22635'
   failureType: 'testCodeFailure'
   error: |-
     no stale r2 PUT
-    
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:293:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:304:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -337,14 +410,14 @@ not ok 1 - L5: D changes after r1 projection so no stale r2 projection is submit
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 188.00725
+# duration_ms 172.258334
 
 ===== L5-generation / restored =====
 TAP version 13
 # Subtest: L5: D changes after r1 projection so no stale r2 projection is submitted
 ok 1 - L5: D changes after r1 projection so no stale r2 projection is submitted
   ---
-  duration_ms: 41.937667
+  duration_ms: 42.475125
   type: 'test'
   ...
 1..1
@@ -355,14 +428,14 @@ ok 1 - L5: D changes after r1 projection so no stale r2 projection is submitted
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 147.671292
+# duration_ms 135.944917
 
 ===== L6-destination-details / green =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 40.63475
+  duration_ms: 45.802833
   type: 'test'
   ...
 1..1
@@ -373,29 +446,29 @@ ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 142.018417
+# duration_ms 139.432125
 
 ===== L6-destination-details / red =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 not ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 72.954042
+  duration_ms: 67.807292
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:6169'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:6834'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:96:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:107:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -407,14 +480,14 @@ not ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 176.776167
+# duration_ms 167.794416
 
 ===== L6-destination-details / restored =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 41.418583
+  duration_ms: 39.524041
   type: 'test'
   ...
 1..1
@@ -425,14 +498,14 @@ ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 140.398
+# duration_ms 133.34775
 
 ===== L6-retain-source / green =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 42.49575
+  duration_ms: 40.112958
   type: 'test'
   ...
 1..1
@@ -443,29 +516,29 @@ ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 143.31925
+# duration_ms 132.299458
 
 ===== L6-retain-source / red =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 not ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 75.363125
+  duration_ms: 66.260416
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:6169'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:6834'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     404 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 404
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:96:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:107:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -477,14 +550,14 @@ not ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 190.637
+# duration_ms 165.196042
 
 ===== L6-retain-source / restored =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 43.949833
+  duration_ms: 38.215667
   type: 'test'
   ...
 1..1
@@ -495,14 +568,14 @@ ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 150.563042
+# duration_ms 133.924083
 
 ===== L7-child-extension-fence / green =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 45.810584
+  duration_ms: 39.6305
   type: 'test'
   ...
 1..1
@@ -513,21 +586,21 @@ ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 153.146333
+# duration_ms 133.412375
 
 ===== L7-child-extension-fence / red =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 not ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 80.821792
+  duration_ms: 69.013958
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:6169'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:6834'
   failureType: 'testCodeFailure'
   error: |-
     r1 preserves extension
     + actual - expected
-    
+
       [
         {
           url: 'urn:synthetic:consent-authority',
@@ -555,7 +628,7 @@ not ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write
     -     valueString: 'r1-unrelated'
         }
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -592,7 +665,7 @@ not ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write
       valueString: 'k-unrelated'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:101:103)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:112:103)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -604,14 +677,14 @@ not ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 197.561542
+# duration_ms 166.452291
 
 ===== L7-child-extension-fence / restored =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 44.56075
+  duration_ms: 39.165417
   type: 'test'
   ...
 1..1
@@ -622,14 +695,14 @@ ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 154.472958
+# duration_ms 131.061792
 
 ===== L7-child-active-fence / green =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 43.769
+  duration_ms: 39.643833
   type: 'test'
   ...
 1..1
@@ -640,29 +713,29 @@ ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 150.964042
+# duration_ms 131.937958
 
 ===== L7-child-active-fence / red =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 not ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 78.669833
+  duration_ms: 70.245959
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:6169'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:6834'
   failureType: 'testCodeFailure'
   error: |-
     r2 preserves active
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
   actual: true
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:101:103)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:112:103)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -674,14 +747,14 @@ not ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 191.069
+# duration_ms 168.403208
 
 ===== L7-child-active-fence / restored =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 45.918625
+  duration_ms: 39.220416
   type: 'test'
   ...
 1..1
@@ -692,14 +765,14 @@ ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 149.530291
+# duration_ms 132.394833
 
 ===== L8-write-set / green =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 44.425333
+  duration_ms: 38.896166
   type: 'test'
   ...
 1..1
@@ -710,29 +783,29 @@ ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 151.650959
+# duration_ms 131.927708
 
 ===== L8-write-set / red =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 not ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 83.411041
+  duration_ms: 71.645917
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:6169'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:6834'
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
-    
+
       assert.ok(f.writes.every(w => w.resource.resourceType === "Task" || ["Person/S", "Person/D", ...f.ids.map(id => `RelatedPerson/${id}`)].includes(`${w.resource.resourceType}/${w.resource.id}`)))
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
   actual: false
   operator: '=='
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:108:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:119:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -744,14 +817,14 @@ not ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 193.641542
+# duration_ms 166.22525
 
 ===== L8-write-set / restored =====
 TAP version 13
 # Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
 ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
   ---
-  duration_ms: 42.936041
+  duration_ms: 40.334334
   type: 'test'
   ...
 1..1
@@ -762,14 +835,14 @@ ok 1 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 149.776708
+# duration_ms 132.962959
 
 ===== L9-expected-version / green =====
 TAP version 13
 # Subtest: L9: stale confirmation refuses before any Task or resource write
 ok 1 - L9: stale confirmation refuses before any Task or resource write
   ---
-  duration_ms: 30.954334
+  duration_ms: 29.176917
   type: 'test'
   ...
 1..1
@@ -780,29 +853,29 @@ ok 1 - L9: stale confirmation refuses before any Task or resource write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 139.688
+# duration_ms 129.009541
 
 ===== L9-expected-version / red =====
 TAP version 13
 # Subtest: L9: stale confirmation refuses before any Task or resource write
 not ok 1 - L9: stale confirmation refuses before any Task or resource write
   ---
-  duration_ms: 77.487041
+  duration_ms: 70.956458
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:7716'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:8381'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:116:55)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:127:55)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -814,14 +887,14 @@ not ok 1 - L9: stale confirmation refuses before any Task or resource write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 189.776708
+# duration_ms 170.663417
 
 ===== L9-expected-version / restored =====
 TAP version 13
 # Subtest: L9: stale confirmation refuses before any Task or resource write
 ok 1 - L9: stale confirmation refuses before any Task or resource write
   ---
-  duration_ms: 30.036
+  duration_ms: 29.0345
   type: 'test'
   ...
 1..1
@@ -832,14 +905,14 @@ ok 1 - L9: stale confirmation refuses before any Task or resource write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 140.131334
+# duration_ms 128.285375
 
 ===== L10-complete-consolidation-set / green =====
 TAP version 13
 # Subtest: L10: consolidate subset refuses before any write
 ok 1 - L10: consolidate subset refuses before any write
   ---
-  duration_ms: 30.696542
+  duration_ms: 28.070167
   type: 'test'
   ...
 1..1
@@ -850,29 +923,29 @@ ok 1 - L10: consolidate subset refuses before any write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 138.273208
+# duration_ms 124.122417
 
 ===== L10-complete-consolidation-set / red =====
 TAP version 13
 # Subtest: L10: consolidate subset refuses before any write
 not ok 1 - L10: consolidate subset refuses before any write
   ---
-  duration_ms: 72.530042
+  duration_ms: 67.035917
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:7999'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:8664'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:120:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:131:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -884,14 +957,14 @@ not ok 1 - L10: consolidate subset refuses before any write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 180.809292
+# duration_ms 165.937625
 
 ===== L10-complete-consolidation-set / restored =====
 TAP version 13
 # Subtest: L10: consolidate subset refuses before any write
 ok 1 - L10: consolidate subset refuses before any write
   ---
-  duration_ms: 29.358209
+  duration_ms: 29.338
   type: 'test'
   ...
 1..1
@@ -902,14 +975,14 @@ ok 1 - L10: consolidate subset refuses before any write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 131.192125
+# duration_ms 125.286292
 
 ===== L11-practice-scope / green =====
 TAP version 13
 # Subtest: L11: foreign D and separately foreign child Patient refuse without writes
 ok 1 - L11: foreign D and separately foreign child Patient refuse without writes
   ---
-  duration_ms: 30.731584
+  duration_ms: 30.322334
   type: 'test'
   ...
 1..1
@@ -920,29 +993,29 @@ ok 1 - L11: foreign D and separately foreign child Patient refuse without writes
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 132.39925
+# duration_ms 125.09525
 
 ===== L11-practice-scope / red =====
 TAP version 13
 # Subtest: L11: foreign D and separately foreign child Patient refuse without writes
 not ok 1 - L11: foreign D and separately foreign child Patient refuse without writes
   ---
-  duration_ms: 73.52325
+  duration_ms: 68.339833
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:8214'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:8879'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:124:62)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:135:62)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -954,14 +1027,14 @@ not ok 1 - L11: foreign D and separately foreign child Patient refuse without wr
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 180.665541
+# duration_ms 163.951166
 
 ===== L11-practice-scope / restored =====
 TAP version 13
 # Subtest: L11: foreign D and separately foreign child Patient refuse without writes
 ok 1 - L11: foreign D and separately foreign child Patient refuse without writes
   ---
-  duration_ms: 31.404458
+  duration_ms: 30.401125
   type: 'test'
   ...
 1..1
@@ -972,14 +1045,14 @@ ok 1 - L11: foreign D and separately foreign child Patient refuse without writes
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 136.504792
+# duration_ms 128.051166
 
 ===== L12-landed-intent / green =====
 TAP version 13
 # Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
 ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
   ---
-  duration_ms: 43.595875
+  duration_ms: 41.707209
   type: 'test'
   ...
 1..1
@@ -990,29 +1063,29 @@ ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 138.659459
+# duration_ms 137.176959
 
 ===== L12-landed-intent / red =====
 TAP version 13
 # Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
 not ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
   ---
-  duration_ms: 70.544917
+  duration_ms: 67.715334
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:11223'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:11888'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     412 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 412
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:168:12)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:179:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -1024,14 +1097,14 @@ not ok 1 - L12/L14: landed and unsent detach intents use the expected-version fe
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 174.093584
+# duration_ms 168.351541
 
 ===== L12-landed-intent / restored =====
 TAP version 13
 # Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
 ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
   ---
-  duration_ms: 46.183458
+  duration_ms: 43.458583
   type: 'test'
   ...
 1..1
@@ -1042,14 +1115,14 @@ ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 145.4055
+# duration_ms 137.479209
 
 ===== L13-interference / green =====
 TAP version 13
 # Subtest: L13: an unresolved changed child intent is interference with no further domain writes
 ok 1 - L13: an unresolved changed child intent is interference with no further domain writes
   ---
-  duration_ms: 37.699084
+  duration_ms: 37.886458
   type: 'test'
   ...
 1..1
@@ -1060,29 +1133,29 @@ ok 1 - L13: an unresolved changed child intent is interference with no further d
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 137.249625
+# duration_ms 133.042209
 
 ===== L13-interference / red =====
 TAP version 13
 # Subtest: L13: an unresolved changed child intent is interference with no further domain writes
 not ok 1 - L13: an unresolved changed child intent is interference with no further domain writes
   ---
-  duration_ms: 70.9565
+  duration_ms: 71.97875
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:12416'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:13081'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     2 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0
   actual: 2
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:182:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:193:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -1094,14 +1167,14 @@ not ok 1 - L13: an unresolved changed child intent is interference with no furth
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 174.251125
+# duration_ms 173.209834
 
 ===== L13-interference / restored =====
 TAP version 13
 # Subtest: L13: an unresolved changed child intent is interference with no further domain writes
 ok 1 - L13: an unresolved changed child intent is interference with no further domain writes
   ---
-  duration_ms: 37.558417
+  duration_ms: 37.605208
   type: 'test'
   ...
 1..1
@@ -1112,14 +1185,14 @@ ok 1 - L13: an unresolved changed child intent is interference with no further d
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 138.580667
+# duration_ms 136.180708
 
 ===== L14a-full-old-comparator / green =====
 TAP version 13
 # Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
 ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
   ---
-  duration_ms: 47.203791
+  duration_ms: 42.724958
   type: 'test'
   ...
 1..1
@@ -1130,29 +1203,29 @@ ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 147.274583
+# duration_ms 134.725666
 
 ===== L14a-full-old-comparator / red =====
 TAP version 13
 # Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
 not ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
   ---
-  duration_ms: 72.317125
+  duration_ms: 68.365292
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:11223'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:11888'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:168:12)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:179:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -1164,14 +1237,14 @@ not ok 1 - L12/L14: landed and unsent detach intents use the expected-version fe
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 178.836
+# duration_ms 164.897458
 
 ===== L14a-full-old-comparator / restored =====
 TAP version 13
 # Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
 ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
   ---
-  duration_ms: 44.943667
+  duration_ms: 43.160709
   type: 'test'
   ...
 1..1
@@ -1182,14 +1255,14 @@ ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 145.606334
+# duration_ms 135.046917
 
 ===== L14b-epoch-in-comparison / green =====
 TAP version 13
 # Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
 ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
   ---
-  duration_ms: 43.84525
+  duration_ms: 42.800583
   type: 'test'
   ...
 1..1
@@ -1200,29 +1273,29 @@ ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 147.132208
+# duration_ms 138.405125
 
 ===== L14b-epoch-in-comparison / red =====
 TAP version 13
 # Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
 not ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
   ---
-  duration_ms: 70.495084
+  duration_ms: 70.746625
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:11223'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:11888'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:168:12)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:179:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -1234,14 +1307,14 @@ not ok 1 - L12/L14: landed and unsent detach intents use the expected-version fe
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 177.33725
+# duration_ms 175.145459
 
 ===== L14b-epoch-in-comparison / restored =====
 TAP version 13
 # Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
 ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
   ---
-  duration_ms: 44.006
+  duration_ms: 43.398917
   type: 'test'
   ...
 1..1
@@ -1252,14 +1325,14 @@ ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 144.551291
+# duration_ms 139.605834
 
 ===== L14c-classify-before-fence / green =====
 TAP version 13
 # Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
 ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
   ---
-  duration_ms: 46.102125
+  duration_ms: 41.680333
   type: 'test'
   ...
 1..1
@@ -1270,29 +1343,29 @@ ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 146.599542
+# duration_ms 134.384792
 
 ===== L14c-classify-before-fence / red =====
 TAP version 13
 # Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
 not ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
   ---
-  duration_ms: 74.04375
+  duration_ms: 71.681208
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:11223'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:11888'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     '2' !== '1'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: '1'
   actual: '2'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:172:12)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:183:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -1304,14 +1377,14 @@ not ok 1 - L12/L14: landed and unsent detach intents use the expected-version fe
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 176.016541
+# duration_ms 170.607041
 
 ===== L14c-classify-before-fence / restored =====
 TAP version 13
 # Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
 ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
   ---
-  duration_ms: 44.80625
+  duration_ms: 44.020375
   type: 'test'
   ...
 1..1
@@ -1322,14 +1395,14 @@ ok 1 - L12/L14: landed and unsent detach intents use the expected-version fence 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 146.972459
+# duration_ms 136.113208
 
 ===== L15a-person-fence / green =====
 TAP version 13
 # Subtest: L15: correction fences a paused Complete before its already-intended destination PUT
 ok 1 - L15: correction fences a paused Complete before its already-intended destination PUT
   ---
-  duration_ms: 43.678417
+  duration_ms: 40.935541
   type: 'test'
   ...
 1..1
@@ -1340,29 +1413,29 @@ ok 1 - L15: correction fences a paused Complete before its already-intended dest
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 147.637125
+# duration_ms 133.928125
 
 ===== L15a-person-fence / red =====
 TAP version 13
 # Subtest: L15: correction fences a paused Complete before its already-intended destination PUT
 not ok 1 - L15: correction fences a paused Complete before its already-intended destination PUT
   ---
-  duration_ms: 79.269541
+  duration_ms: 76.9735
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:25483'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:26148'
   failureType: 'testCodeFailure'
   error: |-
     paused earlier Person write is refused by the correction fence
-    
+
     200 !== 412
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 412
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:331:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:342:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -1374,14 +1447,14 @@ not ok 1 - L15: correction fences a paused Complete before its already-intended 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 178.244708
+# duration_ms 172.817833
 
 ===== L15a-person-fence / restored =====
 TAP version 13
 # Subtest: L15: correction fences a paused Complete before its already-intended destination PUT
 ok 1 - L15: correction fences a paused Complete before its already-intended destination PUT
   ---
-  duration_ms: 49.022916
+  duration_ms: 41.447875
   type: 'test'
   ...
 1..1
@@ -1392,14 +1465,14 @@ ok 1 - L15: correction fences a paused Complete before its already-intended dest
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 151.261208
+# duration_ms 132.868125
 
 ===== L15b-cancel-last / green =====
 TAP version 13
 # Subtest: L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
 ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
   ---
-  duration_ms: 45.469167
+  duration_ms: 42.345333
   type: 'test'
   ...
 1..1
@@ -1410,32 +1483,32 @@ ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descen
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 146.889708
+# duration_ms 134.698167
 
 ===== L15b-cancel-last / red =====
 TAP version 13
 # Subtest: L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
 not ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
   ---
-  duration_ms: 74.560875
+  duration_ms: 71.491209
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:16567'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:17232'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'in-progress'
     - 'failed'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'failed'
   actual: 'in-progress'
   operator: 'strictEqual'
   stack: |-
-    partialFailedCorrection (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:222:48)
-    async TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:227:45)
+    partialFailedCorrection (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:233:48)
+    async TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:238:45)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -1447,14 +1520,14 @@ not ok 1 - L15/L24a/L25: partial takeover fails while original stays live and de
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 178.465583
+# duration_ms 171.028583
 
 ===== L15b-cancel-last / restored =====
 TAP version 13
 # Subtest: L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
 ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
   ---
-  duration_ms: 45.347083
+  duration_ms: 42.651875
   type: 'test'
   ...
 1..1
@@ -1465,14 +1538,14 @@ ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descen
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 143.436417
+# duration_ms 134.88025
 
 ===== L15-fresh-retry-correction-check / green =====
 TAP version 13
 # Subtest: L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands
 ok 1 - L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands
   ---
-  duration_ms: 43.9975
+  duration_ms: 41.224417
   type: 'test'
   ...
 1..1
@@ -1483,31 +1556,31 @@ ok 1 - L15 pre-takeover retry: the correction record stops a fresh retry even be
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 143.56275
+# duration_ms 135.66075
 
 ===== L15-fresh-retry-correction-check / red =====
 TAP version 13
 # Subtest: L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands
 not ok 1 - L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands
   ---
-  duration_ms: 78.021833
+  duration_ms: 71.42
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:40989'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:41724'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'linked'
     - 'takeover-in-progress'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'takeover-in-progress'
   actual: 'linked'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:518:45)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:529:45)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -1519,14 +1592,14 @@ not ok 1 - L15 pre-takeover retry: the correction record stops a fresh retry eve
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 178.034333
+# duration_ms 166.610125
 
 ===== L15-fresh-retry-correction-check / restored =====
 TAP version 13
 # Subtest: L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands
 ok 1 - L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands
   ---
-  duration_ms: 43.865
+  duration_ms: 40.23525
   type: 'test'
   ...
 1..1
@@ -1537,14 +1610,14 @@ ok 1 - L15 pre-takeover retry: the correction record stops a fresh retry even be
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 144.368459
+# duration_ms 132.279959
 
 ===== L16-release-required / green =====
 TAP version 13
 # Subtest: L16/L20: another claim or name edit after verification refuses release and completion audit
 ok 1 - L16/L20: another claim or name edit after verification refuses release and completion audit
   ---
-  duration_ms: 41.985375
+  duration_ms: 40.235834
   type: 'test'
   ...
 1..1
@@ -1555,29 +1628,29 @@ ok 1 - L16/L20: another claim or name edit after verification refuses release an
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 137.867708
+# duration_ms 132.527292
 
 ===== L16-release-required / red =====
 TAP version 13
 # Subtest: L16/L20: another claim or name edit after verification refuses release and completion audit
 not ok 1 - L16/L20: another claim or name edit after verification refuses release and completion audit
   ---
-  duration_ms: 72.2575
+  duration_ms: 69.06225
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:22808'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:23473'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:304:12)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:315:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -1589,14 +1662,14 @@ not ok 1 - L16/L20: another claim or name edit after verification refuses releas
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 181.159125
+# duration_ms 169.312958
 
 ===== L16-release-required / restored =====
 TAP version 13
 # Subtest: L16/L20: another claim or name edit after verification refuses release and completion audit
 ok 1 - L16/L20: another claim or name edit after verification refuses release and completion audit
   ---
-  duration_ms: 42.298958
+  duration_ms: 39.894167
   type: 'test'
   ...
 1..1
@@ -1607,14 +1680,14 @@ ok 1 - L16/L20: another claim or name edit after verification refuses release an
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 142.058083
+# duration_ms 131.384833
 
 ===== L17-moved-set-binding / green =====
 TAP version 13
 # Subtest: L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan
 ok 1 - L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan
   ---
-  duration_ms: 43.059042
+  duration_ms: 37.286042
   type: 'test'
   ...
 1..1
@@ -1625,29 +1698,29 @@ ok 1 - L17: a genuine claim copied to an unlisted child is inert; an untrusted T
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 145.579875
+# duration_ms 132.220708
 
 ===== L17-moved-set-binding / red =====
 TAP version 13
 # Subtest: L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan
 not ok 1 - L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan
   ---
-  duration_ms: 75.36475
+  duration_ms: 69.317208
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:39219'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:39954'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:495:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:506:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -1659,14 +1732,14 @@ not ok 1 - L17: a genuine claim copied to an unlisted child is inert; an untrust
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 184.927333
+# duration_ms 170.226125
 
 ===== L17-moved-set-binding / restored =====
 TAP version 13
 # Subtest: L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan
 ok 1 - L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan
   ---
-  duration_ms: 38.334625
+  duration_ms: 37.531042
   type: 'test'
   ...
 1..1
@@ -1677,14 +1750,14 @@ ok 1 - L17: a genuine claim copied to an unlisted child is inert; an untrusted T
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 138.979375
+# duration_ms 131.894166
 
 ===== L19-action-required / green =====
 TAP version 13
 # Subtest: L19: a revoked business action refuses before any read or write
 ok 1 - L19: a revoked business action refuses before any read or write
   ---
-  duration_ms: 28.065333
+  duration_ms: 27.270334
   type: 'test'
   ...
 1..1
@@ -1695,29 +1768,29 @@ ok 1 - L19: a revoked business action refuses before any read or write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 132.997166
+# duration_ms 123.914375
 
 ===== L19-action-required / red =====
 TAP version 13
 # Subtest: L19: a revoked business action refuses before any read or write
 not ok 1 - L19: a revoked business action refuses before any read or write
   ---
-  duration_ms: 75.270375
+  duration_ms: 69.386459
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:24608'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:25273'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 403
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 403
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:318:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:329:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -1729,14 +1802,14 @@ not ok 1 - L19: a revoked business action refuses before any read or write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 179.054375
+# duration_ms 166.08825
 
 ===== L19-action-required / restored =====
 TAP version 13
 # Subtest: L19: a revoked business action refuses before any read or write
 ok 1 - L19: a revoked business action refuses before any read or write
   ---
-  duration_ms: 29.681958
+  duration_ms: 27.548541
   type: 'test'
   ...
 1..1
@@ -1747,14 +1820,14 @@ ok 1 - L19: a revoked business action refuses before any read or write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 134.06075
+# duration_ms 125.201333
 
 ===== L20-completed-audit-after-release / green =====
 TAP version 13
 # Subtest: L16/L20: another claim or name edit after verification refuses release and completion audit
 ok 1 - L16/L20: another claim or name edit after verification refuses release and completion audit
   ---
-  duration_ms: 44.0825
+  duration_ms: 41.030083
   type: 'test'
   ...
 1..1
@@ -1765,29 +1838,29 @@ ok 1 - L16/L20: another claim or name edit after verification refuses release an
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 147.231125
+# duration_ms 135.868791
 
 ===== L20-completed-audit-after-release / red =====
 TAP version 13
 # Subtest: L16/L20: another claim or name edit after verification refuses release and completion audit
 not ok 1 - L16/L20: another claim or name edit after verification refuses release and completion audit
   ---
-  duration_ms: 70.063333
+  duration_ms: 70.326583
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:22808'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:23473'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:306:12)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:317:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -1799,14 +1872,14 @@ not ok 1 - L16/L20: another claim or name edit after verification refuses releas
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 177.956792
+# duration_ms 173.062958
 
 ===== L20-completed-audit-after-release / restored =====
 TAP version 13
 # Subtest: L16/L20: another claim or name edit after verification refuses release and completion audit
 ok 1 - L16/L20: another claim or name edit after verification refuses release and completion audit
   ---
-  duration_ms: 41.7075
+  duration_ms: 41.206917
   type: 'test'
   ...
 1..1
@@ -1817,14 +1890,14 @@ ok 1 - L16/L20: another claim or name edit after verification refuses release an
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 142.571125
+# duration_ms 142.761333
 
 ===== L21-idempotency / green =====
 TAP version 13
 # Subtest: L21: repeated operation identifier returns one Task and performs no second writes
 ok 1 - L21: repeated operation identifier returns one Task and performs no second writes
   ---
-  duration_ms: 43.331792
+  duration_ms: 39.0295
   type: 'test'
   ...
 1..1
@@ -1835,29 +1908,29 @@ ok 1 - L21: repeated operation identifier returns one Task and performs no secon
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 147.942709
+# duration_ms 135.982041
 
 ===== L21-idempotency / red =====
 TAP version 13
 # Subtest: L21: repeated operation identifier returns one Task and performs no second writes
 not ok 1 - L21: repeated operation identifier returns one Task and performs no second writes
   ---
-  duration_ms: 73.274291
+  duration_ms: 69.187625
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:8550'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:9215'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:128:89)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:139:89)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -1869,14 +1942,14 @@ not ok 1 - L21: repeated operation identifier returns one Task and performs no s
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 179.44575
+# duration_ms 180.154625
 
 ===== L21-idempotency / restored =====
 TAP version 13
 # Subtest: L21: repeated operation identifier returns one Task and performs no second writes
 ok 1 - L21: repeated operation identifier returns one Task and performs no second writes
   ---
-  duration_ms: 40.455917
+  duration_ms: 38.879584
   type: 'test'
   ...
 1..1
@@ -1887,14 +1960,14 @@ ok 1 - L21: repeated operation identifier returns one Task and performs no secon
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 142.210833
+# duration_ms 133.321542
 
 ===== L24-code-filter / green =====
 TAP version 13
 # Subtest: L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
 ok 1 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
   ---
-  duration_ms: 45.513333
+  duration_ms: 39.711792
   type: 'test'
   ...
 1..1
@@ -1905,31 +1978,31 @@ ok 1 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operations
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 155.048625
+# duration_ms 135.630167
 
 ===== L24-code-filter / red =====
 TAP version 13
 # Subtest: L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
 not ok 1 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
   ---
-  duration_ms: 73.437792
+  duration_ms: 69.662625
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:10027'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:10692'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'cancelled'
     - 'completed'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'completed'
   actual: 'cancelled'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:151:44)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:162:44)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -1941,14 +2014,14 @@ not ok 1 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operat
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 180.6705
+# duration_ms 174.928875
 
 ===== L24-code-filter / restored =====
 TAP version 13
 # Subtest: L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
 ok 1 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
   ---
-  duration_ms: 44.234708
+  duration_ms: 40.805
   type: 'test'
   ...
 1..1
@@ -1959,14 +2032,14 @@ ok 1 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operations
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 145.396708
+# duration_ms 138.136666
 
 ===== L24-service-authorship / green =====
 TAP version 13
 # Subtest: L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
 ok 1 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
   ---
-  duration_ms: 43.56425
+  duration_ms: 39.71525
   type: 'test'
   ...
 1..1
@@ -1977,31 +2050,31 @@ ok 1 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operations
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 150.337625
+# duration_ms 133.073
 
 ===== L24-service-authorship / red =====
 TAP version 13
 # Subtest: L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
 not ok 1 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
   ---
-  duration_ms: 74.7795
+  duration_ms: 69.050291
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:10027'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:10692'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'cancelled'
     - 'completed'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'completed'
   actual: 'cancelled'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:151:44)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:162:44)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -2013,14 +2086,14 @@ not ok 1 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operat
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 184.489
+# duration_ms 168.98325
 
 ===== L24-service-authorship / restored =====
 TAP version 13
 # Subtest: L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
 ok 1 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
   ---
-  duration_ms: 43.406542
+  duration_ms: 40.090167
   type: 'test'
   ...
 1..1
@@ -2031,14 +2104,14 @@ ok 1 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operations
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 145.208375
+# duration_ms 136.135542
 
 ===== L24a-claim-descent / green =====
 TAP version 13
 # Subtest: L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
 ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
   ---
-  duration_ms: 46.276583
+  duration_ms: 43.943458
   type: 'test'
   ...
 1..1
@@ -2049,29 +2122,29 @@ ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descen
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 146.540041
+# duration_ms 137.079916
 
 ===== L24a-claim-descent / red =====
 TAP version 13
 # Subtest: L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
 not ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
   ---
-  duration_ms: 79.885625
+  duration_ms: 71.469625
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:16567'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:17232'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:228:75)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:239:75)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -2083,14 +2156,14 @@ not ok 1 - L15/L24a/L25: partial takeover fails while original stays live and de
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 189.285916
+# duration_ms 172.389916
 
 ===== L24a-claim-descent / restored =====
 TAP version 13
 # Subtest: L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
 ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
   ---
-  duration_ms: 47.041417
+  duration_ms: 43.249166
   type: 'test'
   ...
 1..1
@@ -2101,14 +2174,14 @@ ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descen
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 148.527166
+# duration_ms 138.576916
 
 ===== L24b-step-zero-before-writes / green =====
 TAP version 13
 # Subtest: L24b: a live service-authored correction stops Complete before every write
 ok 1 - L24b: a live service-authored correction stops Complete before every write
   ---
-  duration_ms: 41.343792
+  duration_ms: 39.101125
   type: 'test'
   ...
 1..1
@@ -2119,29 +2192,29 @@ ok 1 - L24b: a live service-authored correction stops Complete before every writ
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 143.326333
+# duration_ms 133.5575
 
 ===== L24b-step-zero-before-writes / red =====
 TAP version 13
 # Subtest: L24b: a live service-authored correction stops Complete before every write
 not ok 1 - L24b: a live service-authored correction stops Complete before every write
   ---
-  duration_ms: 74.125917
+  duration_ms: 68.005125
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:10779'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:11444'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     20 !== 14
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 14
   actual: 20
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:157:101)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:168:101)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -2153,14 +2226,14 @@ not ok 1 - L24b: a live service-authored correction stops Complete before every 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 179.066125
+# duration_ms 167.518875
 
 ===== L24b-step-zero-before-writes / restored =====
 TAP version 13
 # Subtest: L24b: a live service-authored correction stops Complete before every write
 ok 1 - L24b: a live service-authored correction stops Complete before every write
   ---
-  duration_ms: 40.553291
+  duration_ms: 37.7235
   type: 'test'
   ...
 1..1
@@ -2171,14 +2244,14 @@ ok 1 - L24b: a live service-authored correction stops Complete before every writ
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 142.129334
+# duration_ms 130.324625
 
 ===== L24c-completed-correction / green =====
 TAP version 13
 # Subtest: L24c: completed correction causes one cancel attempt, never an attempted fence intent
 ok 1 - L24c: completed correction causes one cancel attempt, never an attempted fence intent
   ---
-  duration_ms: 43.917625
+  duration_ms: 39.934917
   type: 'test'
   ...
 1..1
@@ -2189,31 +2262,31 @@ ok 1 - L24c: completed correction causes one cancel attempt, never an attempted 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 142.962041
+# duration_ms 135.484625
 
 ===== L24c-completed-correction / red =====
 TAP version 13
 # Subtest: L24c: completed correction causes one cancel attempt, never an attempted fence intent
 not ok 1 - L24c: completed correction causes one cancel attempt, never an attempted fence intent
   ---
-  duration_ms: 77.190125
+  duration_ms: 72.56175
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:26607'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:27272'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'in-progress'
     - 'cancelled'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'cancelled'
   actual: 'in-progress'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:343:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:354:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -2225,14 +2298,14 @@ not ok 1 - L24c: completed correction causes one cancel attempt, never an attemp
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 181.21475
+# duration_ms 174.209125
 
 ===== L24c-completed-correction / restored =====
 TAP version 13
 # Subtest: L24c: completed correction causes one cancel attempt, never an attempted fence intent
 ok 1 - L24c: completed correction causes one cancel attempt, never an attempted fence intent
   ---
-  duration_ms: 46.031625
+  duration_ms: 40.482291
   type: 'test'
   ...
 1..1
@@ -2243,14 +2316,14 @@ ok 1 - L24c: completed correction causes one cancel attempt, never an attempted 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 150.976542
+# duration_ms 133.676958
 
 ===== L25-live-correction-never-self-cancels / green =====
 TAP version 13
 # Subtest: L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
 ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
   ---
-  duration_ms: 47.393084
+  duration_ms: 42.755084
   type: 'test'
   ...
 1..1
@@ -2261,32 +2334,32 @@ ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descen
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 148.599583
+# duration_ms 137.385584
 
 ===== L25-live-correction-never-self-cancels / red =====
 TAP version 13
 # Subtest: L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
 not ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
   ---
-  duration_ms: 77.263292
+  duration_ms: 71.000875
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:16567'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:17232'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'in-progress'
     - 'failed'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'failed'
   actual: 'in-progress'
   operator: 'strictEqual'
   stack: |-
-    partialFailedCorrection (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:222:48)
-    async TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:227:45)
+    partialFailedCorrection (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:233:48)
+    async TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:238:45)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -2298,14 +2371,14 @@ not ok 1 - L15/L24a/L25: partial takeover fails while original stays live and de
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 197.753167
+# duration_ms 170.623417
 
 ===== L25-live-correction-never-self-cancels / restored =====
 TAP version 13
 # Subtest: L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
 ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
   ---
-  duration_ms: 46.444375
+  duration_ms: 43.010125
   type: 'test'
   ...
 1..1
@@ -2316,14 +2389,14 @@ ok 1 - L15/L24a/L25: partial takeover fails while original stays live and descen
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 149.743416
+# duration_ms 139.420667
 
 ===== L26-correction-detaches-current-owner / green =====
 TAP version 13
 # Subtest: L26: pending Correct detaches a landed attachment before returning children to retained S
 ok 1 - L26: pending Correct detaches a landed attachment before returning children to retained S
   ---
-  duration_ms: 44.829125
+  duration_ms: 42.213084
   type: 'test'
   ...
 1..1
@@ -2334,29 +2407,29 @@ ok 1 - L26: pending Correct detaches a landed attachment before returning childr
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 144.426792
+# duration_ms 138.971041
 
 ===== L26-correction-detaches-current-owner / red =====
 TAP version 13
 # Subtest: L26: pending Correct detaches a landed attachment before returning children to retained S
 not ok 1 - L26: pending Correct detaches a landed attachment before returning children to retained S
   ---
-  duration_ms: 72.320459
+  duration_ms: 69.272041
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:13441'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:14106'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:194:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:205:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -2368,14 +2441,14 @@ not ok 1 - L26: pending Correct detaches a landed attachment before returning ch
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 177.443916
+# duration_ms 169.339
 
 ===== L26-correction-detaches-current-owner / restored =====
 TAP version 13
 # Subtest: L26: pending Correct detaches a landed attachment before returning children to retained S
 ok 1 - L26: pending Correct detaches a landed attachment before returning children to retained S
   ---
-  duration_ms: 45.533
+  duration_ms: 41.899458
   type: 'test'
   ...
 1..1
@@ -2386,14 +2459,14 @@ ok 1 - L26: pending Correct detaches a landed attachment before returning childr
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 150.685458
+# duration_ms 136.677833
 
 ===== L27-terminal-rule-at-ownership-check / green =====
 TAP version 13
 # Subtest: L27/L29: one or two descent refusals resolve each intent; a later Complete is live
 ok 1 - L27/L29: one or two descent refusals resolve each intent; a later Complete is live
   ---
-  duration_ms: 51.44925
+  duration_ms: 49.431125
   type: 'test'
   ...
 1..1
@@ -2404,31 +2477,31 @@ ok 1 - L27/L29: one or two descent refusals resolve each intent; a later Complet
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 155.281583
+# duration_ms 146.056417
 
 ===== L27-terminal-rule-at-ownership-check / red =====
 TAP version 13
 # Subtest: L27/L29: one or two descent refusals resolve each intent; a later Complete is live
 not ok 1 - L27/L29: one or two descent refusals resolve each intent; a later Complete is live
   ---
-  duration_ms: 72.904708
+  duration_ms: 72.172959
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:16945'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:17610'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'failed'
     - 'completed'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'completed'
   actual: 'failed'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:245:19)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:256:19)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -2440,14 +2513,14 @@ not ok 1 - L27/L29: one or two descent refusals resolve each intent; a later Com
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 177.021292
+# duration_ms 175.19175
 
 ===== L27-terminal-rule-at-ownership-check / restored =====
 TAP version 13
 # Subtest: L27/L29: one or two descent refusals resolve each intent; a later Complete is live
 ok 1 - L27/L29: one or two descent refusals resolve each intent; a later Complete is live
   ---
-  duration_ms: 48.233208
+  duration_ms: 48.312542
   type: 'test'
   ...
 1..1
@@ -2458,14 +2531,14 @@ ok 1 - L27/L29: one or two descent refusals resolve each intent; a later Complet
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 147.326583
+# duration_ms 144.571292
 
 ===== L28-reclaim-checkpointed-claim / green =====
 TAP version 13
 # Subtest: L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim
 ok 1 - L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim
   ---
-  duration_ms: 44.414625
+  duration_ms: 45.927834
   type: 'test'
   ...
 1..1
@@ -2476,29 +2549,29 @@ ok 1 - L28: a missing checkpointed claim is reclaimed only on an unowned child w
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 142.452541
+# duration_ms 142.351
 
 ===== L28-reclaim-checkpointed-claim / red =====
 TAP version 13
 # Subtest: L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim
 not ok 1 - L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim
   ---
-  duration_ms: 78.1715
+  duration_ms: 70.675917
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:18432'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:19097'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:255:12)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:266:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -2510,14 +2583,14 @@ not ok 1 - L28: a missing checkpointed claim is reclaimed only on an unowned chi
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 189.470542
+# duration_ms 174.017416
 
 ===== L28-reclaim-checkpointed-claim / restored =====
 TAP version 13
 # Subtest: L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim
 ok 1 - L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim
   ---
-  duration_ms: 44.731291
+  duration_ms: 43.988042
   type: 'test'
   ...
 1..1
@@ -2528,26 +2601,26 @@ ok 1 - L28: a missing checkpointed claim is reclaimed only on an unowned child w
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 146.80775
+# duration_ms 137.646125
 
 ===== L29-definite-response-intent-rule / green =====
 TAP version 13
 # Subtest: L27/L29: one or two descent refusals resolve each intent; a later Complete is live
 ok 1 - L27/L29: one or two descent refusals resolve each intent; a later Complete is live
   ---
-  duration_ms: 51.049125
+  duration_ms: 47.426667
   type: 'test'
   ...
 # Subtest: L29: double re-claim refusals and a lost successful descent retry remain resumable
 ok 2 - L29: double re-claim refusals and a lost successful descent retry remain resumable
   ---
-  duration_ms: 10.200625
+  duration_ms: 9.59075
   type: 'test'
   ...
 # Subtest: S3 intent rule: a definite server error is rejected history, not an unresolved response
 ok 3 - S3 intent rule: a definite server error is rejected history, not an unresolved response
   ---
-  duration_ms: 0.656125
+  duration_ms: 0.683917
   type: 'test'
   ...
 1..3
@@ -2558,76 +2631,76 @@ ok 3 - S3 intent rule: a definite server error is rejected history, not an unres
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 164.342708
+# duration_ms 154.593042
 
 ===== L29-definite-response-intent-rule / red =====
 TAP version 13
 # Subtest: L27/L29: one or two descent refusals resolve each intent; a later Complete is live
 not ok 1 - L27/L29: one or two descent refusals resolve each intent; a later Complete is live
   ---
-  duration_ms: 76.098459
+  duration_ms: 70.742166
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:16945'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:17610'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
   actual: 0
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:236:12)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:247:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
 # Subtest: L29: double re-claim refusals and a lost successful descent retry remain resumable
 not ok 2 - L29: double re-claim refusals and a lost successful descent retry remain resumable
   ---
-  duration_ms: 2.698167
+  duration_ms: 2.037541
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:33823'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:34488'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'interfered'
     - 'recovery-conflict'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'recovery-conflict'
   actual: 'interfered'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:422:45)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:433:45)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: S3 intent rule: a definite server error is rejected history, not an unresolved response
 not ok 3 - S3 intent rule: a definite server error is rejected history, not an unresolved response
   ---
-  duration_ms: 1.875834
+  duration_ms: 1.693416
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:35403'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:36068'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'rejected'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'rejected'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:435:43)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:446:43)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -2639,26 +2712,26 @@ not ok 3 - S3 intent rule: a definite server error is rejected history, not an u
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 184.504875
+# duration_ms 174.244584
 
 ===== L29-definite-response-intent-rule / restored =====
 TAP version 13
 # Subtest: L27/L29: one or two descent refusals resolve each intent; a later Complete is live
 ok 1 - L27/L29: one or two descent refusals resolve each intent; a later Complete is live
   ---
-  duration_ms: 50.620541
+  duration_ms: 49.263333
   type: 'test'
   ...
 # Subtest: L29: double re-claim refusals and a lost successful descent retry remain resumable
 ok 2 - L29: double re-claim refusals and a lost successful descent retry remain resumable
   ---
-  duration_ms: 8.967042
+  duration_ms: 9.211875
   type: 'test'
   ...
 # Subtest: S3 intent rule: a definite server error is rejected history, not an unresolved response
 ok 3 - S3 intent rule: a definite server error is rejected history, not an unresolved response
   ---
-  duration_ms: 0.552417
+  duration_ms: 0.573917
   type: 'test'
   ...
 1..3
@@ -2669,14 +2742,14 @@ ok 3 - S3 intent rule: a definite server error is rejected history, not an unres
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 161.020167
+# duration_ms 155.194875
 
 ===== S6-cancel-attempt-bound / green =====
 TAP version 13
 # Subtest: S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes
 ok 1 - S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes
   ---
-  duration_ms: 44.105917
+  duration_ms: 41.229542
   type: 'test'
   ...
 1..1
@@ -2687,29 +2760,29 @@ ok 1 - S6 bounded cancellation: three fresh versions and intents, then pending; 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 139.076083
+# duration_ms 137.848333
 
 ===== S6-cancel-attempt-bound / red =====
 TAP version 13
 # Subtest: S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes
 not ok 1 - S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes
   ---
-  duration_ms: 72.078917
+  duration_ms: 70.850208
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:27512'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:28177'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:349:38)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:360:38)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -2721,14 +2794,14 @@ not ok 1 - S6 bounded cancellation: three fresh versions and intents, then pendi
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 172.918
+# duration_ms 164.605
 
 ===== S6-cancel-attempt-bound / restored =====
 TAP version 13
 # Subtest: S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes
 ok 1 - S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes
   ---
-  duration_ms: 43.642958
+  duration_ms: 43.307084
   type: 'test'
   ...
 1..1
@@ -2739,14 +2812,14 @@ ok 1 - S6 bounded cancellation: three fresh versions and intents, then pending; 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 143.027417
+# duration_ms 140.037334
 
 ===== S6-pending-takeover-prefix / green =====
 TAP version 13
 # Subtest: S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response
 ok 1 - S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response
   ---
-  duration_ms: 47.834208
+  duration_ms: 46.26775
   type: 'test'
   ...
 1..1
@@ -2757,29 +2830,29 @@ ok 1 - S6 crash prefix: Complete finishes a partial takeover after a lost or uns
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 144.460708
+# duration_ms 140.486042
 
 ===== S6-pending-takeover-prefix / red =====
 TAP version 13
 # Subtest: S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response
 not ok 1 - S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response
   ---
-  duration_ms: 79.472
+  duration_ms: 69.73325
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:28702'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:29367'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:363:12)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:374:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -2791,14 +2864,14 @@ not ok 1 - S6 crash prefix: Complete finishes a partial takeover after a lost or
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 184.828625
+# duration_ms 167.671208
 
 ===== S6-pending-takeover-prefix / restored =====
 TAP version 13
 # Subtest: S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response
 ok 1 - S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response
   ---
-  duration_ms: 56.578792
+  duration_ms: 47.368042
   type: 'test'
   ...
 1..1
@@ -2809,14 +2882,14 @@ ok 1 - S6 crash prefix: Complete finishes a partial takeover after a lost or uns
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 161.589209
+# duration_ms 143.781666
 
 ===== S3-post-release-activity / green =====
 TAP version 13
 # Subtest: S3 released children: Complete preserves later transfers after partial release or an unsent terminal write
 ok 1 - S3 released children: Complete preserves later transfers after partial release or an unsent terminal write
   ---
-  duration_ms: 57.760708
+  duration_ms: 54.155834
   type: 'test'
   ...
 1..1
@@ -2827,29 +2900,29 @@ ok 1 - S3 released children: Complete preserves later transfers after partial re
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 164.518709
+# duration_ms 153.180459
 
 ===== S3-post-release-activity / red =====
 TAP version 13
 # Subtest: S3 released children: Complete preserves later transfers after partial release or an unsent terminal write
 not ok 1 - S3 released children: Complete preserves later transfers after partial release or an unsent terminal write
   ---
-  duration_ms: 78.703334
+  duration_ms: 72.472875
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:32005'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:32670'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:408:80)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:419:80)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -2861,14 +2934,14 @@ not ok 1 - S3 released children: Complete preserves later transfers after partia
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 186.313708
+# duration_ms 172.744042
 
 ===== S3-post-release-activity / restored =====
 TAP version 13
 # Subtest: S3 released children: Complete preserves later transfers after partial release or an unsent terminal write
 ok 1 - S3 released children: Complete preserves later transfers after partial release or an unsent terminal write
   ---
-  duration_ms: 58.538833
+  duration_ms: 56.55425
   type: 'test'
   ...
 1..1
@@ -2879,14 +2952,14 @@ ok 1 - S3 released children: Complete preserves later transfers after partial re
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 159.3345
+# duration_ms 151.960041
 
 ===== S3-no-checkpoint-replay / green =====
 TAP version 13
 # Subtest: S3 checkpoint refusal stops immediately without replaying a stale Task version
 ok 1 - S3 checkpoint refusal stops immediately without replaying a stale Task version
   ---
-  duration_ms: 36.203334
+  duration_ms: 35.87025
   type: 'test'
   ...
 1..1
@@ -2897,29 +2970,29 @@ ok 1 - S3 checkpoint refusal stops immediately without replaying a stale Task ve
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 137.084708
+# duration_ms 129.937542
 
 ===== S3-no-checkpoint-replay / red =====
 TAP version 13
 # Subtest: S3 checkpoint refusal stops immediately without replaying a stale Task version
 not ok 1 - S3 checkpoint refusal stops immediately without replaying a stale Task version
   ---
-  duration_ms: 66.99825
+  duration_ms: 66.669416
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:36092'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:36757'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     2 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
   actual: 2
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:443:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:454:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -2931,14 +3004,14 @@ not ok 1 - S3 checkpoint refusal stops immediately without replaying a stale Tas
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 170.114917
+# duration_ms 165.537792
 
 ===== S3-no-checkpoint-replay / restored =====
 TAP version 13
 # Subtest: S3 checkpoint refusal stops immediately without replaying a stale Task version
 ok 1 - S3 checkpoint refusal stops immediately without replaying a stale Task version
   ---
-  duration_ms: 35.919625
+  duration_ms: 36.625333
   type: 'test'
   ...
 1..1
@@ -2949,14 +3022,14 @@ ok 1 - S3 checkpoint refusal stops immediately without replaying a stale Task ve
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 133.990333
+# duration_ms 137.013209
 
 ===== S5-fresh-claim-classification / green =====
 TAP version 13
 # Subtest: S5 retry classification: a fresh foreign live claim stops a recovery Person retry
 ok 1 - S5 retry classification: a fresh foreign live claim stops a recovery Person retry
   ---
-  duration_ms: 40.668625
+  duration_ms: 40.130375
   type: 'test'
   ...
 1..1
@@ -2967,29 +3040,29 @@ ok 1 - S5 retry classification: a fresh foreign live claim stops a recovery Pers
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 140.09825
+# duration_ms 133.55375
 
 ===== S5-fresh-claim-classification / red =====
 TAP version 13
 # Subtest: S5 retry classification: a fresh foreign live claim stops a recovery Person retry
 not ok 1 - S5 retry classification: a fresh foreign live claim stops a recovery Person retry
   ---
-  duration_ms: 74.242334
+  duration_ms: 69.490667
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:39976'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:40711'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:504:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:515:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -3001,14 +3074,14 @@ not ok 1 - S5 retry classification: a fresh foreign live claim stops a recovery 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 177.38425
+# duration_ms 166.78775
 
 ===== S5-fresh-claim-classification / restored =====
 TAP version 13
 # Subtest: S5 retry classification: a fresh foreign live claim stops a recovery Person retry
 ok 1 - S5 retry classification: a fresh foreign live claim stops a recovery Person retry
   ---
-  duration_ms: 40.928458
+  duration_ms: 39.9305
   type: 'test'
   ...
 1..1
@@ -3019,14 +3092,14 @@ ok 1 - S5 retry classification: a fresh foreign live claim stops a recovery Pers
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 139.918958
+# duration_ms 133.526875
 
 ===== S3-terminal-journal-checkpoint / green =====
 TAP version 13
 # Subtest: L15: correction fences a paused Complete before its already-intended destination PUT
 ok 1 - L15: correction fences a paused Complete before its already-intended destination PUT
   ---
-  duration_ms: 42.545666
+  duration_ms: 40.827959
   type: 'test'
   ...
 1..1
@@ -3037,30 +3110,30 @@ ok 1 - L15: correction fences a paused Complete before its already-intended dest
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 140.054583
+# duration_ms 134.140042
 
 ===== S3-terminal-journal-checkpoint / red =====
 TAP version 13
 # Subtest: L15: correction fences a paused Complete before its already-intended destination PUT
 not ok 1 - L15: correction fences a paused Complete before its already-intended destination PUT
   ---
-  duration_ms: 75.868542
+  duration_ms: 70.160625
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:25483'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:26148'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'rejected'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'rejected'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:334:51)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:345:51)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -3072,14 +3145,14 @@ not ok 1 - L15: correction fences a paused Complete before its already-intended 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 172.838167
+# duration_ms 167.895625
 
 ===== S3-terminal-journal-checkpoint / restored =====
 TAP version 13
 # Subtest: L15: correction fences a paused Complete before its already-intended destination PUT
 ok 1 - L15: correction fences a paused Complete before its already-intended destination PUT
   ---
-  duration_ms: 45.3185
+  duration_ms: 43.476458
   type: 'test'
   ...
 1..1
@@ -3090,14 +3163,14 @@ ok 1 - L15: correction fences a paused Complete before its already-intended dest
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 149.216208
+# duration_ms 135.121041
 
 ===== S3-terminal-response-stops-runner / green =====
 TAP version 13
 # Subtest: S3 late successful release checkpoints its result without completing or auditing twice
 ok 1 - S3 late successful release checkpoints its result without completing or auditing twice
   ---
-  duration_ms: 43.1715
+  duration_ms: 39.093458
   type: 'test'
   ...
 1..1
@@ -3108,29 +3181,29 @@ ok 1 - S3 late successful release checkpoints its result without completing or a
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 143.718167
+# duration_ms 134.125042
 
 ===== S3-terminal-response-stops-runner / red =====
 TAP version 13
 # Subtest: S3 late successful release checkpoints its result without completing or auditing twice
 not ok 1 - S3 late successful release checkpoints its result without completing or auditing twice
   ---
-  duration_ms: 73.307791
+  duration_ms: 68.489625
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:36698'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:37363'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     2 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
   actual: 2
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:461:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:472:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -3142,14 +3215,14 @@ not ok 1 - S3 late successful release checkpoints its result without completing 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 179.652042
+# duration_ms 167.966375
 
 ===== S3-terminal-response-stops-runner / restored =====
 TAP version 13
 # Subtest: S3 late successful release checkpoints its result without completing or auditing twice
 ok 1 - S3 late successful release checkpoints its result without completing or auditing twice
   ---
-  duration_ms: 41.310333
+  duration_ms: 40.377875
   type: 'test'
   ...
 1..1
@@ -3160,14 +3233,14 @@ ok 1 - S3 late successful release checkpoints its result without completing or a
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 143.002208
+# duration_ms 134.319375
 
 ===== S3-terminal-checkpoint-refusal / green =====
 TAP version 13
 # Subtest: S3 terminal response checkpoint refusal is reported and never replayed
 ok 1 - S3 terminal response checkpoint refusal is reported and never replayed
   ---
-  duration_ms: 86.093375
+  duration_ms: 39.450666
   type: 'test'
   ...
 1..1
@@ -3178,29 +3251,29 @@ ok 1 - S3 terminal response checkpoint refusal is reported and never replayed
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 272.526625
+# duration_ms 132.111875
 
 ===== S3-terminal-checkpoint-refusal / red =====
 TAP version 13
 # Subtest: S3 terminal response checkpoint refusal is reported and never replayed
 not ok 1 - S3 terminal response checkpoint refusal is reported and never replayed
   ---
-  duration_ms: 78.155167
+  duration_ms: 73.740125
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:1:38058'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:1:38723'
   failureType: 'testCodeFailure'
   error: |-
     a refused journal checkpoint cannot report settled success
-    
+
     200 !== 412
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 412
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/guarantorLinkOperation.test.ts:487:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkOperation.test.ts:498:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -3212,14 +3285,14 @@ not ok 1 - S3 terminal response checkpoint refusal is reported and never replaye
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 186.979458
+# duration_ms 169.354125
 
 ===== S3-terminal-checkpoint-refusal / restored =====
 TAP version 13
 # Subtest: S3 terminal response checkpoint refusal is reported and never replayed
 ok 1 - S3 terminal response checkpoint refusal is reported and never replayed
   ---
-  duration_ms: 46.377125
+  duration_ms: 40.606083
   type: 'test'
   ...
 1..1
@@ -3230,7 +3303,78 @@ ok 1 - S3 terminal response checkpoint refusal is reported and never replayed
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 147.598291
+# duration_ms 137.68025
+
+===== S1-rate-limit / green =====
+TAP version 13
+# Subtest: S1 rate limit: all five routes share a budget before service or staff authentication
+ok 1 - S1 rate limit: all five routes share a budget before service or staff authentication
+  ---
+  duration_ms: 100.027792
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 286.668834
+
+===== S1-rate-limit / red =====
+TAP version 13
+# Subtest: S1 rate limit: all five routes share a budget before service or staff authentication
+not ok 1 - S1 rate limit: all five routes share a budget before service or staff authentication
+  ---
+  duration_ms: 112.10675
+  type: 'test'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkRoutes.test.ts:1:1413'
+  failureType: 'testCodeFailure'
+  error: |-
+    /preview
+
+    401 !== 429
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 429
+  actual: 401
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/guarantorLinkRoutes.test.ts:32:74)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 238.883959
+
+===== S1-rate-limit / restored =====
+TAP version 13
+# Subtest: S1 rate limit: all five routes share a budget before service or staff authentication
+ok 1 - S1 rate limit: all five routes share a budget before service or staff authentication
+  ---
+  duration_ms: 93.315042
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 219.331667
 
 ===== Registry-service-write / green =====
 
@@ -3343,14 +3487,14 @@ ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight
 > tsx scripts/shipped-cpt-guard.ts && tsx scripts/fhir-read-grant-check.ts && tsx scripts/preflight-lint.ts
 
 Shipped CPT literal guard: clean.
-<disposable-mutation-copy>/scripts/fhir-read-grant-check.ts:440
+<task-worktree>/.odos/g2b1-mutants-1_syhubd/scripts/fhir-read-grant-check.ts:440
       throw new Error(
             ^
 
 Error: Annotated service transaction requires an exact registry entry: mcp/src/clinic/guarantor-link-operation.ts:169 this.deps.serviceFhir.executeTransactionAsActor Task.
-    at matchExactWriteInventory (<disposable-mutation-copy>/scripts/fhir-read-grant-check.ts:440:13)
-    at runFhirReadGrantCheck (<disposable-mutation-copy>/scripts/fhir-read-grant-check.ts:330:41)
-    at <anonymous> (<disposable-mutation-copy>/scripts/fhir-read-grant-check.ts:740:18)
+    at matchExactWriteInventory (<task-worktree>/.odos/g2b1-mutants-1_syhubd/scripts/fhir-read-grant-check.ts:440:13)
+    at runFhirReadGrantCheck (<task-worktree>/.odos/g2b1-mutants-1_syhubd/scripts/fhir-read-grant-check.ts:330:41)
+    at <anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/scripts/fhir-read-grant-check.ts:740:18)
     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
@@ -3467,31 +3611,31 @@ TAP version 13
 # Subtest: the 10 payment.* audit event types are registered — count and enumeration match (v0.55c Lesson 10)
 ok 1 - the 10 payment.* audit event types are registered — count and enumeration match (v0.55c Lesson 10)
   ---
-  duration_ms: 0.872208
+  duration_ms: 0.546083
   type: 'test'
   ...
 # Subtest: the latest audit migration pair matches the TypeScript union and separates validation
 ok 2 - the latest audit migration pair matches the TypeScript union and separates validation
   ---
-  duration_ms: 5.621958
+  duration_ms: 5.724125
   type: 'test'
   ...
 # Subtest: buildPaymentAuditRecord attributes a completed charge to the staff member and the payment record
 ok 3 - buildPaymentAuditRecord attributes a completed charge to the staff member and the payment record
   ---
-  duration_ms: 0.816667
+  duration_ms: 0.463917
   type: 'test'
   ...
 # Subtest: a failed charge audits as denied against the Invoice it attempted to settle (no PaymentReconciliation exists)
 ok 4 - a failed charge audits as denied against the Invoice it attempted to settle (no PaymentReconciliation exists)
   ---
-  duration_ms: 0.307792
+  duration_ms: 0.201292
   type: 'test'
   ...
 # Subtest: a manual cash charge audits against the tendered Invoice (the manual path's payment record)
 ok 5 - a manual cash charge audits against the tendered Invoice (the manual path's payment record)
   ---
-  duration_ms: 1.252333
+  duration_ms: 0.645333
   type: 'test'
   ...
 1..5
@@ -3502,28 +3646,28 @@ ok 5 - a manual cash charge audits against the tendered Invoice (the manual path
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 145.063
+# duration_ms 129.797709
 
 ===== Registry-audit-event / red =====
 TAP version 13
 # Subtest: the 10 payment.* audit event types are registered — count and enumeration match (v0.55c Lesson 10)
 ok 1 - the 10 payment.* audit event types are registered — count and enumeration match (v0.55c Lesson 10)
   ---
-  duration_ms: 1.485125
+  duration_ms: 0.522542
   type: 'test'
   ...
 # Subtest: the latest audit migration pair matches the TypeScript union and separates validation
 not ok 2 - the latest audit migration pair matches the TypeScript union and separates validation
   ---
-  duration_ms: 1.592791
+  duration_ms: 1.416
   type: 'test'
-  location: '<disposable-mutation-copy>/mcp/tests/paymentAudit.test.ts:1:914'
+  location: '<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/paymentAudit.test.ts:1:914'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         'read',
         'search',
@@ -3537,7 +3681,7 @@ not ok 2 - the latest audit migration pair matches the TypeScript union and sepa
         'guarantor.link.failed',
         'guarantor.link.interfered',
         'agentops.action.attempted',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -3773,7 +3917,7 @@ not ok 2 - the latest audit migration pair matches the TypeScript union and sepa
     113: 'agentops.policy.collision'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (<disposable-mutation-copy>/mcp/tests/paymentAudit.test.ts:49:10)
+    TestContext.<anonymous> (<task-worktree>/.odos/g2b1-mutants-1_syhubd/mcp/tests/paymentAudit.test.ts:49:10)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)
@@ -3784,19 +3928,19 @@ not ok 2 - the latest audit migration pair matches the TypeScript union and sepa
 # Subtest: buildPaymentAuditRecord attributes a completed charge to the staff member and the payment record
 ok 3 - buildPaymentAuditRecord attributes a completed charge to the staff member and the payment record
   ---
-  duration_ms: 0.503208
+  duration_ms: 0.459416
   type: 'test'
   ...
 # Subtest: a failed charge audits as denied against the Invoice it attempted to settle (no PaymentReconciliation exists)
 ok 4 - a failed charge audits as denied against the Invoice it attempted to settle (no PaymentReconciliation exists)
   ---
-  duration_ms: 0.154875
+  duration_ms: 0.145541
   type: 'test'
   ...
 # Subtest: a manual cash charge audits against the tendered Invoice (the manual path's payment record)
 ok 5 - a manual cash charge audits against the tendered Invoice (the manual path's payment record)
   ---
-  duration_ms: 0.742417
+  duration_ms: 0.647
   type: 'test'
   ...
 1..5
@@ -3807,38 +3951,38 @@ ok 5 - a manual cash charge audits against the tendered Invoice (the manual path
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 110.821
+# duration_ms 99.507292
 
 ===== Registry-audit-event / restored =====
 TAP version 13
 # Subtest: the 10 payment.* audit event types are registered — count and enumeration match (v0.55c Lesson 10)
 ok 1 - the 10 payment.* audit event types are registered — count and enumeration match (v0.55c Lesson 10)
   ---
-  duration_ms: 0.551667
+  duration_ms: 0.527084
   type: 'test'
   ...
 # Subtest: the latest audit migration pair matches the TypeScript union and separates validation
 ok 2 - the latest audit migration pair matches the TypeScript union and separates validation
   ---
-  duration_ms: 6.03075
+  duration_ms: 5.429042
   type: 'test'
   ...
 # Subtest: buildPaymentAuditRecord attributes a completed charge to the staff member and the payment record
 ok 3 - buildPaymentAuditRecord attributes a completed charge to the staff member and the payment record
   ---
-  duration_ms: 0.496459
+  duration_ms: 0.424417
   type: 'test'
   ...
 # Subtest: a failed charge audits as denied against the Invoice it attempted to settle (no PaymentReconciliation exists)
 ok 4 - a failed charge audits as denied against the Invoice it attempted to settle (no PaymentReconciliation exists)
   ---
-  duration_ms: 0.1515
+  duration_ms: 0.153208
   type: 'test'
   ...
 # Subtest: a manual cash charge audits against the tendered Invoice (the manual path's payment record)
 ok 5 - a manual cash charge audits against the tendered Invoice (the manual path's payment record)
   ---
-  duration_ms: 0.679875
+  duration_ms: 0.762167
   type: 'test'
   ...
 1..5
@@ -3849,7 +3993,7 @@ ok 5 - a manual cash charge audits against the tendered Invoice (the manual path
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 110.510541
+# duration_ms 100.271042
 
 ===== Registry-canonical-extension / green =====
 
@@ -4285,9 +4429,9 @@ not ok 1 - L17 staff: the Task fence refuses operation creation, mutation and co
   failureType: 'testCodeFailure'
   error: |-
     staff-authored operation
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -4315,9 +4459,9 @@ not ok 3 - L17 composite: the Task fence refuses operation creation, mutation an
   failureType: 'testCodeFailure'
   error: |-
     staff-authored operation
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -4653,9 +4797,9 @@ not ok 2 - L18 staff: the Person fence preserves name edits and refuses link mut
   failureType: 'testCodeFailure'
   error: |-
     link replacement
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -4685,9 +4829,9 @@ not ok 4 - L18 composite: the Person fence preserves name edits and refuses link
   failureType: 'testCodeFailure'
   error: |-
     link replacement
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -4755,7 +4899,7 @@ not ok 12 - P7 declaration: staff Person writes are practice-scoped create/updat
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         {
           interaction: [
@@ -4772,7 +4916,7 @@ not ok 12 - P7 declaration: staff Person writes are practice-scoped create/updat
     -     ]
         }
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -5083,9 +5227,9 @@ not ok 2 - L18 staff: the Person fence preserves name edits and refuses link mut
   failureType: 'testCodeFailure'
   error: |-
     empty-link name-only edit
-    
+
     false !== true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -5115,9 +5259,9 @@ not ok 4 - L18 composite: the Person fence preserves name edits and refuses link
   failureType: 'testCodeFailure'
   error: |-
     empty-link name-only edit
-    
+
     false !== true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -5185,7 +5329,7 @@ not ok 12 - P7 declaration: staff Person writes are practice-scoped create/updat
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         {
           interaction: [
@@ -5200,7 +5344,7 @@ not ok 12 - P7 declaration: staff Person writes are practice-scoped create/updat
           ]
         }
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -5529,7 +5673,7 @@ not ok 4 - the baseline is the explicit eight-action intersection of the three r
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
     +   'guarantor.link',
         'chart.read',
@@ -5537,7 +5681,7 @@ not ok 4 - the baseline is the explicit eight-action intersection of the three r
         'billing-context.read',
         'document.fax-send',
         'communications.read',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -5644,9 +5788,9 @@ not ok 16 - L19: each role grants guarantor.link and a membership revocation rem
   failureType: 'testCodeFailure'
   error: |-
     provider revocation is effective
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -5912,7 +6056,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         'read',
         'search',
@@ -5926,7 +6070,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         'guarantor.link.failed',
         'guarantor.link.interfered',
         'agentops.action.attempted',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -6391,7 +6535,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         'read',
         'search',
@@ -6405,7 +6549,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         'guarantor.link.failed',
         'guarantor.link.interfered',
         'agentops.action.attempted',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -6884,7 +7028,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         'read',
         'search',
@@ -6898,7 +7042,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         'guarantor.link.interfered',
         'agentops.action.attempted',
         'agentops.action.allowed',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -7363,7 +7507,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         'read',
         'search',
@@ -7377,7 +7521,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         'guarantor.link.interfered',
         'agentops.action.attempted',
         'agentops.action.allowed',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -7856,7 +8000,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         'read',
         'search',
@@ -7870,7 +8014,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         'agentops.action.attempted',
         'agentops.action.allowed',
         'agentops.action.blocked',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -8335,7 +8479,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         'read',
         'search',
@@ -8349,7 +8493,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         'agentops.action.attempted',
         'agentops.action.allowed',
         'agentops.action.blocked',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -8828,7 +8972,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         'read',
         'search',
@@ -8842,7 +8986,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         'agentops.action.allowed',
         'agentops.action.blocked',
         'agentops.action.confirmed',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -9307,7 +9451,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         'read',
         'search',
@@ -9321,7 +9465,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         'agentops.action.allowed',
         'agentops.action.blocked',
         'agentops.action.confirmed',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -9800,7 +9944,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         'read',
         'search',
@@ -9814,7 +9958,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         'agentops.action.blocked',
         'agentops.action.confirmed',
         'agentops.action.escalated',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -10279,7 +10423,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         'read',
         'search',
@@ -10293,7 +10437,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         'agentops.action.blocked',
         'agentops.action.confirmed',
         'agentops.action.escalated',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -10756,7 +10900,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /AUDIT_DDL_FILES[\s\S]*2026-09-14-guarantor-link-events\.sql/. Input:
-    
+
     'import { readFile } from "node:fs/promises";\n' +
       'import { basename } from "node:path";\n' +
       'import { fileURLToPath } from "node:url";\n' +
@@ -10983,7 +11127,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
       '          id::text,\n' +
       '          event_time,\n' +
       '          event_typ'... 14985 more characters
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -11008,26 +11152,26 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
     } from "./odosAudit.js";
     import type { AgentOpsAuditFields } from "../agentops/types.js";
     import { createPostgresPool } from "../postgres.js";
-    
+
     const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
     const SCHEMA_MIGRATIONS_DDL_FILE = fileURLToPath(
       new URL("../../../data/migrations/2026-07-17-odos-schema-migrations.sql", import.meta.url),
     );
-    
+
     type AuditMigrationSentinel =
       | { readonly kind: "table"; readonly table: string }
       | { readonly kind: "column"; readonly table: string; readonly column: string }
       | { readonly kind: "event-type"; readonly eventType: OdosAuditEventType }
       | { readonly kind: "constraint-validated"; readonly table: string; readonly constraint: string };
-    
+
     interface AuditDdlFile {
       readonly path: string;
       readonly sentinel: AuditMigrationSentinel;
     }
-    
+
     const migrationPath = (filename: string): string =>
       fileURLToPath(new URL(`../../../data/migrations/${filename}`, import.meta.url));
-    
+
     const AUDIT_DDL_FILES = [
       { path: migrationPath("2026-04-29-v05b-odos-audit-events.sql"), sentinel: { kind: "table", table: "odos_audit_events" } },
       { path: migrationPath("2026-05-01-v055a-smart-events.sql"), sentinel: { kind: "event-type", eventType: "smart-token-issue" } },
@@ -11092,7 +11236,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         },
       },
     ] satisfies readonly AuditDdlFile[];
-    
+
     export interface LiveAuditRuntimeOptions {
       postgresUrl?: string;
       medplumBaseUrl?: string;
@@ -11105,7 +11249,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
       disabled?: boolean;
       projectionWorkerIntervalMs?: number;
     }
-    
+
     export interface LiveAuditQueryFilters {
       patientId?: string;
       actorId?: string;
@@ -11117,12 +11261,12 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
       excludeBreakGlass?: boolean;
       limit?: number;
     }
-    
+
     export interface FhirAuditRecorder {
       record<T>(row: OdosAuditEventRecord, operation: () => Promise<T> | T): Promise<T>;
       recordDenied(row: OdosAuditEventRecord): Promise<void>;
     }
-    
+
     export class LiveOdosAuditRuntime implements FhirAuditRecorder {
       readonly projectionQueue = new AuditEventProjectionQueue();
       private readonly pool: Pool;
@@ -11131,7 +11275,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
       private schemaReady?: Promise<void>;
       private projectionClient?: Promise<MedplumClient>;
       private projectionWorker?: NodeJS.Timeout;
-    
+
       constructor(options: LiveAuditRuntimeOptions = {}) {
         this.options = { ...options, disabled: options.disabled ?? false };
         this.pool = createPostgresPool(
@@ -11142,12 +11286,12 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
           "live audit",
         );
       }
-    
+
       async record<T>(row: OdosAuditEventRecord, operation: () => Promise<T> | T): Promise<T> {
         if (this.options.disabled) {
           return operation();
         }
-    
+
         await this.ensureSchema();
         const client = await this.pool.connect();
         let inserted: OdosAuditEventRecord | undefined;
@@ -11161,7 +11305,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
               cause: error,
             });
           }
-    
+
           let result: T;
           try {
             result = await operation();
@@ -11169,7 +11313,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
             await rollbackQuietly(client);
             throw error;
           }
-    
+
           await client.query("COMMIT");
           await this.projectOrQueue(inserted);
           return result;
@@ -11182,11 +11326,11 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
           client.release();
         }
       }
-    
+
       async recordDenied(row: OdosAuditEventRecord): Promise<void> {
         await this.record(row, async () => undefined);
       }
-    
+
       async queryRows(filters: LiveAuditQueryFilters = {}): Promise<OdosAuditEventRecord[]> {
         await this.ensureSchema();
         const clauses: string[] = [];
@@ -11195,7 +11339,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
           values.push(value);
           clauses.push(clause.replace("?", `$${values.length}`));
         };
-    
+
         if (filters.patientId) add("patient_id = ?", filters.patientId);
         if (filters.actorId) add("actor_id = ?", filters.actorId);
         if (filters.from) add("event_time >= ?::timestamptz", filters.from);
@@ -11204,7 +11348,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         if (filters.outcome) add("action_outcome = ?", filters.outcome);
         if (filters.breakGlassOnly) clauses.push("break_glass = true");
         if (filters.excludeBreakGlass) clauses.push("break_glass = false");
-    
+
         const limit = Math.min(Math.max(filters.limit ?? 500, 1), 5000);
         values.push(limit);
         const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
@@ -11253,7 +11397,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         );
         return result.rows.map(pgRowToAuditRecord);
       }
-    
+
       startProjectionWorker(): void {
         if (this.projectionWorker || this.options.disabled) {
           return;
@@ -11266,7 +11410,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         }, intervalMs);
         this.projectionWorker.unref();
       }
-    
+
       async drainProjectionQueue(now = new Date().toISOString()): Promise<void> {
         for (const item of this.projectionQueue.due(now)) {
           try {
@@ -11277,24 +11421,24 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
           }
         }
       }
-    
+
       async close(): Promise<void> {
         if (this.projectionWorker) {
           clearInterval(this.projectionWorker);
         }
         await this.pool.end();
       }
-    
+
       private async ensureSchema(): Promise<void> {
         this.schemaReady ??= this.initializeSchema();
         await this.schemaReady;
       }
-    
+
       private async initializeSchema(): Promise<void> {
         const client = await this.pool.connect();
         try {
           await client.query(await readFile(SCHEMA_MIGRATIONS_DDL_FILE, "utf8"));
-    
+
           for (const migration of AUDIT_DDL_FILES) {
             await runInTransaction(client, async () => {
               await client.query("LOCK TABLE odos_schema_migrations IN SHARE ROW EXCLUSIVE MODE");
@@ -11305,7 +11449,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
               if (applied.rowCount) {
                 return;
               }
-    
+
               if (!(await migrationEffectExists(client, migration.sentinel))) {
                 await client.query(await readFile(migration.path, "utf8"));
               }
@@ -11319,7 +11463,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
           client.release();
         }
       }
-    
+
       private async insertRow(
         row: OdosAuditEventRecord,
         client: Pool | PoolClient = this.pool,
@@ -11440,7 +11584,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         );
         return pgRowToAuditRecord(result.rows[0]);
       }
-    
+
       private async projectOrQueue(row: OdosAuditEventRecord): Promise<void> {
         try {
           await this.projectAuditEvent(row);
@@ -11449,7 +11593,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
           this.projectionQueue.markFailed(row.id, error, row.eventTime);
         }
       }
-    
+
       private async projectAuditEvent(row: OdosAuditEventRecord): Promise<void> {
         const client = await this.getProjectionClient();
         const auditEvent = buildAuditEventProjection(row);
@@ -11472,13 +11616,13 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
           throw error;
         }
       }
-    
+
       private async getProjectionClient(): Promise<MedplumClient> {
         this.projectionClient ??= createAuditProjectionClient(this.options);
         return this.projectionClient;
       }
     }
-    
+
     export async function createAuditProjectionClient(
       options: LiveAuditRuntimeOptions,
     ): Promise<MedplumClient> {
@@ -11507,17 +11651,17 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
       }
       return client;
     }
-    
+
     function hasAnyConfiguredClientCredential(options: LiveAuditRuntimeOptions): boolean {
       return Boolean(options.medplumClientId?.trim() || options.medplumClientSecret?.trim());
     }
-    
+
     export function createLiveOdosAuditRuntime(
       options: LiveAuditRuntimeOptions = {},
     ): LiveOdosAuditRuntime {
       return new LiveOdosAuditRuntime(options);
     }
-    
+
     function pgRowToAuditRecord(row: Record<string, unknown>): OdosAuditEventRecord {
       return {
         id: String(row.id),
@@ -11544,7 +11688,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         createdAt: iso(row.created_at),
       };
     }
-    
+
     function agentOpsFieldsFromRow(row: Record<string, unknown>): AgentOpsAuditFields | undefined {
       if (!row.agent_identity) {
         return undefined;
@@ -11572,7 +11716,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         attempted_payload_full: row.attempted_payload_full ?? undefined,
       };
     }
-    
+
     function jsonValue<T>(value: unknown, fallback: T): T {
       if (value === undefined || value === null) {
         return fallback;
@@ -11586,18 +11730,18 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
       }
       return value as T;
     }
-    
+
     function iso(value: unknown): string {
       if (value instanceof Date) {
         return value.toISOString();
       }
       return String(value);
     }
-    
+
     function optionalString(value: unknown): string | undefined {
       return value === null || value === undefined ? undefined : String(value);
     }
-    
+
     async function migrationEffectExists(
       client: PoolClient,
       sentinel: AuditMigrationSentinel,
@@ -11657,11 +11801,11 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         }
       }
     }
-    
+
     async function rollbackQuietly(client: PoolClient): Promise<void> {
       await client.query("ROLLBACK").catch(() => undefined);
     }
-    
+
     async function runInTransaction(
       client: PoolClient,
       operation: () => Promise<void>,
@@ -11675,12 +11819,12 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         throw error;
       }
     }
-    
+
     function isAuthzProjectionError(error: unknown): boolean {
       const status = (error as { status?: number } | undefined)?.status;
       return status === 401 || status === 403;
     }
-    
+
   operator: 'match'
   stack: |-
     TestContext.<anonymous> (<task-worktree>/mcp/tests/paymentAudit.test.ts:53:10)
@@ -11910,7 +12054,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /2026-09-14-guarantor-link-events\.sql[\s\S]*2026-09-14-guarantor-link-events\.validate\.sql/. Input:
-    
+
     'import { readFile } from "node:fs/promises";\n' +
       'import { basename } from "node:path";\n' +
       'import { fileURLToPath } from "node:url";\n' +
@@ -12135,7 +12279,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
       '          patient_id,\n' +
       '          resource_type,\n' +
       '  '... 14891 more characters
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -12160,26 +12304,26 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
     } from "./odosAudit.js";
     import type { AgentOpsAuditFields } from "../agentops/types.js";
     import { createPostgresPool } from "../postgres.js";
-    
+
     const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
     const SCHEMA_MIGRATIONS_DDL_FILE = fileURLToPath(
       new URL("../../../data/migrations/2026-07-17-odos-schema-migrations.sql", import.meta.url),
     );
-    
+
     type AuditMigrationSentinel =
       | { readonly kind: "table"; readonly table: string }
       | { readonly kind: "column"; readonly table: string; readonly column: string }
       | { readonly kind: "event-type"; readonly eventType: OdosAuditEventType }
       | { readonly kind: "constraint-validated"; readonly table: string; readonly constraint: string };
-    
+
     interface AuditDdlFile {
       readonly path: string;
       readonly sentinel: AuditMigrationSentinel;
     }
-    
+
     const migrationPath = (filename: string): string =>
       fileURLToPath(new URL(`../../../data/migrations/${filename}`, import.meta.url));
-    
+
     const AUDIT_DDL_FILES = [
       { path: migrationPath("2026-04-29-v05b-odos-audit-events.sql"), sentinel: { kind: "table", table: "odos_audit_events" } },
       { path: migrationPath("2026-05-01-v055a-smart-events.sql"), sentinel: { kind: "event-type", eventType: "smart-token-issue" } },
@@ -12237,7 +12381,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
       },
       { path: migrationPath("2026-09-14-guarantor-link-events.sql"), sentinel: { kind: "event-type", eventType: "guarantor.link.started" } },
     ] satisfies readonly AuditDdlFile[];
-    
+
     export interface LiveAuditRuntimeOptions {
       postgresUrl?: string;
       medplumBaseUrl?: string;
@@ -12250,7 +12394,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
       disabled?: boolean;
       projectionWorkerIntervalMs?: number;
     }
-    
+
     export interface LiveAuditQueryFilters {
       patientId?: string;
       actorId?: string;
@@ -12262,12 +12406,12 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
       excludeBreakGlass?: boolean;
       limit?: number;
     }
-    
+
     export interface FhirAuditRecorder {
       record<T>(row: OdosAuditEventRecord, operation: () => Promise<T> | T): Promise<T>;
       recordDenied(row: OdosAuditEventRecord): Promise<void>;
     }
-    
+
     export class LiveOdosAuditRuntime implements FhirAuditRecorder {
       readonly projectionQueue = new AuditEventProjectionQueue();
       private readonly pool: Pool;
@@ -12276,7 +12420,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
       private schemaReady?: Promise<void>;
       private projectionClient?: Promise<MedplumClient>;
       private projectionWorker?: NodeJS.Timeout;
-    
+
       constructor(options: LiveAuditRuntimeOptions = {}) {
         this.options = { ...options, disabled: options.disabled ?? false };
         this.pool = createPostgresPool(
@@ -12287,12 +12431,12 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
           "live audit",
         );
       }
-    
+
       async record<T>(row: OdosAuditEventRecord, operation: () => Promise<T> | T): Promise<T> {
         if (this.options.disabled) {
           return operation();
         }
-    
+
         await this.ensureSchema();
         const client = await this.pool.connect();
         let inserted: OdosAuditEventRecord | undefined;
@@ -12306,7 +12450,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
               cause: error,
             });
           }
-    
+
           let result: T;
           try {
             result = await operation();
@@ -12314,7 +12458,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
             await rollbackQuietly(client);
             throw error;
           }
-    
+
           await client.query("COMMIT");
           await this.projectOrQueue(inserted);
           return result;
@@ -12327,11 +12471,11 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
           client.release();
         }
       }
-    
+
       async recordDenied(row: OdosAuditEventRecord): Promise<void> {
         await this.record(row, async () => undefined);
       }
-    
+
       async queryRows(filters: LiveAuditQueryFilters = {}): Promise<OdosAuditEventRecord[]> {
         await this.ensureSchema();
         const clauses: string[] = [];
@@ -12340,7 +12484,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
           values.push(value);
           clauses.push(clause.replace("?", `$${values.length}`));
         };
-    
+
         if (filters.patientId) add("patient_id = ?", filters.patientId);
         if (filters.actorId) add("actor_id = ?", filters.actorId);
         if (filters.from) add("event_time >= ?::timestamptz", filters.from);
@@ -12349,7 +12493,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         if (filters.outcome) add("action_outcome = ?", filters.outcome);
         if (filters.breakGlassOnly) clauses.push("break_glass = true");
         if (filters.excludeBreakGlass) clauses.push("break_glass = false");
-    
+
         const limit = Math.min(Math.max(filters.limit ?? 500, 1), 5000);
         values.push(limit);
         const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
@@ -12398,7 +12542,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         );
         return result.rows.map(pgRowToAuditRecord);
       }
-    
+
       startProjectionWorker(): void {
         if (this.projectionWorker || this.options.disabled) {
           return;
@@ -12411,7 +12555,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         }, intervalMs);
         this.projectionWorker.unref();
       }
-    
+
       async drainProjectionQueue(now = new Date().toISOString()): Promise<void> {
         for (const item of this.projectionQueue.due(now)) {
           try {
@@ -12422,24 +12566,24 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
           }
         }
       }
-    
+
       async close(): Promise<void> {
         if (this.projectionWorker) {
           clearInterval(this.projectionWorker);
         }
         await this.pool.end();
       }
-    
+
       private async ensureSchema(): Promise<void> {
         this.schemaReady ??= this.initializeSchema();
         await this.schemaReady;
       }
-    
+
       private async initializeSchema(): Promise<void> {
         const client = await this.pool.connect();
         try {
           await client.query(await readFile(SCHEMA_MIGRATIONS_DDL_FILE, "utf8"));
-    
+
           for (const migration of AUDIT_DDL_FILES) {
             await runInTransaction(client, async () => {
               await client.query("LOCK TABLE odos_schema_migrations IN SHARE ROW EXCLUSIVE MODE");
@@ -12450,7 +12594,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
               if (applied.rowCount) {
                 return;
               }
-    
+
               if (!(await migrationEffectExists(client, migration.sentinel))) {
                 await client.query(await readFile(migration.path, "utf8"));
               }
@@ -12464,7 +12608,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
           client.release();
         }
       }
-    
+
       private async insertRow(
         row: OdosAuditEventRecord,
         client: Pool | PoolClient = this.pool,
@@ -12585,7 +12729,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         );
         return pgRowToAuditRecord(result.rows[0]);
       }
-    
+
       private async projectOrQueue(row: OdosAuditEventRecord): Promise<void> {
         try {
           await this.projectAuditEvent(row);
@@ -12594,7 +12738,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
           this.projectionQueue.markFailed(row.id, error, row.eventTime);
         }
       }
-    
+
       private async projectAuditEvent(row: OdosAuditEventRecord): Promise<void> {
         const client = await this.getProjectionClient();
         const auditEvent = buildAuditEventProjection(row);
@@ -12617,13 +12761,13 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
           throw error;
         }
       }
-    
+
       private async getProjectionClient(): Promise<MedplumClient> {
         this.projectionClient ??= createAuditProjectionClient(this.options);
         return this.projectionClient;
       }
     }
-    
+
     export async function createAuditProjectionClient(
       options: LiveAuditRuntimeOptions,
     ): Promise<MedplumClient> {
@@ -12652,17 +12796,17 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
       }
       return client;
     }
-    
+
     function hasAnyConfiguredClientCredential(options: LiveAuditRuntimeOptions): boolean {
       return Boolean(options.medplumClientId?.trim() || options.medplumClientSecret?.trim());
     }
-    
+
     export function createLiveOdosAuditRuntime(
       options: LiveAuditRuntimeOptions = {},
     ): LiveOdosAuditRuntime {
       return new LiveOdosAuditRuntime(options);
     }
-    
+
     function pgRowToAuditRecord(row: Record<string, unknown>): OdosAuditEventRecord {
       return {
         id: String(row.id),
@@ -12689,7 +12833,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         createdAt: iso(row.created_at),
       };
     }
-    
+
     function agentOpsFieldsFromRow(row: Record<string, unknown>): AgentOpsAuditFields | undefined {
       if (!row.agent_identity) {
         return undefined;
@@ -12717,7 +12861,7 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         attempted_payload_full: row.attempted_payload_full ?? undefined,
       };
     }
-    
+
     function jsonValue<T>(value: unknown, fallback: T): T {
       if (value === undefined || value === null) {
         return fallback;
@@ -12731,18 +12875,18 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
       }
       return value as T;
     }
-    
+
     function iso(value: unknown): string {
       if (value instanceof Date) {
         return value.toISOString();
       }
       return String(value);
     }
-    
+
     function optionalString(value: unknown): string | undefined {
       return value === null || value === undefined ? undefined : String(value);
     }
-    
+
     async function migrationEffectExists(
       client: PoolClient,
       sentinel: AuditMigrationSentinel,
@@ -12802,11 +12946,11 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         }
       }
     }
-    
+
     async function rollbackQuietly(client: PoolClient): Promise<void> {
       await client.query("ROLLBACK").catch(() => undefined);
     }
-    
+
     async function runInTransaction(
       client: PoolClient,
       operation: () => Promise<void>,
@@ -12820,12 +12964,12 @@ not ok 7 - the latest audit migration pair matches the TypeScript union and sepa
         throw error;
       }
     }
-    
+
     function isAuthzProjectionError(error: unknown): boolean {
       const status = (error as { status?: number } | undefined)?.status;
       return status === 401 || status === 403;
     }
-    
+
   operator: 'match'
   stack: |-
     TestContext.<anonymous> (<task-worktree>/mcp/tests/paymentAudit.test.ts:54:10)
@@ -12984,10 +13128,10 @@ not ok 1 - extended read requests author and project metadata while ordinary rea
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'ClientApplication/service'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'ClientApplication/service'
@@ -13121,11 +13265,11 @@ not ok 3 - authenticated profile reference comes from the current session for cl
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'ClientApplication/wrong-service'
     - 'ClientApplication/service'
                          ^
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'ClientApplication/service'
@@ -13254,7 +13398,7 @@ not ok 1 - a service-write annotation scans the actual attributed transaction on
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   {
@@ -13282,7 +13426,7 @@ not ok 1 - a service-write annotation scans the actual attributed transaction on
     -     resourceType: 'RelatedPerson'
     -   }
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -13325,9 +13469,9 @@ not ok 2 - annotated transactions need exact service registry entries despite ex
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 3
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 3
@@ -13351,9 +13495,9 @@ not ok 3 - an annotated transaction registry entry remains bound to path, line, 
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 3
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 3
@@ -13384,7 +13528,7 @@ not ok 5 - a service-write annotation stays on its statement and does not annota
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   {
@@ -13396,7 +13540,7 @@ not ok 5 - a service-write annotation stays on its statement and does not annota
     -     resourceType: 'Task'
     -   }
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -13776,9 +13920,9 @@ not ok 3 - an annotated transaction registry entry remains bound to path, line, 
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /no longer matches a real ungranted call site/. Input:
-    
+
     'Error: Service-identity FHIR write exclusion contains duplicate entries for the same call site.'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -13893,306 +14037,318 @@ ok 7 - the non-FHIR allowlist cannot suppress an explicitly annotated service tr
 # todo 0
 # duration_ms 476.875041
 
-===== S7 full initial green =====
+===== S7 focused baseline =====
 TAP version 13
 # Subtest: A1: a stale demographics PUT shows the concurrent-edit alert without retrying
 ok 1 - A1: a stale demographics PUT shows the concurrent-edit alert without retrying
   ---
-  duration_ms: 20.566292
+  duration_ms: 21.270375
   type: 'test'
   ...
 # Subtest: A2: missing Patient version refuses before any network call
 ok 2 - A2: missing Patient version refuses before any network call
   ---
-  duration_ms: 0.507666
+  duration_ms: 0.39475
   type: 'test'
   ...
 # Subtest: A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
 ok 3 - A3: the actual PatientRoute keeps the returned Patient and the next save uses its new version
   ---
-  duration_ms: 16.177833
+  duration_ms: 16.570208
   type: 'test'
   ...
 # Subtest: Q10: missing linked Person is read-only and direct save handler cannot create
 ok 4 - Q10: missing linked Person is read-only and direct save handler cannot create
   ---
-  duration_ms: 18.9075
+  duration_ms: 16.45525
   type: 'test'
   ...
 # Subtest: Q11: reopening a clean editor offers repair by patient name and converges
 ok 5 - Q11: reopening a clean editor offers repair by patient name and converges
   ---
-  duration_ms: 12.694917
+  duration_ms: 11.775292
   type: 'test'
   ...
 # Subtest: Q12: multiple linked Persons refuse editing and identify both records
 ok 6 - Q12: multiple linked Persons refuse editing and identify both records
   ---
-  duration_ms: 1.488541
+  duration_ms: 0.946666
   type: 'test'
   ...
 # Subtest: editing one name preserves every loaded contact and address entry without a Patient write
 ok 7 - editing one name preserves every loaded contact and address entry without a Patient write
   ---
-  duration_ms: 8.257375
+  duration_ms: 5.125042
   type: 'test'
   ...
 # Subtest: structured address edits clear stale display text only on the edited address
 ok 8 - structured address edits clear stale display text only on the edited address
   ---
-  duration_ms: 21.020375
+  duration_ms: 17.364125
   type: 'test'
   ...
 # Subtest: clearing then replacing the first phone keeps the second phone in its original slot
 ok 9 - clearing then replacing the first phone keeps the second phone in its original slot
   ---
-  duration_ms: 3.788
+  duration_ms: 2.994583
   type: 'test'
   ...
 # Subtest: saving an intentionally blank phone removes only that contact and retains untouched valueless entries
 ok 10 - saving an intentionally blank phone removes only that contact and retains untouched valueless entries
   ---
-  duration_ms: 2.807125
+  duration_ms: 2.648042
   type: 'test'
   ...
 # Subtest: per-patient results distinguish rejected child writes from lost update responses
 ok 11 - per-patient results distinguish rejected child writes from lost update responses
   ---
-  duration_ms: 6.6495
+  duration_ms: 4.178292
   type: 'test'
   ...
 # Subtest: F1e superseded save reloads automatically and one Repair converges
 ok 12 - F1e superseded save reloads automatically and one Repair converges
   ---
-  duration_ms: 4.986792
+  duration_ms: 3.360333
   type: 'test'
   ...
 # Subtest: L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
 ok 13 - L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
   ---
-  duration_ms: 29.556666
+  duration_ms: 26.346541
   type: 'test'
   ...
 # Subtest: S7: a claim on another linked child makes the guarantor pending
 ok 14 - S7: a claim on another linked child makes the guarantor pending
   ---
-  duration_ms: 0.793417
+  duration_ms: 0.724084
   type: 'test'
   ...
 # Subtest: S7: inert, missing, and copied claims do not suppress ordinary classification
 ok 15 - S7: inert, missing, and copied claims do not suppress ordinary classification
   ---
-  duration_ms: 1.970208
+  duration_ms: 1.795834
   type: 'test'
   ...
 # Subtest: S7: unreadable operation status remains unknown and does not offer editing
 ok 16 - S7: unreadable operation status remains unknown and does not offer editing
   ---
-  duration_ms: 1.55575
+  duration_ms: 1.43975
   type: 'test'
   ...
 # Subtest: S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
 ok 17 - S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
   ---
-  duration_ms: 3.840417
+  duration_ms: 2.406666
   type: 'test'
   ...
 # Subtest: L4 S7: Repair sees a claim in its fresh read and submits no child PUT
 ok 18 - L4 S7: Repair sees a claim in its fresh read and submits no child PUT
   ---
-  duration_ms: 2.399542
+  duration_ms: 1.318834
   type: 'test'
   ...
 # Subtest: S7: Save fresh-checks claims after the Person save and stops every remaining child
 ok 19 - S7: Save fresh-checks claims after the Person save and stops every remaining child
   ---
-  duration_ms: 2.142292
+  duration_ms: 1.382959
   type: 'test'
   ...
 # Subtest: S7: Save keeps the loaded child version after its fresh claim-only read
 ok 20 - S7: Save keeps the loaded child version after its fresh claim-only read
   ---
-  duration_ms: 2.035916
+  duration_ms: 2.07825
   type: 'test'
   ...
 # Subtest: S7: Save checks each child and reloads pending after a late claim
 ok 21 - S7: Save checks each child and reloads pending after a late claim
   ---
-  duration_ms: 5.492
+  duration_ms: 4.680625
   type: 'test'
   ...
 # Subtest: L23 S7: an edit after release is ordinary drift and Repair converges to current D
 ok 22 - L23 S7: an edit after release is ordinary drift and Repair converges to current D
   ---
-  duration_ms: 4.632334
+  duration_ms: 3.925958
+  type: 'test'
+  ...
+# Subtest: S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+ok 23 - S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+  ---
+  duration_ms: 1.216208
+  type: 'test'
+  ...
+# Subtest: S7: a correction reason survives same-Task refusal and clears when another Task takes over
+ok 24 - S7: a correction reason survives same-Task refusal and clears when another Task takes over
+  ---
+  duration_ms: 4.191834
   type: 'test'
   ...
 # Subtest: Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
-ok 23 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+ok 25 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
   ---
-  duration_ms: 22.699583
+  duration_ms: 21.214042
   type: 'test'
   ...
 # Subtest: Q5a Q6a preflight mismatch zero writes reload
-ok 24 - Q5a Q6a preflight mismatch zero writes reload
+ok 26 - Q5a Q6a preflight mismatch zero writes reload
   ---
-  duration_ms: 3.001375
+  duration_ms: 2.084916
   type: 'test'
   ...
 # Subtest: Q5b parent stale after preflight prevents children
-ok 25 - Q5b parent stale after preflight prevents children
+ok 27 - Q5b parent stale after preflight prevents children
   ---
-  duration_ms: 1.161917
+  duration_ms: 1.077042
   type: 'test'
   ...
 # Subtest: Q6b Q8 late child conflict preserves competitor and labels correct patient
-ok 26 - Q6b Q8 late child conflict preserves competitor and labels correct patient
+ok 28 - Q6b Q8 late child conflict preserves competitor and labels correct patient
   ---
-  duration_ms: 2.942791
+  duration_ms: 3.355791
   type: 'test'
   ...
 # Subtest: Q8 failed re-read and unresolved lost response are unknown
-ok 27 - Q8 failed re-read and unresolved lost response are unknown
+ok 29 - Q8 failed re-read and unresolved lost response are unknown
   ---
-  duration_ms: 2.596917
+  duration_ms: 2.133959
   type: 'test'
   ...
 # Subtest: lost parent response confirmed landed proceeds once
-ok 28 - lost parent response confirmed landed proceeds once
+ok 30 - lost parent response confirmed landed proceeds once
   ---
-  duration_ms: 1.575208
+  duration_ms: 1.149208
   type: 'test'
   ...
 # Subtest: Q9a converged repeat zero writes and unchanged versions
-ok 29 - Q9a converged repeat zero writes and unchanged versions
+ok 31 - Q9a converged repeat zero writes and unchanged versions
   ---
-  duration_ms: 2.175167
+  duration_ms: 2.328416
   type: 'test'
   ...
 # Subtest: Q9b repair only failed child fresh ETag and second pass zero writes
-ok 30 - Q9b repair only failed child fresh ETag and second pass zero writes
+ok 32 - Q9b repair only failed child fresh ETag and second pass zero writes
   ---
-  duration_ms: 4.267625
+  duration_ms: 2.52425
   type: 'test'
   ...
 # Subtest: Q9c repair superseded generation uses newest values
-ok 31 - Q9c repair superseded generation uses newest values
+ok 33 - Q9c repair superseded generation uses newest values
   ---
-  duration_ms: 2.215625
+  duration_ms: 1.737792
   type: 'test'
   ...
 # Subtest: Q10 Q12 missing or many matches refuse direct save
-ok 32 - Q10 Q12 missing or many matches refuse direct save
+ok 34 - Q10 Q12 missing or many matches refuse direct save
   ---
-  duration_ms: 1.369208
+  duration_ms: 1.128958
   type: 'test'
   ...
 # Subtest: Q13 trailing parent catches torn verification
-ok 33 - Q13 trailing parent catches torn verification
+ok 35 - Q13 trailing parent catches torn verification
   ---
-  duration_ms: 3.295167
+  duration_ms: 2.693834
   type: 'test'
   ...
 # Subtest: Q2 fresh SMS resolver independently observes propagated phone
-ok 34 - Q2 fresh SMS resolver independently observes propagated phone
+ok 36 - Q2 fresh SMS resolver independently observes propagated phone
   ---
-  duration_ms: 1.262834
+  duration_ms: 1.233209
   type: 'test'
   ...
 # Subtest: Q6a independently stale child preflight zero writes
-ok 35 - Q6a independently stale child preflight zero writes
+ok 37 - Q6a independently stale child preflight zero writes
   ---
-  duration_ms: 0.78875
+  duration_ms: 0.7405
   type: 'test'
   ...
 # Subtest: Q10 directly supplied unlinked snapshot refuses create or update
-ok 36 - Q10 directly supplied unlinked snapshot refuses create or update
+ok 38 - Q10 directly supplied unlinked snapshot refuses create or update
   ---
-  duration_ms: 0.298375
+  duration_ms: 0.446125
   type: 'test'
   ...
 # Subtest: Q8 child lost response and verification failure remain unknown
-ok 37 - Q8 child lost response and verification failure remain unknown
+ok 39 - Q8 child lost response and verification failure remain unknown
   ---
-  duration_ms: 0.985875
+  duration_ms: 1.266167
   type: 'test'
   ...
 # Subtest: F1a repair fences generation after fresh child read
-ok 38 - F1a repair fences generation after fresh child read
+ok 40 - F1a repair fences generation after fresh child read
   ---
-  duration_ms: 0.939708
+  duration_ms: 0.9825
   type: 'test'
   ...
 # Subtest: F1b repair fences moved ownership after fresh child read
-ok 39 - F1b repair fences moved ownership after fresh child read
+ok 41 - F1b repair fences moved ownership after fresh child read
   ---
-  duration_ms: 1.021708
+  duration_ms: 0.995833
   type: 'test'
   ...
 # Subtest: F1c save stops Leo after competitor on Sam PUT
-ok 40 - F1c save stops Leo after competitor on Sam PUT
+ok 42 - F1c save stops Leo after competitor on Sam PUT
   ---
-  duration_ms: 1.065125
+  duration_ms: 1.098917
   type: 'test'
   ...
 # Subtest: F1d failed generation check stops child submission
-ok 41 - F1d failed generation check stops child submission
+ok 43 - F1d failed generation check stops child submission
   ---
-  duration_ms: 1.059583
+  duration_ms: 1.001167
   type: 'test'
   ...
 # Subtest: F1e superseded message does not promise absent Repair
-ok 42 - F1e superseded message does not promise absent Repair
+ok 44 - F1e superseded message does not promise absent Repair
   ---
-  duration_ms: 0.925
+  duration_ms: 0.763959
   type: 'test'
   ...
 # Subtest: F1f dangling 410 and 404 are named but 403 stays unknown
-ok 43 - F1f dangling 410 and 404 are named but 403 stays unknown
+ok 45 - F1f dangling 410 and 404 are named but 403 stays unknown
   ---
-  duration_ms: 0.905083
+  duration_ms: 0.769542
   type: 'test'
   ...
 # Subtest: F1 moved generation stays superseded if trailing verification fails
-ok 44 - F1 moved generation stays superseded if trailing verification fails
+ok 46 - F1 moved generation stays superseded if trailing verification fails
   ---
-  duration_ms: 2.502916
+  duration_ms: 1.930792
   type: 'test'
   ...
-1..44
-# tests 44
+1..46
+# tests 46
 # suites 0
-# pass 44
+# pass 46
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 693.37725
+# duration_ms 1349.903417
 
 ===== S7 l3-pending-before-missing / red =====
 TAP version 13
 # Subtest: L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
 not ok 1 - L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
   ---
-  duration_ms: 9.661875
+  duration_ms: 10.584583
   type: 'test'
-  location: '<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:5470'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:5470'
   failureType: 'testCodeFailure'
   error: |-
     an attach-pending child must not be classified missing
     + actual - expected
-    
+
     + 'missing'
     - 'pending'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'pending'
   actual: 'missing'
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:107:10)
-    async usingFixture (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:107:10)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -14204,14 +14360,14 @@ not ok 1 - L3 S7: unowned claimed child is pending, names every patient, and Com
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 236.791375
+# duration_ms 290.806333
 
 ===== S7 l3-pending-before-missing / restored =====
 TAP version 13
 # Subtest: L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
 ok 1 - L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
   ---
-  duration_ms: 23.997459
+  duration_ms: 28.8565
   type: 'test'
   ...
 1..1
@@ -14222,21 +14378,21 @@ ok 1 - L3 S7: unowned claimed child is pending, names every patient, and Complet
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 216.830209
+# duration_ms 264.089333
 
 ===== S7 l4-repair-claim-check / red =====
 TAP version 13
 # Subtest: L4 S7: Repair sees a claim in its fresh read and submits no child PUT
 not ok 1 - L4 S7: Repair sees a claim in its fresh read and submits no child PUT
   ---
-  duration_ms: 20.029166
+  duration_ms: 21.014291
   type: 'test'
-  location: '<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:9632'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:9632'
   failureType: 'testCodeFailure'
   error: |-
     claim check removal must expose a successful repair PUT in this transport list
     + actual - expected
-    
+
     + [
     +   {
     +     body: {
@@ -14340,7 +14496,7 @@ not ok 1 - L4 S7: Repair sees a claim in its fresh read and submits no child PUT
     +   }
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -14415,8 +14571,8 @@ not ok 1 - L4 S7: Repair sees a claim in its fresh read and submits no child PUT
       status: 200
   operator: 'deepStrictEqual'
   stack: |-
-    <anonymous> (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:191:10)
-    async usingFixture (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:191:10)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -14428,14 +14584,14 @@ not ok 1 - L4 S7: Repair sees a claim in its fresh read and submits no child PUT
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 211.77325
+# duration_ms 245.617542
 
 ===== S7 l4-repair-claim-check / restored =====
 TAP version 13
 # Subtest: L4 S7: Repair sees a claim in its fresh read and submits no child PUT
 ok 1 - L4 S7: Repair sees a claim in its fresh read and submits no child PUT
   ---
-  duration_ms: 16.665875
+  duration_ms: 18.520167
   type: 'test'
   ...
 1..1
@@ -14446,27 +14602,27 @@ ok 1 - L4 S7: Repair sees a claim in its fresh read and submits no child PUT
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 208.553709
+# duration_ms 247.485
 
 ===== S7 save-claim-check / red =====
 TAP version 13
 # Subtest: S7: Save fresh-checks claims after the Person save and stops every remaining child
 not ok 1 - S7: Save fresh-checks claims after the Person save and stops every remaining child
   ---
-  duration_ms: 18.33325
+  duration_ms: 21.146834
   type: 'test'
-  location: '<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:10306'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:10306'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
         'Person/source',
     +   'RelatedPerson/a',
     +   'RelatedPerson/b'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -14477,8 +14633,8 @@ not ok 1 - S7: Save fresh-checks claims after the Person save and stops every re
     2: 'RelatedPerson/b'
   operator: 'deepStrictEqual'
   stack: |-
-    <anonymous> (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:203:10)
-    async usingFixture (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:203:10)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -14490,14 +14646,14 @@ not ok 1 - S7: Save fresh-checks claims after the Person save and stops every re
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 210.131125
+# duration_ms 250.170083
 
 ===== S7 save-claim-check / restored =====
 TAP version 13
 # Subtest: S7: Save fresh-checks claims after the Person save and stops every remaining child
 ok 1 - S7: Save fresh-checks claims after the Person save and stops every remaining child
   ---
-  duration_ms: 16.518375
+  duration_ms: 16.511666
   type: 'test'
   ...
 1..1
@@ -14508,30 +14664,30 @@ ok 1 - S7: Save fresh-checks claims after the Person save and stops every remain
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 207.721083
+# duration_ms 237.277583
 
 ===== S7 save-loaded-version / red =====
 TAP version 13
 # Subtest: S7: Save keeps the loaded child version after its fresh claim-only read
 not ok 1 - S7: Save keeps the loaded child version after its fresh claim-only read
   ---
-  duration_ms: 18.0485
+  duration_ms: 18.680625
   type: 'test'
-  location: '<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:10935'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:10935'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     'W/"2"' !== 'W/"1"'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'W/"1"'
   actual: 'W/"2"'
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:216:10)
-    async usingFixture (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:216:10)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -14543,14 +14699,14 @@ not ok 1 - S7: Save keeps the loaded child version after its fresh claim-only re
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 216.436583
+# duration_ms 249.766167
 
 ===== S7 save-loaded-version / restored =====
 TAP version 13
 # Subtest: S7: Save keeps the loaded child version after its fresh claim-only read
 ok 1 - S7: Save keeps the loaded child version after its fresh claim-only read
   ---
-  duration_ms: 16.99725
+  duration_ms: 20.993209
   type: 'test'
   ...
 1..1
@@ -14561,33 +14717,33 @@ ok 1 - S7: Save keeps the loaded child version after its fresh claim-only read
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 211.939042
+# duration_ms 234.735541
 
 ===== S7 copied-claim-membership / red =====
 TAP version 13
 # Subtest: S7: inert, missing, and copied claims do not suppress ordinary classification
 not ok 1 - S7: inert, missing, and copied claims do not suppress ordinary classification
   ---
-  duration_ms: 18.136834
+  duration_ms: 20.704542
   type: 'test'
-  location: '<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:7255'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:7255'
   failureType: 'testCodeFailure'
   error: |-
     unlisted
     + actual - expected
-    
+
     + 'pending'
     - 'editable'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'editable'
   actual: 'pending'
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:141:12)
-    async usingFixture (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
-    async TestContext.<anonymous> (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:136:68)
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:141:12)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    async TestContext.<anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:136:68)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -14599,14 +14755,14 @@ not ok 1 - S7: inert, missing, and copied claims do not suppress ordinary classi
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 213.906375
+# duration_ms 244.542333
 
 ===== S7 copied-claim-membership / restored =====
 TAP version 13
 # Subtest: S7: inert, missing, and copied claims do not suppress ordinary classification
 ok 1 - S7: inert, missing, and copied claims do not suppress ordinary classification
   ---
-  duration_ms: 16.9485
+  duration_ms: 18.167041
   type: 'test'
   ...
 1..1
@@ -14617,26 +14773,26 @@ ok 1 - S7: inert, missing, and copied claims do not suppress ordinary classifica
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 207.685834
+# duration_ms 239.836417
 
 ===== S7 pending-complete-wiring / red =====
 TAP version 13
 # Subtest: L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
 not ok 1 - L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
   ---
-  duration_ms: 16.610209
+  duration_ms: 17.998167
   type: 'test'
-  location: '<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:5470'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:5470'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'POST /guarantors/link-operations/06b18b36-e59d-4aaf-8d32-59cbce7abf86/complete'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -14644,10 +14800,10 @@ not ok 1 - L3 S7: unowned claimed child is pending, names every patient, and Com
   actual:
   operator: 'deepStrictEqual'
   stack: |-
-    <anonymous> (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:121:12)
-    async usingEditor (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:98:9)
-    async <anonymous> (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:109:3)
-    async usingFixture (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:121:12)
+    async usingEditor (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:98:9)
+    async <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:109:3)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -14659,14 +14815,14 @@ not ok 1 - L3 S7: unowned claimed child is pending, names every patient, and Com
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 211.048459
+# duration_ms 243.140375
 
 ===== S7 pending-complete-wiring / restored =====
 TAP version 13
 # Subtest: L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
 ok 1 - L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
   ---
-  duration_ms: 23.813084
+  duration_ms: 26.149417
   type: 'test'
   ...
 1..1
@@ -14677,32 +14833,32 @@ ok 1 - L3 S7: unowned claimed child is pending, names every patient, and Complet
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 223.546667
+# duration_ms 240.4685
 
 ===== S7 pending-correct-wiring / red =====
 TAP version 13
 # Subtest: S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
 not ok 1 - S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
   ---
-  duration_ms: 15.927917
+  duration_ms: 17.882083
   type: 'test'
-  location: '<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:8278'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:8278'
   failureType: 'testCodeFailure'
   error: |-
     the UI must never retry an operation request
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
   actual: 0
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:176:12)
-    async usingEditor (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:98:9)
-    async <anonymous> (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:166:3)
-    async usingFixture (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:176:12)
+    async usingEditor (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:98:9)
+    async <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:166:3)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -14714,14 +14870,14 @@ not ok 1 - S7: Correct requires a reason, sends one new operation id, and reload
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 207.897709
+# duration_ms 241.336459
 
 ===== S7 pending-correct-wiring / restored =====
 TAP version 13
 # Subtest: S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
 ok 1 - S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
   ---
-  duration_ms: 16.592584
+  duration_ms: 20.204833
   type: 'test'
   ...
 1..1
@@ -14732,28 +14888,28 @@ ok 1 - S7: Correct requires a reason, sends one new operation id, and reloads af
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 203.756042
+# duration_ms 249.426167
 
 ===== S7 l23-drift-classification / red =====
 TAP version 13
 # Subtest: L23 S7: an edit after release is ordinary drift and Repair converges to current D
 not ok 1 - L23 S7: an edit after release is ordinary drift and Repair converges to current D
   ---
-  duration_ms: 11.723584
+  duration_ms: 13.8875
   type: 'test'
-  location: '<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:12389'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:12389'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
     +   'verified',
     +   'verified'
     -   'mismatched',
     -   'mismatched'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -14764,8 +14920,8 @@ not ok 1 - L23 S7: an edit after release is ordinary drift and Repair converges 
     1: 'verified'
   operator: 'deepStrictEqual'
   stack: |-
-    <anonymous> (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:242:10)
-    async usingFixture (<task-worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:242:10)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -14777,14 +14933,14 @@ not ok 1 - L23 S7: an edit after release is ordinary drift and Repair converges 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 210.536542
+# duration_ms 253.162125
 
 ===== S7 l23-drift-classification / restored =====
 TAP version 13
 # Subtest: L23 S7: an edit after release is ordinary drift and Repair converges to current D
 ok 1 - L23 S7: an edit after release is ordinary drift and Repair converges to current D
   ---
-  duration_ms: 25.115792
+  duration_ms: 29.592292
   type: 'test'
   ...
 1..1
@@ -14795,5 +14951,253 @@ ok 1 - L23 S7: an edit after release is ordinary drift and Repair converges to c
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 215.612917
+# duration_ms 257.837958
 
+===== S7 review-matching-claim-shortcut / red =====
+TAP version 13
+# Subtest: S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+not ok 1 - S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+  ---
+  duration_ms: 19.524583
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:13391'
+  failureType: 'testCodeFailure'
+  error: |-
+    a matching child's active claim must prevent the later sibling PUT
+    + actual - expected
+
+    + [
+    +   {
+    +     body: {
+    +       active: false,
+    +       address: [
+    +         {
+    +           line: [
+    +             'Old street'
+    +           ]
+    +         }
+    +       ],
+    +       extension: [
+    +         {
+    +           url: 'https://example.test/sentinel',
+    +           valueString: 'b'
+    +         }
+    +       ],
+    +       id: 'b',
+    +       meta: {
+    +         versionId: '2'
+    +       },
+    +       name: [
+    +         {
+    +           family: 'Guardian',
+    +           given: [
+    +             'Old'
+    +           ]
+    +         }
+    +       ],
+    +       patient: {
+    +         reference: 'Patient/leo'
+    +       },
+    +       period: {
+    +         start: '2020-01-01'
+    +       },
+    +       resourceType: 'RelatedPerson',
+    +       telecom: [
+    +         {
+    +           system: 'phone',
+    +           value: '+15555550101'
+    +         }
+    +       ]
+    +     },
+    +     method: 'PUT',
+    +     path: 'RelatedPerson/b',
+    +     status: 200,
+    +     version: 'W/"2"'
+    +   }
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      path: 'RelatedPerson/b'
+      method: 'PUT'
+      version: 'W/"2"'
+      body:
+        resourceType: 'RelatedPerson'
+        id: 'b'
+        meta:
+          versionId: '2'
+        name:
+          0:
+            given:
+              0: 'Old'
+            family: 'Guardian'
+        telecom:
+          0:
+            system: 'phone'
+            value: '+15555550101'
+        address:
+          0:
+            line:
+              0: 'Old street'
+        patient:
+          reference: 'Patient/leo'
+        active: false
+        period:
+          start: '2020-01-01'
+        extension:
+          0:
+            url: 'https://example.test/sentinel'
+            valueString: 'b'
+      status: 200
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:261:10)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 247.750583
+
+===== S7 review-matching-claim-shortcut / restored =====
+TAP version 13
+# Subtest: S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+ok 1 - S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+  ---
+  duration_ms: 17.295708
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 232.619333
+
+===== S7 review-draft-task-reset / red =====
+TAP version 13
+# Subtest: S7: a correction reason survives same-Task refusal and clears when another Task takes over
+not ok 1 - S7: a correction reason survives same-Task refusal and clears when another Task takes over
+  ---
+  duration_ms: 22.64225
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:14125'
+  failureType: 'testCodeFailure'
+  error: |-
+    a new Task must not inherit the previous operation's explanation
+    + actual - expected
+
+    + 'Reason for the original operation'
+    - ''
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ''
+  actual: 'Reason for the original operation'
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:283:12)
+    async usingEditor (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:98:9)
+    async <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:271:3)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 241.692625
+
+===== S7 review-draft-task-reset / restored =====
+TAP version 13
+# Subtest: S7: a correction reason survives same-Task refusal and clears when another Task takes over
+ok 1 - S7: a correction reason survives same-Task refusal and clears when another Task takes over
+  ---
+  duration_ms: 19.819833
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 239.998
+
+===== S7 review-draft-same-task-preservation / red =====
+TAP version 13
+# Subtest: S7: a correction reason survives same-Task refusal and clears when another Task takes over
+not ok 1 - S7: a correction reason survives same-Task refusal and clears when another Task takes over
+  ---
+  duration_ms: 20.750083
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorLinkOperations.test.tsx:1:14125'
+  failureType: 'testCodeFailure'
+  error: |-
+    a same-Task refusal must preserve the entered explanation
+    + actual - expected
+
+    + ''
+    - 'Reason for the original operation'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Reason for the original operation'
+  actual: ''
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:276:12)
+    async usingEditor (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:98:9)
+    async <anonymous> (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:271:3)
+    async usingFixture (<worktree>/ui/tests/guarantorLinkOperations.test.tsx:93:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 241.243334
+
+===== S7 review-draft-same-task-preservation / restored =====
+TAP version 13
+# Subtest: S7: a correction reason survives same-Task refusal and clears when another Task takes over
+ok 1 - S7: a correction reason survives same-Task refusal and clears when another Task takes over
+  ---
+  duration_ms: 19.084792
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 248.290625

@@ -10,11 +10,11 @@ not ok 1 - S9 transaction reasons omit an unassigned Task id and retain assigned
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'guarantor.link record Task/undefined'
     - 'guarantor.link record'
                             ^
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'guarantor.link record'
@@ -92,9 +92,9 @@ not ok 1 - S1 rate limit: all five routes share a budget before service or staff
   failureType: 'testCodeFailure'
   error: |-
     /preview
-    
+
     401 !== 429
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 429
@@ -167,11 +167,11 @@ not ok 1 - S9 transaction reasons omit an unassigned Task id and retain assigned
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'guarantor.link record Task/undefined'
     - 'guarantor.link record'
                             ^
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'guarantor.link record'

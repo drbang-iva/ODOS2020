@@ -1,11 +1,12 @@
 # G-2b-1 guard evidence
 
-Author proof at application head `158c9e67b91f16fdfa20f22ad20577ebef9d5d7a`. All 76 local controls below were green, red after the named mutation, and green after restoration. Detailed counts, source hashes and failures are in [guard-results.json](guard-results.json); actual command output is in [guard-transcripts.txt](guard-transcripts.txt). The core runner is [mutate-guards.py](mutate-guards.py), which changes only its disposable source copy.
+Author proof at application head `82fc66de6cb04f74bcbbe7805c7934c934f932e6`. All 81 local controls below were green, red after the named mutation, and green after restoration. Detailed counts, source hashes and failures are in [guard-results.json](guard-results.json); actual command output is in [guard-transcripts.txt](guard-transcripts.txt). The core runner is [mutate-guards.py](mutate-guards.py), which changes only its disposable source copy. [UI review evidence](ui-review/README.md) retains the two additional regressions and three controls.
 
 Browser controls and actual policy-engine controls are separate: [browser/browser-mutations.json](browser/browser-mutations.json), [live-policy-proof.md](live-policy-proof.md). Neither a fake FHIR store nor a green unit suite is presented as policy or route proof.
 
 | Lane / removed guard | Green / red / restored exit | Failing test or enforced check |
 |---|---|---|
+| core-and-registries / S9-transaction-resource-reference | 0 / 1 / 0 | S9 transaction reasons omit an unassigned Task id and retain assigned resource references |
 | core-and-registries / L1-claim-required | 0 / 1 / 0 | L1: two admitted starters produce one source detach and one completed operation |
 | core-and-registries / L2-sorted-claims | 0 / 1 / 0 | L2: sorted claims give a winner with two shared children and opposed request orders |
 | core-and-registries / L3a-pending-after-detach | 0 / 1 / 0 | L3: detach-first leaves an unowned claimed child and Complete projects current D |
@@ -50,7 +51,8 @@ Browser controls and actual policy-engine controls are separate: [browser/browse
 | core-and-registries / S3-terminal-journal-checkpoint | 0 / 1 / 0 | L15: correction fences a paused Complete before its already-intended destination PUT |
 | core-and-registries / S3-terminal-response-stops-runner | 0 / 1 / 0 | S3 late successful release checkpoints its result without completing or auditing twice |
 | core-and-registries / S3-terminal-checkpoint-refusal | 0 / 1 / 0 | S3 terminal response checkpoint refusal is reported and never replayed |
-| core-and-registries / Registry-service-write | 0 / 1 / 0 | preflight: missing exact service-write registration |
+| core-and-registries / S1-rate-limit | 0 / 1 / 0 | S1 rate limit: all five routes share a budget before service or staff authentication |
+| core-and-registries / Registry-service-write | 0 / 1 / 0 | preflight: missing exact registered entry |
 | core-and-registries / Registry-audit-event | 0 / 1 / 0 | the latest audit migration pair matches the TypeScript union and separates validation |
 | core-and-registries / Registry-canonical-extension | 0 / 1 / 0 | preflight: canonical extension missing from registry |
 | policy-audit-client / L17-task-fence-removed | 0 / 1 / 0 | L17 staff: the Task fence refuses operation creation, mutation and code laundering; L17 composite: the Task fence refuses operation creation, mutation and code laundering |
@@ -82,6 +84,9 @@ Browser controls and actual policy-engine controls are separate: [browser/browse
 | editor / pending-complete-wiring | 0 / 1 / 0 | L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor |
 | editor / pending-correct-wiring | 0 / 1 / 0 | S7: Correct requires a reason, sends one new operation id, and reloads after a refusal |
 | editor / l23-drift-classification | 0 / 1 / 0 | L23 S7: an edit after release is ordinary drift and Repair converges to current D |
+| editor / review-matching-claim-shortcut | 0 / 1 / 0 | S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling |
+| editor / review-draft-task-reset | 0 / 1 / 0 | S7: a correction reason survives same-Task refusal and clears when another Task takes over |
+| editor / review-draft-same-task-preservation | 0 / 1 / 0 | S7: a correction reason survives same-Task refusal and clears when another Task takes over |
 
 ## Contract cases and limits
 
@@ -90,5 +95,5 @@ Browser controls and actual policy-engine controls are separate: [browser/browse
 - L23's post-verification D edit is documented later drift, as the contract specifies. The editor classification/repair control is red when mismatch detection is removed; the child-after-verification race is guarded separately by L16.
 - L26 detach removal is red because the operation refuses the still-owned child; the additional ownership guard prevents two owners. Both detach paths must be removed for the intended control; removing only one would leave the other active. The evidence does not claim that this mutant produces two owners.
 - L5 asserts the absence of the stale r2 write. Task status alone would be decorative. L24(c) asserts the kind of attempted Task write, not merely its count.
-- Source provenance for contribution-lane controls is retained. Policy, audit, client, editor and component bytes match the integrated application. Scanner registration line-number updates are separately guarded by the integrated preflight deletion control.
+- Source provenance for contribution-lane controls is retained. Policy, audit, client, final editor and component contribution bytes match the integrated application. Scanner registration line-number updates are separately guarded by the integrated preflight deletion control.
 - The Mandate 14 ledger is documentary evidence, not an enforced registry. The service-write registry, migration event set and canonical extension registry each have an executed deletion control.

@@ -1,5 +1,5 @@
 {
-  "applicationHead": "158c9e67b91f16fdfa20f22ad20577ebef9d5d7a",
+  "applicationHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
   "originMainRefreshed": "ddf6ba4a4f5e06efb13c59759d4941159fe49d0a",
   "scopeAnchorDiff": "empty from a13fc1ea to refreshed origin/main",
   "runs": [
@@ -44,9 +44,9 @@
     {
       "log": "final-mcp",
       "counts": {
-        "tests": 4783,
-        "pass": 4715,
-        "fail": 8,
+        "tests": 4785,
+        "pass": 4716,
+        "fail": 9,
         "cancelled": 0,
         "skipped": 60
       },
@@ -58,27 +58,28 @@
         "reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth",
         "an older per-claim upsert cannot overwrite a newer completed rebuild",
         "an older rebuild snapshot fails loudly without publishing incomplete FHIR truth",
-        "<task-worktree>/mcp/tests/claimReadModelStore.test.ts"
+        "<task-worktree>/mcp/tests/claimReadModelStore.test.ts",
+        "education list reports dispatchability from the same per-role configuration enforced at send time"
       ],
-      "sha256": "386931923e67d93b45893e9ed591f358d6f155e5a9c291b3783a1d2609296a6f"
+      "sha256": "5716df534293f334c9b42554edad5f9b19bf38c3fd5ff25fb7c0b007f74d1600"
     },
     {
       "log": "final-ui",
       "counts": {
-        "tests": 1496,
-        "pass": 1496,
+        "tests": 1498,
+        "pass": 1498,
         "fail": 0,
         "cancelled": 0,
         "skipped": 0
       },
       "failedTests": [],
-      "sha256": "bafd3d8f23d7ef48ed061f6e2bb1b2709173ab12624aaf26e2fa949640f6954e"
+      "sha256": "d4af78f22b5e5f99ab3a3c01128e17b3984ed5847048f426018aea42baac2f8a"
     },
     {
       "log": "final-ui-build",
       "counts": {},
       "failedTests": [],
-      "sha256": "0daae5588a1048f43544629b550a202a02f8584aa6bb9132fd89d730660a1d5a"
+      "sha256": "2a70d0620c6f7ec6d53dc0986e387dbedab6f2fe0389cc4e5800f1850e5f1d16"
     },
     {
       "log": "mcp-build-current",
@@ -99,16 +100,40 @@
       "sha256": "b570c4c0e31ad713c99c42aa6e6c2bbb5afccea4f41ce77db81fa0d068683fc1"
     },
     {
-      "log": "core-final-green",
+      "log": "core-focused-final",
       "counts": {
-        "tests": 41,
-        "pass": 41,
+        "tests": 43,
+        "pass": 43,
         "fail": 0,
         "cancelled": 0,
         "skipped": 0
       },
       "failedTests": [],
-      "sha256": "b86fe61e364ce0d76ac91d683297ac99689bac07f31a683154296d9011ce7b6b"
+      "sha256": "0e22f53fa04c8a84c0047d560d1b13615520160b2fe0f93c911c07e68e5c24e8"
+    },
+    {
+      "log": "education-api-recheck",
+      "counts": {
+        "tests": 43,
+        "pass": 43,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "failedTests": [],
+      "sha256": "aaba09ed97357005d42d3cb0db822e99fe923626cf6a47ff1c777c70bd4695f0"
+    },
+    {
+      "log": "comms-api-recheck",
+      "counts": {
+        "tests": 99,
+        "pass": 99,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "failedTests": [],
+      "sha256": "ae5c94ed8637a85bb72f412e69cdbf25ec385a1ffa8de06377b994d73a4a16b7"
     }
   ],
   "namedBaseline": [
@@ -354,5 +379,63 @@
       "cancelled": 0,
       "skipped": 0
     }
-  ]
+  ],
+  "intermittentLocalHttpRuns": [
+    {
+      "run": "mcp-extra-fetch-failure",
+      "applicationHead": "bc0569be",
+      "counts": {
+        "tests": 4785,
+        "pass": 4716,
+        "fail": 9,
+        "skipped": 60
+      },
+      "failedTests": [
+        "live FHIR read grant check covers all four chart resources through compiled role policies",
+        "FHIR read grant CLI passes only with full coverage and always prints its limits",
+        "rebuild is atomic and server-side worklist grouping returns honest untouched facts",
+        "never-paid-untouched aggregation is performed by payer and month in PostgreSQL",
+        "reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth",
+        "an older per-claim upsert cannot overwrite a newer completed rebuild",
+        "an older rebuild snapshot fails loudly without publishing incomplete FHIR truth",
+        "<task-worktree>/mcp/tests/claimReadModelStore.test.ts",
+        "sequence HTTP admit lost 409 race returns typed 409 without retry"
+      ],
+      "rawLogSha256": "790b059342ec7796c6c4eaaf8f3449df8e7b5156e733f2fe7835e877807cf7bc"
+    },
+    {
+      "run": "final-mcp",
+      "applicationHead": "82fc66de",
+      "counts": {
+        "tests": 4785,
+        "pass": 4716,
+        "fail": 9,
+        "skipped": 60
+      },
+      "failedTests": [
+        "live FHIR read grant check covers all four chart resources through compiled role policies",
+        "FHIR read grant CLI passes only with full coverage and always prints its limits",
+        "rebuild is atomic and server-side worklist grouping returns honest untouched facts",
+        "never-paid-untouched aggregation is performed by payer and month in PostgreSQL",
+        "reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth",
+        "an older per-claim upsert cannot overwrite a newer completed rebuild",
+        "an older rebuild snapshot fails loudly without publishing incomplete FHIR truth",
+        "<task-worktree>/mcp/tests/claimReadModelStore.test.ts",
+        "education list reports dispatchability from the same per-role configuration enforced at send time"
+      ],
+      "rawLogSha256": "5716df534293f334c9b42554edad5f9b19bf38c3fd5ff25fb7c0b007f74d1600"
+    }
+  ],
+  "intermittentLocalHttpDisposition": "Two full runs had a fetch failed in different unchanged communications tests. Entire affected files passed separately: 43/43 and 99/99. Test and comms source diff from a13fc1ea is empty. Exact transport cause is unproven; no production or existing-test change was made. CI is a separate environment and must be inspected at final PR head.",
+  "ciAtPriorHead": {
+    "head": "df5d09b0418e4c116800bbf317f76585a84a4ef3",
+    "mcp": {
+      "tests": 4795,
+      "pass": 4742,
+      "fail": 6,
+      "skipped": 47
+    },
+    "failureDisposition": "Two inventory counts and four migration pins; no local PostgreSQL or HTTP transport failures in this CI run.",
+    "runUrl": "https://github.com/drbang-iva/ODOS2020/actions/runs/34837439526"
+  }
 }

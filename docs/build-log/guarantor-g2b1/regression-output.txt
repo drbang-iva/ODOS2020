@@ -52,18 +52,20 @@ Limitations:
 - Type-level comparison does not prove criteria scope; criteria-dependent operations without an exact fhir-scope-contract are counted as NOT SCOPE-VERIFIED.
 ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md
 
+
+
 ===== final-mcp =====
 not ok 72 - live FHIR read grant check covers all four chart resources through compiled role policies
   ---
-  duration_ms: 988.902375
+  duration_ms: 936.258584
   type: 'test'
   location: '<task-worktree>/tests/preflight/fhir-read-grant-check.test.ts:1:7617'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     37 !== 34
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 34
@@ -74,59 +76,309 @@ not ok 72 - live FHIR read grant check covers all four chart resources through c
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
+# Subtest: FHIR read grant CLI passes only with full coverage and always prints its limits
+not ok 73 - FHIR read grant CLI passes only with full coverage and always prints its limits
+  ---
+  duration_ms: 1414.338416
+  type: 'test'
+  location: '<task-worktree>/tests/preflight/fhir-read-grant-check.test.ts:1:11044'
+  failureType: 'testCodeFailure'
 
-  duration_ms: 0.521917
+not ok 73 - FHIR read grant CLI passes only with full coverage and always prints its limits
+  ---
+  duration_ms: 1414.338416
+  type: 'test'
+  location: '<task-worktree>/tests/preflight/fhir-read-grant-check.test.ts:1:11044'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Service-identity FHIR write call sites excluded \(34\):/. Input:
+
+    'FHIR read grant check: PASS (48 literal/marked resourceTypes under mcp/src + ui/src)\n' +
+      'FHIR operation grant coverage: PASS (892 read/write operations)\n' +
+      'Included source extensions: .ts, .tsx\n' +
+      'Excluded source directories: __tests__\n' +
+      'Excluded source extensions: all except .ts, .tsx\n' +
+      'Service-identity resourceTypes seen and excluded:\n' +
+      '- CodeSystem — claim reason catalog maintenance through the explicit service client after claims.manage authentication\n' +
+      '- Project — service identity resolves the practice owner for owner-only permission administration\n' +
+      '- ProjectMembership — service identity authorization context\n' +
+      '- User — service identity account resolution\n' +
+      'Service-identity FHIR write call sites excluded (37):\n' +
+      '- mcp/src/clinic/guarantor-link-operation.ts:169 this.deps.serviceFhir.executeTransactionAsActor Task — Guarantor operation uses the explicit service client with staff attribution.\n' +
+      '- mcp/src/clinic/guarantor-link-operation.ts:169 this.deps.serviceFhir.executeTransactionAsActor Person — Guarantor operation uses the explicit service client with staff attribution.\n' +
+      '- mcp/src/clinic/guarantor-link-operation.ts:169 this.deps.serviceFhir.executeTransactionAsActor RelatedPerson — Guarantor operation uses the explicit service client with staff attribution.\n' +
+      '- mcp/src/authz/liveAudit.ts:468 client.create AuditEvent — Dedicated audit projection client.\n' +
+      '- mcp/src/clinical-graph/protocol-store.ts:139 this.fhir.delete Basic — ProtocolDefinitionStore is constructed with the process service client.\n' +
+      '- mcp/src/fax/inbound-fax.ts:328 this.fhir.create AuditEvent — Inbound fax triage service receives the explicit serviceFhir client.\n' +
+      '- mcp/src/fax/inbound-fax.ts:426 this.fhir.create AuditEvent — Inbound fax triage service receives the explicit serviceFhir client.\n' +
+      '- mcp/src/fax/inbound-fax.ts:446 this.fhir.create AuditEvent — Inbound fax triage service receives the explicit serviceFhir client.\n' +
+
+not ok 700 - rebuild is atomic and server-side worklist grouping returns honest untouched facts
+  ---
+  duration_ms: 2.470375
+  type: 'test'
+  location: '<task-worktree>/mcp/tests/claimReadModelStore.test.ts:1:1266'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    <task-worktree>/mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (<task-worktree>/mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: never-paid-untouched aggregation is performed by payer and month in PostgreSQL
+not ok 701 - never-paid-untouched aggregation is performed by payer and month in PostgreSQL
+  ---
+  duration_ms: 1.149667
+  type: 'test'
+  location: '<task-worktree>/mcp/tests/claimReadModelStore.test.ts:1:2197'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    <task-worktree>/mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (<task-worktree>/mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+
+not ok 701 - never-paid-untouched aggregation is performed by payer and month in PostgreSQL
+  ---
+  duration_ms: 1.149667
+  type: 'test'
+  location: '<task-worktree>/mcp/tests/claimReadModelStore.test.ts:1:2197'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    <task-worktree>/mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (<task-worktree>/mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth
+not ok 702 - reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth
+  ---
+  duration_ms: 0.040917
+  type: 'test'
+  location: '<task-worktree>/mcp/tests/claimReadModelStore.test.ts:1:2852'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    <task-worktree>/mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (<task-worktree>/mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+
+not ok 702 - reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth
+  ---
+  duration_ms: 0.040917
+  type: 'test'
+  location: '<task-worktree>/mcp/tests/claimReadModelStore.test.ts:1:2852'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    <task-worktree>/mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (<task-worktree>/mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: an older per-claim upsert cannot overwrite a newer completed rebuild
+not ok 703 - an older per-claim upsert cannot overwrite a newer completed rebuild
+  ---
+  duration_ms: 0.024125
+  type: 'test'
+  location: '<task-worktree>/mcp/tests/claimReadModelStore.test.ts:1:3524'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    <task-worktree>/mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (<task-worktree>/mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+
+not ok 703 - an older per-claim upsert cannot overwrite a newer completed rebuild
+  ---
+  duration_ms: 0.024125
+  type: 'test'
+  location: '<task-worktree>/mcp/tests/claimReadModelStore.test.ts:1:3524'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    <task-worktree>/mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (<task-worktree>/mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: an older rebuild snapshot fails loudly without publishing incomplete FHIR truth
+not ok 704 - an older rebuild snapshot fails loudly without publishing incomplete FHIR truth
+  ---
+  duration_ms: 0.029041
+  type: 'test'
+  location: '<task-worktree>/mcp/tests/claimReadModelStore.test.ts:1:3875'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    <task-worktree>/mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (<task-worktree>/mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+
+not ok 704 - an older rebuild snapshot fails loudly without publishing incomplete FHIR truth
+  ---
+  duration_ms: 0.029041
+  type: 'test'
+  location: '<task-worktree>/mcp/tests/claimReadModelStore.test.ts:1:3875'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    <task-worktree>/mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (<task-worktree>/mcp/tests/claimReadModelStore.test.ts:32:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+not ok 705 - <task-worktree>/mcp/tests/claimReadModelStore.test.ts
+  ---
+  duration_ms: 2.979917
+  location: '<task-worktree>/mcp/tests/claimReadModelStore.test.ts:1:1135'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    <task-worktree>/mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (<task-worktree>/mcp/tests/claimReadModelStore.test.ts:39:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+    async Test.runHook (node:internal/test_runner/test:965:9)
+    async after (node:internal/test_runner/test:1005:9)
+
+not ok 705 - <task-worktree>/mcp/tests/claimReadModelStore.test.ts
+  ---
+  duration_ms: 2.979917
+  location: '<task-worktree>/mcp/tests/claimReadModelStore.test.ts:1:1135'
+  failureType: 'hookFailed'
+  error: 'connect ECONNREFUSED 127.0.0.1:5433'
+  code: 'ECONNREFUSED'
+  stack: |-
+    <task-worktree>/mcp/node_modules/pg-pool/index.js:45:11
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (<task-worktree>/mcp/tests/claimReadModelStore.test.ts:39:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+    async Test.runHook (node:internal/test_runner/test:965:9)
+    async after (node:internal/test_runner/test:1005:9)
+    async Test.run (node:internal/test_runner/test:1070:7)
+  ...
+# Subtest: projection health distinguishes uninitialized, failed, stale, and recovered states
+ok 706 - projection health distinguishes uninitialized, failed, stale, and recovered states
+  ---
+  duration_ms: 0.5415
+  type: 'test'
+  ...
+# Subtest: newer projection outcomes and FHIR invalidations supersede older rebuild completions
+ok 707 - newer projection outcomes and FHIR invalidations supersede older rebuild completions
+  ---
+  duration_ms: 0.084542
+  type: 'test'
+  ...
+
+not ok 800 - education list reports dispatchability from the same per-role configuration enforced at send time
+  ---
+  duration_ms: 27.019875
+  type: 'test'
+  location: '<task-worktree>/mcp/tests/commsApi.test.ts:1:9328'
+  failureType: 'testCodeFailure'
+  error: 'fetch failed'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    node:internal/deps/undici/undici:14976:13
+    async TestContext.<anonymous> (<task-worktree>/mcp/tests/commsApi.test.ts:312:22)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: education detail returns newest or exact pinned version and never exposes internal content
+ok 801 - education detail returns newest or exact pinned version and never exposes internal content
+  ---
+  duration_ms: 6.804
+  type: 'test'
+  ...
+# Subtest: education dispatch refuses marketing content when recorded patient consent is absent
+ok 802 - education dispatch refuses marketing content when recorded patient consent is absent
+  ---
+  duration_ms: 2.373416
+  type: 'test'
+  ...
+# Subtest: only transactional staff chart education receives the quiet-hours exemption
+
+  ---
+  duration_ms: 0.487666
   type: 'test'
   ...
 # Subtest: WestFax config is all-or-nothing, HTTPS-only, and never appears in client code
-ok 4248 - WestFax config is all-or-nothing, HTTPS-only, and never appears in client code
+ok 4250 - WestFax config is all-or-nothing, HTTPS-only, and never appears in client code
   ---
-  duration_ms: 8.445875
+  duration_ms: 1.340916
   type: 'test'
   ...
-1..4248
-# tests 4783
+1..4250
+# tests 4785
 # suites 0
-# pass 4715
-# fail 8
+# pass 4716
+# fail 9
 # cancelled 0
 # skipped 60
 # todo 0
-# duration_ms 82600.95375
+# duration_ms 83964.4595
 ⚠️  LIVE STACK NOT CONFIGURED — 41 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them.
 
 ===== final-ui =====
+ok 1484 - P2 history loading and read failure cannot turn missing values into a writable blank form
   ---
-  duration_ms: 25.7325
+  duration_ms: 17.226042
   type: 'test'
   ...
 # Subtest: P2 a late previous-encounter response cannot replace the new encounter's Wearing values
-ok 1483 - P2 a late previous-encounter response cannot replace the new encounter's Wearing values
+ok 1485 - P2 a late previous-encounter response cannot replace the new encounter's Wearing values
   ---
-  duration_ms: 38.705167
+  duration_ms: 28.772708
   type: 'test'
   ...
-1..1483
-# tests 1496
+1..1485
+# tests 1498
 # suites 0
-# pass 1496
+# pass 1498
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 206330.482334
+# duration_ms 203933.41825
 
 ===== final-ui-build =====
+
+> odos-ui@0.2.0 build
+> tsc --noEmit --skipLibCheck && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 324 modules transformed.
+rendering chunks...
+computing gzip size...
 dist/version.json                   0.16 kB │ gzip:   0.15 kB
 dist/index.html                     0.95 kB │ gzip:   0.56 kB
 dist/assets/index-MgzHian6.css    226.50 kB │ gzip:  38.17 kB
-dist/assets/index-BaFEMsW-.js   1,906.40 kB │ gzip: 514.52 kB
+dist/assets/index-Fzkss3e1.js   1,906.48 kB │ gzip: 514.55 kB
 
 (!) Some chunks are larger than 500 kB after minification. Consider:
 - Using dynamic import() to code-split the application
 - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
-✓ built in 2.64s
+✓ built in 2.52s
 
 ===== mcp-build-current =====
 
@@ -135,6 +387,16 @@ dist/assets/index-BaFEMsW-.js   1,906.40 kB │ gzip: 514.52 kB
 
 
 ===== final-preflight =====
+- Media: 5 operations; 0 scope-verified; 5 NOT SCOPE-VERIFIED
+- MedicationAdministration: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- MedicationRequest: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- MedicationStatement: 6 operations; 0 scope-verified; 6 NOT SCOPE-VERIFIED
+- Observation: 21 operations; 0 scope-verified; 21 NOT SCOPE-VERIFIED
+- Patient: 5 operations; 0 scope-verified; 5 NOT SCOPE-VERIFIED
+- Procedure: 11 operations; 0 scope-verified; 11 NOT SCOPE-VERIFIED
+- Provenance: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- QuestionnaireResponse: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- RelatedPerson: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
 - ServiceRequest: 8 operations; 0 scope-verified; 8 NOT SCOPE-VERIFIED
 Limitations:
 - Computed read resourceTypes escape this scan.
@@ -153,23 +415,114 @@ Every backend route family has a proxy table entry.
 
 Reporting only — CI annotates findings, but this check never fails the build.
 
-===== core-final-green =====
+===== core-focused-final =====
+ok 42 - L22: Coverage subscriber referencing either moved responsible party is still refused after transfer (non-mutation regression)
   ---
-  duration_ms: 48.8535
+  duration_ms: 50.495583
   type: 'test'
   ...
 # Subtest: L7: actual statement recipient remains the moved primary RelatedPerson before and after transfer
-ok 41 - L7: actual statement recipient remains the moved primary RelatedPerson before and after transfer
+ok 43 - L7: actual statement recipient remains the moved primary RelatedPerson before and after transfer
   ---
-  duration_ms: 8.58475
+  duration_ms: 9.210458
   type: 'test'
   ...
-1..41
-# tests 41
+1..43
+# tests 43
 # suites 0
-# pass 41
+# pass 43
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 465.569583
+# duration_ms 409.739959
+
+===== education-api-recheck =====
+ok 42 - precondition HTTP terminal-release lost 412 race returns typed 409
+  ---
+  duration_ms: 3.146625
+  type: 'test'
+  ...
+# Subtest: staff resume cannot claim a pending worker-bound sequence attempt
+ok 43 - staff resume cannot claim a pending worker-bound sequence attempt
+  ---
+  duration_ms: 2.634583
+  type: 'test'
+  ...
+1..43
+# tests 43
+# suites 0
+# pass 43
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1329.197917
+
+===== comms-api-recheck =====
+ok 98 - J12: education delegates false textable selection for RelatedPerson
+  ---
+  duration_ms: 1.134625
+  type: 'test'
+  ...
+# Subtest: J12: education delegates expired textable selection for RelatedPerson
+ok 99 - J12: education delegates expired textable selection for RelatedPerson
+  ---
+  duration_ms: 1.218292
+  type: 'test'
+  ...
+1..99
+# tests 99
+# suites 0
+# pass 99
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 759.687083
+
+===== prior full-run HTTP failure retained =====
+
+
+not ok 1608 - sequence HTTP admit lost 409 race returns typed 409 without retry
+  ---
+  duration_ms: 19.429667
+  type: 'test'
+  location: '<task-worktree>/mcp/tests/educationEnrollmentApi.test.ts:1:42480'
+  failureType: 'testCodeFailure'
+  error: 'fetch failed'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    node:internal/deps/undici/undici:14976:13
+    async TestContext.<anonymous> (<task-worktree>/mcp/tests/educationEnrollmentApi.test.ts:1304:25)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: sequence HTTP admit lost 412 race returns typed 409 without retry
+ok 1609 - sequence HTTP admit lost 412 race returns typed 409 without retry
+  ---
+  duration_ms: 8.841542
+  type: 'test'
+  ...
+# Subtest: sequence HTTP stop lost 409 race returns typed 409 without retry
+ok 1610 - sequence HTTP stop lost 409 race returns typed 409 without retry
+  ---
+
+  ...
+# Subtest: WestFax config is all-or-nothing, HTTPS-only, and never appears in client code
+ok 4250 - WestFax config is all-or-nothing, HTTPS-only, and never appears in client code
+  ---
+  duration_ms: 0.58125
+  type: 'test'
+  ...
+1..4250
+# tests 4785
+# suites 0
+# pass 4716
+# fail 9
+# cancelled 0
+# skipped 60
+# todo 0
+# duration_ms 88781.680417
+⚠️  LIVE STACK NOT CONFIGURED — 41 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them.

@@ -1,23 +1,73 @@
 {
   "kind": "Author mutation evidence; not independent evaluation",
-  "sourceHead": "158c9e67b91f16fdfa20f22ad20577ebef9d5d7a",
+  "sourceHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
   "sourceSha256": {
-    "mcp/src/clinic/guarantor-link-operation.ts": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
+    "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
     "mcp/src/authz/roles.ts": "afdd50b756f907121ccfeb965abdd72d8981739992c1d21f111d4568087cf114",
     "mcp/src/authz/odosAudit.ts": "741d7c5d6d0eb0b8d3328a08e0055307cd3e1b0c979afdad08d332658d78b2e9",
     "mcp/src/authz/liveAudit.ts": "2d65d97951d365a3621310a89a88ef47587741fa67eb498e4f933f21c1295ddb",
     "mcp/src/fhir-client.ts": "57715549311950cbd1306173f71e1e98563d1c97421b3a578fce18e687bd925b",
     "scripts/fhir-read-grant-check.ts": "ac8bec19ca4e5aed2f219cbbd7c53fa34b19da2bb85dd8f2c9493df384ce4bc3",
-    "ui/src/lib/guarantor-editor.ts": "9ccc86563866afed1a47cb7eeae5d0c56b6619efffcd76e0e8e81a0b3ebd9c67",
-    "ui/src/components/patient/ResponsiblePartiesControl.tsx": "83ffe27a086b45d4a22c347efa673450151d05490cc556994feaeb951b8b07f0"
+    "ui/src/lib/guarantor-editor.ts": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06",
+    "ui/src/components/patient/ResponsiblePartiesControl.tsx": "3c9883c78a7a403ce376deb47f04ba610dc6851e7e251673959375a5c9f4ea80",
+    "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5"
   },
   "controls": [
     {
       "lane": "core-and-registries",
+      "guard": "S9-transaction-resource-reference",
+      "source": "mcp/src/clinic/guarantor-link-operation.ts",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S9 transaction reasons omit an unassigned Task id and retain assigned resource references"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "S9 transaction reasons omit an unassigned Task id and retain assigned resource references"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S9 transaction reasons omit an unassigned Task id and retain assigned resource references"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S9 transaction reasons omit an unassigned Task id and retain assigned resource references"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
       "guard": "L1-claim-required",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "a23020e209f0f8174a50d7ccd32a2620fefd77e17898c8f5d11dc448b8bdcd4e",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "fe25ca056a19073c34739d6383f1185863bd4e8507305ba3eda87861ab48e6c1",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -65,8 +115,8 @@
       "lane": "core-and-registries",
       "guard": "L2-sorted-claims",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "0e867d355d3e4d1fcfaace20d132ccb876a2f440cceb22d8fb0b68638218e493",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "49cf53eee5b6941900f4aa820d31f3faa465dc7c7d2cf575985546e905842edb",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -114,8 +164,8 @@
       "lane": "core-and-registries",
       "guard": "L3a-pending-after-detach",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "7488d40ad12c4b85ee0b8f2e4b2f528d804b40a1cef542b7b779099f9ef982ca",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "429f98d914b2245436a1aca0e18d2414e65bfecff003bf4c461129813614a9f1",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -163,8 +213,8 @@
       "lane": "core-and-registries",
       "guard": "L3b-detach-first",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "ea044201e5a33caf6b35565ab75aea958a4f2a42fa0d0b8c2ae03ad332d92c77",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "d1f16d746af7af3e8c36e7e326c7302e165ef8c1f31c6ffcb96edf1418373e51",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -212,8 +262,8 @@
       "lane": "core-and-registries",
       "guard": "L5-generation",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "88ebff494132da4f31fbdde14772e4b9996a1579fe792da98bc274efd04b492b",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "01d6f4897cc31965fba676a6737640419140dd84cd1f18e501205d8c2b95e28f",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -261,8 +311,8 @@
       "lane": "core-and-registries",
       "guard": "L6-destination-details",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "c2fc58d1de803732499113a20f53305f50b1e282d6db92c3a9e74ce680d0f279",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "34f2d947ee9bf67d081e383469765f975772d63d18e05c34efcb55b4e2518d24",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -310,8 +360,8 @@
       "lane": "core-and-registries",
       "guard": "L6-retain-source",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "a430184f2c2424db4abbafd0a730b245073726d6b2ace934869bb58097d3d924",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "f9a3f38d9b2f11dd157e1acd37108a75a295d2c6b42c0631cb0f6976c0b9eb75",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -359,8 +409,8 @@
       "lane": "core-and-registries",
       "guard": "L7-child-extension-fence",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "63953bd9afe1de6522edd4e2e3138be9c2df9b96d313fe29f3e187c63701ba7e",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "5be42042a8e4e43f29c3b785739087fd20deafb22b10c11add982c55fd8f6004",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -408,8 +458,8 @@
       "lane": "core-and-registries",
       "guard": "L7-child-active-fence",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "16f1867bb0f35d79fa8c70dc0ec351569a1ddbd8b7f978a0902650248ca8f2e8",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "9cd5d00d2ed3c0743f645155b74b8ea4d0cd85bfd82f8b73a940c99d2ced5d51",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -457,8 +507,8 @@
       "lane": "core-and-registries",
       "guard": "L8-write-set",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "60c08258f003887c49c3d599486b6c5352231dbe1e2b1681059af400571f208f",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "1b16f3e67d87c636827942528c973b31f5ac3b48d071bcf9ee3df50ccfcf6c94",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -506,8 +556,8 @@
       "lane": "core-and-registries",
       "guard": "L9-expected-version",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "2c2f4d422997eed9bbb9b51f543a5da43f6db1266bcdedef930376fda535abbb",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "1bede0dbcd6c204571daa2102198827265eaa6f02c0246d9ea4a90d5297ee4a2",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -555,8 +605,8 @@
       "lane": "core-and-registries",
       "guard": "L10-complete-consolidation-set",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "92fb8e20970b91b02d34e0db14122495140f6b61a4b48ea486d6ea24ed0287d1",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "694e51343d64e03ddc9dca7a9c2a1c2eeb02727ad455f1bc1aee961fad2e93f9",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -604,8 +654,8 @@
       "lane": "core-and-registries",
       "guard": "L11-practice-scope",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "768135d860dae215f4d8c89d0d7c9f6ee4ea6a193d73522a8934ba0a24fe43bd",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "1f1064845993b637108f519dd59e5f4ebfd499b21565789145b5c2c0937f7c89",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -653,8 +703,8 @@
       "lane": "core-and-registries",
       "guard": "L12-landed-intent",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "f2051e36396511cf561b835f8e050bfa5bab036af99baad0b6a4f7d7f4ca3523",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "98591a569819bd676e32b559f611ad34e85dbad2d1df2e8b3f0a4b5a258edf64",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -702,8 +752,8 @@
       "lane": "core-and-registries",
       "guard": "L13-interference",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "df661ba32eb917e069388fb2627f81a61d0ed48d602a2126073a16c5f7ecc09e",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "beb53c0347a8bd1ae0ebbeed94e941364d60faa2734910b8ef4ce0d13c2534d7",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -751,8 +801,8 @@
       "lane": "core-and-registries",
       "guard": "L14a-full-old-comparator",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "f4f2f9bde130576833d65d5a699bef1785648de4a2fd2638aa36084836026e1e",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "78cda6e2b9e8c78efab1166a58246d62fc673349cd28dbc3d6f2b36cc61086e5",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -800,8 +850,8 @@
       "lane": "core-and-registries",
       "guard": "L14b-epoch-in-comparison",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "e9fbbfc8d4175d378ab3dc8bbfdf33059097a86c9bad29a4120499a4b20ed41e",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "bc828a318983e5960794b98b2d4c88388ba48354b440a0a3001fe18faf808f73",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -849,8 +899,8 @@
       "lane": "core-and-registries",
       "guard": "L14c-classify-before-fence",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "c3865db604a0bf3098f531ee8acead2cdd7abbd61355e360c5c2467eb8d46280",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "a733f96d534867e6bf552305cce5effafe2cdde0beb0d1174188b0cf61944c1a",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -898,8 +948,8 @@
       "lane": "core-and-registries",
       "guard": "L15a-person-fence",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "5a432c6d724adca9fd62bc3671d34fd58617a96d612f7009792b5c92274b8499",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "3964b91fbc3114e1d331effbbef9907edaf51ca5a688c2af0d0625e8dbdc6d66",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -947,8 +997,8 @@
       "lane": "core-and-registries",
       "guard": "L15b-cancel-last",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "80b8a5965f6862de6a719b64785a6a7d3a9da0facf503a235a36ebb18ec785cc",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "4b57d1bdd69f98bf1dca9388ec9d5ab8b87dc7462fcd6addf49b34561ad01fba",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -996,8 +1046,8 @@
       "lane": "core-and-registries",
       "guard": "L15-fresh-retry-correction-check",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "ae9ac743ca31fd8ef164e8c8005c6bee9569c9f08034b3efb3b0100b2aff08bd",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "3ca2dff0efba908a08cfd226e31d191efc9f1541e7bab300860794d0530aa704",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1045,8 +1095,8 @@
       "lane": "core-and-registries",
       "guard": "L16-release-required",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "f386f92fa7d954ad3c46198141fe3b6a0fef490475ddbfb19e7dd1d46b5e3a01",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "e616d64aac0b009388c4e86e63b50750bbac5695f7835b6b7de01c1f250935ac",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1094,8 +1144,8 @@
       "lane": "core-and-registries",
       "guard": "L17-moved-set-binding",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "f8f0996db04b752d253011528d4117ee7e851c20478e3101efcd5abc6650ff1e",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "0d94b439137e54ed8dcc7927c7917d039458c365fe177e31b329d08ac4301126",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1143,8 +1193,8 @@
       "lane": "core-and-registries",
       "guard": "L19-action-required",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "bbe9b9267c307aacfd17b24f700b21b9813683c56c06080ee78a8a24172e7c25",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "db585d4e97b6b7541ed9ed93eb633caec22f13de1fd958214f4b2d26436de210",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1192,8 +1242,8 @@
       "lane": "core-and-registries",
       "guard": "L20-completed-audit-after-release",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "70374b7e666237b38b4f83743095b10f1b4869e3edd2123cd700124d69989974",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "5b31cfdd1a760bf62ff82322631f8ffc2fee49ce5f778e07982ea708e17b508a",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1241,8 +1291,8 @@
       "lane": "core-and-registries",
       "guard": "L21-idempotency",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "d167a0fafaefa13a5dc2bea4c9de181c690279caa07fd1822467672d9e4ee313",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "b0b3621e892a10222ff33c6c02d856247b25887cce5ebbe90cab9d73a6744f1c",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1290,8 +1340,8 @@
       "lane": "core-and-registries",
       "guard": "L24-code-filter",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "c6f8dde758945efaca35d2aed0eb6c6fb80ef067e0e9cbcb5837fd615e8e320b",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "a8bc0285dd16dca7596d4417bbd08490b307bf1afc031737cf98d7a4a061dafb",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1339,8 +1389,8 @@
       "lane": "core-and-registries",
       "guard": "L24-service-authorship",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "b424abf341d6f5588fb461d298cd5ea9553754ebfd9b877f14cae36949886d1a",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "37b6cd4aec60a415e42d3c68adea966f7181da48d114a6d72816f8fecca234b0",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1388,8 +1438,8 @@
       "lane": "core-and-registries",
       "guard": "L24a-claim-descent",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "708d50df405f4f291ece253f04128e22abfccc8a200f5a10c9fcaca70a0efc47",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "9ec6c80f6272412b83a0dc2e33f24e80711744429b320f7e30d6b59d0a3e3063",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1437,8 +1487,8 @@
       "lane": "core-and-registries",
       "guard": "L24b-step-zero-before-writes",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "0c700714ea9738dc0ab31027ca32e3184b96c6466cb01408a93f8a7ba85a49e5",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "1ebd83abdedb2e98a800f72eb6461c7eb43c2ea08402f7c999f4158f5787f694",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1486,8 +1536,8 @@
       "lane": "core-and-registries",
       "guard": "L24c-completed-correction",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "85a41f7d977482fb09b7ab59ea230be5e230b3995cf086c0ad0bc3f62c23ec43",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "d45e444bad187dfc67604915a52790b4795466f703d76ef85602c763d59a89eb",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1535,8 +1585,8 @@
       "lane": "core-and-registries",
       "guard": "L25-live-correction-never-self-cancels",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "e04791a34cb35bc7634adceb9824af318448876b5f952abe177a9321a89be75c",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "9eee7699ad8278ffcbb5b2b4ecbdd45c06ce7e279806e6ed8a62aa1e27905279",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1584,8 +1634,8 @@
       "lane": "core-and-registries",
       "guard": "L26-correction-detaches-current-owner",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "73e1693f7cc179946a8ae718c65d22675201222b1b294b8ef81382e52ae373dd",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "40346dc1313d21071d5c182817cbdd4396980442a6b322431b39b8ef582aaba2",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1633,8 +1683,8 @@
       "lane": "core-and-registries",
       "guard": "L27-terminal-rule-at-ownership-check",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "1fdf96cc780bfb932ab175b86640c1e5dd4fb248376f5d4c101a5b4ec41805ac",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "e4768f500796f6c8e1803e426f32ac0bf0d7f79732ea9a99a90e812288d39b37",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1682,8 +1732,8 @@
       "lane": "core-and-registries",
       "guard": "L28-reclaim-checkpointed-claim",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "6982bb262e79f8ec5bd79141f2b2e488da98403326ebfecc55b04a6095e9f7ad",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "bfc7cf5b3e77def772953535ff0325d575a3ebf9d44f59f5975c0b78a57d406b",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1731,8 +1781,8 @@
       "lane": "core-and-registries",
       "guard": "L29-definite-response-intent-rule",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "d03dd1e999b19c962631866141605a06c53ef1ac457a4d02270f8b1c96561854",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "36af699c58a834ca562ea567f7f1e352f6fe1247618208398d6a54ac0d7ca38b",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1788,8 +1838,8 @@
       "lane": "core-and-registries",
       "guard": "S6-cancel-attempt-bound",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "b72a4ae7404d7a93dd706e8b46f075b2564acba45c28dfaa51b9aabf0ee93c4a",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "ce4c4939c39cc53e26615a286eefe34d2b8715518bdc566d6b48aadea976f606",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1837,8 +1887,8 @@
       "lane": "core-and-registries",
       "guard": "S6-pending-takeover-prefix",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "869f40e33cb449d20f4c3f8ab9b3a5fed25a44eb007a26ca2cb8e0c52c559950",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "7e9766cce1c7ef0d3f104a4311b29746fd46d93769ef3636989b9212c490f5ae",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1886,8 +1936,8 @@
       "lane": "core-and-registries",
       "guard": "S3-post-release-activity",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "8a2cdb22c77e4df3c766b6888a295ffec856ed4438262276de393d3ef57195b6",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "7313094c172639ff1e90391bb7c7ee6635b76d24af7a5f9e0173e919c3e88a06",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1935,8 +1985,8 @@
       "lane": "core-and-registries",
       "guard": "S3-no-checkpoint-replay",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "f348342798333662114c4610012139b2ecd4f06445ed103b97eb11ce3868186a",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "6c33eaab4c71887ffae94785f29ca1e8a69dbe838f648cd168d07b43522f47b4",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -1984,8 +2034,8 @@
       "lane": "core-and-registries",
       "guard": "S5-fresh-claim-classification",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "7c4d2bb65d32ef67c30de3609684176abe06fc0ef72083d93d51169ef89f4bb4",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "88ac5c2e22c3338d8e0e56c619f50998ce83d450b337d9996495f7d1cd78d9c3",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -2033,8 +2083,8 @@
       "lane": "core-and-registries",
       "guard": "S3-terminal-journal-checkpoint",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "a129ec10d0058419737d9fe21fbc8fb741ac283aee08fc30282b886046a6fdae",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "8b5f3852a315ff15fe252fa88dc41463f203e0dc9afcc82da1395de7b6ba3cfa",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -2082,8 +2132,8 @@
       "lane": "core-and-registries",
       "guard": "S3-terminal-response-stops-runner",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "f6a0f5136f6ccbe0a57ca5f82478197396edf8a2cb369f4bd036e9aded6189b7",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "bdbcef79ea865f639230fb54c2fa4632823725d7b5f1a7b81f916fe58dc8c697",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -2131,8 +2181,8 @@
       "lane": "core-and-registries",
       "guard": "S3-terminal-checkpoint-refusal",
       "source": "mcp/src/clinic/guarantor-link-operation.ts",
-      "sourceSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mutatedSha256": "d3e3a1e09f21f3405b6cd7fec088efb9c55b976bb3c0991757a408a3349483db",
+      "sourceSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mutatedSha256": "99c52d8fd08b9f190a007446357721599ccdf5d188b18f4f986af38761e5b4ae",
       "green": {
         "exit": 0,
         "failingTests": [],
@@ -2172,6 +2222,55 @@
         },
         "namedTests": [
           "S3 terminal response checkpoint refusal is reported and never replayed"
+        ]
+      },
+      "killed": true
+    },
+    {
+      "lane": "core-and-registries",
+      "guard": "S1-rate-limit",
+      "source": "mcp/src/clinic/guarantor-routes.ts",
+      "sourceSha256": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
+      "mutatedSha256": "3be8e9e405d1c715a1f4d208fe9bd22403c2f05b23200d4c1c8425ccebb3f5b4",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
         ]
       },
       "killed": true
@@ -2860,12 +2959,11 @@
       "green": {
         "exit": 0,
         "counts": {
-          "tests": 44,
-          "pass": 44,
-          "fail": 0,
-          "skipped": 0
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
         },
-        "scope": "full focused suite before mutation wave"
+        "scope": "46-test focused suite before mutation wave"
       },
       "red": {
         "exit": 1,
@@ -2886,7 +2984,8 @@
           "pass": 1,
           "fail": 0,
           "skipped": 0
-        }
+        },
+        "failingTests": []
       }
     },
     {
@@ -2904,12 +3003,11 @@
       "green": {
         "exit": 0,
         "counts": {
-          "tests": 44,
-          "pass": 44,
-          "fail": 0,
-          "skipped": 0
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
         },
-        "scope": "full focused suite before mutation wave"
+        "scope": "46-test focused suite before mutation wave"
       },
       "red": {
         "exit": 1,
@@ -2930,7 +3028,8 @@
           "pass": 1,
           "fail": 0,
           "skipped": 0
-        }
+        },
+        "failingTests": []
       }
     },
     {
@@ -2948,12 +3047,11 @@
       "green": {
         "exit": 0,
         "counts": {
-          "tests": 44,
-          "pass": 44,
-          "fail": 0,
-          "skipped": 0
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
         },
-        "scope": "full focused suite before mutation wave"
+        "scope": "46-test focused suite before mutation wave"
       },
       "red": {
         "exit": 1,
@@ -2974,7 +3072,8 @@
           "pass": 1,
           "fail": 0,
           "skipped": 0
-        }
+        },
+        "failingTests": []
       }
     },
     {
@@ -2992,12 +3091,11 @@
       "green": {
         "exit": 0,
         "counts": {
-          "tests": 44,
-          "pass": 44,
-          "fail": 0,
-          "skipped": 0
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
         },
-        "scope": "full focused suite before mutation wave"
+        "scope": "46-test focused suite before mutation wave"
       },
       "red": {
         "exit": 1,
@@ -3018,7 +3116,8 @@
           "pass": 1,
           "fail": 0,
           "skipped": 0
-        }
+        },
+        "failingTests": []
       }
     },
     {
@@ -3036,12 +3135,11 @@
       "green": {
         "exit": 0,
         "counts": {
-          "tests": 44,
-          "pass": 44,
-          "fail": 0,
-          "skipped": 0
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
         },
-        "scope": "full focused suite before mutation wave"
+        "scope": "46-test focused suite before mutation wave"
       },
       "red": {
         "exit": 1,
@@ -3062,7 +3160,8 @@
           "pass": 1,
           "fail": 0,
           "skipped": 0
-        }
+        },
+        "failingTests": []
       }
     },
     {
@@ -3080,12 +3179,11 @@
       "green": {
         "exit": 0,
         "counts": {
-          "tests": 44,
-          "pass": 44,
-          "fail": 0,
-          "skipped": 0
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
         },
-        "scope": "full focused suite before mutation wave"
+        "scope": "46-test focused suite before mutation wave"
       },
       "red": {
         "exit": 1,
@@ -3106,7 +3204,8 @@
           "pass": 1,
           "fail": 0,
           "skipped": 0
-        }
+        },
+        "failingTests": []
       }
     },
     {
@@ -3124,12 +3223,11 @@
       "green": {
         "exit": 0,
         "counts": {
-          "tests": 44,
-          "pass": 44,
-          "fail": 0,
-          "skipped": 0
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
         },
-        "scope": "full focused suite before mutation wave"
+        "scope": "46-test focused suite before mutation wave"
       },
       "red": {
         "exit": 1,
@@ -3150,7 +3248,8 @@
           "pass": 1,
           "fail": 0,
           "skipped": 0
-        }
+        },
+        "failingTests": []
       }
     },
     {
@@ -3168,12 +3267,11 @@
       "green": {
         "exit": 0,
         "counts": {
-          "tests": 44,
-          "pass": 44,
-          "fail": 0,
-          "skipped": 0
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
         },
-        "scope": "full focused suite before mutation wave"
+        "scope": "46-test focused suite before mutation wave"
       },
       "red": {
         "exit": 1,
@@ -3194,13 +3292,146 @@
           "pass": 1,
           "fail": 0,
           "skipped": 0
-        }
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor",
+      "guard": "review-matching-claim-shortcut",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "Repair stops at a newly claimed matching child",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
+        },
+        "scope": "46-test focused suite before mutation wave"
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor",
+      "guard": "review-draft-task-reset",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "correction reason survives same-Task refusal",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
+        },
+        "scope": "46-test focused suite before mutation wave"
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: a correction reason survives same-Task refusal and clears when another Task takes over"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor",
+      "guard": "review-draft-same-task-preservation",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "correction reason survives same-Task refusal",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0
+        },
+        "scope": "46-test focused suite before mutation wave"
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: a correction reason survives same-Task refusal and clears when another Task takes over"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
       }
     }
   ],
   "policyEvidenceCommit": "d282472f",
-  "editorEvidenceCommit": "03d53723",
-  "note": "Core controls ran on the integrated source. Policy and S7 controls ran on the contributing commits; their production bytes are unchanged in the integrated head. Browser and live policy controls are recorded separately.",
+  "editorEvidenceCommit": "e16b524e6402a6c333b8af459794b0387e4978e5",
+  "note": "Core controls ran at bc0569be; every mutated source file is byte-identical at the integrated head. S7 controls ran at the recorded contribution with byte-identical integrated UI files. Policy/audit/client/scanner contribution sources remain unchanged. Browser and live policy controls are separate.",
   "contributionFileVerification": [
     {
       "source": "mcp/src/authz/roles.ts",
@@ -3228,15 +3459,20 @@
     },
     {
       "source": "ui/src/lib/guarantor-editor.ts",
-      "contributionCommit": "03d53723",
-      "sha256": "9ccc86563866afed1a47cb7eeae5d0c56b6619efffcd76e0e8e81a0b3ebd9c67",
+      "contributionCommit": "b54710c87efbca79159887e974d3217db14a9b57",
+      "sha256": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06",
       "matches": true
     },
     {
       "source": "ui/src/components/patient/ResponsiblePartiesControl.tsx",
-      "contributionCommit": "03d53723",
-      "sha256": "83ffe27a086b45d4a22c347efa673450151d05490cc556994feaeb951b8b07f0",
+      "contributionCommit": "b54710c87efbca79159887e974d3217db14a9b57",
+      "sha256": "3c9883c78a7a403ce376deb47f04ba610dc6851e7e251673959375a5c9f4ea80",
       "matches": true
     }
+  ],
+  "coreExecutionHead": "bc0569be",
+  "outputNormalization": [
+    "absolute task and mutation roots replaced with placeholders",
+    "whitespace-only diagnostic lines blanked; raw outputs retained in ignored author logs"
   ]
 }

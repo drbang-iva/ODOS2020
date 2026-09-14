@@ -1,11 +1,11 @@
 {
   "source": {
-    "head": "158c9e67b91f16fdfa20f22ad20577ebef9d5d7a",
+    "head": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
     "files": {
-      "mcp/src/clinic/guarantor-link-operation.ts": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-      "mcp/src/clinic/guarantor-routes.ts": "b3af98597b9bdd7c1023ba1638f63e491ad47e8c7731b2482c990d0ec9f46d09",
+      "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+      "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
       "mcp/src/fhir-client.ts": "57715549311950cbd1306173f71e1e98563d1c97421b3a578fce18e687bd925b",
-      "ui/src/lib/guarantor-editor.ts": "9ccc86563866afed1a47cb7eeae5d0c56b6619efffcd76e0e8e81a0b3ebd9c67",
+      "ui/src/lib/guarantor-editor.ts": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06",
       "ui/src/lib/guarantor-link-operations.ts": "ba364ee486beb2744527e13953270ed4ce5d7f30b104012b06efba221d93756f",
       "mcp/src/authz/role-grants.ts": "7b69b7ea07156dc97cafcf2e1225841bca66c72cf30be8b8d5cbffc283ec18f5"
     }
@@ -61,10 +61,10 @@
       "scenario": "L1",
       "name": "Child has exactly A destination owner",
       "actual": [
-        "ad15ac00-1902-4d8b-8699-25525663eb0b"
+        "f2e70964-b06d-4085-80bb-6b7dec53354d"
       ],
       "expected": [
-        "ad15ac00-1902-4d8b-8699-25525663eb0b"
+        "f2e70964-b06d-4085-80bb-6b7dec53354d"
       ],
       "passed": true
     },
@@ -113,10 +113,10 @@
       "scenario": "L3",
       "name": "Pending child still claimed by A",
       "actual": [
-        "Task/f7fa6d8d-9fd3-4645-a147-96af067d4439"
+        "Task/ca8a0389-f4d7-4ca6-ba89-8553c4e265ca"
       ],
       "expected": [
-        "Task/f7fa6d8d-9fd3-4645-a147-96af067d4439"
+        "Task/ca8a0389-f4d7-4ca6-ba89-8553c4e265ca"
       ],
       "passed": true
     },
@@ -204,10 +204,10 @@
       "scenario": "L3",
       "name": "Complete gives one destination owner",
       "actual": [
-        "4072747c-d8e0-4f0d-901b-6503a92b3ed4"
+        "cb9b1614-b9b3-40cd-80b9-5a0a060ed46d"
       ],
       "expected": [
-        "4072747c-d8e0-4f0d-901b-6503a92b3ed4"
+        "cb9b1614-b9b3-40cd-80b9-5a0a060ed46d"
       ],
       "passed": true
     },
@@ -243,10 +243,10 @@
       "scenario": "L3",
       "name": "Sibling remains under S",
       "actual": [
-        "0a43bb67-47af-4cea-ac55-f56728dc62a4"
+        "d4b9b10f-7963-4dc4-907b-69dc5367c21a"
       ],
       "expected": [
-        "0a43bb67-47af-4cea-ac55-f56728dc62a4"
+        "d4b9b10f-7963-4dc4-907b-69dc5367c21a"
       ],
       "passed": true
     },
@@ -410,8 +410,8 @@
     {
       "scenario": "L13",
       "name": "Interference response names the child",
-      "actual": "RelatedPerson/7309b541-7155-40d5-ad5d-c4bf4d73986f",
-      "expected": "RelatedPerson/7309b541-7155-40d5-ad5d-c4bf4d73986f",
+      "actual": "RelatedPerson/c7dbc44f-f508-4b68-b322-22b2dc25e1b6",
+      "expected": "RelatedPerson/c7dbc44f-f508-4b68-b322-22b2dc25e1b6",
       "passed": true
     },
     {
@@ -451,8 +451,8 @@
     {
       "scenario": "L14-landed",
       "name": "First source fence uses original intent expectedVersion",
-      "actual": "W/\"279fd284-0561-46b3-9947-e160d7549416\"",
-      "expected": "W/\"279fd284-0561-46b3-9947-e160d7549416\"",
+      "actual": "W/\"753a41ce-43e4-4707-b579-9ffedc2f4ab1\"",
+      "expected": "W/\"753a41ce-43e4-4707-b579-9ffedc2f4ab1\"",
       "passed": true
     },
     {
@@ -485,10 +485,10 @@
       "scenario": "L14-landed",
       "name": "Recovered child has one D owner",
       "actual": [
-        "51dc890d-b98d-45c3-9b2b-0a3fa2359b11"
+        "93e3b0e7-9f9f-4abe-915b-dee673cec18d"
       ],
       "expected": [
-        "51dc890d-b98d-45c3-9b2b-0a3fa2359b11"
+        "93e3b0e7-9f9f-4abe-915b-dee673cec18d"
       ],
       "passed": true
     },
@@ -530,18 +530,18 @@
       "scenario": "L14-unsent",
       "name": "Prefix ownership matches delivery",
       "actual": [
-        "578fd154-7702-4791-b52f-00e56d16ac60"
+        "7c6073e0-d44a-4c9e-84bb-15dc574caa6e"
       ],
       "expected": [
-        "578fd154-7702-4791-b52f-00e56d16ac60"
+        "7c6073e0-d44a-4c9e-84bb-15dc574caa6e"
       ],
       "passed": true
     },
     {
       "scenario": "L14-unsent",
       "name": "First source fence uses original intent expectedVersion",
-      "actual": "W/\"26125fdc-cf22-4a86-908a-18feb46a24b5\"",
-      "expected": "W/\"26125fdc-cf22-4a86-908a-18feb46a24b5\"",
+      "actual": "W/\"c3b056d5-40ac-4d36-a345-1688b9bfa9a0\"",
+      "expected": "W/\"c3b056d5-40ac-4d36-a345-1688b9bfa9a0\"",
       "passed": true
     },
     {
@@ -572,10 +572,10 @@
       "scenario": "L14-unsent",
       "name": "Recovered child has one D owner",
       "actual": [
-        "65989a3b-d5aa-490b-a8c2-8bbb28bb7cd7"
+        "b6836c2d-8815-4b99-9147-13d12c323723"
       ],
       "expected": [
-        "65989a3b-d5aa-490b-a8c2-8bbb28bb7cd7"
+        "b6836c2d-8815-4b99-9147-13d12c323723"
       ],
       "passed": true
     },
@@ -654,10 +654,10 @@
       "scenario": "L15-paused",
       "name": "Correct leaves exactly original S as owner",
       "actual": [
-        "48015583-04f3-435e-b4c4-b3ea36ecf4cc"
+        "6effda83-d892-4971-8aec-acb52af236b7"
       ],
       "expected": [
-        "48015583-04f3-435e-b4c4-b3ea36ecf4cc"
+        "6effda83-d892-4971-8aec-acb52af236b7"
       ],
       "passed": true
     },
@@ -741,10 +741,10 @@
       "scenario": "L15-takeover-fail",
       "name": "Failed takeover retains A claim",
       "actual": [
-        "Task/91bfcddc-4397-44d5-b6f2-f01d750bc113"
+        "Task/93428e0d-2274-42d5-a131-86a2cd787ab5"
       ],
       "expected": [
-        "Task/91bfcddc-4397-44d5-b6f2-f01d750bc113"
+        "Task/93428e0d-2274-42d5-a131-86a2cd787ab5"
       ],
       "passed": true
     },
@@ -798,10 +798,10 @@
       "scenario": "L15-takeover-fail",
       "name": "A completion leaves one D owner",
       "actual": [
-        "fea1773d-f2ad-4ced-a433-f0a68e07d169"
+        "8fa60af3-8e74-47d1-9e71-d9c88479b5cf"
       ],
       "expected": [
-        "fea1773d-f2ad-4ced-a433-f0a68e07d169"
+        "8fa60af3-8e74-47d1-9e71-d9c88479b5cf"
       ],
       "passed": true
     },
@@ -880,10 +880,10 @@
       "scenario": "L15-partial-correction",
       "name": "Stronger paused correction leaves one original S owner",
       "actual": [
-        "9a1a0970-aef5-4b13-b54f-6c7fe80413ba"
+        "b5505f9a-e2f3-4e66-bb6b-3f799accbe73"
       ],
       "expected": [
-        "9a1a0970-aef5-4b13-b54f-6c7fe80413ba"
+        "b5505f9a-e2f3-4e66-bb6b-3f799accbe73"
       ],
       "passed": true
     },
@@ -957,10 +957,10 @@
       "scenario": "L16-claim",
       "name": "Verification race preserves single D ownership",
       "actual": [
-        "5634eefd-9210-4b23-b3eb-53136c986446"
+        "5688b649-1460-4db4-8b48-0dfe7d18adf7"
       ],
       "expected": [
-        "5634eefd-9210-4b23-b3eb-53136c986446"
+        "5688b649-1460-4db4-8b48-0dfe7d18adf7"
       ],
       "passed": true
     },
@@ -968,10 +968,10 @@
       "scenario": "L16-claim",
       "name": "B claim remains visible on pending child",
       "actual": [
-        "Task/9144f925-d13b-4083-af9e-40fcbb956c1a"
+        "Task/0e945837-6f82-4e37-ac61-bc8593736c4b"
       ],
       "expected": [
-        "Task/9144f925-d13b-4083-af9e-40fcbb956c1a"
+        "Task/0e945837-6f82-4e37-ac61-bc8593736c4b"
       ],
       "passed": true
     },
@@ -1019,10 +1019,10 @@
       "scenario": "L16-demographics",
       "name": "Verification race preserves single D ownership",
       "actual": [
-        "93ac1cee-35fc-40a0-80fd-41f39a585f61"
+        "ebaf3a0c-8bcb-4296-8671-e2a7626971b3"
       ],
       "expected": [
-        "93ac1cee-35fc-40a0-80fd-41f39a585f61"
+        "ebaf3a0c-8bcb-4296-8671-e2a7626971b3"
       ],
       "passed": true
     },
@@ -1149,18 +1149,18 @@
       "scenario": "seal",
       "name": "Source digests unchanged during capture",
       "actual": {
-        "mcp/src/clinic/guarantor-link-operation.ts": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-        "mcp/src/clinic/guarantor-routes.ts": "b3af98597b9bdd7c1023ba1638f63e491ad47e8c7731b2482c990d0ec9f46d09",
+        "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+        "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
         "mcp/src/fhir-client.ts": "57715549311950cbd1306173f71e1e98563d1c97421b3a578fce18e687bd925b",
-        "ui/src/lib/guarantor-editor.ts": "9ccc86563866afed1a47cb7eeae5d0c56b6619efffcd76e0e8e81a0b3ebd9c67",
+        "ui/src/lib/guarantor-editor.ts": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06",
         "ui/src/lib/guarantor-link-operations.ts": "ba364ee486beb2744527e13953270ed4ce5d7f30b104012b06efba221d93756f",
         "mcp/src/authz/role-grants.ts": "7b69b7ea07156dc97cafcf2e1225841bca66c72cf30be8b8d5cbffc283ec18f5"
       },
       "expected": {
-        "mcp/src/clinic/guarantor-link-operation.ts": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
-        "mcp/src/clinic/guarantor-routes.ts": "b3af98597b9bdd7c1023ba1638f63e491ad47e8c7731b2482c990d0ec9f46d09",
+        "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
+        "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
         "mcp/src/fhir-client.ts": "57715549311950cbd1306173f71e1e98563d1c97421b3a578fce18e687bd925b",
-        "ui/src/lib/guarantor-editor.ts": "9ccc86563866afed1a47cb7eeae5d0c56b6619efffcd76e0e8e81a0b3ebd9c67",
+        "ui/src/lib/guarantor-editor.ts": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06",
         "ui/src/lib/guarantor-link-operations.ts": "ba364ee486beb2744527e13953270ed4ce5d7f30b104012b06efba221d93756f",
         "mcp/src/authz/role-grants.ts": "7b69b7ea07156dc97cafcf2e1225841bca66c72cf30be8b8d5cbffc283ec18f5"
       },
