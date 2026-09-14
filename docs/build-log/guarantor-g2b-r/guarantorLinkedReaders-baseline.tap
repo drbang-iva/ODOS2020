@@ -1,0 +1,26 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/guarantorLinkedReaders.test.ts
+
+TAP version 13
+# Subtest: L22: Coverage subscriber referencing either moved responsible party is still refused after transfer (non-mutation regression)
+ok 1 - L22: Coverage subscriber referencing either moved responsible party is still refused after transfer (non-mutation regression)
+  ---
+  duration_ms: 16.350584
+  type: 'test'
+  ...
+# Subtest: L7: actual statement recipient remains the moved primary RelatedPerson before and after transfer
+ok 2 - L7: actual statement recipient remains the moved primary RelatedPerson before and after transfer
+  ---
+  duration_ms: 6.711666
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 208.165

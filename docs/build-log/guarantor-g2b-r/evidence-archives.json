@@ -1,0 +1,72 @@
+[
+  {
+    "file": "live-after-browser-server-http.json",
+    "archive": "live-after-browser-server-http.json.gz",
+    "bytes": 177686,
+    "sha256": "0b0b4262b878e2d8e78476480fd84d10fbe8cc3c79065165296f94266531250f",
+    "archiveSha256": "5a9468001040d3806d63e1fd8dc4d2389a47d417ebd1a9f3b373649fa629db3f"
+  },
+  {
+    "file": "live-after-http.json",
+    "archive": "live-after-http.json.gz",
+    "bytes": 3440302,
+    "sha256": "b43cd0fc6dd19cdd92f7045ec71c830aa2453c8f6d49e32c11ed3ee5635b9f3a",
+    "archiveSha256": "0985549b168dbd136331a0894abf7c6c90561d2d5cdfb36e60c02227986da314"
+  },
+  {
+    "file": "live-after.json",
+    "archive": "live-after.json.gz",
+    "bytes": 280886,
+    "sha256": "74913ca41dae1ab8c294fbb7cd1c48abe53750062441f6a8b4ce23408d770cf7",
+    "archiveSha256": "71f148f0ce694ba9addcc1b746eac68865e35dc23332be4141f1f8aa7558e0da"
+  },
+  {
+    "file": "live-before-browser-server-http.json",
+    "archive": "live-before-browser-server-http.json.gz",
+    "bytes": 177686,
+    "sha256": "e0d85054eb9d92d0df618850892c32dcbc683de10fb5252f31cfac8d6eab48cc",
+    "archiveSha256": "92b901d4933020cc02f863061f81c1c381d657cd3801e5040d170915faeda627"
+  },
+  {
+    "file": "live-before-http.json",
+    "archive": "live-before-http.json.gz",
+    "bytes": 2936477,
+    "sha256": "c0176eaa7f927a2c0769a40d6afd7a12c296c087fa9a7524a85b7560b656ba34",
+    "archiveSha256": "7034ef3b4dee4d806674e6fe29b7fafa5786fb59a87945da0ac2dddcb6dde5ad"
+  },
+  {
+    "file": "live-before.json",
+    "archive": "live-before.json.gz",
+    "bytes": 271179,
+    "sha256": "eaee34fb301217943fa7fb4ae05b61997bdce07335fb0ebe2dddd7943246ab95",
+    "archiveSha256": "4ad2e670cfc1fa7ddfad354ec3005b7abdf7c3bfd5b41f622285c4175923e253"
+  },
+  {
+    "file": "mcp-baseline.tap",
+    "archive": "mcp-baseline.tap.gz",
+    "bytes": 1092464,
+    "sha256": "4977d1b5f7e65b3ac5e1d793bc3234c584b49b1a23399d463c924b3148e9efc0",
+    "archiveSha256": "cc358839992ab81370f1e8b3e04a97942d264a82324a5e6444a4aafc8e1bc688"
+  },
+  {
+    "file": "mcp-final.tap",
+    "archive": "mcp-final.tap.gz",
+    "bytes": 1095007,
+    "sha256": "21aab7b8898175cff1e61795a172aeed8b85e3a9c7e9fccf65bd2c70c284975a",
+    "archiveSha256": "6ecf29a7ef49f974b5fee2d05b165fd51ec15823752172fd227f707e490ef845"
+  },
+  {
+    "file": "ui-baseline.tap",
+    "archive": "ui-baseline.tap.gz",
+    "bytes": 371413,
+    "sha256": "779b188ec7c61ad3c733809b10a7aef887226663f629b11b72372f33d8f017e1",
+    "archiveSha256": "cb0df0a510a9b55b93f8a81430ff11813bc9314afe72d66acf39ba877c542cc8"
+  },
+  {
+    "file": "ui-final.tap",
+    "archive": "ui-final.tap.gz",
+    "bytes": 371749,
+    "sha256": "e912049005b6a71747d35581e677ff028fb9ddd259be96f36b4bd6f22a1430ff",
+    "archiveSha256": "3b1bf49f1db3f9f3ba9a9fb5bb88a5ba00848c0dfe1b3b3bdb5ad1913117a4f6"
+  }
+]

@@ -1,0 +1,1 @@
+{"variant":"fixback","scenario":"R7","admitted":["C1","C2"],"atFence":["C1","C2"],"correctionStatuses":[[200,"linked"],[409,"recovery-conflict"]],"complete":200,"taskStatus":"cancelled","businessStatus":"superseded","owners":["c1300b0b-515e-40ce-b595-b90e54bdd8f4"],"domainWrites":0,"pendingAudits":1}

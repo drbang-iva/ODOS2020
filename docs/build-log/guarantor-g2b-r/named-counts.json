@@ -1,0 +1,170 @@
+[
+  {
+    "name": "guarantorLinkOperation",
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "tests/guarantorLinkOperation.test.ts"
+    ],
+    "exitCode": 0,
+    "counts": {
+      "tests": "38",
+      "pass": "38",
+      "fail": "0",
+      "skipped": "0"
+    },
+    "baseline": {
+      "source": "bd7029eb55435655f3e4332b2cc703bfd2d77e7e",
+      "exitCode": 0,
+      "counts": {
+        "tests": "38",
+        "pass": "38",
+        "fail": "0",
+        "skipped": "0"
+      }
+    }
+  },
+  {
+    "name": "guarantorLinkRoutes",
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "tests/guarantorLinkRoutes.test.ts"
+    ],
+    "exitCode": 0,
+    "counts": {
+      "tests": "2",
+      "pass": "2",
+      "fail": "0",
+      "skipped": "0"
+    },
+    "baseline": {
+      "source": "bd7029eb55435655f3e4332b2cc703bfd2d77e7e",
+      "exitCode": 0,
+      "counts": {
+        "tests": "2",
+        "pass": "2",
+        "fail": "0",
+        "skipped": "0"
+      }
+    }
+  },
+  {
+    "name": "guarantorLinkPolicy",
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "tests/guarantorLinkPolicy.test.ts"
+    ],
+    "exitCode": 0,
+    "counts": {
+      "tests": "5",
+      "pass": "5",
+      "fail": "0",
+      "skipped": "0"
+    },
+    "baseline": {
+      "source": "bd7029eb55435655f3e4332b2cc703bfd2d77e7e",
+      "exitCode": 0,
+      "counts": {
+        "tests": "5",
+        "pass": "5",
+        "fail": "0",
+        "skipped": "0"
+      }
+    }
+  },
+  {
+    "name": "guarantorLinkAudit",
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "tests/guarantorLinkAudit.test.ts"
+    ],
+    "exitCode": 0,
+    "counts": {
+      "tests": "5",
+      "pass": "5",
+      "fail": "0",
+      "skipped": "0"
+    },
+    "baseline": {
+      "source": "bd7029eb55435655f3e4332b2cc703bfd2d77e7e",
+      "exitCode": 0,
+      "counts": {
+        "tests": "5",
+        "pass": "5",
+        "fail": "0",
+        "skipped": "0"
+      }
+    }
+  },
+  {
+    "name": "guarantorLinkedReaders",
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "tests/guarantorLinkedReaders.test.ts"
+    ],
+    "exitCode": 0,
+    "counts": {
+      "tests": "2",
+      "pass": "2",
+      "fail": "0",
+      "skipped": "0"
+    },
+    "baseline": {
+      "source": "bd7029eb55435655f3e4332b2cc703bfd2d77e7e",
+      "exitCode": 0,
+      "counts": {
+        "tests": "2",
+        "pass": "2",
+        "fail": "0",
+        "skipped": "0"
+      }
+    }
+  },
+  {
+    "name": "guarantorSearchScreens",
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "tests/guarantorSearchScreens.test.ts"
+    ],
+    "exitCode": 0,
+    "counts": {
+      "tests": "17",
+      "pass": "17",
+      "fail": "0",
+      "skipped": "0"
+    },
+    "baseline": {
+      "source": "bd7029eb55435655f3e4332b2cc703bfd2d77e7e",
+      "exitCode": 0,
+      "counts": {
+        "tests": "17",
+        "pass": "17",
+        "fail": "0",
+        "skipped": "0"
+      }
+    }
+  }
+]

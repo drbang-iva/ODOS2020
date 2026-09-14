@@ -1,0 +1,148 @@
+TAP version 13
+# Subtest: R9: an in-progress correction alone renders Complete and success reloads the patient and history once
+ok 1 - R9: an in-progress correction alone renders Complete and success reloads the patient and history once
+  ---
+  duration_ms: 15.907833
+  type: 'test'
+  ...
+# Subtest: R9 K15: a 409 with a Task from Complete reloads once and closes history
+ok 2 - R9 K15: a 409 with a Task from Complete reloads once and closes history
+  ---
+  duration_ms: 2.423166
+  type: 'test'
+  ...
+# Subtest: R6 UI: history hides Undo when correctionInProgress is true
+ok 3 - R6 UI: history hides Undo when correctionInProgress is true
+  ---
+  duration_ms: 14.213833
+  type: 'test'
+  ...
+# Subtest: R6 UI: history offers Undo when correctionInProgress is false
+ok 4 - R6 UI: history offers Undo when correctionInProgress is false
+  ---
+  duration_ms: 1.722542
+  type: 'test'
+  ...
+# Subtest: K14 create-new starts disabled before any keyed search
+ok 5 - K14 create-new starts disabled before any keyed search
+  ---
+  duration_ms: 22.637583
+  type: 'test'
+  ...
+# Subtest: K9 stale confirmation makes one create and requires Review again
+ok 6 - K9 stale confirmation makes one create and requires Review again
+  ---
+  duration_ms: 4.472583
+  type: 'test'
+  ...
+# Subtest: K10 existing Move drafts before create
+ok 7 - K10 existing Move drafts before create
+  ---
+  duration_ms: 2.831875
+  type: 'test'
+  ...
+# Subtest: K10 new Move creates Person before draft and Review again reuses it
+ok 8 - K10 new Move creates Person before draft and Review again reuses it
+  ---
+  duration_ms: 3.944958
+  type: 'test'
+  ...
+# Subtest: K11 Join keeps Loaded Ann and moves loser full set
+ok 9 - K11 Join keeps Loaded Ann and moves loser full set
+  ---
+  duration_ms: 2.402166
+  type: 'test'
+  ...
+# Subtest: K11 Join keeps Found Ann and moves loser full set
+ok 10 - K11 Join keeps Found Ann and moves loser full set
+  ---
+  duration_ms: 2.201458
+  type: 'test'
+  ...
+# Subtest: K13 Undo only on completed non-correct and requires a reason
+ok 11 - K13 Undo only on completed non-correct and requires a reason
+  ---
+  duration_ms: 1.720208
+  type: 'test'
+  ...
+# Subtest: K14 matching cards require None of these before new guarantor
+ok 12 - K14 matching cards require None of these before new guarantor
+  ---
+  duration_ms: 1.402917
+  type: 'test'
+  ...
+# Subtest: K12 missing offers no Move Join or history Undo
+ok 13 - K12 missing offers no Move Join or history Undo
+  ---
+  duration_ms: 0.979
+  type: 'test'
+  ...
+# Subtest: K12 ambiguous offers no Move Join or history Undo
+ok 14 - K12 ambiguous offers no Move Join or history Undo
+  ---
+  duration_ms: 0.819833
+  type: 'test'
+  ...
+# Subtest: K12 dangling offers no Move Join or history Undo
+ok 15 - K12 dangling offers no Move Join or history Undo
+  ---
+  duration_ms: 0.744833
+  type: 'test'
+  ...
+# Subtest: K12 unknown offers no Move Join or history Undo
+ok 16 - K12 unknown offers no Move Join or history Undo
+  ---
+  duration_ms: 0.572417
+  type: 'test'
+  ...
+# Subtest: K12 pending offers no Move Join or history Undo
+ok 17 - K12 pending offers no Move Join or history Undo
+  ---
+  duration_ms: 0.587458
+  type: 'test'
+  ...
+# Subtest: K9 uncertain confirmation retry reuses the submitted operation id
+ok 18 - K9 uncertain confirmation retry reuses the submitted operation id
+  ---
+  duration_ms: 2.411041
+  type: 'test'
+  ...
+# Subtest: K13 uncertain Undo retry reuses the submitted correction id
+ok 19 - K13 uncertain Undo retry reuses the submitted correction id
+  ---
+  duration_ms: 1.381917
+  type: 'test'
+  ...
+# Subtest: K15 paused create reloads once and closes without Review again or a second create
+ok 20 - K15 paused create reloads once and closes without Review again or a second create
+  ---
+  duration_ms: 3.596208
+  type: 'test'
+  ...
+# Subtest: K15 paused Undo reloads once and closes without a second correction
+ok 21 - K15 paused Undo reloads once and closes without a second correction
+  ---
+  duration_ms: 1.1725
+  type: 'test'
+  ...
+# Subtest: K15 failed paused create reload locks the screen and reports reload required
+ok 22 - K15 failed paused create reload locks the screen and reports reload required
+  ---
+  duration_ms: 2.00325
+  type: 'test'
+  ...
+# Subtest: K15 failed paused Undo reload locks the screen and reports reload required
+ok 23 - K15 failed paused Undo reload locks the screen and reports reload required
+  ---
+  duration_ms: 1.130125
+  type: 'test'
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 846.620834

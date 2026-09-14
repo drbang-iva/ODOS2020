@@ -1,0 +1,12 @@
+{
+  "evaluatedHead": "60323dacf0b555a0f1722053f6e92b9cf846e68a",
+  "files": {
+    "mcp/src/clinic/guarantor-link-operation.ts": "002a4c77b5b930ee08ceec46cc37e6941fef76152a1feeea9b44b2e7277838c6",
+    "ui/src/components/patient/GuarantorLinkScreens.tsx": "d4073db3583f18495d8dacd0a3c7ce1403590ba08bcc993e2c0b4a0173a1a0a6",
+    "mcp/tests/guarantorRecoveryFixback.test.ts": "7aa371fe789db74e4d97fef516f777d9cccb4f4b40b3a6bf2e7b726c1465e399",
+    "ui/tests/guarantorRecoveryFixback.test.tsx": "0335f7fff78e9c1f4fd12039fd8e725abe528c20f3ffe034ca078af82a4cfcdc",
+    "docs/build-log/guarantor-g2b-r/live-proof.mjs": "a9951fe78d0ee6d43d911cfcdba7059ba5af0a226c4d7878ecbac83865baf818",
+    "docs/build-log/guarantor-g2b-r/browser-proof.mjs": "b459d2f0f1bb75cb24bf1b8c05c515722725af141c659c30a11412f3bf70e386",
+    "docs/build-log/guarantor-g2b-r/mutate-fixback-guards.py": "9d613edb0373ca6b6f5d2ec7fcc1ea0c50a82f2ab8b2270fc90bd66674615c59"
+  }
+}

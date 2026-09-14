@@ -1,0 +1,17 @@
+TAP version 13
+# Subtest: R2 X2: lost correction release followed by transfer B completes without rewriting B's child
+ok 1 - R2 X2: lost correction release followed by transfer B completes without rewriting B's child
+  ---
+  duration_ms: 16.382583
+  type: 'test'
+  ...
+# {"schedule":"X2","complete":[{"status":200,"phase":"linked"}],"correct":422,"owners":["D"],"claims":[],"correctionStatus":"completed","originalStatus":"cancelled"}
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 140.268417

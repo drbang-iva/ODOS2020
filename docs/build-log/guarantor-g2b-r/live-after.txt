@@ -1,0 +1,2 @@
+{"variant":"after","scenario":"X1","complete":200,"phase":"linked","owners":["259211a5-5970-490b-b277-0dc003277677"],"claims":[],"originalStatus":"cancelled","correctionStatus":"completed"}
+{"variant":"after","scenario":"X2","complete":200,"phase":"linked","owners":["1d24f669-b0dc-47a2-8f26-5cd3eec0cc21"],"claims":[],"originalStatus":"cancelled","correctionStatus":"completed"}

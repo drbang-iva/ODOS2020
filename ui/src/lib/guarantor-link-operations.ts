@@ -4,6 +4,7 @@ import { fhir, toError } from "./fhir";
 export interface GuarantorLinkOperation {
   task: Task;
   active: boolean;
+  correctionInProgress?: boolean;
   kind: "transfer" | "consolidate" | "correct";
   phase: string;
   sourcePersonId: string;

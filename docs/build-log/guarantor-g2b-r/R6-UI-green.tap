@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: R6 UI: history hides Undo when correctionInProgress is true
+ok 1 - R6 UI: history hides Undo when correctionInProgress is true
+  ---
+  duration_ms: 14.133084
+  type: 'test'
+  ...
+# Subtest: R6 UI: history offers Undo when correctionInProgress is false
+ok 2 - R6 UI: history offers Undo when correctionInProgress is false
+  ---
+  duration_ms: 2.158666
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 225.935583

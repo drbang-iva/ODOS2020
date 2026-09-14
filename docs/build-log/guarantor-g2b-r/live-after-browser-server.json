@@ -1,0 +1,18 @@
+{
+  "variant": "after",
+  "mode": "serve",
+  "completed": false,
+  "provenance": {
+    "head": "60323dacf0b555a0f1722053f6e92b9cf846e68a",
+    "files": {
+      "mcp/src/clinic/guarantor-link-operation.ts": "002a4c77b5b930ee08ceec46cc37e6941fef76152a1feeea9b44b2e7277838c6",
+      "mcp/src/clinic/guarantor-routes.ts": "0c18343b58ae8ac232652ebe90f0e803163c1c72999df667bfc444335b487e6b",
+      "mcp/src/authz/roles.ts": "afdd50b756f907121ccfeb965abdd72d8981739992c1d21f111d4568087cf114",
+      "mcp/src/fhir-client.ts": "57715549311950cbd1306173f71e1e98563d1c97421b3a578fce18e687bd925b"
+    },
+    "fixtureSourceSha256": "72b9a011e51518e2b41edea6ed50ea3cbdd9b34d9e2f50437170cd6bcb63b11d"
+  },
+  "checks": [],
+  "cases": [],
+  "transactions": []
+}

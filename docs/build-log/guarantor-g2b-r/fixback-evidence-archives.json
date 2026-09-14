@@ -1,0 +1,22 @@
+{
+  "live-fixback.json.gz": {
+    "uncompressedBytes": 183179,
+    "uncompressedSha256": "c63b69d2a579f58939f7cb852151c9b0147d983dd5f2e1b1146d73ea8ac70664",
+    "gzipSha256": "81082c963d06e2a2b48090745f0ad0d7aa01a5da6af9ebe18531b59a5e2fde57"
+  },
+  "live-fixback-http.json.gz": {
+    "uncompressedBytes": 1869925,
+    "uncompressedSha256": "21b3cc7285112ecf5d2a34fd1998c1f5b0d59f1203b18a24ab08c2b87f069b90",
+    "gzipSha256": "cd1f92adf652771e4758f7e860e5210ad7bff2a971c1fc44a907abaf20e22f82"
+  },
+  "fixback-mcp-full.tap.gz": {
+    "uncompressedBytes": 1096072,
+    "uncompressedSha256": "c59d51cc3349c10966ca43f296b63c416025281879f614d922cd172fc42f9c07",
+    "gzipSha256": "ed150ddc7e769bd2cd50c3410d06816ea2edd5526c430185626f92c915352f60"
+  },
+  "fixback-ui-full.tap.gz": {
+    "uncompressedBytes": 372392,
+    "uncompressedSha256": "fc41e4fa0fcec359152ee2d34341d9748041aed1b869fbc86f1e1fa00bde67a7",
+    "gzipSha256": "4d9c90f88d9ff566683e3172e39614a75463cab757c48dd1a4f40e0f8ca3a646"
+  }
+}

@@ -1,0 +1,33 @@
+TAP version 13
+# Subtest: R8: Complete fails a pre-ownership correction when its completed original no longer owns the child
+not ok 1 - R8: Complete fails a pre-ownership correction when its completed original no longer owns the child
+  ---
+  duration_ms: 14.475
+  type: 'test'
+  location: 'mcp/tests/guarantorRecoveryFixback.test.ts:1:3007'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/guarantorRecoveryFixback.test.ts:92:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# {"status":200,"phase":"linked","taskStatus":"completed","businessStatus":"linked","owners":["S"],"domainWrites":["guarantor.link claiming Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79","guarantor.link claiming RelatedPerson/r1","guarantor.link claiming Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79","guarantor.link detaching Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79","guarantor.link detaching Person/S","guarantor.link detaching Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79","guarantor.link attaching Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79","guarantor.link attaching Person/S","guarantor.link attaching Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79","guarantor.link projecting Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79","guarantor.link projecting RelatedPerson/r1","guarantor.link projecting Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79","guarantor.link releasing Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79","guarantor.link releasing RelatedPerson/r1","guarantor.link releasing Task/ed3f1b8a-3332-4d49-9699-e68f49d4ff79"]}
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 183.400917

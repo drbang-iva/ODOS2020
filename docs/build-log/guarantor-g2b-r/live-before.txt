@@ -1,0 +1,2 @@
+{"variant":"before","scenario":"X1","complete":409,"phase":"interfered","owners":[],"claims":["Task/5b10b971-6bc6-41ff-b266-32e4ff8c608c"],"originalStatus":"completed","correctionStatus":"in-progress"}
+{"variant":"before","scenario":"X2","complete":409,"phase":"interfered","owners":["be1f57af-eb59-4be2-b86b-41a422a1cb3d"],"claims":[],"originalStatus":"completed","correctionStatus":"in-progress"}

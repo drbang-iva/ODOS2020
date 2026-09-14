@@ -1,0 +1,26 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/guarantorLinkRoutes.test.ts
+
+TAP version 13
+# Subtest: S1: all five operation routes require an authenticated staff caller
+ok 1 - S1: all five operation routes require an authenticated staff caller
+  ---
+  duration_ms: 67.999375
+  type: 'test'
+  ...
+# Subtest: S1 rate limit: all five routes share a budget before service or staff authentication
+ok 2 - S1 rate limit: all five routes share a budget before service or staff authentication
+  ---
+  duration_ms: 38.054625
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 269.0235
