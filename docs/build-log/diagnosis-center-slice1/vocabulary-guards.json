@@ -1,0 +1,27 @@
+[
+  {
+    "mutation": "server-status-entry",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "mutation": "ui-status-entry",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "mutation": "server-mdm-entry",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "mutation": "ui-mdm-entry",
+    "brokenExit": 1,
+    "restoredExit": 0
+  },
+  {
+    "mutation": "codesystem-entry",
+    "brokenExit": 1,
+    "restoredExit": 0
+  }
+]

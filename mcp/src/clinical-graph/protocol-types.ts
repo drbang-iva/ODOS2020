@@ -1,13 +1,9 @@
+import type { DiagnosisVisitStatus } from "./diagnosis-visit-status-store.js";
 import type { CodeableConcept } from "@medplum/fhirtypes";
 import type { ChargeLaterality } from "../fhir/charge-item-laterality.js";
 
 export type LateralityMode = "inherit-dx" | "OU-always" | { fixed: "OD" | "OS" | "OU" };
-export type DiagnosisVisitStatus =
-  | "new"
-  | "stable"
-  | "improved"
-  | "worsening"
-  | "resolved-this-visit";
+export type { DiagnosisVisitStatus } from "./diagnosis-visit-status-store.js";
 export type ProtocolTrigger =
   | { kind: "diagnosis"; dxKeys: string[]; statusScope?: DiagnosisVisitStatus[] }
   | { kind: "visit-type"; visitTypes: string[] };

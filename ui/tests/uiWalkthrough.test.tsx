@@ -323,8 +323,10 @@ for (const interaction of ["iop", "assessment-search", "assessment-status"] as c
         await page.getByRole("combobox", { name: "Diagnosis laterality", exact: true }).click();
         await page.getByRole("option", { name: "OD", exact: true }).click();
       } else {
-        await page.getByRole("combobox", { name: "Problem status", exact: true }).click();
-        await page.getByRole("option").filter({ hasText: "Stable chronic illness" }).click();
+        await page.getByRole("button", { name: "Edit", exact: true }).click();
+        await page.getByRole("combobox", { name: "Diagnosis clinical status", exact: true }).click();
+        await page.getByRole("option", { name: "resolved", exact: true }).click();
+        await page.getByRole("button", { name: "Save status", exact: true }).click();
       }
       const navigate = () => interaction === "assessment-search"
         ? page.getByRole("button", { name: "Open Prescription", exact: true }).click()

@@ -182,6 +182,7 @@ export function computeMdmHint(input: { encounter: Encounter }): MdmHint {
       missingProblemStatusCount += 1;
       continue;
     }
+    if (status === "not-addressed-no-mdm") continue;
     incrementMdmCount(counts, status);
   }
 

@@ -1,3 +1,7 @@
+import { handleProtocolOffersRequest } from "../src/clinical-graph/protocol-endpoint.js";
+import { buildEncounterDiagnosisCondition } from "../src/fhir/condition.js";
+import { DIAGNOSIS_VISIT_STATUSES } from "../src/clinical-graph/diagnosis-visit-status-store.js";
+import { DIAGNOSIS_VISIT_STATUSES as UI_STATUSES } from "../../ui/src/lib/clinical-graph-client.js";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
@@ -43,6 +47,7 @@ class MemoryStatusStore implements DiagnosisVisitStatusStore {
 }
 
 class MemoryFhir {
+  readonly baseUrl = "http://synthetic.invalid/fhir/R4";
   readonly resources: Resource[] = [];
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
@@ -238,6 +243,33 @@ test("missing rows read as unset, signed encounters reject updates, and a later 
   const laterCondition = (later.body as { condition: Condition }).condition;
   assert.notEqual(laterCondition.id, firstCondition.id);
   assert.equal(store.rows.has(`Condition/${laterCondition.id}`), false);
+});
+
+test("all ten visit statuses agree across clients and pass the update endpoint", async () => {
+  const expected = ["new", "stable", "improved", "worsening", "resolved-this-visit", "well-controlled", "resolving", "inadequately-controlled", "unchanged", "not-at-treatment-goal"];
+  assert.deepEqual([...DIAGNOSIS_VISIT_STATUSES], expected);
+  assert.deepEqual(UI_STATUSES, DIAGNOSIS_VISIT_STATUSES);
+  const fhir = encounterFhir();
+  const encounter = fhir.resources.find((row) => row.id === "encounter-1") as Encounter;
+  encounter.diagnosis = [{ condition: { reference: "Condition/dx" } }];
+  fhir.resources.push({ ...buildEncounterDiagnosisCondition({ patientReference: "Patient/patient-1", encounterReference: "Encounter/encounter-1", code: { text: "Synthetic diagnosis" } }), id: "dx" });
+  const store = new MemoryStatusStore();
+  const deps = { store, authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider" as PracticeRoleId, fhir }) };
+  for (const status of expected) {
+    const result = await handleDiagnosisVisitStatusUpdateRequest(deps, {
+      authHeader: "Bearer synthetic", params: { encounterId: "encounter-1", conditionId: "dx" }, body: { status },
+    });
+    assert.equal(result.status, 200, JSON.stringify(result.body));
+    assert.equal(store.rows.get("Condition/dx")?.status, status);
+    const offers = await handleProtocolOffersRequest(deps, {
+      authHeader: "Bearer synthetic",
+      body: { diagnoses: [{ reference: "Condition/dx", code: "synthetic", confirmed: true, visitStatus: status }] },
+    });
+    assert.equal(offers.status, 200, JSON.stringify(offers.body));
+  }
+  assert.equal((await handleDiagnosisVisitStatusUpdateRequest(deps, {
+    authHeader: "Bearer synthetic", params: { encounterId: "encounter-1", conditionId: "dx" }, body: { status: "invented" },
+  })).status, 400);
 });
 
 test("status vocabulary is application-validated and the SQL column remains extensible", () => {

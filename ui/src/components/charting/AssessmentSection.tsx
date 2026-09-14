@@ -10,7 +10,6 @@ import {
   updateConditionBodySite,
   updateConditionCode,
   updateConditionStatus,
-  updateEncounterDiagnosisProblemStatus,
   type DiagnosisTierChoice,
   type EyeChoice,
 } from "../../lib/clinical-actions";
@@ -24,19 +23,16 @@ import type { SectionSaveStatus } from "./types";
 import {
   authHeaders,
   clinicalGraphApiBase,
-  DIAGNOSIS_VISIT_STATUSES,
   procedureChargeApi,
   readDiagnosisVisitStatuses,
   submitDiagnosisPick,
   updateDiagnosisOrder,
-  updateDiagnosisVisitStatus,
   type AttachedProcedure,
   type DiagnosisDemotionImpact,
   type DiagnosisVisitStatus,
 } from "../../lib/clinical-graph-client";
 import { ODOS_EXTENSION_URLS } from "../../lib/fhir-ophthalmology/extensions";
 import {
-  encounterDiagnosisProblemStatus,
   MDM_PROBLEM_STATUSES,
   type MdmProblemStatus,
 } from "../../lib/fhir-clinical/condition";
@@ -307,20 +303,6 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   async function saveStatus(condition: Condition, status: "active" | "recurrence" | "resolved") {
     await runEdit("status", async () => {
       await updateConditionStatus({ condition, clinicalStatus: status });
-    });
-  }
-
-  async function saveProblemStatus(condition: Condition, problemStatus: MdmProblemStatus) {
-    if (!encounter) return;
-    await runEdit("problem-status", async () => {
-      await updateEncounterDiagnosisProblemStatus({ encounter, condition, problemStatus });
-    });
-  }
-
-  async function saveVisitStatus(condition: Condition, status: DiagnosisVisitStatus) {
-    if (!condition.id) return;
-    await runEdit("visit-status", async () => {
-      await updateDiagnosisVisitStatus({ encounterId, conditionId: condition.id!, status });
     });
   }
 
@@ -751,17 +733,11 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                   busy={busy}
                   provenanceLine={condition.id ? provenanceLines[condition.id] : undefined}
                   possible={verificationStatus(condition) === "provisional"}
-                  visitStatus={condition.id ? diagnosisVisitStatuses[`Condition/${condition.id}`] : undefined}
-                  visitStatusDisabled={!canShowEditing || encounter?.status === "finished"}
-                  problemStatus={encounterProblemStatus(encounter, condition)}
-                  problemStatusDisabled={!canShowEditing || encounter?.status === "finished"}
                   onToggle={() => setEditingId((current) => (current === condition.id ? null : condition.id ?? null))}
                   onLaterality={(laterality) => saveLaterality(condition, laterality)}
                   onCode={(code, display) => saveCode(condition, code, display)}
                   onMakePrincipal={() => savePrincipal(condition)}
                   onStatus={(status) => saveStatus(condition, status)}
-                  onVisitStatus={(status) => saveVisitStatus(condition, status)}
-                  onProblemStatus={(status) => saveProblemStatus(condition, status)}
                   onEnteredInError={() => markEnteredInError(condition)}
                   onConfirm={() => decidePossible(condition, "confirm")}
                   onDiscard={() => decidePossible(condition, "discard")}
@@ -812,17 +788,11 @@ function DiagnosisCard({
   busy,
   provenanceLine,
   possible,
-  visitStatus,
-  visitStatusDisabled,
-  problemStatus,
-  problemStatusDisabled,
   onToggle,
   onLaterality,
   onCode,
   onMakePrincipal,
   onStatus,
-  onVisitStatus,
-  onProblemStatus,
   onEnteredInError,
   onConfirm,
   onDiscard,
@@ -836,17 +806,11 @@ function DiagnosisCard({
   busy: string | null;
   provenanceLine?: string;
   possible: boolean;
-  visitStatus?: DiagnosisVisitStatus;
-  visitStatusDisabled: boolean;
-  problemStatus?: MdmProblemStatus;
-  problemStatusDisabled: boolean;
   onToggle: () => void;
   onLaterality: (laterality: EyeChoice) => void;
   onCode: (code: string, display: string) => void;
   onMakePrincipal: () => void;
   onStatus: (status: "active" | "recurrence" | "resolved") => void;
-  onVisitStatus: (status: DiagnosisVisitStatus) => void;
-  onProblemStatus: (status: MdmProblemStatus) => void;
   onEnteredInError: () => void;
   onConfirm: () => void;
   onDiscard: () => void;
@@ -875,27 +839,8 @@ function DiagnosisCard({
             {provenanceLine && <div className="mt-1 text-xs text-[color:var(--odos-accent)]">← from {provenanceLine}</div>}
           </div>
         </button>
-        {!possible && (
-          <div className="flex min-w-[18rem] flex-col gap-2">
-            <DiagnosisProblemStatusField
-              value={problemStatus}
-              disabled={problemStatusDisabled || busy !== null}
-              onChange={onProblemStatus}
-            />
-            <OdosSelect
-              value={visitStatus ?? ""}
-              disabled={visitStatusDisabled || busy !== null}
-              options={[
-                { value: "", label: "" },
-                ...DIAGNOSIS_VISIT_STATUSES.map((choice) => ({ value: choice, label: visitStatusLabel(choice) })),
-              ]}
-              onChange={(value) => {
-                if (value) onVisitStatus(value as DiagnosisVisitStatus);
-              }}
-              ariaLabel="Diagnosis visit status"
-            />
-            {canShowEditing && <button type="button" onClick={onToggle} className="text-xs text-[color:var(--odos-accent)]">Edit</button>}
-          </div>
+        {!possible && canShowEditing && (
+          <button type="button" onClick={onToggle} className="text-xs text-[color:var(--odos-accent)]">Edit</button>
         )}
         {onEngage && (
           <button type="button" className="sidebar-button" aria-label={`Engage ${displayCode(condition.code)}`} onClick={onEngage}>
@@ -1011,13 +956,6 @@ export function DiagnosisProblemStatusField({
   );
 }
 
-function encounterProblemStatus(encounter: Encounter | null, condition: Condition): MdmProblemStatus | undefined {
-  const diagnosis = encounter?.diagnosis?.find(
-    (entry) => entry.condition.reference === `Condition/${condition.id}`,
-  );
-  return diagnosis ? encounterDiagnosisProblemStatus(diagnosis) : undefined;
-}
-
 function notifyEncounterDiagnosisUpdated(encounterReference: string): void {
   window.dispatchEvent(new CustomEvent("odos:encounter-diagnosis-updated", {
     detail: { encounterReference },
@@ -1082,11 +1020,6 @@ export function DiagnosisRankActions({
 function normalizeClinicalStatus(value: string): "active" | "recurrence" | "resolved" {
   if (value === "recurrence" || value === "resolved") return value;
   return "active";
-}
-
-function visitStatusLabel(status: DiagnosisVisitStatus): string {
-  if (status === "resolved-this-visit") return "Resolved this visit";
-  return status[0]!.toUpperCase() + status.slice(1);
 }
 
 function matchesProtocolCode(code: string, pattern: string): boolean {

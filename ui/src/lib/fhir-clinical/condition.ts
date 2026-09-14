@@ -52,6 +52,7 @@ export const MDM_PROBLEM_STATUSES = [
   { code: "acute-complicated-or-systemic-symptoms", display: "Acute complicated / acute with systemic symptoms" },
   { code: "undiagnosed-new-problem-uncertain-prognosis", display: "Undiagnosed new problem with uncertain prognosis" },
   { code: "threat-to-life-or-bodily-function", display: "Acute or chronic threat to life or bodily function" },
+  { code: "not-addressed-no-mdm", display: "Not addressed today / No MDM" },
 ] as const;
 
 export type ConditionCategoryCode = (typeof CONDITION_CATEGORY_CODES)[number];

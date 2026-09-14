@@ -1,14 +1,14 @@
 {
   "resourceType": "CodeSystem",
   "url": "https://odos2020.com/fhir/CodeSystem/mdm-problem-status",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "name": "ODOSMdmProblemStatus",
   "title": "ODOS MDM Problem Status",
   "status": "active",
   "experimental": false,
-  "date": "2026-08-09",
+  "date": "2026-09-14",
   "publisher": "ODOS",
-  "description": "ODOS local codes for clinician-selected 2021 E/M problem categories.",
+  "description": "ODOS local codes for clinician-selected problem categories and explicit exclusion from the MDM problems axis.",
   "caseSensitive": true,
   "content": "complete",
   "concept": [
@@ -43,6 +43,10 @@
     {
       "code": "threat-to-life-or-bodily-function",
       "display": "Acute or chronic threat to life or bodily function"
+    },
+    {
+      "code": "not-addressed-no-mdm",
+      "display": "Not addressed today / No MDM"
     }
   ]
 }

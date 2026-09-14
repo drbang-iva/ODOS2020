@@ -18,6 +18,11 @@ export const DIAGNOSIS_VISIT_STATUSES = [
   "improved",
   "worsening",
   "resolved-this-visit",
+  "well-controlled",
+  "resolving",
+  "inadequately-controlled",
+  "unchanged",
+  "not-at-treatment-goal",
 ] as const;
 
 export type DiagnosisVisitStatus = (typeof DIAGNOSIS_VISIT_STATUSES)[number];

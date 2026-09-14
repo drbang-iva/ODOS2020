@@ -1,0 +1,98 @@
+TAP version 13
+# Subtest: MDM problem status canonical artifacts bind exactly the nine clinician choices
+not ok 1 - MDM problem status canonical artifacts bind exactly the nine clinician choices
+  ---
+  duration_ms: 2.748625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/v035b-ui-view.test.ts:1:8947'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      [
+        {
+          code: 'minimal-self-limited',
+          display: 'Minimal / self-limited'
+        },
+    ...
+        },
+    +   {
+    +     code: 'not-addressed-no-mdm',
+    +     display: 'Not addressed today / No MDM'
+    +   }
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      code: 'minimal-self-limited'
+      display: 'Minimal / self-limited'
+    1:
+      code: 'stable-chronic'
+      display: 'Stable chronic illness'
+    2:
+      code: 'chronic-exacerbation-progression'
+      display: 'Chronic illness with exacerbation / progression'
+    3:
+      code: 'chronic-severe-exacerbation'
+      display: 'Chronic illness with severe exacerbation'
+    4:
+      code: 'acute-uncomplicated'
+      display: 'Acute uncomplicated'
+    5:
+      code: 'acute-complicated-or-systemic-symptoms'
+      display: 'Acute complicated / acute with systemic symptoms'
+    6:
+      code: 'undiagnosed-new-problem-uncertain-prognosis'
+      display: 'Undiagnosed new problem with uncertain prognosis'
+    7:
+      code: 'threat-to-life-or-bodily-function'
+      display: 'Acute or chronic threat to life or bodily function'
+  actual:
+    0:
+      code: 'minimal-self-limited'
+      display: 'Minimal / self-limited'
+    1:
+      code: 'stable-chronic'
+      display: 'Stable chronic illness'
+    2:
+      code: 'chronic-exacerbation-progression'
+      display: 'Chronic illness with exacerbation / progression'
+    3:
+      code: 'chronic-severe-exacerbation'
+      display: 'Chronic illness with severe exacerbation'
+    4:
+      code: 'acute-uncomplicated'
+      display: 'Acute uncomplicated'
+    5:
+      code: 'acute-complicated-or-systemic-symptoms'
+      display: 'Acute complicated / acute with systemic symptoms'
+    6:
+      code: 'undiagnosed-new-problem-uncertain-prognosis'
+      display: 'Undiagnosed new problem with uncertain prognosis'
+    7:
+      code: 'threat-to-life-or-bodily-function'
+      display: 'Acute or chronic threat to life or bodily function'
+    8:
+      code: 'not-addressed-no-mdm'
+      display: 'Not addressed today / No MDM'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/v035b-ui-view.test.ts:263:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 102.964292

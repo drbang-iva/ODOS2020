@@ -1,3 +1,4 @@
+import { DIAGNOSIS_VISIT_STATUSES } from "./diagnosis-visit-status-store.js";
 import type { Basic, Bundle, CarePlan, Condition, Encounter, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
@@ -81,13 +82,7 @@ export interface ProtocolEndpointDeps {
   catalogs?: () => ProtocolCatalogs;
 }
 
-const diagnosisVisitStatusSchema = z.enum([
-  "new",
-  "stable",
-  "improved",
-  "worsening",
-  "resolved-this-visit",
-]);
+const diagnosisVisitStatusSchema = z.enum(DIAGNOSIS_VISIT_STATUSES);
 const diagnosesSchema = z.array(z.object({
   reference: z.string(),
   code: z.string(),
