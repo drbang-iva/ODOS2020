@@ -1,8 +1,8 @@
 {
   "mode": "author development capture; not final-head evaluation",
-  "startedAt": "2026-09-14T11:44:49.740Z",
+  "startedAt": "2026-09-14T12:19:28.938Z",
   "beforeSource": {
-    "head": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
+    "head": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
     "files": {
       "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
       "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
@@ -13,7 +13,7 @@
     }
   },
   "afterSource": {
-    "head": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
+    "head": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
     "files": {
       "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
       "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
@@ -652,8 +652,8 @@
   "checksFailed": 0,
   "auditRows": [
     {
-      "id": "34daed74-ba24-48ce-8082-dc63267ba96b",
-      "eventTime": "2026-09-14T11:44:53.094Z",
+      "id": "9eb6ec77-b8f5-4adf-bf2b-0f1eb8a8d68d",
+      "eventTime": "2026-09-14T12:19:32.415Z",
       "eventType": "search",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -661,11 +661,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:53.094Z"
+      "createdAt": "2026-09-14T12:19:32.415Z"
     },
     {
-      "id": "92e8e5fb-1431-4dc3-8209-ed7abd1af311",
-      "eventTime": "2026-09-14T11:44:53.076Z",
+      "id": "c23b887f-0f55-462c-a74b-6fa496d7b978",
+      "eventTime": "2026-09-14T12:19:32.370Z",
       "eventType": "search",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -673,11 +673,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:53.076Z"
+      "createdAt": "2026-09-14T12:19:32.370Z"
     },
     {
-      "id": "c171887d-8f17-485d-9efe-12acd996651c",
-      "eventTime": "2026-09-14T11:44:52.493Z",
+      "id": "53fc1edd-d97d-4039-bd73-88430c723528",
+      "eventTime": "2026-09-14T12:19:31.816Z",
       "eventType": "policy-change",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -686,11 +686,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:52.493Z"
+      "createdAt": "2026-09-14T12:19:31.816Z"
     },
     {
-      "id": "5179fad0-ea5c-4ca5-ba27-75c4c36a9a4b",
-      "eventTime": "2026-09-14T11:44:52.449Z",
+      "id": "073d4816-ce65-46db-9874-8462d15537ba",
+      "eventTime": "2026-09-14T12:19:31.795Z",
       "eventType": "policy-change",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -699,11 +699,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:52.449Z"
+      "createdAt": "2026-09-14T12:19:31.795Z"
     },
     {
-      "id": "65608fb3-958e-4faf-80df-1bf9feb7a1d4",
-      "eventTime": "2026-09-14T11:44:52.416Z",
+      "id": "361a8433-4264-4ece-be29-b169f1784c39",
+      "eventTime": "2026-09-14T12:19:31.770Z",
       "eventType": "search",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -711,11 +711,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:52.416Z"
+      "createdAt": "2026-09-14T12:19:31.770Z"
     },
     {
-      "id": "b04b1f93-8124-4043-9577-7b60338f6de0",
-      "eventTime": "2026-09-14T11:44:52.385Z",
+      "id": "e619ad17-2191-4cd2-a4e0-dc7d58342f00",
+      "eventTime": "2026-09-14T12:19:31.747Z",
       "eventType": "search",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -723,61 +723,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:52.385Z"
+      "createdAt": "2026-09-14T12:19:31.747Z"
     },
     {
-      "id": "b70869e4-b3cc-4abf-a4b9-8801313b6e30",
-      "eventTime": "2026-09-14T11:44:52.249Z",
-      "eventType": "policy-change",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "AccessPolicy",
-      "resourceId": "ca61bba9-d680-4ccb-b151-e44a6b587785",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:52.249Z"
-    },
-    {
-      "id": "3996533a-ca28-4bce-8434-591c0f0a3bf4",
-      "eventTime": "2026-09-14T11:44:52.229Z",
-      "eventType": "policy-change",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "AccessPolicy",
-      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:52.229Z"
-    },
-    {
-      "id": "d235a67f-6f09-4fe2-bec6-6b9c44bc51ea",
-      "eventTime": "2026-09-14T11:44:52.196Z",
-      "eventType": "search",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "ProjectMembership",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:52.196Z"
-    },
-    {
-      "id": "57a1da8e-07a5-4198-a6f3-8f8901ff444b",
-      "eventTime": "2026-09-14T11:44:52.171Z",
-      "eventType": "search",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "AccessPolicy",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:52.171Z"
-    },
-    {
-      "id": "fd213dc9-7ae0-4710-aabe-03874c55878f",
-      "eventTime": "2026-09-14T11:44:51.414Z",
+      "id": "4c589ba5-1238-4ac3-bf93-f5160382610a",
+      "eventTime": "2026-09-14T12:19:31.608Z",
       "eventType": "policy-change",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -786,11 +736,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:51.414Z"
+      "createdAt": "2026-09-14T12:19:31.608Z"
     },
     {
-      "id": "75bd9cc5-c59a-4b97-adf1-f6f330704f66",
-      "eventTime": "2026-09-14T11:44:51.391Z",
+      "id": "98efe32f-9793-4e4a-924d-756e3d0d07c7",
+      "eventTime": "2026-09-14T12:19:31.584Z",
       "eventType": "policy-change",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -799,11 +749,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:51.391Z"
+      "createdAt": "2026-09-14T12:19:31.584Z"
     },
     {
-      "id": "9baa0721-d04c-46d5-9478-10a0e51d0811",
-      "eventTime": "2026-09-14T11:44:51.357Z",
+      "id": "b92a6c00-315f-45d7-a54f-e6c98737fa92",
+      "eventTime": "2026-09-14T12:19:31.551Z",
       "eventType": "search",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -811,11 +761,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:51.357Z"
+      "createdAt": "2026-09-14T12:19:31.551Z"
     },
     {
-      "id": "fde93495-61e7-4206-88cc-8bb8057ad412",
-      "eventTime": "2026-09-14T11:44:51.339Z",
+      "id": "3f3cc5f9-34fb-4067-9413-1b96534025d2",
+      "eventTime": "2026-09-14T12:19:31.527Z",
       "eventType": "search",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -823,267 +773,24 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:51.339Z"
+      "createdAt": "2026-09-14T12:19:31.527Z"
     },
     {
-      "id": "05b9d99b-6b2c-445c-b008-93b2f306c0f0",
-      "eventTime": "2026-09-14T11:44:51.100Z",
-      "eventType": "read",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "Task",
-      "resourceId": "87f997ac-aa2a-4e34-83c0-cdc0d773f134",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:51.100Z"
-    },
-    {
-      "id": "e78f60d0-bc53-470c-9963-5ff90188fa1e",
-      "eventTime": "2026-09-14T11:44:51.086Z",
-      "eventType": "search",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "Person",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:51.086Z"
-    },
-    {
-      "id": "a8320e37-36fa-4a44-b0dc-c262e46f3e0b",
-      "eventTime": "2026-09-14T11:44:51.071Z",
-      "eventType": "read",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "patientId": "db62bb4b-5416-4ef1-9c94-2598f3c3bce3",
-      "resourceType": "Patient",
-      "resourceId": "db62bb4b-5416-4ef1-9c94-2598f3c3bce3",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:51.071Z"
-    },
-    {
-      "id": "3ab2fed6-57e6-47c9-adc6-95b6cf8702b7",
-      "eventTime": "2026-09-14T11:44:51.060Z",
-      "eventType": "read",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "RelatedPerson",
-      "resourceId": "7204b180-cfe0-4004-9903-66f1fe7cd2b2",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:51.060Z"
-    },
-    {
-      "id": "6d0a6035-14b7-4120-9e20-00fa677adce6",
-      "eventTime": "2026-09-14T11:44:51.048Z",
-      "eventType": "read",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "Person",
-      "resourceId": "d40697ba-cf7d-4a0f-8cf9-41a972660b88",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:51.048Z"
-    },
-    {
-      "id": "88c1e0bb-51ca-4e0a-9672-bf981394b69e",
-      "eventTime": "2026-09-14T11:44:51.037Z",
-      "eventType": "read",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "Person",
-      "resourceId": "2af1cfe6-a9e7-4709-92e5-6ab7f6669d01",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:51.037Z"
-    },
-    {
-      "id": "1dff0a2e-de39-44b0-b3b7-4b8a036411ef",
-      "eventTime": "2026-09-14T11:44:51.025Z",
-      "eventType": "read",
+      "id": "a71b192c-96c4-46b1-b271-fb135b8024cd",
+      "eventTime": "2026-09-14T12:19:30.595Z",
+      "eventType": "policy-change",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
       "resourceType": "AccessPolicy",
-      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "resourceId": "ca61bba9-d680-4ccb-b151-e44a6b587785",
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:51.025Z"
+      "createdAt": "2026-09-14T12:19:30.595Z"
     },
     {
-      "id": "36a6f64c-68d6-4bbd-bc54-602cec372bb4",
-      "eventTime": "2026-09-14T11:44:51.014Z",
-      "eventType": "search",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "ProjectMembership",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:51.014Z"
-    },
-    {
-      "id": "e9109639-e600-471a-a932-233f60af2657",
-      "eventTime": "2026-09-14T11:44:50.982Z",
-      "eventType": "read",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "Task",
-      "resourceId": "97ec970a-908d-4e40-a0bf-247362774026",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.982Z"
-    },
-    {
-      "id": "40eb1c3f-f34f-4324-b033-39d99a581452",
-      "eventTime": "2026-09-14T11:44:50.971Z",
-      "eventType": "search",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "Task",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.971Z"
-    },
-    {
-      "id": "91bd741e-3ee1-45c4-92ec-3697f6d46394",
-      "eventTime": "2026-09-14T11:44:50.960Z",
-      "eventType": "read",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "AccessPolicy",
-      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.960Z"
-    },
-    {
-      "id": "36f3557b-4fdd-4a55-b6d2-7101b242ad8c",
-      "eventTime": "2026-09-14T11:44:50.949Z",
-      "eventType": "search",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "ProjectMembership",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.949Z"
-    },
-    {
-      "id": "fac33b22-76bb-4b6d-8403-2f25435e7802",
-      "eventTime": "2026-09-14T11:44:50.931Z",
-      "eventType": "read",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "Task",
-      "resourceId": "97ec970a-908d-4e40-a0bf-247362774026",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.931Z"
-    },
-    {
-      "id": "a1df1e8c-1a09-4593-9eb3-72be42fe3ab5",
-      "eventTime": "2026-09-14T11:44:50.918Z",
-      "eventType": "search",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "Person",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.918Z"
-    },
-    {
-      "id": "87fc109b-c992-45b8-9d07-da4c0999aeac",
-      "eventTime": "2026-09-14T11:44:50.906Z",
-      "eventType": "read",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "patientId": "7fea3507-17ec-4b00-9618-c209d84aaed3",
-      "resourceType": "Patient",
-      "resourceId": "7fea3507-17ec-4b00-9618-c209d84aaed3",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.906Z"
-    },
-    {
-      "id": "4fe0679f-0e6c-4d8b-9a49-0acc7ceda2d6",
-      "eventTime": "2026-09-14T11:44:50.893Z",
-      "eventType": "read",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "RelatedPerson",
-      "resourceId": "4e65415c-69aa-4844-91f8-2492319b78f4",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.893Z"
-    },
-    {
-      "id": "8f5c45e7-da8a-44a9-ac71-a256286a2440",
-      "eventTime": "2026-09-14T11:44:50.882Z",
-      "eventType": "read",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "Person",
-      "resourceId": "2ebfdaef-3440-48ed-aaea-90f1387b2bf6",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.882Z"
-    },
-    {
-      "id": "630a194f-708f-4ec3-84b2-bb997b84d8bf",
-      "eventTime": "2026-09-14T11:44:50.870Z",
-      "eventType": "read",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "Person",
-      "resourceId": "82fbb15c-931d-4914-acd2-68465c03ebf6",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.870Z"
-    },
-    {
-      "id": "ce8026c0-30a9-4fe4-bf4b-68e49e824f76",
-      "eventTime": "2026-09-14T11:44:50.858Z",
-      "eventType": "read",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "AccessPolicy",
-      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.858Z"
-    },
-    {
-      "id": "0b96577b-80f2-4821-92cc-3b3d14ab1a12",
-      "eventTime": "2026-09-14T11:44:50.847Z",
-      "eventType": "search",
-      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
-      "actorRole": "system",
-      "resourceType": "ProjectMembership",
-      "actionOutcome": "granted",
-      "breakGlass": false,
-      "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.847Z"
-    },
-    {
-      "id": "a4cb1cb0-ad33-4e88-a71c-0a0b9a254705",
-      "eventTime": "2026-09-14T11:44:50.782Z",
+      "id": "be892b09-6943-494e-915c-8a86ca0705fa",
+      "eventTime": "2026-09-14T12:19:30.572Z",
       "eventType": "policy-change",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -1092,11 +799,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.782Z"
+      "createdAt": "2026-09-14T12:19:30.572Z"
     },
     {
-      "id": "f1c9b1eb-a2c1-420c-bec6-f7e9fcfdb26e",
-      "eventTime": "2026-09-14T11:44:50.749Z",
+      "id": "01f5d600-1741-4738-ba69-6b14e0d4b9f0",
+      "eventTime": "2026-09-14T12:19:30.542Z",
       "eventType": "search",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -1104,11 +811,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.749Z"
+      "createdAt": "2026-09-14T12:19:30.542Z"
     },
     {
-      "id": "517347f9-8c06-4acf-bd6b-db842510ae85",
-      "eventTime": "2026-09-14T11:44:50.733Z",
+      "id": "b8257239-1afb-40e3-a499-d07610684ee1",
+      "eventTime": "2026-09-14T12:19:30.522Z",
       "eventType": "search",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -1116,199 +823,492 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.733Z"
+      "createdAt": "2026-09-14T12:19:30.522Z"
     },
     {
-      "id": "99fb2a35-59d9-4770-acf6-9b2797fb4de4",
-      "eventTime": "2026-09-14T11:44:50.479Z",
+      "id": "9f3f449a-d4e3-49b4-aa67-f9335cbeda0a",
+      "eventTime": "2026-09-14T12:19:30.338Z",
       "eventType": "read",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
-      "patientId": "7fea3507-17ec-4b00-9618-c209d84aaed3",
-      "resourceType": "Patient",
-      "resourceId": "7fea3507-17ec-4b00-9618-c209d84aaed3",
+      "resourceType": "Task",
+      "resourceId": "04c43ba7-2faf-4e7d-a8fc-c53982421d18",
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.479Z"
+      "createdAt": "2026-09-14T12:19:30.338Z"
     },
     {
-      "id": "e5de4cba-23e0-4693-879b-c4ec627cb2c2",
-      "eventTime": "2026-09-14T11:44:50.464Z",
+      "id": "6cd3ffd1-9746-496c-80ba-d1a05eb0f0e8",
+      "eventTime": "2026-09-14T12:19:30.319Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.319Z"
+    },
+    {
+      "id": "ff96b4ab-0404-472b-b11a-3b63e04d0ab6",
+      "eventTime": "2026-09-14T12:19:30.304Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "patientId": "ef1d4b6f-7b44-4746-b3a7-200fdd3cec5d",
+      "resourceType": "Patient",
+      "resourceId": "ef1d4b6f-7b44-4746-b3a7-200fdd3cec5d",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.304Z"
+    },
+    {
+      "id": "ef421055-a31a-43cc-b3ac-e71e4ce98556",
+      "eventTime": "2026-09-14T12:19:30.290Z",
       "eventType": "read",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
       "resourceType": "RelatedPerson",
-      "resourceId": "4e65415c-69aa-4844-91f8-2492319b78f4",
+      "resourceId": "a329f4be-19ad-4678-a004-426a4ea2be2e",
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.464Z"
+      "createdAt": "2026-09-14T12:19:30.290Z"
     },
     {
-      "id": "9509ac44-f6ea-4c81-8999-ad61d4ae7984",
-      "eventTime": "2026-09-14T11:44:50.451Z",
+      "id": "a23bb32a-cbe8-4c1e-9dc5-982261d4c20e",
+      "eventTime": "2026-09-14T12:19:30.275Z",
       "eventType": "read",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
       "resourceType": "Person",
-      "resourceId": "2ebfdaef-3440-48ed-aaea-90f1387b2bf6",
+      "resourceId": "5de10f42-9d41-4f77-8b7c-3c0c842731d2",
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.451Z"
+      "createdAt": "2026-09-14T12:19:30.275Z"
     },
     {
-      "id": "b3d08155-c8e9-408f-860e-fc524111cc36",
-      "eventTime": "2026-09-14T11:44:50.441Z",
+      "id": "5eda638b-4d1c-48eb-9164-a060233fa2cd",
+      "eventTime": "2026-09-14T12:19:30.261Z",
       "eventType": "read",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
       "resourceType": "Person",
-      "resourceId": "82fbb15c-931d-4914-acd2-68465c03ebf6",
+      "resourceId": "12722221-d517-4d8e-9525-cd2498309781",
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.441Z"
+      "createdAt": "2026-09-14T12:19:30.261Z"
     },
     {
-      "id": "8c3ed784-6cc3-45b0-82fc-54aa14d6c0c6",
-      "eventTime": "2026-09-14T11:44:50.432Z",
+      "id": "9aacdf2b-a0e8-4c43-b8e4-74185d1dd5f6",
+      "eventTime": "2026-09-14T12:19:30.245Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.245Z"
+    },
+    {
+      "id": "f5c8012c-0cb5-4712-893e-28b1d8093cb3",
+      "eventTime": "2026-09-14T12:19:30.231Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "ProjectMembership",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.231Z"
+    },
+    {
+      "id": "542845bd-5643-45f0-910e-88fcfea67038",
+      "eventTime": "2026-09-14T12:19:30.197Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Task",
+      "resourceId": "309211f7-7ed4-47ab-8158-f6acea35049a",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.197Z"
+    },
+    {
+      "id": "9294cfe9-debe-4d40-b29e-477291da79b2",
+      "eventTime": "2026-09-14T12:19:30.182Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Task",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.182Z"
+    },
+    {
+      "id": "0c739069-5cc4-4407-ba77-9dd892f99f88",
+      "eventTime": "2026-09-14T12:19:30.170Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.170Z"
+    },
+    {
+      "id": "b591dcbd-c4b1-4673-84fd-fbbc9ee816d4",
+      "eventTime": "2026-09-14T12:19:30.161Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "ProjectMembership",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.161Z"
+    },
+    {
+      "id": "6fa8eb1c-f913-4bc5-815d-ca4c0481562e",
+      "eventTime": "2026-09-14T12:19:30.146Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Task",
+      "resourceId": "309211f7-7ed4-47ab-8158-f6acea35049a",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.146Z"
+    },
+    {
+      "id": "dae8ec31-7433-412e-ba15-bb6e557a6565",
+      "eventTime": "2026-09-14T12:19:30.135Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.135Z"
+    },
+    {
+      "id": "7a476aba-6beb-4b34-9543-a2e9a6869f61",
+      "eventTime": "2026-09-14T12:19:30.124Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "patientId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
+      "resourceType": "Patient",
+      "resourceId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.124Z"
+    },
+    {
+      "id": "85a10f42-ee0e-4f1a-a7cd-d46bf04b4d49",
+      "eventTime": "2026-09-14T12:19:30.111Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "RelatedPerson",
+      "resourceId": "6588592b-13d9-48b6-be1b-3b50e630606c",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.111Z"
+    },
+    {
+      "id": "92caf19f-32ca-4647-8a33-47bc0bc052b4",
+      "eventTime": "2026-09-14T12:19:30.100Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "resourceId": "af823f84-8d3b-44e3-b958-ef83cf80cb18",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.100Z"
+    },
+    {
+      "id": "c2c169a2-0ca2-40a6-827f-c2c668b1a578",
+      "eventTime": "2026-09-14T12:19:30.089Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "resourceId": "1b9cffb4-f6da-44ff-8dc4-eb58a16939c7",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.089Z"
+    },
+    {
+      "id": "7aefd583-6c3c-4717-9486-e05ce6fec679",
+      "eventTime": "2026-09-14T12:19:30.075Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.075Z"
+    },
+    {
+      "id": "35fed6df-75c4-4f31-b873-617306084df7",
+      "eventTime": "2026-09-14T12:19:30.063Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "ProjectMembership",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.063Z"
+    },
+    {
+      "id": "275d6bf2-842d-4f85-8325-6e45515de238",
+      "eventTime": "2026-09-14T12:19:30.004Z",
+      "eventType": "policy-change",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "resourceId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:30.004Z"
+    },
+    {
+      "id": "0f980b4e-f09c-447c-89e9-aa6037c9afd3",
+      "eventTime": "2026-09-14T12:19:29.969Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "ProjectMembership",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.969Z"
+    },
+    {
+      "id": "6ea24729-7eac-46ee-81b0-ef2b6601ce03",
+      "eventTime": "2026-09-14T12:19:29.933Z",
+      "eventType": "search",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "AccessPolicy",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.933Z"
+    },
+    {
+      "id": "81e46044-3079-4a5d-a115-a69d5078151d",
+      "eventTime": "2026-09-14T12:19:29.671Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "patientId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
+      "resourceType": "Patient",
+      "resourceId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.671Z"
+    },
+    {
+      "id": "ed099b35-8019-40b4-8f7d-07e42b0568d0",
+      "eventTime": "2026-09-14T12:19:29.661Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "RelatedPerson",
+      "resourceId": "6588592b-13d9-48b6-be1b-3b50e630606c",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.661Z"
+    },
+    {
+      "id": "110abbfd-cba6-4558-972d-e645e88350df",
+      "eventTime": "2026-09-14T12:19:29.651Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "resourceId": "af823f84-8d3b-44e3-b958-ef83cf80cb18",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.651Z"
+    },
+    {
+      "id": "8a8ca15e-ebe5-47ce-a40d-be119c3122d8",
+      "eventTime": "2026-09-14T12:19:29.643Z",
+      "eventType": "read",
+      "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
+      "actorRole": "system",
+      "resourceType": "Person",
+      "resourceId": "1b9cffb4-f6da-44ff-8dc4-eb58a16939c7",
+      "actionOutcome": "granted",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-14T12:19:29.643Z"
+    },
+    {
+      "id": "ecd9bca8-9af7-4c45-a36b-d7184793bf28",
+      "eventTime": "2026-09-14T12:19:29.635Z",
       "eventType": "guarantor.link.pending",
       "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
       "actorRole": "staff",
-      "patientId": "7fea3507-17ec-4b00-9618-c209d84aaed3",
+      "patientId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
       "resourceType": "Task",
-      "resourceId": "87f997ac-aa2a-4e34-83c0-cdc0d773f134",
+      "resourceId": "04c43ba7-2faf-4e7d-a8fc-c53982421d18",
       "actionOutcome": "granted",
-      "actionReason": "transfer Task/87f997ac-aa2a-4e34-83c0-cdc0d773f134 S=Person/82fbb15c-931d-4914-acd2-68465c03ebf6 D=Person/2ebfdaef-3440-48ed-aaea-90f1387b2bf6 phase=detach-pending target=Person/82fbb15c-931d-4914-acd2-68465c03ebf6; Synthetic L17 genuine operation proof",
+      "actionReason": "transfer Task/04c43ba7-2faf-4e7d-a8fc-c53982421d18 S=Person/1b9cffb4-f6da-44ff-8dc4-eb58a16939c7 D=Person/af823f84-8d3b-44e3-b958-ef83cf80cb18 phase=detach-pending target=Person/1b9cffb4-f6da-44ff-8dc4-eb58a16939c7; Synthetic L17 genuine operation proof",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.432Z"
+      "createdAt": "2026-09-14T12:19:29.635Z"
     },
     {
-      "id": "de0298bc-40a1-435c-882c-0a01ae1ee074",
-      "eventTime": "2026-09-14T11:44:50.411Z",
+      "id": "5fda76cb-f31d-4845-9186-2074fd2ce0d1",
+      "eventTime": "2026-09-14T12:19:29.620Z",
       "eventType": "transaction",
       "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
       "actorRole": "staff",
       "resourceType": "Task",
       "actionOutcome": "granted",
-      "actionReason": "guarantor.link detach-pending Task/87f997ac-aa2a-4e34-83c0-cdc0d773f134",
+      "actionReason": "guarantor.link detach-pending Task/04c43ba7-2faf-4e7d-a8fc-c53982421d18",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.411Z"
+      "createdAt": "2026-09-14T12:19:29.620Z"
     },
     {
-      "id": "ff7c49ab-d6da-47d1-812c-d9944ececf7a",
-      "eventTime": "2026-09-14T11:44:50.386Z",
+      "id": "f48f769e-a080-40da-8fa3-c293f3908e57",
+      "eventTime": "2026-09-14T12:19:29.601Z",
       "eventType": "transaction",
       "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
       "actorRole": "staff",
       "resourceType": "Task",
       "actionOutcome": "granted",
-      "actionReason": "guarantor.link detaching Task/87f997ac-aa2a-4e34-83c0-cdc0d773f134",
+      "actionReason": "guarantor.link detaching Task/04c43ba7-2faf-4e7d-a8fc-c53982421d18",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.386Z"
+      "createdAt": "2026-09-14T12:19:29.601Z"
     },
     {
-      "id": "4cb4a466-21d7-4de6-804b-796c956a54e1",
-      "eventTime": "2026-09-14T11:44:50.362Z",
+      "id": "38408b41-f7d9-46fd-bd8e-07001eb2daca",
+      "eventTime": "2026-09-14T12:19:29.583Z",
       "eventType": "read",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
       "resourceType": "Task",
-      "resourceId": "87f997ac-aa2a-4e34-83c0-cdc0d773f134",
+      "resourceId": "04c43ba7-2faf-4e7d-a8fc-c53982421d18",
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.362Z"
+      "createdAt": "2026-09-14T12:19:29.583Z"
     },
     {
-      "id": "59d3a92f-f7e8-4646-b242-dcdad39875f3",
-      "eventTime": "2026-09-14T11:44:50.328Z",
+      "id": "b344b38a-5d53-4ce1-8cd1-d4552c8b372b",
+      "eventTime": "2026-09-14T12:19:29.551Z",
       "eventType": "transaction",
       "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
       "actorRole": "staff",
       "resourceType": "Task",
       "actionOutcome": "granted",
-      "actionReason": "guarantor.link detaching Task/87f997ac-aa2a-4e34-83c0-cdc0d773f134",
+      "actionReason": "guarantor.link detaching Task/04c43ba7-2faf-4e7d-a8fc-c53982421d18",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.328Z"
+      "createdAt": "2026-09-14T12:19:29.551Z"
     },
     {
-      "id": "c4915ba7-c8ff-44e7-9917-a85325dad377",
-      "eventTime": "2026-09-14T11:44:50.312Z",
+      "id": "37af0edd-05e5-4742-a61a-464829a6c11e",
+      "eventTime": "2026-09-14T12:19:29.531Z",
       "eventType": "transaction",
       "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
       "actorRole": "staff",
       "resourceType": "Task",
       "actionOutcome": "granted",
-      "actionReason": "guarantor.link claiming Task/87f997ac-aa2a-4e34-83c0-cdc0d773f134",
+      "actionReason": "guarantor.link claiming Task/04c43ba7-2faf-4e7d-a8fc-c53982421d18",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.312Z"
+      "createdAt": "2026-09-14T12:19:29.531Z"
     },
     {
-      "id": "705c1cb2-8175-4c11-9142-2d92a6ba140e",
-      "eventTime": "2026-09-14T11:44:50.287Z",
+      "id": "2d1db46d-468f-44a9-b5c8-15143ba58bff",
+      "eventTime": "2026-09-14T12:19:29.514Z",
       "eventType": "read",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
       "resourceType": "Task",
-      "resourceId": "87f997ac-aa2a-4e34-83c0-cdc0d773f134",
+      "resourceId": "04c43ba7-2faf-4e7d-a8fc-c53982421d18",
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.287Z"
+      "createdAt": "2026-09-14T12:19:29.514Z"
     },
     {
-      "id": "96c1fc80-4b31-4fb4-8090-69acd3849b53",
-      "eventTime": "2026-09-14T11:44:50.244Z",
+      "id": "403d6568-69f0-485c-a6ac-b8b41d424ac1",
+      "eventTime": "2026-09-14T12:19:29.492Z",
       "eventType": "transaction",
       "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
       "actorRole": "staff",
-      "patientId": "7fea3507-17ec-4b00-9618-c209d84aaed3",
+      "patientId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
       "resourceType": "RelatedPerson",
       "actionOutcome": "granted",
-      "actionReason": "guarantor.link claiming RelatedPerson/4e65415c-69aa-4844-91f8-2492319b78f4",
+      "actionReason": "guarantor.link claiming RelatedPerson/6588592b-13d9-48b6-be1b-3b50e630606c",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.244Z"
+      "createdAt": "2026-09-14T12:19:29.492Z"
     },
     {
-      "id": "e70e9760-5696-4720-8b69-6593c28e6e44",
-      "eventTime": "2026-09-14T11:44:50.214Z",
+      "id": "a8ea97b1-d50e-4f36-9939-0fed4d24905e",
+      "eventTime": "2026-09-14T12:19:29.473Z",
       "eventType": "transaction",
       "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
       "actorRole": "staff",
       "resourceType": "Task",
       "actionOutcome": "granted",
-      "actionReason": "guarantor.link claiming Task/87f997ac-aa2a-4e34-83c0-cdc0d773f134",
+      "actionReason": "guarantor.link claiming Task/04c43ba7-2faf-4e7d-a8fc-c53982421d18",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.214Z"
+      "createdAt": "2026-09-14T12:19:29.473Z"
     },
     {
-      "id": "321527c6-ca8f-4239-829f-2bc6783aec87",
-      "eventTime": "2026-09-14T11:44:50.201Z",
+      "id": "18eb6acb-a287-4e49-9007-c03a3717538c",
+      "eventTime": "2026-09-14T12:19:29.463Z",
       "eventType": "guarantor.link.started",
       "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
       "actorRole": "staff",
-      "patientId": "7fea3507-17ec-4b00-9618-c209d84aaed3",
+      "patientId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
       "resourceType": "Task",
-      "resourceId": "87f997ac-aa2a-4e34-83c0-cdc0d773f134",
+      "resourceId": "04c43ba7-2faf-4e7d-a8fc-c53982421d18",
       "actionOutcome": "granted",
-      "actionReason": "transfer Task/87f997ac-aa2a-4e34-83c0-cdc0d773f134 S=Person/82fbb15c-931d-4914-acd2-68465c03ebf6 D=Person/2ebfdaef-3440-48ed-aaea-90f1387b2bf6 phase=claiming; Synthetic L17 genuine operation proof",
+      "actionReason": "transfer Task/04c43ba7-2faf-4e7d-a8fc-c53982421d18 S=Person/1b9cffb4-f6da-44ff-8dc4-eb58a16939c7 D=Person/af823f84-8d3b-44e3-b958-ef83cf80cb18 phase=claiming; Synthetic L17 genuine operation proof",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.201Z"
+      "createdAt": "2026-09-14T12:19:29.463Z"
     },
     {
-      "id": "777dcb0d-63ef-400f-a6c0-86018793399c",
-      "eventTime": "2026-09-14T11:44:50.181Z",
+      "id": "7a07504f-96ba-40b0-ad41-b70177c77e22",
+      "eventTime": "2026-09-14T12:19:29.444Z",
       "eventType": "transaction",
       "actorId": "7441ed22-0b27-4f23-bafa-d295dfbd621a",
       "actorRole": "staff",
@@ -1317,11 +1317,11 @@
       "actionReason": "guarantor.link record",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.181Z"
+      "createdAt": "2026-09-14T12:19:29.444Z"
     },
     {
-      "id": "32a7c2f3-f277-45cc-b825-61749c19b0b4",
-      "eventTime": "2026-09-14T11:44:50.165Z",
+      "id": "fddbd78a-75df-43e2-858a-d5d1421570df",
+      "eventTime": "2026-09-14T12:19:29.433Z",
       "eventType": "search",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -1329,64 +1329,64 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.165Z"
+      "createdAt": "2026-09-14T12:19:29.433Z"
     },
     {
-      "id": "a80e2b18-5b16-44ea-ad3e-456da6543638",
-      "eventTime": "2026-09-14T11:44:50.151Z",
+      "id": "17b202d5-0b5a-4918-9887-43a18c9b0cdc",
+      "eventTime": "2026-09-14T12:19:29.422Z",
       "eventType": "read",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
-      "patientId": "7fea3507-17ec-4b00-9618-c209d84aaed3",
+      "patientId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
       "resourceType": "Patient",
-      "resourceId": "7fea3507-17ec-4b00-9618-c209d84aaed3",
+      "resourceId": "f7858125-45ac-43b4-bc7b-cc4063989ae9",
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.151Z"
+      "createdAt": "2026-09-14T12:19:29.422Z"
     },
     {
-      "id": "feb1df47-9b3d-4230-a986-60a500a121e5",
-      "eventTime": "2026-09-14T11:44:50.139Z",
+      "id": "b7fd0b48-5e0b-4935-96f2-7ff216571a8b",
+      "eventTime": "2026-09-14T12:19:29.410Z",
       "eventType": "read",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
       "resourceType": "RelatedPerson",
-      "resourceId": "4e65415c-69aa-4844-91f8-2492319b78f4",
+      "resourceId": "6588592b-13d9-48b6-be1b-3b50e630606c",
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.139Z"
+      "createdAt": "2026-09-14T12:19:29.410Z"
     },
     {
-      "id": "9b7dedaf-b3df-4674-9b28-9ed7802e7b95",
-      "eventTime": "2026-09-14T11:44:50.128Z",
+      "id": "05f946b3-a09d-4b14-8ad6-f0c3e71e1cd9",
+      "eventTime": "2026-09-14T12:19:29.400Z",
       "eventType": "read",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
       "resourceType": "Person",
-      "resourceId": "2ebfdaef-3440-48ed-aaea-90f1387b2bf6",
+      "resourceId": "af823f84-8d3b-44e3-b958-ef83cf80cb18",
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.128Z"
+      "createdAt": "2026-09-14T12:19:29.400Z"
     },
     {
-      "id": "f2b015ee-7ce8-4a2c-9038-3805ffdb6030",
-      "eventTime": "2026-09-14T11:44:50.117Z",
+      "id": "cd79eea9-540e-408f-bd18-7798e9b83b14",
+      "eventTime": "2026-09-14T12:19:29.390Z",
       "eventType": "read",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
       "resourceType": "Person",
-      "resourceId": "82fbb15c-931d-4914-acd2-68465c03ebf6",
+      "resourceId": "1b9cffb4-f6da-44ff-8dc4-eb58a16939c7",
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.117Z"
+      "createdAt": "2026-09-14T12:19:29.390Z"
     },
     {
-      "id": "09ec6111-48a7-450b-9819-39f810838b96",
-      "eventTime": "2026-09-14T11:44:50.105Z",
+      "id": "7428726c-52a7-4d6c-ad33-4eb59839cece",
+      "eventTime": "2026-09-14T12:19:29.377Z",
       "eventType": "search",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -1394,11 +1394,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.105Z"
+      "createdAt": "2026-09-14T12:19:29.377Z"
     },
     {
-      "id": "8cadd191-fc51-431c-8a0b-4e9677f75046",
-      "eventTime": "2026-09-14T11:44:50.090Z",
+      "id": "e812ddaf-ff76-4854-a451-43cd02358d37",
+      "eventTime": "2026-09-14T12:19:29.362Z",
       "eventType": "read",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -1407,11 +1407,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.090Z"
+      "createdAt": "2026-09-14T12:19:29.362Z"
     },
     {
-      "id": "87714643-9c1d-4ed6-889d-5bf74b0304dd",
-      "eventTime": "2026-09-14T11:44:50.077Z",
+      "id": "36eafa3d-14dd-462a-a2ff-3b6f7607b685",
+      "eventTime": "2026-09-14T12:19:29.348Z",
       "eventType": "search",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -1419,11 +1419,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:50.077Z"
+      "createdAt": "2026-09-14T12:19:29.348Z"
     },
     {
-      "id": "26323c6d-2d2e-49cd-bb0d-7ce916a3c8e7",
-      "eventTime": "2026-09-14T11:44:49.946Z",
+      "id": "a2db3a28-d052-4008-b0c0-e0f821718784",
+      "eventTime": "2026-09-14T12:19:29.186Z",
       "eventType": "search",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -1431,11 +1431,11 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:49.946Z"
+      "createdAt": "2026-09-14T12:19:29.186Z"
     },
     {
-      "id": "2fcd99f7-e941-4c91-97a8-2cc3f06141b6",
-      "eventTime": "2026-09-14T11:44:49.789Z",
+      "id": "f5ecc374-ce92-442a-88eb-4c766131fd1d",
+      "eventTime": "2026-09-14T12:19:28.995Z",
       "eventType": "search",
       "actorId": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
       "actorRole": "system",
@@ -1443,7 +1443,7 @@
       "actionOutcome": "granted",
       "breakGlass": false,
       "ibActorClassification": "health-care-provider",
-      "createdAt": "2026-09-14T11:44:49.789Z"
+      "createdAt": "2026-09-14T12:19:28.995Z"
     }
   ],
   "restoreRuns": [
@@ -1477,7 +1477,7 @@
             "status": "match",
             "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
             "policyName": "ODOS Staff",
-            "versionId": "59cf75d5-0512-458a-ad0f-54e44280a593",
+            "versionId": "002c8c9b-68c6-4c2a-9c7e-6bbf9158d199",
             "missingRules": [],
             "unexpectedRules": []
           },
@@ -1502,7 +1502,7 @@
             "status": "match",
             "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
             "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
-            "versionId": "48b49e69-425d-4471-8ee8-076d861b0d4b",
+            "versionId": "83adae74-82ac-4992-9648-5e8d54e7de5e",
             "missingRules": [],
             "unexpectedRules": []
           }
@@ -1539,7 +1539,7 @@
             "status": "drift",
             "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
             "policyName": "ODOS Staff",
-            "versionId": "d528bc76-ca00-4644-8a5f-f4d8167be2ee",
+            "versionId": "e80a716b-85fb-455d-a96a-f26190e331bc",
             "missingRules": [
               {
                 "interaction": [
@@ -1587,7 +1587,7 @@
             "status": "match",
             "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
             "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
-            "versionId": "48b49e69-425d-4471-8ee8-076d861b0d4b",
+            "versionId": "83adae74-82ac-4992-9648-5e8d54e7de5e",
             "missingRules": [],
             "unexpectedRules": []
           }
@@ -1624,7 +1624,7 @@
             "status": "drift",
             "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
             "policyName": "ODOS Staff",
-            "versionId": "60ec6d67-50a4-40c4-9c32-961db5450adc",
+            "versionId": "4689e0e7-6dfd-413e-9842-3a350d297473",
             "missingRules": [
               {
                 "interaction": [
@@ -1672,7 +1672,7 @@
             "status": "drift",
             "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
             "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
-            "versionId": "989755a9-f666-47cb-a0b7-f360100d2a33",
+            "versionId": "4be1dcb5-d475-4883-bbfe-fae46742ba33",
             "missingRules": [
               {
                 "interaction": [
@@ -1749,7 +1749,7 @@
             "status": "drift",
             "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
             "policyName": "ODOS Staff",
-            "versionId": "0eea822d-83be-4ac9-a509-238f0d7f7f7f",
+            "versionId": "dd7a6972-ece1-41c5-9f33-bad6166bc7fc",
             "missingRules": [
               {
                 "interaction": [
@@ -1797,7 +1797,7 @@
             "status": "drift",
             "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
             "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
-            "versionId": "ddf16b08-da96-4a0c-bd5c-0c42c0aa71e1",
+            "versionId": "55d65761-9c87-4845-95e9-0c8dc7833d09",
             "missingRules": [
               {
                 "interaction": [
@@ -1874,7 +1874,7 @@
             "status": "drift",
             "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
             "policyName": "ODOS Staff",
-            "versionId": "f4303e5b-161c-483d-a45c-77bd9529fe7f",
+            "versionId": "4ba275a8-e797-47d7-a412-97546fd3ca5c",
             "missingRules": [
               {
                 "interaction": [
@@ -1928,7 +1928,7 @@
             "status": "drift",
             "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
             "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
-            "versionId": "1ac753e7-b0df-4bd1-9ea2-09a7aeeacfaa",
+            "versionId": "b0b0d689-d37a-46df-b877-cda5389c0e61",
             "missingRules": [
               {
                 "interaction": [
@@ -2017,7 +2017,7 @@
             "status": "match",
             "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
             "policyName": "ODOS Staff",
-            "versionId": "002c8c9b-68c6-4c2a-9c7e-6bbf9158d199",
+            "versionId": "3a934c4d-700b-47bc-b4d3-b8d3baab3c15",
             "missingRules": [],
             "unexpectedRules": []
           },
@@ -2042,7 +2042,7 @@
             "status": "match",
             "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
             "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
-            "versionId": "83adae74-82ac-4992-9648-5e8d54e7de5e",
+            "versionId": "b047a210-5de4-4166-aabd-4e461f4a286e",
             "missingRules": [],
             "unexpectedRules": []
           }

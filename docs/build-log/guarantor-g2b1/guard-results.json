@@ -1,6 +1,6 @@
 {
   "kind": "Author mutation evidence; not independent evaluation",
-  "sourceHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
+  "sourceHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
   "sourceSha256": {
     "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
     "mcp/src/authz/roles.ts": "afdd50b756f907121ccfeb965abdd72d8981739992c1d21f111d4568087cf114",
@@ -10,7 +10,8 @@
     "scripts/fhir-read-grant-check.ts": "ac8bec19ca4e5aed2f219cbbd7c53fa34b19da2bb85dd8f2c9493df384ce4bc3",
     "ui/src/lib/guarantor-editor.ts": "eb40f6bf0018d13590206e9278f92f38d5ca8fda961a6669d2d4162ccc69fb06",
     "ui/src/components/patient/ResponsiblePartiesControl.tsx": "3c9883c78a7a403ce376deb47f04ba610dc6851e7e251673959375a5c9f4ea80",
-    "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5"
+    "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
+    "ui/src/lib/guarantor-link-operations.ts": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de"
   },
   "controls": [
     {
@@ -3427,11 +3428,199 @@
         },
         "failingTests": []
       }
+    },
+    {
+      "lane": "editor-uuid",
+      "guard": "fallback-removed",
+      "source": "ui/src/lib/guarantor-link-operations.ts",
+      "sourceSha256": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+      "mutatedSha256": "d1b11446cad6fba2d7b14e0f69359006d82917bb5b4a1840c7bc5d8642948d36",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "Correct (sends fresh v4|keeps native)",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        }
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 2,
+          "pass": 1,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor-uuid",
+      "guard": "version-mask-removed",
+      "source": "ui/src/lib/guarantor-link-operations.ts",
+      "sourceSha256": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+      "mutatedSha256": "c4dda7e5ff57a598545289e69f2acafa4b3287667a372eb35eecb51969155ea5",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "Correct (sends fresh v4|keeps native)",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        }
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 2,
+          "pass": 1,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor-uuid",
+      "guard": "variant-mask-removed",
+      "source": "ui/src/lib/guarantor-link-operations.ts",
+      "sourceSha256": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+      "mutatedSha256": "3aba57c4d0876bd2f4ca0c3917b75ac8aef3ee11827c5820b95f5702d64d6bdc",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "Correct (sends fresh v4|keeps native)",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        }
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 2,
+          "pass": 1,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
+    },
+    {
+      "lane": "editor-uuid",
+      "guard": "native-preference-removed",
+      "source": "ui/src/lib/guarantor-link-operations.ts",
+      "sourceSha256": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+      "mutatedSha256": "cfb903a623d8e66c9335fccbb6716f989a53a1d91d1b3c47ebc28996a6f91369",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern",
+        "Correct (sends fresh v4|keeps native)",
+        "tests/guarantorLinkOperations.test.tsx"
+      ],
+      "green": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        }
+      },
+      "red": {
+        "exit": 1,
+        "counts": {
+          "tests": 2,
+          "pass": 1,
+          "fail": 1,
+          "skipped": 0
+        },
+        "failingTests": [
+          "S7: Correct keeps native randomUUID when available"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "counts": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0,
+          "skipped": 0
+        },
+        "failingTests": []
+      }
     }
   ],
   "policyEvidenceCommit": "d282472f",
   "editorEvidenceCommit": "e16b524e6402a6c333b8af459794b0387e4978e5",
-  "note": "Core controls ran at bc0569be; every mutated source file is byte-identical at the integrated head. S7 controls ran at the recorded contribution with byte-identical integrated UI files. Policy/audit/client/scanner contribution sources remain unchanged. Browser and live policy controls are separate.",
+  "note": "Core controls ran at bc0569be; every mutated source file is byte-identical at the integrated head. S7 controls ran at the recorded contribution with byte-identical integrated UI files. Policy/audit/client/scanner contribution sources remain unchanged. Browser and live policy controls are separate. UUID controls ran at the recorded contribution; its operation API helper and two appended tests match the integrated application. Existing editor/component and server bytes remain unchanged.",
   "contributionFileVerification": [
     {
       "source": "mcp/src/authz/roles.ts",
@@ -3468,11 +3657,18 @@
       "contributionCommit": "b54710c87efbca79159887e974d3217db14a9b57",
       "sha256": "3c9883c78a7a403ce376deb47f04ba610dc6851e7e251673959375a5c9f4ea80",
       "matches": true
+    },
+    {
+      "source": "ui/src/lib/guarantor-link-operations.ts",
+      "contributionCommit": "4bc9091d7849fb6c96e558d4c4bdd12c37f0a7cc",
+      "sha256": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+      "matches": true
     }
   ],
   "coreExecutionHead": "bc0569be",
   "outputNormalization": [
     "absolute task and mutation roots replaced with placeholders",
     "whitespace-only diagnostic lines blanked; raw outputs retained in ignored author logs"
-  ]
+  ],
+  "uuidEvidenceCommit": "5cbe81d8651b4bc34b6932bed41e26275e563666"
 }

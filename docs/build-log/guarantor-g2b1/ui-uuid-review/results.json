@@ -23,7 +23,7 @@
       "ui/tests/demographicsConcurrency.test.tsx"
     ]
   },
-  "targetedCommand": "node --import tsx --test --test-name-pattern Correct (sends fresh v4|keeps native) tests/guarantorLinkOperations.test.tsx",
+  "targetedCommand": "node --import tsx --test --test-name-pattern 'Correct (sends fresh v4|keeps native)' tests/guarantorLinkOperations.test.tsx",
   "beforeFix": {
     "exitCode": 1,
     "tests": 2,

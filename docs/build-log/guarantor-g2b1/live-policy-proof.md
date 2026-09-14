@@ -2,7 +2,7 @@
 
 Author development capture: **58 positive assertions passed, zero unexpected failures**. The unchanged guards produced **12 expected failing assertions** across three fixture-policy mutations. Each mutation also ran the captured HTTP results through the status guard in a separate Node process, which exited **1**. Restored-policy assertions passed afterward.
 
-Application source HEAD was `82fc66de6cb04f74bcbbe7805c7934c934f932e6`. `live-policy-proof.json` records each loaded service, route, policy, audit, sync and editor SHA-256; all source digests and the HEAD are unchanged before and after the capture. This integrated author proof is separate from independent evaluation.
+Application source HEAD was `3442140a0ef94e52e5bdb7fd4cb26ddabd47caec`. `live-policy-proof.json` records each loaded service, route, policy, audit, sync and editor SHA-256; all source digests and the HEAD are unchanged before and after the capture. This integrated author proof is separate from independent evaluation.
 
 | Case | Live observation |
 |---|---|

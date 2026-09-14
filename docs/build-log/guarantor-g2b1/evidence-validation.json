@@ -11,8 +11,8 @@
     "scannerCoverageClaimedForRuntime": false
   },
   "credentialScan": {
-    "filesBeforeThisReport": 79,
-    "knownSecretValues": 10,
+    "files": 93,
+    "knownSecretValues": 8,
     "matches": 0
   },
   "fixtureScannerAfterRename": {
@@ -22,5 +22,23 @@
     "pass": 1,
     "fail": 0,
     "skipped": 0
+  },
+  "latestRuntimeCapture": {
+    "sourceHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
+    "sha256": "e1fe5b35b28513e2e49a64d39fee34bcd039fa55dfc60492b098548b4bce6e1f",
+    "capturedAfterBrowser": true
+  },
+  "latestVerification": {
+    "applicationHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
+    "fixtureScanner": {
+      "command": "node --import ./mcp/node_modules/tsx/dist/loader.mjs --test mcp/tests/fixturePhiGuard.test.ts",
+      "exitCode": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "preflight": "0 warnings, 0 hard blocks",
+    "allRecordedSourceHashesMatch": true
   }
 }

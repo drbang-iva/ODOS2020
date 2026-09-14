@@ -1,5 +1,5 @@
 {
-  "sourceHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
+  "sourceHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
   "composeProject": "g2b1-build-live",
   "image": "medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de",
   "health": {
@@ -80,7 +80,7 @@
         "status": "match",
         "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
         "policyName": "ODOS Staff",
-        "versionId": "002c8c9b-68c6-4c2a-9c7e-6bbf9158d199",
+        "versionId": "3a934c4d-700b-47bc-b4d3-b8d3baab3c15",
         "missingRules": [],
         "unexpectedRules": []
       },
@@ -105,14 +105,14 @@
         "status": "match",
         "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
         "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
-        "versionId": "83adae74-82ac-4992-9648-5e8d54e7de5e",
+        "versionId": "b047a210-5de4-4166-aabd-4e461f4a286e",
         "missingRules": [],
         "unexpectedRules": []
       }
     ]
   },
   "source": {
-    "head": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
+    "head": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
     "files": {
       "mcp/src/clinic/guarantor-link-operation.ts": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
       "mcp/src/clinic/guarantor-routes.ts": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",

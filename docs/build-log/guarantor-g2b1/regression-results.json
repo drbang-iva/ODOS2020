@@ -1,5 +1,5 @@
 {
-  "applicationHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
+  "applicationHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
   "originMainRefreshed": "ddf6ba4a4f5e06efb13c59759d4941159fe49d0a",
   "scopeAnchorDiff": "empty from a13fc1ea to refreshed origin/main",
   "runs": [
@@ -61,7 +61,8 @@
         "<task-worktree>/mcp/tests/claimReadModelStore.test.ts",
         "education list reports dispatchability from the same per-role configuration enforced at send time"
       ],
-      "sha256": "5716df534293f334c9b42554edad5f9b19bf38c3fd5ff25fb7c0b007f74d1600"
+      "sha256": "5716df534293f334c9b42554edad5f9b19bf38c3fd5ff25fb7c0b007f74d1600",
+      "applicationHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6"
     },
     {
       "log": "final-ui",
@@ -73,7 +74,8 @@
         "skipped": 0
       },
       "failedTests": [],
-      "sha256": "d4af78f22b5e5f99ab3a3c01128e17b3984ed5847048f426018aea42baac2f8a"
+      "sha256": "d4af78f22b5e5f99ab3a3c01128e17b3984ed5847048f426018aea42baac2f8a",
+      "applicationHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6"
     },
     {
       "log": "final-ui-build",
@@ -134,6 +136,28 @@
       },
       "failedTests": [],
       "sha256": "ae5c94ed8637a85bb72f412e69cdbf25ec385a1ffa8de06377b994d73a4a16b7"
+    },
+    {
+      "log": "uuid-final-ui",
+      "applicationHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
+      "exitCode": 0,
+      "counts": {
+        "tests": 1500,
+        "pass": 1500,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "failedTests": [],
+      "sha256": "1ed14f450812c2a56db56d07d7051bcf95ea623f8029868b9d183b18702d9b97"
+    },
+    {
+      "log": "uuid-final-ui-build",
+      "applicationHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
+      "exitCode": 0,
+      "counts": {},
+      "failedTests": [],
+      "sha256": "63fbd3f9d9a7e962117a71cc94971a1aa28d4d0d385b56f68255c966f6f9a297"
     }
   ],
   "namedBaseline": [
@@ -427,19 +451,8 @@
     }
   ],
   "intermittentLocalHttpDisposition": "Two full runs had a fetch failed in different unchanged communications tests. Entire affected files passed separately: 43/43 and 99/99. Test and comms source diff from a13fc1ea is empty. Exact transport cause is unproven; no production or existing-test change was made. CI is a separate environment and must be inspected at final PR head.",
-  "ciAtPriorHead": {
-    "head": "df5d09b0418e4c116800bbf317f76585a84a4ef3",
-    "mcp": {
-      "tests": 4795,
-      "pass": 4742,
-      "fail": 6,
-      "skipped": 47
-    },
-    "failureDisposition": "Two inventory counts and four migration pins; no local PostgreSQL or HTTP transport failures in this CI run.",
-    "runUrl": "https://github.com/drbang-iva/ODOS2020/actions/runs/34837439526"
-  },
   "finalEvidenceChecks": {
-    "sourceMatchesApplicationHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
+    "sourceMatchesApplicationHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
     "fixtureScannerAfterRuntimeCaptureRename": {
       "tests": 1,
       "pass": 1,
@@ -447,11 +460,45 @@
       "skipped": 0
     },
     "credentialScan": {
-      "files": 79,
-      "secretValues": 10,
+      "files": 93,
+      "secretValues": 8,
       "matches": 0
     },
     "finalPreflight": "0 warnings, 0 hard blocks",
     "scopeNote": "The filename-based fixture scanner does not cover runtime captures. See evidence-validation.json."
-  }
+  },
+  "ciPriorHeads": [
+    {
+      "head": "df5d09b0418e4c116800bbf317f76585a84a4ef3",
+      "mcp": {
+        "tests": 4795,
+        "pass": 4742,
+        "fail": 6,
+        "skipped": 47
+      },
+      "failureDisposition": "Two inventory counts and four migration pins; no local PostgreSQL or HTTP transport failures in this CI run.",
+      "runUrl": "https://github.com/drbang-iva/ODOS2020/actions/runs/34837439526"
+    },
+    {
+      "head": "1d3bba39ee0b1fd5954f5e2aff67666bb79084c2",
+      "mcp": {
+        "tests": 4797,
+        "pass": 4744,
+        "fail": 6,
+        "skipped": 47
+      },
+      "failedTests": [
+        "live FHIR read grant check covers all four chart resources through compiled role policies",
+        "FHIR read grant CLI passes only with full coverage and always prints its limits",
+        "live audit boot backfills a restored pre-ledger schema without replaying it",
+        "live audit boot backfills a partially populated ledger without replaying legacy migrations",
+        "live audit boot applies a genuinely absent migration instead of marking it applied",
+        "live audit backfill leaves a NOT VALID migration for the normal loop"
+      ],
+      "failureDisposition": "Two inventory counts and four migration pins; no local PostgreSQL or HTTP transport failures.",
+      "runUrl": "https://github.com/drbang-iva/ODOS2020/actions/runs/34840825920",
+      "mcpJobUrl": "https://github.com/drbang-iva/ODOS2020/actions/runs/34840825920/job/103965287143",
+      "rawLogSha256": "7a79d51365423fd6c378c0a019e4cb7d4f959df8f392cca8c71edf8be6a26993"
+    }
+  ]
 }

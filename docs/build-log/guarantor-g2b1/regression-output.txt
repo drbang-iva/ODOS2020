@@ -544,3 +544,64 @@ ok 1 - fixture files contain only allowlisted synthetic identity values
 # skipped 0
 # todo 0
 # duration_ms 147.624792
+
+===== uuid-final-ui at 3442140a0ef94e52e5bdb7fd4cb26ddabd47caec =====
+  ---
+  duration_ms: 30.314875
+  type: 'test'
+  ...
+# Subtest: P2 history loading and read failure cannot turn missing values into a writable blank form
+ok 1486 - P2 history loading and read failure cannot turn missing values into a writable blank form
+  ---
+  duration_ms: 19.673166
+  type: 'test'
+  ...
+# Subtest: P2 a late previous-encounter response cannot replace the new encounter's Wearing values
+ok 1487 - P2 a late previous-encounter response cannot replace the new encounter's Wearing values
+  ---
+  duration_ms: 31.784916
+  type: 'test'
+  ...
+1..1487
+# tests 1500
+# suites 0
+# pass 1500
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 200923.153125
+
+===== uuid-final-ui-build at 3442140a0ef94e52e5bdb7fd4cb26ddabd47caec =====
+
+> odos-ui@0.2.0 build
+> tsc --noEmit --skipLibCheck && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 324 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/version.json                   0.16 kB │ gzip:   0.14 kB
+dist/index.html                     0.95 kB │ gzip:   0.56 kB
+dist/assets/index-MgzHian6.css    226.50 kB │ gzip:  38.17 kB
+dist/assets/index-BuRE9S-z.js   1,906.77 kB │ gzip: 514.67 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 4.96s
+
+===== CI at 1d3bba39ee0b1fd5954f5e2aff67666bb79084c2 =====
+https://github.com/drbang-iva/ODOS2020/actions/runs/34840825920/job/103965287143
+mcp — install + typecheck + tests	run mcp tests	2026-09-14T12:01:15.5169343Z not ok 72 - live FHIR read grant check covers all four chart resources through compiled role policies
+mcp — install + typecheck + tests	run mcp tests	2026-09-14T12:01:15.5222096Z not ok 73 - FHIR read grant CLI passes only with full coverage and always prints its limits
+mcp — install + typecheck + tests	run mcp tests	2026-09-14T12:02:37.1671969Z not ok 2556 - live audit boot backfills a restored pre-ledger schema without replaying it
+mcp — install + typecheck + tests	run mcp tests	2026-09-14T12:02:38.7642785Z not ok 2557 - live audit boot backfills a partially populated ledger without replaying legacy migrations
+mcp — install + typecheck + tests	run mcp tests	2026-09-14T12:02:40.7188135Z not ok 2558 - live audit boot applies a genuinely absent migration instead of marking it applied
+mcp — install + typecheck + tests	run mcp tests	2026-09-14T12:02:42.3465289Z not ok 2559 - live audit backfill leaves a NOT VALID migration for the normal loop
+mcp — install + typecheck + tests	run mcp tests	2026-09-14T12:03:23.9941115Z # tests 4797
+mcp — install + typecheck + tests	run mcp tests	2026-09-14T12:03:23.9941618Z # pass 4744
+mcp — install + typecheck + tests	run mcp tests	2026-09-14T12:03:23.9941878Z # fail 6
+mcp — install + typecheck + tests	run mcp tests	2026-09-14T12:03:23.9942359Z # skipped 47

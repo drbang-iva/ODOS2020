@@ -2,7 +2,7 @@
 
 Author development evidence: **115 assertions passed, 0 failed** across 13 real HTTP schedules. The capture contains **2025 HTTP exchanges**, 297 application transaction calls, and 833 persisted audit rows, including 39 guarantor-operation rows. It is not an independent evaluation or a final-head release verdict.
 
-The application source HEAD was `82fc66de6cb04f74bcbbe7805c7934c934f932e6`. Its operation implementation SHA-256 was `c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab`. All six recorded implementation digests and the HEAD match before and after the capture.
+The application source HEAD was `3442140a0ef94e52e5bdb7fd4cb26ddabd47caec`. Its operation implementation SHA-256 was `c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab`. All six recorded implementation digests and the HEAD match before and after the capture.
 
 | Schedule | Scenario assertions | HTTP exchanges | Operation audit rows |
 |---|---:|---:|---:|

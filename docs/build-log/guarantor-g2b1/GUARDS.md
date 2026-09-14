@@ -1,6 +1,6 @@
 # G-2b-1 guard evidence
 
-Author proof at application head `82fc66de6cb04f74bcbbe7805c7934c934f932e6`. All 81 local controls below were green, red after the named mutation, and green after restoration. Detailed counts, source hashes and failures are in [guard-results.json](guard-results.json); actual command output is in [guard-transcripts.txt](guard-transcripts.txt). The core runner is [mutate-guards.py](mutate-guards.py), which changes only its disposable source copy. [UI review evidence](ui-review/README.md) retains the two additional regressions and three controls.
+Author proof at application head `3442140a0ef94e52e5bdb7fd4cb26ddabd47caec`. All 85 local controls below were green, red after the named mutation, and green after restoration. Detailed counts, source hashes and failures are in [guard-results.json](guard-results.json); actual command output is in [guard-transcripts.txt](guard-transcripts.txt). The core runner is [mutate-guards.py](mutate-guards.py), which changes only its disposable source copy. [UI review evidence](ui-review/README.md) retains the two additional regressions and three controls. [UUID compatibility evidence](ui-uuid-review/README.md) adds two regressions and four removal controls.
 
 Browser controls and actual policy-engine controls are separate: [browser/browser-mutations.json](browser/browser-mutations.json), [live-policy-proof.md](live-policy-proof.md). Neither a fake FHIR store nor a green unit suite is presented as policy or route proof.
 
@@ -87,6 +87,11 @@ Browser controls and actual policy-engine controls are separate: [browser/browse
 | editor / review-matching-claim-shortcut | 0 / 1 / 0 | S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling |
 | editor / review-draft-task-reset | 0 / 1 / 0 | S7: a correction reason survives same-Task refusal and clears when another Task takes over |
 | editor / review-draft-same-task-preservation | 0 / 1 / 0 | S7: a correction reason survives same-Task refusal and clears when another Task takes over |
+
+| editor-uuid / fallback-removed | 0 / 1 / 0 | S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable |
+| editor-uuid / version-mask-removed | 0 / 1 / 0 | S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable |
+| editor-uuid / variant-mask-removed | 0 / 1 / 0 | S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable |
+| editor-uuid / native-preference-removed | 0 / 1 / 0 | S7: Correct keeps native randomUUID when available |
 
 ## Contract cases and limits
 
