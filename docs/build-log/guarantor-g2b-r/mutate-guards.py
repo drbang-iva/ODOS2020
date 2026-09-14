@@ -25,10 +25,11 @@ def run_case(label, state, package, pattern):
     test_file = 'tests/guarantorOwnedRecovery.test.ts' if package == 'mcp' else 'tests/guarantorRecoveryHistory.test.tsx'
     command = ['node', '--import', 'tsx', '--test', '--test-name-pattern=' + pattern, test_file]
     result = subprocess.run(command, cwd=root / package, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    (evidence / f'{label}-{state}.tap').write_text(result.stdout)
+    output = result.stdout.replace('file://' + str(root) + '/', '').replace(str(root) + '/', '')
+    (evidence / f'{label}-{state}.tap').write_text(output)
     return {'command': command, 'cwd': package, 'exitCode': result.returncode,
-            'counts': dict(re.findall(r'^# (tests|pass|fail|skipped) (\d+)$', result.stdout, re.M)),
-            'failingTests': re.findall(r'^not ok \d+ - (.*)$', result.stdout, re.M)}
+            'counts': dict(re.findall(r'^# (tests|pass|fail|skipped) (\d+)$', output, re.M)),
+            'failingTests': re.findall(r'^not ok \d+ - (.*)$', output, re.M)}
 
 for label, path, before, after, package, pattern in cases:
     original = path.read_text()

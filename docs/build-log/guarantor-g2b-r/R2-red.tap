@@ -4,7 +4,7 @@ not ok 1 - R2 X2: lost correction release followed by transfer B completes witho
   ---
   duration_ms: 17.961667
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:1:2949'
+  location: 'mcp/tests/guarantorOwnedRecovery.test.ts:1:2949'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - R2 X2: lost correction release followed by transfer B completes witho
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:74:10)
+    TestContext.<anonymous> (mcp/tests/guarantorOwnedRecovery.test.ts:74:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

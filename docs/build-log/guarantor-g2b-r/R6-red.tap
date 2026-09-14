@@ -4,7 +4,7 @@ not ok 1 - R6: second Undo of completed original refuses without a write or a Ta
   ---
   duration_ms: 14.594583
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:1:10101'
+  location: 'mcp/tests/guarantorOwnedRecovery.test.ts:1:10101'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -19,7 +19,7 @@ not ok 1 - R6: second Undo of completed original refuses without a write or a Ta
   actual: 'Pending: Complete or Correct.'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:187:10)
+    TestContext.<anonymous> (mcp/tests/guarantorOwnedRecovery.test.ts:187:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -29,7 +29,7 @@ not ok 2 - R6: second Undo of pending original refuses without a write or a Task
   ---
   duration_ms: 3.293417
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:1:10101'
+  location: 'mcp/tests/guarantorOwnedRecovery.test.ts:1:10101'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -44,7 +44,7 @@ not ok 2 - R6: second Undo of pending original refuses without a write or a Task
   actual: 'Pending: Complete or Correct.'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:187:10)
+    TestContext.<anonymous> (mcp/tests/guarantorOwnedRecovery.test.ts:187:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

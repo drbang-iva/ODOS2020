@@ -4,7 +4,7 @@ not ok 1 - R5: each phase hashes its owned fields and ignores non-owned changes
   ---
   duration_ms: 1.852458
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:1:6043'
+  location: 'mcp/tests/guarantorOwnedRecovery.test.ts:1:6043'
   failureType: 'testCodeFailure'
   error: 'detaching: active'
   code: 'ERR_ASSERTION'
@@ -13,7 +13,7 @@ not ok 1 - R5: each phase hashes its owned fields and ignores non-owned changes
   actual: 'b16ea12dca04b65e2c5559c23f647f038323ca0013586fdaa2b71e6d456f3048'
   operator: 'notStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:134:12)
+    TestContext.<anonymous> (mcp/tests/guarantorOwnedRecovery.test.ts:134:12)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.start (node:internal/test_runner/test:944:17)

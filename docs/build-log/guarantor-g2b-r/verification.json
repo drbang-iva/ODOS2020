@@ -31,7 +31,7 @@
     "reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth",
     "an older per-claim upsert cannot overwrite a newer completed rebuild",
     "an older rebuild snapshot fails loudly without publishing incomplete FHIR truth",
-    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/claimReadModelStore.test.ts"
+    "mcp/tests/claimReadModelStore.test.ts"
   ],
   "finalFailures": [
     "rebuild is atomic and server-side worklist grouping returns honest untouched facts",
@@ -39,7 +39,7 @@
     "reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth",
     "an older per-claim upsert cannot overwrite a newer completed rebuild",
     "an older rebuild snapshot fails loudly without publishing incomplete FHIR truth",
-    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/claimReadModelStore.test.ts"
+    "mcp/tests/claimReadModelStore.test.ts"
   ],
   "liveAssertions": 80,
   "mutationControls": 7,

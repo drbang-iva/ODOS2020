@@ -4,7 +4,7 @@ not ok 1 - R1 X1: lost correction detach followed by a staff rename completes wi
   ---
   duration_ms: 16.36325
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:1:1861'
+  location: 'mcp/tests/guarantorOwnedRecovery.test.ts:1:1861'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - R1 X1: lost correction detach followed by a staff rename completes wi
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.test.ts:53:10)
+    TestContext.<anonymous> (mcp/tests/guarantorOwnedRecovery.test.ts:53:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

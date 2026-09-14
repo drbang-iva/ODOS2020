@@ -4,7 +4,7 @@ not ok 1 - R6 UI: history hides Undo when correctionInProgress is true
   ---
   duration_ms: 14.994458
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/ui/tests/guarantorRecoveryHistory.test.tsx:1:264'
+  location: 'ui/tests/guarantorRecoveryHistory.test.tsx:1:264'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - R6 UI: history hides Undo when correctionInProgress is true
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/ui/tests/guarantorRecoveryHistory.test.tsx:22:12)
+    TestContext.<anonymous> (ui/tests/guarantorRecoveryHistory.test.tsx:22:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

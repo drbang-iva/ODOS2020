@@ -50,7 +50,7 @@ R1's mutant retains the claim and reports interference. R2's mutant leaves A com
 
 Raw per-control files are `<guard>-green.tap`, `<guard>-red.tap`, and `<guard>-restored.tap`.
 
-Large raw captures and full-suite transcripts are stored losslessly as `.gz` files so the PR diff stays reviewable. [evidence-archives.json](evidence-archives.json) records original sizes and hashes; `gzip -dc <file.gz>` prints the original bytes. Small red/green guard outputs remain directly readable.
+Large captures and full-suite transcripts are stored losslessly as `.gz` files so the PR diff stays reviewable. Workstation prefixes in the published transcripts were replaced with repository-relative paths after capture; assertions, failure names, timing, and counts are unchanged. [evidence-archives.json](evidence-archives.json) records the sanitized uncompressed sizes and hashes; `gzip -dc <file.gz>` prints those bytes. Small red/green guard outputs remain directly readable. The original captures remain in the ignored local fixture directory. The mutation runner applies the same path sanitization to future output.
 
 ## Regression results
 
@@ -100,6 +100,8 @@ Reproduction entrypoints: `live-proof.mjs fixture <action>`, `G2BR_PROOF_SOURCE=
 After a **lost release reply**, `completed` means the child was verified before release and this Task's claim is gone. “Released on exactly the verified version” is promised only when the release reply was received. Verification itself is unchanged.
 
 Legacy intents without `ownedHash` deliberately keep the previous behavior, including their interference outcome. The ruling's residual Person `active` flip and raw-API claim-strip cases remain; neither has an ODOS screen. `active` policy fencing is a later policy slice. Simultaneous corrections are not made atomic by this read-before-create admission check. History is still the existing bounded page; the server admission check is authoritative even when a pending correction is outside that page.
+
+CodeRabbit's atomic-admission finding is a valid residual, deferred to the contract owner: two requests can both search before either correction Task exists. The accepted ruling explicitly carries simultaneous corrections outside its executed matrix; this slice's R6 requirement is refusal when a trusted in-progress correction already exists. Reserving the original Task would add a write/reservation and recovery protocol beyond that bounded change. No atomic-admission guarantee is claimed. CodeRabbit's workstation-path findings were corrected in the published evidence. Its generic docstring warning is not adopted: repository style defaults to no comments unless the reason is non-obvious, and no behavior changed for that warning.
 
 All three **own fixture containers were stopped, not removed**, with exit 0; see [fixture-final-state.txt](fixture-final-state.txt). Browser/proof servers were stopped and temporary browser fixture files removed. Other stacks were not changed. Worktrees and disposable fixture data are retained.
 

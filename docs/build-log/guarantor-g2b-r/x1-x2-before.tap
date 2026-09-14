@@ -8,7 +8,7 @@ not ok 1 - R1 X1: lost correction detach followed by a staff rename completes wi
   ---
   duration_ms: 14.558375
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.probe.ts:1:1776'
+  location: 'mcp/tests/guarantorOwnedRecovery.probe.ts:1:1776'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -21,7 +21,7 @@ not ok 1 - R1 X1: lost correction detach followed by a staff rename completes wi
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.probe.ts:52:10)
+    TestContext.<anonymous> (mcp/tests/guarantorOwnedRecovery.probe.ts:52:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -31,7 +31,7 @@ not ok 2 - R2 X2: lost correction release followed by transfer B completes witho
   ---
   duration_ms: 6.74925
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.probe.ts:1:2864'
+  location: 'mcp/tests/guarantorOwnedRecovery.probe.ts:1:2864'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -44,7 +44,7 @@ not ok 2 - R2 X2: lost correction release followed by transfer B completes witho
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b-r/mcp/tests/guarantorOwnedRecovery.probe.ts:73:10)
+    TestContext.<anonymous> (mcp/tests/guarantorOwnedRecovery.probe.ts:73:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
