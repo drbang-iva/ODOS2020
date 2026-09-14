@@ -1,30 +1,13 @@
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import type {
   ClinicalGraphProvenance,
   DiagnosisCatalogRow,
   DiagnosisIcd10,
 } from "./glaucoma-suspect.js";
-
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
-const GLAUCOMA_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/glaucoma-suspect-phase0-ledger.json");
-const REFRACTIVE_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/refractive-error-phase0-ledger.json");
-const OCULAR_HEALTH_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/ocular-health-phase0-ledger.json");
-const DIABETIC_RETINOPATHY_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/diabetic-retinopathy-phase0-ledger.json");
-const TYPE_2_DIABETES_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/type-2-diabetes-phase0-ledger.json");
-const TYPE_1_DIABETIC_RETINOPATHY_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/type-1-diabetic-retinopathy-phase0-ledger.json");
-const DIPLOPIA_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/diplopia-phase0-ledger.json");
-const VISUAL_FIELD_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/visual-field-phase0-ledger.json");
-const LENS_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/lens-phase0-ledger.json");
-
-interface LedgerRow {
-  code: string;
-  display: string;
-  family: string;
-  laterality: string;
-  sourceRefs: string[];
-}
+import {
+  DIAGNOSIS_CODE_LEDGER_PATHS,
+  loadDiagnosisCodeLedger,
+  type DiagnosisCodeLedgerRow as LedgerRow,
+} from "./diagnosis-code-ledgers.js";
 
 export type FamilyResolutionMode =
   | {
@@ -150,15 +133,15 @@ function buildSeeds(): DiagnosisCatalogRow[] {
     recordedAt: new Date(0).toISOString(),
     actorReference: "Practitioner/odos-system",
   };
-  const glaucoma = loadLedger(GLAUCOMA_LEDGER_PATH);
-  const refractive = loadLedger(REFRACTIVE_LEDGER_PATH);
-  const ocularHealth = loadLedger(OCULAR_HEALTH_LEDGER_PATH);
-  const diabeticRetinopathy = loadLedger(DIABETIC_RETINOPATHY_LEDGER_PATH);
-  const type2Diabetes = loadLedger(TYPE_2_DIABETES_LEDGER_PATH);
-  const type1DiabeticRetinopathy = loadLedger(TYPE_1_DIABETIC_RETINOPATHY_LEDGER_PATH);
-  const diplopia = loadLedger(DIPLOPIA_LEDGER_PATH);
-  const visualField = loadLedger(VISUAL_FIELD_LEDGER_PATH);
-  const lens = loadLedger(LENS_LEDGER_PATH);
+  const glaucoma = loadDiagnosisCodeLedger(DIAGNOSIS_CODE_LEDGER_PATHS.glaucomaSuspect);
+  const refractive = loadDiagnosisCodeLedger(DIAGNOSIS_CODE_LEDGER_PATHS.refractiveError);
+  const ocularHealth = loadDiagnosisCodeLedger(DIAGNOSIS_CODE_LEDGER_PATHS.ocularHealth);
+  const diabeticRetinopathy = loadDiagnosisCodeLedger(DIAGNOSIS_CODE_LEDGER_PATHS.diabeticRetinopathy);
+  const type2Diabetes = loadDiagnosisCodeLedger(DIAGNOSIS_CODE_LEDGER_PATHS.type2Diabetes);
+  const type1DiabeticRetinopathy = loadDiagnosisCodeLedger(DIAGNOSIS_CODE_LEDGER_PATHS.type1DiabeticRetinopathy);
+  const diplopia = loadDiagnosisCodeLedger(DIAGNOSIS_CODE_LEDGER_PATHS.diplopia);
+  const visualField = loadDiagnosisCodeLedger(DIAGNOSIS_CODE_LEDGER_PATHS.visualField);
+  const lens = loadDiagnosisCodeLedger(DIAGNOSIS_CODE_LEDGER_PATHS.lens);
   const seeds = [
     familySeed("glaucoma_suspect_open_angle_low", "Open angle with borderline findings, low risk", "glaucoma-suspect", "H40.01-", glaucoma, provenance),
     familySeed("glaucoma_suspect_open_angle_high", "Open angle with borderline findings, high risk", "glaucoma-suspect", "H40.02-", glaucoma, provenance),
@@ -297,12 +280,6 @@ function buildSeeds(): DiagnosisCatalogRow[] {
   ];
   validateFamilyResolutionModes(seeds);
   return seeds;
-}
-
-function loadLedger(path: string): LedgerRow[] {
-  const parsed = JSON.parse(readFileSync(path, "utf8")) as { diagnosisCodes?: LedgerRow[] };
-  if (!Array.isArray(parsed.diagnosisCodes)) throw new Error(`Diagnosis ledger ${path} has no diagnosisCodes array.`);
-  return parsed.diagnosisCodes;
 }
 
 function familySeed(
