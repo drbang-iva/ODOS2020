@@ -19,9 +19,9 @@ not ok 1 - G1 Common returns 20 eligible usage rows
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     15 !== 20
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 20
@@ -80,7 +80,7 @@ not ok 1 - G2 first pick receives all starter pins in order and preserves usage
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'astigmatism',
@@ -98,7 +98,7 @@ not ok 1 - G2 first pick receives all starter pins in order and preserves usage
     -   'macular_drusen',
     -   'optic_disc_drusen'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -171,7 +171,7 @@ not ok 1 - G3 pre-pin storage receives starter and preserves usage
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'astigmatism',
@@ -189,7 +189,7 @@ not ok 1 - G3 pre-pin storage receives starter and preserves usage
     -   'macular_drusen',
     -   'optic_disc_drusen'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -267,7 +267,7 @@ not ok 1 - G4 saved empty pins survive repeated reads and later picks
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'astigmatism',
     +   'myopia',
@@ -285,7 +285,7 @@ not ok 1 - G4 saved empty pins survive repeated reads and later picks
     +   'optic_disc_drusen'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -358,7 +358,7 @@ not ok 1 - G5 doctor pins remain unchanged in doctor order
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
         'presbyopia',
         'myopia',
@@ -376,7 +376,7 @@ not ok 1 - G5 doctor pins remain unchanged in doctor order
     +   'macular_drusen',
     +   'optic_disc_drusen'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -451,9 +451,9 @@ not ok 1 - G6 chart reader causes no seed write for missing or unset records
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0
@@ -517,7 +517,7 @@ not ok 1 - G7 ambiguous legacy empty pins are preserved across reads and picks
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'astigmatism',
     +   'myopia',
@@ -535,7 +535,7 @@ not ok 1 - G7 ambiguous legacy empty pins are preserved across reads and picks
     +   'optic_disc_drusen'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -607,9 +607,9 @@ not ok 1 - G8 operator dry run lists every ambiguous tally without writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     4 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -668,7 +668,7 @@ not ok 1 - G9 operator apply seeds only ambiguous empties and is idempotent
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
         'Practitioner/ambiguous',
     +   'Practitioner/legacy-pins',
@@ -676,7 +676,7 @@ not ok 1 - G9 operator apply seeds only ambiguous empties and is idempotent
     +   'Practitioner/seeded',
     +   'Practitioner/unset'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -856,7 +856,7 @@ not ok 1 - empty save records custom intent when a first pick wins conditional c
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'astigmatism',
     +   'myopia',
@@ -874,7 +874,7 @@ not ok 1 - empty save records custom intent when a first pick wins conditional c
     +   'optic_disc_drusen'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
