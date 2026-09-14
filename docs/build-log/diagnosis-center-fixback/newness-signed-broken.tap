@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: diagnosis status controls: finished
+not ok 1 - diagnosis status controls: finished
+  ---
+  duration_ms: 38.791708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisWorkspace.test.tsx:1:71162'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+
+      assert.ok(buttons.every((button) => button.props.disabled === true))
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisWorkspace.test.tsx:1925:16)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 265.953333

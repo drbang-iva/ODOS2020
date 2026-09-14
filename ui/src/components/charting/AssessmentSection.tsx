@@ -25,6 +25,9 @@ import {
   clinicalGraphApiBase,
   procedureChargeApi,
   readDiagnosisVisitStatuses,
+  readDiagnosisNewness,
+  diagnosisProtocolVisitStatus,
+  type DiagnosisNewnessRow,
   submitDiagnosisPick,
   updateDiagnosisOrder,
   type AttachedProcedure,
@@ -33,6 +36,7 @@ import {
 } from "../../lib/clinical-graph-client";
 import { ODOS_EXTENSION_URLS } from "../../lib/fhir-ophthalmology/extensions";
 import {
+  encounterDiagnosisProblemStatus,
   MDM_PROBLEM_STATUSES,
   type MdmProblemStatus,
 } from "../../lib/fhir-clinical/condition";
@@ -69,6 +73,7 @@ interface Props {
   encounterReference: string;
   onSaved: (status: SectionSaveStatus) => void;
   onRefer?: () => void;
+  onOpenDiagnosis?: (reference: string) => void;
   onEngageDiagnosis?: (diagnosis: { reference: string; code: string; display: string }) => void;
 }
 
@@ -112,13 +117,15 @@ const INITIAL_FORM: FormState = {
 const INPUT_CLASS = "h-10 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none transition placeholder:text-[color:var(--odos-faint)] focus:border-[color:var(--odos-accent-border)]";
 const BUTTON_CLASS = "rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-hi)] px-3 py-2 text-sm font-semibold text-[color:var(--odos-text)] outline-none transition hover:bg-[color:var(--odos-accent-tint-lo)] focus-visible:ring-2 focus-visible:ring-[color:var(--odos-accent-border)] disabled:cursor-not-allowed disabled:opacity-50";
 
-export function AssessmentSection({ patientReference, encounterReference, onSaved, onRefer, onEngageDiagnosis }: Props) {
+export function AssessmentSection({ patientReference, encounterReference, onSaved, onRefer, onEngageDiagnosis, onOpenDiagnosis }: Props) {
   const { role } = useRole();
   const canShowEditing = role !== "front-desk";
   const { onCleared } = useEncounterEdit();
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [provenanceLines, setProvenanceLines] = useState<Record<string, string>>({});
+  const [diagnosisNewness, setDiagnosisNewness] = useState<Record<string, DiagnosisNewnessRow>>({});
+  const [diagnosisStatusError, setDiagnosisStatusError] = useState<string>();
   const [diagnosisVisitStatuses, setDiagnosisVisitStatuses] = useState<Record<string, DiagnosisVisitStatus>>({});
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -152,12 +159,13 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     setDiagnosisDemotionImpact(undefined);
     setError(null);
     const loadedEncounter = await fhir.read<Encounter>("Encounter", encounterId);
-    const [conditionBundle, visitStatuses, procedureResult] = await Promise.all([
+    const [conditionBundle, visitStatuses, newness, procedureResult] = await Promise.all([
       fhir.search<Condition>("Condition", {
         encounter: encounterReference,
         _count: "40",
       }),
-      readDiagnosisVisitStatuses(encounterId),
+      readDiagnosisVisitStatuses(encounterId).then((rows) => ({ rows, error: undefined }), () => ({ rows: [], error: "Visit status could not be loaded." })),
+      readDiagnosisNewness(encounterId).then((rows) => ({ rows, error: undefined }), () => ({ rows: [], error: "New / Established could not be loaded." })),
       procedureChargeApi().read(encounterId).then(
         (response) => ({ response, error: undefined }),
         (caught) => ({
@@ -167,7 +175,9 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       ),
     ]);
     setEncounter(loadedEncounter);
-    setDiagnosisVisitStatuses(Object.fromEntries(visitStatuses.map((row) => [row.conditionReference, row.status])));
+    setDiagnosisVisitStatuses(Object.fromEntries(visitStatuses.rows.map((row) => [row.conditionReference, row.status])));
+    setDiagnosisNewness(Object.fromEntries(newness.rows.map((row) => [row.conditionReference, row])));
+    setDiagnosisStatusError(visitStatuses.error ?? newness.error);
     setAttachedProcedures(procedureResult.response?.attachedProcedures ?? []);
     setProcedureAttachmentError(procedureResult.error ? "Attached procedures could not be loaded." : undefined);
     const loadedConditions = (conditionBundle.entry ?? [])
@@ -356,7 +366,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       reference: `Condition/${condition.id}`,
       code: coding.code,
       confirmed: true as const,
-      visitStatus: diagnosisVisitStatuses[`Condition/${condition.id}`],
+      visitStatus: diagnosisStatusError ? undefined : diagnosisProtocolVisitStatus(diagnosisVisitStatuses[`Condition/${condition.id}`], diagnosisNewness[`Condition/${condition.id}`]),
     }] : []);
   });
   const protocolOffer = protocolOffers.find((offer) => offer.id === selectedProtocolId) ?? protocolOffers[0];
@@ -532,6 +542,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
 
   return (
     <section className="h-full overflow-y-auto p-6">
+      {diagnosisStatusError && <p role="alert">{diagnosisStatusError} Status-based protocol ranking is unavailable. <button type="button" onClick={() => void load().catch((err) => setError(String(err)))}>Retry</button></p>}
       <div className="max-w-5xl">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -733,6 +744,12 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                   busy={busy}
                   provenanceLine={condition.id ? provenanceLines[condition.id] : undefined}
                   possible={verificationStatus(condition) === "provisional"}
+                  completionLink={<DiagnosisCompletionLink
+                    conditionReference={`Condition/${condition.id}`}
+                    missingComplexity={!encounterDiagnosisProblemStatus(encounter?.diagnosis?.find((entry) => entry.condition.reference === `Condition/${condition.id}`) ?? { condition: {} })}
+                    missingVisitStatus={!diagnosisVisitStatuses[`Condition/${condition.id}`] || diagnosisVisitStatuses[`Condition/${condition.id}`] === "new"}
+                    onOpenDiagnosis={onOpenDiagnosis}
+                  />}
                   onToggle={() => setEditingId((current) => (current === condition.id ? null : condition.id ?? null))}
                   onLaterality={(laterality) => saveLaterality(condition, laterality)}
                   onCode={(code, display) => saveCode(condition, code, display)}
@@ -780,6 +797,7 @@ export function protocolConfirmationLabel(acceptCharges: boolean): string {
 }
 
 function DiagnosisCard({
+  completionLink,
   condition,
   codeLabel,
   rank,
@@ -798,6 +816,7 @@ function DiagnosisCard({
   onDiscard,
   onEngage,
 }: {
+  completionLink?: React.ReactNode;
   condition: Condition;
   codeLabel: string;
   rank: number | undefined;
@@ -825,6 +844,7 @@ function DiagnosisCard({
 
   return (
     <div data-testid="diagnosis-card" className={possible ? "rounded-full border border-[color:var(--odos-amber)] bg-[color:var(--odos-surface-2)] px-4 py-3" : "rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4"}>
+      {!possible && completionLink}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <button
           type="button"
@@ -1056,4 +1076,19 @@ function findingValue(observation: Observation): string | undefined {
   }
   const sphere = observation.component?.find((component) => component.code.coding?.some((coding) => coding.code === "SPHERE"))?.valueQuantity?.value;
   return sphere !== undefined ? `${sphere >= 0 ? "+" : ""}${sphere.toFixed(2)} D` : undefined;
+}
+
+
+export function DiagnosisCompletionLink({ conditionReference, missingComplexity, missingVisitStatus, onOpenDiagnosis }: {
+  conditionReference: string;
+  missingComplexity: boolean;
+  missingVisitStatus: boolean;
+  onOpenDiagnosis?: (reference: string) => void;
+}) {
+  if (!missingComplexity && !missingVisitStatus) return null;
+  const missing = [missingComplexity ? "complexity" : "", missingVisitStatus ? "visit status" : ""].filter(Boolean).join(" and ");
+  return <button type="button" className="mb-2 text-sm text-[color:var(--odos-accent)]" disabled={!onOpenDiagnosis}
+    onClick={() => onOpenDiagnosis?.(conditionReference)}>
+    Complete {missing} in By diagnosis →
+  </button>;
 }

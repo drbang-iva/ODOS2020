@@ -1,0 +1,10 @@
+[
+  {
+    "phase": "broken",
+    "exit": 1
+  },
+  {
+    "phase": "restored",
+    "exit": 0
+  }
+]

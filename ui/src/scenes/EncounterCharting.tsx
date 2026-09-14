@@ -184,9 +184,10 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
     setSidebarExpanded(expanded);
   }
 
-  function selectChartView(view: EncounterChartView) {
+  function selectChartView(view: EncounterChartView, diagnosisReference?: string) {
     const transition = () => {
       setChartView(view);
+      if (diagnosisReference) setSelectedDiagnosis({ workspaceKey: diagnosisWorkspaceKey, reference: diagnosisReference });
       if (view !== "structure") {
         setBoardEditorOpen(false);
         setEntrySheetSection(undefined);
@@ -984,6 +985,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
               patientReference={patientReference}
               encounterReference={encounterReference}
               onEngageDiagnosis={openEngage}
+              onOpenDiagnosis={(reference) => selectChartView("diagnosis", reference)}
               onRefer={() => setReferralComposeOpen(true)}
               onSaved={(status) => markSaved(activeSection, status)}
             />
@@ -1173,6 +1175,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
               patientReference={patientReference}
               encounterReference={encounterReference}
               onEngageDiagnosis={openEngage}
+              onOpenDiagnosis={(reference) => selectChartView("diagnosis", reference)}
               onRefer={() => setReferralComposeOpen(true)}
               onSaved={(status, keepOpen) => {
                 if (keepOpen && !status.completed) entrySheetGuard.markDirty();
@@ -1266,7 +1269,7 @@ interface MappedExamDefinitions {
   dilation?: CustomFindingDefinition;
 }
 
-function MappedExamSection({ sectionId, definitions, patientReference, encounterReference, onSaved, onRefer, onEngageDiagnosis }: {
+function MappedExamSection({ sectionId, definitions, patientReference, encounterReference, onSaved, onRefer, onEngageDiagnosis, onOpenDiagnosis }: {
   sectionId: ExamEntrySheetSectionId;
   definitions: MappedExamDefinitions;
   patientReference: string;
@@ -1274,6 +1277,7 @@ function MappedExamSection({ sectionId, definitions, patientReference, encounter
   onSaved(status: SectionSaveStatus, keepOpen?: boolean): void;
   onRefer(): void;
   onEngageDiagnosis(diagnosis: EngageDiagnosis): void;
+  onOpenDiagnosis(reference: string): void;
 }) {
   const props = { patientReference, encounterReference, onSaved };
   if (sectionId === "hpi") return <HpiSection {...props} />;
@@ -1326,7 +1330,7 @@ function MappedExamSection({ sectionId, definitions, patientReference, encounter
   if (sectionId === "gonioscopy") return <GonioscopySection {...props} />;
   if (sectionId === "dry-eye") return <DryEyeSection {...props} />;
   if (sectionId === "imaging") return <ImagingSection {...props} />;
-  if (sectionId === "assessment") return <AssessmentSection {...props} onRefer={onRefer} onEngageDiagnosis={onEngageDiagnosis} />;
+  if (sectionId === "assessment") return <AssessmentSection {...props} onRefer={onRefer} onEngageDiagnosis={onEngageDiagnosis} onOpenDiagnosis={onOpenDiagnosis} />;
   return <PrescriptionSection {...props} />;
 }
 

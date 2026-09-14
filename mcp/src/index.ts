@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { handleDiagnosisNewnessReadRequest, handleDiagnosisNewnessUpdateRequest } from "./clinical-graph/diagnosis-newness-endpoint.js";
 import { registerHistoryItemRoutes } from "./clinical-graph/history-item-routes.js";
 /**
  * ODOS MCP Server
@@ -6520,6 +6521,34 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: encounter diagnosis status update route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "diagnosis status update route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/encounters/:encounterId/diagnosis-newness", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisNewnessReadRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.read"), store: diagnosisVisitStatusStore },
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: diagnosis newness read failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "New / Established could not be loaded." });
+        }
+      });
+
+      app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/newness", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisNewnessUpdateRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.write"), store: diagnosisVisitStatusStore },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: diagnosis newness update failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "New / Established could not be saved." });
         }
       });
 

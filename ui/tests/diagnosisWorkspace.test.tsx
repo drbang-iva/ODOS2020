@@ -22,6 +22,7 @@ import {
   mostRecentPriorStage,
   orderedEncounterConditions,
 } from "../src/components/charting/DiagnosisWorkspace";
+import { DiagnosisCompletionLink } from "../src/components/charting/AssessmentSection";
 import { OdosSelect } from "../src/components/inputs/OdosSelect";
 import { OdosSearchPicker } from "../src/components/inputs/OdosSearchPicker";
 import { DiagnosisImagingRegion } from "../src/components/charting/DiagnosisImagingRegion";
@@ -1699,6 +1700,7 @@ function workspaceRaceFetch({
 }): typeof fetch {
   return (async (input: string | URL | Request) => {
     const url = String(input);
+    if (url.endsWith("/diagnosis-newness")) return jsonResponse({ rows: [{ conditionReference: "Condition/a", value: "new", source: "suggestion" }] });
     if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({
@@ -1896,4 +1898,91 @@ test("diagnosis header visit-status picker excludes new and saves the selected d
     act(() => renderer?.unmount());
     globalThis.fetch = originalFetch;
   }
+});
+
+for (const scenario of ["finished", "status-read-failure"] as const) {
+  test(`diagnosis status controls: ${scenario}`, async () => {
+    const originalFetch = globalThis.fetch;
+    const baseFetch = workspaceRaceFetch({ findings: async () => jsonResponse(raceFindingsPayload("Condition/a", "Retained finding", "2026-09-01T12:00:00Z")) });
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (scenario === "status-read-failure" && url.endsWith("/diagnosis-statuses")) return new Response(JSON.stringify({ error: "Status store unavailable" }), { status: 503 });
+      const response = await baseFetch(input, init);
+      if (scenario === "finished" && url.includes("/fhir/R4/Encounter/e1")) return jsonResponse({ ...await response.json(), status: "finished" });
+      return response;
+    }) as typeof fetch;
+    let renderer!: ReactTestRenderer;
+    try {
+      await act(async () => {
+        renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/a" onSelectDiagnosis={() => undefined} />);
+      });
+      const picker = renderer.root.findAllByType(OdosSelect).find((node) => node.props.ariaLabel === "Diagnosis visit status");
+      assert.ok(picker, "the diagnosis header remains available");
+      assert.equal(picker.props.disabled, true);
+      if (scenario === "finished") {
+        const buttons = renderer.root.findByProps({ "aria-label": "Diagnosis New or Established" }).findAllByType("button");
+        assert.equal(buttons.length, 2);
+        assert.ok(buttons.every((button) => button.props.disabled === true));
+      }
+      if (scenario === "status-read-failure") {
+        assert.match(JSON.stringify(renderer.toJSON()), /Retained finding/);
+        assert.ok(renderer.root.findByProps({ "data-testid": "diagnosis-status-error" }));
+        assert.equal(renderer.root.findAllByType(OdosSelect).find((node) => node.props.ariaLabel === "Problem status")?.props.disabled, false);
+      }
+    } finally {
+      act(() => renderer?.unmount());
+      globalThis.fetch = originalFetch;
+    }
+  });
+}
+
+
+test("Assessment completion pointer targets the diagnosis and disappears when complete", () => {
+  const selected: string[] = [];
+  const renderer = create(<DiagnosisCompletionLink conditionReference="Condition/a" missingComplexity missingVisitStatus onOpenDiagnosis={(reference) => selected.push(reference)} />);
+  assert.match(JSON.stringify(renderer.toJSON()), /complexity and visit status/);
+  act(() => renderer.root.findByType("button").props.onClick());
+  assert.deepEqual(selected, ["Condition/a"]);
+  act(() => renderer.update(<DiagnosisCompletionLink conditionReference="Condition/a" missingComplexity={false} missingVisitStatus={false} onOpenDiagnosis={() => undefined} />));
+  assert.equal(renderer.toJSON(), null);
+  act(() => renderer.unmount());
+  const scene = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
+  assert.match(scene, /onOpenDiagnosis=\{\(reference\) => selectChartView\("diagnosis", reference\)\}/);
+  assert.match(scene, /if \(diagnosisReference\) setSelectedDiagnosis\(\{ workspaceKey: diagnosisWorkspaceKey, reference: diagnosisReference \}\)/);
+});
+
+
+test("doctor chooses Established with one tap and the header shows the saved choice after reload", async () => {
+  const originalFetch = globalThis.fetch;
+  let value = "new";
+  let source = "suggestion";
+  let writes = 0;
+  const baseFetch = workspaceRaceFetch({ findings: async () => jsonResponse(raceFindingsPayload("Condition/a", "A finding", "2026-09-01T12:00:00Z")) });
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith("/diagnosis-newness")) return jsonResponse({ rows: [{ conditionReference: "Condition/a", value, source }] });
+    if (url.endsWith("/diagnoses/a/newness")) {
+      assert.equal(init?.method, "PUT");
+      assert.deepEqual(JSON.parse(String(init?.body)), { value: "established" });
+      writes += 1;
+      value = "established";
+      source = "doctor";
+      return jsonResponse({ newness: { conditionReference: "Condition/a", value, source } });
+    }
+    return baseFetch(input, init);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  const mount = () => create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/a" onSelectDiagnosis={() => undefined} />);
+  try {
+    await act(async () => { renderer = mount(); });
+    assert.match(JSON.stringify(renderer.toJSON()), /ODOS suggestion/);
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Diagnosis New or Established" }).findAllByType("button").find((button) => button.children.includes("Established"))!.props.onClick();
+    });
+    act(() => renderer.unmount());
+    await act(async () => { renderer = mount(); });
+    assert.equal(writes, 1);
+    assert.match(JSON.stringify(renderer.toJSON()), /Doctor's choice/);
+    assert.equal(renderer.root.findByProps({ "aria-label": "Diagnosis New or Established" }).findAllByType("button").find((button) => button.children.includes("Established"))!.props["aria-pressed"], true);
+  } finally { act(() => renderer?.unmount()); globalThis.fetch = originalFetch; }
 });

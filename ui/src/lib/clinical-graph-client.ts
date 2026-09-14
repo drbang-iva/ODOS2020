@@ -403,3 +403,35 @@ export async function updateDiagnosisVisitStatus(input: {
   if (!body.status) throw new Error("Diagnosis visit status update returned no status.");
   return body.status;
 }
+
+
+export type DiagnosisNewness = "new" | "established";
+export interface DiagnosisNewnessRow {
+  conditionReference: string;
+  value: DiagnosisNewness;
+  source: "suggestion" | "doctor";
+  matchedBy?: "catalog-key" | "icd10-category";
+  matchedEncounterReference?: string;
+}
+
+export async function readDiagnosisNewness(encounterId: string): Promise<DiagnosisNewnessRow[]> {
+  const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-newness`, { headers: authHeaders() });
+  const body = await response.json() as { rows?: DiagnosisNewnessRow[]; error?: string };
+  if (!response.ok) throw clinicalGraphResponseError(response, body, "New / Established could not be loaded.");
+  return body.rows ?? [];
+}
+
+export async function updateDiagnosisNewness(input: { encounterId: string; conditionId: string; value: DiagnosisNewness }): Promise<DiagnosisNewnessRow> {
+  const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(input.encounterId)}/diagnoses/${encodeURIComponent(input.conditionId)}/newness`, {
+    method: "PUT", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ value: input.value }),
+  });
+  const body = await response.json() as { newness?: DiagnosisNewnessRow; error?: string };
+  if (!response.ok) throw clinicalGraphResponseError(response, body, "New / Established could not be saved.");
+  if (!body.newness) throw new Error("New / Established update returned no value.");
+  return body.newness;
+}
+
+export function diagnosisProtocolVisitStatus(status: DiagnosisVisitStatus | undefined, newness: DiagnosisNewnessRow | undefined): DiagnosisVisitStatus | undefined {
+  if (newness?.value === "new") return "new";
+  return status === "new" ? undefined : status;
+}
