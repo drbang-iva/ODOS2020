@@ -3,6 +3,7 @@ import { resolvePractitionerReference } from "../authz/practitioner-reference.js
 import { buildCommsConsent, communicationPreferencesInputSchema, parsePreferenceWriteInput } from "../comms/comms-preferences.js";
 import { replaceCommsPreferenceCells } from "../comms/suppression-gate.js";
 import { randomInt, randomUUID } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import type {
   Account,
   Bundle,
@@ -145,7 +146,7 @@ export async function registerPatientFromDemographics(
       {
         autoRollbackCreatedEntries: false,
         validateResponse: assertTransactionSuccess,
-        reconcileError: (error) => reconcileUnknownTransactionOutcome(deps.serviceFhir, reservation, error),
+        reconcileError: (error) => reconcileUnknownTransactionOutcome(deps.serviceFhir, reservation, request, projectId, error),
       },
     );
   } catch (error) {
@@ -192,7 +193,10 @@ export async function registerPatientFromDemographics(
     };
   }
   const guarantorLinks = warning
-    ? existingRegistrationParties(input).map(party => ({ relatedPersonId: createdIdFromEntry(response, built.existingRelatedPersonEntryIndexes.get(party.localId)!, "RelatedPerson"), personId: party.personId, status: "unconfirmed" as const, message: "Guarantor attach was not started because patient access needs repair." }))
+    ? existingRegistrationParties(input).flatMap(party => {
+        const relatedPersonId = createdIdFromEntryIfPresent(response, built.existingRelatedPersonEntryIndexes.get(party.localId)!, "RelatedPerson");
+        return relatedPersonId ? [{ relatedPersonId, personId: party.personId, status: "unconfirmed" as const, message: "Guarantor attach was not started because patient access needs repair." }] : [];
+      })
     : await attachExistingRegistrationGuarantors(input, staff, deps, response, built.existingRelatedPersonEntryIndexes, existingPersons);
   return { status: 201, body: { kind: "created", patient, ...(warning ? { warning } : {}), ...(guarantorLinks.length ? { guarantorLinks } : {}) } };
 }
@@ -261,7 +265,8 @@ async function attachExistingRegistrationGuarantors(
 ) {
   const outcomes: Array<{ relatedPersonId: string; personId: string; taskId?: string; status: "linked" | "pending" | "failed" | "unconfirmed"; message: string }> = [];
   for (const party of existingRegistrationParties(input)) {
-    const relatedPersonId = createdIdFromEntry(response, entryIndexes.get(party.localId)!, "RelatedPerson");
+    const relatedPersonId = createdIdFromEntryIfPresent(response, entryIndexes.get(party.localId)!, "RelatedPerson");
+    if (!relatedPersonId) continue;
     const personId = persons.get(party.localId)!.id!;
     try {
       if (!deps.attachRegistrationGuarantor) throw new Error("Registration guarantor attach service is unavailable.");
@@ -514,8 +519,10 @@ class ConfirmedRegistrationTransactionFailure extends Error {
 }
 
 async function reconcileUnknownTransactionOutcome(
-  fhir: Pick<MedplumClient, "read">,
+  fhir: Pick<MedplumClient, "baseUrl" | "read" | "searchProject" | "searchProjectUrl">,
   reservation: ReservedMrn,
+  request: Bundle,
+  projectId: string,
   transactionError: unknown,
 ): Promise<Bundle> {
   let account: Account;
@@ -529,11 +536,45 @@ async function reconcileUnknownTransactionOutcome(
   }
   const patientId = committedRegistrationPatientId(account, reservation);
   if (!patientId) throw transactionError;
+  const responseEntries: BundleEntry[] = (request.entry ?? []).map(() => ({}));
+  responseEntries[0] = { response: { status: "201 Created", location: `Patient/${patientId}` } };
+  const relatedIndexes = (request.entry ?? []).flatMap((entry, index) => entry.resource?.resourceType === "RelatedPerson" ? [index] : []);
+  if (relatedIndexes.length) {
+    const candidates = (await searchProjectAll<RelatedPerson>(fhir, "RelatedPerson", projectId, { patient: `Patient/${patientId}` }))
+      .filter(candidate => candidate.id && candidate.meta?.project?.replace(/^Project\//, "") === projectId && candidate.patient.reference === `Patient/${patientId}`);
+    const used = new Set<string>();
+    for (const index of relatedIndexes) {
+      const requestEntry = request.entry![index]!;
+      const requested = requestEntry.resource as RelatedPerson;
+      const accountId = recoveredAccountRelatedPersonId(request, account, requestEntry.fullUrl);
+      const matching = candidates.filter(candidate => !used.has(candidate.id!)
+        && (!accountId || candidate.id === accountId)
+        && sameRegistrationRelatedPerson(requested, candidate));
+      if (matching.length !== 1) continue;
+      const recovered = matching[0]!;
+      used.add(recovered.id!);
+      responseEntries[index] = { response: { status: "201 Created", location: `RelatedPerson/${recovered.id}/_history/${recovered.meta?.versionId ?? "1"}` } };
+    }
+  }
   return {
     resourceType: "Bundle",
     type: "transaction-response",
-    entry: [{ response: { status: "201 Created", location: `Patient/${patientId}` } }],
+    entry: responseEntries,
   };
+}
+
+function recoveredAccountRelatedPersonId(request: Bundle, account: Account, relatedFullUrl: string | undefined): string | undefined {
+  if (!relatedFullUrl) return undefined;
+  const requestAccount = request.entry?.find(entry => entry.resource?.resourceType === "Account")?.resource as Account | undefined;
+  const guarantorIndex = requestAccount?.guarantor?.findIndex(guarantor => guarantor.party.reference === relatedFullUrl) ?? -1;
+  if (guarantorIndex < 0) return undefined;
+  return account.guarantor?.[guarantorIndex]?.party.reference?.match(/^RelatedPerson\/([A-Za-z0-9.-]{1,64})$/)?.[1];
+}
+
+function sameRegistrationRelatedPerson(requested: RelatedPerson, committed: RelatedPerson): boolean {
+  const { id: _requestedId, meta: _requestedMeta, patient: _requestedPatient, ...requestedFields } = requested;
+  const { id: _committedId, meta: _committedMeta, patient: _committedPatient, ...committedFields } = committed;
+  return isDeepStrictEqual(requestedFields, committedFields);
 }
 
 function isUnchangedReservation(account: Account, reservation: ReservedMrn): boolean {
@@ -571,9 +612,13 @@ function hasIdentifier(account: Account, system: string, value: string): boolean
 }
 
 function createdIdFromEntry(bundle: Bundle, index: number, resourceType: string): string {
-  const id = bundle.entry?.[index]?.response?.location?.match(new RegExp(`^${resourceType}/([A-Za-z0-9.-]{1,64})(?:/|$)`))?.[1];
+  const id = createdIdFromEntryIfPresent(bundle, index, resourceType);
   if (!id) throw new Error(`Transaction response did not identify the created ${resourceType}.`);
   return id;
+}
+
+function createdIdFromEntryIfPresent(bundle: Bundle, index: number, resourceType: string): string | undefined {
+  return bundle.entry?.[index]?.response?.location?.match(new RegExp(`^${resourceType}/([A-Za-z0-9.-]{1,64})(?:/|$)`))?.[1];
 }
 
 function responsiblePartyPeriod(party: ResponsiblePartyInput): { start?: string; end?: string } {

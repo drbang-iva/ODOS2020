@@ -3,6 +3,7 @@ import test from "node:test";
 import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { COMMS_PREFERENCE_CHANNELS, COMMS_PURPOSES } from "../src/lib/communications-client";
+import { emptyPatientDemographics, registerPatient } from "../src/lib/patient-registration";
 import { NewPatient } from "../src/scenes/NewPatient";
 
 const card = { personId: "existing-guardian", versionId: "7", name: "Existing Guardian", phones: ["864-555-0199"], city: "Greenville", postalCode: "29601" };
@@ -29,6 +30,12 @@ function labelledInput(renderer: ReactTestRenderer, label: string, occurrence = 
   const labels = renderer.root.findAllByType("label").filter(node => node.children[0] === label);
   assert.ok(labels[occurrence], `${label} occurrence ${occurrence}`);
   return labels[occurrence].findByType("input");
+}
+
+function labelledControl(renderer: ReactTestRenderer, label: string, type: "select" | "textarea" | "input"): ReactTestInstance {
+  const row = renderer.root.findAllByType("label").find(node => node.children.includes(label));
+  assert.ok(row, label);
+  return row.findByType(type);
 }
 
 test("B3: registration offers an existing guarantor, serializes only owned fields, and surfaces a failed attach with a chart link", async () => {
@@ -64,9 +71,17 @@ test("B3: registration offers an existing guarantor, serializes only owned field
     assert.ok(button(renderer, "Not this person"));
     assert.equal(renderer.root.findAllByType("input").some(node => node.props.value === "Existing" && !node.props.readOnly), false);
 
+    await act(async () => labelledControl(renderer, "Relationship", "select").props.onChange({ target: { value: "legal-guardian" } }));
+    await act(async () => labelledInput(renderer, "Effective date").props.onChange({ target: { value: "2026-09-13" } }));
+    await act(async () => labelledControl(renderer, "Court order / custody notes", "textarea").props.onChange({ target: { value: "Synthetic restriction" } }));
+    await act(async () => labelledControl(renderer, "Consent authority", "input").props.onChange({ target: { checked: true } }));
     await act(async () => button(renderer, "Not this person").props.onClick());
     assert.equal(labelledInput(renderer, "First name").props.value, "Existing");
     assert.equal(labelledInput(renderer, "Last name").props.value, "Guardian");
+    assert.equal(labelledControl(renderer, "Relationship", "select").props.value, "legal-guardian");
+    assert.equal(labelledInput(renderer, "Effective date").props.value, "2026-09-13");
+    assert.equal(labelledControl(renderer, "Court order / custody notes", "textarea").props.value, "Synthetic restriction");
+    assert.equal(labelledControl(renderer, "Consent authority", "input").props.checked, true);
     await act(async () => button(renderer, "Use Existing Guardian").props.onClick());
     await act(async () => button(renderer, "Create patient").props.onClick());
 
@@ -83,4 +98,20 @@ test("B3: registration offers an existing guarantor, serializes only owned field
     if (renderer) await act(async () => renderer.unmount());
     globalThis.fetch = original;
   }
+});
+
+test("B3: registration rejects a non-string guarantor link status", async () => {
+  const draft = {
+    ...emptyPatientDemographics(),
+    firstName: "Synthetic",
+    lastName: "Child",
+    birthDate: "1980-04-03",
+    gender: "female" as const,
+  };
+  const fetchImpl: typeof fetch = async () => Response.json({
+    kind: "created",
+    patient: { resourceType: "Patient", id: "registered-child" },
+    guarantorLinks: [{ relatedPersonId: "related-created", personId: card.personId, status: ["linked"], message: "Guarantor linked." }],
+  }, { status: 201 });
+  await assert.rejects(registerPatient(draft, {}, fetchImpl), /Patient registration returned an invalid response/);
 });

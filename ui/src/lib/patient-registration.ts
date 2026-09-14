@@ -348,7 +348,8 @@ function isCreatedResult(value: unknown): value is Extract<PatientRegistrationRe
   const linksValid = value.guarantorLinks === undefined || (Array.isArray(value.guarantorLinks) && value.guarantorLinks.every(link => isObject(link)
     && typeof link.relatedPersonId === "string" && typeof link.personId === "string"
     && (link.taskId === undefined || typeof link.taskId === "string")
-    && ["linked", "pending", "failed", "unconfirmed"].includes(String(link.status))
+    && typeof link.status === "string"
+    && ["linked", "pending", "failed", "unconfirmed"].includes(link.status)
     && typeof link.message === "string"));
   return warningValid && linksValid;
 }

@@ -117,7 +117,7 @@ async function resolveGuarantor(relatedPerson: RelatedPerson): Promise<Guarantor
     if (!persons.length) {
       let failedAttach = false;
       let historyReadable = true;
-      try { failedAttach = (await guarantorOperationHistory(relatedPerson.id!)).some(operation => operation.kind === "attach" && operation.task.status === "failed"); }
+      try { failedAttach = (await guarantorOperationHistory(relatedPerson.id!)).find(operation => operation.kind === "attach")?.task.status === "failed"; }
       catch { historyReadable = false; }
       return { kind: "missing", relatedPerson, personIds: [], message: failedAttach ? "No linked guarantor record. The guarantor attach did not finish." : historyReadable ? "No linked guarantor record." : "No linked guarantor record — pre-migration." };
     }

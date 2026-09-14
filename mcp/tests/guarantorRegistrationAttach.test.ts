@@ -37,6 +37,8 @@ class RegistrationAttachFhir {
   reservationWrites = 0;
   transaction?: Bundle;
   person: Person;
+  dropRegistrationReply = false;
+  duplicateRecoveredRelatedPerson = false;
 
   constructor() {
     this.person = {
@@ -54,9 +56,14 @@ class RegistrationAttachFhir {
     return { resourceType: "Bundle", type: "searchset", entry: [] };
   }
 
-  async searchProject<T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> {
-    assert.equal(resourceType, "Patient", "only duplicate search precedes the registration bundle");
-    return { resourceType: "Bundle", type: "searchset", entry: [] };
+  async searchProject<T extends Resource>(resourceType: T["resourceType"], _projectId?: string, params?: Record<string, string>): Promise<Bundle<T>> {
+    if (resourceType === "Patient") return { resourceType: "Bundle", type: "searchset", entry: [] };
+    if (resourceType === "RelatedPerson") {
+      const resources = [...this.resources.values()].filter((resource): resource is RelatedPerson => resource.resourceType === "RelatedPerson"
+        && resource.patient.reference === params?.patient);
+      return { resourceType: "Bundle", type: "searchset", entry: resources.map(resource => ({ resource: structuredClone(resource) as T })) };
+    }
+    throw new Error(`unexpected project search ${resourceType}`);
   }
 
   async searchProjectUrl<T extends Resource>(): Promise<Bundle<T>> {
@@ -87,9 +94,21 @@ class RegistrationAttachFhir {
     throw new Error("grant patch is replaced by the explicit test seam");
   }
 
-  async executeTransactionAsActor(bundle: Bundle): Promise<Bundle> {
+  async executeTransactionAsActor(
+    bundle: Bundle,
+    _actor?: unknown,
+    _headers?: unknown,
+    options?: { reconcileError?: (error: unknown) => Promise<Bundle> },
+  ): Promise<Bundle> {
     this.events.push("registration");
     this.transaction = structuredClone(bundle);
+    const resolvedReferences = new Map<string, string>();
+    for (const [index, entry] of (bundle.entry ?? []).entries()) {
+      if (entry.fullUrl && entry.resource?.resourceType !== "Account") {
+        const id = entry.resource.resourceType === "Patient" ? "patient-registered" : entry.resource.resourceType === "RelatedPerson" ? `related-${index}` : entry.resource.id ?? "existing-person-write";
+        resolvedReferences.set(entry.fullUrl, `${entry.resource.resourceType}/${id}`);
+      }
+    }
     const responseEntries = (bundle.entry ?? []).map((entry, index) => {
       const resource = structuredClone(entry.resource!);
       let id: string;
@@ -98,10 +117,22 @@ class RegistrationAttachFhir {
       else if (resource.resourceType === "Person") id = resource.id ?? "existing-person-write";
       else if (resource.resourceType === "Account") id = "reservation-1";
       else throw new Error(`unexpected registration resource ${resource.resourceType}`);
+      if (resource.resourceType === "RelatedPerson" && resource.patient.reference) {
+        resource.patient.reference = resolvedReferences.get(resource.patient.reference) ?? resource.patient.reference;
+      }
+      if (resource.resourceType === "Account") {
+        resource.subject = resource.subject?.map(subject => ({ ...subject, reference: subject.reference ? resolvedReferences.get(subject.reference) ?? subject.reference : subject.reference }));
+        resource.guarantor = resource.guarantor?.map(guarantor => ({ ...guarantor, party: { ...guarantor.party, reference: guarantor.party.reference ? resolvedReferences.get(guarantor.party.reference) ?? guarantor.party.reference : guarantor.party.reference } }));
+      }
       const accepted = { ...resource, id, meta: { ...resource.meta, versionId: resource.resourceType === "Account" ? "2" : "1" } } as Resource;
       this.resources.set(`${resource.resourceType}/${id}`, accepted);
       return { resource: structuredClone(accepted), response: { status: entry.request?.method === "PUT" ? "200 OK" : "201 Created", location: `${resource.resourceType}/${id}/_history/${accepted.meta?.versionId}` } };
     });
+    if (this.duplicateRecoveredRelatedPerson) {
+      const related = this.resources.get("RelatedPerson/related-1") as RelatedPerson;
+      this.resources.set("RelatedPerson/related-duplicate", { ...structuredClone(related), id: "related-duplicate" });
+    }
+    if (this.dropRegistrationReply) return options!.reconcileError!(new Error("synthetic registration reply loss"));
     return { resourceType: "Bundle", type: "transaction-response", entry: responseEntries };
   }
 }
@@ -110,6 +141,9 @@ type HarnessOptions = {
   businessActions?: string[];
   attachResult?: { status: number; body: unknown };
   mutatePerson?: (person: Person) => Person;
+  dropRegistrationReply?: boolean;
+  duplicateRecoveredRelatedPerson?: boolean;
+  registrationBody?: unknown;
 };
 
 async function postRegistration(options: HarnessOptions = {}) {
@@ -118,6 +152,8 @@ async function postRegistration(options: HarnessOptions = {}) {
     fhir.person = options.mutatePerson(fhir.person);
     fhir.resources.set("Person/guarantor-existing", structuredClone(fhir.person));
   }
+  fhir.dropRegistrationReply = options.dropRegistrationReply ?? false;
+  fhir.duplicateRecoveredRelatedPerson = options.duplicateRecoveredRelatedPerson ?? false;
   let attachedInput: unknown;
   const app = express();
   app.use(express.json());
@@ -142,7 +178,7 @@ async function postRegistration(options: HarnessOptions = {}) {
   const { port } = listener.address() as AddressInfo;
   try {
     const response = await fetch(`http://127.0.0.1:${port}/clinic/patients`, {
-      method: "POST", headers: { Authorization: "Bearer synthetic", "Content-Type": "application/json" }, body: JSON.stringify(registrationBody),
+      method: "POST", headers: { Authorization: "Bearer synthetic", "Content-Type": "application/json" }, body: JSON.stringify(options.registrationBody ?? registrationBody),
     });
     return { fhir, response, body: await response.json() as any, attachedInput };
   } finally {
@@ -176,6 +212,41 @@ test("A10: an attach claim conflict after the registration bundle preserves 201 
   assert.equal(response.status, 201);
   assert.equal((await fhir.read<Patient>("Patient", "patient-registered")).id, "patient-registered");
   assert.deepEqual(body.guarantorLinks, [{ relatedPersonId: "related-1", personId: "guarantor-existing", taskId: "failed-attach", status: "failed", message: "Pending: Complete or Correct." }]);
+});
+
+test("B3: a lost committed registration reply is recovered before the existing guarantor attach", async () => {
+  const { fhir, response, body, attachedInput } = await postRegistration({ dropRegistrationReply: true });
+  assert.equal(response.status, 201);
+  assert.equal((await fhir.read<Patient>("Patient", "patient-registered")).id, "patient-registered");
+  assert.deepEqual(fhir.events, ["registration", "grant", "attach"]);
+  assert.deepEqual((attachedInput as any).relatedPersonIds, ["related-1"]);
+  assert.deepEqual(body.guarantorLinks, [{ relatedPersonId: "related-1", personId: "guarantor-existing", taskId: "attach-task", status: "linked", message: "Guarantor linked." }]);
+});
+
+test("B3: ambiguous committed-state recovery preserves registration without guessing an attach target", async () => {
+  const adultRegistration = {
+    ...registrationBody,
+    demographics: { ...registrationBody.demographics, birthDate: "1980-04-03" },
+    responsibleParties: [
+      { ...existingParty, financialResponsible: false },
+      {
+        localId: "self", kind: "self", relationship: "other", financialResponsible: true,
+        consentAuthority: false, primary: false, courtOrderNotes: "", effectiveDate: "2026-09-14", endDate: "",
+        firstName: "Synthetic", middleName: "", lastName: "Child", phone: "864-555-0100",
+        address: "1 Synthetic Way", city: "Greenville", state: "SC", postalCode: "29601",
+      },
+    ],
+  };
+  const { response, body, attachedInput } = await postRegistration({
+    registrationBody: adultRegistration,
+    dropRegistrationReply: true,
+    duplicateRecoveredRelatedPerson: true,
+  });
+  assert.equal(response.status, 201);
+  assert.equal(attachedInput, undefined);
+  assert.equal(body.kind, "created");
+  assert.equal(body.patient.id, "patient-registered");
+  assert.equal(body.guarantorLinks, undefined);
 });
 
 test("A11: registration with an existing party requires guarantor.link before any write or MRN reservation", async () => {

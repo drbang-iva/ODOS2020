@@ -77,6 +77,26 @@ test("A14: ambiguous ownership never offers Attach", async () => {
   assert.equal(attachOffered, false);
 });
 
+test("B4: a successful later attach clears an older failed-attach explanation", async () => {
+  const original = globalThis.fetch;
+  let renderer!: ReactTestRenderer;
+  globalThis.fetch = async input => {
+    const url = new URL(String(input), "http://synthetic.test");
+    if (url.pathname.endsWith("/RelatedPerson")) return Response.json({ resourceType: "Bundle", entry: [{ resource: related }] });
+    if (url.pathname.endsWith("/Person")) return Response.json({ resourceType: "Bundle", entry: [] });
+    if (url.pathname === "/guarantors/link-operations") return Response.json([
+      { kind: "attach", task: { resourceType: "Task", id: "attach-later", status: "completed" }, active: false, phase: "linked", destinationPersonId: "D", relatedPersonIds: ["r"], patients: [] },
+      { kind: "attach", task: { resourceType: "Task", id: "attach-older", status: "failed" }, active: false, phase: "claim-conflict", destinationPersonId: "D", relatedPersonIds: ["r"], patients: [] },
+    ]);
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  try {
+    await act(async () => { renderer = create(<ResponsiblePartiesControl patientId="p" />); });
+    assert.match(text(renderer), /No linked guarantor record\./);
+    assert.doesNotMatch(text(renderer), /The guarantor attach did not finish\./);
+  } finally { if (renderer) await act(async () => renderer.unmount()); globalThis.fetch = original; }
+});
+
 test("A3: an attach-pending child renders pending without a source Person", async () => {
   const original = globalThis.fetch;
   let renderer!: ReactTestRenderer;
