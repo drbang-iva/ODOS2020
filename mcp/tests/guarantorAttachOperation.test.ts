@@ -127,7 +127,7 @@ test("A4: Complete classifies a landed attach after reply loss without a second 
   assert.equal(f.writes.filter(write => write.resource.resourceType === "Person" && write.resource.id === "D" && phase(write) === "attaching").length, 1);
 });
 
-test("A5: correcting a completed attach unlinks without projecting or disturbing siblings and child-owned fields", async () => {
+test("A5/A15: correcting a completed attach unlinks without projection and preserves every child-owned field", async () => {
   const f = unownedFixture();
   const attached = await run(f, "create", attachInput(f));
   assert.equal(attached.status, 200);

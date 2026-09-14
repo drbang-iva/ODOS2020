@@ -201,7 +201,9 @@ type ExistingPartyInput = Extract<ResponsiblePartyInput, { kind: "existing" }>;
 type PersonPartyInput = Extract<ResponsiblePartyInput, { kind: "person" }>;
 
 function existingRegistrationParties(input: PatientRegistrationInput): ExistingPartyInput[] {
-  return input.responsibleParties.filter((party): party is ExistingPartyInput => party.kind === "existing");
+  return input.responsibleParties
+    .filter((party): party is ExistingPartyInput => party.kind === "existing")
+    .sort((left, right) => left.localId.localeCompare(right.localId));
 }
 
 async function loadExistingGuarantors(
