@@ -1,0 +1,12 @@
+{
+  "cwd": "mcp",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-name-pattern=every definition-backed clinical-graph HTTP closure",
+    "tests/findingDefinitionStore.test.ts"
+  ],
+  "exit": 0
+}

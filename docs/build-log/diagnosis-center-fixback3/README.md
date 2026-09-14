@@ -57,7 +57,7 @@ Eight existing review comments are covered by this patch: 4008335145, 4008335162
 
 ## Remaining CI issue and status
 
-The previous head's MCP CI also failed `findingDefinitionStore.test.ts:479`, which expects 99 inline clinical-graph routes but finds 101 after the two newness routes were added. The same single test fails locally at the current code (`existing-ci-blocker.txt`); this is separate from the repaired checker failures. Its one-line assertion update awaits an explicit scope decision.
+At fixback 3, MCP CI also failed `findingDefinitionStore.test.ts:479`: it expected 99 inline clinical-graph routes but found 101 after the two newness routes were added (`existing-ci-blocker.txt`). This PR-owned failure is corrected in [fixback 4](../diagnosis-center-fixback4/README.md), which documents the routes' status-store dependencies, adds both handler assertions, and records red/green and full-suite verification.
 
 No new decision or terminology value was introduced: `decisions/INDEX.md` and Mandate 14 ledgers need no new entries. No cross-repo change is required.
 
