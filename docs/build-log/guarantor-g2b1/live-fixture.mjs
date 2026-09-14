@@ -268,7 +268,7 @@ async function seed() {
   for (const name of ['staff', 'composite']) {
     const email = `g2b1-${name}@example.invalid`;
     const password = randomBytes(30).toString('base64url') + '!Aa1';
-    const invited = await successfulHttp(fixture, 'POST', `/admin/projects/${fixture.projectA}/invite`, { body: { resourceType: 'Practitioner', email, firstName: 'Synthetic', lastName: `G2b1 ${name}`, sendEmail: false } });
+    const invited = await successfulHttp(fixture, 'POST', `/admin/projects/${fixture.projectA}/invite`, { body: { resourceType: 'Practitioner', email, firstName: 'ODOS', lastName: 'EXAMPLEV', sendEmail: false } });
     assert.equal(invited.resourceType, 'ProjectMembership');
     const membership = await successfulHttp(fixture, 'GET', `/fhir/R4/ProjectMembership/${invited.id}`);
     await successfulHttp(fixture, 'POST', '/admin/super/setpassword', { body: { email, password } });
