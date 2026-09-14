@@ -93,6 +93,15 @@ const AUDIT_DDL_FILES = [
       constraint: "odos_audit_events_event_type_check",
     },
   },
+  { path: migrationPath("2026-09-14-guarantor-link-events.sql"), sentinel: { kind: "event-type", eventType: "guarantor.link.started" } },
+  {
+    path: migrationPath("2026-09-14-guarantor-link-events.validate.sql"),
+    sentinel: {
+      kind: "constraint-validated",
+      table: "odos_audit_events",
+      constraint: "odos_audit_events_event_type_check",
+    },
+  },
 ] satisfies readonly AuditDdlFile[];
 
 export interface LiveAuditRuntimeOptions {

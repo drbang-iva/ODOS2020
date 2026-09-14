@@ -45,6 +45,7 @@ export interface MedplumClient {
   login(email: string, password: string): Promise<void>;
   loginWithClientCredentials(credentials: OperatorCredentials): Promise<void>;
   read<T extends Resource>(rt: T["resourceType"], id: string): Promise<T>;
+  readExtended<T extends Resource>(rt: T["resourceType"], id: string): Promise<T>;
   readBinaryData(id: string): Promise<{ contentType: string; bytes: Uint8Array }>;
   search<T extends Resource>(
     rt: T["resourceType"],
@@ -96,6 +97,7 @@ export interface MedplumClient {
     options?: FhirAttributedTransactionExecutionOptions,
   ): Promise<Bundle>;
   getActiveProjectId(): Promise<string>;
+  getAuthenticatedProfileReference(): Promise<string>;
   invitePractitioner(
     projectId: string,
     input: MedplumPractitionerInvite,
@@ -508,6 +510,38 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
     return responseBundle;
   }
 
+  async function readResource<T extends Resource>(rt: T["resourceType"], id: string, extended = false): Promise<T> {
+    return audited(
+      {
+        eventType: "read",
+        resourceType: String(rt),
+        resourceId: id,
+        patientId: String(rt) === "Patient" ? id : undefined,
+        targetReference: `${String(rt)}/${id}`,
+        actionOutcome: "granted",
+      },
+      async () => {
+        const res = await authorizedFetch(`${base}/fhir/R4/${rt}/${id}`, () => ({
+          headers: { ...headers(), ...(extended ? { "X-Medplum": "extended" } : {}) },
+        }));
+        if (!res.ok) {
+          throw await toError(res, {
+            method: "GET",
+            path: `/fhir/R4/${rt}/:id`,
+            resourceType: String(rt),
+          });
+        }
+        return (await res.json()) as T;
+      },
+    );
+  }
+
+  async function readAuthenticatedSession(): Promise<unknown> {
+    const res = await authorizedFetch(`${base}/auth/me`, () => ({ headers: headers() }));
+    if (!res.ok) throw await toError(res, { method: "GET", path: "/auth/me" });
+    return res.json();
+  }
+
   return {
     baseUrl: base,
     async login(email: string, password: string): Promise<void> {
@@ -523,27 +557,11 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
     },
 
     async read<T extends Resource>(rt: T["resourceType"], id: string): Promise<T> {
-      return audited(
-        {
-          eventType: "read",
-          resourceType: String(rt),
-          resourceId: id,
-          patientId: String(rt) === "Patient" ? id : undefined,
-          targetReference: `${String(rt)}/${id}`,
-          actionOutcome: "granted",
-        },
-        async () => {
-          const res = await authorizedFetch(`${base}/fhir/R4/${rt}/${id}`, () => ({ headers: headers() }));
-          if (!res.ok) {
-            throw await toError(res, {
-              method: "GET",
-              path: `/fhir/R4/${rt}/:id`,
-              resourceType: String(rt),
-            });
-          }
-          return (await res.json()) as T;
-        },
-      );
+      return readResource<T>(rt, id);
+    },
+
+    async readExtended<T extends Resource>(rt: T["resourceType"], id: string): Promise<T> {
+      return readResource<T>(rt, id, true);
     },
 
     async readBinaryData(id: string): Promise<{ contentType: string; bytes: Uint8Array }> {
@@ -980,11 +998,19 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
     },
 
     async getActiveProjectId(): Promise<string> {
-      const res = await authorizedFetch(`${base}/auth/me`, () => ({ headers: headers() }));
-      if (!res.ok) throw await toError(res, { method: "GET", path: "/auth/me" });
-      const body = (await res.json()) as { project?: { id?: string } };
+      const body = (await readAuthenticatedSession()) as { project?: { id?: string } };
       if (!body.project?.id) throw new Error("The service session has no active Medplum project.");
       return body.project.id;
+    },
+
+    async getAuthenticatedProfileReference(): Promise<string> {
+      const body = (await readAuthenticatedSession()) as { profile?: { resourceType?: unknown; id?: unknown } } | null;
+      const profile = body?.profile;
+      if (
+        typeof profile?.resourceType !== "string" || !/^[A-Z][A-Za-z]+$/.test(profile.resourceType) ||
+        typeof profile.id !== "string" || !/^[A-Za-z0-9.-]{1,64}$/.test(profile.id)
+      ) throw new Error("The service session has no valid authenticated Medplum profile.");
+      return `${profile.resourceType}/${profile.id}`;
     },
 
     async invitePractitioner(

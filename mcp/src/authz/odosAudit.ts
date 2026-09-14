@@ -124,6 +124,11 @@ export const ODOS_AUDIT_EVENT_TYPES = [
   "document.generate.failed",
   "document.print.requested",
   "document.print.completed",
+  "guarantor.link.started",
+  "guarantor.link.completed",
+  "guarantor.link.pending",
+  "guarantor.link.failed",
+  "guarantor.link.interfered",
   ...AGENTOPS_AUDIT_EVENT_TYPES,
 ] as const;
 
