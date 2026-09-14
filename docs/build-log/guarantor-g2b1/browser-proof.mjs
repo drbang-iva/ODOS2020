@@ -43,6 +43,7 @@ report.source = {
   ].map(path => [path, digest(sourceRoot, path)]).concat([
     'ui/src/main.tsx', 'ui/src/App.tsx', 'ui/src/components/patient/PatientDemographicsEditor.tsx',
     'ui/src/components/patient/ResponsiblePartiesControl.tsx', 'ui/src/lib/guarantor-editor.ts', 'ui/src/lib/guarantor-link-operations.ts',
+    'docs/build-log/guarantor-g2b1/browser-proof.mjs',
   ].map(path => [path, digest(proofRoot, path)]))),
 };
 for (const path of ['ui/src/lib/guarantor-editor.ts', 'ui/src/lib/guarantor-link-operations.ts', 'ui/src/components/patient/ResponsiblePartiesControl.tsx']) {
@@ -247,7 +248,11 @@ try {
   assert.equal(await group.getByRole('button', { name: 'Complete', exact: true }).count(), 0);
   await capture(page, group, 'complete-reloaded');
   await verifyFinal(completeCase, await read('Person', completeCase.destination.id), 'completed');
+  await page.addInitScript(() => Object.defineProperty(crypto, 'randomUUID', { configurable: true, value: undefined }));
   group = await openPending(page, correctCase);
+  const correctCapabilities = await page.evaluate(() => ({ randomUUID: typeof crypto.randomUUID, getRandomValues: typeof crypto.getRandomValues }));
+  assert.deepEqual(correctCapabilities, { randomUUID: 'undefined', getRandomValues: 'function' });
+  report.source.browserCapabilityOverride = { scenario: 'Correct', method: 'Test-only page init script removes randomUUID; native getRandomValues is unchanged', observed: correctCapabilities };
   await group.getByRole('textbox', { name: 'Reason for correction', exact: true }).fill('   ');
   assert.ok(await group.getByRole('button', { name: 'Correct', exact: true }).isDisabled());
   const reason = 'Synthetic proof: retain the original guarantor';
@@ -260,7 +265,7 @@ try {
   assert.equal(correctResult.status(), 200);
   const correctionRequest = correctResult.request().postDataJSON();
   assert.equal(correctionRequest.reason, reason);
-  assert.match(correctionRequest.operationId, /^[a-f0-9-]{36}$/);
+  assert.match(correctionRequest.operationId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   const correction = await correctResult.json();
   assert.equal(correction.kind, 'correct');
   assert.equal(correction.task.status, 'completed');
@@ -276,6 +281,7 @@ try {
   report.checks = {
     recoveryClicks: 2, claimedUnlinkedChildrenShownPending: 4, disabledSaveAndRepairClickAttempts: 4,
     protectedChildSentinelsPreserved: 4, directBrowserFhirPuts: 0, pageErrors: 0,
+    correctWithoutNativeRandomUUID: true, correctOperationIdValidV4: true,
     scope: 'Author route wiring and real local FHIR state proof; independent evaluation and policy proof are separate.',
     unmountedBackgroundRoutes: report.browserRequests.filter(request => request.status === 404),
   };

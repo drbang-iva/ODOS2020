@@ -1,6 +1,6 @@
 {
   "kind": "Author Chromium guard mutations",
-  "backendHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
+  "backendHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
   "backendOperationSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
   "backendRoutesSha256": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
   "mutations": [
@@ -15,7 +15,7 @@
         "sourceBeforeViteSha256": "e72aed4e229d18857c425cf6d8e9175333351f88714275508d0ce80d22df6471"
       },
       "sourceComponentSha256": "3c9883c78a7a403ce376deb47f04ba610dc6851e7e251673959375a5c9f4ea80",
-      "completedAt": "2026-09-14T11:48:29.344Z"
+      "completedAt": "2026-09-14T12:21:49.773Z"
     },
     {
       "mutation": "correct-click",
@@ -28,7 +28,7 @@
         "sourceBeforeViteSha256": "0e095062d4fd0d87c56aa2a50c0dd9dabe64cceefde4a4afed667d36787c8af1"
       },
       "sourceComponentSha256": "3c9883c78a7a403ce376deb47f04ba610dc6851e7e251673959375a5c9f4ea80",
-      "completedAt": "2026-09-14T11:48:49.210Z"
+      "completedAt": "2026-09-14T12:22:14.260Z"
     }
   ],
   "restored": {
@@ -40,17 +40,29 @@
       "protectedChildSentinelsPreserved": 4,
       "directBrowserFhirPuts": 0,
       "pageErrors": 0,
+      "correctWithoutNativeRandomUUID": true,
+      "correctOperationIdValidV4": true,
       "scope": "Author route wiring and real local FHIR state proof; independent evaluation and policy proof are separate."
     },
-    "completedAt": "2026-09-14T11:49:00.521Z"
+    "completedAt": "2026-09-14T12:22:29.459Z",
+    "browserCapabilityOverride": {
+      "scenario": "Correct",
+      "method": "Test-only page init script removes randomUUID; native getRandomValues is unchanged",
+      "observed": {
+        "randomUUID": "undefined",
+        "getRandomValues": "function"
+      }
+    }
   },
   "sourcePinVerification": {
-    "expectedHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
+    "expectedHead": "3442140a0ef94e52e5bdb7fd4cb26ddabd47caec",
     "operationSha256": "c7854febcbf8707f3f306f781646bad02b4f13c5f7debebc84e14e944ea5daab",
     "routesSha256": "c39e04ea3a42e8f1edaa2ec93d48556efca77682b320edffd10395d80d55c4a5",
+    "operationApiHelperSha256": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+    "browserHarnessSha256": "f50273ea4c6e90f82cea0d227a2066056bb0f1c992983b4cd76c721898a86117",
     "checks": "HEAD, operation source, and routes source asserted before and after each of the three runs",
     "uiTreeComparison": {
-      "command": "git diff --exit-code e16b524e6402a6c333b8af459794b0387e4978e5 82fc66de6cb04f74bcbbe7805c7934c934f932e6 -- ui",
+      "command": "git diff --exit-code 5cbe81d8651b4bc34b6932bed41e26275e563666 3442140a0ef94e52e5bdb7fd4cb26ddabd47caec -- ui",
       "exitCode": 0,
       "output": ""
     }
