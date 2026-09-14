@@ -1,0 +1,62 @@
+[
+  {
+    "name": "guarantorLinkOperation",
+    "exit": 0,
+    "summary": [
+      "# tests 38",
+      "# pass 38",
+      "# fail 0",
+      "# skipped 0"
+    ]
+  },
+  {
+    "name": "guarantorLinkRoutes",
+    "exit": 0,
+    "summary": [
+      "# tests 2",
+      "# pass 2",
+      "# fail 0",
+      "# skipped 0"
+    ]
+  },
+  {
+    "name": "guarantorLinkPolicy",
+    "exit": 0,
+    "summary": [
+      "# tests 5",
+      "# pass 5",
+      "# fail 0",
+      "# skipped 0"
+    ]
+  },
+  {
+    "name": "guarantorPerson",
+    "exit": 0,
+    "summary": [
+      "# tests 11",
+      "# pass 11",
+      "# fail 0",
+      "# skipped 0"
+    ]
+  },
+  {
+    "name": "guarantorEditor",
+    "exit": 0,
+    "summary": [
+      "# tests 9",
+      "# pass 9",
+      "# fail 0",
+      "# skipped 0"
+    ]
+  },
+  {
+    "name": "guarantorLinkOperations",
+    "exit": 0,
+    "summary": [
+      "# tests 14",
+      "# pass 14",
+      "# fail 0",
+      "# skipped 0"
+    ]
+  }
+]

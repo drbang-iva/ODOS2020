@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: K1 search refuses a prefix-only family
+ok 1 - K1 search refuses a prefix-only family
+  ---
+  duration_ms: 24.788042
+  type: 'test'
+  ...
+# Subtest: K2 phone compares digits and rejects a different digit
+ok 2 - K2 phone compares digits and rejects a different digit
+  ---
+  duration_ms: 4.454583
+  type: 'test'
+  ...
+# Subtest: K3 search card exposes exactly six keys
+ok 3 - K3 search card exposes exactly six keys
+  ---
+  duration_ms: 1.839791
+  type: 'test'
+  ...
+# Subtest: K4 inactive excluded
+ok 4 - K4 inactive excluded
+  ---
+  duration_ms: 2.245
+  type: 'test'
+  ...
+# Subtest: K4 zero-link excluded
+ok 5 - K4 zero-link excluded
+  ---
+  duration_ms: 1.821375
+  type: 'test'
+  ...
+# Subtest: K4 non-RelatedPerson excluded
+ok 6 - K4 non-RelatedPerson excluded
+  ---
+  duration_ms: 1.417666
+  type: 'test'
+  ...
+# Subtest: K5 21 matches return 422
+ok 7 - K5 21 matches return 422
+  ---
+  duration_ms: 1.260875
+  type: 'test'
+  ...
+# Subtest: K5 201 matches return 422
+ok 8 - K5 201 matches return 422
+  ---
+  duration_ms: 2.909791
+  type: 'test'
+  ...
+# Subtest: K7 create writes exactly one active unlinked Person; missing surname writes nothing
+ok 9 - K7 create writes exactly one active unlinked Person; missing surname writes nothing
+  ---
+  duration_ms: 11.163833
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 301.513875

@@ -1,0 +1,122 @@
+TAP version 13
+# Subtest: K14 create-new starts disabled before any keyed search
+ok 1 - K14 create-new starts disabled before any keyed search
+  ---
+  duration_ms: 21.276584
+  type: 'test'
+  ...
+# Subtest: K9 stale confirmation makes one create and requires Review again
+ok 2 - K9 stale confirmation makes one create and requires Review again
+  ---
+  duration_ms: 5.111625
+  type: 'test'
+  ...
+# Subtest: K10 existing Move drafts before create
+ok 3 - K10 existing Move drafts before create
+  ---
+  duration_ms: 2.694
+  type: 'test'
+  ...
+# Subtest: K10 new Move creates Person before draft and Review again reuses it
+ok 4 - K10 new Move creates Person before draft and Review again reuses it
+  ---
+  duration_ms: 3.979833
+  type: 'test'
+  ...
+# Subtest: K11 Join keeps Loaded Ann and moves loser full set
+not ok 5 - K11 Join keeps Loaded Ann and moves loser full set
+  ---
+  duration_ms: 4.241583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:1:6023'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    'D' !== 'S'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'S'
+  actual: 'D'
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:36:495)
+    async screen (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:31:152)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: K11 Join keeps Found Ann and moves loser full set
+not ok 6 - K11 Join keeps Found Ann and moves loser full set
+  ---
+  duration_ms: 4.052292
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:1:6023'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    'S' !== 'D'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'D'
+  actual: 'S'
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:36:495)
+    async screen (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:31:152)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: K13 Undo only on completed non-correct and requires a reason
+ok 7 - K13 Undo only on completed non-correct and requires a reason
+  ---
+  duration_ms: 2.174167
+  type: 'test'
+  ...
+# Subtest: K14 matching cards require None of these before new guarantor
+ok 8 - K14 matching cards require None of these before new guarantor
+  ---
+  duration_ms: 1.582709
+  type: 'test'
+  ...
+# Subtest: K12 missing offers no Move Join or history Undo
+ok 9 - K12 missing offers no Move Join or history Undo
+  ---
+  duration_ms: 1.101917
+  type: 'test'
+  ...
+# Subtest: K12 ambiguous offers no Move Join or history Undo
+ok 10 - K12 ambiguous offers no Move Join or history Undo
+  ---
+  duration_ms: 0.86225
+  type: 'test'
+  ...
+# Subtest: K12 dangling offers no Move Join or history Undo
+ok 11 - K12 dangling offers no Move Join or history Undo
+  ---
+  duration_ms: 0.822625
+  type: 'test'
+  ...
+# Subtest: K12 unknown offers no Move Join or history Undo
+ok 12 - K12 unknown offers no Move Join or history Undo
+  ---
+  duration_ms: 0.922125
+  type: 'test'
+  ...
+# Subtest: K12 pending offers no Move Join or history Undo
+ok 13 - K12 pending offers no Move Join or history Undo
+  ---
+  duration_ms: 0.639666
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 11
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 263.884333

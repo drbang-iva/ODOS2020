@@ -1,0 +1,360 @@
+{
+  "sourceHead": "6baea1d51666461e3de94ded1287ffe8817d2f70",
+  "events": [
+    {
+      "sequence": 1,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/147b1d96-2a5d-4618-837a-25cfac04d147",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/273f86ef-d85b-4a76-a357-ca6a943bcfb2",
+          "display": "g2b2a-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/fde03b0d-2193-4cb6-b163-3d413572dfa8",
+          "display": "g2b2a-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/d8d84939-7ca2-40a5-a70e-77282402dadd",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "147b1d96-2a5d-4618-837a-25cfac04d147",
+        "meta": {
+          "versionId": "1b38deae-2ed1-4e17-aede-b81e5b9fc91c",
+          "lastUpdated": "2026-09-14T15:28:42.864Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/af0c8164-d8bd-4cdc-9d17-12b9b1461a99"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 2,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "PUT",
+      "path": "/fhir/R4/ProjectMembership/147b1d96-2a5d-4618-837a-25cfac04d147",
+      "status": 200,
+      "ifMatch": "W/\"1b38deae-2ed1-4e17-aede-b81e5b9fc91c\"",
+      "request": {
+        "invitedBy": {
+          "reference": "User/273f86ef-d85b-4a76-a357-ca6a943bcfb2",
+          "display": "g2b2a-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/fde03b0d-2193-4cb6-b163-3d413572dfa8",
+          "display": "g2b2a-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/d8d84939-7ca2-40a5-a70e-77282402dadd",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "147b1d96-2a5d-4618-837a-25cfac04d147",
+        "meta": {
+          "versionId": "1b38deae-2ed1-4e17-aede-b81e5b9fc91c",
+          "lastUpdated": "2026-09-14T15:28:42.864Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/af0c8164-d8bd-4cdc-9d17-12b9b1461a99"
+              }
+            ]
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/project-membership-business-actions",
+            "extension": [
+              {
+                "url": "revoked",
+                "valueCode": "guarantor.link"
+              }
+            ]
+          }
+        ]
+      },
+      "response": {
+        "invitedBy": {
+          "reference": "User/273f86ef-d85b-4a76-a357-ca6a943bcfb2",
+          "display": "g2b2a-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/fde03b0d-2193-4cb6-b163-3d413572dfa8",
+          "display": "g2b2a-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/d8d84939-7ca2-40a5-a70e-77282402dadd",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "147b1d96-2a5d-4618-837a-25cfac04d147",
+        "meta": {
+          "versionId": "a52a6ec5-f2dc-4970-af45-5f79347fb25a",
+          "lastUpdated": "2026-09-14T15:31:33.339Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/af0c8164-d8bd-4cdc-9d17-12b9b1461a99"
+              }
+            ]
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/project-membership-business-actions",
+            "extension": [
+              {
+                "url": "revoked",
+                "valueCode": "guarantor.link"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 3,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/147b1d96-2a5d-4618-837a-25cfac04d147",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/273f86ef-d85b-4a76-a357-ca6a943bcfb2",
+          "display": "g2b2a-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/fde03b0d-2193-4cb6-b163-3d413572dfa8",
+          "display": "g2b2a-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/d8d84939-7ca2-40a5-a70e-77282402dadd",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "147b1d96-2a5d-4618-837a-25cfac04d147",
+        "meta": {
+          "versionId": "a52a6ec5-f2dc-4970-af45-5f79347fb25a",
+          "lastUpdated": "2026-09-14T15:31:33.339Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/af0c8164-d8bd-4cdc-9d17-12b9b1461a99"
+              }
+            ]
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/project-membership-business-actions",
+            "extension": [
+              {
+                "url": "revoked",
+                "valueCode": "guarantor.link"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 4,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "PUT",
+      "path": "/fhir/R4/ProjectMembership/147b1d96-2a5d-4618-837a-25cfac04d147",
+      "status": 200,
+      "ifMatch": "W/\"a52a6ec5-f2dc-4970-af45-5f79347fb25a\"",
+      "request": {
+        "invitedBy": {
+          "reference": "User/273f86ef-d85b-4a76-a357-ca6a943bcfb2",
+          "display": "g2b2a-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/fde03b0d-2193-4cb6-b163-3d413572dfa8",
+          "display": "g2b2a-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/d8d84939-7ca2-40a5-a70e-77282402dadd",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "147b1d96-2a5d-4618-837a-25cfac04d147",
+        "meta": {
+          "versionId": "a52a6ec5-f2dc-4970-af45-5f79347fb25a",
+          "lastUpdated": "2026-09-14T15:31:33.339Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/af0c8164-d8bd-4cdc-9d17-12b9b1461a99"
+              }
+            ]
+          }
+        ]
+      },
+      "response": {
+        "invitedBy": {
+          "reference": "User/273f86ef-d85b-4a76-a357-ca6a943bcfb2",
+          "display": "g2b2a-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/fde03b0d-2193-4cb6-b163-3d413572dfa8",
+          "display": "g2b2a-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/d8d84939-7ca2-40a5-a70e-77282402dadd",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "147b1d96-2a5d-4618-837a-25cfac04d147",
+        "meta": {
+          "versionId": "2604daa6-1f54-47ba-8d05-f8fefe6478c1",
+          "lastUpdated": "2026-09-14T15:31:33.381Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/af0c8164-d8bd-4cdc-9d17-12b9b1461a99"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

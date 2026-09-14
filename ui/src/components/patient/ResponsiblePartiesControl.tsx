@@ -6,6 +6,8 @@ import {
 } from "../../lib/guarantor-editor";
 import { completeGuarantorLinkOperation, correctGuarantorLinkOperation } from "../../lib/guarantor-link-operations";
 
+import { GuarantorLinkScreens } from "./GuarantorLinkScreens";
+
 const writeStatusMessages = { stopped: "not updated — the guarantor changed or a link operation is pending", updated: "update accepted", conflict: "record changed while you were editing", error: "update failed", "no-response": "update response not received" };
 
 type Demographics = Pick<Person, "name" | "telecom" | "address">;
@@ -142,6 +144,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
       {mismatched.length > 0 && <button type="button" disabled={busy || dirty} onClick={() => save(true)}>Repair for {mismatched.map(child => child.patientName).join(", ")}</button>}
       <button type="button" disabled={busy} onClick={() => void reload()}>Reload guarantor</button>
     </div>
+    <GuarantorLinkScreens key={loaded.snapshot.person.id} person={loaded.snapshot.person} relatedPersonId={loaded.relatedPerson.id!} disabled={busy || dirty} onReload={refresh} />
   </section>;
 }
 
