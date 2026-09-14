@@ -2,7 +2,9 @@
 
 Author proof passed against the disposable local Medplum stack. Chromium opened the real `/clinic?patientId=...` route, clicked **Edit demographics**, and used the actual Responsible parties controls. The full application was served from `ui/index.html` through `main.tsx`, `App`, `RouteSwitch`, `PatientRoute`, `PatientOverview`, and `PatientDemographicsEditor`.
 
-The capture used backend source at `5e7c2aef7f6b59432deb6046fda8e65056796b10` and UI source at `245a9d7dc6f9ab6eafddc77e77c79867ebbc5ec0`. The runner requires the guarantor editor, component, and operation API helper to match the integrated source byte for byte. [browser-proof.json](browser-proof.json) records individual source hashes, strict ports, PID, screenshot hashes, requests, writes, and checks. This is a Vite development-server capture, with the normal application styles and disposable proxy targets.
+The capture used backend source at `158c9e67b91f16fdfa20f22ad20577ebef9d5d7a` and UI source at `2802e6f26ba8d10254fa190f12f6b348e13518a8`. The runner requires the guarantor editor, component, and operation API helper to match the integrated source byte for byte. [browser-proof.json](browser-proof.json) records individual source hashes, strict ports, PID, screenshot hashes, requests, writes, and checks. This is a Vite development-server capture, with the normal application styles and disposable proxy targets.
+
+The final wave checked the backend commit and operation-file SHA256 `ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19` before and after each mutation and the restored run. The entire `ui/` directory was identical between the UI checkout and final core: `git diff --exit-code 2802e6f26ba8d10254fa190f12f6b348e13518a8 158c9e67b91f16fdfa20f22ad20577ebef9d5d7a -- ui` returned exit 0 with no output. The final wave used the integrated fixture helper unchanged, after the parent released the shared staff principal.
 
 ## Results
 

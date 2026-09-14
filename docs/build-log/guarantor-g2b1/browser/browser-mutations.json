@@ -1,9 +1,10 @@
 {
   "kind": "Author Chromium guard mutations",
+  "backendHead": "158c9e67b91f16fdfa20f22ad20577ebef9d5d7a",
+  "backendOperationSha256": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
   "mutations": [
     {
       "mutation": "complete-click",
-      "command": "G2B1_BROWSER_MUTATION=complete-click G2B1_EVIDENCE_DIR=<proof-root>/.odos/g2b1-editor/browser-mutation-complete node --import ./mcp/node_modules/tsx/dist/loader.mjs docs/build-log/guarantor-g2b1/browser-proof.mjs",
       "exitCode": 1,
       "result": "FAIL",
       "failure": "page.waitForResponse: Timeout 10000ms exceeded while waiting for event \"response\"",
@@ -13,11 +14,10 @@
         "sourceBeforeViteSha256": "b07e64c1c89ebbb1e0960a1adb33141913740ab94b879937414f28dd4533781b"
       },
       "sourceComponentSha256": "83ffe27a086b45d4a22c347efa673450151d05490cc556994feaeb951b8b07f0",
-      "completedAt": "2026-09-14T10:33:30.631Z"
+      "completedAt": "2026-09-14T11:11:40.725Z"
     },
     {
       "mutation": "correct-click",
-      "command": "G2B1_BROWSER_MUTATION=correct-click G2B1_EVIDENCE_DIR=<proof-root>/.odos/g2b1-editor/browser-mutation-correct node --import ./mcp/node_modules/tsx/dist/loader.mjs docs/build-log/guarantor-g2b1/browser-proof.mjs",
       "exitCode": 1,
       "result": "FAIL",
       "failure": "page.waitForResponse: Timeout 10000ms exceeded while waiting for event \"response\"",
@@ -27,7 +27,7 @@
         "sourceBeforeViteSha256": "fb6ef9f47c1a2d4ccf713191bf4319da582788a09c6ca196bd6ef1b7bed5590f"
       },
       "sourceComponentSha256": "83ffe27a086b45d4a22c347efa673450151d05490cc556994feaeb951b8b07f0",
-      "completedAt": "2026-09-14T10:34:07.916Z"
+      "completedAt": "2026-09-14T11:11:59.781Z"
     }
   ],
   "restored": {
@@ -41,6 +41,12 @@
       "pageErrors": 0,
       "scope": "Author route wiring and real local FHIR state proof; independent evaluation and policy proof are separate."
     },
-    "completedAt": "2026-09-14T10:34:33.859Z"
+    "completedAt": "2026-09-14T11:12:09.688Z"
+  },
+  "sourcePinVerification": "Exact backend HEAD and operation SHA256 were asserted before and after each of the three runs.",
+  "uiTreeComparison": {
+    "command": "git diff --exit-code 2802e6f26ba8d10254fa190f12f6b348e13518a8 158c9e67b91f16fdfa20f22ad20577ebef9d5d7a -- ui",
+    "exitCode": 0,
+    "output": ""
   }
 }
