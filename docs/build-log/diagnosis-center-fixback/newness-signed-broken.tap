@@ -4,7 +4,7 @@ not ok 1 - diagnosis status controls: finished
   ---
   duration_ms: 38.791708
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisWorkspace.test.tsx:1:71162'
+  location: 'ui/tests/diagnosisWorkspace.test.tsx:1:71162'
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
@@ -17,7 +17,7 @@ not ok 1 - diagnosis status controls: finished
   actual: false
   operator: '=='
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisWorkspace.test.tsx:1925:16)
+    TestContext.<anonymous> (ui/tests/diagnosisWorkspace.test.tsx:1925:16)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

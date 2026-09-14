@@ -4,7 +4,7 @@ not ok 1 - New / Established suggestion: resolved prior
   ---
   duration_ms: 4.836417
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/diagnosisNewness.test.ts:1:9746'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:9746'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -19,7 +19,7 @@ not ok 1 - New / Established suggestion: resolved prior
   actual: 'established'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/diagnosisNewness.test.ts:145:12)
+    TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:145:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

@@ -125,7 +125,8 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [provenanceLines, setProvenanceLines] = useState<Record<string, string>>({});
   const [diagnosisNewness, setDiagnosisNewness] = useState<Record<string, DiagnosisNewnessRow>>({});
-  const [diagnosisStatusError, setDiagnosisStatusError] = useState<string>();
+  const [visitStatusError, setVisitStatusError] = useState<string>();
+  const [newnessError, setNewnessError] = useState<string>();
   const [diagnosisVisitStatuses, setDiagnosisVisitStatuses] = useState<Record<string, DiagnosisVisitStatus>>({});
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -177,7 +178,8 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     setEncounter(loadedEncounter);
     setDiagnosisVisitStatuses(Object.fromEntries(visitStatuses.rows.map((row) => [row.conditionReference, row.status])));
     setDiagnosisNewness(Object.fromEntries(newness.rows.map((row) => [row.conditionReference, row])));
-    setDiagnosisStatusError(visitStatuses.error ?? newness.error);
+    setVisitStatusError(visitStatuses.error);
+    setNewnessError(newness.error);
     setAttachedProcedures(procedureResult.response?.attachedProcedures ?? []);
     setProcedureAttachmentError(procedureResult.error ? "Attached procedures could not be loaded." : undefined);
     const loadedConditions = (conditionBundle.entry ?? [])
@@ -366,7 +368,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       reference: `Condition/${condition.id}`,
       code: coding.code,
       confirmed: true as const,
-      visitStatus: diagnosisStatusError ? undefined : diagnosisProtocolVisitStatus(diagnosisVisitStatuses[`Condition/${condition.id}`], diagnosisNewness[`Condition/${condition.id}`]),
+      visitStatus: visitStatusError ? undefined : diagnosisProtocolVisitStatus(diagnosisVisitStatuses[`Condition/${condition.id}`], diagnosisNewness[`Condition/${condition.id}`]),
     }] : []);
   });
   const protocolOffer = protocolOffers.find((offer) => offer.id === selectedProtocolId) ?? protocolOffers[0];
@@ -542,7 +544,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
 
   return (
     <section className="h-full overflow-y-auto p-6">
-      {diagnosisStatusError && <p role="alert">{diagnosisStatusError} Status-based protocol ranking is unavailable. <button type="button" onClick={() => void load().catch((err) => setError(String(err)))}>Retry</button></p>}
+      {(visitStatusError || newnessError) && <p role="alert">{[visitStatusError, newnessError].filter(Boolean).join(" ")}{visitStatusError && " Status-based protocol ranking is unavailable."} <button type="button" onClick={() => void load().catch((err) => setError(String(err)))}>Retry</button></p>}
       <div className="max-w-5xl">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>

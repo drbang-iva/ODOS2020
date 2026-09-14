@@ -16,9 +16,9 @@ ok 2 - AR dashboard client reaches the authenticated reporting route
   type: 'test'
   ...
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at CatalogScene (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/settings/CatalogEditor.tsx:89:3)
-#     at OpticalPricingSettings (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/settings/OpticalPricingSettings.tsx:16:42)
-#     at RouteSwitch (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/App.tsx:386:3)
+#     at CatalogScene (ui/src/scenes/settings/CatalogEditor.tsx:89:3)
+#     at OpticalPricingSettings (ui/src/scenes/settings/OpticalPricingSettings.tsx:16:42)
+#     at RouteSwitch (ui/src/App.tsx:386:3)
 # Subtest: the claims worklist route now reaches the authoritative billing Work surface
 ok 3 - the claims worklist route now reaches the authoritative billing Work surface
   ---
@@ -62,9 +62,9 @@ ok 9 - the four round-two settings routes render write controls only for authori
   type: 'test'
   ...
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at CatalogScene (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/settings/CatalogEditor.tsx:89:3)
-#     at LensCatalogSettings (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/settings/LensCatalogSettings.tsx:50:3)
-#     at RouteSwitch (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/App.tsx:386:3)
+#     at CatalogScene (ui/src/scenes/settings/CatalogEditor.tsx:89:3)
+#     at LensCatalogSettings (ui/src/scenes/settings/LensCatalogSettings.tsx:50:3)
+#     at RouteSwitch (ui/src/App.tsx:386:3)
 # Subtest: audit log renders an empty patient filter
 ok 10 - audit log renders an empty patient filter
   ---
@@ -612,8 +612,8 @@ ok 97 - singletonListAdapter refuses deletes by exposing deactivation only and g
   type: 'test'
   ...
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at CatalogScene (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/settings/CatalogEditor.tsx:89:3)
-#     at CatalogEditor (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/settings/CatalogEditor.tsx:73:3)
+#     at CatalogScene (ui/src/scenes/settings/CatalogEditor.tsx:89:3)
+#     at CatalogEditor (ui/src/scenes/settings/CatalogEditor.tsx:73:3)
 # Subtest: CatalogEditor renders its loading skeleton
 ok 98 - CatalogEditor renders its loading skeleton
   ---
@@ -952,20 +952,20 @@ ok 153 - CollectPanel surfaces an ambiguous charge reason and keeps the line non
   ...
 # Receipt footer message read skipped. TypeError: Failed to parse URL from /fhir/R4/Basic?code=https%3A%2F%2Fodos2020.com%2Ffhir%2FCodeSystem%2Fstatement-message-config%7Codos-statement-message-config&_count=10
 #     at node:internal/deps/undici/undici:14976:13
-#     at async Object.search (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/lib/fhir.ts:255:17)
-#     at async searchAll (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/lib/fhir-search.ts:17:16)
-#     at async loadStatementMessageConfigSingleton (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/settings/StatementMessagesSettings.tsx:67:21) {
+#     at async Object.search (ui/src/lib/fhir.ts:255:17)
+#     at async searchAll (ui/src/lib/fhir-search.ts:17:16)
+#     at async loadStatementMessageConfigSingleton (ui/src/scenes/settings/StatementMessagesSettings.tsx:67:21) {
 #   [cause]: TypeError: Invalid URL
 #       at new URL (node:internal/url:818:25)
 #       at new Request (node:internal/deps/undici/undici:9804:25)
 #       at fetch (node:internal/deps/undici/undici:10533:25)
 #       at fetch (node:internal/deps/undici/undici:14974:10)
 #       at fetch (node:internal/bootstrap/web/exposed-window-or-worker:75:12)
-#       at Object.search (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/lib/fhir.ts:255:23)
-#       at searchAll (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/lib/fhir-search.ts:17:29)
-#       at loadStatementMessageConfigSingleton (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/settings/StatementMessagesSettings.tsx:67:27)
-#       at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/CollectPanel.tsx:360:5)
-#       at commitHookEffectListMount (/Users/ericr.bang/GitHub/ODOS2020/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13038:26) {
+#       at Object.search (ui/src/lib/fhir.ts:255:23)
+#       at searchAll (ui/src/lib/fhir-search.ts:17:29)
+#       at loadStatementMessageConfigSingleton (ui/src/scenes/settings/StatementMessagesSettings.tsx:67:27)
+#       at <anonymous> (ui/src/components/CollectPanel.tsx:360:5)
+#       at commitHookEffectListMount (ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13038:26) {
 #     code: 'ERR_INVALID_URL',
 #     input: '/fhir/R4/Basic?code=https%3A%2F%2Fodos2020.com%2Ffhir%2FCodeSystem%2Fstatement-message-config%7Codos-statement-message-config&_count=10'
 #   }
@@ -1763,9 +1763,9 @@ ok 285 - remaining anterior structure grades render blank, persist typed values,
   type: 'test'
   ...
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:1372:46)
+#     at loadExamOverviewProjection (ui/src/scenes/EncounterCharting.tsx:1372:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
-#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:366:63)
+#     at <anonymous> (ui/src/scenes/EncounterCharting.tsx:366:63)
 # Subtest: ocular-health cleanup qualifiers render only for their selected finding
 ok 286 - ocular-health cleanup qualifiers render only for their selected finding
   ---
@@ -1791,9 +1791,9 @@ ok 289 - EncounterCharting keeps the shipped eyecare branches, adds three dry-ey
   type: 'test'
   ...
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:1372:46)
+#     at loadExamOverviewProjection (ui/src/scenes/EncounterCharting.tsx:1372:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
-#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:366:63)
+#     at <anonymous> (ui/src/scenes/EncounterCharting.tsx:366:63)
 # Subtest: an aesthetics-tagged Encounter loads the procedure catalog into the shared clinical spine
 ok 290 - an aesthetics-tagged Encounter loads the procedure catalog into the shared clinical spine
   ---
@@ -1807,17 +1807,17 @@ ok 291 - an eyecare-tagged Encounter does not load or render aesthetics procedur
   type: 'test'
   ...
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:1372:46)
+#     at loadExamOverviewProjection (ui/src/scenes/EncounterCharting.tsx:1372:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
-#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:366:63)
+#     at <anonymous> (ui/src/scenes/EncounterCharting.tsx:366:63)
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:1372:46)
+#     at loadExamOverviewProjection (ui/src/scenes/EncounterCharting.tsx:1372:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
-#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:366:63)
+#     at <anonymous> (ui/src/scenes/EncounterCharting.tsx:366:63)
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:1372:46)
+#     at loadExamOverviewProjection (ui/src/scenes/EncounterCharting.tsx:1372:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
-#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:366:63)
+#     at <anonymous> (ui/src/scenes/EncounterCharting.tsx:366:63)
 # Subtest: changing encounterId remounts charting and clears encounter-scoped completion statuses
 ok 292 - changing encounterId remounts charting and clears encounter-scoped completion statuses
   ---
@@ -1849,9 +1849,9 @@ ok 296 - GonioscopySection eye copy preserves anatomical quadrant names
   type: 'test'
   ...
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:1372:46)
+#     at loadExamOverviewProjection (ui/src/scenes/EncounterCharting.tsx:1372:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
-#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:366:63)
+#     at <anonymous> (ui/src/scenes/EncounterCharting.tsx:366:63)
 # Subtest: GonioscopySection preserves documented target pigmentation when the source is blank
 ok 297 - GonioscopySection preserves documented target pigmentation when the source is blank
   ---
@@ -1865,9 +1865,9 @@ ok 298 - EncounterCharting retains the shared ChartSidebar after the chart-open 
   type: 'test'
   ...
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:1372:46)
+#     at loadExamOverviewProjection (ui/src/scenes/EncounterCharting.tsx:1372:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
-#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:366:63)
+#     at <anonymous> (ui/src/scenes/EncounterCharting.tsx:366:63)
 # Subtest: EncounterCharting collapses its chart sidebar at the existing tablet container breakpoint and persists expansion
 ok 299 - EncounterCharting collapses its chart sidebar at the existing tablet container breakpoint and persists expansion
   ---
@@ -3197,8 +3197,8 @@ ok 514 - education dispatch client rejects malformed chart update metadata
   type: 'test'
   ...
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/section-editing.tsx:29:42)
-#     at CvfSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/CvfSection.tsx:42:30)
+#     at SectionEditingProvider (ui/src/components/charting/section-editing.tsx:29:42)
+#     at CvfSection (ui/src/components/charting/CvfSection.tsx:42:30)
 # Subtest: screenshot refinement preserves PRETEST order with the backend confrontation label
 ok 515 - screenshot refinement preserves PRETEST order with the backend confrontation label
   ---
@@ -3224,11 +3224,11 @@ ok 518 - color vision derives only the operator-confirmed Ishihara total
   type: 'test'
   ...
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/section-editing.tsx:29:42)
-#     at CvfSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/CvfSection.tsx:42:30)
+#     at SectionEditingProvider (ui/src/components/charting/section-editing.tsx:29:42)
+#     at CvfSection (ui/src/components/charting/CvfSection.tsx:42:30)
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/section-editing.tsx:29:42)
-#     at CvfSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/CvfSection.tsx:42:30)
+#     at SectionEditingProvider (ui/src/components/charting/section-editing.tsx:29:42)
+#     at CvfSection (ui/src/components/charting/CvfSection.tsx:42:30)
 # Subtest: CVF renders four accessible quadrant wedges and preserves per-eye controls
 ok 519 - CVF renders four accessible quadrant wedges and preserves per-eye controls
   ---
@@ -3272,11 +3272,11 @@ ok 525 - bilateral structure catalog picks stay scoped to the eye where the sear
   type: 'test'
   ...
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/section-editing.tsx:29:42)
-#     at CoverTestSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/CoverTestSection.tsx:38:36)
+#     at SectionEditingProvider (ui/src/components/charting/section-editing.tsx:29:42)
+#     at CoverTestSection (ui/src/components/charting/CoverTestSection.tsx:38:36)
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/section-editing.tsx:29:42)
-#     at EntranceStateSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/EntranceStateSection.tsx:34:40)
+#     at SectionEditingProvider (ui/src/components/charting/section-editing.tsx:29:42)
+#     at EntranceStateSection (ui/src/components/charting/EntranceStateSection.tsx:34:40)
 # Subtest: structure proposal toggles find provisional Conditions beyond the first FHIR search page
 ok 526 - structure proposal toggles find provisional Conditions beyond the first FHIR search page
   ---
@@ -3302,12 +3302,12 @@ ok 529 - pupil state sections retain explicit per-eye states and centered spinne
   type: 'test'
   ...
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/section-editing.tsx:29:42)
-#     at EntranceMeasurementSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/EntranceMeasurementSection.tsx:24:46)
+#     at SectionEditingProvider (ui/src/components/charting/section-editing.tsx:29:42)
+#     at EntranceMeasurementSection (ui/src/components/charting/EntranceMeasurementSection.tsx:24:46)
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/section-editing.tsx:29:42)
-#     at DilationSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/DilationSection.tsx:15:35)
-#     at ConfirmDestructiveProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/ConfirmDestructive.tsx:26:46)
+#     at SectionEditingProvider (ui/src/components/charting/section-editing.tsx:29:42)
+#     at DilationSection (ui/src/components/charting/DilationSection.tsx:15:35)
+#     at ConfirmDestructiveProvider (ui/src/components/charting/ConfirmDestructive.tsx:26:46)
 # Subtest: selecting Pupils Normal OU fills only the definition-supplied 3 mm and 5 mm normal values
 ok 530 - selecting Pupils Normal OU fills only the definition-supplied 3 mm and 5 mm normal values
   ---
@@ -3333,8 +3333,8 @@ ok 533 - dilation retains agent capture, DFE flag, declined counseling, and char
   type: 'test'
   ...
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/section-editing.tsx:29:42)
-#     at EntranceStateSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/EntranceStateSection.tsx:34:40)
+#     at SectionEditingProvider (ui/src/components/charting/section-editing.tsx:29:42)
+#     at EntranceStateSection (ui/src/components/charting/EntranceStateSection.tsx:34:40)
 # Subtest: clearing Dilation leaves the editor unrecorded instead of pre-filling an administration row
 ok 534 - clearing Dilation leaves the editor unrecorded instead of pre-filling an administration row
   ---
@@ -3754,8 +3754,8 @@ ok 597 - the confrontation-field diagram keeps seeing field light and restrictio
   type: 'test'
   ...
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/section-editing.tsx:29:42)
-#     at VaSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/VaSection.tsx:30:29)
+#     at SectionEditingProvider (ui/src/components/charting/section-editing.tsx:29:42)
+#     at VaSection (ui/src/components/charting/VaSection.tsx:30:29)
 # Subtest: Auto-Refraction uses centered PD and K spinners plus plano-centered axis wheels
 ok 598 - Auto-Refraction uses centered PD and K spinners plus plano-centered axis wheels
   ---
@@ -4672,9 +4672,9 @@ ok 741 - editing a derived family code updates all six fees without merging thei
   type: 'test'
   ...
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:1372:46)
+#     at loadExamOverviewProjection (ui/src/scenes/EncounterCharting.tsx:1372:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
-#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:366:63)
+#     at <anonymous> (ui/src/scenes/EncounterCharting.tsx:366:63)
 # Subtest: ungrouped definitions remain visible for every category while grouped definitions require an effective group
 ok 742 - ungrouped definitions remain visible for every category while grouped definitions require an effective group
   ---
@@ -4682,13 +4682,13 @@ ok 742 - ungrouped definitions remain visible for every category while grouped d
   type: 'test'
   ...
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:1372:46)
+#     at loadExamOverviewProjection (ui/src/scenes/EncounterCharting.tsx:1372:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
-#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:366:63)
+#     at <anonymous> (ui/src/scenes/EncounterCharting.tsx:366:63)
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:1372:46)
+#     at loadExamOverviewProjection (ui/src/scenes/EncounterCharting.tsx:1372:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
-#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:366:63)
+#     at <anonymous> (ui/src/scenes/EncounterCharting.tsx:366:63)
 # Subtest: a custom specialty category renders its configured battery while a general category leaves it absent
 ok 743 - a custom specialty category renders its configured battery while a general category leaves it absent
   ---
@@ -4696,11 +4696,11 @@ ok 743 - a custom specialty category renders its configured battery while a gene
   type: 'test'
   ...
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:1372:46)
+#     at loadExamOverviewProjection (ui/src/scenes/EncounterCharting.tsx:1372:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
-#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:366:63)
+#     at <anonymous> (ui/src/scenes/EncounterCharting.tsx:366:63)
 # Finding section groups unavailable; definitions remain ungated. Error: Synthetic catalog failure
-#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/EncounterCharting.tsx:420:17)
+#     at <anonymous> (ui/src/scenes/EncounterCharting.tsx:420:17)
 # Subtest: EncounterCharting pulls a group into only the current encounter and renders it without reloading
 ok 744 - EncounterCharting pulls a group into only the current encounter and renders it without reloading
   ---
@@ -5280,8 +5280,8 @@ ok 839 - switching to encounter scope drops the late all-chart response
   type: 'test'
   ...
 # Imaging saved but chart history could not refresh. Error: refresh unavailable
-#     at loadImages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/ImagingSection.tsx:119:29)
-#     at async upload (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/charting/ImagingSection.tsx:226:27)
+#     at loadImages (ui/src/components/charting/ImagingSection.tsx:119:29)
+#     at async upload (ui/src/components/charting/ImagingSection.tsx:226:27)
 # Subtest: a successful upload still reports onSaved when the history refresh fails
 ok 840 - a successful upload still reports onSaved when the history refresh fails
   ---
@@ -6335,16 +6335,16 @@ ok 1014 - Desk-side Office state refuses acknowledgement calls even when invoked
   type: 'test'
   ...
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at OfficeChannelShell (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/OfficeChannel.tsx:94:3)
+#     at OfficeChannelShell (ui/src/components/OfficeChannel.tsx:94:3)
 #     at ClinicOfficeShell
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at OfficeChannelShell (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/OfficeChannel.tsx:94:3)
+#     at OfficeChannelShell (ui/src/components/OfficeChannel.tsx:94:3)
 #     at ClinicOfficeShell
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at OfficeChannelShell (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/OfficeChannel.tsx:94:3)
+#     at OfficeChannelShell (ui/src/components/OfficeChannel.tsx:94:3)
 #     at ClinicOfficeShell
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at OfficeChannelShell (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/components/OfficeChannel.tsx:94:3)
+#     at OfficeChannelShell (ui/src/components/OfficeChannel.tsx:94:3)
 #     at ClinicOfficeShell
 # Subtest: Desk home consumes the shell Office source without starting a second poll
 ok 1015 - Desk home consumes the shell Office source without starting a second poll
@@ -6707,7 +6707,7 @@ ok 1074 - INS2 U5 primary extension alone excludes reuse and prevents guardian w
   type: 'test'
   ...
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at RoleProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/lib/role-context.tsx:12:32)
+#     at RoleProvider (ui/src/lib/role-context.tsx:12:32)
 # Subtest: Clinic flow and unsigned-chart clicks both route through PatientOverview
 ok 1075 - Clinic flow and unsigned-chart clicks both route through PatientOverview
   ---
@@ -6769,7 +6769,7 @@ ok 1084 - the header band contains one StartExam and keeps DOB and age in its id
   type: 'test'
   ...
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at RoleProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/lib/role-context.tsx:12:32)
+#     at RoleProvider (ui/src/lib/role-context.tsx:12:32)
 # Subtest: patient chart History renders a patient-scoped change line without field diffs
 ok 1085 - patient chart History renders a patient-scoped change line without field diffs
   ---
@@ -9033,8 +9033,8 @@ ok 1460 - VISITTYPE-1 fresh walk-in board renders configured sections including 
   type: 'test'
   ...
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at CatalogScene (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/settings/CatalogEditor.tsx:89:3)
-#     at VisitTypeSettingsReady (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/settings/VisitTypeSettings.tsx:102:3)
+#     at CatalogScene (ui/src/scenes/settings/CatalogEditor.tsx:89:3)
+#     at VisitTypeSettingsReady (ui/src/scenes/settings/VisitTypeSettings.tsx:102:3)
 # Subtest: resourceCatalogAdapter lists inactive visit types across every page and fails closed without pagination support
 ok 1461 - resourceCatalogAdapter lists inactive visit types across every page and fails closed without pagination support
   ---
@@ -9084,11 +9084,11 @@ ok 1468 - an existing 25-minute visit type can change its name without changing 
   type: 'test'
   ...
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at CatalogScene (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/settings/CatalogEditor.tsx:89:3)
-#     at VisitTypeSettingsReady (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/settings/VisitTypeSettings.tsx:102:3)
+#     at CatalogScene (ui/src/scenes/settings/CatalogEditor.tsx:89:3)
+#     at VisitTypeSettingsReady (ui/src/scenes/settings/VisitTypeSettings.tsx:102:3)
 # Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
-#     at CatalogScene (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/settings/CatalogEditor.tsx:89:3)
-#     at VisitTypeSettingsReady (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/src/scenes/settings/VisitTypeSettings.tsx:102:3)
+#     at CatalogScene (ui/src/scenes/settings/CatalogEditor.tsx:89:3)
+#     at VisitTypeSettingsReady (ui/src/scenes/settings/VisitTypeSettings.tsx:102:3)
 # Subtest: visit-type deactivation cannot bypass the 1440-minute validation ceiling
 ok 1469 - visit-type deactivation cannot bypass the 1440-minute validation ceiling
   ---

@@ -4,14 +4,14 @@ not ok 1 - partial newness response keeps doctor choice visible and marks only u
   ---
   duration_ms: 38.761958
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisWorkspace.test.tsx:1:75740'
+  location: 'ui/tests/diagnosisWorkspace.test.tsx:1:75740'
   failureType: 'testCodeFailure'
   error: 'No instances found with props: {"data-testid":"diagnosis-newness-error"}'
   code: 'ERR_TEST_FAILURE'
   stack: |-
-    expectOne (/Users/ericr.bang/GitHub/ODOS2020/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:18499:9)
-    ReactTestInstance.findByProps (/Users/ericr.bang/GitHub/ODOS2020/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:18395:12)
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisWorkspace.test.tsx:2009:29)
+    expectOne (ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:18499:9)
+    ReactTestInstance.findByProps (ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:18395:12)
+    TestContext.<anonymous> (ui/tests/diagnosisWorkspace.test.tsx:2009:29)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

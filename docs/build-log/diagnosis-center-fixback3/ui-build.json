@@ -1,0 +1,11 @@
+{
+  "cwd": ".",
+  "command": [
+    "npm",
+    "--prefix",
+    "ui",
+    "run",
+    "build"
+  ],
+  "exit": 0
+}

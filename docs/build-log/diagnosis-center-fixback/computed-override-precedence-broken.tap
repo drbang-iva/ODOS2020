@@ -4,7 +4,7 @@ not ok 1 - doctor Established beats computed New after reload; suggestion update
   ---
   duration_ms: 29.662167
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/diagnosisNewness.test.ts:1:10117'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:10117'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -34,7 +34,7 @@ not ok 1 - doctor Established beats computed New after reload; suggestion update
     matchedEncounterReference: 'Encounter/prior'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/diagnosisNewness.test.ts:160:10)
+    TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:160:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

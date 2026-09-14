@@ -4,7 +4,7 @@ not ok 1 - diagnosis header visit-status picker excludes new and saves the selec
   ---
   duration_ms: 26.985958
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisWorkspace.test.tsx:1:68946'
+  location: 'ui/tests/diagnosisWorkspace.test.tsx:1:68946'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - diagnosis header visit-status picker excludes new and saves the selec
   actual: true
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisWorkspace.test.tsx:1886:12)
+    TestContext.<anonymous> (ui/tests/diagnosisWorkspace.test.tsx:1886:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

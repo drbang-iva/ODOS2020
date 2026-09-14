@@ -30,7 +30,12 @@ export async function handleDiagnosisNewnessUpdateRequest(
   const params = updateParams.safeParse(input.params);
   const body = choiceSchema.safeParse(input.body);
   if (!params.success || !body.success) return { status: 400, body: { error: "A valid encounter, diagnosis and New / Established choice are required." } };
-  const encounter = await staff.fhir.read<Encounter>("Encounter", params.data.encounterId);
+  let encounter: Encounter;
+  try {
+    encounter = await staff.fhir.read<Encounter>("Encounter", params.data.encounterId);
+  } catch {
+    return { status: 404, body: { error: "Encounter not found." } };
+  }
   if (encounter.status === "finished") return { status: 409, body: { error: "New / Established cannot change after the encounter is signed." } };
   const condition = await staff.fhir.read<Condition>("Condition", params.data.conditionId);
   const conditionReference = `Condition/${params.data.conditionId}`;
@@ -56,7 +61,12 @@ export async function handleDiagnosisNewnessReadRequest(
   if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const params = encounterParams.safeParse(input.params);
   if (!params.success) return { status: 400, body: { error: "A valid encounter id is required." } };
-  const encounter = await staff.fhir.read<Encounter>("Encounter", params.data.encounterId);
+  let encounter: Encounter;
+  try {
+    encounter = await staff.fhir.read<Encounter>("Encounter", params.data.encounterId);
+  } catch {
+    return { status: 404, body: { error: "Encounter not found." } };
+  }
   try {
     const [overrides, legacy] = await Promise.all([
       deps.store.listNewnessOverrides(params.data.encounterId),

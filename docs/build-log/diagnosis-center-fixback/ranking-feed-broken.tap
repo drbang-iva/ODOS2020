@@ -4,7 +4,7 @@ not ok 1 - Assessment ranking feed follows suggested-new
   ---
   duration_ms: 20.747875
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisNewness.test.tsx:1:842'
+  location: 'ui/tests/diagnosisNewness.test.tsx:1:842'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - Assessment ranking feed follows suggested-new
   actual: 'unscoped'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisNewness.test.tsx:45:14)
+    TestContext.<anonymous> (ui/tests/diagnosisNewness.test.tsx:45:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -26,7 +26,7 @@ not ok 2 - Assessment ranking feed follows doctor-new
   ---
   duration_ms: 4.327416
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisNewness.test.tsx:1:842'
+  location: 'ui/tests/diagnosisNewness.test.tsx:1:842'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -39,7 +39,7 @@ not ok 2 - Assessment ranking feed follows doctor-new
   actual: 'unscoped'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisNewness.test.tsx:45:14)
+    TestContext.<anonymous> (ui/tests/diagnosisNewness.test.tsx:45:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

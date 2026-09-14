@@ -2,6 +2,9 @@ from pathlib import Path
 import subprocess,json
 root=Path(__file__).resolve().parents[3]
 ev=Path(__file__).resolve().parent
+common_root=(root/subprocess.check_output(['git','rev-parse','--git-common-dir'],cwd=root,text=True).strip()).resolve().parent
+def normalize_output(output):
+ return output.replace(str(root)+'/', '').replace(str(common_root)+'/', '')
 cases=[
  ('visit-resolution','mcp/src/clinical-graph/diagnosis-newness.ts',' || prior.visitStatus === "resolved-this-visit"','', 'mcp','stye recurrence','tests/diagnosisNewness.test.ts'),
  ('mixed-eye','mcp/src/clinical-graph/diagnosis-newness.ts','value: latestVisit.every(isResolved)','value: latestVisit.some(isResolved)', 'mcp','mixed-eye latest','tests/diagnosisNewness.test.ts'),
@@ -14,11 +17,11 @@ for name,file,old,new,cwd,pattern,testfile in cases:
  try:
   p.write_text(original.replace(old,new,1))
   red=subprocess.run(['node','--import','tsx','--test','--test-name-pattern='+pattern,testfile],cwd=root/cwd,capture_output=True,text=True)
-  (ev/(name+'-broken.tap')).write_text(red.stdout+red.stderr)
+  (ev/(name+'-broken.tap')).write_text(normalize_output(red.stdout+red.stderr))
   assert red.returncode != 0,name
  finally:p.write_text(original)
  green=subprocess.run(['node','--import','tsx','--test','--test-name-pattern='+pattern,testfile],cwd=root/cwd,capture_output=True,text=True)
- (ev/(name+'-restored.tap')).write_text(green.stdout+green.stderr)
+ (ev/(name+'-restored.tap')).write_text(normalize_output(green.stdout+green.stderr))
  assert green.returncode == 0,name
  results.append({'guard':name,'brokenExit':red.returncode,'restoredExit':green.returncode})
 (ev/'mutations.json').write_text(json.dumps(results,indent=2)+'\n')

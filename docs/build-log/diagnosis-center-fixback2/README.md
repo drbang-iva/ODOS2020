@@ -1,6 +1,6 @@
 # Diagnosis-center slice 1 — fixback 2 sealed bundle
 
-**Status: needs-review.** Local author changes on `drbang-iva/dx-status`, continuing exact head `e6e7c501a54ace85d3265cfa8a8e5b9b083e0b78` in `/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status`. No push, PR, merge, or deployment.
+**Status: needs-review.** Local author changes on `drbang-iva/dx-status`, continuing exact head `e6e7c501a54ace85d3265cfa8a8e5b9b083e0b78` in `.worktrees/dx-status`. No push, PR, merge, or deployment.
 
 The latest matching visit now counts a diagnosis as resolved if its FHIR clinical status is resolved **or its stored visit status is `resolved-this-visit`**. Prior statuses are read using the existing store, once per eligible visit, and matched by Condition reference. The latest-visit/window rules and mixed-eye all-resolved rule remain intact. The stye/follow-up/recurrence test keeps clinicalStatus active and obtains New from the follow-up's stored resolution.
 
@@ -10,7 +10,7 @@ UI/server row types both include unavailable rows. The diagnosis header shows a 
 
 ## Verification of review and scope
 
-Read `/Users/ericr.bang/GitHub/performance-od/decisions/2026-09-14-odos-diagnosis-center-slice1-fixback-eval.md` and verified it matches the file at companion commit `205c7dd3`. Reverified the cited code at the requested head: resolution only checked clinicalStatus; DiagnosisWorkspace's clinicalStatus use at line 906 is filtering, not an editor; its visit-status update calls the endpoint/store only; the read handler's broad catch returned 503 after any history error; and the final suggestion uses `latestVisit.every(isResolved)`. The existing start-encounter path passes an ISO instant at encounter-bundles.ts:178; the import's localDateTime function at :1254 returns a timestamp with an offset. The review's ICD-category note is out of scope and unchanged.
+Read `../performance-od/decisions/2026-09-14-odos-diagnosis-center-slice1-fixback-eval.md` and verified it matches the file at companion commit `205c7dd3`. Reverified the cited code at the requested head: resolution only checked clinicalStatus; DiagnosisWorkspace's clinicalStatus use at line 906 is filtering, not an editor; its visit-status update calls the endpoint/store only; the read handler's broad catch returned 503 after any history error; and the final suggestion uses `latestVisit.every(isResolved)`. The existing start-encounter path passes an ISO instant at encounter-bundles.ts:178; the import's localDateTime function at :1254 returns a timestamp with an offset. The review's ICD-category note is out of scope and unchanged.
 
 Main was `6baea1d51666461e3de94ded1287ffe8817d2f70` at start. The final fetch advanced it to **`bd7029eb55435655f3e4332b2cc703bfd2d77e7e`**, the unrelated Guarantor search/Move/Join/undo merge (#593). Its changes do not overlap this fixback. The final open-PR query returned `[]`. This branch remains on its requested slice history; no rebase was performed.
 
@@ -54,7 +54,7 @@ Run: `python3 docs/build-log/diagnosis-center-fixback2/mutations.py`. Each guard
 
 | Guard | Deliberate break | Broken | Restored |
 | --- | --- | --- | --- |
-| Stored resolution | Delete `|| prior.visitStatus === "resolved-this-visit"` | exit 1; recurrence produces Established instead of New | exit 0 |
+| Stored resolution | Delete `\|\| prior.visitStatus === "resolved-this-visit"` | exit 1; recurrence produces Established instead of New | exit 0 |
 | Mixed eyes | Change final `.every(isResolved)` to `.some(isResolved)` | exit 1; one resolved/one active incorrectly produces New | exit 0 |
 | Doctor survives | Propagate history-read failure to the outer 503 catch | exit 1; expected partial 200 response | exit 0 |
 | Unavailable UI | Remove unavailable-row error condition | exit 1; affected diagnosis loses its error | exit 0 |

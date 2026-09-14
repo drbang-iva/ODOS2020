@@ -4,7 +4,7 @@ not ok 1 - diagnosis status controls: finished
   ---
   duration_ms: 36.624292
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisWorkspace.test.tsx:1:71162'
+  location: 'ui/tests/diagnosisWorkspace.test.tsx:1:71162'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - diagnosis status controls: finished
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisWorkspace.test.tsx:1921:14)
+    TestContext.<anonymous> (ui/tests/diagnosisWorkspace.test.tsx:1921:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

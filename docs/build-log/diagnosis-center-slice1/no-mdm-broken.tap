@@ -4,7 +4,7 @@ not ok 1 - No MDM is explicitly answered but excluded from every MDM bucket
   ---
   duration_ms: 2.018167
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/v035b-ui-view.test.ts:1:7703'
+  location: 'mcp/tests/v035b-ui-view.test.ts:1:7703'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - No MDM is explicitly answered but excluded from every MDM bucket
   actual: 'High'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/v035b-ui-view.test.ts:199:10)
+    TestContext.<anonymous> (mcp/tests/v035b-ui-view.test.ts:199:10)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.start (node:internal/test_runner/test:944:17)

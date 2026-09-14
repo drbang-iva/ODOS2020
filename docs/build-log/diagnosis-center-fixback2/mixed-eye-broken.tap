@@ -4,7 +4,7 @@ not ok 1 - mixed-eye latest visit stays Established when only one matching eye i
   ---
   duration_ms: 4.562291
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/diagnosisNewness.test.ts:1:11803'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:11803'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -19,7 +19,7 @@ not ok 1 - mixed-eye latest visit stays Established when only one matching eye i
   actual: 'new'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/diagnosisNewness.test.ts:185:10)
+    TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:185:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

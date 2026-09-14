@@ -4,7 +4,7 @@ not ok 1 - explicit Established wins over legacy Doctor New
   ---
   duration_ms: 2.081
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/diagnosisNewness.test.ts:1:1316'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:1316'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -29,7 +29,7 @@ not ok 1 - explicit Established wins over legacy Doctor New
     source: 'doctor'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/diagnosisNewness.test.ts:22:10)
+    TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:22:10)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.start (node:internal/test_runner/test:944:17)

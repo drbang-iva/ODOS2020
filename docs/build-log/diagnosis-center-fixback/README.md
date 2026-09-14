@@ -1,6 +1,6 @@
 # Diagnosis-center slice 1 fixback — sealed author bundle
 
-**Status: needs-review.** Branch `drbang-iva/dx-status`, worktree `/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status`. This fixes the independent evaluation of slice-1 commit `b504005f04bea7e315c09b422bc27bff68d15347`. No push, PR, merge, deployment, or independent verdict was performed. The original slice-1 evidence remains in `../diagnosis-center-slice1/`; this bundle supersedes its claim that stored `new` was automatically generated provenance.
+**Status: needs-review.** Branch `drbang-iva/dx-status`, worktree `.worktrees/dx-status`. This fixes the independent evaluation of slice-1 commit `b504005f04bea7e315c09b422bc27bff68d15347`. No push, PR, merge, deployment, or independent verdict was performed. The original slice-1 evidence remains in `../diagnosis-center-slice1/`; this bundle supersedes its claim that stored `new` was automatically generated provenance.
 
 The latest matching prior visit inside the preceding 12 calendar months governs: resolved → New; any other clinical status → Established; no match → New. Older matching visits cannot overrule the latest one. The doctor can choose New or Established with one click, including explicitly accepting the same value as the suggestion. The header identifies “ODOS suggestion” versus “Doctor's choice.” This choice is separate from the nine-option visit-status picker and from complexity/MDM.
 
@@ -10,7 +10,7 @@ Assessment has a completion pointer instead of duplicate editors. It passes the 
 
 Re-fetched `origin/main` on 2026-09-14: `6baea1d51666461e3de94ded1287ffe8817d2f70`. Since original pin `ddf6ba4a4f5e06efb13c59759d4941159fe49d0a`, only the unrelated Guarantor link operations and recovery merge (#592) landed. The cited diagnosis files did not change. Fresh open-PR query returned #593 (guarantor-g2b2a); its file list has no overlap with this slice.
 
-Companion checkout verified at `/Users/ericr.bang/GitHub/performance-od`. Read the design §1/§2.1/§7 item 1, R5, the NEEDS WORK evaluation, and `decisions/2026-09-14-odos-diagnosis-center-slice1-fixback-codex-kickoff.md`, including the latest-visit clarification. Existing diagnosis pick callers do not automatically write `new`; legacy stored `new` is treated as Doctor New. No new business decision was created, so `decisions/INDEX.md` was not changed. No companion files were edited.
+Companion checkout verified at `../performance-od`. Read the design §1/§2.1/§7 item 1, R5, the NEEDS WORK evaluation, and `decisions/2026-09-14-odos-diagnosis-center-slice1-fixback-codex-kickoff.md`, including the latest-visit clarification. Existing diagnosis pick callers do not automatically write `new`; legacy stored `new` is treated as Doctor New. No new business decision was created, so `decisions/INDEX.md` was not changed. No companion files were edited.
 
 Original slice-1 still supplies ten stored visit statuses, nine pickable statuses, identical UI/server vocabularies, the ninth No MDM complexity, and removal of both editors from Assessment. Its original consumer audit and No MDM/no-New break/restore evidence remain valid; final full UI and focused MCP checks include those tests. Plans, findings behavior, write-ups, R10/R11, and the E&M footer/override are unchanged.
 

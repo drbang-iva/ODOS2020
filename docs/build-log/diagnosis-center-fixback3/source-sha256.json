@@ -1,0 +1,10 @@
+{
+  "scripts/fhir-read-grant-check.ts": "b32105ea70f0d6b098e826db96c28bc5ce36e2a8db6e95d7c650bc7634d6bb17",
+  "mcp/src/index.ts": "8999c6296618800f7b857d53f4f6d9d3b2bae207c7144ba5405d158a1ba903ac",
+  "mcp/src/clinical-graph/diagnosis-newness-endpoint.ts": "8cf12a4433c5823870989b9bbdfcf3a1ff39d7db3e93a23d35638eb8a7f1dd4e",
+  "mcp/tests/diagnosisNewness.test.ts": "a28f432a3745815bd1baa2650a1b130895cd16c2ba6356a5de762be319e1a385",
+  "ui/src/components/charting/AssessmentSection.tsx": "9b7ec0ac31b24019311d00d4ba40ac3a7867769092ed98a5533379e4e358fccf",
+  "ui/tests/diagnosisNewness.test.tsx": "bc7f831714355dcb82087500badfb39d198c7fd2a4adc74fb26504038963d066",
+  "docs/build-log/diagnosis-center-fixback/mutate-guards.py": "440e3ba02b13f855cb013bc3b80b1c6cb4b34b4681a9d20c8739248d5c364a66",
+  "docs/build-log/diagnosis-center-fixback2/mutations.py": "6fc6bb2613672b59ae7f1a3747634ed2463868d2430de5810a95a7253ecdf6ac"
+}

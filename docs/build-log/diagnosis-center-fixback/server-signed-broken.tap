@@ -4,7 +4,7 @@ not ok 1 - newness endpoint locks signed encounters and persists a doctor choice
   ---
   duration_ms: 28.1605
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/diagnosisNewness.test.ts:1:4574'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:4574'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - newness endpoint locks signed encounters and persists a doctor choice
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/diagnosisNewness.test.ts:77:10)
+    TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:77:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

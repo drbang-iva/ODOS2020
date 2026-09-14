@@ -186,9 +186,9 @@ ok 31 - mixed conflict rolls back representation-free creates by their exact loc
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: representation-free 201 without a parseable location fails without privileged rollback
 ok 32 - representation-free 201 without a parseable location fails without privileged rollback
   ---
@@ -196,9 +196,9 @@ ok 32 - representation-free 201 without a parseable location fails without privi
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: representation-free 201 with the wrong positional location type fails without privileged rollback
 ok 33 - representation-free 201 with the wrong positional location type fails without privileged rollback
   ---
@@ -206,9 +206,9 @@ ok 33 - representation-free 201 with the wrong positional location type fails wi
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: representation-free Observation 201 with the wrong location type fails without privileged rollback
 ok 34 - representation-free Observation 201 with the wrong location type fails without privileged rollback
   ---
@@ -216,9 +216,9 @@ ok 34 - representation-free Observation 201 with the wrong location type fails w
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: representation-free Observation create returning 200 fails without privileged rollback
 ok 35 - representation-free Observation create returning 200 fails without privileged rollback
   ---
@@ -226,9 +226,9 @@ ok 35 - representation-free Observation create returning 200 fails without privi
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: represented 201 with a mismatched location id still refuses privileged rollback
 ok 36 - represented 201 with a mismatched location id still refuses privileged rollback
   ---
@@ -248,9 +248,9 @@ ok 38 - mixed 409 transaction also authorizes only the exact generated create ro
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction response was invalid: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:414:81)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:414:81)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: guarded Encounter conflict compensates only validated creates around a later POST failure
 ok 39 - guarded Encounter conflict compensates only validated creates around a later POST failure
   ---
@@ -258,9 +258,9 @@ ok 39 - guarded Encounter conflict compensates only validated creates around a l
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for same-type-wrong-id
 ok 40 - mixed transaction makes zero service rollback calls for same-type-wrong-id
   ---
@@ -268,9 +268,9 @@ ok 40 - mixed transaction makes zero service rollback calls for same-type-wrong-
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for non-mixed-invalid
 ok 41 - mixed transaction makes zero service rollback calls for non-mixed-invalid
   ---
@@ -278,9 +278,9 @@ ok 41 - mixed transaction makes zero service rollback calls for non-mixed-invali
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for wrong-full-url
 ok 42 - mixed transaction makes zero service rollback calls for wrong-full-url
   ---
@@ -288,9 +288,9 @@ ok 42 - mixed transaction makes zero service rollback calls for wrong-full-url
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for wrong-response-order
 ok 43 - mixed transaction makes zero service rollback calls for wrong-response-order
   ---
@@ -298,9 +298,9 @@ ok 43 - mixed transaction makes zero service rollback calls for wrong-response-o
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for wrong-location-id
 ok 44 - mixed transaction makes zero service rollback calls for wrong-location-id
   ---
@@ -308,9 +308,9 @@ ok 44 - mixed transaction makes zero service rollback calls for wrong-location-i
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for invalid-fhir-id
 ok 45 - mixed transaction makes zero service rollback calls for invalid-fhir-id
   ---
@@ -318,9 +318,9 @@ ok 45 - mixed transaction makes zero service rollback calls for invalid-fhir-id
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for invalid-http-status
 ok 46 - mixed transaction makes zero service rollback calls for invalid-http-status
   ---
@@ -328,9 +328,9 @@ ok 46 - mixed transaction makes zero service rollback calls for invalid-http-sta
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for encounter-200-before-later-500
 ok 47 - mixed transaction makes zero service rollback calls for encounter-200-before-later-500
   ---
@@ -338,9 +338,9 @@ ok 47 - mixed transaction makes zero service rollback calls for encounter-200-be
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for encounter-201-before-later-500
 ok 48 - mixed transaction makes zero service rollback calls for encounter-201-before-later-500
   ---
@@ -348,9 +348,9 @@ ok 48 - mixed transaction makes zero service rollback calls for encounter-201-be
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for encounter-1xx-before-later-500
 ok 49 - mixed transaction makes zero service rollback calls for encounter-1xx-before-later-500
   ---
@@ -358,9 +358,9 @@ ok 49 - mixed transaction makes zero service rollback calls for encounter-1xx-be
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for encounter-500
 ok 50 - mixed transaction makes zero service rollback calls for encounter-500
   ---
@@ -368,9 +368,9 @@ ok 50 - mixed transaction makes zero service rollback calls for encounter-500
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for later-1xx
 ok 51 - mixed transaction makes zero service rollback calls for later-1xx
   ---
@@ -378,9 +378,9 @@ ok 51 - mixed transaction makes zero service rollback calls for later-1xx
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for later-3xx
 ok 52 - mixed transaction makes zero service rollback calls for later-3xx
   ---
@@ -388,9 +388,9 @@ ok 52 - mixed transaction makes zero service rollback calls for later-3xx
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for later-missing-status
 ok 53 - mixed transaction makes zero service rollback calls for later-missing-status
   ---
@@ -398,9 +398,9 @@ ok 53 - mixed transaction makes zero service rollback calls for later-missing-st
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed transaction makes zero service rollback calls for later-malformed-status
 ok 54 - mixed transaction makes zero service rollback calls for later-malformed-status
   ---
@@ -408,9 +408,9 @@ ok 54 - mixed transaction makes zero service rollback calls for later-malformed-
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed stale transaction fails closed when privileged rollback is absent
 ok 55 - mixed stale transaction fails closed when privileged rollback is absent
   ---
@@ -418,9 +418,9 @@ ok 55 - mixed stale transaction fails closed when privileged rollback is absent
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed stale transaction fails closed for wrong-location-type rollback evidence
 ok 56 - mixed stale transaction fails closed for wrong-location-type rollback evidence
   ---
@@ -428,9 +428,9 @@ ok 56 - mixed stale transaction fails closed for wrong-location-type rollback ev
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed stale transaction fails closed for delete-failure rollback evidence
 ok 57 - mixed stale transaction fails closed for delete-failure rollback evidence
   ---
@@ -438,9 +438,9 @@ ok 57 - mixed stale transaction fails closed for delete-failure rollback evidenc
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed stale transaction fails closed for still-readable rollback evidence
 ok 58 - mixed stale transaction fails closed for still-readable rollback evidence
   ---
@@ -448,9 +448,9 @@ ok 58 - mixed stale transaction fails closed for still-readable rollback evidenc
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed stale transaction rejects rollback DELETE status 201 Created
 ok 59 - mixed stale transaction rejects rollback DELETE status 201 Created
   ---
@@ -458,9 +458,9 @@ ok 59 - mixed stale transaction rejects rollback DELETE status 201 Created
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed stale transaction rejects rollback DELETE status 202 Accepted
 ok 60 - mixed stale transaction rejects rollback DELETE status 202 Accepted
   ---
@@ -468,9 +468,9 @@ ok 60 - mixed stale transaction rejects rollback DELETE status 202 Accepted
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed stale transaction rejects rollback DELETE status 206 Partial Content
 ok 61 - mixed stale transaction rejects rollback DELETE status 206 Partial Content
   ---
@@ -478,9 +478,9 @@ ok 61 - mixed stale transaction rejects rollback DELETE status 206 Partial Conte
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed stale transaction rejects rollback DELETE status 226 IM Used
 ok 62 - mixed stale transaction rejects rollback DELETE status 226 IM Used
   ---
@@ -488,9 +488,9 @@ ok 62 - mixed stale transaction rejects rollback DELETE status 226 IM Used
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: conflict
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: mixed stale transaction rejects message-only 404 rollback verification
 ok 63 - mixed stale transaction rejects message-only 404 rollback verification
   ---
@@ -564,9 +564,9 @@ ok 74 - pull rejects source patient, diagnosis membership, and retracted-conditi
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction response was invalid: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:414:81)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:414:81)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: pull rejects failed transaction entries and maps precondition failures to 409
 ok 75 - pull rejects failed transaction entries and maps precondition failures to 409
   ---
@@ -574,9 +574,9 @@ ok 75 - pull rejects failed transaction entries and maps precondition failures t
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: pull rejects a non-Bundle resource discriminator
 ok 76 - pull rejects a non-Bundle resource discriminator
   ---
@@ -584,9 +584,9 @@ ok 76 - pull rejects a non-Bundle resource discriminator
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: pull rejects a non-transaction-response Bundle
 ok 77 - pull rejects a non-transaction-response Bundle
   ---
@@ -594,9 +594,9 @@ ok 77 - pull rejects a non-transaction-response Bundle
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: pull rejects a truncated transaction response
 ok 78 - pull rejects a truncated transaction response
   ---
@@ -604,9 +604,9 @@ ok 78 - pull rejects a truncated transaction response
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: pull rejects a transaction entry without status
 ok 79 - pull rejects a transaction entry without status
   ---
@@ -614,9 +614,9 @@ ok 79 - pull rejects a transaction entry without status
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: pull rejects a 3xx transaction entry
 ok 80 - pull rejects a 3xx transaction entry
   ---
@@ -624,9 +624,9 @@ ok 80 - pull rejects a 3xx transaction entry
   type: 'test'
   ...
 # odos-mcp: diagnosis pull transaction rollback was not verified: Error: invalid
-#     at handleDiagnosisPullRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
+#     at handleDiagnosisPullRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:408:88)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
+#     at async <anonymous> (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:131:22)
 # Subtest: pull rejects transaction entries in the wrong resource order
 ok 81 - pull rejects transaction entries in the wrong resource order
   ---
@@ -892,17 +892,17 @@ ok 124 - previous exams maps page Condition and Observation FHIR access failures
   type: 'test'
   ...
 # odos-mcp: previous exams next link is invalid: InvalidCursorError
-#     at validatedNextPath (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:1025:20)
-#     at handlePreviousExamsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:216:17)
+#     at validatedNextPath (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:1025:20)
+#     at handlePreviousExamsReadRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:216:17)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/diagnosisCarryForward.test.ts:2339:20)
+#     at async TestContext.<anonymous> (mcp/tests/diagnosisCarryForward.test.ts:2339:20)
 #     at async Test.run (node:internal/test_runner/test:1054:7)
 #     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
 # odos-mcp: previous exams next link is invalid: InvalidCursorError
-#     at validatedNextPath (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:1025:20)
-#     at handlePreviousExamsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:216:17)
+#     at validatedNextPath (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:1025:20)
+#     at handlePreviousExamsReadRequest (mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:216:17)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/diagnosisCarryForward.test.ts:2353:20)
+#     at async TestContext.<anonymous> (mcp/tests/diagnosisCarryForward.test.ts:2353:20)
 #     at async Test.run (node:internal/test_runner/test:1054:7)
 #     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
 # Subtest: previous exams registered route maps cursor-page FHIR denials and missing history without a generic 500

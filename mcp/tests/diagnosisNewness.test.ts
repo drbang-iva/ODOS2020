@@ -130,6 +130,28 @@ async function readHistory(fixture: ReturnType<typeof historyFixture>) {
   return (result.body as { rows: import("../src/clinical-graph/diagnosis-newness-types.js").DiagnosisNewnessRow[] }).rows[0]!;
 }
 
+for (const operation of ["read", "update"] as const) {
+  for (const upstreamStatus of [404, 403]) {
+    test(`newness ${operation} maps Encounter read ${upstreamStatus} to 404`, async () => {
+      const { handleDiagnosisNewnessReadRequest, handleDiagnosisNewnessUpdateRequest } = await import("../src/clinical-graph/diagnosis-newness-endpoint.js");
+      const fixture = historyFixture();
+      const staff = await fixture.deps.authenticate();
+      const reads: string[] = [];
+      staff.fhir.read = async (type, id) => {
+        reads.push(`${type}/${id}`);
+        throw Object.assign(new Error(upstreamStatus === 404 ? "Missing encounter" : "Unreadable encounter"), { status: upstreamStatus });
+      };
+      const request = { authHeader: "Bearer synthetic", params: { encounterId: "current", conditionId: "dx" }, body: { value: "established" } };
+      const response = operation === "read"
+        ? await handleDiagnosisNewnessReadRequest(fixture.deps, { authHeader: request.authHeader, params: { encounterId: "current" } })
+        : await handleDiagnosisNewnessUpdateRequest(fixture.deps, request);
+      assert.deepEqual(response, { status: 404, body: { error: "Encounter not found." } });
+      assert.deepEqual(reads, ["Encounter/current"]);
+      assert.equal(fixture.overrides.length, 0);
+    });
+  }
+}
+
 for (const [scenario, history, expected] of [
   ["most recent resolved supersedes older active", [["2026-03-14T12:00:00Z", "active"], ["2026-04-14T12:00:00Z", "resolved"]], "new"],
   ["most recent active supersedes older resolved", [["2026-03-14T12:00:00Z", "resolved"], ["2026-04-14T12:00:00Z", "active"]], "established"],

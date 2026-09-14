@@ -1,0 +1,10 @@
+{
+  "absolutePathScan": {
+    "exit": 1,
+    "matches": 0
+  },
+  "markdownCells": 4,
+  "normalizers": "working tree and shared dependencies verified",
+  "changedFiles": 70,
+  "dismissedFindingsUntouched": true
+}

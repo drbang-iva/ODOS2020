@@ -4,16 +4,16 @@ not ok 1 - Postgres migration preserves legacy New and the doctor's override sur
   ---
   duration_ms: 70.347958
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/diagnosisNewness.test.ts:1:1976'
+  location: 'mcp/tests/diagnosisNewness.test.ts:1:1976'
   failureType: 'testCodeFailure'
   error: 'relation "odos_encounter_diagnosis_newness_overrides" does not exist'
   code: '42P01'
   name: 'error'
   stack: |-
-    /Users/ericr.bang/GitHub/ODOS2020/mcp/node_modules/pg-pool/index.js:45:11
+    mcp/node_modules/pg-pool/index.js:45:11
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async PgDiagnosisVisitStatusStore.listNewnessOverrides (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/src/clinical-graph/diagnosis-visit-status-store.ts:111:20)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/mcp/tests/diagnosisNewness.test.ts:42:19)
+    async PgDiagnosisVisitStatusStore.listNewnessOverrides (mcp/src/clinical-graph/diagnosis-visit-status-store.ts:111:20)
+    async TestContext.<anonymous> (mcp/tests/diagnosisNewness.test.ts:42:19)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

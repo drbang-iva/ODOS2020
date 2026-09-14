@@ -1,0 +1,136 @@
+TAP version 13
+# Subtest: FHIR read grant scan collects every literal FHIR receiver and requires the search-contract marker for computed searches
+ok 1 - FHIR read grant scan collects every literal FHIR receiver and requires the search-contract marker for computed searches
+  ---
+  duration_ms: 341.417792
+  type: 'test'
+  ...
+# Subtest: FHIR operation scan maps every write interaction to its required Medplum grant
+ok 2 - FHIR operation scan maps every write interaction to its required Medplum grant
+  ---
+  duration_ms: 0.84625
+  type: 'test'
+  ...
+# Subtest: the PR 397 tally create fails grant comparison when its exact profile fence is absent
+ok 3 - the PR 397 tally create fails grant comparison when its exact profile fence is absent
+  ---
+  duration_ms: 0.594
+  type: 'test'
+  ...
+# Subtest: the exact write ratchet rejects a stale entry instead of silently forgiving it
+ok 4 - the exact write ratchet rejects a stale entry instead of silently forgiving it
+  ---
+  duration_ms: 0.145417
+  type: 'test'
+  ...
+# Subtest: the service-identity write inventory rejects an exact ui/src relocation
+ok 5 - the service-identity write inventory rejects an exact ui/src relocation
+  ---
+  duration_ms: 0.120958
+  type: 'test'
+  ...
+# Subtest: FHIR read grant comparison reports the exact sorted subset gap
+ok 6 - FHIR read grant comparison reports the exact sorted subset gap
+  ---
+  duration_ms: 0.076333
+  type: 'test'
+  ...
+# Subtest: an explicitly reasoned non-FHIR literal call site does not manufacture a grant demand
+ok 7 - an explicitly reasoned non-FHIR literal call site does not manufacture a grant demand
+  ---
+  duration_ms: 0.250125
+  type: 'test'
+  ...
+# Subtest: live FHIR read grant check covers all four chart resources through compiled role policies
+ok 8 - live FHIR read grant check covers all four chart resources through compiled role policies
+  ---
+  duration_ms: 779.884625
+  type: 'test'
+  ...
+# Subtest: FHIR read grant CLI passes only with full coverage and always prints its limits
+ok 9 - FHIR read grant CLI passes only with full coverage and always prints its limits
+  ---
+  duration_ms: 1227.56175
+  type: 'test'
+  ...
+# Subtest: an ungranted FHIR create in mcp source makes the CLI fail with its interaction and resource type
+ok 10 - an ungranted FHIR create in mcp source makes the CLI fail with its interaction and resource type
+  ---
+  duration_ms: 1241.222709
+  type: 'test'
+  ...
+# Subtest: an ungranted FHIR create in ui tsx makes the CLI fail with its interaction and resource type
+ok 11 - an ungranted FHIR create in ui tsx makes the CLI fail with its interaction and resource type
+  ---
+  duration_ms: 1229.253708
+  type: 'test'
+  ...
+# Subtest: serviceFhir read of an ungranted non-plumbing resource makes the CLI fail with its name
+ok 12 - serviceFhir read of an ungranted non-plumbing resource makes the CLI fail with its name
+  ---
+  duration_ms: 1238.7
+  type: 'test'
+  ...
+# Subtest: an ungranted FHIR read in ui/src makes the CLI fail with its name
+ok 13 - an ungranted FHIR read in ui/src makes the CLI fail with its name
+  ---
+  duration_ms: 1228.77775
+  type: 'test'
+  ...
+# Subtest: a marked computed search helper carries literal resource types across source files
+ok 14 - a marked computed search helper carries literal resource types across source files
+  ---
+  duration_ms: 0.37725
+  type: 'test'
+  ...
+# Subtest: a service-write annotation scans the actual attributed transaction once per resource type
+ok 15 - a service-write annotation scans the actual attributed transaction once per resource type
+  ---
+  duration_ms: 9.082958
+  type: 'test'
+  ...
+# Subtest: annotated transactions need exact service registry entries despite existing staff write grants
+ok 16 - annotated transactions need exact service registry entries despite existing staff write grants
+  ---
+  duration_ms: 0.927833
+  type: 'test'
+  ...
+# Subtest: an annotated transaction registry entry remains bound to path, line, callee and resource type
+ok 17 - an annotated transaction registry entry remains bound to path, line, callee and resource type
+  ---
+  duration_ms: 0.47925
+  type: 'test'
+  ...
+# Subtest: unannotated transactions retain their previous scan behavior
+ok 18 - unannotated transactions retain their previous scan behavior
+  ---
+  duration_ms: 0.549
+  type: 'test'
+  ...
+# Subtest: a service-write annotation stays on its statement and does not annotate later calls
+ok 19 - a service-write annotation stays on its statement and does not annotate later calls
+  ---
+  duration_ms: 0.253542
+  type: 'test'
+  ...
+# Subtest: malformed service transaction annotations fail instead of dropping declared resource types
+ok 20 - malformed service transaction annotations fail instead of dropping declared resource types
+  ---
+  duration_ms: 0.79175
+  type: 'test'
+  ...
+# Subtest: the non-FHIR allowlist cannot suppress an explicitly annotated service transaction
+ok 21 - the non-FHIR allowlist cannot suppress an explicitly annotated service transaction
+  ---
+  duration_ms: 0.210125
+  type: 'test'
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7886.311375

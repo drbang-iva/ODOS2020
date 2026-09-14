@@ -1,0 +1,63 @@
+TAP version 13
+# Subtest: Assessment ranking feed follows suggested-new
+ok 1 - Assessment ranking feed follows suggested-new
+  ---
+  duration_ms: 21.429583
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows doctor-new
+ok 2 - Assessment ranking feed follows doctor-new
+  ---
+  duration_ms: 3.718042
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows doctor-established
+ok 3 - Assessment ranking feed follows doctor-established
+  ---
+  duration_ms: 9.107834
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows suggested-established
+ok 4 - Assessment ranking feed follows suggested-established
+  ---
+  duration_ms: 3.293333
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows newness-read-failure
+not ok 5 - Assessment ranking feed follows newness-read-failure
+  ---
+  duration_ms: 3.986
+  type: 'test'
+  location: 'ui/tests/diagnosisNewness.test.tsx:1:1026'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'well-controlled'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'well-controlled'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (ui/tests/diagnosisNewness.test.tsx:54:16)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: Assessment ranking feed follows visit-status-read-failure
+ok 6 - Assessment ranking feed follows visit-status-read-failure
+  ---
+  duration_ms: 3.90175
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 5
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 319.538875

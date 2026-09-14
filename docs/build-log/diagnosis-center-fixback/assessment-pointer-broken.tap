@@ -4,7 +4,7 @@ not ok 1 - Assessment completion pointer targets the diagnosis and disappears wh
   ---
   duration_ms: 6.593541
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisWorkspace.test.tsx:1:72882'
+  location: 'ui/tests/diagnosisWorkspace.test.tsx:1:72882'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -23,7 +23,7 @@ not ok 1 - Assessment completion pointer targets the diagnosis and disappears wh
     0: 'Condition/wrong'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status/ui/tests/diagnosisWorkspace.test.tsx:1945:10)
+    TestContext.<anonymous> (ui/tests/diagnosisWorkspace.test.tsx:1945:10)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.start (node:internal/test_runner/test:944:17)

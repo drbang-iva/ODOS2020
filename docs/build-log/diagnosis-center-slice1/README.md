@@ -1,6 +1,6 @@
 # Diagnosis-center slice 1 — sealed author bundle
 
-Status: **needs-review**. Local implementation of accepted R5; no PR, push, merge, deployment, or independent evaluation. Branch: `drbang-iva/dx-status`. Worktree: `/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dx-status`.
+Status: **needs-review**. Local implementation of accepted R5; no PR, push, merge, deployment, or independent evaluation. Branch: `drbang-iva/dx-status`. Worktree: `.worktrees/dx-status`.
 
 Ten stored visit statuses now have nine clinician-selectable options, with `new` retained for provenance only. Both independent UI/server constants were updated. The ninth complexity choice, `not-addressed-no-mdm` / **Not addressed today / No MDM**, is explicitly answered but excluded from every MDM bucket and the missing-classification count. `sourceDiagnosisCount` still describes all source diagnoses. Existing MDM thresholds are unchanged.
 
@@ -10,7 +10,7 @@ The additional consumer fixes are necessary vocabulary alignment: protocol valid
 
 ## Source verification
 
-Read the companion checkout at `/Users/ericr.bang/GitHub/performance-od`; verified its `decisions/` directory. Read `core/operations/open-source-od/segments/diagnosis-center-workspace-design.md` §1, §2.1, §7 item 1, and `decisions/2026-09-14-odos-diagnosis-center-design-rulings-r1-r9.md` R5. This implements an accepted decision; no new decision or `decisions/INDEX.md` entry was created.
+Read the companion checkout at `../performance-od`; verified its `decisions/` directory. Read `core/operations/open-source-od/segments/diagnosis-center-workspace-design.md` §1, §2.1, §7 item 1, and `decisions/2026-09-14-odos-diagnosis-center-design-rulings-r1-r9.md` R5. This implements an accepted decision; no new decision or `decisions/INDEX.md` entry was created.
 
 Fetched main: **`6baea1d51666461e3de94ded1287ffe8817d2f70`**. Compared with supplied `ddf6ba4a4f5e06efb13c59759d4941159fe49d0a`: one merge, **Guarantor link operations and recovery (#592)**. None of the cited diagnosis source files changed. Re-fetched during final checks: same main. No open PR at start; PR #593 appeared later and its file list has no overlap.
 

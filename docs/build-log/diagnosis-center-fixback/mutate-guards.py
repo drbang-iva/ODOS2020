@@ -1,6 +1,9 @@
 from pathlib import Path
 import subprocess,json
 root=Path(__file__).resolve().parents[3];ev=root/'docs/build-log/diagnosis-center-fixback'
+common_root=(root/subprocess.check_output(['git','rev-parse','--git-common-dir'],cwd=root,text=True).strip()).resolve().parent
+def normalize_output(output):
+ return output.replace(str(root)+'/', '').replace(str(common_root)+'/', '')
 guards=[
 ('most-recent-governs','mcp/src/clinical-graph/diagnosis-newness.ts','const latest = matches[0];','const latest = matches.find((row) => !row.condition.clinicalStatus?.coding?.some((coding) => coding.code === "resolved")) ?? matches[0];','mcp','most recent resolved supersedes','tests/diagnosisNewness.test.ts'),
 ('resolved-history','mcp/src/clinical-graph/diagnosis-newness.ts','value: latestVisit.every(isResolved) ?','value: false ?','mcp','suggestion: resolved prior','tests/diagnosisNewness.test.ts'),
@@ -19,9 +22,9 @@ for name,file,old,new,cwd,pattern,testfile in guards:
  p=root/file;original=p.read_text();assert old in original,name
  try:
   p.write_text(original.replace(old,new,1));r=subprocess.run(['node','--import','tsx','--test','--test-name-pattern='+pattern,testfile],cwd=root/cwd,capture_output=True,text=True)
-  (ev/(name+'-broken.tap')).write_text(r.stdout+r.stderr);red=r.returncode;assert red!=0,name
+  (ev/(name+'-broken.tap')).write_text(normalize_output(r.stdout+r.stderr));red=r.returncode;assert red!=0,name
  finally:p.write_text(original)
  r=subprocess.run(['node','--import','tsx','--test','--test-name-pattern='+pattern,testfile],cwd=root/cwd,capture_output=True,text=True)
- (ev/(name+'-restored.tap')).write_text(r.stdout+r.stderr);assert r.returncode==0,name
+ (ev/(name+'-restored.tap')).write_text(normalize_output(r.stdout+r.stderr));assert r.returncode==0,name
  results.append({'guard':name,'brokenExit':red,'restoredExit':r.returncode})
 (ev/'guards.json').write_text(json.dumps(results,indent=2)+'\n');print(json.dumps(results))
