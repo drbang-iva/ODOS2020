@@ -467,6 +467,27 @@ test("S3 late successful release checkpoints its result without completing or au
   const release = JSON.parse(final.extension![0].valueString!).intents.find((i: any) => i.phase === "releasing");
   assert.equal(release.disposition, "landed"); assert.equal(release.responseStatus, 200);
 });
+test("S3 terminal response checkpoint refusal is reported and never replayed", { timeout: 5000 }, async () => {
+  const f = fixture(1), paused = deferred(), resume = deferred(); let held = false;
+  f.beforeWrite = async w => {
+    if (!held && w.resource.resourceType === "Person" && w.resource.id === "D" && w.resource.link?.some(l => l.target.reference === "RelatedPerson/r1")) {
+      held = true; paused.resolve(); await resume.promise;
+    }
+  };
+  const running = run(f, "create", f.input()); await paused.promise;
+  const original = [...f.data.values()].find(r => r.resourceType === "Task") as Task;
+  const correction = await run(f, "correct", correctionInput(), original.id); assert.equal(correction.status, 200);
+  let checkpoint: Write | undefined;
+  f.beforeWrite = async w => {
+    if (!checkpoint && w.resource.resourceType === "Task" && w.resource.id === original.id) {
+      checkpoint = w; f.compete(`Task/${original.id}`, t => t, SERVICE);
+    }
+  };
+  const count = f.writes.length; resume.resolve(); const refused = await running; f.beforeWrite = undefined;
+  assert.equal(refused.status, 412, "a refused journal checkpoint cannot report settled success");
+  assert.equal(checkpoint?.status, 412); assert.equal(f.writes.length - count, 1);
+  assert.equal(f.get<Task>(`Task/${original.id}`).status, "cancelled"); assert.deepEqual(f.owners("r1"), ["S"]);
+});
 test("L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan", async () => {
   const f = fixture(); const original = await attachPending(f, ["r1"]);
   f.compete("RelatedPerson/r2", r => ({ ...r, extension: [...r.extension, { url: CLAIM, valueReference: { reference: `Task/${original.id}` } }] }));

@@ -103,6 +103,7 @@ cases = [
     case('S5-fresh-claim-classification', 'S5 retry classification:', replace('if (phase !== "claiming") {\n        await this.resumeClaims();\n        if (resource.resourceType === "RelatedPerson") fresh = await this.operation.read<T>(resource.resourceType, resource.id!);\n      }', '')),
     case('S3-terminal-journal-checkpoint', 'L15: correction fences', replace('const fresh = await this.operation.read<Task>("Task", this.task.id!);', 'const fresh = this.task;')),
     case('S3-terminal-response-stops-runner', 'S3 late successful release', replace('if (fresh.status !== "in-progress") throw new Settled();', '')),
+    case('S3-terminal-checkpoint-refusal', 'S3 terminal response checkpoint refusal', replace('if (run?.checkpointError) error = run.checkpointError.cause;', '')),
 
     case('Registry-service-write', '', lambda s: re.sub(r'^  \{ path: "mcp/src/clinic/guarantor-link-operation.ts",[^\n]+resourceType: "Task"[^\n]+\n', '', s, count=1, flags=re.M), file='scripts/fhir-read-grant-check.ts', command=['npm', 'run', 'preflight'], cwd='.'),
     case('Registry-audit-event', '', replace("'guarantor.link.started',", ''), file='data/migrations/2026-09-14-guarantor-link-events.sql', command=['node', '--import', 'tsx', '--test', 'tests/paymentAudit.test.ts']),

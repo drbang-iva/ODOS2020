@@ -558,6 +558,7 @@ export async function handleGuarantorOperation(deps: GuarantorOperationDeps, sta
     await run.audit("started", "claiming"); await run.original();
     return { status: 200, body: await operation.summary(run.task) };
   } catch (error) {
+    if (run?.checkpointError) error = run.checkpointError.cause;
     if (error instanceof Settled && run) return { status: 200, body: await run.operation.summary(run.task) };
     if (error instanceof Paused && run) return { status: 409, body: { ...await run.operation.summary(run.task), phase: error.phase, error: error.message, target: error.target } };
     return { status: error instanceof z.ZodError ? 422 : definiteStatus(error) ?? 500, body: { error: error instanceof Refusal ? error.message : "The operation result could not be confirmed. Reload its status before continuing." } };
