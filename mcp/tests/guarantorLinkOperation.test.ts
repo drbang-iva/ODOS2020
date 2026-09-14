@@ -480,7 +480,7 @@ test("S3 terminal response checkpoint refusal is reported and never replayed", {
   let checkpoint: Write | undefined;
   f.beforeWrite = async w => {
     if (!checkpoint && w.resource.resourceType === "Task" && w.resource.id === original.id) {
-      checkpoint = w; f.compete(`Task/${original.id}`, t => t, SERVICE);
+      checkpoint = w; f.compete(`Task/${original.id}`, t => ({ ...t, businessStatus: { text: "Concurrent terminal journal checkpoint" } }), SERVICE);
     }
   };
   const count = f.writes.length; resume.resolve(); const refused = await running; f.beforeWrite = undefined;
