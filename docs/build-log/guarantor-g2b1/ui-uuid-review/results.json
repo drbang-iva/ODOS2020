@@ -1,0 +1,135 @@
+{
+  "kind": "Author UUID fallback regression and guard proof",
+  "implementationCommit": "4bc9091d7849fb6c96e558d4c4bdd12c37f0a7cc",
+  "preFixCommit": "4ceacf0378bd7a46ad5c370817118638946a32cb",
+  "sourceHashes": {
+    "ui/src/lib/guarantor-link-operations.ts": "6d61a0a44b653657055fef130c592f02b3ab96f032d597f22165570514ff96de",
+    "ui/tests/guarantorLinkOperations.test.tsx": "a9f392f15738a357647e26818a550af4956e334750d5975fef7d99e3a6fa8ab8"
+  },
+  "specification": {
+    "url": "https://w3c.github.io/webcrypto/#crypto-interface",
+    "accessed": "2026-09-14",
+    "sections": [
+      "10 Crypto interface",
+      "10.1.1 getRandomValues",
+      "10.1.2 randomUUID"
+    ]
+  },
+  "preservation": {
+    "originalTwelveTestsAndFixtureByteIdenticalPrefix": true,
+    "existingRegressionFilesUntouched": [
+      "ui/tests/guarantorEditor.test.tsx",
+      "ui/tests/guarantorPropagation.test.tsx",
+      "ui/tests/demographicsConcurrency.test.tsx"
+    ]
+  },
+  "targetedCommand": "node --import tsx --test --test-name-pattern Correct (sends fresh v4|keeps native) tests/guarantorLinkOperations.test.tsx",
+  "beforeFix": {
+    "exitCode": 1,
+    "tests": 2,
+    "pass": 1,
+    "fail": 1,
+    "skipped": 0
+  },
+  "afterFix": {
+    "exitCode": 0,
+    "tests": 2,
+    "pass": 2,
+    "fail": 0,
+    "skipped": 0
+  },
+  "focused": {
+    "command": "node --import tsx --test --test-concurrency=1 tests/guarantorLinkOperations.test.tsx tests/guarantorEditor.test.tsx tests/guarantorPropagation.test.tsx tests/demographicsConcurrency.test.tsx",
+    "cwd": "ui",
+    "exitCode": 0,
+    "tests": 48,
+    "pass": 48,
+    "fail": 0,
+    "skipped": 0
+  },
+  "typecheck": {
+    "command": "./node_modules/.bin/tsc --noEmit --skipLibCheck",
+    "cwd": "ui",
+    "exitCode": 0,
+    "output": ""
+  },
+  "mutations": [
+    {
+      "mutation": "fallback-removed",
+      "redExitCode": 1,
+      "restoredExitCode": 0,
+      "sourceSha256": "d1b11446cad6fba2d7b14e0f69359006d82917bb5b4a1840c7bc5d8642948d36",
+      "failure": "each Correct click must send its request without native randomUUID",
+      "red": {
+        "tests": 2,
+        "pass": 1,
+        "fail": 1,
+        "skipped": 0
+      },
+      "restored": {
+        "tests": 2,
+        "pass": 2,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "mutation": "version-mask-removed",
+      "redExitCode": 1,
+      "restoredExitCode": 0,
+      "sourceSha256": "c4dda7e5ff57a598545289e69f2acafa4b3287667a372eb35eecb51969155ea5",
+      "failure": "ERR_ASSERTION",
+      "red": {
+        "tests": 2,
+        "pass": 1,
+        "fail": 1,
+        "skipped": 0
+      },
+      "restored": {
+        "tests": 2,
+        "pass": 2,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "mutation": "variant-mask-removed",
+      "redExitCode": 1,
+      "restoredExitCode": 0,
+      "sourceSha256": "3aba57c4d0876bd2f4ca0c3917b75ac8aef3ee11827c5820b95f5702d64d6bdc",
+      "failure": "ERR_ASSERTION",
+      "red": {
+        "tests": 2,
+        "pass": 1,
+        "fail": 1,
+        "skipped": 0
+      },
+      "restored": {
+        "tests": 2,
+        "pass": 2,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "mutation": "native-preference-removed",
+      "redExitCode": 1,
+      "restoredExitCode": 0,
+      "sourceSha256": "cfb903a623d8e66c9335fccbb6716f989a53a1d91d1b3c47ebc28996a6f91369",
+      "failure": "Native randomUUID must remain preferred",
+      "red": {
+        "tests": 2,
+        "pass": 1,
+        "fail": 1,
+        "skipped": 0
+      },
+      "restored": {
+        "tests": 2,
+        "pass": 2,
+        "fail": 0,
+        "skipped": 0
+      }
+    }
+  ],
+  "scope": "Component/helper requests over synthetic FHIR transport only; browser, live FHIR, policies, and independent evaluation are separate."
+}
