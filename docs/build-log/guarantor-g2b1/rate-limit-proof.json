@@ -1,0 +1,80 @@
+{
+  "sourceParent": "df5d09b0418e4c116800bbf317f76585a84a4ef3",
+  "supplyChain": {
+    "directDependency": "express-rate-limit",
+    "version": "8.5.1",
+    "previouslyLockedVia": "@modelcontextprotocol/sdk",
+    "license": "MIT",
+    "addedArtifacts": 0,
+    "removedArtifacts": 0,
+    "changedExistingPackageRecords": 0,
+    "lockedPackage": {
+      "version": "8.5.1",
+      "resolved": "https://registry.npmjs.org/express-rate-limit/-/express-rate-limit-8.5.1.tgz",
+      "integrity": "sha512-5O6KYmyJEpuPJV5hNTXKbAHWRqrzyu+OI3vUnSd2kXFubIVpG7ezpgxQy76Zo5GQZtrQBg86hF+CM/NX+cioiQ==",
+      "license": "MIT",
+      "dependencies": {
+        "ip-address": "^10.2.0"
+      },
+      "engines": {
+        "node": ">= 16"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/express-rate-limit"
+      },
+      "peerDependencies": {
+        "express": ">= 4.11"
+      }
+    }
+  },
+  "controls": [
+    {
+      "guard": "S1-rate-limit",
+      "source": "mcp/src/clinic/guarantor-routes.ts",
+      "sourceSha256": "4d3de4efbc93ddd5e850a00657108158a3d78f809231cb459f431b646d88416d",
+      "mutatedSha256": "815a3d8e89b740b00adb77ae2c2e2ee0fd107ce7279d02342b6c63e278211f4c",
+      "green": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ]
+      },
+      "red": {
+        "exit": 1,
+        "failingTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ],
+        "counts": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ]
+      },
+      "restored": {
+        "exit": 0,
+        "failingTests": [],
+        "counts": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "namedTests": [
+          "S1 rate limit: all five routes share a budget before service or staff authentication"
+        ]
+      },
+      "killed": true
+    }
+  ]
+}
