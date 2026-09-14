@@ -285,3 +285,56 @@ test("S7: a correction reason survives same-Task refusal and clears when another
     assert.equal(data.writes.length, 1, "the new operation needs its own entered reason before another request");
   });
 }));
+
+test("S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable", async t => usingFixture(async data => {
+  const descriptor = Object.getOwnPropertyDescriptor(crypto, "randomUUID");
+  const getRandomValues = crypto.getRandomValues.bind(crypto);
+  Object.defineProperty(crypto, "randomUUID", { configurable: true, value: undefined });
+  const randomBytes = t.mock.method(crypto, "getRandomValues", (bytes: Uint8Array) => {
+    assert.equal(bytes.byteLength, 16);
+    getRandomValues(bytes);
+    // Force non-v4 bits so removing either mask cannot pass by chance.
+    bytes[6] = 0xff;
+    bytes[8] = 0xff;
+    return bytes;
+  });
+  try {
+    data.claim("a");
+    data.action = () => Response.json({ error: "Correction refused; original remains pending" }, { status: 409 });
+    await usingEditor(data, async renderer => {
+      const reason = renderer.root.findAllByType("label").find(node => node.children[0] === "Reason for correction")!.findByType("input");
+      await act(async () => { reason.props.onChange({ target: { value: "Retain the original guarantor" } }); });
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await act(async () => { await button(renderer, "Correct")!.props.onClick(); });
+      }
+      assert.equal(data.writes.length, 2, "each Correct click must send its request without native randomUUID");
+      const ids = data.writes.map(write => {
+        assert.equal(write.path, `/guarantors/link-operations/${operationId}/correct`);
+        assert.equal(write.method, "POST");
+        const body = write.body as { operationId: string; reason: string };
+        assert.equal(body.reason, "Retain the original guarantor");
+        assert.match(body.operationId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+        return body.operationId;
+      });
+      assert.equal(new Set(ids).size, 2, "separate Correct clicks need distinct operation IDs");
+      assert.equal(randomBytes.mock.callCount(), 2);
+    });
+  } finally {
+    randomBytes.mock.restore();
+    if (descriptor) Object.defineProperty(crypto, "randomUUID", descriptor);
+    else Reflect.deleteProperty(crypto, "randomUUID");
+  }
+}));
+
+test("S7: Correct keeps native randomUUID when available", async t => usingFixture(async data => {
+  const nativeId = "499fc7c4-d6fd-468f-a646-695455c934d1";
+  const native = t.mock.method(crypto, "randomUUID", () => nativeId);
+  t.mock.method(crypto, "getRandomValues", () => { throw new Error("Native randomUUID must remain preferred"); });
+  const { correctGuarantorLinkOperation } = await import("../src/lib/guarantor-link-operations");
+  await correctGuarantorLinkOperation(operationId, "Use the native operation ID");
+  assert.equal(native.mock.callCount(), 1);
+  assert.deepEqual(data.writes.map(({ path, method, body }) => ({ path, method, body })), [{
+    path: `/guarantors/link-operations/${operationId}/correct`, method: "POST",
+    body: { operationId: nativeId, reason: "Use the native operation ID" },
+  }]);
+}));
