@@ -2,7 +2,7 @@
 
 Author development evidence: **115 assertions passed, 0 failed** across 13 real HTTP schedules. The capture contains **2025 HTTP exchanges**, 297 application transaction calls, and 833 persisted audit rows, including 39 guarantor-operation rows. It is not an independent evaluation or a final-head release verdict.
 
-The source checkout HEAD was `5e7c2aef7f6b59432deb6046fda8e65056796b10`, with the operation implementation still uncommitted at capture time. Its SHA-256 was `7319e313f64978137142e36462b5feb501ee3bcf843153456f1a61956100ee37`. All six recorded implementation digests match before and after the capture.
+The application source HEAD was `158c9e67b91f16fdfa20f22ad20577ebef9d5d7a`. Its operation implementation SHA-256 was `ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19`. All six recorded implementation digests and the HEAD match before and after the capture.
 
 | Schedule | Scenario assertions | HTTP exchanges | Operation audit rows |
 |---|---:|---:|---:|
@@ -24,7 +24,7 @@ The total assertion count also includes fourteen audit checks and one source-dig
 
 `live-operation-proof.mjs` mounts the actual `registerGuarantorRoutes` on owned loopback port 28765, with the actual staff authenticator, service FHIR client and PostgreSQL audit runtime. The injected functions only schedule competitors, pause a prepared write, or discard a real response. Each service write remains a single-entry conditional transaction Bundle. The raw trace retains the HTTP response and the entry-level status and If-Match value; the assertions inspect those entry-level 200/412 responses.
 
-`live-operation-http.json` retains requests and responses. Authentication responses retain identity, membership and Person/Task policy rules plus a digest of the full response; session details are omitted. `live-operation-proof.json` contains fresh resource snapshots, Task journals, transaction metadata, checks and audit rows. `live-operation-runtime.json` confirms Medplum 5.1.30-9b1bd92, two synthetic practice Projects plus its isolated bootstrap Project, transaction-bundles absent, real non-admin staff/composite memberships and a final repository sync dry run with four matching policies and zero membership drift.
+`live-operation-http.json` retains requests and responses. Authentication responses retain identity, membership and Person/Task policy rules plus a digest of the full response; session details are omitted. `live-operation-proof.json` contains fresh resource snapshots, Task journals, transaction metadata, checks and audit rows. `live-operation-runtime.json` confirms Medplum 5.1.30-9b1bd92, two synthetic practice Projects plus its isolated bootstrap Project, transaction-bundles absent, real non-admin staff/composite memberships and the final repository sync with four matching policies and zero changes and zero membership drift.
 
 The first instrument assumed direct PUTs and missed Bundle entry writes; its guards failed and the transport inspection was corrected. `live-operation-harness-check.json` records that repair. The audit seal then found a real implementation defect: C cancelled A before A could checkpoint its late definite 412, leaving A's intent unresolved. `live-operation-journal-before.json` preserves the red assertion and exact synthetic Task/intent evidence. The rerun verifies that A stays cancelled and that intent is recorded as rejected/412.
 

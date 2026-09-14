@@ -1,0 +1,358 @@
+{
+  "applicationHead": "158c9e67b91f16fdfa20f22ad20577ebef9d5d7a",
+  "originMainRefreshed": "ddf6ba4a4f5e06efb13c59759d4941159fe49d0a",
+  "scopeAnchorDiff": "empty from a13fc1ea to refreshed origin/main",
+  "runs": [
+    {
+      "log": "baseline-mcp",
+      "counts": {
+        "tests": 4722,
+        "pass": 4655,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 60
+      },
+      "failedTests": [
+        "rebuild is atomic and server-side worklist grouping returns honest untouched facts",
+        "never-paid-untouched aggregation is performed by payer and month in PostgreSQL",
+        "reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth",
+        "an older per-claim upsert cannot overwrite a newer completed rebuild",
+        "an older rebuild snapshot fails loudly without publishing incomplete FHIR truth",
+        "<task-worktree>/mcp/tests/claimReadModelStore.test.ts",
+        "drill child commands never inherit the persistent Redis password"
+      ],
+      "sha256": "23fcbfcd270c7ed4821f006573b1f810c2916a2d7a248ae18d692cdd8e976261"
+    },
+    {
+      "log": "baseline-ui",
+      "counts": {
+        "tests": 1485,
+        "pass": 1485,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "failedTests": [],
+      "sha256": "9b3491ffa75425578f67d4fa8f8a11272531d612caa97ef4978c063a6cc54831"
+    },
+    {
+      "log": "baseline-preflight",
+      "counts": {},
+      "failedTests": [],
+      "sha256": "fe7efd02332a04a9aaab90606c8e5ca8c587e31a217bc9e49723538ffcb56677"
+    },
+    {
+      "log": "final-mcp",
+      "counts": {
+        "tests": 4783,
+        "pass": 4715,
+        "fail": 8,
+        "cancelled": 0,
+        "skipped": 60
+      },
+      "failedTests": [
+        "live FHIR read grant check covers all four chart resources through compiled role policies",
+        "FHIR read grant CLI passes only with full coverage and always prints its limits",
+        "rebuild is atomic and server-side worklist grouping returns honest untouched facts",
+        "never-paid-untouched aggregation is performed by payer and month in PostgreSQL",
+        "reconciliation detects a corrupted money row and a rebuild restores exact FHIR-derived truth",
+        "an older per-claim upsert cannot overwrite a newer completed rebuild",
+        "an older rebuild snapshot fails loudly without publishing incomplete FHIR truth",
+        "<task-worktree>/mcp/tests/claimReadModelStore.test.ts"
+      ],
+      "sha256": "386931923e67d93b45893e9ed591f358d6f155e5a9c291b3783a1d2609296a6f"
+    },
+    {
+      "log": "final-ui",
+      "counts": {
+        "tests": 1496,
+        "pass": 1496,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "failedTests": [],
+      "sha256": "bafd3d8f23d7ef48ed061f6e2bb1b2709173ab12624aaf26e2fa949640f6954e"
+    },
+    {
+      "log": "final-ui-build",
+      "counts": {},
+      "failedTests": [],
+      "sha256": "0daae5588a1048f43544629b550a202a02f8584aa6bb9132fd89d730660a1d5a"
+    },
+    {
+      "log": "mcp-build-current",
+      "counts": {},
+      "failedTests": [],
+      "sha256": "79d812332743de9cbe0b1e9272d1388f2cdcf7d56abdac8397b03137a4312914"
+    },
+    {
+      "log": "final-preflight",
+      "counts": {},
+      "failedTests": [],
+      "sha256": "0066626e2f65107d2f72c503b1e6834898107a8e0ab0a172a8c81755fce0d976"
+    },
+    {
+      "log": "proxy-census",
+      "counts": {},
+      "failedTests": [],
+      "sha256": "b570c4c0e31ad713c99c42aa6e6c2bbb5afccea4f41ce77db81fa0d068683fc1"
+    },
+    {
+      "log": "core-final-green",
+      "counts": {
+        "tests": 41,
+        "pass": 41,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "failedTests": [],
+      "sha256": "b86fe61e364ce0d76ac91d683297ac99689bac07f31a683154296d9011ce7b6b"
+    }
+  ],
+  "namedBaseline": [
+    {
+      "package": "mcp",
+      "file": "tests/guarantorPerson.test.ts",
+      "exitCode": 0,
+      "tests": 11,
+      "pass": 11,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "mcp",
+      "file": "tests/patientRegistrationAuthz.test.ts",
+      "exitCode": 0,
+      "tests": 29,
+      "pass": 29,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "mcp",
+      "file": "tests/patientInsuranceHonestSave.test.ts",
+      "exitCode": 0,
+      "tests": 17,
+      "pass": 17,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "mcp",
+      "file": "tests/statements.test.ts",
+      "exitCode": 0,
+      "tests": 33,
+      "pass": 33,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "mcp",
+      "file": "tests/commsSuppression.test.ts",
+      "exitCode": 0,
+      "tests": 49,
+      "pass": 49,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "mcp",
+      "file": "tests/paymentAudit.test.ts",
+      "exitCode": 0,
+      "tests": 5,
+      "pass": 5,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "mcp",
+      "file": "tests/businessActions.test.ts",
+      "exitCode": 0,
+      "tests": 11,
+      "pass": 11,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "ui",
+      "file": "tests/guarantorEditor.test.tsx",
+      "exitCode": 0,
+      "tests": 9,
+      "pass": 9,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "ui",
+      "file": "tests/guarantorPropagation.test.tsx",
+      "exitCode": 0,
+      "tests": 22,
+      "pass": 22,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "ui",
+      "file": "tests/demographicsConcurrency.test.tsx",
+      "exitCode": 0,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "ui",
+      "file": "tests/engageSheet.test.tsx",
+      "exitCode": 0,
+      "tests": 18,
+      "pass": 18,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "ui",
+      "file": "tests/statements.test.tsx",
+      "exitCode": 0,
+      "tests": 14,
+      "pass": 14,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  ],
+  "namedFinal": [
+    {
+      "package": "mcp",
+      "file": "tests/guarantorPerson.test.ts",
+      "exitCode": 0,
+      "tests": 11,
+      "pass": 11,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "mcp",
+      "file": "tests/patientRegistrationAuthz.test.ts",
+      "exitCode": 0,
+      "tests": 29,
+      "pass": 29,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "mcp",
+      "file": "tests/patientInsuranceHonestSave.test.ts",
+      "exitCode": 0,
+      "tests": 17,
+      "pass": 17,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "mcp",
+      "file": "tests/statements.test.ts",
+      "exitCode": 0,
+      "tests": 33,
+      "pass": 33,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "mcp",
+      "file": "tests/commsSuppression.test.ts",
+      "exitCode": 0,
+      "tests": 49,
+      "pass": 49,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "mcp",
+      "file": "tests/paymentAudit.test.ts",
+      "exitCode": 0,
+      "tests": 5,
+      "pass": 5,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "mcp",
+      "file": "tests/businessActions.test.ts",
+      "exitCode": 0,
+      "tests": 11,
+      "pass": 11,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "ui",
+      "file": "tests/guarantorEditor.test.tsx",
+      "exitCode": 0,
+      "tests": 9,
+      "pass": 9,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "ui",
+      "file": "tests/guarantorPropagation.test.tsx",
+      "exitCode": 0,
+      "tests": 22,
+      "pass": 22,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "ui",
+      "file": "tests/demographicsConcurrency.test.tsx",
+      "exitCode": 0,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "ui",
+      "file": "tests/engageSheet.test.tsx",
+      "exitCode": 0,
+      "tests": 18,
+      "pass": 18,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "ui",
+      "file": "tests/statements.test.tsx",
+      "exitCode": 0,
+      "tests": 14,
+      "pass": 14,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  ]
+}

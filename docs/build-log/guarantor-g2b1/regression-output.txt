@@ -1,0 +1,175 @@
+===== baseline-mcp =====
+  duration_ms: 0.467
+  type: 'test'
+  ...
+# Subtest: WestFax config is all-or-nothing, HTTPS-only, and never appears in client code
+ok 4187 - WestFax config is all-or-nothing, HTTPS-only, and never appears in client code
+  ---
+  duration_ms: 0.515833
+  type: 'test'
+  ...
+1..4187
+# tests 4722
+# suites 0
+# pass 4655
+# fail 7
+# cancelled 0
+# skipped 60
+# todo 0
+# duration_ms 94333.969208
+⚠️  LIVE STACK NOT CONFIGURED — 41 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them.
+
+===== baseline-ui =====
+  ---
+  duration_ms: 17.569666
+  type: 'test'
+  ...
+# Subtest: P2 a late previous-encounter response cannot replace the new encounter's Wearing values
+ok 1472 - P2 a late previous-encounter response cannot replace the new encounter's Wearing values
+  ---
+  duration_ms: 25.041459
+  type: 'test'
+  ...
+1..1472
+# tests 1485
+# suites 0
+# pass 1485
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 193169.856125
+
+===== baseline-preflight =====
+- ServiceRequest: 8 operations; 0 scope-verified; 8 NOT SCOPE-VERIFIED
+Limitations:
+- Computed read resourceTypes escape this scan.
+- Computed create resources require a generic resource type, an object-literal resourceType, or an fhir-scope-contract marker; other computed creates escape this scan.
+- Computed update, delete, and patch resourceTypes escape this scan.
+- A computed search is marker-checked only when its argument is named resourceType, resource_type, or .resourceType; other names escape because receiver-independent matching would misclassify non-FHIR search APIs.
+- Marked helper propagation follows named parameters; destructured or object-property resourceType forwarding escapes this scan.
+- Marked helper propagation is function-name based across scanned roots; an imported helper alias escapes unless its local name matches, and same-named non-FHIR helpers require the explicit call-site allowlist.
+- Type-level comparison does not prove criteria scope; criteria-dependent operations without an exact fhir-scope-contract are counted as NOT SCOPE-VERIFIED.
+ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md
+
+===== final-mcp =====
+not ok 72 - live FHIR read grant check covers all four chart resources through compiled role policies
+  ---
+  duration_ms: 988.902375
+  type: 'test'
+  location: '<task-worktree>/tests/preflight/fhir-read-grant-check.test.ts:1:7617'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    37 !== 34
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 34
+  actual: 37
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<task-worktree>/tests/preflight/fhir-read-grant-check.test.ts:294:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+
+  duration_ms: 0.521917
+  type: 'test'
+  ...
+# Subtest: WestFax config is all-or-nothing, HTTPS-only, and never appears in client code
+ok 4248 - WestFax config is all-or-nothing, HTTPS-only, and never appears in client code
+  ---
+  duration_ms: 8.445875
+  type: 'test'
+  ...
+1..4248
+# tests 4783
+# suites 0
+# pass 4715
+# fail 8
+# cancelled 0
+# skipped 60
+# todo 0
+# duration_ms 82600.95375
+⚠️  LIVE STACK NOT CONFIGURED — 41 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them.
+
+===== final-ui =====
+  ---
+  duration_ms: 25.7325
+  type: 'test'
+  ...
+# Subtest: P2 a late previous-encounter response cannot replace the new encounter's Wearing values
+ok 1483 - P2 a late previous-encounter response cannot replace the new encounter's Wearing values
+  ---
+  duration_ms: 38.705167
+  type: 'test'
+  ...
+1..1483
+# tests 1496
+# suites 0
+# pass 1496
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 206330.482334
+
+===== final-ui-build =====
+dist/version.json                   0.16 kB │ gzip:   0.15 kB
+dist/index.html                     0.95 kB │ gzip:   0.56 kB
+dist/assets/index-MgzHian6.css    226.50 kB │ gzip:  38.17 kB
+dist/assets/index-BaFEMsW-.js   1,906.40 kB │ gzip: 514.52 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.64s
+
+===== mcp-build-current =====
+
+> odos-mcp@0.1.0 build
+> tsc
+
+
+===== final-preflight =====
+- ServiceRequest: 8 operations; 0 scope-verified; 8 NOT SCOPE-VERIFIED
+Limitations:
+- Computed read resourceTypes escape this scan.
+- Computed create resources require a generic resource type, an object-literal resourceType, or an fhir-scope-contract marker; other computed creates escape this scan.
+- Computed update, delete, and patch resourceTypes escape this scan.
+- A computed search is marker-checked only when its argument is named resourceType, resource_type, or .resourceType; other names escape because receiver-independent matching would misclassify non-FHIR search APIs.
+- Marked helper propagation follows named parameters; destructured or object-property resourceType forwarding escapes this scan.
+- Marked helper propagation is function-name based across scanned roots; an imported helper alias escapes unless its local name matches, and same-named non-FHIR helpers require the explicit call-site allowlist.
+- Type-level comparison does not prove criteria scope; criteria-dependent operations without an exact fhir-scope-contract are counted as NOT SCOPE-VERIFIED.
+ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md
+
+===== proxy-census =====
+Proxy-coverage census — 25 backend route families discovered, 28 proxy table entries.
+
+Every backend route family has a proxy table entry.
+
+Reporting only — CI annotates findings, but this check never fails the build.
+
+===== core-final-green =====
+  ---
+  duration_ms: 48.8535
+  type: 'test'
+  ...
+# Subtest: L7: actual statement recipient remains the moved primary RelatedPerson before and after transfer
+ok 41 - L7: actual statement recipient remains the moved primary RelatedPerson before and after transfer
+  ---
+  duration_ms: 8.58475
+  type: 'test'
+  ...
+1..41
+# tests 41
+# suites 0
+# pass 41
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 465.569583

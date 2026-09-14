@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-09-14T10:42:10.603Z",
+  "sourceHead": "158c9e67b91f16fdfa20f22ad20577ebef9d5d7a",
   "composeProject": "g2b1-build-live",
   "image": "medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de",
   "health": {
@@ -17,20 +17,17 @@
     {
       "id": "97d4724e-f504-4e3a-9879-dd809cde3167",
       "name": "Super Admin",
-      "features": [],
-      "version": "924adae4-ed1e-4453-9454-becb7d0de790"
+      "features": []
     },
     {
       "id": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
       "name": "G2b1 build synthetic A",
-      "features": [],
-      "version": "3e26f868-b6f6-4705-81fe-a1de8afad29b"
+      "features": []
     },
     {
       "id": "cd1c78b4-f8f8-46fc-aacc-76c82a52ea10",
       "name": "G2b1 build synthetic B",
-      "features": [],
-      "version": "bc3817d6-2620-439b-9306-0fd8f68e1052"
+      "features": []
     }
   ],
   "principals": {
@@ -40,7 +37,6 @@
         "staff"
       ],
       "membershipId": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
-      "admin": false,
       "policyId": "1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
       "accessEntries": 4
     },
@@ -52,13 +48,12 @@
         "admin"
       ],
       "membershipId": "a937ca2a-1f1c-4a2e-8c19-7b43cb44259e",
-      "admin": false,
       "policyId": "ca61bba9-d680-4ccb-b151-e44a6b587785",
-      "accessEntries": 14
+      "accessEntries": 9
     }
   },
   "policySync": {
-    "mode": "dry-run",
+    "mode": "apply",
     "policiesCreated": 0,
     "policiesUpdated": 0,
     "compositesRequired": 0,
@@ -85,7 +80,7 @@
         "status": "match",
         "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
         "policyName": "ODOS Staff",
-        "versionId": "ef9471e1-858d-470a-8168-3b7421b74fce",
+        "versionId": "f35d064c-8c89-44c8-843f-44ca00722b8c",
         "missingRules": [],
         "unexpectedRules": []
       },
@@ -110,10 +105,22 @@
         "status": "match",
         "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
         "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
-        "versionId": "b5f9d210-b847-4cf1-a061-130976731e18",
+        "versionId": "f940385d-58f6-4d20-93fa-e6bc9f878bac",
         "missingRules": [],
         "unexpectedRules": []
       }
     ]
-  }
+  },
+  "source": {
+    "head": "158c9e67b91f16fdfa20f22ad20577ebef9d5d7a",
+    "files": {
+      "mcp/src/clinic/guarantor-link-operation.ts": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
+      "mcp/src/clinic/guarantor-routes.ts": "b3af98597b9bdd7c1023ba1638f63e491ad47e8c7731b2482c990d0ec9f46d09",
+      "mcp/src/authz/roles.ts": "afdd50b756f907121ccfeb965abdd72d8981739992c1d21f111d4568087cf114",
+      "mcp/src/authz/liveAudit.ts": "2d65d97951d365a3621310a89a88ef47587741fa67eb498e4f933f21c1295ddb",
+      "scripts/sync-practice-role-policy-rules.ts": "dab88bd2b33d81e2535e1f0459fc47696e85e9bad6a5154e255de5775bbb860f",
+      "ui/src/lib/guarantor-editor.ts": "9ccc86563866afed1a47cb7eeae5d0c56b6619efffcd76e0e8e81a0b3ebd9c67"
+    }
+  },
+  "note": "Final fixture read after policy restoration and browser proof. The repository sync last applied zero changes. All Projects retain transaction-bundles absent."
 }

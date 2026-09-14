@@ -1,7 +1,17 @@
 {
-  "mode": "Actual repository sync dry run after all fixture mutations",
+  "source": {
+    "head": "158c9e67b91f16fdfa20f22ad20577ebef9d5d7a",
+    "files": {
+      "mcp/src/clinic/guarantor-link-operation.ts": "ab78233b28938c5b010e44d45e33b657dee52bc2d15e211679905b9ddf76ec19",
+      "mcp/src/clinic/guarantor-routes.ts": "b3af98597b9bdd7c1023ba1638f63e491ad47e8c7731b2482c990d0ec9f46d09",
+      "mcp/src/authz/roles.ts": "afdd50b756f907121ccfeb965abdd72d8981739992c1d21f111d4568087cf114",
+      "mcp/src/authz/liveAudit.ts": "2d65d97951d365a3621310a89a88ef47587741fa67eb498e4f933f21c1295ddb",
+      "scripts/sync-practice-role-policy-rules.ts": "dab88bd2b33d81e2535e1f0459fc47696e85e9bad6a5154e255de5775bbb860f",
+      "ui/src/lib/guarantor-editor.ts": "9ccc86563866afed1a47cb7eeae5d0c56b6619efffcd76e0e8e81a0b3ebd9c67"
+    }
+  },
   "result": {
-    "mode": "dry-run",
+    "mode": "apply",
     "policiesCreated": 0,
     "policiesUpdated": 0,
     "compositesRequired": 0,
@@ -28,7 +38,7 @@
         "status": "match",
         "policyReference": "AccessPolicy/1538e4b8-3b92-4f29-b2aa-7b6a7eb99e87",
         "policyName": "ODOS Staff",
-        "versionId": "ef9471e1-858d-470a-8168-3b7421b74fce",
+        "versionId": "f35d064c-8c89-44c8-843f-44ca00722b8c",
         "missingRules": [],
         "unexpectedRules": []
       },
@@ -53,10 +63,11 @@
         "status": "match",
         "policyReference": "AccessPolicy/ca61bba9-d680-4ccb-b151-e44a6b587785",
         "policyName": "ODOS Composite Provider + Staff + Admin / Manager",
-        "versionId": "b5f9d210-b847-4cf1-a061-130976731e18",
+        "versionId": "f940385d-58f6-4d20-93fa-e6bc9f878bac",
         "missingRules": [],
         "unexpectedRules": []
       }
     ]
-  }
+  },
+  "mode": "final repository apply with zero policy or membership changes"
 }

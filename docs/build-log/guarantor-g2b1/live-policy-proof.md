@@ -2,7 +2,7 @@
 
 Author development capture: **58 positive assertions passed, zero unexpected failures**. The unchanged guards produced **12 expected failing assertions** across three fixture-policy mutations. Each mutation also ran the captured HTTP results through the status guard in a separate Node process, which exited **1**. Restored-policy assertions passed afterward.
 
-Source HEAD was `dba65485ba74b9d02fbe51c3be68725148a94431`, with the operation service still uncommitted. `live-policy-proof.json` records the SHA-256 of each loaded service, route, policy, audit, sync, and editor file. Those digests and the HEAD were unchanged between the beginning and end of the capture. Final integrated-head repetition and independent evaluation remain outstanding.
+Application source HEAD was `158c9e67b91f16fdfa20f22ad20577ebef9d5d7a`. `live-policy-proof.json` records each loaded service, route, policy, audit, sync and editor SHA-256; all source digests and the HEAD are unchanged before and after the capture. This integrated author proof is separate from independent evaluation.
 
 | Case | Live observation |
 |---|---|
@@ -20,7 +20,7 @@ Source HEAD was `dba65485ba74b9d02fbe51c3be68725148a94431`, with the operation s
 | Remove Person write constraint | Both link changes became 200; two 403 assertions failed; guard process exit 1 | Repository sync restored the constraint; both link guards passed |
 | Restore revision-1 Person expression | Both empty-link name edits became 403; two 200 assertions failed; guard process exit 1 | Repository sync restored the current expression; both empty-link edits passed |
 
-The capture contains **362 actual HTTP exchanges and 63 audit rows**, including the operation's real `guarantor.link.started` and `guarantor.link.pending` rows. The full HTTP trace is compact JSON in `live-policy-http.json`; AccessPolicy bodies and patches retain Person/Task rules plus hashes of their full values. `live-policy-restore-verification.json` records a final dry run of the actual repository sync: four canonical policies, zero policy drift, and zero membership drift.
+The capture contains **360 actual HTTP exchanges and 62 audit rows**, including the operation's real `guarantor.link.started` and `guarantor.link.pending` rows. The full HTTP trace is compact JSON in `live-policy-http.json`; AccessPolicy bodies and patches retain Person/Task rules plus hashes of their full values. `live-policy-restore-verification.json` records a final application of the actual repository sync that makes zero changes: four canonical policies, zero policy drift, and zero membership drift.
 
 The script uses actual `authenticateStaffRoute()`, `handleGuarantorOperation()`, and the integrated editor. Browser-relative FHIR URLs are forwarded to the disposable Medplum origin; resources and responses are not stubbed. S4 source predicates were not mutated in this instrument. A rendered browser workflow and the remaining concurrency schedules belong to the broader proof.
 
