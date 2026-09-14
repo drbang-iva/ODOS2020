@@ -1,5 +1,5 @@
 {
-  "sourceHead": "158c9e67b91f16fdfa20f22ad20577ebef9d5d7a",
+  "sourceHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
   "events": [
     {
       "sequence": 1,
@@ -40,8 +40,8 @@
         "birthDate": "2015-01-01",
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "dfecdbed-89d5-4ee5-bf00-e581fecfbfbf",
-          "lastUpdated": "2026-09-14T11:12:00.603Z",
+          "versionId": "be3c5d35-6b41-4f9e-a0bb-cc0d98f9fec1",
+          "lastUpdated": "2026-09-14T11:48:50.128Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -51,11 +51,11 @@
               "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
             },
             {
-              "reference": "Patient/bd98c148-1cac-45fb-addb-d023a1d889c7"
+              "reference": "Patient/88176d70-e820-48d4-bafa-ec11480b2253"
             }
           ]
         },
-        "id": "bd98c148-1cac-45fb-addb-d023a1d889c7"
+        "id": "88176d70-e820-48d4-bafa-ec11480b2253"
       }
     },
     {
@@ -68,7 +68,7 @@
       "request": {
         "resourceType": "RelatedPerson",
         "patient": {
-          "reference": "Patient/bd98c148-1cac-45fb-addb-d023a1d889c7"
+          "reference": "Patient/88176d70-e820-48d4-bafa-ec11480b2253"
         },
         "active": true,
         "name": [
@@ -123,7 +123,7 @@
       "response": {
         "resourceType": "RelatedPerson",
         "patient": {
-          "reference": "Patient/bd98c148-1cac-45fb-addb-d023a1d889c7"
+          "reference": "Patient/88176d70-e820-48d4-bafa-ec11480b2253"
         },
         "active": true,
         "name": [
@@ -173,8 +173,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "66bc7161-9c53-411e-9da3-6e59fc5bf55b",
-          "lastUpdated": "2026-09-14T11:12:00.638Z",
+          "versionId": "da1f5efe-120d-4e90-bfc3-f8f0cac3eab9",
+          "lastUpdated": "2026-09-14T11:48:50.151Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -184,11 +184,11 @@
               "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
             },
             {
-              "reference": "Patient/bd98c148-1cac-45fb-addb-d023a1d889c7"
+              "reference": "Patient/88176d70-e820-48d4-bafa-ec11480b2253"
             }
           ]
         },
-        "id": "1ab3ef1a-8812-41b2-82fd-10b6c7a3af84"
+        "id": "1bf4ed89-2419-4c59-8e97-691985f074d3"
       }
     },
     {
@@ -230,8 +230,8 @@
         "birthDate": "2015-01-01",
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "7a3bd9d5-73b3-497f-b297-79726719d45f",
-          "lastUpdated": "2026-09-14T11:12:00.652Z",
+          "versionId": "62f575f2-0a6a-4872-b4e9-9895130083b8",
+          "lastUpdated": "2026-09-14T11:48:50.164Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -241,11 +241,11 @@
               "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
             },
             {
-              "reference": "Patient/35ec957e-be05-4909-a4ea-47dfcbd2d40b"
+              "reference": "Patient/830406f7-e71c-4763-8a17-86735dc26c28"
             }
           ]
         },
-        "id": "35ec957e-be05-4909-a4ea-47dfcbd2d40b"
+        "id": "830406f7-e71c-4763-8a17-86735dc26c28"
       }
     },
     {
@@ -258,7 +258,7 @@
       "request": {
         "resourceType": "RelatedPerson",
         "patient": {
-          "reference": "Patient/35ec957e-be05-4909-a4ea-47dfcbd2d40b"
+          "reference": "Patient/830406f7-e71c-4763-8a17-86735dc26c28"
         },
         "active": true,
         "name": [
@@ -313,7 +313,7 @@
       "response": {
         "resourceType": "RelatedPerson",
         "patient": {
-          "reference": "Patient/35ec957e-be05-4909-a4ea-47dfcbd2d40b"
+          "reference": "Patient/830406f7-e71c-4763-8a17-86735dc26c28"
         },
         "active": true,
         "name": [
@@ -363,8 +363,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "64bd780e-6df0-44e0-9cb3-ac8e77a5379a",
-          "lastUpdated": "2026-09-14T11:12:00.657Z",
+          "versionId": "51646c3c-1671-4936-8632-c6c215c14239",
+          "lastUpdated": "2026-09-14T11:48:50.172Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -374,11 +374,11 @@
               "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
             },
             {
-              "reference": "Patient/35ec957e-be05-4909-a4ea-47dfcbd2d40b"
+              "reference": "Patient/830406f7-e71c-4763-8a17-86735dc26c28"
             }
           ]
         },
-        "id": "ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4"
+        "id": "09fb5b75-8acc-4a4c-bb5f-818c7f2169ff"
       }
     },
     {
@@ -417,13 +417,13 @@
         "link": [
           {
             "target": {
-              "reference": "RelatedPerson/1ab3ef1a-8812-41b2-82fd-10b6c7a3af84"
+              "reference": "RelatedPerson/1bf4ed89-2419-4c59-8e97-691985f074d3"
             },
             "assurance": "level2"
           },
           {
             "target": {
-              "reference": "RelatedPerson/ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4"
+              "reference": "RelatedPerson/09fb5b75-8acc-4a4c-bb5f-818c7f2169ff"
             },
             "assurance": "level2"
           }
@@ -461,21 +461,21 @@
         "link": [
           {
             "target": {
-              "reference": "RelatedPerson/1ab3ef1a-8812-41b2-82fd-10b6c7a3af84"
+              "reference": "RelatedPerson/1bf4ed89-2419-4c59-8e97-691985f074d3"
             },
             "assurance": "level2"
           },
           {
             "target": {
-              "reference": "RelatedPerson/ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4"
+              "reference": "RelatedPerson/09fb5b75-8acc-4a4c-bb5f-818c7f2169ff"
             },
             "assurance": "level2"
           }
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "a2c2e608-e1db-4af2-97ce-03e34fceda1d",
-          "lastUpdated": "2026-09-14T11:12:00.668Z",
+          "versionId": "92a678c4-4fc6-4e6a-9b8f-57925bf40893",
+          "lastUpdated": "2026-09-14T11:48:50.180Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -486,7 +486,7 @@
             }
           ]
         },
-        "id": "76f0c06a-5266-4000-aedb-3ecbd98767d2"
+        "id": "0ea786b7-d28b-4ed7-bf79-ac559497d7a9"
       }
     },
     {
@@ -554,8 +554,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "59985ddb-493b-4855-8041-58280de5b649",
-          "lastUpdated": "2026-09-14T11:12:00.685Z",
+          "versionId": "13654bcd-31ee-4693-ba68-16a70a95cc58",
+          "lastUpdated": "2026-09-14T11:48:50.189Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -566,7 +566,7 @@
             }
           ]
         },
-        "id": "73551997-5e95-420e-80e1-2c745de9abf9"
+        "id": "c5f1a6ed-9ac2-4226-af3c-662a9592c2ea"
       }
     },
     {
@@ -608,8 +608,8 @@
         "birthDate": "2015-01-01",
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "b1330700-0a3b-4096-a778-2f6e5063d6a9",
-          "lastUpdated": "2026-09-14T11:12:00.698Z",
+          "versionId": "4a87fa4c-95d9-4fb7-892e-1253fe862e7c",
+          "lastUpdated": "2026-09-14T11:48:50.196Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -619,11 +619,11 @@
               "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
             },
             {
-              "reference": "Patient/4e589185-fd47-49da-a98e-571bd5a9b95a"
+              "reference": "Patient/ebc63c37-24e3-4cdb-90ca-6f84b1dd1f98"
             }
           ]
         },
-        "id": "4e589185-fd47-49da-a98e-571bd5a9b95a"
+        "id": "ebc63c37-24e3-4cdb-90ca-6f84b1dd1f98"
       }
     },
     {
@@ -636,7 +636,7 @@
       "request": {
         "resourceType": "RelatedPerson",
         "patient": {
-          "reference": "Patient/4e589185-fd47-49da-a98e-571bd5a9b95a"
+          "reference": "Patient/ebc63c37-24e3-4cdb-90ca-6f84b1dd1f98"
         },
         "active": true,
         "name": [
@@ -691,7 +691,7 @@
       "response": {
         "resourceType": "RelatedPerson",
         "patient": {
-          "reference": "Patient/4e589185-fd47-49da-a98e-571bd5a9b95a"
+          "reference": "Patient/ebc63c37-24e3-4cdb-90ca-6f84b1dd1f98"
         },
         "active": true,
         "name": [
@@ -741,8 +741,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "a463bb42-8c23-4a3f-b1fa-61fbf90ab4a6",
-          "lastUpdated": "2026-09-14T11:12:00.704Z",
+          "versionId": "1d1ecacc-aa2b-422d-be86-09cb27704fdb",
+          "lastUpdated": "2026-09-14T11:48:50.201Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -752,11 +752,11 @@
               "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
             },
             {
-              "reference": "Patient/4e589185-fd47-49da-a98e-571bd5a9b95a"
+              "reference": "Patient/ebc63c37-24e3-4cdb-90ca-6f84b1dd1f98"
             }
           ]
         },
-        "id": "47a24f3c-f6cc-42ee-bb34-b922cb39e9e6"
+        "id": "29f54b83-71a6-46f6-9c4e-b384e5404bc4"
       }
     },
     {
@@ -798,8 +798,8 @@
         "birthDate": "2015-01-01",
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "84f12857-44cd-48ba-b7d0-37369f285635",
-          "lastUpdated": "2026-09-14T11:12:00.712Z",
+          "versionId": "5c5e42a6-8f8b-4df8-96fa-85b3941f5c8c",
+          "lastUpdated": "2026-09-14T11:48:50.210Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -809,11 +809,11 @@
               "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
             },
             {
-              "reference": "Patient/0bed9aba-d872-4ff4-84ef-45818cd0a22f"
+              "reference": "Patient/d30b8624-a0c1-4641-b0a2-b04c2d70d115"
             }
           ]
         },
-        "id": "0bed9aba-d872-4ff4-84ef-45818cd0a22f"
+        "id": "d30b8624-a0c1-4641-b0a2-b04c2d70d115"
       }
     },
     {
@@ -826,7 +826,7 @@
       "request": {
         "resourceType": "RelatedPerson",
         "patient": {
-          "reference": "Patient/0bed9aba-d872-4ff4-84ef-45818cd0a22f"
+          "reference": "Patient/d30b8624-a0c1-4641-b0a2-b04c2d70d115"
         },
         "active": true,
         "name": [
@@ -881,7 +881,7 @@
       "response": {
         "resourceType": "RelatedPerson",
         "patient": {
-          "reference": "Patient/0bed9aba-d872-4ff4-84ef-45818cd0a22f"
+          "reference": "Patient/d30b8624-a0c1-4641-b0a2-b04c2d70d115"
         },
         "active": true,
         "name": [
@@ -931,8 +931,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "f1079c80-c83d-4a01-965f-1e1e89dafb9f",
-          "lastUpdated": "2026-09-14T11:12:00.717Z",
+          "versionId": "ebe2089f-b852-4d3a-997c-647fceec89d6",
+          "lastUpdated": "2026-09-14T11:48:50.216Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -942,11 +942,11 @@
               "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
             },
             {
-              "reference": "Patient/0bed9aba-d872-4ff4-84ef-45818cd0a22f"
+              "reference": "Patient/d30b8624-a0c1-4641-b0a2-b04c2d70d115"
             }
           ]
         },
-        "id": "da9c128f-e6b0-4869-84f6-e395c01007c5"
+        "id": "9249c42e-3ac1-4caa-b78e-3fb824a1daf5"
       }
     },
     {
@@ -985,13 +985,13 @@
         "link": [
           {
             "target": {
-              "reference": "RelatedPerson/47a24f3c-f6cc-42ee-bb34-b922cb39e9e6"
+              "reference": "RelatedPerson/29f54b83-71a6-46f6-9c4e-b384e5404bc4"
             },
             "assurance": "level2"
           },
           {
             "target": {
-              "reference": "RelatedPerson/da9c128f-e6b0-4869-84f6-e395c01007c5"
+              "reference": "RelatedPerson/9249c42e-3ac1-4caa-b78e-3fb824a1daf5"
             },
             "assurance": "level2"
           }
@@ -1029,21 +1029,21 @@
         "link": [
           {
             "target": {
-              "reference": "RelatedPerson/47a24f3c-f6cc-42ee-bb34-b922cb39e9e6"
+              "reference": "RelatedPerson/29f54b83-71a6-46f6-9c4e-b384e5404bc4"
             },
             "assurance": "level2"
           },
           {
             "target": {
-              "reference": "RelatedPerson/da9c128f-e6b0-4869-84f6-e395c01007c5"
+              "reference": "RelatedPerson/9249c42e-3ac1-4caa-b78e-3fb824a1daf5"
             },
             "assurance": "level2"
           }
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "a1b67d6d-b74a-42a9-8654-ffd25c7374a9",
-          "lastUpdated": "2026-09-14T11:12:00.723Z",
+          "versionId": "ac3b3d1c-31d7-47d1-aba2-9359ae6daf5c",
+          "lastUpdated": "2026-09-14T11:48:50.223Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -1054,7 +1054,7 @@
             }
           ]
         },
-        "id": "a226c81a-1373-428e-9101-6f0fae7019c6"
+        "id": "98dae2de-1d37-4928-b5c6-aee8f2bbcf1e"
       }
     },
     {
@@ -1122,8 +1122,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "78f2a555-7df7-4c02-aea9-2e7b273deeae",
-          "lastUpdated": "2026-09-14T11:12:00.728Z",
+          "versionId": "d13ce43b-08f8-4a41-a20a-8d3112d8c65a",
+          "lastUpdated": "2026-09-14T11:48:50.231Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -1134,7 +1134,7 @@
             }
           ]
         },
-        "id": "7c8827eb-b441-49b6-a85b-c51a1127f5b8"
+        "id": "dfde4a85-cfcc-4b19-ba6f-570cfe89cbc4"
       }
     },
     {
@@ -1164,8 +1164,8 @@
         },
         "id": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
         "meta": {
-          "versionId": "7cbd3889-115c-4948-9052-73157111d3d1",
-          "lastUpdated": "2026-09-14T11:11:41.704Z",
+          "versionId": "addf9f24-2d42-49f7-88a8-3b269158b611",
+          "lastUpdated": "2026-09-14T11:48:30.377Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -1186,7 +1186,7 @@
             "parameter": [
               {
                 "name": "patient_compartment",
-                "valueString": "Patient/a43de05e-7dba-464e-9436-7cdb8f08ee66"
+                "valueString": "Patient/5708c810-aad7-4edf-b8de-97d84fb3ee16"
               }
             ]
           },
@@ -1197,7 +1197,7 @@
             "parameter": [
               {
                 "name": "patient_compartment",
-                "valueString": "Patient/3e0fe026-0c40-4d01-b06e-514a11aeaa3e"
+                "valueString": "Patient/728e71ad-c48c-45e5-b13f-6f2475f804e8"
               }
             ]
           },
@@ -1208,7 +1208,7 @@
             "parameter": [
               {
                 "name": "patient_compartment",
-                "valueString": "Patient/57324cd2-88d6-4717-9be9-f63e3e16dcd1"
+                "valueString": "Patient/496c9be3-697d-47d4-8e32-e5f6cb7752de"
               }
             ]
           },
@@ -1219,7 +1219,7 @@
             "parameter": [
               {
                 "name": "patient_compartment",
-                "valueString": "Patient/1787ea33-1196-4011-b8c5-12f80584e2e8"
+                "valueString": "Patient/a5bf3b6f-c1c5-4580-a733-91676687dd62"
               }
             ]
           }
@@ -1233,7 +1233,7 @@
       "method": "PUT",
       "path": "/fhir/R4/ProjectMembership/a56de48d-cd4b-49db-981a-0a8abba7c8de",
       "status": 200,
-      "ifMatch": "W/\"7cbd3889-115c-4948-9052-73157111d3d1\"",
+      "ifMatch": "W/\"addf9f24-2d42-49f7-88a8-3b269158b611\"",
       "request": {
         "invitedBy": {
           "reference": "User/f54613cf-b83e-4389-b091-4e34fdebef93",
@@ -1254,8 +1254,8 @@
         },
         "id": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
         "meta": {
-          "versionId": "7cbd3889-115c-4948-9052-73157111d3d1",
-          "lastUpdated": "2026-09-14T11:11:41.704Z",
+          "versionId": "addf9f24-2d42-49f7-88a8-3b269158b611",
+          "lastUpdated": "2026-09-14T11:48:30.377Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -1276,7 +1276,7 @@
             "parameter": [
               {
                 "name": "patient_compartment",
-                "valueString": "Patient/bd98c148-1cac-45fb-addb-d023a1d889c7"
+                "valueString": "Patient/88176d70-e820-48d4-bafa-ec11480b2253"
               }
             ]
           },
@@ -1287,7 +1287,7 @@
             "parameter": [
               {
                 "name": "patient_compartment",
-                "valueString": "Patient/35ec957e-be05-4909-a4ea-47dfcbd2d40b"
+                "valueString": "Patient/830406f7-e71c-4763-8a17-86735dc26c28"
               }
             ]
           },
@@ -1298,7 +1298,7 @@
             "parameter": [
               {
                 "name": "patient_compartment",
-                "valueString": "Patient/4e589185-fd47-49da-a98e-571bd5a9b95a"
+                "valueString": "Patient/ebc63c37-24e3-4cdb-90ca-6f84b1dd1f98"
               }
             ]
           },
@@ -1309,7 +1309,7 @@
             "parameter": [
               {
                 "name": "patient_compartment",
-                "valueString": "Patient/0bed9aba-d872-4ff4-84ef-45818cd0a22f"
+                "valueString": "Patient/d30b8624-a0c1-4641-b0a2-b04c2d70d115"
               }
             ]
           }
@@ -1335,8 +1335,8 @@
         },
         "id": "a56de48d-cd4b-49db-981a-0a8abba7c8de",
         "meta": {
-          "versionId": "f7ed28a3-d5f0-45e2-83c5-0752eb89f353",
-          "lastUpdated": "2026-09-14T11:12:00.738Z",
+          "versionId": "80ae0edf-896d-4fc4-881e-c32db9f5817c",
+          "lastUpdated": "2026-09-14T11:48:50.243Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -1357,7 +1357,7 @@
             "parameter": [
               {
                 "name": "patient_compartment",
-                "valueString": "Patient/bd98c148-1cac-45fb-addb-d023a1d889c7"
+                "valueString": "Patient/88176d70-e820-48d4-bafa-ec11480b2253"
               }
             ]
           },
@@ -1368,7 +1368,7 @@
             "parameter": [
               {
                 "name": "patient_compartment",
-                "valueString": "Patient/35ec957e-be05-4909-a4ea-47dfcbd2d40b"
+                "valueString": "Patient/830406f7-e71c-4763-8a17-86735dc26c28"
               }
             ]
           },
@@ -1379,7 +1379,7 @@
             "parameter": [
               {
                 "name": "patient_compartment",
-                "valueString": "Patient/4e589185-fd47-49da-a98e-571bd5a9b95a"
+                "valueString": "Patient/ebc63c37-24e3-4cdb-90ca-6f84b1dd1f98"
               }
             ]
           },
@@ -1390,7 +1390,7 @@
             "parameter": [
               {
                 "name": "patient_compartment",
-                "valueString": "Patient/0bed9aba-d872-4ff4-84ef-45818cd0a22f"
+                "valueString": "Patient/d30b8624-a0c1-4641-b0a2-b04c2d70d115"
               }
             ]
           }
@@ -1402,7 +1402,7 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Person/73551997-5e95-420e-80e1-2c745de9abf9",
+      "path": "/fhir/R4/Person/c5f1a6ed-9ac2-4226-af3c-662a9592c2ea",
       "status": 200,
       "response": {
         "resourceType": "Person",
@@ -1432,8 +1432,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "59985ddb-493b-4855-8041-58280de5b649",
-          "lastUpdated": "2026-09-14T11:12:00.685Z",
+          "versionId": "13654bcd-31ee-4693-ba68-16a70a95cc58",
+          "lastUpdated": "2026-09-14T11:48:50.189Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -1444,7 +1444,7 @@
             }
           ]
         },
-        "id": "73551997-5e95-420e-80e1-2c745de9abf9"
+        "id": "c5f1a6ed-9ac2-4226-af3c-662a9592c2ea"
       }
     },
     {
@@ -1452,9 +1452,9 @@
       "scenario": "Complete: genuine competing destination edit after detach",
       "principal": "staff",
       "method": "PUT",
-      "path": "/fhir/R4/Person/73551997-5e95-420e-80e1-2c745de9abf9",
+      "path": "/fhir/R4/Person/c5f1a6ed-9ac2-4226-af3c-662a9592c2ea",
       "status": 200,
-      "ifMatch": "W/\"59985ddb-493b-4855-8041-58280de5b649\"",
+      "ifMatch": "W/\"13654bcd-31ee-4693-ba68-16a70a95cc58\"",
       "request": {
         "resourceType": "Person",
         "active": true,
@@ -1483,8 +1483,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "59985ddb-493b-4855-8041-58280de5b649",
-          "lastUpdated": "2026-09-14T11:12:00.685Z",
+          "versionId": "13654bcd-31ee-4693-ba68-16a70a95cc58",
+          "lastUpdated": "2026-09-14T11:48:50.189Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -1495,7 +1495,7 @@
             }
           ]
         },
-        "id": "73551997-5e95-420e-80e1-2c745de9abf9"
+        "id": "c5f1a6ed-9ac2-4226-af3c-662a9592c2ea"
       },
       "response": {
         "resourceType": "Person",
@@ -1525,8 +1525,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "54d0e392-7a33-45da-a50a-3c80f49e0adb",
-          "lastUpdated": "2026-09-14T11:12:01.563Z",
+          "versionId": "a2c42ce1-0350-49aa-a3e5-608ac6140874",
+          "lastUpdated": "2026-09-14T11:48:50.979Z",
           "author": {
             "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
             "display": "Synthetic G2b1 staff"
@@ -1537,7 +1537,7 @@
             }
           ]
         },
-        "id": "73551997-5e95-420e-80e1-2c745de9abf9"
+        "id": "c5f1a6ed-9ac2-4226-af3c-662a9592c2ea"
       }
     },
     {
@@ -1545,17 +1545,17 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Task/8aaefce3-7790-4b29-a92e-0894412a8cb2",
+      "path": "/fhir/R4/Task/a5a3090f-a4fd-4939-8a50-82e4590af83d",
       "status": 200,
       "response": {
         "resourceType": "Task",
-        "id": "8aaefce3-7790-4b29-a92e-0894412a8cb2",
+        "id": "a5a3090f-a4fd-4939-8a50-82e4590af83d",
         "intent": "order",
         "status": "in-progress",
         "identifier": [
           {
             "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
-            "value": "2d81b6f9-ca61-4f5c-aff0-040ee0c36512"
+            "value": "fc72abf8-f4cd-4fb6-b6fa-f08d80ce67a7"
           }
         ],
         "code": {
@@ -1578,7 +1578,7 @@
               "text": "source"
             },
             "valueReference": {
-              "reference": "Person/76f0c06a-5266-4000-aedb-3ecbd98767d2"
+              "reference": "Person/0ea786b7-d28b-4ed7-bf79-ac559497d7a9"
             }
           },
           {
@@ -1586,7 +1586,7 @@
               "text": "destination"
             },
             "valueReference": {
-              "reference": "Person/73551997-5e95-420e-80e1-2c745de9abf9"
+              "reference": "Person/c5f1a6ed-9ac2-4226-af3c-662a9592c2ea"
             }
           },
           {
@@ -1594,7 +1594,7 @@
               "text": "moved"
             },
             "valueReference": {
-              "reference": "RelatedPerson/1ab3ef1a-8812-41b2-82fd-10b6c7a3af84"
+              "reference": "RelatedPerson/1bf4ed89-2419-4c59-8e97-691985f074d3"
             }
           },
           {
@@ -1602,32 +1602,32 @@
               "text": "moved"
             },
             "valueReference": {
-              "reference": "RelatedPerson/ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4"
+              "reference": "RelatedPerson/09fb5b75-8acc-4a4c-bb5f-818c7f2169ff"
             }
           },
           {
             "type": {
-              "text": "expected:Person/76f0c06a-5266-4000-aedb-3ecbd98767d2"
+              "text": "expected:Person/0ea786b7-d28b-4ed7-bf79-ac559497d7a9"
             },
-            "valueString": "a2c2e608-e1db-4af2-97ce-03e34fceda1d"
+            "valueString": "92a678c4-4fc6-4e6a-9b8f-57925bf40893"
           },
           {
             "type": {
-              "text": "expected:Person/73551997-5e95-420e-80e1-2c745de9abf9"
+              "text": "expected:Person/c5f1a6ed-9ac2-4226-af3c-662a9592c2ea"
             },
-            "valueString": "59985ddb-493b-4855-8041-58280de5b649"
+            "valueString": "13654bcd-31ee-4693-ba68-16a70a95cc58"
           },
           {
             "type": {
-              "text": "expected:RelatedPerson/1ab3ef1a-8812-41b2-82fd-10b6c7a3af84"
+              "text": "expected:RelatedPerson/1bf4ed89-2419-4c59-8e97-691985f074d3"
             },
-            "valueString": "66bc7161-9c53-411e-9da3-6e59fc5bf55b"
+            "valueString": "da1f5efe-120d-4e90-bfc3-f8f0cac3eab9"
           },
           {
             "type": {
-              "text": "expected:RelatedPerson/ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4"
+              "text": "expected:RelatedPerson/09fb5b75-8acc-4a4c-bb5f-818c7f2169ff"
             },
-            "valueString": "64bd780e-6df0-44e0-9cb3-ac8e77a5379a"
+            "valueString": "51646c3c-1671-4936-8632-c6c215c14239"
           },
           {
             "type": {
@@ -1641,8 +1641,8 @@
         },
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "c0f50a5c-4da6-4b90-999e-5b6354e25db8",
-          "lastUpdated": "2026-09-14T11:12:01.707Z",
+          "versionId": "f047f139-eb10-4fb9-b763-02a071eeec9b",
+          "lastUpdated": "2026-09-14T11:48:51.103Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -1659,7 +1659,7 @@
         "extension": [
           {
             "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
-            "valueString": "{\"intents\":[{\"id\":\"2866e37c-c610-41c6-9cf1-cf40c594ce87\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/1ab3ef1a-8812-41b2-82fd-10b6c7a3af84\",\"expectedVersion\":\"66bc7161-9c53-411e-9da3-6e59fc5bf55b\",\"intendedContentHash\":\"f19a371c86f645f30bb5d4af08bec97b84673b8e7700df388d1f56e493ccbd0d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"a6ca6816-f022-4336-8461-e9ce9de2baa4\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4\",\"expectedVersion\":\"64bd780e-6df0-44e0-9cb3-ac8e77a5379a\",\"intendedContentHash\":\"09964cfbd848ba3cc9cc2997ec341adb336e337949b21f0dad53d77d1583daa7\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"0544114d-3c84-4c38-8f69-e3303e99a4bd\",\"phase\":\"detaching\",\"target\":\"Person/76f0c06a-5266-4000-aedb-3ecbd98767d2\",\"expectedVersion\":\"a2c2e608-e1db-4af2-97ce-03e34fceda1d\",\"intendedContentHash\":\"c7f42d59d27ba98d70d18ab3f79e920b40efcf4543aa8d87ad3fc8ffacfc85bd\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"e4bbc9f3-fde4-4cd3-bdba-8864a5dae6cb\",\"phase\":\"attaching\",\"target\":\"Person/73551997-5e95-420e-80e1-2c745de9abf9\",\"expectedVersion\":\"59985ddb-493b-4855-8041-58280de5b649\",\"intendedContentHash\":\"38a0ec222f93cc5528c0eda78bea34457ab60f1f789df4f9aa4d8510755d4249\",\"disposition\":\"rejected\",\"responseStatus\":412}]}"
+            "valueString": "{\"intents\":[{\"id\":\"b6ac062c-8bd8-473a-9a76-4d9a9cb0ef6a\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/09fb5b75-8acc-4a4c-bb5f-818c7f2169ff\",\"expectedVersion\":\"51646c3c-1671-4936-8632-c6c215c14239\",\"intendedContentHash\":\"f4c2370bc2ffde323bdd2947dba4ec5d9de6ebfd9ae59f216c76925f7daf4d7c\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"ed4db203-d95b-4099-8514-2d9ffd748b29\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/1bf4ed89-2419-4c59-8e97-691985f074d3\",\"expectedVersion\":\"da1f5efe-120d-4e90-bfc3-f8f0cac3eab9\",\"intendedContentHash\":\"6893ac89bb745db3c262cd3d385c32375f3c2f58f64574857d312cd432f73f11\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"9c1f9918-8d42-436b-837d-6adbba5bbefc\",\"phase\":\"detaching\",\"target\":\"Person/0ea786b7-d28b-4ed7-bf79-ac559497d7a9\",\"expectedVersion\":\"92a678c4-4fc6-4e6a-9b8f-57925bf40893\",\"intendedContentHash\":\"0e8a8570d94975a7b8949702edb5d8520c663e5d96ee1ab88a9d5694667565cb\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"ed3fe128-8275-4885-8d80-122bdff466f0\",\"phase\":\"attaching\",\"target\":\"Person/c5f1a6ed-9ac2-4226-af3c-662a9592c2ea\",\"expectedVersion\":\"13654bcd-31ee-4693-ba68-16a70a95cc58\",\"intendedContentHash\":\"ecc3a101508666f04b18e9019307cd0723846e94d32850d4ad5299e2f0e1481d\",\"disposition\":\"rejected\",\"responseStatus\":412}]}"
           }
         ]
       }
@@ -1669,7 +1669,7 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Person?link=RelatedPerson%2F1ab3ef1a-8812-41b2-82fd-10b6c7a3af84",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F1bf4ed89-2419-4c59-8e97-691985f074d3",
       "status": 200,
       "response": {
         "resourceType": "Bundle",
@@ -1677,7 +1677,7 @@
         "link": [
           {
             "relation": "self",
-            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F1ab3ef1a-8812-41b2-82fd-10b6c7a3af84"
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F1bf4ed89-2419-4c59-8e97-691985f074d3"
           }
         ]
       }
@@ -1687,7 +1687,7 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Person?link=RelatedPerson%2Fec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F09fb5b75-8acc-4a4c-bb5f-818c7f2169ff",
       "status": 200,
       "response": {
         "resourceType": "Bundle",
@@ -1695,7 +1695,7 @@
         "link": [
           {
             "relation": "self",
-            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2Fec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4"
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F09fb5b75-8acc-4a4c-bb5f-818c7f2169ff"
           }
         ]
       }
@@ -1705,7 +1705,7 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Person/7c8827eb-b441-49b6-a85b-c51a1127f5b8",
+      "path": "/fhir/R4/Person/dfde4a85-cfcc-4b19-ba6f-570cfe89cbc4",
       "status": 200,
       "response": {
         "resourceType": "Person",
@@ -1735,8 +1735,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "78f2a555-7df7-4c02-aea9-2e7b273deeae",
-          "lastUpdated": "2026-09-14T11:12:00.728Z",
+          "versionId": "d13ce43b-08f8-4a41-a20a-8d3112d8c65a",
+          "lastUpdated": "2026-09-14T11:48:50.231Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -1747,7 +1747,7 @@
             }
           ]
         },
-        "id": "7c8827eb-b441-49b6-a85b-c51a1127f5b8"
+        "id": "dfde4a85-cfcc-4b19-ba6f-570cfe89cbc4"
       }
     },
     {
@@ -1755,9 +1755,9 @@
       "scenario": "Correct: genuine competing destination edit after detach",
       "principal": "staff",
       "method": "PUT",
-      "path": "/fhir/R4/Person/7c8827eb-b441-49b6-a85b-c51a1127f5b8",
+      "path": "/fhir/R4/Person/dfde4a85-cfcc-4b19-ba6f-570cfe89cbc4",
       "status": 200,
-      "ifMatch": "W/\"78f2a555-7df7-4c02-aea9-2e7b273deeae\"",
+      "ifMatch": "W/\"d13ce43b-08f8-4a41-a20a-8d3112d8c65a\"",
       "request": {
         "resourceType": "Person",
         "active": true,
@@ -1786,8 +1786,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "78f2a555-7df7-4c02-aea9-2e7b273deeae",
-          "lastUpdated": "2026-09-14T11:12:00.728Z",
+          "versionId": "d13ce43b-08f8-4a41-a20a-8d3112d8c65a",
+          "lastUpdated": "2026-09-14T11:48:50.231Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -1798,7 +1798,7 @@
             }
           ]
         },
-        "id": "7c8827eb-b441-49b6-a85b-c51a1127f5b8"
+        "id": "dfde4a85-cfcc-4b19-ba6f-570cfe89cbc4"
       },
       "response": {
         "resourceType": "Person",
@@ -1828,8 +1828,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "cf7e357b-2d28-4271-a878-574c65002431",
-          "lastUpdated": "2026-09-14T11:12:02.130Z",
+          "versionId": "ada78be4-083e-4302-ae9d-7c112d0c7bc0",
+          "lastUpdated": "2026-09-14T11:48:51.602Z",
           "author": {
             "reference": "Practitioner/7441ed22-0b27-4f23-bafa-d295dfbd621a",
             "display": "Synthetic G2b1 staff"
@@ -1840,7 +1840,7 @@
             }
           ]
         },
-        "id": "7c8827eb-b441-49b6-a85b-c51a1127f5b8"
+        "id": "dfde4a85-cfcc-4b19-ba6f-570cfe89cbc4"
       }
     },
     {
@@ -1848,17 +1848,17 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Task/d60f5d4a-4bd2-49a1-a1c9-803c8a143443",
+      "path": "/fhir/R4/Task/0e5e80ff-67a1-4e63-85b2-b5d9dca0f86f",
       "status": 200,
       "response": {
         "resourceType": "Task",
-        "id": "d60f5d4a-4bd2-49a1-a1c9-803c8a143443",
+        "id": "0e5e80ff-67a1-4e63-85b2-b5d9dca0f86f",
         "intent": "order",
         "status": "in-progress",
         "identifier": [
           {
             "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
-            "value": "90d9ed63-b336-4a66-82f4-baa2ec5407d3"
+            "value": "c5c631c2-90d4-4c76-9cb9-b734aa1d17bd"
           }
         ],
         "code": {
@@ -1881,7 +1881,7 @@
               "text": "source"
             },
             "valueReference": {
-              "reference": "Person/a226c81a-1373-428e-9101-6f0fae7019c6"
+              "reference": "Person/98dae2de-1d37-4928-b5c6-aee8f2bbcf1e"
             }
           },
           {
@@ -1889,7 +1889,7 @@
               "text": "destination"
             },
             "valueReference": {
-              "reference": "Person/7c8827eb-b441-49b6-a85b-c51a1127f5b8"
+              "reference": "Person/dfde4a85-cfcc-4b19-ba6f-570cfe89cbc4"
             }
           },
           {
@@ -1897,7 +1897,7 @@
               "text": "moved"
             },
             "valueReference": {
-              "reference": "RelatedPerson/47a24f3c-f6cc-42ee-bb34-b922cb39e9e6"
+              "reference": "RelatedPerson/29f54b83-71a6-46f6-9c4e-b384e5404bc4"
             }
           },
           {
@@ -1905,32 +1905,32 @@
               "text": "moved"
             },
             "valueReference": {
-              "reference": "RelatedPerson/da9c128f-e6b0-4869-84f6-e395c01007c5"
+              "reference": "RelatedPerson/9249c42e-3ac1-4caa-b78e-3fb824a1daf5"
             }
           },
           {
             "type": {
-              "text": "expected:Person/a226c81a-1373-428e-9101-6f0fae7019c6"
+              "text": "expected:Person/98dae2de-1d37-4928-b5c6-aee8f2bbcf1e"
             },
-            "valueString": "a1b67d6d-b74a-42a9-8654-ffd25c7374a9"
+            "valueString": "ac3b3d1c-31d7-47d1-aba2-9359ae6daf5c"
           },
           {
             "type": {
-              "text": "expected:Person/7c8827eb-b441-49b6-a85b-c51a1127f5b8"
+              "text": "expected:Person/dfde4a85-cfcc-4b19-ba6f-570cfe89cbc4"
             },
-            "valueString": "78f2a555-7df7-4c02-aea9-2e7b273deeae"
+            "valueString": "d13ce43b-08f8-4a41-a20a-8d3112d8c65a"
           },
           {
             "type": {
-              "text": "expected:RelatedPerson/47a24f3c-f6cc-42ee-bb34-b922cb39e9e6"
+              "text": "expected:RelatedPerson/29f54b83-71a6-46f6-9c4e-b384e5404bc4"
             },
-            "valueString": "a463bb42-8c23-4a3f-b1fa-61fbf90ab4a6"
+            "valueString": "1d1ecacc-aa2b-422d-be86-09cb27704fdb"
           },
           {
             "type": {
-              "text": "expected:RelatedPerson/da9c128f-e6b0-4869-84f6-e395c01007c5"
+              "text": "expected:RelatedPerson/9249c42e-3ac1-4caa-b78e-3fb824a1daf5"
             },
-            "valueString": "f1079c80-c83d-4a01-965f-1e1e89dafb9f"
+            "valueString": "ebe2089f-b852-4d3a-997c-647fceec89d6"
           },
           {
             "type": {
@@ -1944,8 +1944,8 @@
         },
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "716bd8f2-b1aa-43aa-903b-8aeb718965f6",
-          "lastUpdated": "2026-09-14T11:12:02.230Z",
+          "versionId": "c830020a-ebf5-4305-8a38-1e7f453fd6fd",
+          "lastUpdated": "2026-09-14T11:48:51.762Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -1962,7 +1962,7 @@
         "extension": [
           {
             "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
-            "valueString": "{\"intents\":[{\"id\":\"43a3f653-7fa5-43c5-ba6a-0f5b8c3c4a43\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/47a24f3c-f6cc-42ee-bb34-b922cb39e9e6\",\"expectedVersion\":\"a463bb42-8c23-4a3f-b1fa-61fbf90ab4a6\",\"intendedContentHash\":\"42a1575ba01cc8ca09a4726814cc93f1b4c7cb773ef0b353a52c3b8cfeaae4bf\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"41ae4819-1af4-464a-b3da-55698fc016b9\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/da9c128f-e6b0-4869-84f6-e395c01007c5\",\"expectedVersion\":\"f1079c80-c83d-4a01-965f-1e1e89dafb9f\",\"intendedContentHash\":\"07cff2bb139d9d957f370c2db00beae3634201109c525fb1ad11727f1f13b982\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"9a6a45ff-66bc-46b8-8b5a-6aec1fa56441\",\"phase\":\"detaching\",\"target\":\"Person/a226c81a-1373-428e-9101-6f0fae7019c6\",\"expectedVersion\":\"a1b67d6d-b74a-42a9-8654-ffd25c7374a9\",\"intendedContentHash\":\"5d0a31fc754f5423479a680bdeeda41bf4eb8f75c86b9bbe6c7ce6cd8b08c777\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"7493a5be-79a7-4710-a7f6-bd2c6639e85b\",\"phase\":\"attaching\",\"target\":\"Person/7c8827eb-b441-49b6-a85b-c51a1127f5b8\",\"expectedVersion\":\"78f2a555-7df7-4c02-aea9-2e7b273deeae\",\"intendedContentHash\":\"70fb642ab062b976fdaf35edb68d264e1b98653894a16cc4b2ea645a8a6fa689\",\"disposition\":\"rejected\",\"responseStatus\":412}]}"
+            "valueString": "{\"intents\":[{\"id\":\"7070e748-40f2-437c-8c9e-17137fe6ad80\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/29f54b83-71a6-46f6-9c4e-b384e5404bc4\",\"expectedVersion\":\"1d1ecacc-aa2b-422d-be86-09cb27704fdb\",\"intendedContentHash\":\"ddd64d3e6e4c84989c4dd916ab3673474df14abbf882746a0eadc724b308cbf9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"310f38cd-0a0a-4dae-bc49-ebd28a655603\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/9249c42e-3ac1-4caa-b78e-3fb824a1daf5\",\"expectedVersion\":\"ebe2089f-b852-4d3a-997c-647fceec89d6\",\"intendedContentHash\":\"9a2300f5724677d3d9d3873cf1a4d96a29587926ad3fb372742c116b552882f8\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"944ce245-078a-4e72-b95d-366cacc42d3a\",\"phase\":\"detaching\",\"target\":\"Person/98dae2de-1d37-4928-b5c6-aee8f2bbcf1e\",\"expectedVersion\":\"ac3b3d1c-31d7-47d1-aba2-9359ae6daf5c\",\"intendedContentHash\":\"952de03c9243e57225b8f79c62851c85331b1ad069fd31daed64db75dcaf0fe1\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"5a911a0e-65b5-48c0-a3d8-5f093c346cc8\",\"phase\":\"attaching\",\"target\":\"Person/dfde4a85-cfcc-4b19-ba6f-570cfe89cbc4\",\"expectedVersion\":\"d13ce43b-08f8-4a41-a20a-8d3112d8c65a\",\"intendedContentHash\":\"1990558cc523e37d3d2b2ca2a3a0d39878962e5f45a0bf2cb0254576cd7ee546\",\"disposition\":\"rejected\",\"responseStatus\":412}]}"
           }
         ]
       }
@@ -1972,7 +1972,7 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Person?link=RelatedPerson%2F47a24f3c-f6cc-42ee-bb34-b922cb39e9e6",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F29f54b83-71a6-46f6-9c4e-b384e5404bc4",
       "status": 200,
       "response": {
         "resourceType": "Bundle",
@@ -1980,7 +1980,7 @@
         "link": [
           {
             "relation": "self",
-            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F47a24f3c-f6cc-42ee-bb34-b922cb39e9e6"
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F29f54b83-71a6-46f6-9c4e-b384e5404bc4"
           }
         ]
       }
@@ -1990,7 +1990,7 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Person?link=RelatedPerson%2Fda9c128f-e6b0-4869-84f6-e395c01007c5",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F9249c42e-3ac1-4caa-b78e-3fb824a1daf5",
       "status": 200,
       "response": {
         "resourceType": "Bundle",
@@ -1998,7 +1998,7 @@
         "link": [
           {
             "relation": "self",
-            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2Fda9c128f-e6b0-4869-84f6-e395c01007c5"
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F9249c42e-3ac1-4caa-b78e-3fb824a1daf5"
           }
         ]
       }
@@ -2008,7 +2008,7 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Person/73551997-5e95-420e-80e1-2c745de9abf9",
+      "path": "/fhir/R4/Person/c5f1a6ed-9ac2-4226-af3c-662a9592c2ea",
       "status": 200,
       "response": {
         "resourceType": "Person",
@@ -2038,8 +2038,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "9302e40e-a2b5-4123-b27a-001da9558b4a",
-          "lastUpdated": "2026-09-14T11:12:06.377Z",
+          "versionId": "34f129ae-1d13-411f-ab70-a8461719cc86",
+          "lastUpdated": "2026-09-14T11:48:56.968Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -2050,23 +2050,23 @@
             }
           ]
         },
-        "id": "73551997-5e95-420e-80e1-2c745de9abf9",
+        "id": "c5f1a6ed-9ac2-4226-af3c-662a9592c2ea",
         "extension": [
           {
             "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
-            "valueString": "bc1ce165-0cbc-4e3a-a812-87046f1ee4bd"
+            "valueString": "0594feee-11a0-4e21-9969-5b4e427de977"
           }
         ],
         "link": [
           {
             "target": {
-              "reference": "RelatedPerson/1ab3ef1a-8812-41b2-82fd-10b6c7a3af84"
+              "reference": "RelatedPerson/1bf4ed89-2419-4c59-8e97-691985f074d3"
             },
             "assurance": "level2"
           },
           {
             "target": {
-              "reference": "RelatedPerson/ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4"
+              "reference": "RelatedPerson/09fb5b75-8acc-4a4c-bb5f-818c7f2169ff"
             },
             "assurance": "level2"
           }
@@ -2078,17 +2078,17 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Task/8aaefce3-7790-4b29-a92e-0894412a8cb2",
+      "path": "/fhir/R4/Task/a5a3090f-a4fd-4939-8a50-82e4590af83d",
       "status": 200,
       "response": {
         "resourceType": "Task",
-        "id": "8aaefce3-7790-4b29-a92e-0894412a8cb2",
+        "id": "a5a3090f-a4fd-4939-8a50-82e4590af83d",
         "intent": "order",
         "status": "completed",
         "identifier": [
           {
             "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
-            "value": "2d81b6f9-ca61-4f5c-aff0-040ee0c36512"
+            "value": "fc72abf8-f4cd-4fb6-b6fa-f08d80ce67a7"
           }
         ],
         "code": {
@@ -2111,7 +2111,7 @@
               "text": "source"
             },
             "valueReference": {
-              "reference": "Person/76f0c06a-5266-4000-aedb-3ecbd98767d2"
+              "reference": "Person/0ea786b7-d28b-4ed7-bf79-ac559497d7a9"
             }
           },
           {
@@ -2119,7 +2119,7 @@
               "text": "destination"
             },
             "valueReference": {
-              "reference": "Person/73551997-5e95-420e-80e1-2c745de9abf9"
+              "reference": "Person/c5f1a6ed-9ac2-4226-af3c-662a9592c2ea"
             }
           },
           {
@@ -2127,7 +2127,7 @@
               "text": "moved"
             },
             "valueReference": {
-              "reference": "RelatedPerson/1ab3ef1a-8812-41b2-82fd-10b6c7a3af84"
+              "reference": "RelatedPerson/1bf4ed89-2419-4c59-8e97-691985f074d3"
             }
           },
           {
@@ -2135,32 +2135,32 @@
               "text": "moved"
             },
             "valueReference": {
-              "reference": "RelatedPerson/ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4"
+              "reference": "RelatedPerson/09fb5b75-8acc-4a4c-bb5f-818c7f2169ff"
             }
           },
           {
             "type": {
-              "text": "expected:Person/76f0c06a-5266-4000-aedb-3ecbd98767d2"
+              "text": "expected:Person/0ea786b7-d28b-4ed7-bf79-ac559497d7a9"
             },
-            "valueString": "a2c2e608-e1db-4af2-97ce-03e34fceda1d"
+            "valueString": "92a678c4-4fc6-4e6a-9b8f-57925bf40893"
           },
           {
             "type": {
-              "text": "expected:Person/73551997-5e95-420e-80e1-2c745de9abf9"
+              "text": "expected:Person/c5f1a6ed-9ac2-4226-af3c-662a9592c2ea"
             },
-            "valueString": "59985ddb-493b-4855-8041-58280de5b649"
+            "valueString": "13654bcd-31ee-4693-ba68-16a70a95cc58"
           },
           {
             "type": {
-              "text": "expected:RelatedPerson/1ab3ef1a-8812-41b2-82fd-10b6c7a3af84"
+              "text": "expected:RelatedPerson/1bf4ed89-2419-4c59-8e97-691985f074d3"
             },
-            "valueString": "66bc7161-9c53-411e-9da3-6e59fc5bf55b"
+            "valueString": "da1f5efe-120d-4e90-bfc3-f8f0cac3eab9"
           },
           {
             "type": {
-              "text": "expected:RelatedPerson/ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4"
+              "text": "expected:RelatedPerson/09fb5b75-8acc-4a4c-bb5f-818c7f2169ff"
             },
-            "valueString": "64bd780e-6df0-44e0-9cb3-ac8e77a5379a"
+            "valueString": "51646c3c-1671-4936-8632-c6c215c14239"
           },
           {
             "type": {
@@ -2174,8 +2174,8 @@
         },
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "074f74b7-2f1c-4f6e-9165-cc53d29f04d3",
-          "lastUpdated": "2026-09-14T11:12:06.876Z",
+          "versionId": "74cd24a6-2e7a-4006-892e-43fa46351fb8",
+          "lastUpdated": "2026-09-14T11:48:57.407Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -2192,7 +2192,7 @@
         "extension": [
           {
             "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
-            "valueString": "{\"intents\":[{\"id\":\"2866e37c-c610-41c6-9cf1-cf40c594ce87\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/1ab3ef1a-8812-41b2-82fd-10b6c7a3af84\",\"expectedVersion\":\"66bc7161-9c53-411e-9da3-6e59fc5bf55b\",\"intendedContentHash\":\"f19a371c86f645f30bb5d4af08bec97b84673b8e7700df388d1f56e493ccbd0d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"a6ca6816-f022-4336-8461-e9ce9de2baa4\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4\",\"expectedVersion\":\"64bd780e-6df0-44e0-9cb3-ac8e77a5379a\",\"intendedContentHash\":\"09964cfbd848ba3cc9cc2997ec341adb336e337949b21f0dad53d77d1583daa7\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"0544114d-3c84-4c38-8f69-e3303e99a4bd\",\"phase\":\"detaching\",\"target\":\"Person/76f0c06a-5266-4000-aedb-3ecbd98767d2\",\"expectedVersion\":\"a2c2e608-e1db-4af2-97ce-03e34fceda1d\",\"intendedContentHash\":\"c7f42d59d27ba98d70d18ab3f79e920b40efcf4543aa8d87ad3fc8ffacfc85bd\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"e4bbc9f3-fde4-4cd3-bdba-8864a5dae6cb\",\"phase\":\"attaching\",\"target\":\"Person/73551997-5e95-420e-80e1-2c745de9abf9\",\"expectedVersion\":\"59985ddb-493b-4855-8041-58280de5b649\",\"intendedContentHash\":\"38a0ec222f93cc5528c0eda78bea34457ab60f1f789df4f9aa4d8510755d4249\",\"disposition\":\"rejected\",\"responseStatus\":412},{\"id\":\"2efe0740-5483-4f0d-9bb3-aa29a897dedc\",\"phase\":\"fence-source\",\"target\":\"Person/76f0c06a-5266-4000-aedb-3ecbd98767d2\",\"expectedVersion\":\"01d25897-584f-4158-a6c7-b26e2b9277a8\",\"intendedContentHash\":\"c7f42d59d27ba98d70d18ab3f79e920b40efcf4543aa8d87ad3fc8ffacfc85bd\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"37736a55-2d3a-45fd-88c3-0c85e917952e\",\"phase\":\"fence-destination\",\"target\":\"Person/73551997-5e95-420e-80e1-2c745de9abf9\",\"expectedVersion\":\"54d0e392-7a33-45da-a50a-3c80f49e0adb\",\"intendedContentHash\":\"07fba52ebb77c6db8977217750f22ded65ddc0b72f134f43af7545078c8eecb9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"2d8959e2-30bd-493e-8676-947d338f0af8\",\"phase\":\"attaching\",\"target\":\"Person/73551997-5e95-420e-80e1-2c745de9abf9\",\"expectedVersion\":\"4df42674-1c49-4f41-9c19-b476456d065c\",\"intendedContentHash\":\"63505b5f7c1fe6b016d6973d2ceec38d9b3911f424e37eff99342a1c6278841d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"000c7650-1ba3-496c-9572-adb736a61d6e\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/1ab3ef1a-8812-41b2-82fd-10b6c7a3af84\",\"expectedVersion\":\"b492919f-77fe-486d-949c-8de98a9fa120\",\"intendedContentHash\":\"8fbbac5c9206b40885410bc3a04cdd1525d8f8a964f6991201c536f530a7aa2d\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"3de74539-a795-419f-b6cf-2a8307e358bb\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4\",\"expectedVersion\":\"699cffd6-17c4-4281-95ae-1be8db23b83a\",\"intendedContentHash\":\"8db33ae4810efdc0422b4f03ab35ffa0b84016a24caba5693fe322d0ee57d28a\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"aad82e4f-0db7-4290-9bad-472b05e037e7\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/1ab3ef1a-8812-41b2-82fd-10b6c7a3af84\",\"expectedVersion\":\"677beab8-0de6-4b3e-b714-fcb9d0a7b816\",\"intendedContentHash\":\"570921fefbe0551bc804ebae68e63b020fdb01640c5fcbd70ab637f888badd17\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"62fa05ca-d173-4654-90d3-18a5c51e5574\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4\",\"expectedVersion\":\"3fe88966-27a6-46db-82a7-38f4326a8a07\",\"intendedContentHash\":\"7a383c9093b4c2d09270f443951d1f69bb3e18d907939daa705f37631502d6fe\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"}],\"generation\":\"9302e40e-a2b5-4123-b27a-001da9558b4a\"}"
+            "valueString": "{\"intents\":[{\"id\":\"b6ac062c-8bd8-473a-9a76-4d9a9cb0ef6a\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/09fb5b75-8acc-4a4c-bb5f-818c7f2169ff\",\"expectedVersion\":\"51646c3c-1671-4936-8632-c6c215c14239\",\"intendedContentHash\":\"f4c2370bc2ffde323bdd2947dba4ec5d9de6ebfd9ae59f216c76925f7daf4d7c\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"ed4db203-d95b-4099-8514-2d9ffd748b29\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/1bf4ed89-2419-4c59-8e97-691985f074d3\",\"expectedVersion\":\"da1f5efe-120d-4e90-bfc3-f8f0cac3eab9\",\"intendedContentHash\":\"6893ac89bb745db3c262cd3d385c32375f3c2f58f64574857d312cd432f73f11\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"9c1f9918-8d42-436b-837d-6adbba5bbefc\",\"phase\":\"detaching\",\"target\":\"Person/0ea786b7-d28b-4ed7-bf79-ac559497d7a9\",\"expectedVersion\":\"92a678c4-4fc6-4e6a-9b8f-57925bf40893\",\"intendedContentHash\":\"0e8a8570d94975a7b8949702edb5d8520c663e5d96ee1ab88a9d5694667565cb\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"ed3fe128-8275-4885-8d80-122bdff466f0\",\"phase\":\"attaching\",\"target\":\"Person/c5f1a6ed-9ac2-4226-af3c-662a9592c2ea\",\"expectedVersion\":\"13654bcd-31ee-4693-ba68-16a70a95cc58\",\"intendedContentHash\":\"ecc3a101508666f04b18e9019307cd0723846e94d32850d4ad5299e2f0e1481d\",\"disposition\":\"rejected\",\"responseStatus\":412},{\"id\":\"70539efc-16f8-4ea1-b5ba-c7b6cac03b09\",\"phase\":\"fence-source\",\"target\":\"Person/0ea786b7-d28b-4ed7-bf79-ac559497d7a9\",\"expectedVersion\":\"dde16959-e5e4-4209-9a08-30cc7a49b691\",\"intendedContentHash\":\"0e8a8570d94975a7b8949702edb5d8520c663e5d96ee1ab88a9d5694667565cb\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"2b048ac6-195a-4ddd-b8d6-ef4936051a5d\",\"phase\":\"fence-destination\",\"target\":\"Person/c5f1a6ed-9ac2-4226-af3c-662a9592c2ea\",\"expectedVersion\":\"a2c42ce1-0350-49aa-a3e5-608ac6140874\",\"intendedContentHash\":\"93157f804a25f56489eb3c231e45feb2173358eb5a58088502d0b4455d8b3b6e\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"83281250-992a-46e7-ab3a-ea60958fe520\",\"phase\":\"attaching\",\"target\":\"Person/c5f1a6ed-9ac2-4226-af3c-662a9592c2ea\",\"expectedVersion\":\"d2f83f0a-7b71-4088-a98c-940142c13ce1\",\"intendedContentHash\":\"52c753faaf310b6a94999d5e6b928b887d892b5877fcf32ad8a293f15f38bbb0\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"a0c43d67-1151-42ce-8fb2-659d1a767f3d\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/09fb5b75-8acc-4a4c-bb5f-818c7f2169ff\",\"expectedVersion\":\"c5d507d3-7cec-40f3-a20e-11bb79e49b1f\",\"intendedContentHash\":\"7f5cc2232eb8bb8d6af2b5c201bad0113d3ebe11ccc646beb9dc2a0cdc40d970\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"c6c70c3b-6fd6-47b3-9042-bfcd889a4c71\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/1bf4ed89-2419-4c59-8e97-691985f074d3\",\"expectedVersion\":\"4e034cbb-cbe6-4b20-adf4-53e541e3798c\",\"intendedContentHash\":\"e53e8a4e57332a216076ca98a28d85308b20cf3b90cbbe3ce9bde64007642f05\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"4dee5ad0-8ed7-4118-a774-3d58df6cb05c\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/09fb5b75-8acc-4a4c-bb5f-818c7f2169ff\",\"expectedVersion\":\"2ba62037-48dc-4dad-92a5-488d7f2d7eb7\",\"intendedContentHash\":\"342dfd4f023c036b52d29705254eb003eb62bcd288b31b683aa93cd43bef6d76\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"0fe9d8d1-7233-4456-b42c-d6736ea8805b\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/1bf4ed89-2419-4c59-8e97-691985f074d3\",\"expectedVersion\":\"b0d12229-6a57-48bf-83e1-2150e6a8a89e\",\"intendedContentHash\":\"8d431d12b8c9e74d4ca9cddd396d638cf8b9889f2d4e4559ec467f0001d5ab8b\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"}],\"generation\":\"34f129ae-1d13-411f-ab70-a8461719cc86\"}"
           }
         ]
       }
@@ -2202,12 +2202,12 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/1ab3ef1a-8812-41b2-82fd-10b6c7a3af84",
+      "path": "/fhir/R4/RelatedPerson/1bf4ed89-2419-4c59-8e97-691985f074d3",
       "status": 200,
       "response": {
         "resourceType": "RelatedPerson",
         "patient": {
-          "reference": "Patient/bd98c148-1cac-45fb-addb-d023a1d889c7"
+          "reference": "Patient/88176d70-e820-48d4-bafa-ec11480b2253"
         },
         "active": true,
         "name": [
@@ -2257,8 +2257,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "a73f90b7-d2da-434b-aa73-4b0fc7498495",
-          "lastUpdated": "2026-09-14T11:12:06.741Z",
+          "versionId": "c888f695-8f7a-45ec-843d-06a1a4c0d1a6",
+          "lastUpdated": "2026-09-14T11:48:57.366Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -2268,11 +2268,11 @@
               "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
             },
             {
-              "reference": "Patient/bd98c148-1cac-45fb-addb-d023a1d889c7"
+              "reference": "Patient/88176d70-e820-48d4-bafa-ec11480b2253"
             }
           ]
         },
-        "id": "1ab3ef1a-8812-41b2-82fd-10b6c7a3af84"
+        "id": "1bf4ed89-2419-4c59-8e97-691985f074d3"
       }
     },
     {
@@ -2280,14 +2280,14 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Person?link=RelatedPerson%2F1ab3ef1a-8812-41b2-82fd-10b6c7a3af84",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F1bf4ed89-2419-4c59-8e97-691985f074d3",
       "status": 200,
       "response": {
         "resourceType": "Bundle",
         "type": "searchset",
         "entry": [
           {
-            "fullUrl": "http://127.0.0.1:28760/fhir/R4/Person/73551997-5e95-420e-80e1-2c745de9abf9",
+            "fullUrl": "http://127.0.0.1:28760/fhir/R4/Person/c5f1a6ed-9ac2-4226-af3c-662a9592c2ea",
             "search": {
               "mode": "match"
             },
@@ -2319,8 +2319,8 @@
               ],
               "meta": {
                 "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-                "versionId": "9302e40e-a2b5-4123-b27a-001da9558b4a",
-                "lastUpdated": "2026-09-14T11:12:06.377Z",
+                "versionId": "34f129ae-1d13-411f-ab70-a8461719cc86",
+                "lastUpdated": "2026-09-14T11:48:56.968Z",
                 "author": {
                   "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
                   "display": "Medplum Admin"
@@ -2331,23 +2331,23 @@
                   }
                 ]
               },
-              "id": "73551997-5e95-420e-80e1-2c745de9abf9",
+              "id": "c5f1a6ed-9ac2-4226-af3c-662a9592c2ea",
               "extension": [
                 {
                   "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
-                  "valueString": "bc1ce165-0cbc-4e3a-a812-87046f1ee4bd"
+                  "valueString": "0594feee-11a0-4e21-9969-5b4e427de977"
                 }
               ],
               "link": [
                 {
                   "target": {
-                    "reference": "RelatedPerson/1ab3ef1a-8812-41b2-82fd-10b6c7a3af84"
+                    "reference": "RelatedPerson/1bf4ed89-2419-4c59-8e97-691985f074d3"
                   },
                   "assurance": "level2"
                 },
                 {
                   "target": {
-                    "reference": "RelatedPerson/ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4"
+                    "reference": "RelatedPerson/09fb5b75-8acc-4a4c-bb5f-818c7f2169ff"
                   },
                   "assurance": "level2"
                 }
@@ -2358,11 +2358,11 @@
         "link": [
           {
             "relation": "self",
-            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F1ab3ef1a-8812-41b2-82fd-10b6c7a3af84"
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F1bf4ed89-2419-4c59-8e97-691985f074d3"
           },
           {
             "relation": "first",
-            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F1ab3ef1a-8812-41b2-82fd-10b6c7a3af84"
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F1bf4ed89-2419-4c59-8e97-691985f074d3"
           }
         ]
       }
@@ -2372,12 +2372,12 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4",
+      "path": "/fhir/R4/RelatedPerson/09fb5b75-8acc-4a4c-bb5f-818c7f2169ff",
       "status": 200,
       "response": {
         "resourceType": "RelatedPerson",
         "patient": {
-          "reference": "Patient/35ec957e-be05-4909-a4ea-47dfcbd2d40b"
+          "reference": "Patient/830406f7-e71c-4763-8a17-86735dc26c28"
         },
         "active": true,
         "name": [
@@ -2427,8 +2427,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "cb293575-3ff5-46cd-acca-0c6c01934731",
-          "lastUpdated": "2026-09-14T11:12:06.823Z",
+          "versionId": "11c303b9-6ed0-4591-b3aa-c576509d5d7d",
+          "lastUpdated": "2026-09-14T11:48:57.302Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -2438,11 +2438,11 @@
               "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
             },
             {
-              "reference": "Patient/35ec957e-be05-4909-a4ea-47dfcbd2d40b"
+              "reference": "Patient/830406f7-e71c-4763-8a17-86735dc26c28"
             }
           ]
         },
-        "id": "ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4"
+        "id": "09fb5b75-8acc-4a4c-bb5f-818c7f2169ff"
       }
     },
     {
@@ -2450,14 +2450,14 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Person?link=RelatedPerson%2Fec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F09fb5b75-8acc-4a4c-bb5f-818c7f2169ff",
       "status": 200,
       "response": {
         "resourceType": "Bundle",
         "type": "searchset",
         "entry": [
           {
-            "fullUrl": "http://127.0.0.1:28760/fhir/R4/Person/73551997-5e95-420e-80e1-2c745de9abf9",
+            "fullUrl": "http://127.0.0.1:28760/fhir/R4/Person/c5f1a6ed-9ac2-4226-af3c-662a9592c2ea",
             "search": {
               "mode": "match"
             },
@@ -2489,8 +2489,8 @@
               ],
               "meta": {
                 "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-                "versionId": "9302e40e-a2b5-4123-b27a-001da9558b4a",
-                "lastUpdated": "2026-09-14T11:12:06.377Z",
+                "versionId": "34f129ae-1d13-411f-ab70-a8461719cc86",
+                "lastUpdated": "2026-09-14T11:48:56.968Z",
                 "author": {
                   "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
                   "display": "Medplum Admin"
@@ -2501,23 +2501,23 @@
                   }
                 ]
               },
-              "id": "73551997-5e95-420e-80e1-2c745de9abf9",
+              "id": "c5f1a6ed-9ac2-4226-af3c-662a9592c2ea",
               "extension": [
                 {
                   "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
-                  "valueString": "bc1ce165-0cbc-4e3a-a812-87046f1ee4bd"
+                  "valueString": "0594feee-11a0-4e21-9969-5b4e427de977"
                 }
               ],
               "link": [
                 {
                   "target": {
-                    "reference": "RelatedPerson/1ab3ef1a-8812-41b2-82fd-10b6c7a3af84"
+                    "reference": "RelatedPerson/1bf4ed89-2419-4c59-8e97-691985f074d3"
                   },
                   "assurance": "level2"
                 },
                 {
                   "target": {
-                    "reference": "RelatedPerson/ec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4"
+                    "reference": "RelatedPerson/09fb5b75-8acc-4a4c-bb5f-818c7f2169ff"
                   },
                   "assurance": "level2"
                 }
@@ -2528,11 +2528,11 @@
         "link": [
           {
             "relation": "self",
-            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2Fec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4"
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F09fb5b75-8acc-4a4c-bb5f-818c7f2169ff"
           },
           {
             "relation": "first",
-            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2Fec3e73f6-75d4-44bf-9f4d-a0e2e57b99c4"
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F09fb5b75-8acc-4a4c-bb5f-818c7f2169ff"
           }
         ]
       }
@@ -2542,7 +2542,7 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Person/a226c81a-1373-428e-9101-6f0fae7019c6",
+      "path": "/fhir/R4/Person/98dae2de-1d37-4928-b5c6-aee8f2bbcf1e",
       "status": 200,
       "response": {
         "resourceType": "Person",
@@ -2572,8 +2572,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "5a3ef6a1-0777-4773-9f13-45838cf8956d",
-          "lastUpdated": "2026-09-14T11:12:08.822Z",
+          "versionId": "b3f3dd12-454d-44bb-8ca4-ed98915595ff",
+          "lastUpdated": "2026-09-14T11:48:59.568Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -2584,23 +2584,23 @@
             }
           ]
         },
-        "id": "a226c81a-1373-428e-9101-6f0fae7019c6",
+        "id": "98dae2de-1d37-4928-b5c6-aee8f2bbcf1e",
         "extension": [
           {
             "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
-            "valueString": "2fd25a1f-1900-4889-93a0-d293b6913a88"
+            "valueString": "38b5b1f9-c4fa-4ab7-bb5f-30dfa4b2a82b"
           }
         ],
         "link": [
           {
             "target": {
-              "reference": "RelatedPerson/47a24f3c-f6cc-42ee-bb34-b922cb39e9e6"
+              "reference": "RelatedPerson/29f54b83-71a6-46f6-9c4e-b384e5404bc4"
             },
             "assurance": "level2"
           },
           {
             "target": {
-              "reference": "RelatedPerson/da9c128f-e6b0-4869-84f6-e395c01007c5"
+              "reference": "RelatedPerson/9249c42e-3ac1-4caa-b78e-3fb824a1daf5"
             },
             "assurance": "level2"
           }
@@ -2612,17 +2612,17 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Task/d60f5d4a-4bd2-49a1-a1c9-803c8a143443",
+      "path": "/fhir/R4/Task/0e5e80ff-67a1-4e63-85b2-b5d9dca0f86f",
       "status": 200,
       "response": {
         "resourceType": "Task",
-        "id": "d60f5d4a-4bd2-49a1-a1c9-803c8a143443",
+        "id": "0e5e80ff-67a1-4e63-85b2-b5d9dca0f86f",
         "intent": "order",
         "status": "cancelled",
         "identifier": [
           {
             "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
-            "value": "90d9ed63-b336-4a66-82f4-baa2ec5407d3"
+            "value": "c5c631c2-90d4-4c76-9cb9-b734aa1d17bd"
           }
         ],
         "code": {
@@ -2645,7 +2645,7 @@
               "text": "source"
             },
             "valueReference": {
-              "reference": "Person/a226c81a-1373-428e-9101-6f0fae7019c6"
+              "reference": "Person/98dae2de-1d37-4928-b5c6-aee8f2bbcf1e"
             }
           },
           {
@@ -2653,7 +2653,7 @@
               "text": "destination"
             },
             "valueReference": {
-              "reference": "Person/7c8827eb-b441-49b6-a85b-c51a1127f5b8"
+              "reference": "Person/dfde4a85-cfcc-4b19-ba6f-570cfe89cbc4"
             }
           },
           {
@@ -2661,7 +2661,7 @@
               "text": "moved"
             },
             "valueReference": {
-              "reference": "RelatedPerson/47a24f3c-f6cc-42ee-bb34-b922cb39e9e6"
+              "reference": "RelatedPerson/29f54b83-71a6-46f6-9c4e-b384e5404bc4"
             }
           },
           {
@@ -2669,32 +2669,32 @@
               "text": "moved"
             },
             "valueReference": {
-              "reference": "RelatedPerson/da9c128f-e6b0-4869-84f6-e395c01007c5"
+              "reference": "RelatedPerson/9249c42e-3ac1-4caa-b78e-3fb824a1daf5"
             }
           },
           {
             "type": {
-              "text": "expected:Person/a226c81a-1373-428e-9101-6f0fae7019c6"
+              "text": "expected:Person/98dae2de-1d37-4928-b5c6-aee8f2bbcf1e"
             },
-            "valueString": "a1b67d6d-b74a-42a9-8654-ffd25c7374a9"
+            "valueString": "ac3b3d1c-31d7-47d1-aba2-9359ae6daf5c"
           },
           {
             "type": {
-              "text": "expected:Person/7c8827eb-b441-49b6-a85b-c51a1127f5b8"
+              "text": "expected:Person/dfde4a85-cfcc-4b19-ba6f-570cfe89cbc4"
             },
-            "valueString": "78f2a555-7df7-4c02-aea9-2e7b273deeae"
+            "valueString": "d13ce43b-08f8-4a41-a20a-8d3112d8c65a"
           },
           {
             "type": {
-              "text": "expected:RelatedPerson/47a24f3c-f6cc-42ee-bb34-b922cb39e9e6"
+              "text": "expected:RelatedPerson/29f54b83-71a6-46f6-9c4e-b384e5404bc4"
             },
-            "valueString": "a463bb42-8c23-4a3f-b1fa-61fbf90ab4a6"
+            "valueString": "1d1ecacc-aa2b-422d-be86-09cb27704fdb"
           },
           {
             "type": {
-              "text": "expected:RelatedPerson/da9c128f-e6b0-4869-84f6-e395c01007c5"
+              "text": "expected:RelatedPerson/9249c42e-3ac1-4caa-b78e-3fb824a1daf5"
             },
-            "valueString": "f1079c80-c83d-4a01-965f-1e1e89dafb9f"
+            "valueString": "ebe2089f-b852-4d3a-997c-647fceec89d6"
           },
           {
             "type": {
@@ -2708,8 +2708,8 @@
         },
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "92d9a3d7-b747-43e2-9da0-854118b95d6a",
-          "lastUpdated": "2026-09-14T11:12:09.230Z",
+          "versionId": "6d2bf705-e785-4d21-9702-e165f1324b3e",
+          "lastUpdated": "2026-09-14T11:49:00.018Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -2723,7 +2723,7 @@
         "extension": [
           {
             "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
-            "valueString": "{\"intents\":[{\"id\":\"43a3f653-7fa5-43c5-ba6a-0f5b8c3c4a43\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/47a24f3c-f6cc-42ee-bb34-b922cb39e9e6\",\"expectedVersion\":\"a463bb42-8c23-4a3f-b1fa-61fbf90ab4a6\",\"intendedContentHash\":\"42a1575ba01cc8ca09a4726814cc93f1b4c7cb773ef0b353a52c3b8cfeaae4bf\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"41ae4819-1af4-464a-b3da-55698fc016b9\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/da9c128f-e6b0-4869-84f6-e395c01007c5\",\"expectedVersion\":\"f1079c80-c83d-4a01-965f-1e1e89dafb9f\",\"intendedContentHash\":\"07cff2bb139d9d957f370c2db00beae3634201109c525fb1ad11727f1f13b982\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"9a6a45ff-66bc-46b8-8b5a-6aec1fa56441\",\"phase\":\"detaching\",\"target\":\"Person/a226c81a-1373-428e-9101-6f0fae7019c6\",\"expectedVersion\":\"a1b67d6d-b74a-42a9-8654-ffd25c7374a9\",\"intendedContentHash\":\"5d0a31fc754f5423479a680bdeeda41bf4eb8f75c86b9bbe6c7ce6cd8b08c777\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"7493a5be-79a7-4710-a7f6-bd2c6639e85b\",\"phase\":\"attaching\",\"target\":\"Person/7c8827eb-b441-49b6-a85b-c51a1127f5b8\",\"expectedVersion\":\"78f2a555-7df7-4c02-aea9-2e7b273deeae\",\"intendedContentHash\":\"70fb642ab062b976fdaf35edb68d264e1b98653894a16cc4b2ea645a8a6fa689\",\"disposition\":\"rejected\",\"responseStatus\":412}]}"
+            "valueString": "{\"intents\":[{\"id\":\"7070e748-40f2-437c-8c9e-17137fe6ad80\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/29f54b83-71a6-46f6-9c4e-b384e5404bc4\",\"expectedVersion\":\"1d1ecacc-aa2b-422d-be86-09cb27704fdb\",\"intendedContentHash\":\"ddd64d3e6e4c84989c4dd916ab3673474df14abbf882746a0eadc724b308cbf9\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"310f38cd-0a0a-4dae-bc49-ebd28a655603\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/9249c42e-3ac1-4caa-b78e-3fb824a1daf5\",\"expectedVersion\":\"ebe2089f-b852-4d3a-997c-647fceec89d6\",\"intendedContentHash\":\"9a2300f5724677d3d9d3873cf1a4d96a29587926ad3fb372742c116b552882f8\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"944ce245-078a-4e72-b95d-366cacc42d3a\",\"phase\":\"detaching\",\"target\":\"Person/98dae2de-1d37-4928-b5c6-aee8f2bbcf1e\",\"expectedVersion\":\"ac3b3d1c-31d7-47d1-aba2-9359ae6daf5c\",\"intendedContentHash\":\"952de03c9243e57225b8f79c62851c85331b1ad069fd31daed64db75dcaf0fe1\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2\"},{\"id\":\"5a911a0e-65b5-48c0-a3d8-5f093c346cc8\",\"phase\":\"attaching\",\"target\":\"Person/dfde4a85-cfcc-4b19-ba6f-570cfe89cbc4\",\"expectedVersion\":\"d13ce43b-08f8-4a41-a20a-8d3112d8c65a\",\"intendedContentHash\":\"1990558cc523e37d3d2b2ca2a3a0d39878962e5f45a0bf2cb0254576cd7ee546\",\"disposition\":\"rejected\",\"responseStatus\":412}]}"
           }
         ],
         "businessStatus": {
@@ -2736,12 +2736,12 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/47a24f3c-f6cc-42ee-bb34-b922cb39e9e6",
+      "path": "/fhir/R4/RelatedPerson/29f54b83-71a6-46f6-9c4e-b384e5404bc4",
       "status": 200,
       "response": {
         "resourceType": "RelatedPerson",
         "patient": {
-          "reference": "Patient/4e589185-fd47-49da-a98e-571bd5a9b95a"
+          "reference": "Patient/ebc63c37-24e3-4cdb-90ca-6f84b1dd1f98"
         },
         "active": true,
         "name": [
@@ -2791,8 +2791,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "2c711e42-4ee0-4d7e-b680-3fd784a0de8a",
-          "lastUpdated": "2026-09-14T11:12:09.078Z",
+          "versionId": "6fc64bad-3b9f-45f8-80b4-f037ffbd5db3",
+          "lastUpdated": "2026-09-14T11:48:59.888Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -2802,11 +2802,11 @@
               "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
             },
             {
-              "reference": "Patient/4e589185-fd47-49da-a98e-571bd5a9b95a"
+              "reference": "Patient/ebc63c37-24e3-4cdb-90ca-6f84b1dd1f98"
             }
           ]
         },
-        "id": "47a24f3c-f6cc-42ee-bb34-b922cb39e9e6"
+        "id": "29f54b83-71a6-46f6-9c4e-b384e5404bc4"
       }
     },
     {
@@ -2814,14 +2814,14 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Person?link=RelatedPerson%2F47a24f3c-f6cc-42ee-bb34-b922cb39e9e6",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F29f54b83-71a6-46f6-9c4e-b384e5404bc4",
       "status": 200,
       "response": {
         "resourceType": "Bundle",
         "type": "searchset",
         "entry": [
           {
-            "fullUrl": "http://127.0.0.1:28760/fhir/R4/Person/a226c81a-1373-428e-9101-6f0fae7019c6",
+            "fullUrl": "http://127.0.0.1:28760/fhir/R4/Person/98dae2de-1d37-4928-b5c6-aee8f2bbcf1e",
             "search": {
               "mode": "match"
             },
@@ -2853,8 +2853,8 @@
               ],
               "meta": {
                 "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-                "versionId": "5a3ef6a1-0777-4773-9f13-45838cf8956d",
-                "lastUpdated": "2026-09-14T11:12:08.822Z",
+                "versionId": "b3f3dd12-454d-44bb-8ca4-ed98915595ff",
+                "lastUpdated": "2026-09-14T11:48:59.568Z",
                 "author": {
                   "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
                   "display": "Medplum Admin"
@@ -2865,23 +2865,23 @@
                   }
                 ]
               },
-              "id": "a226c81a-1373-428e-9101-6f0fae7019c6",
+              "id": "98dae2de-1d37-4928-b5c6-aee8f2bbcf1e",
               "extension": [
                 {
                   "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
-                  "valueString": "2fd25a1f-1900-4889-93a0-d293b6913a88"
+                  "valueString": "38b5b1f9-c4fa-4ab7-bb5f-30dfa4b2a82b"
                 }
               ],
               "link": [
                 {
                   "target": {
-                    "reference": "RelatedPerson/47a24f3c-f6cc-42ee-bb34-b922cb39e9e6"
+                    "reference": "RelatedPerson/29f54b83-71a6-46f6-9c4e-b384e5404bc4"
                   },
                   "assurance": "level2"
                 },
                 {
                   "target": {
-                    "reference": "RelatedPerson/da9c128f-e6b0-4869-84f6-e395c01007c5"
+                    "reference": "RelatedPerson/9249c42e-3ac1-4caa-b78e-3fb824a1daf5"
                   },
                   "assurance": "level2"
                 }
@@ -2892,11 +2892,11 @@
         "link": [
           {
             "relation": "self",
-            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F47a24f3c-f6cc-42ee-bb34-b922cb39e9e6"
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F29f54b83-71a6-46f6-9c4e-b384e5404bc4"
           },
           {
             "relation": "first",
-            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F47a24f3c-f6cc-42ee-bb34-b922cb39e9e6"
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F29f54b83-71a6-46f6-9c4e-b384e5404bc4"
           }
         ]
       }
@@ -2906,12 +2906,12 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/da9c128f-e6b0-4869-84f6-e395c01007c5",
+      "path": "/fhir/R4/RelatedPerson/9249c42e-3ac1-4caa-b78e-3fb824a1daf5",
       "status": 200,
       "response": {
         "resourceType": "RelatedPerson",
         "patient": {
-          "reference": "Patient/0bed9aba-d872-4ff4-84ef-45818cd0a22f"
+          "reference": "Patient/d30b8624-a0c1-4641-b0a2-b04c2d70d115"
         },
         "active": true,
         "name": [
@@ -2961,8 +2961,8 @@
         ],
         "meta": {
           "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-          "versionId": "577b697e-698f-4c87-b2b4-b2fe070dc1aa",
-          "lastUpdated": "2026-09-14T11:12:09.132Z",
+          "versionId": "9d9fda38-f794-4dc0-88ca-83c5975e0d91",
+          "lastUpdated": "2026-09-14T11:48:59.949Z",
           "author": {
             "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
             "display": "Medplum Admin"
@@ -2972,11 +2972,11 @@
               "reference": "Project/1650ce6d-c50a-4fbd-b30f-324514f7f57b"
             },
             {
-              "reference": "Patient/0bed9aba-d872-4ff4-84ef-45818cd0a22f"
+              "reference": "Patient/d30b8624-a0c1-4641-b0a2-b04c2d70d115"
             }
           ]
         },
-        "id": "da9c128f-e6b0-4869-84f6-e395c01007c5"
+        "id": "9249c42e-3ac1-4caa-b78e-3fb824a1daf5"
       }
     },
     {
@@ -2984,14 +2984,14 @@
       "scenario": "fixture",
       "principal": "service",
       "method": "GET",
-      "path": "/fhir/R4/Person?link=RelatedPerson%2Fda9c128f-e6b0-4869-84f6-e395c01007c5",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F9249c42e-3ac1-4caa-b78e-3fb824a1daf5",
       "status": 200,
       "response": {
         "resourceType": "Bundle",
         "type": "searchset",
         "entry": [
           {
-            "fullUrl": "http://127.0.0.1:28760/fhir/R4/Person/a226c81a-1373-428e-9101-6f0fae7019c6",
+            "fullUrl": "http://127.0.0.1:28760/fhir/R4/Person/98dae2de-1d37-4928-b5c6-aee8f2bbcf1e",
             "search": {
               "mode": "match"
             },
@@ -3023,8 +3023,8 @@
               ],
               "meta": {
                 "project": "1650ce6d-c50a-4fbd-b30f-324514f7f57b",
-                "versionId": "5a3ef6a1-0777-4773-9f13-45838cf8956d",
-                "lastUpdated": "2026-09-14T11:12:08.822Z",
+                "versionId": "b3f3dd12-454d-44bb-8ca4-ed98915595ff",
+                "lastUpdated": "2026-09-14T11:48:59.568Z",
                 "author": {
                   "reference": "Practitioner/bc06a762-1d8e-4d7f-acf7-5e6087a828f2",
                   "display": "Medplum Admin"
@@ -3035,23 +3035,23 @@
                   }
                 ]
               },
-              "id": "a226c81a-1373-428e-9101-6f0fae7019c6",
+              "id": "98dae2de-1d37-4928-b5c6-aee8f2bbcf1e",
               "extension": [
                 {
                   "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
-                  "valueString": "2fd25a1f-1900-4889-93a0-d293b6913a88"
+                  "valueString": "38b5b1f9-c4fa-4ab7-bb5f-30dfa4b2a82b"
                 }
               ],
               "link": [
                 {
                   "target": {
-                    "reference": "RelatedPerson/47a24f3c-f6cc-42ee-bb34-b922cb39e9e6"
+                    "reference": "RelatedPerson/29f54b83-71a6-46f6-9c4e-b384e5404bc4"
                   },
                   "assurance": "level2"
                 },
                 {
                   "target": {
-                    "reference": "RelatedPerson/da9c128f-e6b0-4869-84f6-e395c01007c5"
+                    "reference": "RelatedPerson/9249c42e-3ac1-4caa-b78e-3fb824a1daf5"
                   },
                   "assurance": "level2"
                 }
@@ -3062,11 +3062,11 @@
         "link": [
           {
             "relation": "self",
-            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2Fda9c128f-e6b0-4869-84f6-e395c01007c5"
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F9249c42e-3ac1-4caa-b78e-3fb824a1daf5"
           },
           {
             "relation": "first",
-            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2Fda9c128f-e6b0-4869-84f6-e395c01007c5"
+            "url": "http://127.0.0.1:28760/fhir/R4/Person?_count=20&link=RelatedPerson%2F9249c42e-3ac1-4caa-b78e-3fb824a1daf5"
           }
         ]
       }
