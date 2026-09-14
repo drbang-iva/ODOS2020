@@ -4,7 +4,7 @@ not ok 1 - K14 create-new starts disabled before any keyed search
   ---
   duration_ms: 23.710417
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:1:342'
+  location: 'ui/tests/guarantorSearchScreens.test.tsx:1:342'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - K14 create-new starts disabled before any keyed search
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:9:397)
+    TestContext.<anonymous> (ui/tests/guarantorSearchScreens.test.tsx:9:397)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -62,7 +62,7 @@ not ok 8 - K14 matching cards require None of these before new guarantor
   ---
   duration_ms: 1.217875
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:1:7326'
+  location: 'ui/tests/guarantorSearchScreens.test.tsx:1:7326'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -75,8 +75,8 @@ not ok 8 - K14 matching cards require None of these before new guarantor
   actual: false
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:38:163)
-    async screen (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:31:152)
+    <anonymous> (ui/tests/guarantorSearchScreens.test.tsx:38:163)
+    async screen (ui/tests/guarantorSearchScreens.test.tsx:31:152)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

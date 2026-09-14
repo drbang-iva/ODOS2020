@@ -22,7 +22,7 @@ not ok 4 - K10 new Move creates Person before draft and Review again reuses it
   ---
   duration_ms: 6.404375
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:1:5246'
+  location: 'ui/tests/guarantorSearchScreens.test.tsx:1:5246'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -51,8 +51,8 @@ not ok 4 - K10 new Move creates Person before draft and Review again reuses it
     4: '/guarantors/link-operations/draft'
   operator: 'deepStrictEqual'
   stack: |-
-    screen.cards (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:35:402)
-    async screen (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:31:152)
+    screen.cards (ui/tests/guarantorSearchScreens.test.tsx:35:402)
+    async screen (ui/tests/guarantorSearchScreens.test.tsx:31:152)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

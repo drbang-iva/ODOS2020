@@ -58,7 +58,7 @@ not ok 10 - K8 draft includes every source link, writes nothing, refuses consoli
   ---
   duration_ms: 2.472458
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:4559'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:4559'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -71,7 +71,7 @@ not ok 10 - K8 draft includes every source link, writes nothing, refuses consoli
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:22:374)
+    TestContext.<anonymous> (mcp/tests/guarantorSearchScreens.test.ts:22:374)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
@@ -81,7 +81,7 @@ not ok 11 - K9 draft versions reject changed child at create
   ---
   duration_ms: 1.458542
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:5074'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:5074'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -94,7 +94,7 @@ not ok 11 - K9 draft versions reject changed child at create
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:23:428)
+    TestContext.<anonymous> (mcp/tests/guarantorSearchScreens.test.ts:23:428)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)

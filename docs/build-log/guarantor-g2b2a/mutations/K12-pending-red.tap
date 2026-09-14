@@ -76,7 +76,7 @@ not ok 13 - K12 pending offers no Move Join or history Undo
   ---
   duration_ms: 4.027417
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:1:7836'
+  location: 'ui/tests/guarantorSearchScreens.test.tsx:1:7836'
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
@@ -89,7 +89,7 @@ not ok 13 - K12 pending offers no Move Join or history Undo
   actual: false
   operator: '=='
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:43:133)
+    TestContext.<anonymous> (ui/tests/guarantorSearchScreens.test.tsx:43:133)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

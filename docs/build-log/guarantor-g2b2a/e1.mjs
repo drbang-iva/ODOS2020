@@ -15,7 +15,7 @@ for(const key of ['ZzeoneAnn','zzeoneann','ZZEONEANN','ZzeoneBeth','zzeonebe','e
  cases.push({key,status:result.status,names:result.body.entry?.map(e=>e.resource.name),ids:(result.body.entry ?? []).map(e=>e.resource.id)});
 }
 writeEvidence('e1-results.json',{cases});saveHttpTrace('e1-http.json');
-assert.equal(cases[0].status,200);
+for(const c of cases) assert.equal(c.status,200,c.key);
 assert.deepEqual(new Set(cases[0].ids),new Set(created.slice(0,2).map(p=>p.id)));
 assert.deepEqual(cases[1].ids,cases[0].ids);assert.deepEqual(cases[2].ids,cases[0].ids);
 assert.deepEqual(cases[3].ids,[created[0].id]);assert.deepEqual(cases[4].ids,[created[0].id]);

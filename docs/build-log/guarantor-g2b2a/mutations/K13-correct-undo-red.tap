@@ -40,7 +40,7 @@ not ok 7 - K13 Undo only on completed non-correct and requires a reason
   ---
   duration_ms: 2.415333
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:1:6675'
+  location: 'ui/tests/guarantorSearchScreens.test.tsx:1:6675'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -53,8 +53,8 @@ not ok 7 - K13 Undo only on completed non-correct and requires a reason
   actual: 2
   operator: 'strictEqual'
   stack: |-
-    screen.history.kind (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:37:230)
-    async screen (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:31:152)
+    screen.history.kind (ui/tests/guarantorSearchScreens.test.tsx:37:230)
+    async screen (ui/tests/guarantorSearchScreens.test.tsx:31:152)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

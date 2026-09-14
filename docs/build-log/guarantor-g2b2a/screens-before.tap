@@ -4,7 +4,7 @@ not ok 1 - K14 create-new starts disabled before any keyed search
   ---
   duration_ms: 22.648
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:1:228'
+  location: 'ui/tests/guarantorSearchScreens.test.tsx:1:228'
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
@@ -16,7 +16,7 @@ not ok 1 - K14 create-new starts disabled before any keyed search
   expected: true
   operator: '=='
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:9:215)
+    TestContext.<anonymous> (ui/tests/guarantorSearchScreens.test.tsx:9:215)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

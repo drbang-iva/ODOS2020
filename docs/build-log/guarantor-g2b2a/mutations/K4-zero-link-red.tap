@@ -28,7 +28,7 @@ not ok 5 - K4 zero-link excluded
   ---
   duration_ms: 2.247708
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:3160'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3160'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -62,9 +62,9 @@ not ok 5 - K4 zero-link excluded
       postalCode: ''
   operator: 'deepStrictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:17:350)
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:17:350)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

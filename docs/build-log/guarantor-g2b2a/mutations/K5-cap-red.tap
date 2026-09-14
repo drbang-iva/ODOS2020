@@ -40,7 +40,7 @@ not ok 7 - K5 21 matches return 422
   ---
   duration_ms: 1.600333
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:3411'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3411'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -53,9 +53,9 @@ not ok 7 - K5 21 matches return 422
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:18:227)
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:18:227)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

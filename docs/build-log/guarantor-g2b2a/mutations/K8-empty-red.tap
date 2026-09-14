@@ -2,100 +2,104 @@ TAP version 13
 # Subtest: K1 search refuses a prefix-only family
 ok 1 - K1 search refuses a prefix-only family
   ---
-  duration_ms: 27.26425
+  duration_ms: 24.47225
   type: 'test'
   ...
 # Subtest: K2 phone compares digits and rejects a different digit
 ok 2 - K2 phone compares digits and rejects a different digit
   ---
-  duration_ms: 4.732583
+  duration_ms: 4.460958
   type: 'test'
   ...
 # Subtest: K3 search card exposes exactly six keys
 ok 3 - K3 search card exposes exactly six keys
   ---
-  duration_ms: 2.253792
+  duration_ms: 1.727667
   type: 'test'
   ...
 # Subtest: K4 inactive excluded
 ok 4 - K4 inactive excluded
   ---
-  duration_ms: 2.224542
+  duration_ms: 1.76425
   type: 'test'
   ...
 # Subtest: K4 zero-link excluded
 ok 5 - K4 zero-link excluded
   ---
-  duration_ms: 1.637042
+  duration_ms: 1.638458
   type: 'test'
   ...
 # Subtest: K4 non-RelatedPerson excluded
 ok 6 - K4 non-RelatedPerson excluded
   ---
-  duration_ms: 1.4195
+  duration_ms: 1.445
   type: 'test'
   ...
 # Subtest: K5 21 matches return 422
 ok 7 - K5 21 matches return 422
   ---
-  duration_ms: 1.441708
+  duration_ms: 1.185167
   type: 'test'
   ...
-# odos-mcp: guarantor link-operation search setup failed; result unconfirmed.
 # Subtest: K5 201 matches return 422
-not ok 8 - K5 201 matches return 422
+ok 8 - K5 201 matches return 422
   ---
-  duration_ms: 4.18925
+  duration_ms: 2.812125
   type: 'test'
-  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3411'
-  failureType: 'testCodeFailure'
-  error: |-
-    Expected values to be strictly equal:
-
-    500 !== 422
-
-  code: 'ERR_ASSERTION'
-  name: 'AssertionError'
-  expected: 422
-  actual: 500
-  operator: 'strictEqual'
-  stack: |-
-    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:18:227)
-    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
-    async Test.run (node:internal/test_runner/test:1054:7)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: K7 create writes exactly one active unlinked Person; missing surname writes nothing
 ok 9 - K7 create writes exactly one active unlinked Person; missing surname writes nothing
   ---
-  duration_ms: 10.344709
+  duration_ms: 8.033125
   type: 'test'
   ...
 # Subtest: K8 draft includes every source link, writes nothing, refuses consolidate subset
 ok 10 - K8 draft includes every source link, writes nothing, refuses consolidate subset
   ---
-  duration_ms: 1.910833
+  duration_ms: 1.900958
   type: 'test'
   ...
 # Subtest: K9 draft versions reject changed child at create
 ok 11 - K9 draft versions reject changed child at create
   ---
-  duration_ms: 0.883208
+  duration_ms: 0.951666
   type: 'test'
   ...
 # Subtest: K13 history filters trusted child plans and queries newest 50 once
 ok 12 - K13 history filters trusted child plans and queries newest 50 once
   ---
-  duration_ms: 11.507834
+  duration_ms: 10.556125
   type: 'test'
   ...
-1..12
-# tests 12
+# Subtest: K8 empty consolidation draft refuses with zero writes
+not ok 13 - K8 empty consolidation draft refuses with zero writes
+  ---
+  duration_ms: 0.598583
+  type: 'test'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:6647'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 422
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/guarantorSearchScreens.test.ts:27:196)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..13
+# tests 13
 # suites 0
-# pass 11
+# pass 12
 # fail 1
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 258.13375
+# duration_ms 210.776416

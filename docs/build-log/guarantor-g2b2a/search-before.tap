@@ -4,7 +4,7 @@ not ok 1 - K1 search refuses a prefix-only family
   ---
   duration_ms: 22.147875
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:1943'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:1943'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,9 +17,9 @@ not ok 1 - K1 search refuses a prefix-only family
   actual: 404
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:14:195)
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:14:195)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -28,7 +28,7 @@ not ok 2 - K2 phone compares digits and rejects a different digit
   ---
   duration_ms: 3.875917
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:2222'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:2222'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -41,9 +41,9 @@ not ok 2 - K2 phone compares digits and rejects a different digit
   actual: 404
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:15:284)
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:15:284)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -52,7 +52,7 @@ not ok 3 - K3 search card exposes exactly six keys
   ---
   duration_ms: 1.811833
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:2561'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:2561'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -65,9 +65,9 @@ not ok 3 - K3 search card exposes exactly six keys
   actual: 404
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:16:304)
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:16:304)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -76,7 +76,7 @@ not ok 4 - K4 inactive excluded
   ---
   duration_ms: 1.561458
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:3158'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3158'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -89,9 +89,9 @@ not ok 4 - K4 inactive excluded
   actual: 404
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:17:323)
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:17:323)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -100,7 +100,7 @@ not ok 5 - K4 zero-link excluded
   ---
   duration_ms: 1.579708
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:3158'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3158'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -113,9 +113,9 @@ not ok 5 - K4 zero-link excluded
   actual: 404
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:17:323)
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:17:323)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -124,7 +124,7 @@ not ok 6 - K4 non-RelatedPerson excluded
   ---
   duration_ms: 1.197125
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:3158'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3158'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -137,9 +137,9 @@ not ok 6 - K4 non-RelatedPerson excluded
   actual: 404
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:17:323)
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:17:323)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -148,7 +148,7 @@ not ok 7 - K5 21 matches return 422
   ---
   duration_ms: 1.1165
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:3409'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3409'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -161,9 +161,9 @@ not ok 7 - K5 21 matches return 422
   actual: 404
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:18:227)
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:18:227)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -172,7 +172,7 @@ not ok 8 - K5 201 matches return 422
   ---
   duration_ms: 1.373916
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:3409'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3409'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -185,9 +185,9 @@ not ok 8 - K5 201 matches return 422
   actual: 404
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:18:227)
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:18:227)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -196,7 +196,7 @@ not ok 9 - K7 create writes exactly one active unlinked Person; missing surname 
   ---
   duration_ms: 11.404042
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:3714'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3714'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -209,9 +209,9 @@ not ok 9 - K7 create writes exactly one active unlinked Person; missing surname 
   actual: 404
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:19:291)
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:19:291)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

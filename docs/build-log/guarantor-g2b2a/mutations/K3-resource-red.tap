@@ -16,7 +16,7 @@ not ok 3 - K3 search card exposes exactly six keys
   ---
   duration_ms: 3.192375
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:2563'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:2563'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -65,9 +65,9 @@ not ok 3 - K3 search card exposes exactly six keys
     13: 'versionId'
   operator: 'deepStrictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:16:331)
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:16:331)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

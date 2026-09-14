@@ -559,6 +559,7 @@ export async function handleGuarantorOperation(deps: GuarantorOperationDeps, sta
         z.object({ kind: z.literal("consolidate"), sourcePersonId: idSchema, destinationPersonId: idSchema }).strict(),
       ]).parse(request.body);
       const relatedPersonIds = input.kind === "transfer" ? input.relatedPersonIds : linkedIds(await operation.read<Person>("Person", input.sourcePersonId));
+      if (!relatedPersonIds.length) throw new Refusal(422, "Operation input is invalid.");
       const plan: Plan = { ...input, relatedPersonIds, operationId: randomUUID(), reason: "Draft only", expected: {} };
       const current = await operation.load(plan);
       plan.expected = Object.fromEntries([current.source, current.destination, ...current.children].map(resource => [reference(resource), version(resource)]));

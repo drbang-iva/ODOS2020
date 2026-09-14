@@ -28,7 +28,7 @@ not ok 5 - K11 Join keeps Loaded Ann and moves loser full set
   ---
   duration_ms: 4.241583
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:1:6023'
+  location: 'ui/tests/guarantorSearchScreens.test.tsx:1:6023'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -41,8 +41,8 @@ not ok 5 - K11 Join keeps Loaded Ann and moves loser full set
   actual: 'D'
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:36:495)
-    async screen (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:31:152)
+    <anonymous> (ui/tests/guarantorSearchScreens.test.tsx:36:495)
+    async screen (ui/tests/guarantorSearchScreens.test.tsx:31:152)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -51,7 +51,7 @@ not ok 6 - K11 Join keeps Found Ann and moves loser full set
   ---
   duration_ms: 4.052292
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:1:6023'
+  location: 'ui/tests/guarantorSearchScreens.test.tsx:1:6023'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -64,8 +64,8 @@ not ok 6 - K11 Join keeps Found Ann and moves loser full set
   actual: 'S'
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:36:495)
-    async screen (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/ui/tests/guarantorSearchScreens.test.tsx:31:152)
+    <anonymous> (ui/tests/guarantorSearchScreens.test.tsx:36:495)
+    async screen (ui/tests/guarantorSearchScreens.test.tsx:31:152)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

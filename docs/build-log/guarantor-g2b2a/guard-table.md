@@ -16,6 +16,7 @@ Each row lists command exit codes. Green/restored 0 means success; red 1 means t
 | K7-name-check | 0 | 1 | 0 | K7 create writes exactly one active unlinked Person; missing surname writes nothing |
 | K8-draft-record | 0 | 1 | 0 | K8 draft includes every source link, writes nothing, refuses consolidate subset<br>K9 draft versions reject changed child at create |
 | K8-subset | 0 | 1 | 0 | K8 draft includes every source link, writes nothing, refuses consolidate subset |
+| K8-empty | 0 | 1 | 0 | K8 empty consolidation draft refuses with zero writes |
 | K9-auto-retry | 0 | 1 | 0 | K9 stale confirmation makes one create and requires Review again<br>K10 new Move creates Person before draft and Review again reuses it |
 | K10-draft-before-person | 0 | 1 | 0 | K10 new Move creates Person before draft and Review again reuses it |
 | K10-second-person | 0 | 1 | 0 | K10 new Move creates Person before draft and Review again reuses it |

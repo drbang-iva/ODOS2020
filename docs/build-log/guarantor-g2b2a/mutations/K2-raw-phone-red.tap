@@ -10,7 +10,7 @@ not ok 2 - K2 phone compares digits and rejects a different digit
   ---
   duration_ms: 3.847375
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:1:2224'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:2224'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -23,9 +23,9 @@ not ok 2 - K2 phone compares digits and rejects a different digit
   actual: 0
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:15:311)
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:15:311)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-g2b2a/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
