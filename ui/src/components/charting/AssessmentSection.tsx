@@ -744,12 +744,14 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                   busy={busy}
                   provenanceLine={condition.id ? provenanceLines[condition.id] : undefined}
                   possible={verificationStatus(condition) === "provisional"}
-                  completionLink={<DiagnosisCompletionLink
+                  completionLink={<>
+                    {diagnosisNewness[`Condition/${condition.id}`]?.source === "unavailable" && <p role="alert">New / Established suggestion unavailable for this diagnosis.</p>}
+                    <DiagnosisCompletionLink
                     conditionReference={`Condition/${condition.id}`}
                     missingComplexity={!encounterDiagnosisProblemStatus(encounter?.diagnosis?.find((entry) => entry.condition.reference === `Condition/${condition.id}`) ?? { condition: {} })}
                     missingVisitStatus={!diagnosisVisitStatuses[`Condition/${condition.id}`] || diagnosisVisitStatuses[`Condition/${condition.id}`] === "new"}
                     onOpenDiagnosis={onOpenDiagnosis}
-                  />}
+                  /></>}
                   onToggle={() => setEditingId((current) => (current === condition.id ? null : condition.id ?? null))}
                   onLaterality={(laterality) => saveLaterality(condition, laterality)}
                   onCode={(code, display) => saveCode(condition, code, display)}

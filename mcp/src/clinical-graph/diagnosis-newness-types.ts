@@ -8,13 +8,11 @@ export interface DiagnosisNewnessOverride {
   setAt: string;
 }
 
-export interface DiagnosisNewnessRow {
+export type DiagnosisNewnessRow = {
   conditionReference: string;
-  value: DiagnosisNewness;
-  source: "suggestion" | "doctor";
   matchedBy?: "catalog-key" | "icd10-category";
   matchedEncounterReference?: string;
-}
+} & ({ value: DiagnosisNewness; source: "suggestion" | "doctor" } | { value?: never; source: "unavailable" });
 
 export interface DiagnosisNewnessStore {
   listNewnessOverrides(encounterId: string): Promise<DiagnosisNewnessOverride[]>;

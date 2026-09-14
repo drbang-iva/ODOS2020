@@ -1986,3 +1986,28 @@ test("doctor chooses Established with one tap and the header shows the saved cho
     assert.equal(renderer.root.findByProps({ "aria-label": "Diagnosis New or Established" }).findAllByType("button").find((button) => button.children.includes("Established"))!.props["aria-pressed"], true);
   } finally { act(() => renderer?.unmount()); globalThis.fetch = originalFetch; }
 });
+
+test("partial newness response keeps doctor choice visible and marks only unavailable diagnosis", async () => {
+  const originalFetch = globalThis.fetch;
+  const baseFetch = workspaceRaceFetch({ findings: async () => jsonResponse(raceFindingsPayload("Condition/a", "Retained finding", "2026-09-01T12:00:00Z")) });
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    if (String(input).endsWith("/diagnosis-newness")) return jsonResponse({ rows: [
+      { conditionReference: "Condition/a", source: "doctor", value: "established" },
+      { conditionReference: "Condition/b", source: "unavailable" },
+    ] });
+    return baseFetch(input, init);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  const view = (reference: string) => <DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference={reference} onSelectDiagnosis={() => undefined} />;
+  try {
+    await act(async () => { renderer = create(view("Condition/a")); });
+    assert.match(JSON.stringify(renderer.toJSON()), /Doctor's choice/);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "diagnosis-newness-error" }).length, 0);
+    const buttons = () => renderer.root.findByProps({ "aria-label": "Diagnosis New or Established" }).findAllByType("button");
+    assert.equal(buttons().find((button) => button.children.includes("Established"))!.props["aria-pressed"], true);
+    await act(async () => { renderer.update(view("Condition/b")); });
+    assert.ok(renderer.root.findByProps({ "data-testid": "diagnosis-newness-error" }));
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /ODOS suggestion/);
+    assert.ok(buttons().every((button) => !button.props["aria-pressed"] && !button.props.disabled));
+  } finally { act(() => renderer?.unmount()); globalThis.fetch = originalFetch; }
+});

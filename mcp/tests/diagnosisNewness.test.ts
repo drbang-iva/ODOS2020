@@ -159,3 +159,44 @@ test("doctor Established beats computed New after reload; suggestion updates whe
   assert.equal(saved.status, 200);
   assert.deepEqual(await readHistory(fixture), { conditionReference: "Condition/dx", value: "established", source: "doctor" });
 });
+
+test("stye recurrence is New after Resolved this visit while clinical status stays active", async () => {
+  const fixture = historyFixture();
+  fixture.addVisit("first", "2026-03-14T12:00:00Z", "active");
+  const followup = fixture.addVisit("followup", "2026-04-14T12:00:00Z", "active");
+  const reads: string[] = [];
+  fixture.deps.store.listByEncounter = async (encounterId?: string) => {
+    reads.push(encounterId!);
+    return encounterId === "followup" ? [{ conditionReference: "Condition/followup", encounterId, status: "resolved-this-visit", setBy: "Practitioner/doctor", setAt: "2026-04-14T12:00:00Z", updatedAt: "2026-04-14T12:00:00Z" }] : [];
+  };
+  assert.equal((await readHistory(fixture)).value, "new");
+  assert.equal(followup.clinicalStatus!.coding![0]!.code, "active");
+  assert.ok(reads.includes("followup"), "prior visit status must come from the store");
+});
+
+test("mixed-eye latest visit stays Established when only one matching eye is resolved", async () => {
+  const fixture = historyFixture();
+  fixture.addVisit("prior", "2026-04-14T12:00:00Z", "resolved");
+  const activeEye = condition("prior::synthetic::right", "prior");
+  activeEye.id = "active-eye";
+  activeEye.clinicalStatus = { coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-clinical", code: "active" }] };
+  fixture.resources["Condition/active-eye"] = activeEye;
+  (fixture.visits[0] as { diagnosis: { condition: { reference: string } }[] }).diagnosis.push({ condition: { reference: "Condition/active-eye" } });
+  assert.equal((await readHistory(fixture)).value, "established");
+});
+
+test("history failure preserves doctor rows and marks only unsuggested rows unavailable", async () => {
+  const fixture = historyFixture();
+  const other = { ...structuredClone(fixture.currentCondition), id: "other" };
+  fixture.resources["Condition/other"] = other;
+  fixture.current.diagnosis.push({ condition: { reference: "Condition/other" } });
+  fixture.overrides.push({ conditionReference: "Condition/dx", encounterId: "current", value: "established", setBy: "Practitioner/doctor", setAt: "2026-09-14T12:00:00Z" });
+  fixture.current.period.start = "2026-09-14";
+  const { handleDiagnosisNewnessReadRequest } = await import("../src/clinical-graph/diagnosis-newness-endpoint.js");
+  const result = await handleDiagnosisNewnessReadRequest(fixture.deps, { authHeader: "Bearer synthetic", params: { encounterId: "current" } });
+  assert.equal(result.status, 200);
+  assert.deepEqual((result.body as { rows: unknown[] }).rows, [
+    { conditionReference: "Condition/dx", value: "established", source: "doctor" },
+    { conditionReference: "Condition/other", source: "unavailable" },
+  ]);
+});

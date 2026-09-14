@@ -78,8 +78,20 @@ export async function handleDiagnosisNewnessReadRequest(
       else needsSuggestion.push(condition);
     }
     if (needsSuggestion.length) {
-      const history = await readPriorDiagnoses(staff.fhir, encounter);
-      rows.push(...needsSuggestion.map((condition) => suggestDiagnosisNewness(condition, history)));
+      let history;
+      try {
+        history = await readPriorDiagnoses(staff.fhir, encounter, deps.store);
+      } catch {
+        history = undefined;
+      }
+      for (const condition of needsSuggestion) {
+        try {
+          if (!history) throw new Error("History unavailable");
+          rows.push(suggestDiagnosisNewness(condition, history));
+        } catch {
+          rows.push({ conditionReference: `Condition/${condition.id}`, source: "unavailable" });
+        }
+      }
     }
     return { status: 200, body: { rows } };
   } catch {

@@ -3,7 +3,7 @@ import { searchAll, type FhirSearchClient } from "../fhir-search.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "./diagnosis-pick-endpoint.js";
 import { parseDiagnosisIdentifier } from "./diagnosis-identifier.js";
 import type { DiagnosisNewnessOverride, DiagnosisNewnessRow } from "./diagnosis-newness-types.js";
-import type { DiagnosisVisitStatusRow } from "./diagnosis-visit-status-store.js";
+import type { DiagnosisVisitStatusRow, DiagnosisVisitStatusStore } from "./diagnosis-visit-status-store.js";
 
 export interface DiagnosisHistoryClient extends FhirSearchClient {
   read<T extends Resource>(type: T["resourceType"], id: string): Promise<T>;
@@ -12,6 +12,7 @@ export interface DiagnosisHistoryClient extends FhirSearchClient {
 export interface PriorDiagnosis {
   condition: Condition;
   encounter: Encounter;
+  visitStatus?: DiagnosisVisitStatusRow["status"];
 }
 
 function catalogKey(condition: Condition): string | undefined {
@@ -60,7 +61,7 @@ export function twelveMonthsBefore(instant: number): number {
   return cutoff.getTime();
 }
 
-export async function readPriorDiagnoses(fhir: DiagnosisHistoryClient, encounter: Encounter): Promise<PriorDiagnosis[]> {
+export async function readPriorDiagnoses(fhir: DiagnosisHistoryClient, encounter: Encounter, store: Pick<DiagnosisVisitStatusStore, "listByEncounter">): Promise<PriorDiagnosis[]> {
   const patient = encounter.subject?.reference;
   if (!patient?.match(/^Patient\/[A-Za-z0-9.-]+$/)) throw new Error("The encounter must reference a patient.");
   const start = encounterStart(encounter);
@@ -71,6 +72,7 @@ export async function readPriorDiagnoses(fhir: DiagnosisHistoryClient, encounter
     if (visit.id === encounter.id || visit.status === "entered-in-error" || visit.status === "cancelled") continue;
     const date = encounterStart(visit);
     if (date >= start || date < twelveMonthsBefore(start)) continue;
+    const statuses = await store.listByEncounter(visit.id!);
     for (const diagnosis of visit.diagnosis ?? []) {
       const match = diagnosis.condition.reference?.match(/^Condition\/([A-Za-z0-9.-]+)$/);
       if (!match) continue;
@@ -79,7 +81,7 @@ export async function readPriorDiagnoses(fhir: DiagnosisHistoryClient, encounter
         throw new Error("Diagnosis history does not belong to its patient and encounter.");
       }
       if (condition.verificationStatus?.coding?.some((coding) => ["refuted", "entered-in-error"].includes(coding.code ?? ""))) continue;
-      prior.push({ condition, encounter: visit });
+      prior.push({ condition, encounter: visit, visitStatus: statuses.find((row) => row.conditionReference === diagnosis.condition.reference)?.status });
     }
   }
   return prior;
@@ -95,7 +97,7 @@ export function suggestDiagnosisNewness(condition: Condition, history: PriorDiag
   const latestVisit = matches.filter((row) => row.encounter.id === latest.encounter.id);
   const isResolved = (prior: PriorDiagnosis) => prior.condition.clinicalStatus?.coding?.some((coding) =>
     coding.system === "http://terminology.hl7.org/CodeSystem/condition-clinical" && coding.code === "resolved",
-  ) === true;
+  ) === true || prior.visitStatus === "resolved-this-visit";
   const sameInstantOtherVisit = matches.filter((row) => row.encounter.id !== latest.encounter.id && encounterStart(row.encounter) === encounterStart(latest.encounter));
   if (sameInstantOtherVisit.some((row) => isResolved(row) !== latestVisit.every(isResolved))) {
     throw new Error("Matching visits have the same start time and conflicting resolution states.");

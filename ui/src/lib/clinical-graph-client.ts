@@ -406,13 +406,11 @@ export async function updateDiagnosisVisitStatus(input: {
 
 
 export type DiagnosisNewness = "new" | "established";
-export interface DiagnosisNewnessRow {
+export type DiagnosisNewnessRow = {
   conditionReference: string;
-  value: DiagnosisNewness;
-  source: "suggestion" | "doctor";
   matchedBy?: "catalog-key" | "icd10-category";
   matchedEncounterReference?: string;
-}
+} & ({ value: DiagnosisNewness; source: "suggestion" | "doctor" } | { value?: never; source: "unavailable" });
 
 export async function readDiagnosisNewness(encounterId: string): Promise<DiagnosisNewnessRow[]> {
   const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-newness`, { headers: authHeaders() });

@@ -711,9 +711,9 @@ export function DiagnosisWorkspace({
               </div>
               <div className="rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface-2)] p-2">
                 <div className="mb-1 text-xs text-[color:var(--odos-muted)]">
-                  {newnessRows[selectedReference!]?.source === "doctor" ? "Doctor's choice" : newnessRows[selectedReference!] ? "ODOS suggestion" : "New / Established"}
+                  {newnessRows[selectedReference!]?.source === "doctor" ? "Doctor's choice" : newnessRows[selectedReference!]?.source === "suggestion" ? "ODOS suggestion" : "New / Established"}
                 </div>
-                {newnessError && <div role="alert" data-testid="diagnosis-newness-error">{newnessError} <button type="button" onClick={() => void load()}>Retry</button></div>}
+                {(newnessError || newnessRows[selectedReference!]?.source === "unavailable") && <div role="alert" data-testid="diagnosis-newness-error">{newnessError ?? "Suggestion unavailable. Retry or record a doctor’s choice."} <button type="button" onClick={() => void load()}>Retry</button></div>}
                 <div role="group" aria-label="Diagnosis New or Established" className="flex gap-2">
                   {(["new", "established"] as const).map((value) => (
                     <button key={value} type="button" aria-pressed={newnessRows[selectedReference!]?.value === value}

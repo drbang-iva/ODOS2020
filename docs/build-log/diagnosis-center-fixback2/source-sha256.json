@@ -1,0 +1,10 @@
+{
+  "mcp/src/clinical-graph/diagnosis-newness-endpoint.ts": "16777395f304388a9fc9a2117fa9e008a21996a7b0702917c56dbfd029001681",
+  "mcp/src/clinical-graph/diagnosis-newness-types.ts": "e5ca0426c74db5279fad9ec3ecd25e6b3cfb39d5505099773a8c4b96057f9633",
+  "mcp/src/clinical-graph/diagnosis-newness.ts": "a5f2d3b6e67e73f081aae2a09284c2400b88fe5e8a8933b535036ccfb6bae6a0",
+  "mcp/tests/diagnosisNewness.test.ts": "336e16afecc8b780d06d61d5d99a2a59d56a053a23e827c4f72db3b238d79b3e",
+  "ui/src/components/charting/AssessmentSection.tsx": "5ec23d1b16dcd6d45bdfc9f3d50677cd635bab4a277b6faee3a37f34935c08b4",
+  "ui/src/components/charting/DiagnosisWorkspace.tsx": "21a9475c29294cfa55baccf50f64f01f77bee6135621b82ce1e56956369d8bb8",
+  "ui/src/lib/clinical-graph-client.ts": "1691784269f85259b9cbba8dbd32c4f648883cf1372223ae0df40909792db9ce",
+  "ui/tests/diagnosisWorkspace.test.tsx": "736976abf22571c00cc060d2e4be100380f4b2ac70465d3e88e0ca362c33627d"
+}
