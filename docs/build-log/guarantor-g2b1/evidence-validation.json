@@ -11,8 +11,9 @@
     "scannerCoverageClaimedForRuntime": false
   },
   "credentialScan": {
-    "files": 93,
-    "knownSecretValues": 8,
+    "files": 98,
+    "scope": "Evidence directory plus guarantor-g2b1-ledger.md",
+    "knownSecretValues": 10,
     "matches": 0
   },
   "fixtureScannerAfterRename": {
@@ -40,5 +41,12 @@
     },
     "preflight": "0 warnings, 0 hard blocks",
     "allRecordedSourceHashesMatch": true
+  },
+  "collectionReview": {
+    "head": "9d8b629c0c47e9f6e3c53c9b667475723cc57116",
+    "observations": 8,
+    "unexpectedResults": 0,
+    "policyMutation": false,
+    "probeSyntaxCheckExit": 0
   }
 }

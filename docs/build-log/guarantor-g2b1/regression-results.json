@@ -62,7 +62,9 @@
         "education list reports dispatchability from the same per-role configuration enforced at send time"
       ],
       "sha256": "5716df534293f334c9b42554edad5f9b19bf38c3fd5ff25fb7c0b007f74d1600",
-      "applicationHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6"
+      "applicationHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
+      "historical": true,
+      "evidenceRole": "Historical local run at its recorded applicationHead; not a current-head gate verdict."
     },
     {
       "log": "final-ui",
@@ -75,7 +77,9 @@
       },
       "failedTests": [],
       "sha256": "d4af78f22b5e5f99ab3a3c01128e17b3984ed5847048f426018aea42baac2f8a",
-      "applicationHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6"
+      "applicationHead": "82fc66de6cb04f74bcbbe7805c7934c934f932e6",
+      "historical": true,
+      "evidenceRole": "Historical local run at its recorded applicationHead; not a current-head gate verdict."
     },
     {
       "log": "final-ui-build",
@@ -460,8 +464,8 @@
       "skipped": 0
     },
     "credentialScan": {
-      "files": 93,
-      "secretValues": 8,
+      "files": 98,
+      "secretValues": 10,
       "matches": 0
     },
     "finalPreflight": "0 warnings, 0 hard blocks",
@@ -499,6 +503,27 @@
       "runUrl": "https://github.com/drbang-iva/ODOS2020/actions/runs/34840825920",
       "mcpJobUrl": "https://github.com/drbang-iva/ODOS2020/actions/runs/34840825920/job/103965287143",
       "rawLogSha256": "7a79d51365423fd6c378c0a019e4cb7d4f959df8f392cca8c71edf8be6a26993"
+    },
+    {
+      "head": "9d8b629c0c47e9f6e3c53c9b667475723cc57116",
+      "mcp": {
+        "tests": 4797,
+        "pass": 4744,
+        "fail": 6,
+        "skipped": 47
+      },
+      "failedTests": [
+        "live FHIR read grant check covers all four chart resources through compiled role policies",
+        "FHIR read grant CLI passes only with full coverage and always prints its limits",
+        "live audit boot backfills a restored pre-ledger schema without replaying it",
+        "live audit boot backfills a partially populated ledger without replaying legacy migrations",
+        "live audit boot applies a genuinely absent migration instead of marking it applied",
+        "live audit backfill leaves a NOT VALID migration for the normal loop"
+      ],
+      "historical": true,
+      "failureDisposition": "Two inventory counts and four migration pins; no local PostgreSQL or HTTP transport failures.",
+      "mcpJobUrl": "https://github.com/drbang-iva/ODOS2020/actions/runs/34843664513/job/103974376329",
+      "rawLogSha256": "d6f7fbac310a28fc4e9682266c87323b9e33c87c7cb551f8b8dc3375538c2a38"
     }
   ]
 }

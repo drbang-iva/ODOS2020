@@ -605,3 +605,16 @@ mcp — install + typecheck + tests	run mcp tests	2026-09-14T12:03:23.9941115Z #
 mcp — install + typecheck + tests	run mcp tests	2026-09-14T12:03:23.9941618Z # pass 4744
 mcp — install + typecheck + tests	run mcp tests	2026-09-14T12:03:23.9941878Z # fail 6
 mcp — install + typecheck + tests	run mcp tests	2026-09-14T12:03:23.9942359Z # skipped 47
+
+===== CI at 9d8b629c0c47e9f6e3c53c9b667475723cc57116 =====
+https://github.com/drbang-iva/ODOS2020/actions/runs/34843664513/job/103974376329
+2026-09-14T12:31:55.7859764Z not ok 72 - live FHIR read grant check covers all four chart resources through compiled role policies
+2026-09-14T12:31:55.7874969Z not ok 73 - FHIR read grant CLI passes only with full coverage and always prints its limits
+2026-09-14T12:33:37.5786247Z not ok 2556 - live audit boot backfills a restored pre-ledger schema without replaying it
+2026-09-14T12:33:38.0261359Z not ok 2557 - live audit boot backfills a partially populated ledger without replaying legacy migrations
+2026-09-14T12:33:38.4541758Z not ok 2558 - live audit boot applies a genuinely absent migration instead of marking it applied
+2026-09-14T12:33:38.8748015Z not ok 2559 - live audit backfill leaves a NOT VALID migration for the normal loop
+2026-09-14T12:34:35.8509272Z # tests 4797
+2026-09-14T12:34:35.8509957Z # pass 4744
+2026-09-14T12:34:35.8510266Z # fail 6
+2026-09-14T12:34:35.8510919Z # skipped 47
