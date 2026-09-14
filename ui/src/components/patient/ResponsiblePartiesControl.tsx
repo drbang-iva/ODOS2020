@@ -43,6 +43,9 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
   const dirty = editable && JSON.stringify(draft) !== JSON.stringify(demographics(loaded.snapshot.person));
   const refresh = async () => {
     const next = await loadGuarantor(loaded.relatedPerson.id!);
+    const loadedTaskId = loaded.kind === "pending" ? loaded.operation.task.id : undefined;
+    const nextTaskId = next.kind === "pending" ? next.operation.task.id : undefined;
+    if (loadedTaskId !== nextTaskId) setCorrectionReason("");
     setLoaded(next);
     setEditedContacts(new Set());
     setDraft(next.kind === "editable" ? demographics(next.snapshot.person) : {});

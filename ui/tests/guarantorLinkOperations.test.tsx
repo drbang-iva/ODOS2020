@@ -264,3 +264,24 @@ test("S7: Repair stops at a newly claimed matching child before repairing a mism
   assert.ok(data.reads.includes(`/guarantors/link-operations/${operationId}`));
   assert.deepEqual(data.get<RelatedPerson>("RelatedPerson/b").name, destination.name);
 }));
+
+test("S7: a correction reason survives same-Task refusal and clears when another Task takes over", async () => usingFixture(async data => {
+  data.claim("a");
+  data.action = () => Response.json({ error: "Correction refused; original remains pending" }, { status: 409 });
+  await usingEditor(data, async renderer => {
+    const reason = () => renderer.root.findAllByType("label").find(node => node.children[0] === "Reason for correction")!.findByType("input");
+    await act(async () => { reason().props.onChange({ target: { value: "Reason for the original operation" } }); });
+    await act(async () => { await button(renderer, "Correct")!.props.onClick(); });
+    assert.equal(data.writes.length, 1);
+    assert.equal(reason().props.value, "Reason for the original operation", "a same-Task refusal must preserve the entered explanation");
+    const successorId = `${operationId}-successor`;
+    data.operation.task = { ...data.operation.task, id: successorId };
+    data.change("RelatedPerson/a", { extension: data.get<RelatedPerson>("RelatedPerson/a").extension!.map(extension => extension.url === claimUrl
+      ? { ...extension, valueReference: { reference: `Task/${successorId}` } } : extension) });
+    await act(async () => { await button(renderer, "Reload guarantor")!.props.onClick(); });
+    assert.match(renderedText(renderer), new RegExp(successorId));
+    assert.equal(reason().props.value, "", "a new Task must not inherit the previous operation's explanation");
+    assert.equal(button(renderer, "Correct")!.props.disabled, true);
+    assert.equal(data.writes.length, 1, "the new operation needs its own entered reason before another request");
+  });
+}));
