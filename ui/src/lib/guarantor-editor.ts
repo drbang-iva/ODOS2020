@@ -228,7 +228,6 @@ export async function repairGuarantor(previous: GuarantorSnapshot): Promise<Guar
   let halted: "stopped" | "no-response" | undefined;
   for (const item of current.children) {
     if (halted) { writes.set(item.resource.id!, halted); continue; }
-    if (demographicsMatch(item.resource, current.person)) continue;
     try {
       const fresh = await fhir.read<RelatedPerson>("RelatedPerson", item.resource.id!);
       halted = await activeOperation(fresh) ? "stopped" : await checkGeneration(current.person);

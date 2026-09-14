@@ -250,3 +250,17 @@ test("L23 S7: an edit after release is ordinary drift and Repair converges to cu
     assert.equal(button(renderer, "Complete"), undefined);
   });
 }));
+
+test("S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling", async () => usingFixture(async data => {
+  data.change("RelatedPerson/b", destination);
+  const snapshot = await data.snapshot();
+  data.before = (path, method) => {
+    if (path === "Person" && method === "GET") { data.before = undefined; data.claim("a"); }
+  };
+  const result = await repairGuarantor(snapshot);
+  assert.deepEqual(data.writes, [], "a matching child's active claim must prevent the later sibling PUT");
+  assert.equal(result.status, "superseded");
+  assert.deepEqual(result.children.map(child => child.writeStatus), ["stopped", "stopped"]);
+  assert.ok(data.reads.includes(`/guarantors/link-operations/${operationId}`));
+  assert.deepEqual(data.get<RelatedPerson>("RelatedPerson/b").name, destination.name);
+}));
