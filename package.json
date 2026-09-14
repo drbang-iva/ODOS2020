@@ -52,7 +52,8 @@
     "dr-drill": "tsx scripts/dr-drill.ts",
     "audit-verify": "tsx scripts/verify-tier1-visit-audit.ts",
     "agentops:migration-type-regen": "tsx scripts/agentops-migration-type-regen.ts",
-    "verify-backup-destination": "tsx scripts/verify-backup-destination.ts"
+    "verify-backup-destination": "tsx scripts/verify-backup-destination.ts",
+    "reseed-common-diagnosis-pins": "tsx --env-file-if-exists=.env scripts/reseed-common-diagnosis-pins.ts"
   },
   "dependencies": {
     "@medplum/fhirtypes": "^4.0.0",

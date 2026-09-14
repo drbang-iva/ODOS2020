@@ -1,0 +1,31 @@
+ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test
+1..4199
+# tests 4734
+# suites 0
+# pass 4674
+# fail 0
+# cancelled 0
+# skipped 60
+# todo 0
+# duration_ms 72907.352958
+⚠️  LIVE STACK NOT CONFIGURED — 41 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.
+
+npm --prefix mcp exec tsc -- --noEmit -p mcp/tsconfig.json
+Exit 0; no diagnostics.
+
+npm run typecheck:scripts
+
+> odos2020@0.0.1 typecheck:scripts
+> tsc -p tsconfig.scripts.json
+
+Exit 0; no diagnostics.
+
+npm --prefix mcp test -- tests/diagnosisQuickList.test.ts
+# tests 28
+# pass 28
+# fail 0
+# skipped 0
+
+npm run preflight
+ODOS preflight complete: 0 warning(s), 0 hard block(s).
+Exit 0.

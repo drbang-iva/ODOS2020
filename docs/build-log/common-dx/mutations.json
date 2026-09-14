@@ -1,0 +1,80 @@
+[
+  {
+    "guard": "G1",
+    "redExit": 1,
+    "greenExit": 0,
+    "restored": true
+  },
+  {
+    "guard": "G2",
+    "redExit": 1,
+    "greenExit": 0,
+    "restored": true
+  },
+  {
+    "guard": "G3",
+    "redExit": 1,
+    "greenExit": 0,
+    "restored": true
+  },
+  {
+    "guard": "G4",
+    "redExit": 1,
+    "greenExit": 0,
+    "restored": true
+  },
+  {
+    "guard": "G5",
+    "redExit": 1,
+    "greenExit": 0,
+    "restored": true
+  },
+  {
+    "guard": "G6",
+    "redExit": 1,
+    "greenExit": 0,
+    "restored": true
+  },
+  {
+    "guard": "G7",
+    "redExit": 1,
+    "greenExit": 0,
+    "restored": true
+  },
+  {
+    "guard": "G8",
+    "redExit": 1,
+    "greenExit": 0,
+    "restored": true
+  },
+  {
+    "guard": "G9",
+    "redExit": 1,
+    "greenExit": 0,
+    "restored": true
+  },
+  {
+    "guard": "starter retries",
+    "redExit": 1,
+    "greenExit": 0,
+    "restored": true
+  },
+  {
+    "guard": "operator refuses",
+    "redExit": 1,
+    "greenExit": 0,
+    "restored": true
+  },
+  {
+    "guard": "empty save records",
+    "redExit": 1,
+    "greenExit": 0,
+    "restored": true
+  },
+  {
+    "guard": "invalid persisted",
+    "redExit": 1,
+    "greenExit": 0,
+    "restored": true
+  }
+]

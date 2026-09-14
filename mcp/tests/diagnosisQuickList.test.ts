@@ -1,3 +1,4 @@
+import { reseedCommonDiagnosisPins } from "../../scripts/reseed-common-diagnosis-pins.js";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Basic, Bundle, Resource } from "@medplum/fhirtypes";
@@ -8,6 +9,7 @@ import {
 } from "../src/clinical-graph/diagnosis-quick-list-endpoint.js";
 import {
   buildDiagnosisPickTallyResource,
+  parseDiagnosisPickTallyResource,
   FhirDiagnosisPickTallyStore,
 } from "../src/clinical-graph/diagnosis-pick-tally-store.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
@@ -43,6 +45,7 @@ test("quick-list pins round-trip without changing per-finding usage counts", asy
   assert.deepEqual(await store.read("Practitioner/doc"), {
     counts: { "finding-a": { myopia: 1 } },
     pinnedDiagnosisKeys: ["presbyopia", "myopia"],
+    pinState: "custom",
     updatedAt: "2026-08-09T12:01:00.000Z",
   });
   await assert.rejects(
@@ -85,19 +88,19 @@ test("quick-list excludes an unused unpinned catalog even when it exceeds the Co
   assert.deepEqual(ordered, []);
 });
 
-test("quick-list preserves every pin in doctor-selected order beyond the Common cap", () => {
-  const diagnoses = diagnosisRows(20);
-  const pinnedDiagnosisKeys = diagnoses.slice(0, 17).map((row) => row.stableKey).reverse();
+test("quick-list displays the first 20 doctor pins when stored pins exceed the cap", () => {
+  const diagnoses = diagnosisRows(25);
+  const pinnedDiagnosisKeys = diagnoses.slice(0, 24).map((row) => row.stableKey).reverse();
   const ordered = orderDiagnosisQuickList(diagnoses, {
     counts: {},
     pinnedDiagnosisKeys,
     updatedAt: "2026-08-10T12:00:00.000Z",
   });
 
-  assert.deepEqual(ordered.map((row) => row.stableKey), pinnedDiagnosisKeys);
+  assert.deepEqual(ordered.map((row) => row.stableKey), pinnedDiagnosisKeys.slice(0, 20));
 });
 
-test("quick-list fills positive usage in descending order only to 15 total rows", () => {
+test("quick-list fills positive usage in descending order only to 20 total rows", () => {
   const diagnoses = diagnosisRows(20);
   const ordered = orderDiagnosisQuickList(diagnoses, {
     counts: {
@@ -123,6 +126,11 @@ test("quick-list fills positive usage in descending order only to 15 total rows"
     "diagnosis-10",
     "diagnosis-11",
     "diagnosis-12",
+    "diagnosis-13",
+    "diagnosis-14",
+    "diagnosis-15",
+    "diagnosis-16",
+    "diagnosis-17",
   ]);
 });
 
@@ -147,7 +155,7 @@ test("staged diagnosis members collapse into four family entries in Common and F
     "dry_amd_early", "dry_amd_intermediate", "dry_amd_advanced_atrophic_without_subfoveal", "dry_amd_advanced_atrophic_with_subfoveal",
     "wet_amd_active_cnv", "wet_amd_inactive_cnv", "wet_amd_inactive_scar",
   ]);
-  assert.deepEqual(body.diagnoses.map((row) => [row.stableKey, row.display, row.axisLabel]), [
+  assert.deepEqual(body.diagnoses.filter((row) => row.axisLabel).map((row) => [row.stableKey, row.display, row.axisLabel]), [
     ["primary-open-angle-glaucoma", "Primary open-angle glaucoma", "Stage"],
   ]);
   assert.deepEqual(body.catalog.filter((row) => row.axisLabel).map((row) => [row.stableKey, row.display, row.axisLabel]), [
@@ -416,7 +424,10 @@ test("quick-list routes isolate practitioner pins and reject unknown diagnoses",
 });
 
 class MemoryFhir {
+  readonly baseUrl = "http://localhost:8103";
+  async searchUrl(): Promise<Bundle<Basic>> { throw new Error("Unexpected page"); }
   readonly resources: Resource[] = [];
+  writeCalls = 0;
 
   async search<T extends Basic>(
     resourceType: T["resourceType"],
@@ -441,6 +452,7 @@ class MemoryFhir {
   }
 
   async create<T extends Basic>(resource: T): Promise<T> {
+    this.writeCalls += 1;
     const persisted = {
       ...resource,
       id: resource.id ?? `basic-${this.resources.length + 1}`,
@@ -460,6 +472,7 @@ class MemoryFhir {
     );
     if (index < 0) throw new Error(`Missing ${resourceType}/${id}`);
     const versionId = String(Number(this.resources[index]!.meta?.versionId ?? "0") + 1);
+    this.writeCalls += 1;
     const persisted = {
       ...resource,
       id,
@@ -534,3 +547,225 @@ function diagnosisRows(count: number): DiagnosisCatalogRow[] {
     display: `Diagnosis ${String(index).padStart(2, "0")}`,
   }));
 }
+
+function quickListDeps(fhir: MemoryFhir, actorRole: "provider" | "admin" = "provider") {
+  return {
+    authenticate: async () => ({ staffReference: "Practitioner/guard", actorRole }),
+    tallyFhir: fhir,
+    diagnosisCatalog: async () => buildDiagnosisCatalogSeeds(),
+    now: () => "2026-09-14T12:00:00.000Z",
+  };
+}
+
+function legacyTallyFormat(fhir: MemoryFhir, missingPins = false): void {
+  for (const resource of fhir.resources as Basic[]) {
+    const extension = resource.extension!.find((entry) => entry.valueString)!;
+    const row = JSON.parse(extension.valueString!);
+    delete row.pinState;
+    if (missingPins) delete row.pinnedDiagnosisKeys;
+    extension.valueString = JSON.stringify(row);
+  }
+}
+
+test("G1 Common returns 20 eligible usage rows", async () => {
+  const fhir = new MemoryFhir();
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  const diagnoses = diagnosisRows(25);
+  for (const diagnosis of diagnoses) {
+    await store.increment("Practitioner/guard", "finding", diagnosis.stableKey, "now");
+  }
+  await store.replacePinned("Practitioner/guard", [], "now");
+  const result = await handleDiagnosisQuickListRequest({ ...quickListDeps(fhir), diagnosisCatalog: async () => diagnoses }, { authHeader: undefined });
+  assert.equal((result.body as { diagnoses: unknown[] }).diagnoses.length, 20);
+});
+
+test("G2 first pick receives all starter pins in order and preserves usage", async () => {
+  const fhir = new MemoryFhir();
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  await store.increment("Practitioner/guard", "finding", "presbyopia", "now");
+  const result = await handleDiagnosisQuickListRequest(quickListDeps(fhir), { authHeader: undefined });
+  const body = result.body as { pinnedDiagnosisKeys: string[]; diagnoses: Array<{ stableKey: string; tallyCount: number }> };
+  assert.deepEqual(body.pinnedDiagnosisKeys, STARTER_DIAGNOSIS_KEYS);
+  assert.deepEqual(body.diagnoses.map((row) => row.stableKey), [...STARTER_DIAGNOSIS_KEYS, "presbyopia"]);
+  assert.equal(body.diagnoses.at(-1)?.tallyCount, 1);
+  assert.deepEqual((await store.read("Practitioner/guard"))?.counts, { finding: { presbyopia: 1 } });
+});
+
+test("G3 pre-pin storage receives starter and preserves usage", async () => {
+  const fhir = new MemoryFhir();
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  await store.increment("Practitioner/guard", "finding", "presbyopia", "now");
+  legacyTallyFormat(fhir, true);
+  const result = await handleDiagnosisQuickListRequest(quickListDeps(fhir), { authHeader: undefined });
+  assert.deepEqual((result.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys, STARTER_DIAGNOSIS_KEYS);
+  assert.deepEqual((await store.read("Practitioner/guard"))?.counts, { finding: { presbyopia: 1 } });
+});
+
+test("G4 saved empty pins survive repeated reads and later picks", async () => {
+  const fhir = new MemoryFhir();
+  const deps = quickListDeps(fhir);
+  const saved = await handleDiagnosisQuickListMutationRequest(deps, { authHeader: undefined, body: { pinnedDiagnosisKeys: [] } });
+  assert.equal(saved.status, 200);
+  await new FhirDiagnosisPickTallyStore(fhir).increment("Practitioner/guard", "finding", "presbyopia", "now");
+  const before = fhir.writeCalls;
+  for (let i = 0; i < 3; i++) {
+    const result = await handleDiagnosisQuickListRequest(deps, { authHeader: undefined });
+    assert.deepEqual((result.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys, []);
+  }
+  assert.equal(fhir.writeCalls, before);
+});
+
+test("G5 doctor pins remain unchanged in doctor order", async () => {
+  const fhir = new MemoryFhir();
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  await store.replacePinned("Practitioner/guard", ["presbyopia", "myopia"], "now");
+  for (let i = 0; i < 2; i++) {
+    const result = await handleDiagnosisQuickListRequest(quickListDeps(fhir), { authHeader: undefined });
+    assert.deepEqual((result.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys, ["presbyopia", "myopia"]);
+  }
+});
+
+test("G6 chart reader causes no seed write for missing or unset records", async () => {
+  for (const existing of [false, true]) {
+    const fhir = new MemoryFhir();
+    if (existing) await new FhirDiagnosisPickTallyStore(fhir).increment("Practitioner/guard", "finding", "presbyopia", "now");
+    const before = structuredClone(fhir.resources);
+    const writes = fhir.writeCalls;
+    const result = await handleDiagnosisQuickListRequest(quickListDeps(fhir, "admin"), { authHeader: undefined });
+    assert.equal(result.status, 200);
+    assert.equal(fhir.writeCalls, writes);
+    assert.deepEqual(fhir.resources, before);
+  }
+});
+
+test("G7 ambiguous legacy empty pins are preserved across reads and picks", async () => {
+  const fhir = new MemoryFhir();
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  await store.increment("Practitioner/guard", "finding", "presbyopia", "now");
+  legacyTallyFormat(fhir);
+  for (let i = 0; i < 2; i++) {
+    const result = await handleDiagnosisQuickListRequest(quickListDeps(fhir), { authHeader: undefined });
+    assert.deepEqual((result.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys, []);
+    await store.increment("Practitioner/guard", "finding", "presbyopia", "later");
+  }
+});
+
+test("G8 operator dry run lists every ambiguous tally without writes", async () => {
+  const fhir = new MemoryFhir();
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  await store.increment("Practitioner/one", "finding", "presbyopia", "now");
+  await store.increment("Practitioner/two", "finding", "myopia", "now");
+  legacyTallyFormat(fhir);
+  const before = structuredClone(fhir.resources);
+  const writes = fhir.writeCalls;
+  const result = await reseedCommonDiagnosisPins(fhir, { now: "later" });
+  assert.deepEqual(result.changes.map((row) => row.practitionerReference), ["Practitioner/one", "Practitioner/two"]);
+  assert.ok(result.changes.every((row) => row.action === "would-seed"));
+  assert.deepEqual(result.changes[0].pinnedDiagnosisKeys, STARTER_DIAGNOSIS_KEYS);
+  assert.equal(fhir.writeCalls, writes);
+  assert.deepEqual(fhir.resources, before);
+});
+
+test("G9 operator apply seeds only ambiguous empties and is idempotent", async () => {
+  const fhir = new MemoryFhir();
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  await store.increment("Practitioner/ambiguous", "finding", "presbyopia", "now");
+  await store.increment("Practitioner/ambiguous", "finding", "presbyopia", "now");
+  await store.replacePinned("Practitioner/legacy-pins", ["presbyopia", "myopia"], "now");
+  legacyTallyFormat(fhir);
+  await store.replacePinned("Practitioner/custom-empty", [], "now");
+  await store.initializePinnedIfAbsent("Practitioner/seeded", [], "now");
+  await store.increment("Practitioner/unset", "finding", "myopia", "now");
+  const untouched = structuredClone(fhir.resources.slice(1));
+  const result = await reseedCommonDiagnosisPins(fhir, { apply: true, now: "later" });
+  assert.deepEqual(result.changes.map((row) => row.practitionerReference), ["Practitioner/ambiguous"]);
+  assert.equal(result.changes[0].action, "seeded");
+  const row = await store.read("Practitioner/ambiguous");
+  assert.deepEqual(row?.pinnedDiagnosisKeys, STARTER_DIAGNOSIS_KEYS);
+  assert.deepEqual(row?.counts, { finding: { presbyopia: 2 } });
+  assert.equal(row?.pinState, "seeded");
+  assert.deepEqual(fhir.resources.slice(1), untouched);
+  const writes = fhir.writeCalls;
+  const again = await reseedCommonDiagnosisPins(fhir, { apply: true, now: "later-again" });
+  assert.deepEqual(again.changes, []);
+  assert.equal(fhir.writeCalls, writes);
+});
+
+test("starter retries preserve a concurrent doctor's empty save", async () => {
+  class SaveRaceFhir extends MemoryFhir {
+    raced = false;
+    override async update<T extends Basic>(type: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {
+      if (!this.raced) {
+        this.raced = true;
+        await new FhirDiagnosisPickTallyStore(this).replacePinned("Practitioner/guard", [], "doctor-save");
+        assert.ok(headers?.["If-Match"], "seed must be conditional");
+        throw Object.assign(new Error("changed"), { status: 412 });
+      }
+      return super.update(type, id, resource);
+    }
+  }
+  const fhir = new SaveRaceFhir();
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  await store.increment("Practitioner/guard", "finding", "presbyopia", "now");
+  const result = await handleDiagnosisQuickListRequest(quickListDeps(fhir), { authHeader: undefined });
+  assert.deepEqual((result.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys, []);
+  assert.equal((await store.read("Practitioner/guard"))?.pinState, "custom");
+  assert.deepEqual((await store.read("Practitioner/guard"))?.counts, { finding: { presbyopia: 1 } });
+});
+
+test("operator refuses a concurrent pin edit instead of overwriting it", async () => {
+  class SaveRaceFhir extends MemoryFhir {
+    raced = false;
+    override async update<T extends Basic>(type: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {
+      if (!this.raced) {
+        this.raced = true;
+        await new FhirDiagnosisPickTallyStore(this).replacePinned("Practitioner/guard", [], "doctor-save");
+        assert.ok(headers?.["If-Match"], "script must be conditional");
+        throw Object.assign(new Error("changed"), { status: 412 });
+      }
+      return super.update(type, id, resource);
+    }
+  }
+  const fhir = new SaveRaceFhir();
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  await store.increment("Practitioner/guard", "finding", "presbyopia", "now");
+  legacyTallyFormat(fhir);
+  const result = await reseedCommonDiagnosisPins(fhir, { apply: true });
+  assert.equal(result.exitCode, 1);
+  assert.equal(result.conflicts.length, 1);
+  assert.deepEqual(result.changes, []);
+  assert.deepEqual((await store.read("Practitioner/guard"))?.pinnedDiagnosisKeys, []);
+  assert.equal((await store.read("Practitioner/guard"))?.pinState, "custom");
+});
+
+test("invalid persisted pin states are rejected instead of treated as unset", async () => {
+  const fhir = new MemoryFhir();
+  await new FhirDiagnosisPickTallyStore(fhir).increment("Practitioner/guard", "finding", "presbyopia", "now");
+  const resource = fhir.resources[0] as Basic;
+  const original = JSON.parse(resource.extension![0].valueString!);
+  for (const pinState of [null, ["custom"], "unknown"]) {
+    resource.extension![0].valueString = JSON.stringify({ ...original, pinState });
+    assert.throws(() => parseDiagnosisPickTallyResource(resource), /pin state is invalid/);
+  }
+});
+
+test("empty save records custom intent when a first pick wins conditional create", async () => {
+  class PickRaceFhir extends MemoryFhir {
+    raced = false;
+    override async create<T extends Basic>(resource: T): Promise<T> {
+      if (!this.raced) {
+        this.raced = true;
+        await new FhirDiagnosisPickTallyStore(this).increment("Practitioner/guard", "finding", "presbyopia", "pick");
+        return structuredClone(this.resources[0]) as T;
+      }
+      return super.create(resource);
+    }
+  }
+  const fhir = new PickRaceFhir();
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  await store.replacePinned("Practitioner/guard", [], "save");
+  const result = await handleDiagnosisQuickListRequest(quickListDeps(fhir), { authHeader: undefined });
+  assert.deepEqual((result.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys, []);
+  assert.equal((await store.read("Practitioner/guard"))?.pinState, "custom");
+  assert.deepEqual((await store.read("Practitioner/guard"))?.counts, { finding: { presbyopia: 1 } });
+});

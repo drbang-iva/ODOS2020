@@ -9,6 +9,7 @@ export const DX_PICK_TALLY_WRITE_HEADERS = { "X-ODOS-Source": "diagnosis-pick-ta
 export interface DiagnosisPickTallyRow {
   counts: Record<string, Record<string, number>>;
   pinnedDiagnosisKeys: string[];
+  pinState?: "unset" | "seeded" | "custom";
   updatedAt: string;
 }
 
@@ -32,28 +33,36 @@ export class FhirDiagnosisPickTallyStore {
     updatedAt: string,
   ): Promise<DiagnosisPickTallyRow> {
     assertPinnedDiagnosisKeys(pinnedDiagnosisKeys);
-    const existing = await this.readResource(practitionerReference);
-    if (existing) return existing.row;
-    const initial: DiagnosisPickTallyRow = {
-      counts: {},
-      pinnedDiagnosisKeys: [...pinnedDiagnosisKeys],
-      updatedAt,
-    };
-    try {
-      const created = await this.fhir.create(
-        buildDiagnosisPickTallyResource(practitionerReference, initial),
-        {
-          ...DX_PICK_TALLY_WRITE_HEADERS,
-          "If-None-Exist": `identifier=${DX_PICK_TALLY_IDENTIFIER_SYSTEM}|${practitionerReference}`,
-        },
-      );
-      return parseDiagnosisPickTallyResource(created, practitionerReference);
-    } catch (error) {
-      if (!isConflict(error)) throw error;
-      const raced = await this.readResource(practitionerReference);
-      if (raced) return raced.row;
-      throw error;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const existing = await this.readResource(practitionerReference);
+      if (existing && existing.row.pinState !== "unset") return existing.row;
+      const next = withStarterDiagnosisPins(existing?.row, pinnedDiagnosisKeys, updatedAt);
+      try {
+        if (!existing) {
+          const created = await this.fhir.create(
+            buildDiagnosisPickTallyResource(practitionerReference, next),
+            {
+              ...DX_PICK_TALLY_WRITE_HEADERS,
+              "If-None-Exist": `identifier=${DX_PICK_TALLY_IDENTIFIER_SYSTEM}|${practitionerReference}`,
+            },
+          );
+          const persisted = parseDiagnosisPickTallyResource(created, practitionerReference);
+          if (persisted.pinState !== "unset") return persisted;
+        } else {
+          const { id, meta } = existing.resource;
+          if (!id || !meta?.versionId) throw new Error("Diagnosis starter requires a versioned tally.");
+          const updated = await this.fhir.update(
+            "Basic", id, buildDiagnosisPickTallyResource(practitionerReference, next, existing.resource),
+            { ...DX_PICK_TALLY_WRITE_HEADERS, "If-Match": `W/"${meta.versionId}"` },
+          );
+          return parseDiagnosisPickTallyResource(updated, practitionerReference);
+        }
+      } catch (error) {
+        if (attempt === 0 && isConflict(error)) continue;
+        throw error;
+      }
     }
+    throw new Error("Diagnosis starter update retry was exhausted.");
   }
 
   async increment(
@@ -64,9 +73,10 @@ export class FhirDiagnosisPickTallyStore {
   ): Promise<DiagnosisPickTallyRow> {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const existing = await this.readResource(practitionerReference);
-      const current = existing?.row ?? { counts: {}, pinnedDiagnosisKeys: [], updatedAt };
+      const current: DiagnosisPickTallyRow = existing?.row ?? { counts: {}, pinnedDiagnosisKeys: [], pinState: "unset", updatedAt };
       const findingCounts = current.counts[findingDefinitionStableKey] ?? {};
       const next: DiagnosisPickTallyRow = {
+        ...current,
         counts: {
           ...current.counts,
           [findingDefinitionStableKey]: {
@@ -118,6 +128,7 @@ export class FhirDiagnosisPickTallyStore {
       const next: DiagnosisPickTallyRow = {
         counts: existing?.row.counts ?? {},
         pinnedDiagnosisKeys: [...pinnedDiagnosisKeys],
+        pinState: "custom",
         updatedAt,
       };
       try {
@@ -130,7 +141,7 @@ export class FhirDiagnosisPickTallyStore {
             },
           );
           const persisted = parseDiagnosisPickTallyResource(created, practitionerReference);
-          if (samePins(persisted.pinnedDiagnosisKeys, next.pinnedDiagnosisKeys)) return persisted;
+          if (persisted.pinState === "custom" && samePins(persisted.pinnedDiagnosisKeys, next.pinnedDiagnosisKeys)) return persisted;
           if (attempt === 0) continue;
           throw new Error("Diagnosis quick-list pins changed concurrently.");
         }
@@ -207,7 +218,7 @@ export function parseDiagnosisPickTallyResource(resource: Basic, practitionerRef
   if (!raw) throw new Error("Diagnosis pick tally is missing its JSON extension.");
   const parsed = JSON.parse(raw) as unknown;
   const compatible = isRecord(parsed) && parsed.pinnedDiagnosisKeys === undefined
-    ? { ...parsed, pinnedDiagnosisKeys: [] }
+    ? { ...parsed, pinnedDiagnosisKeys: [], pinState: parsed.pinState === undefined ? "unset" : parsed.pinState }
     : parsed;
   assertDiagnosisPickTallyRow(compatible);
   return compatible;
@@ -223,6 +234,12 @@ function assertDiagnosisPickTallyRow(value: unknown): asserts value is Diagnosis
     }
   }
   assertPinnedDiagnosisKeys(value.pinnedDiagnosisKeys);
+  if (value.pinState !== undefined && (typeof value.pinState !== "string" || !["unset", "seeded", "custom"].includes(value.pinState))) {
+    throw new Error("Diagnosis quick-list pin state is invalid.");
+  }
+  if (value.pinState === "unset" && value.pinnedDiagnosisKeys.length > 0) {
+    throw new Error("Unset diagnosis pins must be empty.");
+  }
 }
 
 function assertPinnedDiagnosisKeys(value: unknown): asserts value is readonly string[] {
@@ -253,4 +270,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+export function withStarterDiagnosisPins(
+  row: DiagnosisPickTallyRow | undefined,
+  pinnedDiagnosisKeys: readonly string[],
+  updatedAt: string,
+): DiagnosisPickTallyRow {
+  return { counts: row?.counts ?? {}, pinnedDiagnosisKeys: [...pinnedDiagnosisKeys], pinState: "seeded", updatedAt };
 }
