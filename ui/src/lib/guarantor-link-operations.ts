@@ -75,7 +75,7 @@ export class GuarantorScreenError extends Error { constructor(message: string, r
 async function screenRequest<T>(path: string, body?: object): Promise<T> {
   const authorization = fhir.authHeader();
   const response = await fetch(`/guarantors${path}`, { method: body ? "POST" : "GET", headers: { ...(authorization ? { Authorization: authorization } : {}), ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
-  const result = await response.json();
+  const result = await response.json() as { error?: unknown; task?: unknown };
   if (!response.ok) throw new GuarantorScreenError(typeof result.error === "string" ? result.error : "The guarantor result could not be confirmed. Reload before continuing.", response.status, result);
   return result as T;
 }

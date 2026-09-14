@@ -1,5 +1,4 @@
 import type { Patient } from "@medplum/fhirtypes";
-import type { GuarantorSearchCard } from "./guarantor-link-operations";
 
 export const ODOS_MRN_SYSTEM = "https://odos2020.com/fhir/NamingSystem/odos-mrn";
 export const EYEFINITY_EPM_PATIENT_ID_SYSTEM =
@@ -41,7 +40,7 @@ export interface PersonResponsiblePartyDraft extends ResponsiblePartyCommon {
 export interface ExistingResponsiblePartyDraft extends ResponsiblePartyCommon {
   kind: "existing";
   personId: string;
-  card: GuarantorSearchCard;
+  card: { personId: string; versionId: string; name: string; phones: string[]; city: string; postalCode: string };
   previous: PersonResponsiblePartyDraft;
 }
 
