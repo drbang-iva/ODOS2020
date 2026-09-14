@@ -53,26 +53,26 @@ test("A1: two concurrent chart attaches admit one winner and fail the loser at t
   f.seed<Person>({ ...f.D, id: "D2", link: [] });
   const firstInput = attachInput(f, "D");
   const secondInput = attachInput(f, "D2");
-  let nested: Promise<Result> | undefined;
-  let launched = false;
+  let releaseRecords!: () => void;
+  const bothRecorded = new Promise<void>(resolve => { releaseRecords = resolve; });
+  let recordCount = 0;
   f.beforeWrite = async write => {
-    if (!launched && write.resource.resourceType === "Task" && !write.resource.id) {
-      launched = true;
-      nested = run(f, "create", secondInput);
-      await nested;
+    if (write.resource.resourceType === "Task" && !write.resource.id) {
+      recordCount += 1;
+      if (recordCount === 2) releaseRecords();
+      else await bothRecorded;
     }
   };
 
-  const first = await run(f, "create", firstInput);
-  const second = await nested!;
+  const [first, second] = await Promise.all([run(f, "create", firstInput), run(f, "create", secondInput)]);
   f.beforeWrite = undefined;
 
   const results = [first, second];
+  assert.equal(f.writes.filter(write => write.resource.resourceType === "Person" && phase(write) === "attaching").length, 1, "the losing attach never reaches a Person PUT");
   assert.equal(results.filter(result => taskFrom(result).status === "completed").length, 1);
   const loser = results.find(result => taskFrom(result).status === "failed")!;
   assert.equal((loser.body as { phase: string }).phase, "claim-conflict");
   assert.equal(f.owners("r1").length, 1);
-  assert.equal(f.writes.filter(write => write.resource.resourceType === "Person" && phase(write) === "attaching").length, 1, "the losing attach never reaches a Person PUT");
 }
 );
 
@@ -222,6 +222,7 @@ test("A16: lost unlink release cannot overwrite a later completed attach", async
   assert.equal(unlink.status, 409);
   assert.deepEqual(f.owners("r1"), []);
   assert.deepEqual(claims(f), []);
+  f.compete("RelatedPerson/r1", child => ({ ...child, extension: [...child.extension ?? [], { url: "urn:synthetic:staff-note", valueString: "preserve" }] }));
   const later = await run(f, "create", attachInput(f, "D2"));
   assert.equal(taskFrom(later).status, "completed");
   const childAfterLaterAttach = f.get<RelatedPerson>("RelatedPerson/r1");

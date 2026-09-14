@@ -95,6 +95,7 @@ class RegistrationAttachFhir {
       let id: string;
       if (resource.resourceType === "Patient") id = "patient-registered";
       else if (resource.resourceType === "RelatedPerson") id = `related-${index}`;
+      else if (resource.resourceType === "Person") id = resource.id ?? "existing-person-write";
       else if (resource.resourceType === "Account") id = "reservation-1";
       else throw new Error(`unexpected registration resource ${resource.resourceType}`);
       const accepted = { ...resource, id, meta: { ...resource.meta, versionId: resource.resourceType === "Account" ? "2" : "1" } } as Resource;
