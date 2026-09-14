@@ -1,0 +1,3842 @@
+{
+  "sourceHead": "6baea1d51666461e3de94ded1287ffe8817d2f70",
+  "events": [
+    {
+      "sequence": 1,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+      "status": 200,
+      "response": {
+        "resourceType": "Project",
+        "name": "G2b1 build synthetic A",
+        "id": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+        "meta": {
+          "versionId": "5f6c0c0c-9bf6-4a9f-a877-1e0f67832f12",
+          "lastUpdated": "2026-09-14T15:28:42.605Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 2,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Project/cafae273-d6af-41a4-ad8e-4bc5926bdd46",
+      "status": 200,
+      "response": {
+        "resourceType": "Project",
+        "name": "G2b1 build synthetic B",
+        "id": "cafae273-d6af-41a4-ad8e-4bc5926bdd46",
+        "meta": {
+          "versionId": "609591f0-478b-4202-99ed-621291b3e044",
+          "lastUpdated": "2026-09-14T15:28:42.613Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "project": "cafae273-d6af-41a4-ad8e-4bc5926bdd46",
+          "compartment": [
+            {
+              "reference": "Project/cafae273-d6af-41a4-ad8e-4bc5926bdd46"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 3,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Project/cdf32356-a4f9-47b0-a1ba-891157552c5b",
+      "status": 200,
+      "response": {
+        "resourceType": "Project",
+        "name": "Super Admin",
+        "owner": {
+          "reference": "User/273f86ef-d85b-4a76-a357-ca6a943bcfb2",
+          "display": "g2b2a-service@example.invalid"
+        },
+        "superAdmin": true,
+        "strictMode": true,
+        "id": "cdf32356-a4f9-47b0-a1ba-891157552c5b",
+        "meta": {
+          "versionId": "cb146980-94c8-4f32-8539-dd78327c3015",
+          "lastUpdated": "2026-09-14T15:28:11.231Z",
+          "author": {
+            "reference": "system"
+          },
+          "project": "cdf32356-a4f9-47b0-a1ba-891157552c5b",
+          "compartment": [
+            {
+              "reference": "Project/cdf32356-a4f9-47b0-a1ba-891157552c5b"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 4,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r1"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r1"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "ecaaff82-3b37-48a7-a0b1-838c925e1086",
+          "lastUpdated": "2026-09-14T15:45:08.326Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/2236e50d-9e1a-4a13-b2e9-a348e59c448e"
+            }
+          ]
+        },
+        "id": "2236e50d-9e1a-4a13-b2e9-a348e59c448e"
+      }
+    },
+    {
+      "sequence": 5,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/2236e50d-9e1a-4a13-b2e9-a348e59c448e"
+        },
+        "active": true,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/2236e50d-9e1a-4a13-b2e9-a348e59c448e"
+        },
+        "active": true,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "d3a3919a-8da3-44e7-8b1c-bd965d5d6605",
+          "lastUpdated": "2026-09-14T15:45:08.348Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/2236e50d-9e1a-4a13-b2e9-a348e59c448e"
+            }
+          ]
+        },
+        "id": "56d2382a-bb43-46f1-9e69-8d9b1cb4f67e"
+      }
+    },
+    {
+      "sequence": 6,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r2"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r2"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "2aecf191-7f1c-4404-a3c3-ad61a70ab842",
+          "lastUpdated": "2026-09-14T15:45:08.360Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/56d8052d-e4cc-4f07-92b4-7a972fcbddbb"
+            }
+          ]
+        },
+        "id": "56d8052d-e4cc-4f07-92b4-7a972fcbddbb"
+      }
+    },
+    {
+      "sequence": 7,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/56d8052d-e4cc-4f07-92b4-7a972fcbddbb"
+        },
+        "active": false,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/56d8052d-e4cc-4f07-92b4-7a972fcbddbb"
+        },
+        "active": false,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "79448347-683d-47e1-9b52-4fd2f581244f",
+          "lastUpdated": "2026-09-14T15:45:08.367Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/56d8052d-e4cc-4f07-92b4-7a972fcbddbb"
+            }
+          ]
+        },
+        "id": "646e1269-85d3-43d9-b419-8b0d45df0e98"
+      }
+    },
+    {
+      "sequence": 8,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Person",
+      "status": 201,
+      "request": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/56d2382a-bb43-46f1-9e69-8d9b1cb4f67e"
+            }
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/646e1269-85d3-43d9-b419-8b0d45df0e98"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/56d2382a-bb43-46f1-9e69-8d9b1cb4f67e"
+            }
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/646e1269-85d3-43d9-b419-8b0d45df0e98"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "dfa6f3f6-6d55-4b82-bafa-b99adedd1952",
+          "lastUpdated": "2026-09-14T15:45:08.375Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "id": "df6a1f1f-23a5-4e17-9d18-41987726d5d2"
+      }
+    },
+    {
+      "sequence": 9,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/56d8052d-e4cc-4f07-92b4-7a972fcbddbb"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/56d8052d-e4cc-4f07-92b4-7a972fcbddbb"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "372a8756-5c09-4a96-93aa-ed4a6f4889de",
+          "lastUpdated": "2026-09-14T15:45:08.383Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/56d8052d-e4cc-4f07-92b4-7a972fcbddbb"
+            }
+          ]
+        },
+        "id": "dea36ec8-8aa3-4208-9493-94d60be368a2"
+      }
+    },
+    {
+      "sequence": 10,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Person",
+      "status": 201,
+      "request": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "864-555-0102"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville",
+            "postalCode": "00000"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/dea36ec8-8aa3-4208-9493-94d60be368a2"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "864-555-0102"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville",
+            "postalCode": "00000"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/dea36ec8-8aa3-4208-9493-94d60be368a2"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "13639c32-6063-4b53-886a-f5e81ab8d3ea",
+          "lastUpdated": "2026-09-14T15:45:08.390Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "id": "827fcbe2-1865-4e51-9b77-f2ee0d02f7ce"
+      }
+    },
+    {
+      "sequence": 11,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Freshmu1ezb1r1"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Freshmu1ezb1r1"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "31e0cf7a-805c-4681-bd75-900407970260",
+          "lastUpdated": "2026-09-14T15:45:08.399Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/4c3e4a4d-255b-4656-b842-004ad8c3618b"
+            }
+          ]
+        },
+        "id": "4c3e4a4d-255b-4656-b842-004ad8c3618b"
+      }
+    },
+    {
+      "sequence": 12,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/4c3e4a4d-255b-4656-b842-004ad8c3618b"
+        },
+        "active": true,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Freshmu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/4c3e4a4d-255b-4656-b842-004ad8c3618b"
+        },
+        "active": true,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Freshmu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "4775562c-9022-4cdb-b10b-c09642413e45",
+          "lastUpdated": "2026-09-14T15:45:08.408Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/4c3e4a4d-255b-4656-b842-004ad8c3618b"
+            }
+          ]
+        },
+        "id": "d45ecce6-f914-410f-a4d1-3f8a81fac976"
+      }
+    },
+    {
+      "sequence": 13,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Freshmu1ezb1r2"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Freshmu1ezb1r2"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "2ad1e156-add7-44f8-8445-e2e390e998aa",
+          "lastUpdated": "2026-09-14T15:45:08.416Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/43e886e4-525c-467d-9e1f-a4e11cc56531"
+            }
+          ]
+        },
+        "id": "43e886e4-525c-467d-9e1f-a4e11cc56531"
+      }
+    },
+    {
+      "sequence": 14,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/43e886e4-525c-467d-9e1f-a4e11cc56531"
+        },
+        "active": false,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Freshmu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/43e886e4-525c-467d-9e1f-a4e11cc56531"
+        },
+        "active": false,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Freshmu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "d8aa0178-32f5-4b29-91f2-59bbbcfb3685",
+          "lastUpdated": "2026-09-14T15:45:08.422Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/43e886e4-525c-467d-9e1f-a4e11cc56531"
+            }
+          ]
+        },
+        "id": "53e43f67-fda1-45eb-b051-e95778e2f598"
+      }
+    },
+    {
+      "sequence": 15,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Person",
+      "status": 201,
+      "request": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Freshmu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/d45ecce6-f914-410f-a4d1-3f8a81fac976"
+            }
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/53e43f67-fda1-45eb-b051-e95778e2f598"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Freshmu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/d45ecce6-f914-410f-a4d1-3f8a81fac976"
+            }
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/53e43f67-fda1-45eb-b051-e95778e2f598"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "44e9e6f2-1673-4a3b-addb-a1eb20892e6a",
+          "lastUpdated": "2026-09-14T15:45:08.428Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "id": "facbecac-46f8-4045-883d-a1d9d8fa0aa9"
+      }
+    },
+    {
+      "sequence": 16,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/43e886e4-525c-467d-9e1f-a4e11cc56531"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Freshmu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/43e886e4-525c-467d-9e1f-a4e11cc56531"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Freshmu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "3ca60995-1810-43b3-a891-b77cc971c20c",
+          "lastUpdated": "2026-09-14T15:45:08.433Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/43e886e4-525c-467d-9e1f-a4e11cc56531"
+            }
+          ]
+        },
+        "id": "59b853ff-f7ca-4101-8a68-9038e68feec5"
+      }
+    },
+    {
+      "sequence": 17,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Person",
+      "status": 201,
+      "request": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Freshmu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "864-555-0102"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville",
+            "postalCode": "00000"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/59b853ff-f7ca-4101-8a68-9038e68feec5"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Freshmu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "864-555-0102"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville",
+            "postalCode": "00000"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/59b853ff-f7ca-4101-8a68-9038e68feec5"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "9a7f62ea-a43b-42f6-a68b-010409fdf2ed",
+          "lastUpdated": "2026-09-14T15:45:08.437Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "id": "7311c87d-278a-40b1-8fd8-1a84d9ba23bc"
+      }
+    },
+    {
+      "sequence": 18,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r1"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r1"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "1aa12046-7a28-4308-9afb-73ddf4e3f485",
+          "lastUpdated": "2026-09-14T15:45:08.443Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/7536cbd8-ecba-441f-93ac-7e10fd33be2f"
+            }
+          ]
+        },
+        "id": "7536cbd8-ecba-441f-93ac-7e10fd33be2f"
+      }
+    },
+    {
+      "sequence": 19,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/7536cbd8-ecba-441f-93ac-7e10fd33be2f"
+        },
+        "active": true,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/7536cbd8-ecba-441f-93ac-7e10fd33be2f"
+        },
+        "active": true,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "5c27a66d-c429-49cf-8861-01728b4a0e37",
+          "lastUpdated": "2026-09-14T15:45:08.448Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/7536cbd8-ecba-441f-93ac-7e10fd33be2f"
+            }
+          ]
+        },
+        "id": "19479374-b3e6-407d-8183-26940e57fe01"
+      }
+    },
+    {
+      "sequence": 20,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r2"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r2"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "a54735ab-8b8f-4630-8727-0a43aa69378c",
+          "lastUpdated": "2026-09-14T15:45:08.453Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/92fad682-ff9e-4264-ab7b-fb66efe68b8d"
+            }
+          ]
+        },
+        "id": "92fad682-ff9e-4264-ab7b-fb66efe68b8d"
+      }
+    },
+    {
+      "sequence": 21,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/92fad682-ff9e-4264-ab7b-fb66efe68b8d"
+        },
+        "active": false,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/92fad682-ff9e-4264-ab7b-fb66efe68b8d"
+        },
+        "active": false,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "6e730c22-b7d0-46d3-8379-75ad50c74f31",
+          "lastUpdated": "2026-09-14T15:45:08.459Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/92fad682-ff9e-4264-ab7b-fb66efe68b8d"
+            }
+          ]
+        },
+        "id": "86c3942b-4b1e-4099-8ff9-cedeac1e5c05"
+      }
+    },
+    {
+      "sequence": 22,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Person",
+      "status": 201,
+      "request": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/19479374-b3e6-407d-8183-26940e57fe01"
+            }
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/86c3942b-4b1e-4099-8ff9-cedeac1e5c05"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/19479374-b3e6-407d-8183-26940e57fe01"
+            }
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/86c3942b-4b1e-4099-8ff9-cedeac1e5c05"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "9ba998d8-d2a9-46c2-9330-a1de50624b23",
+          "lastUpdated": "2026-09-14T15:45:08.464Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "id": "fb2e3ce2-3037-4e65-9d3b-bc10c8192b0e"
+      }
+    },
+    {
+      "sequence": 23,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/92fad682-ff9e-4264-ab7b-fb66efe68b8d"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/92fad682-ff9e-4264-ab7b-fb66efe68b8d"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "745e1304-687c-4517-8345-77502d4c0896",
+          "lastUpdated": "2026-09-14T15:45:08.470Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/92fad682-ff9e-4264-ab7b-fb66efe68b8d"
+            }
+          ]
+        },
+        "id": "266f517d-7693-4f87-8276-5772a239d19c"
+      }
+    },
+    {
+      "sequence": 24,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Person",
+      "status": 201,
+      "request": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "864-555-0102"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville",
+            "postalCode": "00000"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/266f517d-7693-4f87-8276-5772a239d19c"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "864-555-0102"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville",
+            "postalCode": "00000"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/266f517d-7693-4f87-8276-5772a239d19c"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "419cb3b1-b76f-4d44-ae12-cfcc0fefc845",
+          "lastUpdated": "2026-09-14T15:45:08.475Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "id": "70c63011-5297-4463-b142-cf3b246540af"
+      }
+    },
+    {
+      "sequence": 25,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r1"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r1"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "7b619242-b2ec-4c95-a37e-4b40b4118eb7",
+          "lastUpdated": "2026-09-14T15:45:08.481Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/b0eb688f-5903-46f9-a7fb-ded10b675ef9"
+            }
+          ]
+        },
+        "id": "b0eb688f-5903-46f9-a7fb-ded10b675ef9"
+      }
+    },
+    {
+      "sequence": 26,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/b0eb688f-5903-46f9-a7fb-ded10b675ef9"
+        },
+        "active": true,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/b0eb688f-5903-46f9-a7fb-ded10b675ef9"
+        },
+        "active": true,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "3f5ff78a-5b3f-41b3-8cee-3823f652c337",
+          "lastUpdated": "2026-09-14T15:45:08.485Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/b0eb688f-5903-46f9-a7fb-ded10b675ef9"
+            }
+          ]
+        },
+        "id": "d1916f05-a8a0-4b26-b212-f3eb41fffece"
+      }
+    },
+    {
+      "sequence": 27,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r2"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Patient",
+        "active": true,
+        "birthDate": "2015-01-01",
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r2"
+            ],
+            "family": "Synthetic"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "54858646-47b4-4406-83db-e2894212686e",
+          "lastUpdated": "2026-09-14T15:45:08.491Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/bf191fc5-8d21-4cc2-a542-f37a0bd20a30"
+            }
+          ]
+        },
+        "id": "bf191fc5-8d21-4cc2-a542-f37a0bd20a30"
+      }
+    },
+    {
+      "sequence": 28,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/bf191fc5-8d21-4cc2-a542-f37a0bd20a30"
+        },
+        "active": false,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/bf191fc5-8d21-4cc2-a542-f37a0bd20a30"
+        },
+        "active": false,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "e067cb9f-caa7-4008-8a11-2419a0cba71d",
+          "lastUpdated": "2026-09-14T15:45:08.496Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/bf191fc5-8d21-4cc2-a542-f37a0bd20a30"
+            }
+          ]
+        },
+        "id": "a25eb3a8-4d0a-4934-8f3a-3c742ae11e71"
+      }
+    },
+    {
+      "sequence": 29,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Person",
+      "status": 201,
+      "request": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/d1916f05-a8a0-4b26-b212-f3eb41fffece"
+            }
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/a25eb3a8-4d0a-4934-8f3a-3c742ae11e71"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/d1916f05-a8a0-4b26-b212-f3eb41fffece"
+            }
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/a25eb3a8-4d0a-4934-8f3a-3c742ae11e71"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "815b6994-5c41-487f-ba3b-d177125cc35a",
+          "lastUpdated": "2026-09-14T15:45:08.502Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "id": "abcfe672-b7aa-4af1-af8c-0c0f0247afc8"
+      }
+    },
+    {
+      "sequence": 30,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/bf191fc5-8d21-4cc2-a542-f37a0bd20a30"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/bf191fc5-8d21-4cc2-a542-f37a0bd20a30"
+        },
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "e0d07084-e48d-475b-8d0b-c883904d29c6",
+          "lastUpdated": "2026-09-14T15:45:08.506Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/bf191fc5-8d21-4cc2-a542-f37a0bd20a30"
+            }
+          ]
+        },
+        "id": "606f49ee-748f-4a65-bd80-6c8783cb301d"
+      }
+    },
+    {
+      "sequence": 31,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Person",
+      "status": 201,
+      "request": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "864-555-0102"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville",
+            "postalCode": "00000"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/606f49ee-748f-4a65-bd80-6c8783cb301d"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+        }
+      },
+      "response": {
+        "resourceType": "Person",
+        "active": true,
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "864-555-0102"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville",
+            "postalCode": "00000"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/606f49ee-748f-4a65-bd80-6c8783cb301d"
+            }
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "98d1c50c-dbad-4f3b-9256-35bfafa5bea4",
+          "lastUpdated": "2026-09-14T15:45:08.511Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "id": "6dc197f3-c680-43df-a4d6-2124603d2107"
+      }
+    },
+    {
+      "sequence": 32,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/147b1d96-2a5d-4618-837a-25cfac04d147",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/273f86ef-d85b-4a76-a357-ca6a943bcfb2",
+          "display": "g2b2a-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/fde03b0d-2193-4cb6-b163-3d413572dfa8",
+          "display": "g2b2a-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/d8d84939-7ca2-40a5-a70e-77282402dadd",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "147b1d96-2a5d-4618-837a-25cfac04d147",
+        "meta": {
+          "versionId": "1b5ec394-f999-4a02-85df-68c16ce6fb1c",
+          "lastUpdated": "2026-09-14T15:41:56.173Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/6a04e4d7-4949-4414-aabb-19ade0f4b7a5"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/e81fdba9-8bc2-4752-8f7d-830d23c20260"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/886a90a2-6dbf-42dd-aecd-739235857809"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/29bc0193-c53f-4a50-8591-4dfeef61de28"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/2cd6a169-9990-4cb6-ac43-9d3400575811"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/42c4647e-ba44-4270-a863-f358ec03319f"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/fced95fe-b9ae-49ef-a1e5-b2f1af0a2568"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/9e0851bc-ff9f-4515-bbb5-8d3120a32788"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 33,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "PUT",
+      "path": "/fhir/R4/ProjectMembership/147b1d96-2a5d-4618-837a-25cfac04d147",
+      "status": 200,
+      "ifMatch": "W/\"1b5ec394-f999-4a02-85df-68c16ce6fb1c\"",
+      "request": {
+        "invitedBy": {
+          "reference": "User/273f86ef-d85b-4a76-a357-ca6a943bcfb2",
+          "display": "g2b2a-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/fde03b0d-2193-4cb6-b163-3d413572dfa8",
+          "display": "g2b2a-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/d8d84939-7ca2-40a5-a70e-77282402dadd",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "147b1d96-2a5d-4618-837a-25cfac04d147",
+        "meta": {
+          "versionId": "1b5ec394-f999-4a02-85df-68c16ce6fb1c",
+          "lastUpdated": "2026-09-14T15:41:56.173Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/2236e50d-9e1a-4a13-b2e9-a348e59c448e"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/56d8052d-e4cc-4f07-92b4-7a972fcbddbb"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/4c3e4a4d-255b-4656-b842-004ad8c3618b"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/43e886e4-525c-467d-9e1f-a4e11cc56531"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/7536cbd8-ecba-441f-93ac-7e10fd33be2f"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/92fad682-ff9e-4264-ab7b-fb66efe68b8d"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/b0eb688f-5903-46f9-a7fb-ded10b675ef9"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/bf191fc5-8d21-4cc2-a542-f37a0bd20a30"
+              }
+            ]
+          }
+        ]
+      },
+      "response": {
+        "invitedBy": {
+          "reference": "User/273f86ef-d85b-4a76-a357-ca6a943bcfb2",
+          "display": "g2b2a-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/fde03b0d-2193-4cb6-b163-3d413572dfa8",
+          "display": "g2b2a-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/d8d84939-7ca2-40a5-a70e-77282402dadd",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "147b1d96-2a5d-4618-837a-25cfac04d147",
+        "meta": {
+          "versionId": "147fbe61-bc8d-4e7a-83d0-33cb47ebf024",
+          "lastUpdated": "2026-09-14T15:45:08.523Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/2236e50d-9e1a-4a13-b2e9-a348e59c448e"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/56d8052d-e4cc-4f07-92b4-7a972fcbddbb"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/4c3e4a4d-255b-4656-b842-004ad8c3618b"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/43e886e4-525c-467d-9e1f-a4e11cc56531"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/7536cbd8-ecba-441f-93ac-7e10fd33be2f"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/92fad682-ff9e-4264-ab7b-fb66efe68b8d"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/b0eb688f-5903-46f9-a7fb-ded10b675ef9"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/d069fe07-1da0-4822-916f-dbc6c84c931f"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/bf191fc5-8d21-4cc2-a542-f37a0bd20a30"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 34,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/56d2382a-bb43-46f1-9e69-8d9b1cb4f67e",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/2236e50d-9e1a-4a13-b2e9-a348e59c448e"
+        },
+        "active": true,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Movemu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "c099ac1f-9bb0-43b5-8a4c-757c1161dbc7",
+          "lastUpdated": "2026-09-14T15:45:13.367Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/2236e50d-9e1a-4a13-b2e9-a348e59c448e"
+            }
+          ]
+        },
+        "id": "56d2382a-bb43-46f1-9e69-8d9b1cb4f67e",
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "864-555-0102"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville",
+            "postalCode": "00000"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 35,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F56d2382a-bb43-46f1-9e69-8d9b1cb4f67e",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/827fcbe2-1865-4e51-9b77-f2ee0d02f7ce",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "active": true,
+              "name": [
+                {
+                  "given": [
+                    "Movemu1ezb1r"
+                  ],
+                  "family": "Found"
+                }
+              ],
+              "telecom": [
+                {
+                  "system": "phone",
+                  "value": "864-555-0102"
+                }
+              ],
+              "address": [
+                {
+                  "line": [
+                    "2 Synthetic Street"
+                  ],
+                  "city": "Testville",
+                  "postalCode": "00000"
+                }
+              ],
+              "link": [
+                {
+                  "target": {
+                    "reference": "RelatedPerson/dea36ec8-8aa3-4208-9493-94d60be368a2"
+                  }
+                },
+                {
+                  "target": {
+                    "reference": "RelatedPerson/56d2382a-bb43-46f1-9e69-8d9b1cb4f67e"
+                  },
+                  "assurance": "level2"
+                }
+              ],
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "a0d8ceed-48ed-4ea8-8d0c-6a4c0b7c1cec",
+                "lastUpdated": "2026-09-14T15:45:13.182Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "id": "827fcbe2-1865-4e51-9b77-f2ee0d02f7ce"
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&link=RelatedPerson%2F56d2382a-bb43-46f1-9e69-8d9b1cb4f67e"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&link=RelatedPerson%2F56d2382a-bb43-46f1-9e69-8d9b1cb4f67e"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 36,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/d45ecce6-f914-410f-a4d1-3f8a81fac976",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/4c3e4a4d-255b-4656-b842-004ad8c3618b"
+        },
+        "active": true,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Freshmu1ezb1r"
+            ],
+            "family": "Absent"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "f23b89e0-4f47-40f1-9dd5-b61bfdd331c6",
+          "lastUpdated": "2026-09-14T15:45:14.974Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/4c3e4a4d-255b-4656-b842-004ad8c3618b"
+            }
+          ]
+        },
+        "id": "d45ecce6-f914-410f-a4d1-3f8a81fac976"
+      }
+    },
+    {
+      "sequence": 37,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2Fd45ecce6-f914-410f-a4d1-3f8a81fac976",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/430963dd-d530-40c9-a441-60e3eeb3fba6",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "active": true,
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "c577a4bf-25a7-4f89-86a6-51f58b9bc60e",
+                "lastUpdated": "2026-09-14T15:45:14.788Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "name": [
+                {
+                  "use": "official",
+                  "given": [
+                    "Freshmu1ezb1r"
+                  ],
+                  "family": "Absent"
+                }
+              ],
+              "id": "430963dd-d530-40c9-a441-60e3eeb3fba6",
+              "link": [
+                {
+                  "target": {
+                    "reference": "RelatedPerson/d45ecce6-f914-410f-a4d1-3f8a81fac976"
+                  },
+                  "assurance": "level2"
+                }
+              ]
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&link=RelatedPerson%2Fd45ecce6-f914-410f-a4d1-3f8a81fac976"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&link=RelatedPerson%2Fd45ecce6-f914-410f-a4d1-3f8a81fac976"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 38,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/19479374-b3e6-407d-8183-26940e57fe01",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/7536cbd8-ecba-441f-93ac-7e10fd33be2f"
+        },
+        "active": true,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "da21f316-da17-4849-a96e-f2de6aeac549",
+          "lastUpdated": "2026-09-14T15:45:16.779Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/7536cbd8-ecba-441f-93ac-7e10fd33be2f"
+            }
+          ]
+        },
+        "id": "19479374-b3e6-407d-8183-26940e57fe01",
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "864-555-0102"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville",
+            "postalCode": "00000"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 39,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F19479374-b3e6-407d-8183-26940e57fe01",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/70c63011-5297-4463-b142-cf3b246540af",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "active": true,
+              "name": [
+                {
+                  "given": [
+                    "Joinmu1ezb1r"
+                  ],
+                  "family": "Found"
+                }
+              ],
+              "telecom": [
+                {
+                  "system": "phone",
+                  "value": "864-555-0102"
+                }
+              ],
+              "address": [
+                {
+                  "line": [
+                    "2 Synthetic Street"
+                  ],
+                  "city": "Testville",
+                  "postalCode": "00000"
+                }
+              ],
+              "link": [
+                {
+                  "target": {
+                    "reference": "RelatedPerson/266f517d-7693-4f87-8276-5772a239d19c"
+                  }
+                },
+                {
+                  "target": {
+                    "reference": "RelatedPerson/19479374-b3e6-407d-8183-26940e57fe01"
+                  },
+                  "assurance": "level2"
+                },
+                {
+                  "target": {
+                    "reference": "RelatedPerson/86c3942b-4b1e-4099-8ff9-cedeac1e5c05"
+                  },
+                  "assurance": "level2"
+                }
+              ],
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "14d1ade5-1b6f-4017-9fd4-ffe382afbcf6",
+                "lastUpdated": "2026-09-14T15:45:16.471Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "id": "70c63011-5297-4463-b142-cf3b246540af"
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&link=RelatedPerson%2F19479374-b3e6-407d-8183-26940e57fe01"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&link=RelatedPerson%2F19479374-b3e6-407d-8183-26940e57fe01"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 40,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/86c3942b-4b1e-4099-8ff9-cedeac1e5c05",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/92fad682-ff9e-4264-ab7b-fb66efe68b8d"
+        },
+        "active": false,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r"
+            ],
+            "family": "Found"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "b2043667-7760-4f31-9c9c-cf8e224b2140",
+          "lastUpdated": "2026-09-14T15:45:16.833Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/92fad682-ff9e-4264-ab7b-fb66efe68b8d"
+            }
+          ]
+        },
+        "id": "86c3942b-4b1e-4099-8ff9-cedeac1e5c05",
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "864-555-0102"
+          }
+        ],
+        "address": [
+          {
+            "line": [
+              "2 Synthetic Street"
+            ],
+            "city": "Testville",
+            "postalCode": "00000"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 41,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F86c3942b-4b1e-4099-8ff9-cedeac1e5c05",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/70c63011-5297-4463-b142-cf3b246540af",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "active": true,
+              "name": [
+                {
+                  "given": [
+                    "Joinmu1ezb1r"
+                  ],
+                  "family": "Found"
+                }
+              ],
+              "telecom": [
+                {
+                  "system": "phone",
+                  "value": "864-555-0102"
+                }
+              ],
+              "address": [
+                {
+                  "line": [
+                    "2 Synthetic Street"
+                  ],
+                  "city": "Testville",
+                  "postalCode": "00000"
+                }
+              ],
+              "link": [
+                {
+                  "target": {
+                    "reference": "RelatedPerson/266f517d-7693-4f87-8276-5772a239d19c"
+                  }
+                },
+                {
+                  "target": {
+                    "reference": "RelatedPerson/19479374-b3e6-407d-8183-26940e57fe01"
+                  },
+                  "assurance": "level2"
+                },
+                {
+                  "target": {
+                    "reference": "RelatedPerson/86c3942b-4b1e-4099-8ff9-cedeac1e5c05"
+                  },
+                  "assurance": "level2"
+                }
+              ],
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "14d1ade5-1b6f-4017-9fd4-ffe382afbcf6",
+                "lastUpdated": "2026-09-14T15:45:16.471Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "id": "70c63011-5297-4463-b142-cf3b246540af"
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&link=RelatedPerson%2F86c3942b-4b1e-4099-8ff9-cedeac1e5c05"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&link=RelatedPerson%2F86c3942b-4b1e-4099-8ff9-cedeac1e5c05"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 42,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F19479374-b3e6-407d-8183-26940e57fe01",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/fb2e3ce2-3037-4e65-9d3b-bc10c8192b0e",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "active": true,
+              "name": [
+                {
+                  "given": [
+                    "Joinmu1ezb1r"
+                  ],
+                  "family": "Source"
+                }
+              ],
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "89dd7a83-75d9-47e8-9b33-48213cc61381",
+                "lastUpdated": "2026-09-14T15:45:18.062Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "id": "fb2e3ce2-3037-4e65-9d3b-bc10c8192b0e",
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+                  "valueString": "05d14ac8-ac62-4309-9e59-d2e139beef89"
+                }
+              ],
+              "link": [
+                {
+                  "target": {
+                    "reference": "RelatedPerson/19479374-b3e6-407d-8183-26940e57fe01"
+                  },
+                  "assurance": "level2"
+                },
+                {
+                  "target": {
+                    "reference": "RelatedPerson/86c3942b-4b1e-4099-8ff9-cedeac1e5c05"
+                  },
+                  "assurance": "level2"
+                }
+              ]
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&link=RelatedPerson%2F19479374-b3e6-407d-8183-26940e57fe01"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&link=RelatedPerson%2F19479374-b3e6-407d-8183-26940e57fe01"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 43,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/19479374-b3e6-407d-8183-26940e57fe01",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/7536cbd8-ecba-441f-93ac-7e10fd33be2f"
+        },
+        "active": true,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "e841d09a-a09e-4bd2-9d3f-39cfd6aedb0e",
+          "lastUpdated": "2026-09-14T15:45:18.368Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/7536cbd8-ecba-441f-93ac-7e10fd33be2f"
+            }
+          ]
+        },
+        "id": "19479374-b3e6-407d-8183-26940e57fe01"
+      }
+    },
+    {
+      "sequence": 44,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F86c3942b-4b1e-4099-8ff9-cedeac1e5c05",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/fb2e3ce2-3037-4e65-9d3b-bc10c8192b0e",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "active": true,
+              "name": [
+                {
+                  "given": [
+                    "Joinmu1ezb1r"
+                  ],
+                  "family": "Source"
+                }
+              ],
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "89dd7a83-75d9-47e8-9b33-48213cc61381",
+                "lastUpdated": "2026-09-14T15:45:18.062Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "id": "fb2e3ce2-3037-4e65-9d3b-bc10c8192b0e",
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+                  "valueString": "05d14ac8-ac62-4309-9e59-d2e139beef89"
+                }
+              ],
+              "link": [
+                {
+                  "target": {
+                    "reference": "RelatedPerson/19479374-b3e6-407d-8183-26940e57fe01"
+                  },
+                  "assurance": "level2"
+                },
+                {
+                  "target": {
+                    "reference": "RelatedPerson/86c3942b-4b1e-4099-8ff9-cedeac1e5c05"
+                  },
+                  "assurance": "level2"
+                }
+              ]
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&link=RelatedPerson%2F86c3942b-4b1e-4099-8ff9-cedeac1e5c05"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&link=RelatedPerson%2F86c3942b-4b1e-4099-8ff9-cedeac1e5c05"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 45,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/86c3942b-4b1e-4099-8ff9-cedeac1e5c05",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/92fad682-ff9e-4264-ab7b-fb66efe68b8d"
+        },
+        "active": false,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Joinmu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "ecbb29e4-ed1f-4e64-a6ae-c5ad7387b8e6",
+          "lastUpdated": "2026-09-14T15:45:18.419Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/92fad682-ff9e-4264-ab7b-fb66efe68b8d"
+            }
+          ]
+        },
+        "id": "86c3942b-4b1e-4099-8ff9-cedeac1e5c05"
+      }
+    },
+    {
+      "sequence": 46,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson/d1916f05-a8a0-4b26-b212-f3eb41fffece",
+      "status": 200,
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/b0eb688f-5903-46f9-a7fb-ded10b675ef9"
+        },
+        "active": true,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "3f5ff78a-5b3f-41b3-8cee-3823f652c337",
+          "lastUpdated": "2026-09-14T15:45:08.485Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/b0eb688f-5903-46f9-a7fb-ded10b675ef9"
+            }
+          ]
+        },
+        "id": "d1916f05-a8a0-4b26-b212-f3eb41fffece"
+      }
+    },
+    {
+      "sequence": 47,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "PUT",
+      "path": "/fhir/R4/RelatedPerson/d1916f05-a8a0-4b26-b212-f3eb41fffece",
+      "status": 200,
+      "ifMatch": "W/\"3f5ff78a-5b3f-41b3-8cee-3823f652c337\"",
+      "request": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/b0eb688f-5903-46f9-a7fb-ded10b675ef9"
+        },
+        "active": false,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "3f5ff78a-5b3f-41b3-8cee-3823f652c337",
+          "lastUpdated": "2026-09-14T15:45:08.485Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/b0eb688f-5903-46f9-a7fb-ded10b675ef9"
+            }
+          ]
+        },
+        "id": "d1916f05-a8a0-4b26-b212-f3eb41fffece"
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "patient": {
+          "reference": "Patient/b0eb688f-5903-46f9-a7fb-ded10b675ef9"
+        },
+        "active": false,
+        "period": {
+          "start": "2026-01-01",
+          "end": "2027-01-01"
+        },
+        "relationship": [
+          {
+            "text": "Guardian"
+          }
+        ],
+        "name": [
+          {
+            "given": [
+              "Stalemu1ezb1r"
+            ],
+            "family": "Source"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic sentinel"
+          }
+        ],
+        "meta": {
+          "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+          "versionId": "0a6e5072-3209-4ae3-830c-37e0aebd815c",
+          "lastUpdated": "2026-09-14T15:45:19.345Z",
+          "author": {
+            "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+            },
+            {
+              "reference": "Patient/b0eb688f-5903-46f9-a7fb-ded10b675ef9"
+            }
+          ]
+        },
+        "id": "d1916f05-a8a0-4b26-b212-f3eb41fffece"
+      }
+    },
+    {
+      "sequence": 48,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2Fd1916f05-a8a0-4b26-b212-f3eb41fffece",
+      "status": 200,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/abcfe672-b7aa-4af1-af8c-0c0f0247afc8",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Person",
+              "active": true,
+              "name": [
+                {
+                  "given": [
+                    "Stalemu1ezb1r"
+                  ],
+                  "family": "Source"
+                }
+              ],
+              "link": [
+                {
+                  "target": {
+                    "reference": "RelatedPerson/d1916f05-a8a0-4b26-b212-f3eb41fffece"
+                  }
+                },
+                {
+                  "target": {
+                    "reference": "RelatedPerson/a25eb3a8-4d0a-4934-8f3a-3c742ae11e71"
+                  }
+                }
+              ],
+              "meta": {
+                "project": "250cd5bf-9cff-4cc9-bc82-b2515f94975f",
+                "versionId": "815b6994-5c41-487f-ba3b-d177125cc35a",
+                "lastUpdated": "2026-09-14T15:45:08.502Z",
+                "author": {
+                  "reference": "Practitioner/d99fc5eb-68d7-47d8-8fa5-76271c982899",
+                  "display": "Medplum Admin"
+                },
+                "compartment": [
+                  {
+                    "reference": "Project/250cd5bf-9cff-4cc9-bc82-b2515f94975f"
+                  }
+                ]
+              },
+              "id": "abcfe672-b7aa-4af1-af8c-0c0f0247afc8"
+            }
+          }
+        ],
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&link=RelatedPerson%2Fd1916f05-a8a0-4b26-b212-f3eb41fffece"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=20&link=RelatedPerson%2Fd1916f05-a8a0-4b26-b212-f3eb41fffece"
+          }
+        ]
+      }
+    }
+  ]
+}

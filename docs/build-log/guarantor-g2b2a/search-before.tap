@@ -1,0 +1,226 @@
+TAP version 13
+# Subtest: K1 search refuses a prefix-only family
+not ok 1 - K1 search refuses a prefix-only family
+  ---
+  duration_ms: 22.147875
+  type: 'test'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:1943'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    404 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 404
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:14:195)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: K2 phone compares digits and rejects a different digit
+not ok 2 - K2 phone compares digits and rejects a different digit
+  ---
+  duration_ms: 3.875917
+  type: 'test'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:2222'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    404 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 404
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:15:284)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: K3 search card exposes exactly six keys
+not ok 3 - K3 search card exposes exactly six keys
+  ---
+  duration_ms: 1.811833
+  type: 'test'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:2561'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    404 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 404
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:16:304)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: K4 inactive excluded
+not ok 4 - K4 inactive excluded
+  ---
+  duration_ms: 1.561458
+  type: 'test'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3158'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    404 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 404
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:17:323)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: K4 zero-link excluded
+not ok 5 - K4 zero-link excluded
+  ---
+  duration_ms: 1.579708
+  type: 'test'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3158'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    404 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 404
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:17:323)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: K4 non-RelatedPerson excluded
+not ok 6 - K4 non-RelatedPerson excluded
+  ---
+  duration_ms: 1.197125
+  type: 'test'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3158'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    404 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 404
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:17:323)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: K5 21 matches return 422
+not ok 7 - K5 21 matches return 422
+  ---
+  duration_ms: 1.1165
+  type: 'test'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3409'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    404 !== 422
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 404
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:18:227)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: K5 201 matches return 422
+not ok 8 - K5 201 matches return 422
+  ---
+  duration_ms: 1.373916
+  type: 'test'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3409'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    404 !== 422
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 404
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:18:227)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: K7 create writes exactly one active unlinked Person; missing surname writes nothing
+not ok 9 - K7 create writes exactly one active unlinked Person; missing surname writes nothing
+  ---
+  duration_ms: 11.404042
+  type: 'test'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3714'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    404 !== 201
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 201
+  actual: 404
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:19:291)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 0
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 293.418583

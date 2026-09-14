@@ -1,0 +1,100 @@
+TAP version 13
+# Subtest: K1 search refuses a prefix-only family
+ok 1 - K1 search refuses a prefix-only family
+  ---
+  duration_ms: 26.535666
+  type: 'test'
+  ...
+# Subtest: K2 phone compares digits and rejects a different digit
+ok 2 - K2 phone compares digits and rejects a different digit
+  ---
+  duration_ms: 4.887583
+  type: 'test'
+  ...
+# Subtest: K3 search card exposes exactly six keys
+ok 3 - K3 search card exposes exactly six keys
+  ---
+  duration_ms: 2.221083
+  type: 'test'
+  ...
+# Subtest: K4 inactive excluded
+ok 4 - K4 inactive excluded
+  ---
+  duration_ms: 2.755959
+  type: 'test'
+  ...
+# Subtest: K4 zero-link excluded
+ok 5 - K4 zero-link excluded
+  ---
+  duration_ms: 1.882959
+  type: 'test'
+  ...
+# Subtest: K4 non-RelatedPerson excluded
+ok 6 - K4 non-RelatedPerson excluded
+  ---
+  duration_ms: 1.411125
+  type: 'test'
+  ...
+# Subtest: K5 21 matches return 422
+ok 7 - K5 21 matches return 422
+  ---
+  duration_ms: 1.324875
+  type: 'test'
+  ...
+# Subtest: K5 201 matches return 422
+ok 8 - K5 201 matches return 422
+  ---
+  duration_ms: 3.453041
+  type: 'test'
+  ...
+# Subtest: K7 create writes exactly one active unlinked Person; missing surname writes nothing
+not ok 9 - K7 create writes exactly one active unlinked Person; missing surname writes nothing
+  ---
+  duration_ms: 10.034584
+  type: 'test'
+  location: 'mcp/tests/guarantorSearchScreens.test.ts:1:3716'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    201 !== 400
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 201
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (mcp/tests/guarantorSearchScreens.test.ts:19:740)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async route (mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: K8 draft includes every source link, writes nothing, refuses consolidate subset
+ok 10 - K8 draft includes every source link, writes nothing, refuses consolidate subset
+  ---
+  duration_ms: 2.284625
+  type: 'test'
+  ...
+# Subtest: K9 draft versions reject changed child at create
+ok 11 - K9 draft versions reject changed child at create
+  ---
+  duration_ms: 0.939167
+  type: 'test'
+  ...
+# Subtest: K13 history filters trusted child plans and queries newest 50 once
+ok 12 - K13 history filters trusted child plans and queries newest 50 once
+  ---
+  duration_ms: 11.361167
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 11
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 242.190792

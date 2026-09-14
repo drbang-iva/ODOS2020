@@ -1,0 +1,262 @@
+TAP version 13
+# Subtest: Q10: missing linked Person is read-only and direct save handler cannot create
+ok 1 - Q10: missing linked Person is read-only and direct save handler cannot create
+  ---
+  duration_ms: 15.51575
+  type: 'test'
+  ...
+# Subtest: Q11: reopening a clean editor offers repair by patient name and converges
+ok 2 - Q11: reopening a clean editor offers repair by patient name and converges
+  ---
+  duration_ms: 12.597416
+  type: 'test'
+  ...
+# Subtest: Q12: multiple linked Persons refuse editing and identify both records
+ok 3 - Q12: multiple linked Persons refuse editing and identify both records
+  ---
+  duration_ms: 1.247709
+  type: 'test'
+  ...
+# Subtest: editing one name preserves every loaded contact and address entry without a Patient write
+ok 4 - editing one name preserves every loaded contact and address entry without a Patient write
+  ---
+  duration_ms: 5.203791
+  type: 'test'
+  ...
+# Subtest: structured address edits clear stale display text only on the edited address
+ok 5 - structured address edits clear stale display text only on the edited address
+  ---
+  duration_ms: 17.517541
+  type: 'test'
+  ...
+# Subtest: clearing then replacing the first phone keeps the second phone in its original slot
+ok 6 - clearing then replacing the first phone keeps the second phone in its original slot
+  ---
+  duration_ms: 3.369334
+  type: 'test'
+  ...
+# Subtest: saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+ok 7 - saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+  ---
+  duration_ms: 2.869042
+  type: 'test'
+  ...
+# Subtest: per-patient results distinguish rejected child writes from lost update responses
+ok 8 - per-patient results distinguish rejected child writes from lost update responses
+  ---
+  duration_ms: 4.367542
+  type: 'test'
+  ...
+# Subtest: F1e superseded save reloads automatically and one Repair converges
+ok 9 - F1e superseded save reloads automatically and one Repair converges
+  ---
+  duration_ms: 3.942375
+  type: 'test'
+  ...
+# Subtest: L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+ok 10 - L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+  ---
+  duration_ms: 25.664125
+  type: 'test'
+  ...
+# Subtest: S7: a claim on another linked child makes the guarantor pending
+ok 11 - S7: a claim on another linked child makes the guarantor pending
+  ---
+  duration_ms: 0.672208
+  type: 'test'
+  ...
+# Subtest: S7: inert, missing, and copied claims do not suppress ordinary classification
+ok 12 - S7: inert, missing, and copied claims do not suppress ordinary classification
+  ---
+  duration_ms: 1.782334
+  type: 'test'
+  ...
+# Subtest: S7: unreadable operation status remains unknown and does not offer editing
+ok 13 - S7: unreadable operation status remains unknown and does not offer editing
+  ---
+  duration_ms: 1.242042
+  type: 'test'
+  ...
+# Subtest: S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
+ok 14 - S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
+  ---
+  duration_ms: 2.284791
+  type: 'test'
+  ...
+# Subtest: L4 S7: Repair sees a claim in its fresh read and submits no child PUT
+ok 15 - L4 S7: Repair sees a claim in its fresh read and submits no child PUT
+  ---
+  duration_ms: 1.479208
+  type: 'test'
+  ...
+# Subtest: S7: Save fresh-checks claims after the Person save and stops every remaining child
+ok 16 - S7: Save fresh-checks claims after the Person save and stops every remaining child
+  ---
+  duration_ms: 1.42275
+  type: 'test'
+  ...
+# Subtest: S7: Save keeps the loaded child version after its fresh claim-only read
+ok 17 - S7: Save keeps the loaded child version after its fresh claim-only read
+  ---
+  duration_ms: 1.418292
+  type: 'test'
+  ...
+# Subtest: S7: Save checks each child and reloads pending after a late claim
+ok 18 - S7: Save checks each child and reloads pending after a late claim
+  ---
+  duration_ms: 4.582541
+  type: 'test'
+  ...
+# Subtest: L23 S7: an edit after release is ordinary drift and Repair converges to current D
+ok 19 - L23 S7: an edit after release is ordinary drift and Repair converges to current D
+  ---
+  duration_ms: 6.006666
+  type: 'test'
+  ...
+# Subtest: S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+ok 20 - S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+  ---
+  duration_ms: 1.139042
+  type: 'test'
+  ...
+# Subtest: S7: a correction reason survives same-Task refusal and clears when another Task takes over
+ok 21 - S7: a correction reason survives same-Task refusal and clears when another Task takes over
+  ---
+  duration_ms: 2.268875
+  type: 'test'
+  ...
+# Subtest: S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+ok 22 - S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+  ---
+  duration_ms: 3.153875
+  type: 'test'
+  ...
+# Subtest: S7: Correct keeps native randomUUID when available
+ok 23 - S7: Correct keeps native randomUUID when available
+  ---
+  duration_ms: 0.501125
+  type: 'test'
+  ...
+# Subtest: K14 create-new starts disabled before any keyed search
+ok 24 - K14 create-new starts disabled before any keyed search
+  ---
+  duration_ms: 22.070416
+  type: 'test'
+  ...
+# Subtest: K9 stale confirmation makes one create and requires Review again
+ok 25 - K9 stale confirmation makes one create and requires Review again
+  ---
+  duration_ms: 5.049875
+  type: 'test'
+  ...
+# Subtest: K10 existing Move drafts before create
+ok 26 - K10 existing Move drafts before create
+  ---
+  duration_ms: 2.620917
+  type: 'test'
+  ...
+# Subtest: K10 new Move creates Person before draft and Review again reuses it
+ok 27 - K10 new Move creates Person before draft and Review again reuses it
+  ---
+  duration_ms: 3.928416
+  type: 'test'
+  ...
+# Subtest: K11 Join keeps Loaded Ann and moves loser full set
+ok 28 - K11 Join keeps Loaded Ann and moves loser full set
+  ---
+  duration_ms: 2.43475
+  type: 'test'
+  ...
+# Subtest: K11 Join keeps Found Ann and moves loser full set
+ok 29 - K11 Join keeps Found Ann and moves loser full set
+  ---
+  duration_ms: 2.420833
+  type: 'test'
+  ...
+# Subtest: K13 Undo only on completed non-correct and requires a reason
+ok 30 - K13 Undo only on completed non-correct and requires a reason
+  ---
+  duration_ms: 1.463625
+  type: 'test'
+  ...
+# Subtest: K14 matching cards require None of these before new guarantor
+ok 31 - K14 matching cards require None of these before new guarantor
+  ---
+  duration_ms: 1.583333
+  type: 'test'
+  ...
+# Subtest: K12 missing offers no Move Join or history Undo
+ok 32 - K12 missing offers no Move Join or history Undo
+  ---
+  duration_ms: 1.083834
+  type: 'test'
+  ...
+# Subtest: K12 ambiguous offers no Move Join or history Undo
+ok 33 - K12 ambiguous offers no Move Join or history Undo
+  ---
+  duration_ms: 0.918917
+  type: 'test'
+  ...
+# Subtest: K12 dangling offers no Move Join or history Undo
+ok 34 - K12 dangling offers no Move Join or history Undo
+  ---
+  duration_ms: 0.755417
+  type: 'test'
+  ...
+# Subtest: K12 unknown offers no Move Join or history Undo
+ok 35 - K12 unknown offers no Move Join or history Undo
+  ---
+  duration_ms: 0.649667
+  type: 'test'
+  ...
+# Subtest: K12 pending offers no Move Join or history Undo
+ok 36 - K12 pending offers no Move Join or history Undo
+  ---
+  duration_ms: 0.707167
+  type: 'test'
+  ...
+# Subtest: K9 uncertain confirmation retry reuses the submitted operation id
+ok 37 - K9 uncertain confirmation retry reuses the submitted operation id
+  ---
+  duration_ms: 2.718791
+  type: 'test'
+  ...
+# Subtest: K13 uncertain Undo retry reuses the submitted correction id
+ok 38 - K13 uncertain Undo retry reuses the submitted correction id
+  ---
+  duration_ms: 1.769833
+  type: 'test'
+  ...
+# Subtest: K15 paused create reloads once and closes without Review again or a second create
+ok 39 - K15 paused create reloads once and closes without Review again or a second create
+  ---
+  duration_ms: 3.105041
+  type: 'test'
+  ...
+# Subtest: K15 paused Undo reloads once and closes without a second correction
+ok 40 - K15 paused Undo reloads once and closes without a second correction
+  ---
+  duration_ms: 1.169
+  type: 'test'
+  ...
+# Subtest: K15 failed paused create reload locks the screen and reports reload required
+ok 41 - K15 failed paused create reload locks the screen and reports reload required
+  ---
+  duration_ms: 2.096667
+  type: 'test'
+  ...
+# Subtest: K15 failed paused Undo reload locks the screen and reports reload required
+ok 42 - K15 failed paused Undo reload locks the screen and reports reload required
+  ---
+  duration_ms: 1.249833
+  type: 'test'
+  ...
+1..42
+# tests 42
+# suites 0
+# pass 42
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 376.343666

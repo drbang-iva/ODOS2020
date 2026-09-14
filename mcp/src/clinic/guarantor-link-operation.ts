@@ -546,6 +546,26 @@ export async function handleGuarantorOperation(deps: GuarantorOperationDeps, sta
       run = new Run(operation, recorded.task, plan, loaded); await run.audit("started", "claiming"); await run.correct(original);
       return { status: 200, body: await operation.summary(run.task) };
     }
+    if (request.action === "history") {
+      const { relatedPersonId } = z.object({ relatedPersonId: idSchema }).strict().parse(request.body);
+      const page = await deps.serviceFhir.searchProject<Task>("Task", operation.project, { code: `${GUARANTOR_OPERATION_SYSTEM}|`, _sort: "-_lastUpdated", _count: "50" });
+      const tasks = (page.entry ?? []).flatMap(entry => entry.resource ? [entry.resource] : [])
+        .filter(task => operation.trusted(task) && readPlan(task).relatedPersonIds.includes(relatedPersonId));
+      return { status: 200, body: await Promise.all(tasks.map(task => operation.summary(task))) };
+    }
+    if (request.action === "draft") {
+      const input = z.discriminatedUnion("kind", [
+        z.object({ kind: z.literal("transfer"), sourcePersonId: idSchema, destinationPersonId: idSchema, relatedPersonIds: z.array(idSchema).min(1) }).strict(),
+        z.object({ kind: z.literal("consolidate"), sourcePersonId: idSchema, destinationPersonId: idSchema }).strict(),
+      ]).parse(request.body);
+      const relatedPersonIds = input.kind === "transfer" ? input.relatedPersonIds : linkedIds(await operation.read<Person>("Person", input.sourcePersonId));
+      if (!relatedPersonIds.length) throw new Refusal(422, "Operation input is invalid.");
+      const plan: Plan = { ...input, relatedPersonIds, operationId: randomUUID(), reason: "Draft only", expected: {} };
+      const current = await operation.load(plan);
+      plan.expected = Object.fromEntries([current.source, current.destination, ...current.children].map(resource => [reference(resource), version(resource)]));
+      const loaded = await operation.validate(plan);
+      return { status: 200, body: { expected: plan.expected, relatedPersonIds, patients: loaded.children.map((child, index) => ({ relatedPersonId: child.id, patientId: loaded.patients[index].id, name: loaded.patients[index].name, current: projectResponsiblePartyDemographics(child), resulting: projectResponsiblePartyDemographics(loaded.destination) })) } };
+    }
     const parsed = startSchema.safeParse(request.body);
     if (!parsed.success) throw new Refusal(422, "Operation input is invalid.");
     const plan = parsed.data;

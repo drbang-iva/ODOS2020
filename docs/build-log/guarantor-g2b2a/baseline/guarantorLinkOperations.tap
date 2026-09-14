@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+ok 1 - L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+  ---
+  duration_ms: 26.543709
+  type: 'test'
+  ...
+# Subtest: S7: a claim on another linked child makes the guarantor pending
+ok 2 - S7: a claim on another linked child makes the guarantor pending
+  ---
+  duration_ms: 0.974292
+  type: 'test'
+  ...
+# Subtest: S7: inert, missing, and copied claims do not suppress ordinary classification
+ok 3 - S7: inert, missing, and copied claims do not suppress ordinary classification
+  ---
+  duration_ms: 2.419875
+  type: 'test'
+  ...
+# Subtest: S7: unreadable operation status remains unknown and does not offer editing
+ok 4 - S7: unreadable operation status remains unknown and does not offer editing
+  ---
+  duration_ms: 1.470083
+  type: 'test'
+  ...
+# Subtest: S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
+ok 5 - S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
+  ---
+  duration_ms: 2.729
+  type: 'test'
+  ...
+# Subtest: L4 S7: Repair sees a claim in its fresh read and submits no child PUT
+ok 6 - L4 S7: Repair sees a claim in its fresh read and submits no child PUT
+  ---
+  duration_ms: 1.454917
+  type: 'test'
+  ...
+# Subtest: S7: Save fresh-checks claims after the Person save and stops every remaining child
+ok 7 - S7: Save fresh-checks claims after the Person save and stops every remaining child
+  ---
+  duration_ms: 1.884542
+  type: 'test'
+  ...
+# Subtest: S7: Save keeps the loaded child version after its fresh claim-only read
+ok 8 - S7: Save keeps the loaded child version after its fresh claim-only read
+  ---
+  duration_ms: 1.618833
+  type: 'test'
+  ...
+# Subtest: S7: Save checks each child and reloads pending after a late claim
+ok 9 - S7: Save checks each child and reloads pending after a late claim
+  ---
+  duration_ms: 4.592917
+  type: 'test'
+  ...
+# Subtest: L23 S7: an edit after release is ordinary drift and Repair converges to current D
+ok 10 - L23 S7: an edit after release is ordinary drift and Repair converges to current D
+  ---
+  duration_ms: 3.721709
+  type: 'test'
+  ...
+# Subtest: S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+ok 11 - S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+  ---
+  duration_ms: 0.970875
+  type: 'test'
+  ...
+# Subtest: S7: a correction reason survives same-Task refusal and clears when another Task takes over
+ok 12 - S7: a correction reason survives same-Task refusal and clears when another Task takes over
+  ---
+  duration_ms: 4.308083
+  type: 'test'
+  ...
+# Subtest: S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+ok 13 - S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+  ---
+  duration_ms: 3.018375
+  type: 'test'
+  ...
+# Subtest: S7: Correct keeps native randomUUID when available
+ok 14 - S7: Correct keeps native randomUUID when available
+  ---
+  duration_ms: 0.577458
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 254.32375
