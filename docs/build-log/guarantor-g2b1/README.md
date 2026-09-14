@@ -68,7 +68,7 @@ The browser harness serves the real patient route and actual guarantor/clinic/de
 
 `express-rate-limit` 8.5.1 (MIT) was already locked through `@modelcontextprotocol/sdk`; it is now declared directly for the new routes. The lockfile adds no artifact, removes no artifact, and changes no existing package record, version, resolution URL, or integrity value. [rate-limit-proof.json](rate-limit-proof.json) records the exact locked artifact and delta. The restored route guard proves all five endpoints share the limit before service or staff authentication. [review-fixup-proof.json](review-fixup-proof.json), [review-fixup-output.txt](review-fixup-output.txt), and [ui-review/README.md](ui-review/README.md) retain the additional before/failing/restored evidence.
 
-[The collection-equality review probe](person-collection-review.md) checks PR-Agent’s overlapping-link claim against the unchanged real policies. All six link changes were refused and both name-only edits succeeded; the primary sources agree with that behavior. These eight review observations are separate from the 85 mutation controls.
+[The collection-equality review probe](person-collection-review.md) checks PR-Agent’s overlapping-link claim against the unchanged real policies. All eight link changes were refused, including complete removal of the link property, and both name-only edits succeeded; the primary sources agree with that behavior. These ten review observations are separate from the 85 mutation controls.
 
 ## Companion follow-ups after merge
 

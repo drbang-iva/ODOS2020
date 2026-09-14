@@ -1,5 +1,5 @@
 {
-  "head": "9d8b629c0c47e9f6e3c53c9b667475723cc57116",
+  "head": "b67a9395d1b4a0e150a8ee1bfc259301aaae82f3",
   "policySourceSha256": "afdd50b756f907121ccfeb965abdd72d8981739992c1d21f111d4568087cf114",
   "sourceUnchanged": true,
   "observations": [
@@ -10,7 +10,7 @@
       "expectedStatus": 403,
       "linksUnchanged": true,
       "versionUnchanged": true,
-      "personId": "68477cf7-2423-471c-995f-2eda6c34efd3",
+      "personId": "9b4cc2be-80f0-49bf-8310-1efb56fc6cf5",
       "policyVersion": "3a934c4d-700b-47bc-b4d3-b8d3baab3c15"
     },
     {
@@ -20,7 +20,7 @@
       "expectedStatus": 403,
       "linksUnchanged": true,
       "versionUnchanged": true,
-      "personId": "68477cf7-2423-471c-995f-2eda6c34efd3",
+      "personId": "9b4cc2be-80f0-49bf-8310-1efb56fc6cf5",
       "policyVersion": "3a934c4d-700b-47bc-b4d3-b8d3baab3c15"
     },
     {
@@ -30,7 +30,17 @@
       "expectedStatus": 403,
       "linksUnchanged": true,
       "versionUnchanged": true,
-      "personId": "68477cf7-2423-471c-995f-2eda6c34efd3",
+      "personId": "9b4cc2be-80f0-49bf-8310-1efb56fc6cf5",
+      "policyVersion": "3a934c4d-700b-47bc-b4d3-b8d3baab3c15"
+    },
+    {
+      "principal": "staff",
+      "caseName": "remove-all",
+      "status": 403,
+      "expectedStatus": 403,
+      "linksUnchanged": true,
+      "versionUnchanged": true,
+      "personId": "9b4cc2be-80f0-49bf-8310-1efb56fc6cf5",
       "policyVersion": "3a934c4d-700b-47bc-b4d3-b8d3baab3c15"
     },
     {
@@ -39,7 +49,7 @@
       "status": 200,
       "expectedStatus": 200,
       "linksUnchanged": true,
-      "personId": "68477cf7-2423-471c-995f-2eda6c34efd3",
+      "personId": "9b4cc2be-80f0-49bf-8310-1efb56fc6cf5",
       "policyVersion": "3a934c4d-700b-47bc-b4d3-b8d3baab3c15"
     },
     {
@@ -49,7 +59,7 @@
       "expectedStatus": 403,
       "linksUnchanged": true,
       "versionUnchanged": true,
-      "personId": "6e60d1d8-9265-4f7b-8200-3af7b1e99c01",
+      "personId": "fe439b9a-f145-457f-b110-92de2767c985",
       "policyVersion": "b047a210-5de4-4166-aabd-4e461f4a286e"
     },
     {
@@ -59,7 +69,7 @@
       "expectedStatus": 403,
       "linksUnchanged": true,
       "versionUnchanged": true,
-      "personId": "6e60d1d8-9265-4f7b-8200-3af7b1e99c01",
+      "personId": "fe439b9a-f145-457f-b110-92de2767c985",
       "policyVersion": "b047a210-5de4-4166-aabd-4e461f4a286e"
     },
     {
@@ -69,7 +79,17 @@
       "expectedStatus": 403,
       "linksUnchanged": true,
       "versionUnchanged": true,
-      "personId": "6e60d1d8-9265-4f7b-8200-3af7b1e99c01",
+      "personId": "fe439b9a-f145-457f-b110-92de2767c985",
+      "policyVersion": "b047a210-5de4-4166-aabd-4e461f4a286e"
+    },
+    {
+      "principal": "composite",
+      "caseName": "remove-all",
+      "status": 403,
+      "expectedStatus": 403,
+      "linksUnchanged": true,
+      "versionUnchanged": true,
+      "personId": "fe439b9a-f145-457f-b110-92de2767c985",
       "policyVersion": "b047a210-5de4-4166-aabd-4e461f4a286e"
     },
     {
@@ -78,7 +98,7 @@
       "status": 200,
       "expectedStatus": 200,
       "linksUnchanged": true,
-      "personId": "6e60d1d8-9265-4f7b-8200-3af7b1e99c01",
+      "personId": "fe439b9a-f145-457f-b110-92de2767c985",
       "policyVersion": "b047a210-5de4-4166-aabd-4e461f4a286e"
     }
   ],

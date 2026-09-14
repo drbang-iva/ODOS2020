@@ -43,10 +43,37 @@
     "allRecordedSourceHashesMatch": true
   },
   "collectionReview": {
-    "head": "9d8b629c0c47e9f6e3c53c9b667475723cc57116",
-    "observations": 8,
+    "head": "b67a9395d1b4a0e150a8ee1bfc259301aaae82f3",
+    "observations": 10,
     "unexpectedResults": 0,
     "policyMutation": false,
-    "probeSyntaxCheckExit": 0
+    "probeSyntaxCheckExit": 0,
+    "sourceStabilityGuard": {
+      "kind": "Extracted actual summary predicate with synthetic before/after digests; no policy or application source mutation",
+      "command": [
+        "node",
+        "--input-type=module",
+        "-e",
+        "import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import vm from 'node:vm';let expression=readFileSync('docs/build-log/guarantor-g2b1/person-collection-review-proof.mjs','utf8').match(/^const checks=(.+);$/m)[1];if(process.argv[1]==='red')expression=expression.replace('beforeHash===afterHash&&','');const values={beforeHash:'original',afterHash:'changed',observations:[{status:403,expectedStatus:403,linksUnchanged:true,versionUnchanged:true}]};assert.equal(vm.runInNewContext(expression,values),false,'A changed source digest must prevent a passed proof result');console.log('source-stability guard caught changed digest');",
+        "<phase>"
+      ],
+      "runs": [
+        {
+          "phase": "green",
+          "exitCode": 0,
+          "output": "source-stability guard caught changed digest\n"
+        },
+        {
+          "phase": "red",
+          "exitCode": 1,
+          "output": "node:internal/modules/run_main:123\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: A changed source digest must prevent a passed proof result\n\ntrue !== false\n\n    at file://<task-worktree>/[eval1]:1:481\n    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:282:26)\n    at async ModuleLoader.executeModuleJob (node:internal/modules/esm/loader:278:20)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: true,\n  expected: false,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v22.22.3\n"
+        },
+        {
+          "phase": "restored",
+          "exitCode": 0,
+          "output": "source-stability guard caught changed digest\n"
+        }
+      ]
+    }
   }
 }

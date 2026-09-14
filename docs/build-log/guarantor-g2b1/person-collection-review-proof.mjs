@@ -15,7 +15,7 @@ const links=children.map(child=>({target:{reference:'RelatedPerson/'+child.id},a
 for(const principal of ['staff','composite']){
  const person=await make({resourceType:'Person',active:true,name:[{family:'Synthetic',given:['Collection '+principal]}],link:links.slice(0,2)});
  const policy=await successfulHttp(fixture,'GET','/fhir/R4/AccessPolicy/'+fixture.principals[principal].policyId,{scenario:'collection-review-policy-read'});
- for(const [caseName,replacement] of [['overlap-replace',[links[0],links[2]]],['overlap-remove',[links[0]]],['overlap-add',links]]){
+ for(const [caseName,replacement] of [['overlap-replace',[links[0],links[2]]],['overlap-remove',[links[0]]],['overlap-add',links],['remove-all',undefined]]){
   const before=await successfulHttp(fixture,'GET','/fhir/R4/Person/'+person.id,{scenario:caseName});
   const result=await http(fixture,'PUT','/fhir/R4/Person/'+person.id,{principal,token:fixture.principals[principal].token,scenario:caseName,headers:{'If-Match':`W/"${before.meta.versionId}"`},body:{...before,link:replacement}});
   const after=await successfulHttp(fixture,'GET','/fhir/R4/Person/'+person.id,{scenario:caseName});
@@ -26,7 +26,7 @@ for(const principal of ['staff','composite']){
  observations.push({principal,caseName:'name-only-with-two-links',status:result.status,expectedStatus:200,linksUnchanged:JSON.stringify(result.body.link)===JSON.stringify(before.link),personId:person.id,policyVersion:policy.meta.versionId});
 }
 const afterHash=createHash('sha256').update(readFileSync(policyPath)).digest('hex');
-const checks=observations.every(x=>x.status===x.expectedStatus&&x.linksUnchanged&&(x.expectedStatus!==403||x.versionUnchanged));
+const checks=beforeHash===afterHash&&observations.every(x=>x.status===x.expectedStatus&&x.linksUnchanged&&(x.expectedStatus!==403||x.versionUnchanged));
 writeEvidence('person-collection-review-proof.json',{head,policySourceSha256:beforeHash,sourceUnchanged:beforeHash===afterHash,observations,passed:checks,policyMutation:false});
 saveHttpTrace('person-collection-review-http.json');
 console.log(JSON.stringify({head,observations:observations.map(({principal,caseName,status,expectedStatus,linksUnchanged,versionUnchanged})=>({principal,caseName,status,expectedStatus,linksUnchanged,versionUnchanged})),passed:checks,policyMutation:false}));
