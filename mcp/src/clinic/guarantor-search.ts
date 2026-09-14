@@ -3,7 +3,7 @@ import { z } from "zod";
 import { FhirSearchLimitError, searchProjectAll } from "../fhir-search.js";
 import { staffHasBusinessAction } from "../authz/roles.js";
 import { registrationProjectId } from "./patient-registration-endpoint.js";
-import { buildResponsiblePartyDemographics } from "./responsible-party-demographics.js";
+import { buildResponsiblePartyDemographics, guarantorPersonIsAttachable } from "./responsible-party-demographics.js";
 import type { GuarantorOperationDeps, GuarantorOperationResult, GuarantorOperationStaff } from "./guarantor-link-operation.js";
 
 const normalName = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
@@ -26,7 +26,7 @@ export async function handleGuarantorSearch(deps: GuarantorOperationDeps, staff:
   catch (error) { if (error instanceof FhirSearchLimitError) return tooMany; throw error; }
   const found = persons.filter(person => {
     if (person.meta?.project?.replace(/^Project\//, "") !== project) throw new Error("Guarantor search returned a foreign-practice Person.");
-    if (person.active === false || !person.link?.length || person.link.some(link => !/^RelatedPerson\/[A-Za-z0-9.-]{1,64}$/.test(link.target.reference ?? ""))) return false;
+    if (!person.link?.length || !guarantorPersonIsAttachable(person, project)) return false;
     return person.name?.some(name => normalName(name.family ?? "") === normalName(key.lastName) &&
       (key.firstName !== undefined ? normalName(name.given?.[0] ?? "") === normalName(key.firstName) : person.telecom?.some(contact => contact.system === "phone" && digits(contact.value ?? "") === digits(key.phone!))));
   });

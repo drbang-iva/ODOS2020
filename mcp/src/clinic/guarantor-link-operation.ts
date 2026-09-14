@@ -14,15 +14,23 @@ export const GUARANTOR_EPOCH_URL = "https://odos2020.com/fhir/StructureDefinitio
 const JOURNAL_URL = "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal";
 const IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/identifier/guarantor-link-operation";
 const idSchema = z.string().regex(/^[A-Za-z0-9.-]{1,64}$/);
-const startSchema = z.object({
-  operationId: z.string().uuid(), kind: z.enum(["transfer", "consolidate"]),
-  sourcePersonId: idSchema, destinationPersonId: idSchema,
-  relatedPersonIds: z.array(idSchema).min(1), expected: z.record(z.string().min(1)), reason: z.string().trim().min(1),
-}).strict();
-type Plan = Omit<z.infer<typeof startSchema>, "kind"> & { kind: "transfer" | "consolidate" | "correct"; originalTaskId?: string };
+const operationFields = {
+  operationId: z.string().uuid(), relatedPersonIds: z.array(idSchema).min(1),
+  expected: z.record(z.string().min(1)), reason: z.string().trim().min(1),
+};
+const startSchema = z.discriminatedUnion("kind", [
+  z.object({ ...operationFields, kind: z.literal("transfer"), sourcePersonId: idSchema, destinationPersonId: idSchema }).strict(),
+  z.object({ ...operationFields, kind: z.literal("consolidate"), sourcePersonId: idSchema, destinationPersonId: idSchema }).strict(),
+  z.object({ ...operationFields, kind: z.literal("attach"), destinationPersonId: idSchema }).strict(),
+]);
+type Plan = {
+  operationId: string; kind: "transfer" | "consolidate" | "attach" | "correct";
+  sourcePersonId?: string; destinationPersonId?: string; relatedPersonIds: string[];
+  expected: Record<string, string>; reason: string; originalTaskId?: string;
+};
 type Intent = { id: string; phase: string; target: string; expectedVersion: string; intendedContentHash: string; ownedHash?: string; disposition?: "landed" | "rejected" | "not-landed"; responseStatus?: number; writer?: string };
 type Journal = { intents: Intent[]; generation?: string };
-type Loaded = { source: Person; destination: Person; children: RelatedPerson[]; patients: Patient[] };
+type Loaded = { source?: Person; destination?: Person; children: RelatedPerson[]; patients: Patient[] };
 
 export interface GuarantorOperationStaff {
   staffReference: string; actorRole: PracticeRoleId; roles?: readonly PracticeRoleId[];
@@ -81,8 +89,8 @@ function validateResponse(response: Bundle): void {
 function taskInputs(plan: Plan): Task["input"] {
   return [
     { type: { text: "kind" }, valueCode: plan.kind },
-    { type: { text: "source" }, valueReference: { reference: `Person/${plan.sourcePersonId}` } },
-    { type: { text: "destination" }, valueReference: { reference: `Person/${plan.destinationPersonId}` } },
+    ...(plan.sourcePersonId ? [{ type: { text: "source" }, valueReference: { reference: `Person/${plan.sourcePersonId}` } }] : []),
+    ...(plan.destinationPersonId ? [{ type: { text: "destination" }, valueReference: { reference: `Person/${plan.destinationPersonId}` } }] : []),
     ...plan.relatedPersonIds.map(id => ({ type: { text: "moved" }, valueReference: { reference: `RelatedPerson/${id}` } })),
     ...Object.entries(plan.expected).map(([target, expected]) => ({ type: { text: `expected:${target}` }, valueString: expected })),
     { type: { text: "reason" }, valueString: plan.reason },
@@ -91,18 +99,22 @@ function taskInputs(plan: Plan): Task["input"] {
 function readPlan(task: Task): Plan {
   const inputs = task.input ?? [];
   const one = (name: string) => { const rows = inputs.filter(i => i.type.text === name); if (rows.length !== 1) throw new Refusal(422, "Operation plan is invalid."); return rows[0]; };
+  const optional = (name: string) => { const rows = inputs.filter(i => i.type.text === name); if (rows.length > 1) throw new Refusal(422, "Operation plan is invalid."); return rows[0]; };
   const kind = one("kind").valueCode;
   const operationId = task.identifier?.find(i => i.system === IDENTIFIER_SYSTEM)?.value;
-  const parse = startSchema.safeParse({ operationId, kind: kind === "correct" ? "transfer" : kind,
-    sourcePersonId: one("source").valueReference?.reference?.replace(/^Person\//, ""),
-    destinationPersonId: one("destination").valueReference?.reference?.replace(/^Person\//, ""),
-    relatedPersonIds: inputs.filter(i => i.type.text === "moved").map(i => i.valueReference?.reference?.replace(/^RelatedPerson\//, "")),
-    expected: Object.fromEntries(inputs.filter(i => i.type.text?.startsWith("expected:")).map(i => [i.type.text!.slice(9), i.valueString])), reason: one("reason").valueString,
-  });
-  if (!parse.success || !["transfer", "consolidate", "correct"].includes(kind ?? "")) throw new Refusal(422, "Operation plan is invalid.");
+  const sourcePersonId = optional("source")?.valueReference?.reference?.replace(/^Person\//, "");
+  const destinationPersonId = optional("destination")?.valueReference?.reference?.replace(/^Person\//, "");
+  const relatedPersonIds = inputs.filter(i => i.type.text === "moved").map(i => i.valueReference?.reference?.replace(/^RelatedPerson\//, ""));
+  const expected = Object.fromEntries(inputs.filter(i => i.type.text?.startsWith("expected:")).map(i => [i.type.text!.slice(9), i.valueString]));
+  const reason = one("reason").valueString;
+  const validBase = z.object(operationFields).safeParse({ operationId, relatedPersonIds, expected, reason });
+  if (!validBase.success || !["transfer", "consolidate", "attach", "correct"].includes(kind ?? "")) throw new Refusal(422, "Operation plan is invalid.");
   const originalTaskId = task.basedOn?.[0]?.reference?.match(/^Task\/([A-Za-z0-9.-]{1,64})$/)?.[1];
   if (kind === "correct" && !originalTaskId) throw new Refusal(422, "Correction has no original operation.");
-  return { ...parse.data, kind: kind as Plan["kind"], ...(originalTaskId ? { originalTaskId } : {}) };
+  if (kind === "attach" && (sourcePersonId || !destinationPersonId || relatedPersonIds.length !== 1)) throw new Refusal(422, "Operation plan is invalid.");
+  if ((kind === "transfer" || kind === "consolidate") && (!sourcePersonId || !destinationPersonId)) throw new Refusal(422, "Operation plan is invalid.");
+  if (kind === "correct" && ((!sourcePersonId && !destinationPersonId) || (!sourcePersonId && destinationPersonId))) throw new Refusal(422, "Operation plan is invalid.");
+  return { ...validBase.data, kind: kind as Plan["kind"], ...(sourcePersonId ? { sourcePersonId } : {}), ...(destinationPersonId ? { destinationPersonId } : {}), ...(originalTaskId ? { originalTaskId } : {}) };
 }
 
 class Operation {
@@ -119,12 +131,23 @@ class Operation {
   }
   async owners(id: string): Promise<Person[]> { return searchProjectAll<Person>(this.deps.serviceFhir, "Person", this.project, { link: `RelatedPerson/${id}` }); }
   trusted(task: Task): boolean { return projectOf(task) === this.project && task.meta?.author?.reference === this.deps.serviceReference && Boolean(task.code?.coding?.some(c => c.system === GUARANTOR_OPERATION_SYSTEM)); }
+  async plan(task: Task): Promise<Plan> {
+    const plan = readPlan(task);
+    if (plan.kind !== "correct") return plan;
+    const original = await this.read<Task>("Task", plan.originalTaskId!);
+    if (!this.trusted(original)) throw new Refusal(403, "Original operation record is not service-authored.");
+    const originalPlan = readPlan(original);
+    if (originalPlan.kind === "attach") {
+      if (plan.destinationPersonId || plan.sourcePersonId !== originalPlan.destinationPersonId) throw new Refusal(422, "Operation plan is invalid.");
+    } else if (!plan.sourcePersonId || !plan.destinationPersonId) throw new Refusal(422, "Operation plan is invalid.");
+    return plan;
+  }
   async activeClaim(child: RelatedPerson): Promise<Task | undefined> {
     for (const ref of claimReferences(child)) {
       const id = ref.match(/^Task\/([A-Za-z0-9.-]{1,64})$/)?.[1]; if (!id) continue;
       let task: Task;
       try { task = await this.deps.serviceFhir.readExtended<Task>("Task", id); } catch (error) { if (definiteStatus(error) === 404) continue; throw error; }
-      if (this.trusted(task) && task.status === "in-progress" && readPlan(task).relatedPersonIds.includes(child.id!)) return task;
+      if (this.trusted(task) && task.status === "in-progress" && (await this.plan(task)).relatedPersonIds.includes(child.id!)) return task;
     }
     return undefined;
   }
@@ -135,8 +158,8 @@ class Operation {
     return tasks[0];
   }
   async load(plan: Plan): Promise<Loaded> {
-    const source = await this.read<Person>("Person", plan.sourcePersonId);
-    const destination = await this.read<Person>("Person", plan.destinationPersonId);
+    const source = plan.sourcePersonId ? await this.read<Person>("Person", plan.sourcePersonId) : undefined;
+    const destination = plan.destinationPersonId ? await this.read<Person>("Person", plan.destinationPersonId) : undefined;
     const children: RelatedPerson[] = [], patients: Patient[] = [];
     for (const id of plan.relatedPersonIds) {
       const child = await this.read<RelatedPerson>("RelatedPerson", id);
@@ -147,14 +170,23 @@ class Operation {
     return { source, destination, children, patients };
   }
   async validate(plan: Plan): Promise<Loaded> {
-    if (plan.sourcePersonId === plan.destinationPersonId || new Set(plan.relatedPersonIds).size !== plan.relatedPersonIds.length) throw new Refusal(422, "Choose distinct guarantors and unique responsible parties.");
+    if ((plan.sourcePersonId && plan.sourcePersonId === plan.destinationPersonId) || new Set(plan.relatedPersonIds).size !== plan.relatedPersonIds.length) throw new Refusal(422, "Choose distinct guarantors and unique responsible parties.");
     const loaded = await this.load(plan);
-    for (const r of [loaded.source, loaded.destination, ...loaded.children]) if (plan.expected[reference(r)] !== version(r)) throw new Refusal(409, `${reference(r)} changed; preview again.`);
-    const sourceIds = linkedIds(loaded.source); linkedIds(loaded.destination);
-    if (loaded.destination.active === false) throw new Refusal(422, "Destination guarantor is inactive.");
+    for (const r of [loaded.source, loaded.destination, ...loaded.children].filter((resource): resource is Person | RelatedPerson => Boolean(resource))) if (plan.expected[reference(r)] !== version(r)) throw new Refusal(409, `${reference(r)} changed; preview again.`);
+    if (plan.kind === "attach") {
+      linkedIds(loaded.destination!);
+      if (loaded.destination!.active === false) throw new Refusal(422, "Destination guarantor is inactive.");
+      for (const child of loaded.children) {
+        if ((await this.owners(child.id!)).length) throw new Refusal(409, `${child.patient.reference}: responsible party already has a guarantor.`);
+        const holder = await this.activeClaim(child); if (holder) throw new Refusal(409, `${child.patient.reference}: operation ${holder.id} is in progress.`);
+      }
+      return loaded;
+    }
+    const sourceIds = linkedIds(loaded.source!); linkedIds(loaded.destination!);
+    if (loaded.destination!.active === false) throw new Refusal(422, "Destination guarantor is inactive.");
     if (plan.kind === "consolidate" && !equalIds(sourceIds, plan.relatedPersonIds)) throw new Refusal(422, "Consolidation must include every linked patient.");
     for (const child of loaded.children) {
-      if (!sourceIds.includes(child.id!) || !equalIds((await this.owners(child.id!)).map(p => p.id!), [loaded.source.id!])) throw new Refusal(409, `${child.patient.reference}: responsible party must belong only to the source guarantor.`);
+      if (!sourceIds.includes(child.id!) || !equalIds((await this.owners(child.id!)).map(p => p.id!), [loaded.source!.id!])) throw new Refusal(409, `${child.patient.reference}: responsible party must belong only to the source guarantor.`);
       const holder = await this.activeClaim(child); if (holder) throw new Refusal(409, `${child.patient.reference}: operation ${holder.id} is in progress.`);
     }
     return loaded;
@@ -187,9 +219,9 @@ class Operation {
   }
   async summary(task: Task) {
     if (!this.trusted(task)) return { task, active: false };
-    const plan = readPlan(task); const loaded = await this.load(plan);
+    const plan = await this.plan(task); const loaded = await this.load(plan);
     return { task, active: this.trusted(task) && task.status === "in-progress", kind: plan.kind,
-      phase: task.businessStatus?.text ?? "", sourcePersonId: plan.sourcePersonId, destinationPersonId: plan.destinationPersonId,
+      phase: task.businessStatus?.text ?? "", ...(plan.sourcePersonId ? { sourcePersonId: plan.sourcePersonId } : {}), ...(plan.destinationPersonId ? { destinationPersonId: plan.destinationPersonId } : {}),
       relatedPersonIds: plan.relatedPersonIds, patients: loaded.children.map((c, index) => {
         const p = loaded.patients[index], name = p.name?.find(n => n.use === "official") ?? p.name?.[0];
         return { relatedPersonId: c.id!, patientId: p.id!, name: name?.text || [...name?.given ?? [], name?.family].filter(Boolean).join(" ") || `Patient/${p.id}` };
@@ -248,7 +280,7 @@ class Run {
       eventType: `guarantor.link.${event}` as OdosAuditEventType, eventTime: this.operation.deps.now?.(),
       actorReference: this.operation.staff.staffReference, actorRole: this.operation.staff.actorRole, patientId: patient.id,
       resourceType: "Task", resourceId: this.task.id, actionOutcome: "granted",
-      actionReason: `${this.plan.kind} Task/${this.task.id} S=Person/${this.plan.sourcePersonId} D=Person/${this.plan.destinationPersonId} phase=${phase}${target ? ` target=${target}` : ""}${writer ? ` writer=${writer}` : ""}; ${this.plan.reason}`,
+      actionReason: `${this.plan.kind} Task/${this.task.id} S=${this.plan.sourcePersonId ? `Person/${this.plan.sourcePersonId}` : "none"} D=${this.plan.destinationPersonId ? `Person/${this.plan.destinationPersonId}` : "none"} phase=${phase}${target ? ` target=${target}` : ""}${writer ? ` writer=${writer}` : ""}; ${this.plan.reason}`,
     }));
   }
   async write<T extends Person | RelatedPerson | Task>(phase: string, resource: T, expected = version(resource)): Promise<T> {
@@ -330,8 +362,8 @@ class Run {
       else return this.pause("interfered", intent.target);
     }
     const epoch = randomUUID();
-    for (const key of ["source", "destination"] as const) {
-      const current = await this.operation.read<Person>("Person", this.loaded[key].id!);
+    for (const key of (["source", "destination"] as const).filter(key => this.loaded[key])) {
+      const current = await this.operation.read<Person>("Person", this.loaded[key]!.id!);
       const candidates = unresolved.filter(i => i.target === reference(current));
       const intent = candidates[candidates.length - 1];
       const fenced = (p: Person) => withExtension(p, GUARANTOR_EPOCH_URL, { url: GUARANTOR_EPOCH_URL, valueString: epoch });
@@ -392,7 +424,8 @@ class Run {
         const checkpointed = this.journal.intents.some(i => i.target === reference(child) && i.phase === "claiming" && i.disposition === "landed");
         const owners = await this.operation.owners(id);
         if (!refs.length && checkpointed && !owners.length) return claimed(child, this.task.id!);
-        if (!checkpointed && !this.ownershipLanded() && equalIds(owners.map(p => p.id!), [this.plan.sourcePersonId])) return claimed(child, this.task.id!);
+        const expectedOwners = this.plan.kind === "attach" ? [] : [this.plan.sourcePersonId!];
+        if (!checkpointed && !this.ownershipLanded() && equalIds(owners.map(p => p.id!), expectedOwners)) return claimed(child, this.task.id!);
         return this.pause("interfered", reference(child));
       };
       const child = await this.operation.read<RelatedPerson>("RelatedPerson", id);
@@ -406,7 +439,15 @@ class Run {
   }
   async takeoverClaim(child: RelatedPerson, original: Task): Promise<RelatedPerson> {
     const owners = await this.operation.owners(child.id!);
-    if (owners.length > 1 || owners.some(p => ![this.plan.sourcePersonId, this.plan.destinationPersonId].includes(p.id!)) || (original.status === "completed" && !equalIds(owners.map(p => p.id!), [this.plan.sourcePersonId]))) return this.fail("correction-conflict", reference(child));
+    const originalPlan = readPlan(original);
+    const allowed = [this.plan.sourcePersonId, this.plan.destinationPersonId].filter((id): id is string => Boolean(id));
+    const originalAttachLanded = originalPlan.kind === "attach" && new Run(this.operation, original, originalPlan, await this.operation.load(originalPlan)).journal.intents.some(intent => intent.phase === "attaching" && intent.disposition === "landed");
+    const invalidAttachOwners = originalPlan.kind === "attach" && (
+      owners.length > 1 || owners.some(person => person.id !== this.plan.sourcePersonId)
+      || (original.status === "completed" && !equalIds(owners.map(person => person.id!), [this.plan.sourcePersonId!]))
+      || (original.status === "in-progress" && !owners.length && originalAttachLanded)
+    );
+    if (invalidAttachOwners || (originalPlan.kind !== "attach" && (owners.length > 1 || owners.some(p => !allowed.includes(p.id!)) || (original.status === "completed" && !equalIds(owners.map(p => p.id!), [this.plan.sourcePersonId!]))))) return this.fail("correction-conflict", reference(child));
     const holder = await this.operation.activeClaim(child);
     if (holder && holder.id !== original.id && holder.id !== this.task.id) return this.pause("interfered", reference(child));
     return claimed(child, this.task.id!);
@@ -427,7 +468,8 @@ class Run {
     for (const id of [...this.plan.relatedPersonIds].sort()) {
       if (this.released(id)) continue;
       const owners = await this.operation.owners(id);
-      if (owners.length > 1 || owners.some(p => ![this.plan.sourcePersonId, this.plan.destinationPersonId].includes(p.id!))) return this.pause("interfered", `RelatedPerson/${id}`);
+      const allowed = [this.plan.sourcePersonId, this.plan.destinationPersonId].filter((personId): personId is string => Boolean(personId));
+      if (owners.length > 1 || owners.some(p => !allowed.includes(p.id!))) return this.pause("interfered", `RelatedPerson/${id}`);
       if (!owners.length) continue;
       const owner = await this.operation.read<Person>("Person", owners[0].id!);
       const detach = async (fresh: Person): Promise<Person> => {
@@ -436,7 +478,8 @@ class Run {
         return withoutLinks(fresh, [id]);
       };
       const accepted = await this.recoveryWrite("detaching", await detach(owner), detach);
-      this.loaded[owner.id === this.plan.sourcePersonId ? "source" : "destination"] = accepted;
+      if (owner.id === this.plan.sourcePersonId) this.loaded.source = accepted;
+      else this.loaded.destination = accepted;
     }
   }
   async cancelOriginal(): Promise<void> {
@@ -459,12 +502,13 @@ class Run {
     const pendingIds = this.plan.relatedPersonIds.filter(id => !this.released(id));
     if (!pendingIds.length) return this.finish();
     const detach = async (source: Person): Promise<Person> => withoutLinks(source, pendingIds);
-    if (linkedIds(this.loaded.source).some(id => pendingIds.includes(id))) {
+    if (this.loaded.source && linkedIds(this.loaded.source).some(id => pendingIds.includes(id))) {
       const detached = await detach(this.loaded.source);
       if (this.resuming) this.loaded.source = await this.recoveryWrite("detaching", detached, detach);
       else try { this.loaded.source = await this.write("detaching", detached); }
       catch { return this.pause("detach-pending", reference(this.loaded.source)); }
     }
+    if (!this.loaded.destination) return this.verifyUnlinkAndRelease();
     const attach = async (destination: Person): Promise<Person> => {
       for (const id of pendingIds) {
         const owners = await this.operation.owners(id);
@@ -473,16 +517,36 @@ class Run {
       const present = new Set(linkedIds(destination));
       return { ...destination, ...(this.plan.kind === "correct" ? { active: true } : {}), link: [...destination.link ?? [], ...pendingIds.filter(id => !present.has(id)).map(id => ({ target: { reference: `RelatedPerson/${id}` }, assurance: "level2" as const }))] };
     };
-    if (pendingIds.some(id => !linkedIds(this.loaded.destination).includes(id))) {
-      const destination = await attach(this.loaded.destination);
+    if (pendingIds.some(id => !linkedIds(this.loaded.destination!).includes(id))) {
+      const destination = await attach(this.loaded.destination!);
       if (this.resuming) this.loaded.destination = await this.recoveryWrite("attaching", destination, attach);
       else try { this.loaded.destination = await this.write("attaching", destination); }
       catch { return this.pause("attach-pending", reference(destination)); }
     }
     await this.projectAndRelease();
   }
+  async verifyUnlinkAndRelease(): Promise<void> {
+    const verified: RelatedPerson[] = [];
+    for (const id of [...this.plan.relatedPersonIds].sort()) {
+      if (this.released(id)) continue;
+      const child = await this.operation.read<RelatedPerson>("RelatedPerson", id);
+      if ((await this.operation.owners(id)).length || !ownClaim(child, this.task.id!)) return this.pause("project-pending", reference(child));
+      verified.push(child);
+    }
+    await this.checkpointTask("in-progress", "verified");
+    for (const child of verified) {
+      const released = withExtension(child, GUARANTOR_CLAIM_URL);
+      if (this.resuming) await this.recoveryWrite("releasing", released, async fresh => {
+        if (!ownClaim(fresh, this.task.id!) || (await this.operation.owners(fresh.id!)).length) return this.pause("interfered", reference(fresh));
+        return withExtension(fresh, GUARANTOR_CLAIM_URL);
+      });
+      else try { await this.write("releasing", released); }
+      catch { return this.pause("project-pending", reference(child)); }
+    }
+    await this.finish();
+  }
   async projectAndRelease(): Promise<void> {
-    const destination = await this.operation.read<Person>("Person", this.plan.destinationPersonId);
+    const destination = await this.operation.read<Person>("Person", this.plan.destinationPersonId!);
     this.journal.generation = version(destination);
     for (const id of [...this.plan.relatedPersonIds].sort()) {
       if (this.released(id)) continue;
@@ -508,9 +572,9 @@ class Run {
       if (!equalIds(owners.map(p => p.id!), [destination.id!]) || !ownClaim(child, this.task.id!) || !demographicsEqual(child, destination)) return this.pause("project-pending", reference(child));
       verified.push(child);
     }
-    const source = await this.operation.read<Person>("Person", this.plan.sourcePersonId);
+    const source = this.plan.sourcePersonId ? await this.operation.read<Person>("Person", this.plan.sourcePersonId) : undefined;
     const trailing = await this.operation.read<Person>("Person", destination.id!);
-    if (linkedIds(source).some(id => this.plan.relatedPersonIds.includes(id) && !this.released(id)) || (this.plan.kind === "consolidate" && !this.plan.relatedPersonIds.some(id => this.released(id)) && (source.active !== false || linkedIds(source).length)) || version(trailing) !== version(destination)) return this.pause("project-pending", reference(trailing));
+    if ((source && linkedIds(source).some(id => this.plan.relatedPersonIds.includes(id) && !this.released(id))) || (source && this.plan.kind === "consolidate" && !this.plan.relatedPersonIds.some(id => this.released(id)) && (source.active !== false || linkedIds(source).length)) || version(trailing) !== version(destination)) return this.pause("project-pending", reference(trailing));
     await this.checkpointTask("in-progress", "verified");
     for (const child of verified) {
       const released = withExtension(child, GUARANTOR_CLAIM_URL);
@@ -525,7 +589,8 @@ class Run {
   }
   async finish(): Promise<void> {
     if (this.plan.kind === "correct") await this.cancelOriginal();
-    await this.checkpointTask("completed", "linked"); await this.audit("completed", "linked");
+    const phase = this.plan.kind === "correct" && !this.plan.destinationPersonId ? "unlinked" : "linked";
+    await this.checkpointTask("completed", phase); await this.audit("completed", phase);
   }
 }
 
@@ -548,7 +613,7 @@ export async function handleGuarantorOperation(deps: GuarantorOperationDeps, sta
       const task = await operation.read<Task>("Task", idSchema.parse(request.taskId));
       if (!operation.trusted(task)) throw new Refusal(403, "Operation record is not service-authored.");
       if (task.status !== "in-progress") throw new Refusal(409, "Only a pending operation can be completed.");
-      const plan = readPlan(task); run = new Run(operation, task, plan, await operation.load(plan));
+      const plan = await operation.plan(task); run = new Run(operation, task, plan, await operation.load(plan));
       const advanced = await run.complete();
       return { status: advanced ? 200 : 409, body: { ...await operation.summary(run.task), ...(!advanced ? { phase: "takeover-in-progress", error: "A correction is in progress. Complete that correction first." } : {}) } };
     }
@@ -558,18 +623,28 @@ export async function handleGuarantorOperation(deps: GuarantorOperationDeps, sta
       const existing = await operation.existing(input.data.operationId); if (existing) return { status: 200, body: await operation.summary(existing) };
       const original = await operation.read<Task>("Task", idSchema.parse(request.taskId));
       if (!operation.trusted(original)) throw new Refusal(403, "Operation record is not service-authored.");
-      const originalPlan = readPlan(original);
+      const originalPlan = await operation.plan(original);
       if (originalPlan.kind === "correct") throw new Refusal(422, "A correction cannot itself be corrected; use a new transfer.");
       if (original.status !== "in-progress" && original.status !== "completed") throw new Refusal(409, "Only a pending or completed operation can be corrected.");
       const corrections = await searchProjectAll<Task>(deps.serviceFhir, "Task", operation.project, { "based-on": `Task/${original.id}`, code: `${GUARANTOR_OPERATION_SYSTEM}|correct` });
       if (corrections.some(task => operation.trusted(task) && task.status === "in-progress" && task.basedOn?.some(r => r.reference === `Task/${original.id}`) && readPlan(task).kind === "correct")) throw new Refusal(409, "A correction of this operation is already in progress.");
-      const plan: Plan = { ...originalPlan, ...input.data, kind: "correct", sourcePersonId: originalPlan.destinationPersonId, destinationPersonId: originalPlan.sourcePersonId, originalTaskId: original.id };
-      const loaded = await operation.load(plan); linkedIds(loaded.source); linkedIds(loaded.destination);
+      const plan: Plan = originalPlan.kind === "attach"
+        ? { ...input.data, kind: "correct", sourcePersonId: originalPlan.destinationPersonId, relatedPersonIds: originalPlan.relatedPersonIds, expected: {}, originalTaskId: original.id }
+        : { ...originalPlan, ...input.data, kind: "correct", sourcePersonId: originalPlan.destinationPersonId, destinationPersonId: originalPlan.sourcePersonId, originalTaskId: original.id };
+      const loaded = await operation.load(plan);
+      if (loaded.source) linkedIds(loaded.source);
+      if (loaded.destination) linkedIds(loaded.destination);
       for (const child of loaded.children) {
         const owners = await operation.owners(child.id!);
-        if (owners.length > 1 || owners.some(p => ![plan.sourcePersonId, plan.destinationPersonId].includes(p.id!)) || (original.status === "completed" && !equalIds(owners.map(p => p.id!), [plan.sourcePersonId]))) throw new Refusal(409, `${child.patient.reference}: ownership changed after the operation.`);
+        const journal: Journal = JSON.parse(original.extension?.find(extension => extension.url === JOURNAL_URL)?.valueString ?? '{"intents":[]}');
+        const attachLanded = journal.intents.some(intent => intent.phase === "attaching" && intent.disposition === "landed");
+        const attachChanged = originalPlan.kind === "attach" && (owners.length > 1 || owners.some(person => person.id !== plan.sourcePersonId)
+          || (original.status === "completed" && !equalIds(owners.map(person => person.id!), [plan.sourcePersonId!]))
+          || (original.status === "in-progress" && !owners.length && attachLanded));
+        const transferChanged = originalPlan.kind !== "attach" && (owners.length > 1 || owners.some(p => ![plan.sourcePersonId, plan.destinationPersonId].includes(p.id!)) || (original.status === "completed" && !equalIds(owners.map(p => p.id!), [plan.sourcePersonId!])));
+        if (attachChanged || transferChanged) throw new Refusal(409, `${child.patient.reference}: ownership changed after the operation.`);
       }
-      plan.expected = Object.fromEntries([loaded.source, loaded.destination, ...loaded.children].map(r => [reference(r), version(r)]));
+      plan.expected = Object.fromEntries([loaded.source, loaded.destination, ...loaded.children].filter((resource): resource is Person | RelatedPerson => Boolean(resource)).map(r => [reference(r), version(r)]));
       const recorded = await operation.record(plan); if (!recorded.created) return { status: 200, body: await operation.summary(recorded.task) };
       run = new Run(operation, recorded.task, plan, loaded); await run.audit("started", "claiming"); await run.correct(original);
       return { status: 200, body: await operation.summary(run.task) };
@@ -586,21 +661,22 @@ export async function handleGuarantorOperation(deps: GuarantorOperationDeps, sta
       const input = z.discriminatedUnion("kind", [
         z.object({ kind: z.literal("transfer"), sourcePersonId: idSchema, destinationPersonId: idSchema, relatedPersonIds: z.array(idSchema).min(1) }).strict(),
         z.object({ kind: z.literal("consolidate"), sourcePersonId: idSchema, destinationPersonId: idSchema }).strict(),
+        z.object({ kind: z.literal("attach"), destinationPersonId: idSchema, relatedPersonIds: z.array(idSchema).length(1) }).strict(),
       ]).parse(request.body);
-      const relatedPersonIds = input.kind === "transfer" ? input.relatedPersonIds : linkedIds(await operation.read<Person>("Person", input.sourcePersonId));
+      const relatedPersonIds = input.kind === "consolidate" ? linkedIds(await operation.read<Person>("Person", input.sourcePersonId)) : input.relatedPersonIds;
       if (!relatedPersonIds.length) throw new Refusal(422, "Operation input is invalid.");
       const plan: Plan = { ...input, relatedPersonIds, operationId: randomUUID(), reason: "Draft only", expected: {} };
       const current = await operation.load(plan);
-      plan.expected = Object.fromEntries([current.source, current.destination, ...current.children].map(resource => [reference(resource), version(resource)]));
+      plan.expected = Object.fromEntries([current.source, current.destination, ...current.children].filter((resource): resource is Person | RelatedPerson => Boolean(resource)).map(resource => [reference(resource), version(resource)]));
       const loaded = await operation.validate(plan);
-      return { status: 200, body: { expected: plan.expected, relatedPersonIds, patients: loaded.children.map((child, index) => ({ relatedPersonId: child.id, patientId: loaded.patients[index].id, name: loaded.patients[index].name, current: projectResponsiblePartyDemographics(child), resulting: projectResponsiblePartyDemographics(loaded.destination) })) } };
+      return { status: 200, body: { expected: plan.expected, relatedPersonIds, patients: loaded.children.map((child, index) => ({ relatedPersonId: child.id, patientId: loaded.patients[index].id, name: loaded.patients[index].name, current: projectResponsiblePartyDemographics(child), resulting: projectResponsiblePartyDemographics(loaded.destination!) })) } };
     }
     const parsed = startSchema.safeParse(request.body);
     if (!parsed.success) throw new Refusal(422, "Operation input is invalid.");
     const plan = parsed.data;
     if (request.action === "create") { const existing = await operation.existing(plan.operationId); if (existing) return { status: 200, body: await operation.summary(existing) }; }
     const loaded = await operation.validate(plan);
-    if (request.action === "preview") return { status: 200, body: { expected: Object.fromEntries([loaded.source, loaded.destination, ...loaded.children].map(r => [reference(r), version(r)])), patients: loaded.children.map((c, i) => ({ relatedPersonId: c.id, patientId: loaded.patients[i].id, name: loaded.patients[i].name, current: projectResponsiblePartyDemographics(c), resulting: projectResponsiblePartyDemographics(loaded.destination) })) } };
+    if (request.action === "preview") return { status: 200, body: { expected: Object.fromEntries([loaded.source, loaded.destination, ...loaded.children].filter((resource): resource is Person | RelatedPerson => Boolean(resource)).map(r => [reference(r), version(r)])), patients: loaded.children.map((c, i) => ({ relatedPersonId: c.id, patientId: loaded.patients[i].id, name: loaded.patients[i].name, current: projectResponsiblePartyDemographics(c), resulting: projectResponsiblePartyDemographics(loaded.destination!) })) } };
     if (request.action !== "create") throw new Refusal(422, "Unsupported operation action.");
     const recorded = await operation.record(plan); if (!recorded.created) return { status: 200, body: await operation.summary(recorded.task) };
     run = new Run(operation, recorded.task, plan, loaded);

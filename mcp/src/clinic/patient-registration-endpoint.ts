@@ -1,4 +1,4 @@
-import { buildResponsiblePartyDemographics } from "./responsible-party-demographics.js";
+import { buildResponsiblePartyDemographics, guarantorPersonIsAttachable, projectResponsiblePartyDemographics } from "./responsible-party-demographics.js";
 import { resolvePractitionerReference } from "../authz/practitioner-reference.js";
 import { buildCommsConsent, communicationPreferencesInputSchema, parsePreferenceWriteInput } from "../comms/comms-preferences.js";
 import { replaceCommsPreferenceCells } from "../comms/suppression-gate.js";
@@ -18,6 +18,7 @@ import { z } from "zod";
 import { grantNewlyRegisteredPatientAccess } from "../authz/role-grants.js";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type BusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
+import type { GuarantorOperationResult } from "./guarantor-link-operation.js";
 import { searchProjectAll } from "../fhir-search.js";
 import { applyPatientTextableAnswer, createPatientPhone, validatePatientPhones } from "./patient-telecom.js";
 import {
@@ -33,6 +34,7 @@ export const CONSENT_AUTHORITY_EXTENSION_URL = "https://odos2020.com/fhir/Struct
 export const RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/related-person-primary";
 const COURT_ORDER_NOTES_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes";
 
+const idSchema = z.string().regex(/^[A-Za-z0-9.-]{1,64}$/);
 const patientPhoneSchema = z.object({ value: z.string(), use: z.enum(["mobile", "home", "work"]) }).strict();
 
 const demographicsSchema = z.object({
@@ -42,14 +44,21 @@ const demographicsSchema = z.object({
   email: z.string(), address: z.string(), city: z.string(), state: z.string(), postalCode: z.string(),
 }).strict();
 
-const responsiblePartySchema = z.object({
-  localId: z.string().min(1), kind: z.enum(["self", "person"]),
+const responsiblePartyFields = {
+  localId: z.string().min(1),
   relationship: z.enum(["parent", "legal-guardian", "spouse", "other"]),
-  firstName: z.string(), middleName: z.string(), lastName: z.string(), phone: z.string(),
-  address: z.string(), city: z.string(), state: z.string(), postalCode: z.string(),
   financialResponsible: z.boolean(), consentAuthority: z.boolean(), primary: z.boolean(),
   courtOrderNotes: z.string(), effectiveDate: z.string(), endDate: z.string(),
-}).strict();
+};
+const responsiblePartyDemographicFields = {
+  firstName: z.string(), middleName: z.string(), lastName: z.string(), phone: z.string(),
+  address: z.string(), city: z.string(), state: z.string(), postalCode: z.string(),
+};
+const responsiblePartySchema = z.discriminatedUnion("kind", [
+  z.object({ ...responsiblePartyFields, ...responsiblePartyDemographicFields, kind: z.literal("self") }).strict(),
+  z.object({ ...responsiblePartyFields, ...responsiblePartyDemographicFields, kind: z.literal("person") }).strict(),
+  z.object({ ...responsiblePartyFields, kind: z.literal("existing"), personId: idSchema }).strict(),
+]);
 
 const patientRegistrationInputSchema = z.object({
   demographics: demographicsSchema,
@@ -70,9 +79,14 @@ export interface PatientRegistrationStaff {
 }
 
 export interface PatientRegistrationEndpointDeps {
-  serviceFhir: Pick<MedplumClient, "baseUrl" | "search" | "searchProject" | "searchProjectUrl" | "create" | "read" | "update" | "patch" | "executeTransactionAsActor">;
+  serviceFhir: Pick<MedplumClient, "baseUrl" | "search" | "searchProject" | "searchProjectUrl" | "create" | "read" | "readExtended" | "update" | "patch" | "executeTransactionAsActor">;
   now?: () => string;
   logGrantFailure?: (message: string, error: unknown) => void;
+  grantRegistrationAccess?: (input: Parameters<typeof grantNewlyRegisteredPatientAccess>[0]) => Promise<void>;
+  attachRegistrationGuarantor?: (staff: PatientRegistrationStaff, input: {
+    operationId: string; kind: "attach"; destinationPersonId: string; relatedPersonIds: [string];
+    expected: Record<string, string>; reason: "Registration attach";
+  }) => Promise<GuarantorOperationResult>;
 }
 
 export type PatientRegistrationEndpointResult = { status: number; body: unknown };
@@ -106,15 +120,18 @@ export async function registerPatientFromDemographics(
     if (!preferencePractitioner) throw new Error("Registration preferences require the registering Practitioner.");
   }
   const today = registrationDate(recordedAt);
-  validateRegistration(input, today);
   const projectId = registrationProjectId(staff.project);
+  const existingPersons = await loadExistingGuarantors(input, staff, deps.serviceFhir, projectId);
+  const resolvedInput = resolveExistingParties(input, existingPersons);
+  validateRegistration(resolvedInput, today);
   const duplicates = await findExactDuplicates(deps.serviceFhir, projectId, input.demographics);
   if (duplicates.length > 0 && !input.confirmDuplicate) {
     return { status: 409, body: { kind: "duplicates", patients: duplicates } };
   }
 
   const reservation = await reserveMrn(deps.serviceFhir, projectId);
-  const request = buildPatientIdentityTransaction(input, reservation, today, projectId, preferencePractitioner, recordedAt);
+  const built = buildPatientIdentityTransaction(input, reservation, today, projectId, existingPersons, preferencePractitioner, recordedAt);
+  const request = built.bundle;
   let response: Bundle;
   try {
     response = await deps.serviceFhir.executeTransactionAsActor(
@@ -151,36 +168,124 @@ export async function registerPatientFromDemographics(
 
   const patientId = createdIdFromEntry(response, 0, "Patient");
   const patient = await deps.serviceFhir.read<Patient>("Patient", patientId);
+  let warning: { code: string; message: string; patientReference: string } | undefined;
   try {
-    await grantNewlyRegisteredPatientAccess(
+    const grantAccess = deps.grantRegistrationAccess ?? ((grantInput: Parameters<typeof grantNewlyRegisteredPatientAccess>[0]) => grantNewlyRegisteredPatientAccess(grantInput, { serviceFhir: deps.serviceFhir }));
+    await grantAccess(
       {
         staffReference: staff.staffReference,
         project: staff.project,
         registrationRequest: request,
         registrationResponse: response,
       },
-      { serviceFhir: deps.serviceFhir },
     );
-    return { status: 201, body: { kind: "created", patient } };
   } catch (error) {
     const patientReference = `Patient/${patientId}`;
     deps.logGrantFailure?.(
       `odos-mcp: patient registration access grant failed for ${patientReference}; registration preserved.`,
       error,
     );
-    return {
-      status: 201,
-      body: {
-        kind: "created",
-        patient,
-        warning: {
-          code: "access-grant-repair-required",
-          message: "The patient was registered, but your access grant did not attach. Ask a practice administrator to repair your patient access, then open the chart again.",
-          patientReference,
-        },
-      },
+    warning = {
+      code: "access-grant-repair-required",
+      message: "The patient was registered, but your access grant did not attach. Ask a practice administrator to repair your patient access, then open the chart again.",
+      patientReference,
     };
   }
+  const guarantorLinks = warning
+    ? existingRegistrationParties(input).map(party => ({ relatedPersonId: createdIdFromEntry(response, built.existingRelatedPersonEntryIndexes.get(party.localId)!, "RelatedPerson"), personId: party.personId, status: "unconfirmed" as const, message: "Guarantor attach was not started because patient access needs repair." }))
+    : await attachExistingRegistrationGuarantors(input, staff, deps, response, built.existingRelatedPersonEntryIndexes, existingPersons);
+  return { status: 201, body: { kind: "created", patient, ...(warning ? { warning } : {}), ...(guarantorLinks.length ? { guarantorLinks } : {}) } };
+}
+
+type ExistingPartyInput = Extract<ResponsiblePartyInput, { kind: "existing" }>;
+type PersonPartyInput = Extract<ResponsiblePartyInput, { kind: "person" }>;
+
+function existingRegistrationParties(input: PatientRegistrationInput): ExistingPartyInput[] {
+  return input.responsibleParties.filter((party): party is ExistingPartyInput => party.kind === "existing");
+}
+
+async function loadExistingGuarantors(
+  input: PatientRegistrationInput,
+  staff: PatientRegistrationStaff,
+  fhir: PatientRegistrationEndpointDeps["serviceFhir"],
+  projectId: string,
+): Promise<Map<string, Person>> {
+  const parties = existingRegistrationParties(input);
+  if (parties.length && !staffHasBusinessAction(staff, "guarantor.link")) {
+    throw Object.assign(new Error("guarantor.link action required."), { status: 403 });
+  }
+  const persons = new Map<string, Person>();
+  for (const party of parties) {
+    const person = await fhir.readExtended<Person>("Person", party.personId);
+    if (!guarantorPersonIsAttachable(person, projectId)) {
+      throw Object.assign(new Error(`Person/${party.personId} is not an active guarantor in this practice.`), { status: 422 });
+    }
+    persons.set(party.localId, person);
+  }
+  return persons;
+}
+
+function resolveExistingParties(input: PatientRegistrationInput, persons: Map<string, Person>): PatientRegistrationInput {
+  return {
+    ...input,
+    responsibleParties: input.responsibleParties.map(party => {
+      if (party.kind !== "existing") return party;
+      const person = persons.get(party.localId)!;
+      const name = person.name?.find(candidate => candidate.use === "official") ?? person.name?.[0];
+      const address = person.address?.find(candidate => candidate.use === "home") ?? person.address?.[0];
+      return {
+        ...party,
+        kind: "person" as const,
+        firstName: name?.given?.[0] ?? "",
+        middleName: name?.given?.slice(1).join(" ") ?? "",
+        lastName: name?.family ?? "",
+        phone: person.telecom?.find(contact => contact.system === "phone")?.value ?? "",
+        address: address?.line?.join(" ") ?? "",
+        city: address?.city ?? "",
+        state: address?.state ?? "",
+        postalCode: address?.postalCode ?? "",
+      } satisfies PersonPartyInput;
+    }),
+  };
+}
+
+async function attachExistingRegistrationGuarantors(
+  input: PatientRegistrationInput,
+  staff: PatientRegistrationStaff,
+  deps: PatientRegistrationEndpointDeps,
+  response: Bundle,
+  entryIndexes: Map<string, number>,
+  persons: Map<string, Person>,
+) {
+  const outcomes: Array<{ relatedPersonId: string; personId: string; taskId?: string; status: "linked" | "pending" | "failed" | "unconfirmed"; message: string }> = [];
+  for (const party of existingRegistrationParties(input)) {
+    const relatedPersonId = createdIdFromEntry(response, entryIndexes.get(party.localId)!, "RelatedPerson");
+    const personId = persons.get(party.localId)!.id!;
+    try {
+      if (!deps.attachRegistrationGuarantor) throw new Error("Registration guarantor attach service is unavailable.");
+      const [person, relatedPerson] = await Promise.all([
+        deps.serviceFhir.readExtended<Person>("Person", personId),
+        deps.serviceFhir.readExtended<RelatedPerson>("RelatedPerson", relatedPersonId),
+      ]);
+      const result = await deps.attachRegistrationGuarantor(staff, {
+        operationId: randomUUID(), kind: "attach", destinationPersonId: personId, relatedPersonIds: [relatedPersonId],
+        expected: { [`Person/${personId}`]: requiredVersion(person), [`RelatedPerson/${relatedPersonId}`]: requiredVersion(relatedPerson) },
+        reason: "Registration attach",
+      });
+      const body = result.body as { task?: { id?: string; status?: string }; error?: string; phase?: string };
+      const status = body.task?.status === "completed" ? "linked" : body.task?.status === "failed" ? "failed" : body.task?.status === "in-progress" ? "pending" : "unconfirmed";
+      outcomes.push({ relatedPersonId, personId, ...(body.task?.id ? { taskId: body.task.id } : {}), status,
+        message: status === "linked" ? "Guarantor linked." : body.error ?? (status === "pending" ? "Guarantor attach is pending." : status === "failed" ? "Guarantor attach failed." : "Guarantor attach result is unconfirmed.") });
+    } catch {
+      outcomes.push({ relatedPersonId, personId, status: "unconfirmed", message: "Guarantor attach result is unconfirmed. Open the chart to review it." });
+    }
+  }
+  return outcomes;
+}
+
+function requiredVersion(resource: Resource): string {
+  if (!resource.meta?.versionId) throw new Error(`${resource.resourceType}/${resource.id} has no version for guarantor attach.`);
+  return resource.meta.versionId;
 }
 
 async function reserveMrn(
@@ -217,9 +322,10 @@ function buildPatientIdentityTransaction(
   reservation: ReservedMrn,
   today: string,
   projectId: string,
+  existingPersons: Map<string, Person>,
   preferencePractitioner?: string,
   recordedAt?: string,
-): Bundle {
+): { bundle: Bundle; existingRelatedPersonEntryIndexes: Map<string, number> } {
   const patientFullUrl = `urn:uuid:${randomUUID()}`;
   const phoneEntries = input.demographics.phones.map(createPatientPhone);
   const telecom = [
@@ -262,6 +368,7 @@ function buildPatientIdentityTransaction(
   const entries: BundleEntry[] = [{ fullUrl: patientFullUrl, resource: patient, request: { method: "POST", url: "Patient" } }];
   if (consentEntry) entries.push(consentEntry);
   const partyReferences = new Map<string, string>();
+  const existingRelatedPersonEntryIndexes = new Map<string, number>();
   for (const party of input.responsibleParties) {
     if (party.kind === "self") {
       partyReferences.set(party.localId, patientFullUrl);
@@ -269,20 +376,23 @@ function buildPatientIdentityTransaction(
     }
     const fullUrl = `urn:uuid:${randomUUID()}`;
     partyReferences.set(party.localId, fullUrl);
+    if (party.kind === "existing") existingRelatedPersonEntryIndexes.set(party.localId, entries.length);
     entries.push({
       fullUrl,
-      resource: registrationResourceInProject(buildRelatedPerson(party, patientFullUrl, today), projectId),
+      resource: registrationResourceInProject(buildRelatedPerson(party, patientFullUrl, today, existingPersons.get(party.localId)), projectId),
       request: { method: "POST", url: "RelatedPerson" },
     });
-    entries.push({
-      fullUrl: `urn:uuid:${randomUUID()}`,
-      resource: registrationResourceInProject<Person>({
-        resourceType: "Person",
-        ...buildResponsiblePartyDemographics(party),
-        link: [{ target: { reference: fullUrl }, assurance: "level2" }],
-      }, projectId),
-      request: { method: "POST", url: "Person" },
-    });
+    if (party.kind === "person") {
+      entries.push({
+        fullUrl: `urn:uuid:${randomUUID()}`,
+        resource: registrationResourceInProject<Person>({
+          resourceType: "Person",
+          ...buildResponsiblePartyDemographics(party),
+          link: [{ target: { reference: fullUrl }, assurance: "level2" }],
+        }, projectId),
+        request: { method: "POST", url: "Person" },
+      });
+    }
   }
   const account = registrationResourceInProject<Account>({
     resourceType: "Account",
@@ -297,14 +407,14 @@ function buildPatientIdentityTransaction(
       if (!party.financialResponsible) return [];
       const reference = partyReferences.get(party.localId);
       if (!reference) throw new Error("Responsible party reference was not built.");
-      return [{ party: { reference }, onHold: false, ...(party.kind === "person" ? { period: responsiblePartyPeriod(party) } : {}) }];
+      return [{ party: { reference }, onHold: false, ...(party.kind !== "self" ? { period: responsiblePartyPeriod(party) } : {}) }];
     }),
   }, projectId);
   entries.push({
     resource: account,
     request: { method: "PUT", url: `Account/${account.id}`, ...(account.meta?.versionId ? { ifMatch: `W/"${account.meta.versionId}"` } : {}) },
   });
-  return { resourceType: "Bundle", type: "transaction", entry: entries };
+  return { bundle: { resourceType: "Bundle", type: "transaction", entry: entries }, existingRelatedPersonEntryIndexes };
 }
 
 export function registrationResourceInProject<T extends Resource>(resource: T, projectId: string): T {
@@ -315,13 +425,13 @@ export function registrationResourceInProject<T extends Resource>(resource: T, p
   return { ...resource, meta: { ...resource.meta, project: projectId } };
 }
 
-function buildRelatedPerson(party: ResponsiblePartyInput, patientReference: string, today: string): RelatedPerson {
+function buildRelatedPerson(party: ResponsiblePartyInput, patientReference: string, today: string, existingPerson?: Person): RelatedPerson {
   return {
     resourceType: "RelatedPerson",
     active: responsiblePartyActiveOn(party, today),
     patient: { reference: patientReference },
     relationship: [{ text: party.relationship === "legal-guardian" ? "Legal guardian" : capitalize(party.relationship) }],
-    ...buildResponsiblePartyDemographics(party),
+    ...(party.kind === "existing" ? projectResponsiblePartyDemographics(existingPerson!) : buildResponsiblePartyDemographics(party)),
     period: responsiblePartyPeriod(party),
     extension: [
       { url: CONSENT_AUTHORITY_EXTENSION_URL, valueBoolean: party.consentAuthority },
@@ -377,7 +487,7 @@ function validateRegistration(input: PatientRegistrationInput, today: string): v
   const activePeople = relatedParties.filter((party) => responsiblePartyActiveOn(party, today));
   if (activePeople.length > 0 && activePeople.filter((party) => party.primary).length !== 1) errors.push("Choose exactly one current related person as primary.");
   for (const party of input.responsibleParties) {
-    if (party.financialResponsible && [party.address, party.city, party.state, party.postalCode].some((value) => !value.trim())) errors.push("A guarantor mailing address is required.");
+    if (party.financialResponsible && (party.kind === "existing" || [party.address, party.city, party.state, party.postalCode].some((value) => !value.trim()))) errors.push("A guarantor mailing address is required.");
   }
   for (const party of relatedParties) {
     if (!party.firstName.trim() || !party.lastName.trim()) errors.push("Responsible-party name is required.");

@@ -100,6 +100,7 @@ import { registerDeskRoutes } from "./desk/desk-routes.js";
 import { registerStaffInviteRoute } from "./desk/staff-invite.js";
 import { registerClinicRoutes } from "./clinic/clinic-routes.js";
 import { registerGuarantorRoutes } from "./clinic/guarantor-routes.js";
+import { handleGuarantorOperation } from "./clinic/guarantor-link-operation.js";
 import { registerOfficeRoutes } from "./office/office-routes.js";
 import { registerWatcherRoutes } from "./watchers/watcher-routes.js";
 import { createWatcherDefinitions, createWatcherRegistry } from "./watchers/watcher-registry.js";
@@ -7970,6 +7971,11 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         authenticateRegistration: authenticateStaffRouteForAction("patients.register"),
         serviceFhir: fhir,
         logRegistrationGrantFailure: (message, error) => console.error(message, error),
+        attachRegistrationGuarantor: async (staff, input) => handleGuarantorOperation({
+          serviceFhir: fhir,
+          serviceReference: await fhir.getAuthenticatedProfileReference(),
+          recordAudit: async (row) => { await auditRuntime.record(row, () => undefined); },
+        }, staff, { action: "create", body: input }),
         timeZone: process.env.ODOS_TIMEZONE,
       });
       registerGuarantorRoutes(app, {

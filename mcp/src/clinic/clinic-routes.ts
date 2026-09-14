@@ -34,6 +34,8 @@ export interface ClinicRouteDeps {
   now?: () => string;
   serviceFhir?: PatientRegistrationEndpointDeps["serviceFhir"];
   logRegistrationGrantFailure?: PatientRegistrationEndpointDeps["logGrantFailure"];
+  grantRegistrationAccess?: PatientRegistrationEndpointDeps["grantRegistrationAccess"];
+  attachRegistrationGuarantor?: PatientRegistrationEndpointDeps["attachRegistrationGuarantor"];
 }
 
 export function registerClinicRoutes(app: Pick<Application, "get" | "post">, deps: ClinicRouteDeps): void {
@@ -227,6 +229,8 @@ async function handlePatientRegistration(req: Request, res: Response, deps: Clin
         serviceFhir: deps.serviceFhir,
         now: deps.now,
         logGrantFailure: deps.logRegistrationGrantFailure,
+        grantRegistrationAccess: deps.grantRegistrationAccess,
+        attachRegistrationGuarantor: deps.attachRegistrationGuarantor,
       },
     );
     res.status(result.status).json(result.body);
