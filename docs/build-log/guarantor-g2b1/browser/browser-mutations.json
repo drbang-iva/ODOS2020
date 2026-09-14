@@ -1,0 +1,46 @@
+{
+  "kind": "Author Chromium guard mutations",
+  "mutations": [
+    {
+      "mutation": "complete-click",
+      "command": "G2B1_BROWSER_MUTATION=complete-click G2B1_EVIDENCE_DIR=<proof-root>/.odos/g2b1-editor/browser-mutation-complete node --import ./mcp/node_modules/tsx/dist/loader.mjs docs/build-log/guarantor-g2b1/browser-proof.mjs",
+      "exitCode": 1,
+      "result": "FAIL",
+      "failure": "page.waitForResponse: Timeout 10000ms exceeded while waiting for event \"response\"",
+      "servedMutation": {
+        "kind": "complete-click",
+        "applied": true,
+        "sourceBeforeViteSha256": "b07e64c1c89ebbb1e0960a1adb33141913740ab94b879937414f28dd4533781b"
+      },
+      "sourceComponentSha256": "83ffe27a086b45d4a22c347efa673450151d05490cc556994feaeb951b8b07f0",
+      "completedAt": "2026-09-14T10:33:30.631Z"
+    },
+    {
+      "mutation": "correct-click",
+      "command": "G2B1_BROWSER_MUTATION=correct-click G2B1_EVIDENCE_DIR=<proof-root>/.odos/g2b1-editor/browser-mutation-correct node --import ./mcp/node_modules/tsx/dist/loader.mjs docs/build-log/guarantor-g2b1/browser-proof.mjs",
+      "exitCode": 1,
+      "result": "FAIL",
+      "failure": "page.waitForResponse: Timeout 10000ms exceeded while waiting for event \"response\"",
+      "servedMutation": {
+        "kind": "correct-click",
+        "applied": true,
+        "sourceBeforeViteSha256": "fb6ef9f47c1a2d4ccf713191bf4319da582788a09c6ca196bd6ef1b7bed5590f"
+      },
+      "sourceComponentSha256": "83ffe27a086b45d4a22c347efa673450151d05490cc556994feaeb951b8b07f0",
+      "completedAt": "2026-09-14T10:34:07.916Z"
+    }
+  ],
+  "restored": {
+    "result": "PASS",
+    "checks": {
+      "recoveryClicks": 2,
+      "claimedUnlinkedChildrenShownPending": 4,
+      "disabledSaveAndRepairClickAttempts": 4,
+      "protectedChildSentinelsPreserved": 4,
+      "directBrowserFhirPuts": 0,
+      "pageErrors": 0,
+      "scope": "Author route wiring and real local FHIR state proof; independent evaluation and policy proof are separate."
+    },
+    "completedAt": "2026-09-14T10:34:33.859Z"
+  }
+}
