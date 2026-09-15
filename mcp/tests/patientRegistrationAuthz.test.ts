@@ -500,6 +500,7 @@ const REGISTRATION_BODY = {
   responsibleParties: [{
     localId: "guardian",
     kind: "person",
+    birthDate: "1980-01-02",
     relationship: "legal-guardian",
     firstName: "Responsible",
     middleName: "",
@@ -951,3 +952,9 @@ test("D7 registration: absent or invalid majority setting refuses before any wri
     assert.equal(fhir.account, undefined);
   }
 });
+ test("D1 new guarantor requires DOB before any registration write", async () => {
+ const body = JSON.parse(JSON.stringify(REGISTRATION_BODY)); delete body.responsibleParties[0].birthDate;
+ const fhir = new RegistrationFhir("staff");
+ const response = await postRegistration("staff", fhir, undefined, body);
+ assert.equal(response.status, 400); assert.equal(fhir.searchCalls, 0);
+ });

@@ -16,7 +16,7 @@ const INPUT: PatientRegistrationInput = {
     email: "", address: "1 Synthetic Way", city: "Greenville", state: "SC", postalCode: "29601",
   },
   responsibleParties: [{
-    localId: "guardian", kind: "person", relationship: "legal-guardian",
+    localId: "guardian", kind: "person", birthDate: "1980-01-02", relationship: "legal-guardian",
     firstName: " Responsible ", middleName: " Middle ", lastName: " Synthetic ", phones: [{ value: " 864-555-0101 ", use: "home" }, { value: "", use: "mobile" }], textable: "",
     address: " 1 Synthetic Way ", city: " Greenville ", state: " SC ", postalCode: " 29601 ",
     financialResponsible: true, consentAuthority: true, primary: true,

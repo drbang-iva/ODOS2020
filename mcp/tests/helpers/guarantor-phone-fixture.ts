@@ -17,7 +17,7 @@ function registrationInput(kind = 'person', family = 'Guardian', emptyAddress = 
   return {
     demographics: { firstName: 'EXAMPLEV', middleName: '', lastName: 'EXAMPLEV', preferredName: '', birthDate: '2015-04-03', gender: 'female', phones: [{ value: '864-555-0100', use: 'home' }, { value: '', use: 'mobile' }], textable: '', email: '', address: '', city: '', state: '', postalCode: '' },
     responsibleParties: [{ localId: 'guardian', kind, relationship: 'parent', financialResponsible: !emptyAddress, consentAuthority: true, primary: true, courtOrderNotes: 'Synthetic court note', effectiveDate: '2026-01-01', endDate: '',
-      ...(kind === 'existing' ? { personId: 'D' } : { firstName: 'EXAMPLEV', middleName: '', lastName: family, phones: [{ value: '864-555-0101', use: 'home' }, { value: '864-555-0102', use: 'mobile' }], textable: '', address: emptyAddress ? '' : '2 Synthetic Way', city: emptyAddress ? '' : 'Greenville', state: emptyAddress ? '' : 'SC', postalCode: emptyAddress ? '' : '29601' }) }], confirmDuplicate: true,
+      ...(kind === 'existing' ? { personId: 'D' } : { birthDate: '1980-01-02', firstName: 'EXAMPLEV', middleName: '', lastName: family, phones: [{ value: '864-555-0101', use: 'home' }, { value: '864-555-0102', use: 'mobile' }], textable: '', address: emptyAddress ? '' : '2 Synthetic Way', city: emptyAddress ? '' : 'Greenville', state: emptyAddress ? '' : 'SC', postalCode: emptyAddress ? '' : '29601' }) }], confirmDuplicate: true,
   };
 }
 

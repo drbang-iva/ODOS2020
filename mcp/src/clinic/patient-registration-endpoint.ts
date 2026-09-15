@@ -60,7 +60,7 @@ const responsiblePartyDemographicFields = {
 const { phone: _legacyPartyPhone, ...personDemographicFields } = responsiblePartyDemographicFields;
 const responsiblePartySchema = z.discriminatedUnion("kind", [
   z.object({ ...responsiblePartyFields, ...responsiblePartyDemographicFields, kind: z.literal("self") }).strict(),
-  z.object({ ...responsiblePartyFields, ...personDemographicFields, kind: z.literal("person"), phones: z.tuple([patientPhoneSchema, patientPhoneSchema]), textable: z.enum(["phone1", "phone2", "neither", ""]) }).strict(),
+  z.object({ ...responsiblePartyFields, ...personDemographicFields, kind: z.literal("person"), birthDate: z.string(), phones: z.tuple([patientPhoneSchema, patientPhoneSchema]), textable: z.enum(["phone1", "phone2", "neither", ""]) }).strict(),
   z.object({ ...responsiblePartyFields, kind: z.literal("existing"), personId: idSchema }).strict(),
 ]);
 
@@ -260,6 +260,7 @@ function resolveExistingParties(input: PatientRegistrationInput, persons: Map<st
       return {
         ...party,
         kind: "person" as const,
+        birthDate: person.birthDate ?? "",
         firstName: name?.given?.[0] ?? "",
         middleName: name?.given?.slice(1).join(" ") ?? "",
         lastName: name?.family ?? "",
@@ -406,7 +407,7 @@ function buildPatientIdentityTransaction(
     const fullUrl = `urn:uuid:${randomUUID()}`;
     partyReferences.set(party.localId, fullUrl);
     if (party.kind === "existing") existingRelatedPersonEntryIndexes.set(party.localId, entries.length);
-    const source: Person = party.kind === "existing" ? existingPersons.get(party.localId)! : { resourceType: "Person", ...buildResponsiblePartyDemographics(party) };
+    const source: Person = party.kind === "existing" ? existingPersons.get(party.localId)! : { resourceType: "Person", birthDate: party.birthDate, ...buildResponsiblePartyDemographics(party) };
     entries.push({
       fullUrl,
       resource: registrationResourceInProject(buildRelatedPerson(party, patientFullUrl, today, source), projectId),
@@ -518,6 +519,7 @@ function validateRegistration(input: PatientRegistrationInput, today: string, ex
     if (party.financialResponsible && (party.kind === "existing" || [party.address, party.city, party.state, party.postalCode].some((value) => !value.trim()))) errors.push("A guarantor mailing address is required.");
   }
   for (const party of relatedParties) {
+    if (!existingIds.has(party.localId) && (!isR4Date(party.birthDate) || party.birthDate > today)) errors.push("Guarantor date of birth must be a valid YYYY-MM-DD date, not in the future.");
     if (!existingIds.has(party.localId)) errors.push(...Object.values(validatePatientPhones(party.phones, party.textable)));
     if (!party.firstName.trim() || !party.lastName.trim()) errors.push("Responsible-party name is required.");
     if (!isR4Date(party.effectiveDate)) errors.push("A valid responsible-party effective date is required.");
@@ -655,7 +657,7 @@ function responsiblePartyActiveOn(party: ResponsiblePartyInput, today: string): 
   return (!party.effectiveDate || party.effectiveDate <= today) && (!party.endDate || party.endDate >= today);
 }
 
-function isR4Date(value: string): boolean {
+export function isR4Date(value: string): boolean {
   const date = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00.000Z`) : undefined;
   return Boolean(date && !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value);
 }

@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: D3 writer-derived DOB edit preserves both child insurance fingerprints and census
+ok 1 - D3 writer-derived DOB edit preserves both child insurance fingerprints and census
+  ---
+  duration_ms: 19.2545
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 138.295208

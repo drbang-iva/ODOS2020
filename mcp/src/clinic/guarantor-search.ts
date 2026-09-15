@@ -3,7 +3,7 @@ import { validatePatientPhones } from "./patient-telecom.js";
 import { z } from "zod";
 import { FhirSearchLimitError, searchProjectAll } from "../fhir-search.js";
 import { staffHasBusinessAction } from "../authz/roles.js";
-import { registrationProjectId } from "./patient-registration-endpoint.js";
+import { registrationProjectId, isR4Date } from "./patient-registration-endpoint.js";
 import { buildResponsiblePartyDemographics, guarantorPersonIsAttachable } from "./responsible-party-demographics.js";
 import type { GuarantorOperationDeps, GuarantorOperationResult, GuarantorOperationStaff } from "./guarantor-link-operation.js";
 
@@ -16,7 +16,7 @@ export const searchPhoneDigits = (value: string) => {
 const keys = z.object({ lastName: z.string().trim().min(1), firstName: z.string().trim().min(1).optional(), phone: z.string().trim().optional() }).strict()
   .refine(v => Boolean(v.firstName) !== (v.phone !== undefined))
   .refine(v => v.phone === undefined || searchPhoneDigits(v.phone).length >= 10);
-const createSchema = z.object({ firstName: z.string().trim().min(1), lastName: z.string().trim().min(1),
+const createSchema = z.object({ birthDate: z.string().refine(value => isR4Date(value) && value <= new Date().toISOString().slice(0, 10)), firstName: z.string().trim().min(1), lastName: z.string().trim().min(1),
   middleName: z.string().default(""), phones: z.tuple([z.object({ value: z.string(), use: z.enum(["mobile", "home", "work"]) }).strict(), z.object({ value: z.string(), use: z.enum(["mobile", "home", "work"]) }).strict()]).default([{ value: "", use: "mobile" }, { value: "", use: "mobile" }]), textable: z.enum(["phone1", "phone2", "neither", ""]).default(""), address: z.string().default(""), city: z.string().default(""), state: z.string().default(""), postalCode: z.string().default("") }).strict();
 const tooMany = { status: 422, body: { error: "Too many matches; add a first name or phone." } };
 
@@ -37,7 +37,7 @@ export async function handleGuarantorSearch(deps: GuarantorOperationDeps, staff:
   });
   if (found.length > 20) return tooMany;
   return { status: 200, body: found.map(person => ({ personId: person.id, versionId: person.meta?.versionId,
-    name: person.name?.[0]?.text || [...person.name?.[0]?.given ?? [], person.name?.[0]?.family].filter(Boolean).join(" "),
+    birthDate: person.birthDate ?? "", name: person.name?.[0]?.text || [...person.name?.[0]?.given ?? [], person.name?.[0]?.family].filter(Boolean).join(" "),
     phones: (person.telecom ?? []).filter(contact => contact.system === "phone").map(contact => contact.value ?? ""),
     city: person.address?.[0]?.city ?? "", postalCode: person.address?.[0]?.postalCode ?? "" })) };
 }
@@ -45,11 +45,11 @@ export async function handleGuarantorSearch(deps: GuarantorOperationDeps, staff:
 export async function createGuarantor(deps: GuarantorOperationDeps, staff: GuarantorOperationStaff, input: unknown): Promise<GuarantorOperationResult> {
   if (!staffHasBusinessAction(staff, "guarantor.link")) return { status: 403, body: { error: "guarantor.link action required." } };
   const parsed = createSchema.safeParse(input);
-  if (!parsed.success) return { status: 400, body: { error: "First and last name are required; guarantor details are invalid." } };
+  if (!parsed.success) return { status: 400, body: { error: "First and last name and a valid date of birth, not in the future, are required; guarantor details are invalid." } };
   if (!staff.project) return { status: 422, body: { error: "Staff practice is unavailable." } };
   const errors = validatePatientPhones(parsed.data.phones, parsed.data.textable);
   if (Object.keys(errors).length) return { status: 400, body: { error: Object.values(errors).join(" ") } };
-  const person: Person = { resourceType: "Person", active: true, meta: { project: registrationProjectId(staff.project) }, ...buildResponsiblePartyDemographics(parsed.data) };
+  const person: Person = { resourceType: "Person", birthDate: parsed.data.birthDate, active: true, meta: { project: registrationProjectId(staff.project) }, ...buildResponsiblePartyDemographics(parsed.data) };
   const bundle: Bundle = { resourceType: "Bundle", type: "transaction", entry: [{ resource: person, request: { method: "POST", url: "Person" } }] };
   // fhir-service-write: Person
   const response = await deps.serviceFhir.executeTransactionAsActor(bundle, { actorReference: staff.staffReference, actorRole: staff.actorRole, actionReason: "guarantor.link create Person" },

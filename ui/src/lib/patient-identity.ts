@@ -34,7 +34,7 @@ interface ResponsiblePartyCommon {
 
 export interface PersonResponsiblePartyDraft extends ResponsiblePartyCommon {
   kind: "person";
-  firstName: string; middleName: string; lastName: string;
+  firstName: string; middleName: string; lastName: string; birthDate: string;
   phones: PhoneDraft["phones"]; textable: PhoneDraft["textable"];
   address: string; city: string; state: string; postalCode: string;
 }
@@ -42,11 +42,11 @@ export interface PersonResponsiblePartyDraft extends ResponsiblePartyCommon {
 export interface ExistingResponsiblePartyDraft extends ResponsiblePartyCommon {
   kind: "existing";
   personId: string;
-  card: { personId: string; versionId: string; name: string; phones: string[]; city: string; postalCode: string };
+  card: { personId: string; versionId: string; name: string; birthDate: string; phones: string[]; city: string; postalCode: string };
   previous: PersonResponsiblePartyDraft;
 }
 
-export type SelfResponsiblePartyDraft = Omit<PersonResponsiblePartyDraft, "kind" | "phones" | "textable"> & { kind: "self"; phone: string };
+export type SelfResponsiblePartyDraft = Omit<PersonResponsiblePartyDraft, "kind" | "phones" | "textable" | "birthDate"> & { kind: "self"; phone: string };
 export type ResponsiblePartyDraft = SelfResponsiblePartyDraft | PersonResponsiblePartyDraft | ExistingResponsiblePartyDraft;
 
 export function emptySelfResponsibleParty(localId: string): SelfResponsiblePartyDraft {
@@ -79,6 +79,7 @@ export function emptyRelatedResponsibleParty(
   return {
     ...common,
     kind: "person",
+    birthDate: "",
     phones: [emptyPatientPhone(), emptyPatientPhone()], textable: "",
     relationship: "parent",
     financialResponsible: true,
@@ -174,6 +175,7 @@ export function validateResponsibleParties(
       return;
     }
     if (party.kind === "person") Object.entries(validatePatientPhones(party.phones, party.textable)).forEach(([field, error]) => { errors[key(field)] = error; });
+    if (party.kind === "person" && (!isR4Date(party.birthDate) || party.birthDate > today)) errors[key("birthDate")] = "A valid guarantor date of birth, not in the future, is required.";
     if (party.kind === "person" && !party.firstName.trim()) errors[key("firstName")] = "First name is required.";
     if (party.kind === "person" && !party.lastName.trim()) errors[key("lastName")] = "Last name is required.";
     if (!party.relationship) errors[key("relationship")] = "Relationship is required.";

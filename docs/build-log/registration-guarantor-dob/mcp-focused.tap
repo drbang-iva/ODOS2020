@@ -1,0 +1,1173 @@
+TAP version 13
+# Subtest: A1: two concurrent chart attaches admit one winner and fail the loser at the claim before its Person write
+ok 1 - A1: two concurrent chart attaches admit one winner and fail the loser at the claim before its Person write
+  ---
+  duration_ms: 10.306875
+  type: 'test'
+  ...
+# Subtest: A2: attach refuses an already-owned RelatedPerson before recording a Task
+ok 2 - A2: attach refuses an already-owned RelatedPerson before recording a Task
+  ---
+  duration_ms: 0.50075
+  type: 'test'
+  ...
+# Subtest: A3: a destination edit after validation pauses attach, and Complete fences only that destination
+ok 3 - A3: a destination edit after validation pauses attach, and Complete fences only that destination
+  ---
+  duration_ms: 26.666166
+  type: 'test'
+  ...
+# Subtest: A4: Complete classifies a landed attach after reply loss without a second attaching PUT
+ok 4 - A4: Complete classifies a landed attach after reply loss without a second attaching PUT
+  ---
+  duration_ms: 2.376042
+  type: 'test'
+  ...
+# Subtest: A5/A15: correcting a completed attach unlinks without projection and preserves every child-owned field
+ok 5 - A5/A15: correcting a completed attach unlinks without projection and preserves every child-owned field
+  ---
+  duration_ms: 3.533
+  type: 'test'
+  ...
+# Subtest: A6: unlink takes over a pending attach whose Person write landed
+ok 6 - A6: unlink takes over a pending attach whose Person write landed
+  ---
+  duration_ms: 9.834916
+  type: 'test'
+  ...
+# Subtest: A7: unlink of a pending attach before the attach lands performs no detaching Person PUT
+ok 7 - A7: unlink of a pending attach before the attach lands performs no detaching Person PUT
+  ---
+  duration_ms: 2.092792
+  type: 'test'
+  ...
+# Subtest: A8: correcting an unlink is refused without a Task
+ok 8 - A8: correcting an unlink is refused without a Task
+  ---
+  duration_ms: 2.54625
+  type: 'test'
+  ...
+# Subtest: A16: lost unlink release cannot overwrite a later completed attach
+ok 9 - A16: lost unlink release cannot overwrite a later completed attach
+  ---
+  duration_ms: 53.246083
+  type: 'test'
+  ...
+# Subtest: A17: lost unlink detach plus a staff rename completes, then a later attach remains live
+ok 10 - A17: lost unlink detach plus a staff rename completes, then a later attach remains live
+  ---
+  duration_ms: 8.377333
+  type: 'test'
+  ...
+# Subtest: A18: only attach and correct-of-attach may omit their designated endpoints
+ok 11 - A18: only attach and correct-of-attach may omit their designated endpoints
+  ---
+  duration_ms: 2.922667
+  type: 'test'
+  ...
+# Subtest: G1 read-only facade refuses every write before transport and a full census emits zero writes
+ok 12 - G1 read-only facade refuses every write before transport and a full census emits zero writes
+  ---
+  duration_ms: 59.268666
+  type: 'test'
+  ...
+# Subtest: G2 role classification excludes subscriber-only and includes a primary-only responsible party
+ok 13 - G2 role classification excludes subscriber-only and includes a primary-only responsible party
+  ---
+  duration_ms: 37.761209
+  type: 'test'
+  ...
+# Subtest: G3 ownership and claim states are exclusive and terminal claims are inert
+ok 14 - G3 ownership and claim states are exclusive and terminal claims are inert
+  ---
+  duration_ms: 6.514959
+  type: 'test'
+  ...
+# Subtest: G4 failed attach, undone attach, and pre-G-1 unowned records remain distinct
+ok 15 - G4 failed attach, undone attach, and pre-G-1 unowned records remain distinct
+  ---
+  duration_ms: 7.86725
+  type: 'test'
+  ...
+# Subtest: G5 insurance census counts only responsible-party subscribers and flags non-service fingerprint fields
+ok 16 - G5 insurance census counts only responsible-party subscribers and flags non-service fingerprint fields
+  ---
+  duration_ms: 9.600333
+  type: 'test'
+  ...
+# Subtest: G6 exact normalized name and US phone create candidate groups without linking anything
+ok 17 - G6 exact normalized name and US phone create candidate groups without linking anything
+  ---
+  duration_ms: 23.519875
+  type: 'test'
+  ...
+# Subtest: G7 exceeding the 50000-row ceiling exits 2 without printing a partial summary
+ok 18 - G7 exceeding the 50000-row ceiling exits 2 without printing a partial summary
+  ---
+  duration_ms: 190.170583
+  type: 'test'
+  ...
+# Subtest: G8 summary is de-identified and detail output is absolute, outside checkouts, exclusive, and mode 0600
+ok 19 - G8 summary is de-identified and detail output is absolute, outside checkouts, exclusive, and mode 0600
+  ---
+  duration_ms: 23.203584
+  type: 'test'
+  ...
+# Subtest: G9 a foreign-project Person is counted as cross-project and never owns the local responsible party
+ok 20 - G9 a foreign-project Person is counted as cross-project and never owns the local responsible party
+  ---
+  duration_ms: 6.56
+  type: 'test'
+  ...
+# Subtest: C2 Person counters distinguish valid, missing, and non-RelatedPerson links
+ok 21 - C2 Person counters distinguish valid, missing, and non-RelatedPerson links
+  ---
+  duration_ms: 7.330875
+  type: 'test'
+  ...
+# Subtest: insurance history follows an exact instance-level history next link
+ok 22 - insurance history follows an exact instance-level history next link
+  ---
+  duration_ms: 5.472375
+  type: 'test'
+  ...
+# Subtest: history ceiling counts entries without resources
+ok 23 - history ceiling counts entries without resources
+  ---
+  duration_ms: 6.242583
+  type: 'test'
+  ...
+# Subtest: duplicate links from one Person count as one owner
+ok 24 - duplicate links from one Person count as one owner
+  ---
+  duration_ms: 4.236666
+  type: 'test'
+  ...
+# Subtest: G10 staff address-only history is informational while birthDate and active fingerprints are suspected
+ok 25 - G10 staff address-only history is informational while birthDate and active fingerprints are suspected
+  ---
+  duration_ms: 19.166166
+  type: 'test'
+  ...
+# Subtest: G11 a wholly untrusted guarantor operation Task population exits 3 without a summary
+ok 26 - G11 a wholly untrusted guarantor operation Task population exits 3 without a summary
+  ---
+  duration_ms: 3.672917
+  type: 'test'
+  ...
+# Subtest: D3 writer-derived DOB edit preserves both child insurance fingerprints and census
+ok 27 - D3 writer-derived DOB edit preserves both child insurance fingerprints and census
+  ---
+  duration_ms: 39.272833
+  type: 'test'
+  ...
+# Subtest: S9: guarantor.link.started produces a patient-attributed audit row and projection
+ok 28 - S9: guarantor.link.started produces a patient-attributed audit row and projection
+  ---
+  duration_ms: 10.641292
+  type: 'test'
+  ...
+# Subtest: S9: guarantor.link.completed produces a patient-attributed audit row and projection
+ok 29 - S9: guarantor.link.completed produces a patient-attributed audit row and projection
+  ---
+  duration_ms: 0.080333
+  type: 'test'
+  ...
+# Subtest: S9: guarantor.link.pending produces a patient-attributed audit row and projection
+ok 30 - S9: guarantor.link.pending produces a patient-attributed audit row and projection
+  ---
+  duration_ms: 0.055125
+  type: 'test'
+  ...
+# Subtest: S9: guarantor.link.failed produces a patient-attributed audit row and projection
+ok 31 - S9: guarantor.link.failed produces a patient-attributed audit row and projection
+  ---
+  duration_ms: 0.098
+  type: 'test'
+  ...
+# Subtest: S9: guarantor.link.interfered produces a patient-attributed audit row and projection
+ok 32 - S9: guarantor.link.interfered produces a patient-attributed audit row and projection
+  ---
+  duration_ms: 0.053
+  type: 'test'
+  ...
+# Subtest: S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+ok 33 - S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+  ---
+  duration_ms: 130.267333
+  type: 'test'
+  ...
+# Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
+ok 34 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
+  ---
+  duration_ms: 3.332416
+  type: 'test'
+  ...
+# Subtest: L9: stale confirmation refuses before any Task or resource write
+ok 35 - L9: stale confirmation refuses before any Task or resource write
+  ---
+  duration_ms: 0.618458
+  type: 'test'
+  ...
+# Subtest: L10: consolidate subset refuses before any write
+ok 36 - L10: consolidate subset refuses before any write
+  ---
+  duration_ms: 0.455916
+  type: 'test'
+  ...
+# Subtest: L11: foreign D and separately foreign child Patient refuse without writes
+ok 37 - L11: foreign D and separately foreign child Patient refuse without writes
+  ---
+  duration_ms: 0.588209
+  type: 'test'
+  ...
+# Subtest: L21: repeated operation identifier returns one Task and performs no second writes
+ok 38 - L21: repeated operation identifier returns one Task and performs no second writes
+  ---
+  duration_ms: 2.316416
+  type: 'test'
+  ...
+# Subtest: L3: detach-first leaves an unowned claimed child and Complete projects current D
+ok 39 - L3: detach-first leaves an unowned claimed child and Complete projects current D
+  ---
+  duration_ms: 14.249
+  type: 'test'
+  ...
+# Subtest: L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
+ok 40 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
+  ---
+  duration_ms: 3.012875
+  type: 'test'
+  ...
+# Subtest: L24b: a live service-authored correction stops Complete before every write
+ok 41 - L24b: a live service-authored correction stops Complete before every write
+  ---
+  duration_ms: 1.629625
+  type: 'test'
+  ...
+# Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
+ok 42 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
+  ---
+  duration_ms: 24.396833
+  type: 'test'
+  ...
+# Subtest: L13: an unresolved changed child intent is interference with no further domain writes
+ok 43 - L13: an unresolved changed child intent is interference with no further domain writes
+  ---
+  duration_ms: 11.648834
+  type: 'test'
+  ...
+# Subtest: L26: pending Correct detaches a landed attachment before returning children to retained S
+ok 44 - L26: pending Correct detaches a landed attachment before returning children to retained S
+  ---
+  duration_ms: 3.278625
+  type: 'test'
+  ...
+# Subtest: S6: completed Correct restores retained S, preserves D sibling, and refuses a later owner
+ok 45 - S6: completed Correct restores retained S, preserves D sibling, and refuses a later owner
+  ---
+  duration_ms: 3.916583
+  type: 'test'
+  ...
+# Subtest: L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
+ok 46 - L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
+  ---
+  duration_ms: 36.933167
+  type: 'test'
+  ...
+# Subtest: L27/L29: one or two descent refusals resolve each intent; a later Complete is live
+ok 47 - L27/L29: one or two descent refusals resolve each intent; a later Complete is live
+  ---
+  duration_ms: 14.128708
+  type: 'test'
+  ...
+# Subtest: L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim
+ok 48 - L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim
+  ---
+  duration_ms: 9.91025
+  type: 'test'
+  ...
+# Subtest: L1: two admitted starters produce one source detach and one completed operation
+ok 49 - L1: two admitted starters produce one source detach and one completed operation
+  ---
+  duration_ms: 1.946667
+  type: 'test'
+  ...
+# Subtest: L2: sorted claims give a winner with two shared children and opposed request orders
+ok 50 - L2: sorted claims give a winner with two shared children and opposed request orders
+  ---
+  duration_ms: 13.865
+  type: 'test'
+  ...
+# Subtest: L5: D changes after r1 projection so no stale r2 projection is submitted
+ok 51 - L5: D changes after r1 projection so no stale r2 projection is submitted
+  ---
+  duration_ms: 12.878041
+  type: 'test'
+  ...
+# Subtest: L16/L20: another claim or name edit after verification refuses release and completion audit
+ok 52 - L16/L20: another claim or name edit after verification refuses release and completion audit
+  ---
+  duration_ms: 2.085209
+  type: 'test'
+  ...
+# Subtest: L23: D editing after verify is later drift; conditional child release still completes
+ok 53 - L23: D editing after verify is later drift; conditional child release still completes
+  ---
+  duration_ms: 1.031708
+  type: 'test'
+  ...
+# Subtest: L19: a revoked business action refuses before any read or write
+ok 54 - L19: a revoked business action refuses before any read or write
+  ---
+  duration_ms: 0.203292
+  type: 'test'
+  ...
+# Subtest: S4/status: a missing operation is inert and a staff-authored copied Task cannot activate claims
+ok 55 - S4/status: a missing operation is inert and a staff-authored copied Task cannot activate claims
+  ---
+  duration_ms: 0.718583
+  type: 'test'
+  ...
+# Subtest: L15: correction fences a paused Complete before its already-intended destination PUT
+ok 56 - L15: correction fences a paused Complete before its already-intended destination PUT
+  ---
+  duration_ms: 2.451666
+  type: 'test'
+  ...
+# Subtest: L24c: completed correction causes one cancel attempt, never an attempted fence intent
+ok 57 - L24c: completed correction causes one cancel attempt, never an attempted fence intent
+  ---
+  duration_ms: 2.288584
+  type: 'test'
+  ...
+# Subtest: S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes
+ok 58 - S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes
+  ---
+  duration_ms: 3.22
+  type: 'test'
+  ...
+# Subtest: S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response
+ok 59 - S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response
+  ---
+  duration_ms: 17.524834
+  type: 'test'
+  ...
+# Subtest: S6 resumed takeover refusal fails only the correction before ownership and preserves original recovery
+ok 60 - S6 resumed takeover refusal fails only the correction before ownership and preserves original recovery
+  ---
+  duration_ms: 9.119584
+  type: 'test'
+  ...
+# Subtest: L15 fresh retry: a partially running correction stops the old runner before a fresh destination write
+ok 61 - L15 fresh retry: a partially running correction stops the old runner before a fresh destination write
+  ---
+  duration_ms: 14.49975
+  type: 'test'
+  ...
+# Subtest: S3 released children: Complete preserves later transfers after partial release or an unsent terminal write
+ok 62 - S3 released children: Complete preserves later transfers after partial release or an unsent terminal write
+  ---
+  duration_ms: 31.687375
+  type: 'test'
+  ...
+# Subtest: L29: double re-claim refusals and a lost successful descent retry remain resumable
+ok 63 - L29: double re-claim refusals and a lost successful descent retry remain resumable
+  ---
+  duration_ms: 23.710791
+  type: 'test'
+  ...
+# Subtest: S3 intent rule: a definite server error is rejected history, not an unresolved response
+ok 64 - S3 intent rule: a definite server error is rejected history, not an unresolved response
+  ---
+  duration_ms: 0.684458
+  type: 'test'
+  ...
+# Subtest: S3 checkpoint refusal stops immediately without replaying a stale Task version
+ok 65 - S3 checkpoint refusal stops immediately without replaying a stale Task version
+  ---
+  duration_ms: 0.48675
+  type: 'test'
+  ...
+# Subtest: S3 late successful release checkpoints its result without completing or auditing twice
+ok 66 - S3 late successful release checkpoints its result without completing or auditing twice
+  ---
+  duration_ms: 1.754042
+  type: 'test'
+  ...
+# Subtest: S3 terminal response checkpoint refusal is reported and never replayed
+ok 67 - S3 terminal response checkpoint refusal is reported and never replayed
+  ---
+  duration_ms: 2.190583
+  type: 'test'
+  ...
+# Subtest: L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan
+ok 68 - L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan
+  ---
+  duration_ms: 1.072125
+  type: 'test'
+  ...
+# Subtest: S5 retry classification: a fresh foreign live claim stops a recovery Person retry
+ok 69 - S5 retry classification: a fresh foreign live claim stops a recovery Person retry
+  ---
+  duration_ms: 1.563958
+  type: 'test'
+  ...
+# Subtest: L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands
+ok 70 - L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands
+  ---
+  duration_ms: 6.812084
+  type: 'test'
+  ...
+# Subtest: L17 staff: the Task fence refuses operation creation, mutation and code laundering
+ok 71 - L17 staff: the Task fence refuses operation creation, mutation and code laundering
+  ---
+  duration_ms: 45.74825
+  type: 'test'
+  ...
+# Subtest: L18 staff: the Person fence preserves name edits and refuses link mutations
+ok 72 - L18 staff: the Person fence preserves name edits and refuses link mutations
+  ---
+  duration_ms: 5.311958
+  type: 'test'
+  ...
+# Subtest: L17 composite: the Task fence refuses operation creation, mutation and code laundering
+ok 73 - L17 composite: the Task fence refuses operation creation, mutation and code laundering
+  ---
+  duration_ms: 6.414458
+  type: 'test'
+  ...
+# Subtest: L18 composite: the Person fence preserves name edits and refuses link mutations
+ok 74 - L18 composite: the Person fence preserves name edits and refuses link mutations
+  ---
+  duration_ms: 3.404459
+  type: 'test'
+  ...
+# Subtest: Follow-up F4: staff cannot change Person active but can edit demographics while active is unchanged
+ok 75 - Follow-up F4: staff cannot change Person active but can edit demographics while active is unchanged
+  ---
+  duration_ms: 0.849625
+  type: 'test'
+  ...
+# Subtest: L19: each role grants guarantor.link and a membership revocation removes it
+ok 76 - L19: each role grants guarantor.link and a membership revocation removes it
+  ---
+  duration_ms: 0.504375
+  type: 'test'
+  ...
+# Subtest: S1: all five operation routes require an authenticated staff caller
+ok 77 - S1: all five operation routes require an authenticated staff caller
+  ---
+  duration_ms: 211.276875
+  type: 'test'
+  ...
+# Subtest: S1 rate limit: all five routes share a budget before service or staff authentication
+ok 78 - S1 rate limit: all five routes share a budget before service or staff authentication
+  ---
+  duration_ms: 106.503584
+  type: 'test'
+  ...
+# Subtest: L22: Coverage subscriber referencing either moved responsible party is still refused after transfer (non-mutation regression)
+ok 79 - L22: Coverage subscriber referencing either moved responsible party is still refused after transfer (non-mutation regression)
+  ---
+  duration_ms: 74.083166
+  type: 'test'
+  ...
+# Subtest: L7: actual statement recipient remains the moved primary RelatedPerson before and after transfer
+ok 80 - L7: actual statement recipient remains the moved primary RelatedPerson before and after transfer
+  ---
+  duration_ms: 15.66375
+  type: 'test'
+  ...
+# Subtest: R1 X1: lost correction detach followed by a staff rename completes with source ownership and no claim
+ok 81 - R1 X1: lost correction detach followed by a staff rename completes with source ownership and no claim
+  ---
+  duration_ms: 42.950375
+  type: 'test'
+  ...
+# {"schedule":"X1","complete":[{"status":200,"phase":"linked"}],"correct":422,"owners":["S"],"claims":[],"correctionStatus":"completed"}
+# Subtest: R2 X2: lost correction release followed by transfer B completes without rewriting B's child
+ok 82 - R2 X2: lost correction release followed by transfer B completes without rewriting B's child
+  ---
+  duration_ms: 18.486667
+  type: 'test'
+  ...
+# {"schedule":"X2","complete":[{"status":200,"phase":"linked"}],"correct":422,"owners":["D"],"claims":[],"correctionStatus":"completed","originalStatus":"cancelled"}
+# Subtest: R3: a service competitor changing an unresolved Person link intent remains interfered
+ok 83 - R3: a service competitor changing an unresolved Person link intent remains interfered
+  ---
+  duration_ms: 9.928
+  type: 'test'
+  ...
+# Subtest: R4: an old journal without ownedHash retains full-content interference after a staff rename
+ok 84 - R4: an old journal without ownedHash retains full-content interference after a staff rename
+  ---
+  duration_ms: 24.662125
+  type: 'test'
+  ...
+# Subtest: R5: each phase hashes its owned fields and ignores non-owned changes
+ok 85 - R5: each phase hashes its owned fields and ignores non-owned changes
+  ---
+  duration_ms: 6.774958
+  type: 'test'
+  ...
+# Subtest: R6: second Undo of completed original refuses without a write or a Task
+ok 86 - R6: second Undo of completed original refuses without a write or a Task
+  ---
+  duration_ms: 7.4215
+  type: 'test'
+  ...
+# {"status":409,"writes":0,"newTasks":[]}
+# Subtest: R6: second Undo of pending original refuses without a write or a Task
+ok 87 - R6: second Undo of pending original refuses without a write or a Task
+  ---
+  duration_ms: 2.332416
+  type: 'test'
+  ...
+# {"status":409,"writes":0,"newTasks":[]}
+# Subtest: R6: a untrusted correction does not block a new Undo
+ok 88 - R6: a untrusted correction does not block a new Undo
+  ---
+  duration_ms: 3.456542
+  type: 'test'
+  ...
+# Subtest: R6: a failed correction does not block a new Undo
+ok 89 - R6: a failed correction does not block a new Undo
+  ---
+  duration_ms: 20.161667
+  type: 'test'
+  ...
+# Subtest: R6: a cancelled correction does not block a new Undo
+ok 90 - R6: a cancelled correction does not block a new Undo
+  ---
+  duration_ms: 8.066583
+  type: 'test'
+  ...
+# Subtest: P1: one non-self party creates exactly one Person linked to its RelatedPerson
+ok 91 - P1: one non-self party creates exactly one Person linked to its RelatedPerson
+  ---
+  duration_ms: 6.452875
+  type: 'test'
+  ...
+# Subtest: P2: a self responsible party creates no Person and retains two entries
+ok 92 - P2: a self responsible party creates no Person and retains two entries
+  ---
+  duration_ms: 0.272
+  type: 'test'
+  ...
+# Subtest: P3: two non-self parties each link to their own RelatedPerson
+ok 93 - P3: two non-self parties each link to their own RelatedPerson
+  ---
+  duration_ms: 0.468083
+  type: 'test'
+  ...
+# Subtest: P4: separate registrations with identical guarantors each request a new Person
+ok 94 - P4: separate registrations with identical guarantors each request a new Person
+  ---
+  duration_ms: 0.385958
+  type: 'test'
+  ...
+# Subtest: P5: shared demographics preserve the base projection for both resources
+ok 95 - P5: shared demographics preserve the base projection for both resources
+  ---
+  duration_ms: 0.334167
+  type: 'test'
+  ...
+# Subtest: P6: Person and Patient explicitly belong to the same practice project
+ok 96 - P6: Person and Patient explicitly belong to the same practice project
+  ---
+  duration_ms: 0.303417
+  type: 'test'
+  ...
+# Subtest: P7 declaration: staff Person writes are practice-scoped create/update only
+ok 97 - P7 declaration: staff Person writes are practice-scoped create/update only
+  ---
+  duration_ms: 0.328125
+  type: 'test'
+  ...
+# Subtest: P9: guardian SMS and voice resolution retain the base bytes
+ok 98 - P9: guardian SMS and voice resolution retain the base bytes
+  ---
+  duration_ms: 0.291291
+  type: 'test'
+  ...
+# Subtest: P8: a statement run retains the base minor recipient without reading Person
+ok 99 - P8: a statement run retains the base minor recipient without reading Person
+  ---
+  duration_ms: 1.952792
+  type: 'test'
+  ...
+# Subtest: P10: every non-self account guarantor still targets a RelatedPerson entry
+ok 100 - P10: every non-self account guarantor still targets a RelatedPerson entry
+  ---
+  duration_ms: 0.518417
+  type: 'test'
+  ...
+# Subtest: P12: Patient remains first and Account last with Person entries between
+ok 101 - P12: Patient remains first and Account last with Person entries between
+  ---
+  duration_ms: 0.246959
+  type: 'test'
+  ...
+# Subtest: T1 Person and RelatedPerson answer leaves one marker and clears refusal on number selection
+ok 102 - T1 Person and RelatedPerson answer leaves one marker and clears refusal on number selection
+  ---
+  duration_ms: 1.587708
+  type: 'test'
+  ...
+# Subtest: T2 merge preserves every target role and operation extension
+ok 103 - T2 merge preserves every target role and operation extension
+  ---
+  duration_ms: 0.296291
+  type: 'test'
+  ...
+# Subtest: T3 projection clears refusal when source clears it
+ok 104 - T3 projection clears refusal when source clears it
+  ---
+  duration_ms: 0.074166
+  type: 'test'
+  ...
+# Subtest: T4 projection has one representation of absent refusal after JSON transport
+ok 105 - T4 projection has one representation of absent refusal after JSON transport
+  ---
+  duration_ms: 0.136959
+  type: 'test'
+  ...
+# Subtest: T6 projecting owned hash detects competing refusal but ignores unrelated extensions
+ok 106 - T6 projecting owned hash detects competing refusal but ignores unrelated extensions
+  ---
+  duration_ms: 4.904125
+  type: 'test'
+  ...
+# Subtest: T11 refusal profile accepts Patient Person and RelatedPerson
+ok 107 - T11 refusal profile accepts Patient Person and RelatedPerson
+  ---
+  duration_ms: 0.147708
+  type: 'test'
+  ...
+# Subtest: T5 attach projects refusal=true and correction restores the required snapshot
+ok 108 - T5 attach projects refusal=true and correction restores the required snapshot
+  ---
+  duration_ms: 14.850916
+  type: 'test'
+  ...
+# Subtest: T5 attach projects refusal=false and correction restores the required snapshot
+ok 109 - T5 attach projects refusal=false and correction restores the required snapshot
+  ---
+  duration_ms: 4.395875
+  type: 'test'
+  ...
+# Subtest: T5 transfer projects refusal=true and correction restores the required snapshot
+ok 110 - T5 transfer projects refusal=true and correction restores the required snapshot
+  ---
+  duration_ms: 59.552375
+  type: 'test'
+  ...
+# Subtest: T5 transfer projects refusal=false and correction restores the required snapshot
+ok 111 - T5 transfer projects refusal=false and correction restores the required snapshot
+  ---
+  duration_ms: 5.848334
+  type: 'test'
+  ...
+# Subtest: T5 consolidate projects refusal=true and correction restores the required snapshot
+ok 112 - T5 consolidate projects refusal=true and correction restores the required snapshot
+  ---
+  duration_ms: 23.407542
+  type: 'test'
+  ...
+# Subtest: T5 consolidate projects refusal=false and correction restores the required snapshot
+ok 113 - T5 consolidate projects refusal=false and correction restores the required snapshot
+  ---
+  duration_ms: 37.043209
+  type: 'test'
+  ...
+# Subtest: T6 lost projecting reply plus competing refusal pauses interfered without domain writes
+ok 114 - T6 lost projecting reply plus competing refusal pauses interfered without domain writes
+  ---
+  duration_ms: 2.977458
+  type: 'test'
+  ...
+# Subtest: T12 exact pre-C2 projecting journal resumes with no-refusal child
+ok 115 - T12 exact pre-C2 projecting journal resumes with no-refusal child
+  ---
+  duration_ms: 3.308291
+  type: 'test'
+  ...
+# Subtest: T13 existing-guarantor initial child refusal before attach with none reply
+ok 116 - T13 existing-guarantor initial child refusal before attach with none reply
+  ---
+  duration_ms: 2.629
+  type: 'test'
+  ...
+# Subtest: T13 existing-guarantor initial child refusal before attach with registration reply
+ok 117 - T13 existing-guarantor initial child refusal before attach with registration reply
+  ---
+  duration_ms: 9.74875
+  type: 'test'
+  ...
+# Subtest: T7 lost registration reply refuses to match a child whose refusal changed
+ok 118 - T7 lost registration reply refuses to match a child whose refusal changed
+  ---
+  duration_ms: 1.082791
+  type: 'test'
+  ...
+# Subtest: R7: Complete supersedes a pre-ownership correction after its original was cancelled and a later transfer completed
+ok 119 - R7: Complete supersedes a pre-ownership correction after its original was cancelled and a later transfer completed
+  ---
+  duration_ms: 19.660416
+  type: 'test'
+  ...
+# {"status":200,"taskStatus":"cancelled","businessStatus":"superseded","owners":["D"],"domainWrites":[],"pendingAudits":["correct Task/6f91f817-b36e-4621-873f-5f2bfc1a51d3 S=Person/D D=Person/S phase=superseded target=Task/aa5bc070-0ba0-4550-afaf-e1f3d8ce7f71; Concurrent correction two"]}
+# Subtest: R8: Complete fails a pre-ownership correction when its completed original no longer owns the child
+ok 120 - R8: Complete fails a pre-ownership correction when its completed original no longer owns the child
+  ---
+  duration_ms: 3.555167
+  type: 'test'
+  ...
+# {"status":409,"phase":"correction-conflict","taskStatus":"failed","businessStatus":"correction-conflict","owners":["S"],"domainWrites":[]}
+# Subtest: A9: registration with an existing guarantor commits no Person and attaches after access grant
+ok 121 - A9: registration with an existing guarantor commits no Person and attaches after access grant
+  ---
+  duration_ms: 82.647084
+  type: 'test'
+  ...
+# Subtest: A10: an attach claim conflict after the registration bundle preserves 201 and reports the failed Task
+ok 122 - A10: an attach claim conflict after the registration bundle preserves 201 and reports the failed Task
+  ---
+  duration_ms: 9.399417
+  type: 'test'
+  ...
+# Subtest: F3: an attach refusal without a Task is reported as failed with its refusal message
+ok 123 - F3: an attach refusal without a Task is reported as failed with its refusal message
+  ---
+  duration_ms: 4.690708
+  type: 'test'
+  ...
+# Subtest: Follow-up F1: a 500 attach result without a Task is unconfirmed while a 409 remains failed
+ok 124 - Follow-up F1: a 500 attach result without a Task is unconfirmed while a 409 remains failed
+  ---
+  duration_ms: 9.405292
+  type: 'test'
+  ...
+# Subtest: B3: a lost committed registration reply is recovered before the existing guarantor attach
+ok 125 - B3: a lost committed registration reply is recovered before the existing guarantor attach
+  ---
+  duration_ms: 3.455792
+  type: 'test'
+  ...
+# Subtest: F1: a lost registration reply still links an existing guarantor without telecom
+ok 126 - F1: a lost registration reply still links an existing guarantor without telecom
+  ---
+  duration_ms: 2.438458
+  type: 'test'
+  ...
+# Subtest: F2: ambiguous committed-state recovery emits one unconfirmed row without guessing an attach target
+ok 127 - F2: ambiguous committed-state recovery emits one unconfirmed row without guessing an attach target
+  ---
+  duration_ms: 2.758208
+  type: 'test'
+  ...
+# Subtest: A11: registration with an existing party requires guarantor.link before any write or MRN reservation
+ok 128 - A11: registration with an existing party requires guarantor.link before any write or MRN reservation
+  ---
+  duration_ms: 5.871291
+  type: 'test'
+  ...
+# Subtest: B3: one existing Person cannot be selected twice in the same registration
+ok 129 - B3: one existing Person cannot be selected twice in the same registration
+  ---
+  duration_ms: 15.551417
+  type: 'test'
+  ...
+# Subtest: A12: a foreign existing Person is rejected before every write
+ok 130 - A12: a foreign existing Person is rejected before every write
+  ---
+  duration_ms: 5.316541
+  type: 'test'
+  ...
+# Subtest: A12: a inactive existing Person is rejected before every write
+ok 131 - A12: a inactive existing Person is rejected before every write
+  ---
+  duration_ms: 5.869958
+  type: 'test'
+  ...
+# Subtest: A12: a unsupported-link existing Person is rejected before every write
+ok 132 - A12: a unsupported-link existing Person is rejected before every write
+  ---
+  duration_ms: 2.450458
+  type: 'test'
+  ...
+# Subtest: A13: a financially responsible existing Person without a complete address is rejected with the established message
+ok 133 - A13: a financially responsible existing Person without a complete address is rejected with the established message
+  ---
+  duration_ms: 2.395083
+  type: 'test'
+  ...
+# Subtest: A15: an existing parent keeps consent authority, active period, and projected identity in the created RelatedPerson
+ok 134 - A15: an existing parent keeps consent authority, active period, and projected identity in the created RelatedPerson
+  ---
+  duration_ms: 2.273917
+  type: 'test'
+  ...
+# Subtest: K1 search refuses a prefix-only family
+ok 135 - K1 search refuses a prefix-only family
+  ---
+  duration_ms: 35.825917
+  type: 'test'
+  ...
+# Subtest: K2 phone compares digits and rejects a different digit
+ok 136 - K2 phone compares digits and rejects a different digit
+  ---
+  duration_ms: 9.575
+  type: 'test'
+  ...
+# Subtest: Follow-up F2: US phone search matches country-code and ten-digit forms without trimming ten-digit leading 1
+ok 137 - Follow-up F2: US phone search matches country-code and ten-digit forms without trimming ten-digit leading 1
+  ---
+  duration_ms: 7.317708
+  type: 'test'
+  ...
+# Subtest: Fixback F2: stored country-code and ten-digit phones match every supported US search form
+ok 138 - Fixback F2: stored country-code and ten-digit phones match every supported US search form
+  ---
+  duration_ms: 54.907125
+  type: 'test'
+  ...
+# Subtest: K3 search card exposes exactly seven keys
+ok 139 - K3 search card exposes exactly seven keys
+  ---
+  duration_ms: 2.777667
+  type: 'test'
+  ...
+# Subtest: K4 inactive excluded
+ok 140 - K4 inactive excluded
+  ---
+  duration_ms: 1.76275
+  type: 'test'
+  ...
+# Subtest: K4 zero-link excluded
+ok 141 - K4 zero-link excluded
+  ---
+  duration_ms: 2.423625
+  type: 'test'
+  ...
+# Subtest: K4 non-RelatedPerson excluded
+ok 142 - K4 non-RelatedPerson excluded
+  ---
+  duration_ms: 1.359916
+  type: 'test'
+  ...
+# Subtest: K5 21 matches return 422
+ok 143 - K5 21 matches return 422
+  ---
+  duration_ms: 1.351042
+  type: 'test'
+  ...
+# Subtest: K5 201 matches return 422
+ok 144 - K5 201 matches return 422
+  ---
+  duration_ms: 1.780708
+  type: 'test'
+  ...
+# Subtest: K7 create writes exactly one active unlinked Person; missing surname writes nothing
+ok 145 - K7 create writes exactly one active unlinked Person; missing surname writes nothing
+  ---
+  duration_ms: 12.288125
+  type: 'test'
+  ...
+# Subtest: K8 draft includes every source link, writes nothing, refuses consolidate subset
+ok 146 - K8 draft includes every source link, writes nothing, refuses consolidate subset
+  ---
+  duration_ms: 2.224666
+  type: 'test'
+  ...
+# Subtest: K9 draft versions reject changed child at create
+ok 147 - K9 draft versions reject changed child at create
+  ---
+  duration_ms: 0.81625
+  type: 'test'
+  ...
+# Subtest: K13 history filters trusted child plans and queries newest 50 once
+ok 148 - K13 history filters trusted child plans and queries newest 50 once
+  ---
+  duration_ms: 15.82825
+  type: 'test'
+  ...
+# Subtest: Follow-up F3: history skips one malformed trusted Task and returns every valid entry
+ok 149 - Follow-up F3: history skips one malformed trusted Task and returns every valid entry
+  ---
+  duration_ms: 1.740625
+  type: 'test'
+  ...
+# Subtest: K8 empty consolidation draft refuses with zero writes
+ok 150 - K8 empty consolidation draft refuses with zero writes
+  ---
+  duration_ms: 0.528125
+  type: 'test'
+  ...
+# Subtest: K6 search denies staff without guarantor.link before FHIR searches or writes
+ok 151 - K6 search denies staff without guarantor.link before FHIR searches or writes
+  ---
+  duration_ms: 3.877459
+  type: 'test'
+  ...
+# Subtest: K6 create denies staff without guarantor.link before FHIR searches or writes
+ok 152 - K6 create denies staff without guarantor.link before FHIR searches or writes
+  ---
+  duration_ms: 2.270125
+  type: 'test'
+  ...
+# Subtest: K6 draft denies staff without guarantor.link before FHIR searches or writes
+ok 153 - K6 draft denies staff without guarantor.link before FHIR searches or writes
+  ---
+  duration_ms: 2.985583
+  type: 'test'
+  ...
+# Subtest: K6 history denies staff without guarantor.link before FHIR searches or writes
+ok 154 - K6 history denies staff without guarantor.link before FHIR searches or writes
+  ---
+  duration_ms: 1.398667
+  type: 'test'
+  ...
+# Subtest: D2 create requires valid nonfuture DOB before writing
+ok 155 - D2 create requires valid nonfuture DOB before writing
+  ---
+  duration_ms: 5.898416
+  type: 'test'
+  ...
+# Subtest: D5 search cards expose Person DOB or empty string
+ok 156 - D5 search cards expose Person DOB or empty string
+  ---
+  duration_ms: 4.791042
+  type: 'test'
+  ...
+# Subtest: K5: the real registration route accepts blank slots and rejects the scalar contract
+ok 157 - K5: the real registration route accepts blank slots and rejects the scalar contract
+  ---
+  duration_ms: 81.003625
+  type: 'test'
+  ...
+# Subtest: K16: registration and editor emit the same marker state through preference application
+ok 158 - K16: registration and editor emit the same marker state through preference application
+  ---
+  duration_ms: 40.010583
+  type: 'test'
+  ...
+# Subtest: registration phone validation rejects bad choices before reserving an MRN
+ok 159 - registration phone validation rejects bad choices before reserving an MRN
+  ---
+  duration_ms: 24.50125
+  type: 'test'
+  ...
+# Subtest: Provider, Staff, and Admin may register a patient
+ok 160 - Provider, Staff, and Admin may register a patient
+  ---
+  duration_ms: 0.173125
+  type: 'test'
+  ...
+# Subtest: no user AccessPolicy authorizes a compartment-less Account create
+ok 161 - no user AccessPolicy authorizes a compartment-less Account create
+  ---
+  duration_ms: 0.499
+  type: 'test'
+  ...
+# Subtest: provider registers Patient, RelatedPerson, Person, and Account through one service transaction
+ok 162 - provider registers Patient, RelatedPerson, Person, and Account through one service transaction
+  ---
+  duration_ms: 2.14875
+  type: 'test'
+  ...
+# Subtest: staff registers Patient, RelatedPerson, Person, and Account through one service transaction
+ok 163 - staff registers Patient, RelatedPerson, Person, and Account through one service transaction
+  ---
+  duration_ms: 1.637334
+  type: 'test'
+  ...
+# Subtest: admin registers Patient, RelatedPerson, Person, and Account through one service transaction
+ok 164 - admin registers Patient, RelatedPerson, Person, and Account through one service transaction
+  ---
+  duration_ms: 1.748917
+  type: 'test'
+  ...
+# Subtest: registration creates the MRN reservation and identity resources in the caller project
+ok 165 - registration creates the MRN reservation and identity resources in the caller project
+  ---
+  duration_ms: 2.865416
+  type: 'test'
+  ...
+# Subtest: a caller in project A never submits registration writes to service project B
+ok 166 - a caller in project A never submits registration writes to service project B
+  ---
+  duration_ms: 1.613708
+  type: 'test'
+  ...
+# odos-mcp: patient registration failed: Error: Registration resource belongs to Project/project-b, not Project/practice-1.
+#     at registrationResourceInProject (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/mcp/src/clinic/patient-registration-endpoint.ts:439:11)
+#     at buildPatientIdentityTransaction (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/mcp/src/clinic/patient-registration-endpoint.ts:413:19)
+#     at registerPatientFromDemographics (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/mcp/src/clinic/patient-registration-endpoint.ts:135:17)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async handlePatientRegistration (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/mcp/src/clinic/clinic-routes.ts:219:20)
+# Subtest: registration stops when an MRN reservation is returned from another project
+ok 167 - registration stops when an MRN reservation is returned from another project
+  ---
+  duration_ms: 3.890166
+  type: 'test'
+  ...
+# Subtest: registration access grant rejects a Patient outside the caller project
+ok 168 - registration access grant rejects a Patient outside the caller project
+  ---
+  duration_ms: 0.315625
+  type: 'test'
+  ...
+# Subtest: a role without patients.register is refused before any service FHIR call
+ok 169 - a role without patients.register is refused before any service FHIR call
+  ---
+  duration_ms: 0.122917
+  type: 'test'
+  ...
+# odos-mcp: patient registration failed: Error: synthetic transaction failure
+#     at RegistrationFhir.executeTransaction (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/mcp/tests/patientRegistrationAuthz.test.ts:717:37)
+#     at RegistrationFhir.executeTransactionAsActor (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/mcp/tests/patientRegistrationAuthz.test.ts:775:35)
+#     at registerPatientFromDemographics (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/mcp/src/clinic/patient-registration-endpoint.ts:139:39)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async handlePatientRegistration (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/mcp/src/clinic/clinic-routes.ts:219:20)
+# Subtest: a failed identity transaction leaves no Patient and marks its MRN reservation entered-in-error
+ok 170 - a failed identity transaction leaves no Patient and marks its MRN reservation entered-in-error
+  ---
+  duration_ms: 3.179125
+  type: 'test'
+  ...
+# Subtest: a committed identity transaction with a dropped response is reconciled and preserved
+ok 171 - a committed identity transaction with a dropped response is reconciled and preserved
+  ---
+  duration_ms: 1.957958
+  type: 'test'
+  ...
+# Subtest: a membership version conflict is refetched and retried before registration returns
+ok 172 - a membership version conflict is refetched and retried before registration returns
+  ---
+  duration_ms: 1.731292
+  type: 'test'
+  ...
+# Subtest: registration grants access when the caller membership omits active
+ok 173 - registration grants access when the caller membership omits active
+  ---
+  duration_ms: 3.660416
+  type: 'test'
+  ...
+# Subtest: inactive memberships do not consume the registration membership search count
+ok 174 - inactive memberships do not consume the registration membership search count
+  ---
+  duration_ms: 1.7315
+  type: 'test'
+  ...
+# Subtest: registration appends every named compartment parameter on a stacked composite membership
+ok 175 - registration appends every named compartment parameter on a stacked composite membership
+  ---
+  duration_ms: 6.682458
+  type: 'test'
+  ...
+# Subtest: persistent grant failure preserves the active registration and returns asserted repair guidance
+ok 176 - persistent grant failure preserves the active registration and returns asserted repair guidance
+  ---
+  duration_ms: 1.438416
+  type: 'test'
+  ...
+# Subtest: an exact pre-existing Patient is returned as a duplicate and never receives a registration grant
+ok 177 - an exact pre-existing Patient is returned as a duplicate and never receives a registration grant
+  ---
+  duration_ms: 1.359292
+  type: 'test'
+  ...
+# Subtest: an exact duplicate on a later project-scoped search page still requires confirmation
+ok 178 - an exact duplicate on a later project-scoped search page still requires confirmation
+  ---
+  duration_ms: 1.58725
+  type: 'test'
+  ...
+# odos-mcp: patient registration failed: Error: Project-scoped duplicate search returned a Patient outside the caller project.
+#     at findExactDuplicates (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/mcp/src/clinic/patient-registration-endpoint.ts:469:11)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async registerPatientFromDemographics (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/mcp/src/clinic/patient-registration-endpoint.ts:129:22)
+#     at async handlePatientRegistration (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/mcp/src/clinic/clinic-routes.ts:219:20)
+# Subtest: duplicate detection never returns a Patient owned by another project
+ok 179 - duplicate detection never returns a Patient owned by another project
+  ---
+  duration_ms: 1.284125
+  type: 'test'
+  ...
+# Subtest: confirmDuplicate creates a distinct server-owned Patient after the duplicate warning
+ok 180 - confirmDuplicate creates a distinct server-owned Patient after the duplicate warning
+  ---
+  duration_ms: 1.393875
+  type: 'test'
+  ...
+# Subtest: a caller-supplied Patient id is rejected before registration FHIR calls
+ok 181 - a caller-supplied Patient id is rejected before registration FHIR calls
+  ---
+  duration_ms: 1.053708
+  type: 'test'
+  ...
+# Subtest: authoritative registration validation rejects form-invalid input before service FHIR
+ok 182 - authoritative registration validation rejects form-invalid input before service FHIR
+  ---
+  duration_ms: 6.124708
+  type: 'test'
+  ...
+# Subtest: G15 registration includes explicit communication cells attributed to registering staff
+ok 183 - G15 registration includes explicit communication cells attributed to registering staff
+  ---
+  duration_ms: 1.812292
+  type: 'test'
+  ...
+# Subtest: G20 registration without effective preference permission creates nothing
+ok 184 - G20 registration without effective preference permission creates nothing
+  ---
+  duration_ms: 0.149083
+  type: 'test'
+  ...
+# Subtest: registration paper evidence and preference references share the Patient creation transaction
+ok 185 - registration paper evidence and preference references share the Patient creation transaction
+  ---
+  duration_ms: 1.924333
+  type: 'test'
+  ...
+# Subtest: T13 initial registration child refusal survives lost reply=false
+ok 186 - T13 initial registration child refusal survives lost reply=false
+  ---
+  duration_ms: 1.688666
+  type: 'test'
+  ...
+# Subtest: T13 initial registration child refusal survives lost reply=true
+ok 187 - T13 initial registration child refusal survives lost reply=true
+  ---
+  duration_ms: 1.938666
+  type: 'test'
+  ...
+# Subtest: T8 guardian blank selected Phone 2 refuses before all writes
+ok 188 - T8 guardian blank selected Phone 2 refuses before all writes
+  ---
+  duration_ms: 1.31875
+  type: 'test'
+  ...
+# Subtest: T7 guardian marked Phone 2 survives registration and lost-reply recovery
+ok 189 - T7 guardian marked Phone 2 survives registration and lost-reply recovery
+  ---
+  duration_ms: 1.882542
+  type: 'test'
+  ...
+# Subtest: D1 new guarantor requires DOB before any registration write
+ok 190 - D1 new guarantor requires DOB before any registration write
+  ---
+  duration_ms: 1.184833
+  type: 'test'
+  ...
+1..190
+# tests 190
+# suites 0
+# pass 190
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 728.00925
