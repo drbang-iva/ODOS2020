@@ -1,0 +1,16 @@
+  ...
+# Subtest: P2 a late previous-encounter response cannot replace the new encounter's Wearing values
+ok 1547 - P2 a late previous-encounter response cannot replace the new encounter's Wearing values
+  ---
+  duration_ms: 31.644209
+  type: 'test'
+  ...
+1..1547
+# tests 1560
+# suites 0
+# pass 1560
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 202313.509583

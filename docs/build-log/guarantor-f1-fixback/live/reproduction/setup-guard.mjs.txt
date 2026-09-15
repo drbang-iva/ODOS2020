@@ -1,6 +1,22 @@
 import assert from 'node:assert/strict';
-let requests=0;
-globalThis.fetch=async()=>{requests++;throw new Error('Network calls forbidden by this guard');};
-await assert.rejects(import('./setup.ts'), {code:'ERR_ASSERTION'});
-assert.equal(requests,0);
-console.log('Invalid endpoint refused before login; network requests: 0');
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
+const runtimeUrl = new URL('./runtime.json', import.meta.url);
+const original = existsSync(runtimeUrl) ? readFileSync(runtimeUrl) : undefined;
+const originalFetch = globalThis.fetch;
+const networkStop = new Error('Network calls forbidden by this guard');
+let requests = 0;
+globalThis.fetch = async () => { requests++; throw networkStop; };
+try {
+  writeFileSync(runtimeUrl, JSON.stringify({ baseUrl: 'https://non-loopback.invalid', email: 'synthetic@example.invalid', password: 'synthetic' }), { mode: 0o600 });
+  await assert.rejects(import('./setup.ts?negative'), { code: 'ERR_ASSERTION' });
+  assert.equal(requests, 0);
+  console.log('Invalid endpoint refused before login; network requests: 0');
+  writeFileSync(runtimeUrl, JSON.stringify({ baseUrl: 'http://127.0.0.1:19613', email: 'synthetic@example.invalid', password: 'synthetic' }), { mode: 0o600 });
+  await assert.rejects(import('./setup.ts?positive'), error => error === networkStop);
+  assert.equal(requests, 1);
+  console.log('Loopback endpoint passed URL guard and reached network stub; real network requests: 0');
+} finally {
+  globalThis.fetch = originalFetch;
+  if (original === undefined) unlinkSync(runtimeUrl);
+  else writeFileSync(runtimeUrl, original);
+}

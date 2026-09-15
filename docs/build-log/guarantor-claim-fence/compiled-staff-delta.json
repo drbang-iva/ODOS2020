@@ -1,0 +1,30 @@
+{
+  "name": "ODOS Staff",
+  "before": [
+    {
+      "resourceType": "RelatedPerson",
+      "interaction": [
+        "create",
+        "update"
+      ],
+      "criteria": "RelatedPerson?_compartment=%patient_compartment"
+    }
+  ],
+  "after": [
+    {
+      "resourceType": "RelatedPerson",
+      "interaction": [
+        "create",
+        "update"
+      ],
+      "criteria": "RelatedPerson?_compartment=%patient_compartment",
+      "writeConstraint": [
+        {
+          "language": "text/fhirpath",
+          "description": "Guarantor link claims are managed by service operations; staff may edit a responsible party without changing claims.",
+          "expression": "(%before.exists() implies ((%before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim').exists() or %after.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim').exists()) implies (%before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim') = %after.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim')))) and (%before.empty() implies %after.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim').empty())"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,215 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/clinicalWriteAuthzLive.test.ts
+
+TAP version 13
+# Subtest: synced practice policies enforce all repaired clinical writes on running Medplum
+    # Subtest: K1 staff cannot strip, add, or change an existing child claim
+    not ok 1 - K1 staff cannot strip, add, or change an existing child claim
+      ---
+      duration_ms: 19.321459
+      type: 'test'
+      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-claim-fence/mcp/tests/clinicalWriteAuthzLive.test.ts:1:4786'
+      failureType: 'testCodeFailure'
+      error: |-
+        staff PUT RelatedPerson/aec25a60-ddfe-4209-9f3e-d83916bfc482 must be denied.
+        
+        200 !== 403
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 403
+      actual: 200
+      operator: 'strictEqual'
+      stack: |-
+        denied (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-claim-fence/mcp/tests/clinicalWriteAuthzLive.test.ts:132:14)
+        process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-claim-fence/mcp/tests/clinicalWriteAuthzLive.test.ts:150:7)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-claim-fence/mcp/tests/clinicalWriteAuthzLive.test.ts:148:5)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: K2 staff cannot create a claimed child
+    not ok 2 - K2 staff cannot create a claimed child
+      ---
+      duration_ms: 7.741541
+      type: 'test'
+      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-claim-fence/mcp/tests/clinicalWriteAuthzLive.test.ts:1:5479'
+      failureType: 'testCodeFailure'
+      error: |-
+        staff POST RelatedPerson must be denied.
+        
+        201 !== 403
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 403
+      actual: 201
+      operator: 'strictEqual'
+      stack: |-
+        denied (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-claim-fence/mcp/tests/clinicalWriteAuthzLive.test.ts:132:14)
+        process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-claim-fence/mcp/tests/clinicalWriteAuthzLive.test.ts:157:7)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-claim-fence/mcp/tests/clinicalWriteAuthzLive.test.ts:156:5)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: K3 staff can create and edit an unclaimed child
+    ok 3 - K3 staff can create and edit an unclaimed child
+      ---
+      duration_ms: 15.248709
+      type: 'test'
+      ...
+    # Subtest: K4 staff can edit name and phone while preserving an inert claim
+    ok 4 - K4 staff can edit name and phone while preserving an inert claim
+      ---
+      duration_ms: 90.39975
+      type: 'test'
+      ...
+    # Subtest: Provider voids a preliminary Observation seeded by Staff
+    ok 5 - Provider voids a preliminary Observation seeded by Staff
+      ---
+      duration_ms: 8.769458
+      type: 'test'
+      ...
+    # Subtest: Staff voids a preliminary Observation seeded by Provider
+    ok 6 - Staff voids a preliminary Observation seeded by Provider
+      ---
+      duration_ms: 8.556709
+      type: 'test'
+      ...
+    # Subtest: Staff cannot finalize a preliminary Observation seeded by Provider
+    ok 7 - Staff cannot finalize a preliminary Observation seeded by Provider
+      ---
+      duration_ms: 5.289792
+      type: 'test'
+      ...
+    # Subtest: Chart sidebar > Allergies — Mark no known allergies
+    ok 8 - Chart sidebar > Allergies — Mark no known allergies
+      ---
+      duration_ms: 20.109708
+      type: 'test'
+      ...
+    # Subtest: Chart sidebar > Allergies — Add allergy
+    ok 9 - Chart sidebar > Allergies — Add allergy
+      ---
+      duration_ms: 18.154875
+      type: 'test'
+      ...
+    # Subtest: Chart sidebar > Care Team — Add team member
+    ok 10 - Chart sidebar > Care Team — Add team member
+      ---
+      duration_ms: 19.169042
+      type: 'test'
+      ...
+    # Subtest: Diagnosis workspace/assessment — diagnosis laterality BodyStructure
+    ok 11 - Diagnosis workspace/assessment — diagnosis laterality BodyStructure
+      ---
+      duration_ms: 12.363666
+      type: 'test'
+      ...
+    # Subtest: IOP Timeline target editor — Save a new target
+    ok 12 - IOP Timeline target editor — Save a new target
+      ---
+      duration_ms: 12.177458
+      type: 'test'
+      ...
+    # Subtest: IOP Timeline target editor — Save an existing target
+    ok 13 - IOP Timeline target editor — Save an existing target
+      ---
+      duration_ms: 12.697458
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Add prescription
+    ok 14 - Prescriptions — Add prescription
+      ---
+      duration_ms: 11.559333
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Staff edits repeats before transmission
+    ok 15 - Prescriptions — Staff edits repeats before transmission
+      ---
+      duration_ms: 9.120791
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Send to pharmacy (reserve WENO message id)
+    ok 16 - Prescriptions — Send to pharmacy (reserve WENO message id)
+      ---
+      duration_ms: 8.659625
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Send to pharmacy (record indeterminate outcome)
+    ok 17 - Prescriptions — Send to pharmacy (record indeterminate outcome)
+      ---
+      duration_ms: 9.446375
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Pharmacy verified not received — clear reservation
+    ok 18 - Prescriptions — Pharmacy verified not received — clear reservation
+      ---
+      duration_ms: 9.526958
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Send to pharmacy (record successful transmission)
+    ok 19 - Prescriptions — Send to pharmacy (record successful transmission)
+      ---
+      duration_ms: 8.99225
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Send to pharmacy (record WENO error)
+    ok 20 - Prescriptions — Send to pharmacy (record WENO error)
+      ---
+      duration_ms: 7.5715
+      type: 'test'
+      ...
+    # Subtest: Staff transmitted prescription mutation is denied while Provider control succeeds
+    ok 21 - Staff transmitted prescription mutation is denied while Provider control succeeds
+      ---
+      duration_ms: 8.087125
+      type: 'test'
+      ...
+    # Subtest: Staff prescription requester mutation is denied before transmission
+    ok 22 - Staff prescription requester mutation is denied before transmission
+      ---
+      duration_ms: 3.452208
+      type: 'test'
+      ...
+    # Subtest: Dry Eye > Adverse Event — Capture and persist Provenance
+    ok 23 - Dry Eye > Adverse Event — Capture and persist Provenance
+      ---
+      duration_ms: 24.7935
+      type: 'test'
+      ...
+    # Subtest: Ortho-K > Adverse Event — Capture and persist Provenance
+    ok 24 - Ortho-K > Adverse Event — Capture and persist Provenance
+      ---
+      duration_ms: 21.635208
+      type: 'test'
+      ...
+    # Subtest: practice-role clients cannot forge AuditEvent
+    ok 25 - practice-role clients cannot forge AuditEvent
+      ---
+      duration_ms: 8.050166
+      type: 'test'
+      ...
+    1..25
+not ok 1 - synced practice policies enforce all repaired clinical writes on running Medplum
+  ---
+  duration_ms: 683.110125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-claim-fence/mcp/tests/clinicalWriteAuthzLive.test.ts:1:1124'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 26
+# suites 0
+# pass 23
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 895.38225

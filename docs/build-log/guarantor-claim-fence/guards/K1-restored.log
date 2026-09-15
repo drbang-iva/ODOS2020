@@ -1,0 +1,171 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/clinicalWriteAuthzLive.test.ts
+
+TAP version 13
+# Subtest: synced practice policies enforce all repaired clinical writes on running Medplum
+    # Subtest: K1 staff cannot strip, add, or change an existing child claim
+    ok 1 - K1 staff cannot strip, add, or change an existing child claim
+      ---
+      duration_ms: 35.47925
+      type: 'test'
+      ...
+    # Subtest: K2 staff cannot create a claimed child
+    ok 2 - K2 staff cannot create a claimed child
+      ---
+      duration_ms: 5.221916
+      type: 'test'
+      ...
+    # Subtest: K3 staff can create and edit an unclaimed child
+    ok 3 - K3 staff can create and edit an unclaimed child
+      ---
+      duration_ms: 18.34375
+      type: 'test'
+      ...
+    # Subtest: K4 staff can edit name and phone while preserving an inert claim
+    ok 4 - K4 staff can edit name and phone while preserving an inert claim
+      ---
+      duration_ms: 96.253209
+      type: 'test'
+      ...
+    # Subtest: Provider voids a preliminary Observation seeded by Staff
+    ok 5 - Provider voids a preliminary Observation seeded by Staff
+      ---
+      duration_ms: 8.722917
+      type: 'test'
+      ...
+    # Subtest: Staff voids a preliminary Observation seeded by Provider
+    ok 6 - Staff voids a preliminary Observation seeded by Provider
+      ---
+      duration_ms: 6.74525
+      type: 'test'
+      ...
+    # Subtest: Staff cannot finalize a preliminary Observation seeded by Provider
+    ok 7 - Staff cannot finalize a preliminary Observation seeded by Provider
+      ---
+      duration_ms: 4.374041
+      type: 'test'
+      ...
+    # Subtest: Chart sidebar > Allergies — Mark no known allergies
+    ok 8 - Chart sidebar > Allergies — Mark no known allergies
+      ---
+      duration_ms: 16.3765
+      type: 'test'
+      ...
+    # Subtest: Chart sidebar > Allergies — Add allergy
+    ok 9 - Chart sidebar > Allergies — Add allergy
+      ---
+      duration_ms: 11.866
+      type: 'test'
+      ...
+    # Subtest: Chart sidebar > Care Team — Add team member
+    ok 10 - Chart sidebar > Care Team — Add team member
+      ---
+      duration_ms: 11.993
+      type: 'test'
+      ...
+    # Subtest: Diagnosis workspace/assessment — diagnosis laterality BodyStructure
+    ok 11 - Diagnosis workspace/assessment — diagnosis laterality BodyStructure
+      ---
+      duration_ms: 9.756542
+      type: 'test'
+      ...
+    # Subtest: IOP Timeline target editor — Save a new target
+    ok 12 - IOP Timeline target editor — Save a new target
+      ---
+      duration_ms: 13.651334
+      type: 'test'
+      ...
+    # Subtest: IOP Timeline target editor — Save an existing target
+    ok 13 - IOP Timeline target editor — Save an existing target
+      ---
+      duration_ms: 12.135958
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Add prescription
+    ok 14 - Prescriptions — Add prescription
+      ---
+      duration_ms: 11.925875
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Staff edits repeats before transmission
+    ok 15 - Prescriptions — Staff edits repeats before transmission
+      ---
+      duration_ms: 9.72375
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Send to pharmacy (reserve WENO message id)
+    ok 16 - Prescriptions — Send to pharmacy (reserve WENO message id)
+      ---
+      duration_ms: 11.558458
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Send to pharmacy (record indeterminate outcome)
+    ok 17 - Prescriptions — Send to pharmacy (record indeterminate outcome)
+      ---
+      duration_ms: 12.327833
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Pharmacy verified not received — clear reservation
+    ok 18 - Prescriptions — Pharmacy verified not received — clear reservation
+      ---
+      duration_ms: 12.1395
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Send to pharmacy (record successful transmission)
+    ok 19 - Prescriptions — Send to pharmacy (record successful transmission)
+      ---
+      duration_ms: 10.116208
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Send to pharmacy (record WENO error)
+    ok 20 - Prescriptions — Send to pharmacy (record WENO error)
+      ---
+      duration_ms: 11.821334
+      type: 'test'
+      ...
+    # Subtest: Staff transmitted prescription mutation is denied while Provider control succeeds
+    ok 21 - Staff transmitted prescription mutation is denied while Provider control succeeds
+      ---
+      duration_ms: 16.930042
+      type: 'test'
+      ...
+    # Subtest: Staff prescription requester mutation is denied before transmission
+    ok 22 - Staff prescription requester mutation is denied before transmission
+      ---
+      duration_ms: 9.423042
+      type: 'test'
+      ...
+    # Subtest: Dry Eye > Adverse Event — Capture and persist Provenance
+    ok 23 - Dry Eye > Adverse Event — Capture and persist Provenance
+      ---
+      duration_ms: 37.683542
+      type: 'test'
+      ...
+    # Subtest: Ortho-K > Adverse Event — Capture and persist Provenance
+    ok 24 - Ortho-K > Adverse Event — Capture and persist Provenance
+      ---
+      duration_ms: 22.008125
+      type: 'test'
+      ...
+    # Subtest: practice-role clients cannot forge AuditEvent
+    ok 25 - practice-role clients cannot forge AuditEvent
+      ---
+      duration_ms: 8.143042
+      type: 'test'
+      ...
+    1..25
+ok 1 - synced practice policies enforce all repaired clinical writes on running Medplum
+  ---
+  duration_ms: 698.49925
+  type: 'test'
+  ...
+1..1
+# tests 26
+# suites 0
+# pass 26
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 888.506291
