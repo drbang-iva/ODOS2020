@@ -4,7 +4,7 @@ not ok 1 - D1 new guarantor requires DOB before any registration write
   ---
   duration_ms: 32.788334
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/mcp/tests/patientRegistrationAuthz.test.ts:1:32421'
+  location: '<workspace>/mcp/tests/patientRegistrationAuthz.test.ts:1:32421'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - D1 new guarantor requires DOB before any registration write
   actual: 201
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/mcp/tests/patientRegistrationAuthz.test.ts:959:9)
+    TestContext.<anonymous> (<workspace>/mcp/tests/patientRegistrationAuthz.test.ts:959:9)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)

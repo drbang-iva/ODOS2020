@@ -4,7 +4,7 @@ not ok 1 - D2 create requires valid nonfuture DOB before writing
   ---
   duration_ms: 33.307959
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/mcp/tests/guarantorSearchScreens.test.ts:1:10364'
+  location: '<workspace>/mcp/tests/guarantorSearchScreens.test.ts:1:10364'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,9 +17,9 @@ not ok 1 - D2 create requires valid nonfuture DOB before writing
   actual: 201
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/mcp/tests/guarantorSearchScreens.test.ts:81:239)
+    <anonymous> (<workspace>/mcp/tests/guarantorSearchScreens.test.ts:81:239)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async route (<workspace>/mcp/tests/guarantorSearchScreens.test.ts:12:6)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

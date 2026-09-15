@@ -5,7 +5,7 @@ TAP version 13
       ---
       duration_ms: 6.817166
       type: 'test'
-      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityAuthzLive.test.ts:1:1826'
+      location: '<workspace>/mcp/tests/ageOfMajorityAuthzLive.test.ts:1:1826'
       failureType: 'testCodeFailure'
       error: |-
         Create provider disposable client.
@@ -18,11 +18,11 @@ TAP version 13
       actual: 403
       operator: 'strictEqual'
       stack: |-
-        createRoleClient (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/liveRoleClient.ts:41:10)
+        createRoleClient (<workspace>/mcp/tests/liveRoleClient.ts:41:10)
         process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityAuthzLive.test.ts:36:27)
+        async TestContext.<anonymous> (<workspace>/mcp/tests/ageOfMajorityAuthzLive.test.ts:36:27)
         async Test.run (node:internal/test_runner/test:1054:7)
-        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityAuthzLive.test.ts:30:7)
+        async TestContext.<anonymous> (<workspace>/mcp/tests/ageOfMajorityAuthzLive.test.ts:30:7)
         async Test.run (node:internal/test_runner/test:1054:7)
         async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
       ...
@@ -31,7 +31,7 @@ TAP version 13
       ---
       duration_ms: 4.461583
       type: 'test'
-      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityAuthzLive.test.ts:1:1826'
+      location: '<workspace>/mcp/tests/ageOfMajorityAuthzLive.test.ts:1:1826'
       failureType: 'testCodeFailure'
       error: |-
         Create staff disposable client.
@@ -44,11 +44,11 @@ TAP version 13
       actual: 403
       operator: 'strictEqual'
       stack: |-
-        createRoleClient (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/liveRoleClient.ts:41:10)
+        createRoleClient (<workspace>/mcp/tests/liveRoleClient.ts:41:10)
         process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityAuthzLive.test.ts:36:27)
+        async TestContext.<anonymous> (<workspace>/mcp/tests/ageOfMajorityAuthzLive.test.ts:36:27)
         async Test.run (node:internal/test_runner/test:1054:7)
-        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityAuthzLive.test.ts:30:7)
+        async TestContext.<anonymous> (<workspace>/mcp/tests/ageOfMajorityAuthzLive.test.ts:30:7)
         async Test.run (node:internal/test_runner/test:1054:7)
         async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
       ...
@@ -57,7 +57,7 @@ TAP version 13
       ---
       duration_ms: 3.682292
       type: 'test'
-      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityAuthzLive.test.ts:1:1826'
+      location: '<workspace>/mcp/tests/ageOfMajorityAuthzLive.test.ts:1:1826'
       failureType: 'testCodeFailure'
       error: |-
         Create admin disposable client.
@@ -70,11 +70,11 @@ TAP version 13
       actual: 403
       operator: 'strictEqual'
       stack: |-
-        createRoleClient (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/liveRoleClient.ts:41:10)
+        createRoleClient (<workspace>/mcp/tests/liveRoleClient.ts:41:10)
         process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityAuthzLive.test.ts:36:27)
+        async TestContext.<anonymous> (<workspace>/mcp/tests/ageOfMajorityAuthzLive.test.ts:36:27)
         async Test.run (node:internal/test_runner/test:1054:7)
-        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityAuthzLive.test.ts:30:7)
+        async TestContext.<anonymous> (<workspace>/mcp/tests/ageOfMajorityAuthzLive.test.ts:30:7)
         async Test.run (node:internal/test_runner/test:1054:7)
         async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
       ...
@@ -83,7 +83,7 @@ not ok 1 - age-of-majority singleton grants enforce provider reads and staff/adm
   ---
   duration_ms: 172.086375
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityAuthzLive.test.ts:1:673'
+  location: '<workspace>/mcp/tests/ageOfMajorityAuthzLive.test.ts:1:673'
   failureType: 'subtestsFailed'
   error: '3 subtests failed'
   code: 'ERR_TEST_FAILURE'

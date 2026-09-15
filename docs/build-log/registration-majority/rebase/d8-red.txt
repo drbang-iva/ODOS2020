@@ -4,7 +4,7 @@ not ok 1 - D8 age-of-majority canonical extension is registered
   ---
   duration_ms: 1.500708
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityConfig.test.ts:1:1563'
+  location: '<workspace>/mcp/tests/ageOfMajorityConfig.test.ts:1:1563'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - D8 age-of-majority canonical extension is registered
   actual: 0
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityConfig.test.ts:26:10)
+    TestContext.<anonymous> (<workspace>/mcp/tests/ageOfMajorityConfig.test.ts:26:10)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.start (node:internal/test_runner/test:944:17)

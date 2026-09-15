@@ -530,14 +530,14 @@ not ok 88 - T13 existing-guarantor initial child refusal before attach with none
   ---
   duration_ms: 0.82275
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/guarantorPhoneRecovery.test.ts:1:2981'
+  location: '<workspace>/mcp/tests/guarantorPhoneRecovery.test.ts:1:2981'
   failureType: 'testCodeFailure'
   error: "Cannot read properties of undefined (reading '0')"
   code: 'ERR_TEST_FAILURE'
   name: 'TypeError'
   stack: |-
-    registerExisting (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/helpers/guarantor-phone-fixture.ts:154:28)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/guarantorPhoneRecovery.test.ts:48:18)
+    registerExisting (<workspace>/mcp/tests/helpers/guarantor-phone-fixture.ts:154:28)
+    async TestContext.<anonymous> (<workspace>/mcp/tests/guarantorPhoneRecovery.test.ts:48:18)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -546,14 +546,14 @@ not ok 89 - T13 existing-guarantor initial child refusal before attach with regi
   ---
   duration_ms: 0.574125
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/guarantorPhoneRecovery.test.ts:1:2981'
+  location: '<workspace>/mcp/tests/guarantorPhoneRecovery.test.ts:1:2981'
   failureType: 'testCodeFailure'
   error: "Cannot read properties of undefined (reading '0')"
   code: 'ERR_TEST_FAILURE'
   name: 'TypeError'
   stack: |-
-    registerExisting (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/helpers/guarantor-phone-fixture.ts:154:28)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/guarantorPhoneRecovery.test.ts:48:18)
+    registerExisting (<workspace>/mcp/tests/helpers/guarantor-phone-fixture.ts:154:28)
+    async TestContext.<anonymous> (<workspace>/mcp/tests/guarantorPhoneRecovery.test.ts:48:18)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -562,14 +562,14 @@ not ok 90 - T7 lost registration reply refuses to match a child whose refusal ch
   ---
   duration_ms: 0.331208
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/guarantorPhoneRecovery.test.ts:1:3354'
+  location: '<workspace>/mcp/tests/guarantorPhoneRecovery.test.ts:1:3354'
   failureType: 'testCodeFailure'
   error: "Cannot read properties of undefined (reading '0')"
   code: 'ERR_TEST_FAILURE'
   name: 'TypeError'
   stack: |-
-    registerExisting (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/helpers/guarantor-phone-fixture.ts:154:28)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/guarantorPhoneRecovery.test.ts:54:18)
+    registerExisting (<workspace>/mcp/tests/helpers/guarantor-phone-fixture.ts:154:28)
+    async TestContext.<anonymous> (<workspace>/mcp/tests/guarantorPhoneRecovery.test.ts:54:18)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

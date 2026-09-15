@@ -4,7 +4,7 @@ not ok 1 - D7 UI missing setting is visible and exposes neither patient nor guar
   ---
   duration_ms: 1.31775
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-ui-rebase/ui/tests/ageOfMajority.test.tsx:1:3172'
+  location: '<workspace>/ui/tests/ageOfMajority.test.tsx:1:3172'
   failureType: 'testCodeFailure'
   error: 'Missing expected exception.'
   code: 'ERR_ASSERTION'
@@ -12,7 +12,7 @@ not ok 1 - D7 UI missing setting is visible and exposes neither patient nor guar
   expected:
   operator: 'throws'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-ui-rebase/ui/tests/ageOfMajority.test.tsx:49:12)
+    TestContext.<anonymous> (<workspace>/ui/tests/ageOfMajority.test.tsx:49:12)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.start (node:internal/test_runner/test:944:17)

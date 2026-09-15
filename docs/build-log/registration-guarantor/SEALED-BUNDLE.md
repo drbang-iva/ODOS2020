@@ -59,7 +59,7 @@ All three fixture containers were stopped, not removed; `fixture-stopped.txt` re
 - Merged targeted registration/statements/census/guarantor tests: **114/114**, `merged-focused.txt`; final phone recovery **11/11**, `phone-recovery-restored.txt`.
 - MCP build, UI build and script typecheck: exit 0, respective `*-build-final.txt` logs.
 - Preflight: **0 warnings, 0 hard blocks**, `preflight-final.txt`.
-- `.gz` files preserve exact original output and can be read with `gzip -dc FILE`.
+- `.gz` files preserve output with workstation paths normalized and can be read with `gzip -dc FILE`.
 
 ## Mandate 14 and follow-ups
 
@@ -76,3 +76,9 @@ Live walkthrough repeated successfully with current policies (`live-rebased.txt`
 Rebased fixture shutdown verified all three containers exited; containers and volumes were not removed (`fixture-stopped-rebased.txt`).
 
 Latest accepted local regression: MCP **5,025 passed / 52 skipped / 0 failed**; UI **1,567 passed / 0 skipped / 0 failed**. Builds and preflight pass. Earlier counts above describe the pre-rebase proof and are preserved for provenance.
+
+## Bot adjudication
+
+Workstation paths in this PR’s text and compressed artifacts are normalized to `<workspace>` or `<home>`; assertions, counts, status codes and other output remain intact. Thus logs are exact except for this disclosed path normalization.
+
+Raw authorized FHIR clients can create duplicate coded Basic resources if they bypass conditional creation. This is the existing practice-config convention, not a storage uniqueness constraint. C3 explicitly requires the existing singleton pattern and matching write grants. The UI and seed use atomic conditional creation; duplicate readers refuse explicitly. The proposed new privileged creation operation and removal of Staff/Admin create grants were not applied because they change the approved contract.

@@ -4,7 +4,7 @@ not ok 1 - D3 writer-derived DOB edit preserves both child insurance fingerprint
   ---
   duration_ms: 27.27975
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/mcp/tests/guarantorDob.test.ts:1:419'
+  location: '<workspace>/mcp/tests/guarantorDob.test.ts:1:419'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -27,7 +27,7 @@ not ok 1 - D3 writer-derived DOB edit preserves both child insurance fingerprint
     1: '1981-03-04'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/mcp/tests/guarantorDob.test.ts:20:9)
+    TestContext.<anonymous> (<workspace>/mcp/tests/guarantorDob.test.ts:20:9)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

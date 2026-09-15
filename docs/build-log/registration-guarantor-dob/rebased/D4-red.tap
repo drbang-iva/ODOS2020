@@ -4,7 +4,7 @@ not ok 1 - D4 editor saves Person DOB
   ---
   duration_ms: 71.289209
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/ui/tests/guarantorEditor.test.tsx:1:15344'
+  location: '<workspace>/ui/tests/guarantorEditor.test.tsx:1:15344'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -20,9 +20,9 @@ not ok 1 - D4 editor saves Person DOB
   actual: '1980-01-02'
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/ui/tests/guarantorEditor.test.tsx:296:11)
-    async withEditor (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/mcp/tests/helpers/guarantor-phone-fixture.ts:113:16)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/ui/tests/guarantorEditor.test.tsx:287:2)
+    <anonymous> (<workspace>/ui/tests/guarantorEditor.test.tsx:296:11)
+    async withEditor (<workspace>/mcp/tests/helpers/guarantor-phone-fixture.ts:113:16)
+    async TestContext.<anonymous> (<workspace>/ui/tests/guarantorEditor.test.tsx:287:2)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

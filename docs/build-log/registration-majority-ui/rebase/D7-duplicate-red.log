@@ -4,7 +4,7 @@ not ok 1 - D7 UI duplicate singleton search refuses ambiguity and Engage exposes
   ---
   duration_ms: 1.714125
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-ui-rebase/ui/tests/ageOfMajority.test.tsx:1:5184'
+  location: '<workspace>/ui/tests/ageOfMajority.test.tsx:1:5184'
   failureType: 'testCodeFailure'
   error: 'Missing expected rejection.'
   code: 'ERR_ASSERTION'
@@ -12,7 +12,7 @@ not ok 1 - D7 UI duplicate singleton search refuses ambiguity and Engage exposes
   expected:
   operator: 'rejects'
   stack: |-
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-ui-rebase/ui/tests/ageOfMajority.test.tsx:93:3)
+    async TestContext.<anonymous> (<workspace>/ui/tests/ageOfMajority.test.tsx:93:3)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

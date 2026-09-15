@@ -322,11 +322,11 @@ ok 53 - a caller in project A never submits registration writes to service proje
   type: 'test'
   ...
 # odos-mcp: patient registration failed: Error: Registration resource belongs to Project/project-b, not Project/practice-1.
-#     at registrationResourceInProject (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/src/clinic/patient-registration-endpoint.ts:453:11)
-#     at buildPatientIdentityTransaction (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/src/clinic/patient-registration-endpoint.ts:427:19)
-#     at registerPatientFromDemographics (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/src/clinic/patient-registration-endpoint.ts:149:17)
+#     at registrationResourceInProject (<workspace>/mcp/src/clinic/patient-registration-endpoint.ts:453:11)
+#     at buildPatientIdentityTransaction (<workspace>/mcp/src/clinic/patient-registration-endpoint.ts:427:19)
+#     at registerPatientFromDemographics (<workspace>/mcp/src/clinic/patient-registration-endpoint.ts:149:17)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async handlePatientRegistration (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/src/clinic/clinic-routes.ts:219:20)
+#     at async handlePatientRegistration (<workspace>/mcp/src/clinic/clinic-routes.ts:219:20)
 # Subtest: registration stops when an MRN reservation is returned from another project
 ok 54 - registration stops when an MRN reservation is returned from another project
   ---
@@ -346,11 +346,11 @@ ok 56 - a role without patients.register is refused before any service FHIR call
   type: 'test'
   ...
 # odos-mcp: patient registration failed: Error: synthetic transaction failure
-#     at RegistrationFhir.executeTransaction (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/patientRegistrationAuthz.test.ts:719:37)
-#     at RegistrationFhir.executeTransactionAsActor (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/patientRegistrationAuthz.test.ts:777:35)
-#     at registerPatientFromDemographics (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/src/clinic/patient-registration-endpoint.ts:153:39)
+#     at RegistrationFhir.executeTransaction (<workspace>/mcp/tests/patientRegistrationAuthz.test.ts:719:37)
+#     at RegistrationFhir.executeTransactionAsActor (<workspace>/mcp/tests/patientRegistrationAuthz.test.ts:777:35)
+#     at registerPatientFromDemographics (<workspace>/mcp/src/clinic/patient-registration-endpoint.ts:153:39)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async handlePatientRegistration (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/src/clinic/clinic-routes.ts:219:20)
+#     at async handlePatientRegistration (<workspace>/mcp/src/clinic/clinic-routes.ts:219:20)
 # Subtest: a failed identity transaction leaves no Patient and marks its MRN reservation entered-in-error
 ok 57 - a failed identity transaction leaves no Patient and marks its MRN reservation entered-in-error
   ---
@@ -406,10 +406,10 @@ ok 65 - an exact duplicate on a later project-scoped search page still requires 
   type: 'test'
   ...
 # odos-mcp: patient registration failed: Error: Project-scoped duplicate search returned a Patient outside the caller project.
-#     at findExactDuplicates (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/src/clinic/patient-registration-endpoint.ts:483:11)
+#     at findExactDuplicates (<workspace>/mcp/src/clinic/patient-registration-endpoint.ts:483:11)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async registerPatientFromDemographics (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/src/clinic/patient-registration-endpoint.ts:143:22)
-#     at async handlePatientRegistration (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/src/clinic/clinic-routes.ts:219:20)
+#     at async registerPatientFromDemographics (<workspace>/mcp/src/clinic/patient-registration-endpoint.ts:143:22)
+#     at async handlePatientRegistration (<workspace>/mcp/src/clinic/clinic-routes.ts:219:20)
 # Subtest: duplicate detection never returns a Patient owned by another project
 ok 66 - duplicate detection never returns a Patient owned by another project
   ---

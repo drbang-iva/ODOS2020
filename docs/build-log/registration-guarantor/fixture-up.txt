@@ -6,10 +6,10 @@ AssertionError [ERR_ASSERTION]: Disposable compose startup failed; inspect priva
 
 1 !== 0
 
-    at start (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/.odos/registration-majority-live/fixture.mjs:228:10)
-    at up (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/.odos/registration-majority-live/fixture.mjs:220:9)
+    at start (<workspace>/.odos/registration-majority-live/fixture.mjs:228:10)
+    at up (<workspace>/.odos/registration-majority-live/fixture.mjs:220:9)
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/.odos/registration-majority-live/fixture.mjs:378:3) {
+    at async <anonymous> (<workspace>/.odos/registration-majority-live/fixture.mjs:378:3) {
   generatedMessage: false,
   code: 'ERR_ASSERTION',
   actual: 1,

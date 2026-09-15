@@ -4,7 +4,7 @@ not ok 1 - D6 UI setting 21 routes a 19-year-old to the guardian through shared 
   ---
   duration_ms: 1.471667
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-ui-worker/ui/tests/ageOfMajority.test.tsx:1:2485'
+  location: '<workspace>/ui/tests/ageOfMajority.test.tsx:1:2485'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - D6 UI setting 21 routes a 19-year-old to the guardian through shared 
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-ui-worker/ui/tests/ageOfMajority.test.tsx:37:10)
+    TestContext.<anonymous> (<workspace>/ui/tests/ageOfMajority.test.tsx:37:10)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.start (node:internal/test_runner/test:944:17)

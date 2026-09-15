@@ -4,7 +4,7 @@ not ok 1 - majority missing prevents all MRN backfill writes
   ---
   duration_ms: 7.691083
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/tests/setup-wizard/patient-mrn-backfill.test.ts:1:16864'
+  location: '<workspace>/tests/setup-wizard/patient-mrn-backfill.test.ts:1:16864'
   failureType: 'testCodeFailure'
   error: 'Missing expected rejection.'
   code: 'ERR_ASSERTION'
@@ -12,7 +12,7 @@ not ok 1 - majority missing prevents all MRN backfill writes
   expected:
   operator: 'rejects'
   stack: |-
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/tests/setup-wizard/patient-mrn-backfill.test.ts:545:2)
+    async TestContext.<anonymous> (<workspace>/tests/setup-wizard/patient-mrn-backfill.test.ts:545:2)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

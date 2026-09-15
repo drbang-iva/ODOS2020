@@ -4,7 +4,7 @@ not ok 1 - D5 search cards expose Person DOB or empty string
   ---
   duration_ms: 36.808208
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/mcp/tests/guarantorSearchScreens.test.ts:1:10751'
+  location: '<workspace>/mcp/tests/guarantorSearchScreens.test.ts:1:10751'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -25,10 +25,10 @@ not ok 1 - D5 search cards expose Person DOB or empty string
   actual:
   operator: 'deepStrictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/mcp/tests/guarantorSearchScreens.test.ts:91:85)
+    <anonymous> (<workspace>/mcp/tests/guarantorSearchScreens.test.ts:91:85)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async route (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/mcp/tests/guarantorSearchScreens.test.ts:12:6)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/mcp/tests/guarantorSearchScreens.test.ts:85:2)
+    async route (<workspace>/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async TestContext.<anonymous> (<workspace>/mcp/tests/guarantorSearchScreens.test.ts:85:2)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
