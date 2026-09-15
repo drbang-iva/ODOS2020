@@ -1,24 +1,24 @@
 {
   "kind": "author Chromium proof on actual registration and patient routes",
-  "sourceHead": "3912021dea94e5fcf9a16c9e24294c04bf12756a",
+  "sourceHead": "d94383967c5551612c6da7a59f67401cfc51be9a",
   "sourceHashes": {
     "ui/src/scenes/NewPatient.tsx": "271535cab772c040c2d02a16d41f40e3477ccbd1b7bc2fc86f38e3756f11261e",
     "ui/src/components/patient/ResponsiblePartiesControl.tsx": "910e3ba129585f3c0ad136de7fb61d749e2c39b3f3bd88b1cf2fd7c13e9baec3",
     "ui/src/components/patient/GuarantorLinkScreens.tsx": "59f1c44eb28ae241f17bbfb4b269dc2b003dfaf4a23b3fa73a542af1cc33e1f5",
-    "mcp/src/clinic/patient-registration-endpoint.ts": "e8b0c4c5f458af0e70a36db9328cc000fa75d281cc150669ef54ac90435249ab",
+    "mcp/src/clinic/patient-registration-endpoint.ts": "b39a4ae4615c230647c8888a00988d011dc3652edfc120d51b328032b256cab2",
     "mcp/src/clinic/guarantor-link-operation.ts": "e5bfac43307802d25d2cba2e851e0d42d3fc3fe38f04b5fde32559bd725753c6"
   },
   "routes": [
     {
       "kind": "claim competitor",
       "status": 200,
-      "target": "RelatedPerson/2338ba81-c8fb-437d-959b-80ee0974a5b8"
+      "target": "RelatedPerson/9863ef55-53b2-42a5-8edc-4e254a3f4b2d"
     },
     {
       "kind": "operation create",
       "status": 409,
       "phase": "claim-conflict",
-      "taskId": "88413971-1537-4530-920c-76d015f56c18",
+      "taskId": "68fdfdc8-96ae-4f2e-a7e3-ab030490567a",
       "taskStatus": "failed"
     }
   ],
@@ -45,12 +45,12 @@
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Practitioner/2c1e6df0-90f4-4a87-a4d9-c7a2fab72209",
+      "path": "/fhir/R4/Basic?code=https%3A%2F%2Fodos2020.com%2Ffhir%2FCodeSystem%2Fappearance-config%7Codos-appearance-config&_count=10",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Basic?code=https%3A%2F%2Fodos2020.com%2Ffhir%2FCodeSystem%2Fappearance-config%7Codos-appearance-config&_count=10",
+      "path": "/fhir/R4/Practitioner/2c1e6df0-90f4-4a87-a4d9-c7a2fab72209",
       "status": 200
     },
     {
@@ -75,7 +75,7 @@
     },
     {
       "method": "GET",
-      "path": "/guarantors/search?lastName=Guardian&firstName=BrowserReg922110",
+      "path": "/guarantors/search?lastName=Guardian&firstName=BrowserReg6587da",
       "status": 200
     },
     {
@@ -95,7 +95,7 @@
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Patient/df513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/fhir/R4/Patient/dae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 200
     },
     {
@@ -105,7 +105,7 @@
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Patient/df513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/fhir/R4/Patient/dae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 200
     },
     {
@@ -115,22 +115,22 @@
     },
     {
       "method": "GET",
-      "path": "/communications/opt-out?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/communications/opt-out?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 404
     },
     {
       "method": "GET",
-      "path": "/communications/opt-out?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/communications/opt-out?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 404
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/VisionPrescription?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0&status=active&_count=20&_sort=-datewritten",
+      "path": "/fhir/R4/VisionPrescription?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d&status=active&_count=20&_sort=-datewritten",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/VisionPrescription?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0&status=active&_count=20&_sort=-datewritten",
+      "path": "/fhir/R4/VisionPrescription?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d&status=active&_count=20&_sort=-datewritten",
       "status": 200
     },
     {
@@ -140,7 +140,7 @@
     },
     {
       "method": "GET",
-      "path": "/clinic/patients/df513be5-7533-45e1-b5e7-be5177740fb0/overview?filter=all",
+      "path": "/clinic/patients/dae6f8cd-6f8b-49b6-b065-a1c4d046be1d/overview?filter=all",
       "status": 200
     },
     {
@@ -150,12 +150,12 @@
     },
     {
       "method": "GET",
-      "path": "/clinic/patients/df513be5-7533-45e1-b5e7-be5177740fb0/overview?filter=all",
+      "path": "/clinic/patients/dae6f8cd-6f8b-49b6-b065-a1c4d046be1d/overview?filter=all",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/series-tracker/patients/df513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/series-tracker/patients/dae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 404
     },
     {
@@ -170,12 +170,12 @@
     },
     {
       "method": "GET",
-      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 404
     },
     {
       "method": "GET",
-      "path": "/series-tracker/patients/df513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/series-tracker/patients/dae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 404
     },
     {
@@ -190,12 +190,12 @@
     },
     {
       "method": "GET",
-      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 404
     },
     {
       "method": "GET",
-      "path": "/clinic?patientId=df513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/clinic?patientId=dae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 200
     },
     {
@@ -235,62 +235,12 @@
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Patient/df513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/fhir/R4/Patient/dae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Patient/df513be5-7533-45e1-b5e7-be5177740fb0",
-      "status": 200
-    },
-    {
-      "method": "GET",
-      "path": "/clinic/summary",
-      "status": 200
-    },
-    {
-      "method": "GET",
-      "path": "/communications/opt-out?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0",
-      "status": 404
-    },
-    {
-      "method": "GET",
-      "path": "/communications/opt-out?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0",
-      "status": 404
-    },
-    {
-      "method": "GET",
-      "path": "/fhir/R4/VisionPrescription?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0&status=active&_count=20&_sort=-datewritten",
-      "status": 200
-    },
-    {
-      "method": "GET",
-      "path": "/fhir/R4/VisionPrescription?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0&status=active&_count=20&_sort=-datewritten",
-      "status": 200
-    },
-    {
-      "method": "GET",
-      "path": "/communications/opt-out?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0",
-      "status": 404
-    },
-    {
-      "method": "GET",
-      "path": "/communications/preferences?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0",
-      "status": 404
-    },
-    {
-      "method": "GET",
-      "path": "/communications/opt-out?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0",
-      "status": 404
-    },
-    {
-      "method": "GET",
-      "path": "/communications/preferences?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0",
-      "status": 404
-    },
-    {
-      "method": "GET",
-      "path": "/fhir/R4/RelatedPerson?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/fhir/R4/Patient/dae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 200
     },
     {
@@ -300,102 +250,152 @@
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Person?link=RelatedPerson%2F6275311e-70ae-4556-8318-6ba2ac240c44",
+      "path": "/communications/opt-out?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/communications/opt-out?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/VisionPrescription?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d&status=active&_count=20&_sort=-datewritten",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/fhir/R4/VisionPrescription?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d&status=active&_count=20&_sort=-datewritten",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/61e684da-f317-45f2-9ae0-1ccfa3219ad5",
+      "path": "/communications/opt-out?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/communications/preferences?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/communications/opt-out?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/communications/preferences?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/RelatedPerson?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Person?link=RelatedPerson%2F6275311e-70ae-4556-8318-6ba2ac240c44",
+      "path": "/clinic/summary",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Patient/e256b9f0-a372-4eef-b53e-d0ca808de98f",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F037eaae6-def7-4315-ac8e-356eafce2a92",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/61e684da-f317-45f2-9ae0-1ccfa3219ad5",
+      "path": "/fhir/R4/RelatedPerson?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/6275311e-70ae-4556-8318-6ba2ac240c44",
+      "path": "/fhir/R4/RelatedPerson/84d39c47-b2b5-4956-aaac-c679be4f1fdc",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Patient/e256b9f0-a372-4eef-b53e-d0ca808de98f",
+      "path": "/fhir/R4/Patient/faf2f86f-1a0b-4fd6-81f7-afa46c1292e8",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Patient/df513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F037eaae6-def7-4315-ac8e-356eafce2a92",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/6275311e-70ae-4556-8318-6ba2ac240c44",
+      "path": "/fhir/R4/RelatedPerson/037eaae6-def7-4315-ac8e-356eafce2a92",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/61e684da-f317-45f2-9ae0-1ccfa3219ad5",
+      "path": "/fhir/R4/RelatedPerson/84d39c47-b2b5-4956-aaac-c679be4f1fdc",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Patient/df513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/fhir/R4/Patient/dae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/6275311e-70ae-4556-8318-6ba2ac240c44",
+      "path": "/fhir/R4/Patient/faf2f86f-1a0b-4fd6-81f7-afa46c1292e8",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/61e684da-f317-45f2-9ae0-1ccfa3219ad5",
+      "path": "/fhir/R4/RelatedPerson/84d39c47-b2b5-4956-aaac-c679be4f1fdc",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Person/f69ee854-bed6-4363-986e-c1ff457a57b2",
+      "path": "/fhir/R4/RelatedPerson/037eaae6-def7-4315-ac8e-356eafce2a92",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/6275311e-70ae-4556-8318-6ba2ac240c44",
+      "path": "/fhir/R4/RelatedPerson/037eaae6-def7-4315-ac8e-356eafce2a92",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/clinic/patients/df513be5-7533-45e1-b5e7-be5177740fb0/overview?filter=all",
+      "path": "/fhir/R4/Patient/dae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Person/f69ee854-bed6-4363-986e-c1ff457a57b2",
+      "path": "/fhir/R4/Person/56630e1f-0691-463d-b54a-6d85f6d8b7aa",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/clinic/patients/df513be5-7533-45e1-b5e7-be5177740fb0/overview?filter=all",
+      "path": "/fhir/R4/RelatedPerson/84d39c47-b2b5-4956-aaac-c679be4f1fdc",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/series-tracker/patients/df513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/fhir/R4/RelatedPerson/037eaae6-def7-4315-ac8e-356eafce2a92",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/Person/56630e1f-0691-463d-b54a-6d85f6d8b7aa",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/patients/dae6f8cd-6f8b-49b6-b065-a1c4d046be1d/overview?filter=all",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/patients/dae6f8cd-6f8b-49b6-b065-a1c4d046be1d/overview?filter=all",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/series-tracker/patients/dae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 404
     },
     {
@@ -410,12 +410,12 @@
     },
     {
       "method": "GET",
-      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 404
     },
     {
       "method": "GET",
-      "path": "/series-tracker/patients/df513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/series-tracker/patients/dae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 404
     },
     {
@@ -430,12 +430,12 @@
     },
     {
       "method": "GET",
-      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2Fdf513be5-7533-45e1-b5e7-be5177740fb0",
+      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2Fdae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
       "status": 404
     },
     {
       "method": "GET",
-      "path": "/clinic?patientId=615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
+      "path": "/clinic?patientId=570b9379-36f6-4824-b435-aae3205be7f6",
       "status": 200
     },
     {
@@ -475,37 +475,12 @@
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Patient/615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
+      "path": "/fhir/R4/Patient/570b9379-36f6-4824-b435-aae3205be7f6",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Patient/615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
-      "status": 200
-    },
-    {
-      "method": "GET",
-      "path": "/clinic/summary",
-      "status": 200
-    },
-    {
-      "method": "GET",
-      "path": "/communications/opt-out?patient=Patient%2F615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
-      "status": 404
-    },
-    {
-      "method": "GET",
-      "path": "/communications/opt-out?patient=Patient%2F615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
-      "status": 404
-    },
-    {
-      "method": "GET",
-      "path": "/fhir/R4/VisionPrescription?patient=Patient%2F615cc79a-2ba5-43b7-b0fe-e942fdec65e6&status=active&_count=20&_sort=-datewritten",
-      "status": 200
-    },
-    {
-      "method": "GET",
-      "path": "/fhir/R4/VisionPrescription?patient=Patient%2F615cc79a-2ba5-43b7-b0fe-e942fdec65e6&status=active&_count=20&_sort=-datewritten",
+      "path": "/fhir/R4/Patient/570b9379-36f6-4824-b435-aae3205be7f6",
       "status": 200
     },
     {
@@ -515,57 +490,87 @@
     },
     {
       "method": "GET",
-      "path": "/communications/opt-out?patient=Patient%2F615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
+      "path": "/communications/opt-out?patient=Patient%2F570b9379-36f6-4824-b435-aae3205be7f6",
       "status": 404
     },
     {
       "method": "GET",
-      "path": "/communications/preferences?patient=Patient%2F615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
+      "path": "/communications/opt-out?patient=Patient%2F570b9379-36f6-4824-b435-aae3205be7f6",
       "status": 404
     },
     {
       "method": "GET",
-      "path": "/communications/opt-out?patient=Patient%2F615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
+      "path": "/fhir/R4/VisionPrescription?patient=Patient%2F570b9379-36f6-4824-b435-aae3205be7f6&status=active&_count=20&_sort=-datewritten",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/fhir/R4/VisionPrescription?patient=Patient%2F570b9379-36f6-4824-b435-aae3205be7f6&status=active&_count=20&_sort=-datewritten",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/communications/opt-out?patient=Patient%2F570b9379-36f6-4824-b435-aae3205be7f6",
       "status": 404
     },
     {
       "method": "GET",
-      "path": "/communications/preferences?patient=Patient%2F615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
+      "path": "/communications/preferences?patient=Patient%2F570b9379-36f6-4824-b435-aae3205be7f6",
       "status": 404
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson?patient=Patient%2F615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
+      "path": "/communications/opt-out?patient=Patient%2F570b9379-36f6-4824-b435-aae3205be7f6",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/communications/preferences?patient=Patient%2F570b9379-36f6-4824-b435-aae3205be7f6",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/summary",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Person?link=RelatedPerson%2F2338ba81-c8fb-437d-959b-80ee0974a5b8",
+      "path": "/fhir/R4/RelatedPerson?patient=Patient%2F570b9379-36f6-4824-b435-aae3205be7f6",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson?patient=Patient%2F615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
+      "path": "/fhir/R4/RelatedPerson?patient=Patient%2F570b9379-36f6-4824-b435-aae3205be7f6",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Person?link=RelatedPerson%2F2338ba81-c8fb-437d-959b-80ee0974a5b8",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F9863ef55-53b2-42a5-8edc-4e254a3f4b2d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/clinic/patients/615cc79a-2ba5-43b7-b0fe-e942fdec65e6/overview?filter=all",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F9863ef55-53b2-42a5-8edc-4e254a3f4b2d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/clinic/patients/615cc79a-2ba5-43b7-b0fe-e942fdec65e6/overview?filter=all",
+      "path": "/clinic/patients/570b9379-36f6-4824-b435-aae3205be7f6/overview?filter=all",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/series-tracker/patients/615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
+      "path": "/guarantors/link-operations?relatedPersonId=9863ef55-53b2-42a5-8edc-4e254a3f4b2d",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/clinic/patients/570b9379-36f6-4824-b435-aae3205be7f6/overview?filter=all",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/series-tracker/patients/570b9379-36f6-4824-b435-aae3205be7f6",
       "status": 404
     },
     {
@@ -580,12 +585,12 @@
     },
     {
       "method": "GET",
-      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2F615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
+      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2F570b9379-36f6-4824-b435-aae3205be7f6",
       "status": 404
     },
     {
       "method": "GET",
-      "path": "/series-tracker/patients/615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
+      "path": "/series-tracker/patients/570b9379-36f6-4824-b435-aae3205be7f6",
       "status": 404
     },
     {
@@ -600,22 +605,17 @@
     },
     {
       "method": "GET",
-      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2F615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
+      "path": "/clinical-graph/longitudinal-imaging?patient=Patient%2F570b9379-36f6-4824-b435-aae3205be7f6",
       "status": 404
     },
     {
       "method": "GET",
-      "path": "/guarantors/link-operations?relatedPersonId=2338ba81-c8fb-437d-959b-80ee0974a5b8",
+      "path": "/guarantors/link-operations?relatedPersonId=9863ef55-53b2-42a5-8edc-4e254a3f4b2d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/guarantors/link-operations?relatedPersonId=2338ba81-c8fb-437d-959b-80ee0974a5b8",
-      "status": 200
-    },
-    {
-      "method": "GET",
-      "path": "/guarantors/search?lastName=Guardian&firstName=BrowserAttach922110",
+      "path": "/guarantors/search?lastName=Guardian&firstName=BrowserAttach6587da",
       "status": 200
     },
     {
@@ -630,77 +630,77 @@
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/2338ba81-c8fb-437d-959b-80ee0974a5b8",
+      "path": "/fhir/R4/RelatedPerson/9863ef55-53b2-42a5-8edc-4e254a3f4b2d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Person?link=RelatedPerson%2F2338ba81-c8fb-437d-959b-80ee0974a5b8",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F9863ef55-53b2-42a5-8edc-4e254a3f4b2d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/88f35371-8b25-4daa-bd2d-3abc16e5da8f",
+      "path": "/fhir/R4/RelatedPerson/d97df2b4-26f6-4c51-852d-07ceee1617d7",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Patient/d54b71c3-66af-480b-90af-0e06232fc60c",
+      "path": "/fhir/R4/Patient/540eac93-36c9-46e4-96ee-be37da8743d8",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/2338ba81-c8fb-437d-959b-80ee0974a5b8",
+      "path": "/fhir/R4/RelatedPerson/9863ef55-53b2-42a5-8edc-4e254a3f4b2d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Patient/615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
+      "path": "/fhir/R4/Patient/570b9379-36f6-4824-b435-aae3205be7f6",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/88f35371-8b25-4daa-bd2d-3abc16e5da8f",
+      "path": "/fhir/R4/RelatedPerson/d97df2b4-26f6-4c51-852d-07ceee1617d7",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/2338ba81-c8fb-437d-959b-80ee0974a5b8",
+      "path": "/fhir/R4/RelatedPerson/9863ef55-53b2-42a5-8edc-4e254a3f4b2d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Person/c6587163-1439-4ed8-9d1e-711d7b299962",
+      "path": "/fhir/R4/Person/a82cd725-7694-4006-a338-66654edc4d02",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/guarantors/link-operations?relatedPersonId=2338ba81-c8fb-437d-959b-80ee0974a5b8",
+      "path": "/guarantors/link-operations?relatedPersonId=9863ef55-53b2-42a5-8edc-4e254a3f4b2d",
       "status": 200
     },
     {
       "method": "POST",
-      "path": "/guarantors/link-operations/36937312-186e-4127-a014-cae1d5351280/correct",
+      "path": "/guarantors/link-operations/016da3a3-2f8c-46df-ae9a-b6ab7d8d3a5c/correct",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/RelatedPerson/2338ba81-c8fb-437d-959b-80ee0974a5b8",
+      "path": "/fhir/R4/RelatedPerson/9863ef55-53b2-42a5-8edc-4e254a3f4b2d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/fhir/R4/Person?link=RelatedPerson%2F2338ba81-c8fb-437d-959b-80ee0974a5b8",
+      "path": "/fhir/R4/Person?link=RelatedPerson%2F9863ef55-53b2-42a5-8edc-4e254a3f4b2d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/guarantors/link-operations?relatedPersonId=2338ba81-c8fb-437d-959b-80ee0974a5b8",
+      "path": "/guarantors/link-operations?relatedPersonId=9863ef55-53b2-42a5-8edc-4e254a3f4b2d",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/guarantors/link-operations?relatedPersonId=2338ba81-c8fb-437d-959b-80ee0974a5b8",
+      "path": "/guarantors/link-operations?relatedPersonId=9863ef55-53b2-42a5-8edc-4e254a3f4b2d",
       "status": 200
     }
   ],
@@ -708,19 +708,19 @@
   "screenshots": [
     {
       "name": "registration-existing-chart.png",
-      "sha256": "e2e44b77fd71f606d3b4e29f260ff80eb0ea6f3d1c179c901edfa287de41bfec"
+      "sha256": "23d47ec11bd4287a340dcac326e17a6f5f88904426061c5d389016fb367ad4ae"
     },
     {
       "name": "failed-attach-missing.png",
-      "sha256": "96d543f8c7c7ef2e9eea9cf5961eab5e4e9f3f7f665d926a6c58f2a4a445820d"
+      "sha256": "b52ff396fa151669183cc535f6615c71199af51b27110ea529154f667126ee93"
     },
     {
       "name": "chart-attach-linked.png",
-      "sha256": "c021d37309b8be1e7d7cb2222ac9b684b535fcd83570cdc2671e779a25847b10"
+      "sha256": "613825904a091fc3990f6286297bc24fc8768edc13bfbccd5f060360e6c8cc67"
     },
     {
       "name": "attach-undo-missing.png",
-      "sha256": "722edf95d38ea2788c3903bfcd18b5d00dd2cefb44c1a140fcdae5aa54683b6d"
+      "sha256": "f87bd8aca41f848353473d7ff1aef216ee5b2c17878bf94cc15657914ddb77f7"
     }
   ],
   "checks": [
@@ -835,10 +835,10 @@
     {
       "name": "registration chart owner",
       "actual": [
-        "f69ee854-bed6-4363-986e-c1ff457a57b2"
+        "56630e1f-0691-463d-b54a-6d85f6d8b7aa"
       ],
       "expected": [
-        "f69ee854-bed6-4363-986e-c1ff457a57b2"
+        "56630e1f-0691-463d-b54a-6d85f6d8b7aa"
       ]
     },
     {
@@ -905,10 +905,10 @@
     {
       "name": "chart Attach linked",
       "actual": [
-        "c6587163-1439-4ed8-9d1e-711d7b299962"
+        "a82cd725-7694-4006-a338-66654edc4d02"
       ],
       "expected": [
-        "c6587163-1439-4ed8-9d1e-711d7b299962"
+        "a82cd725-7694-4006-a338-66654edc4d02"
       ]
     },
     {
@@ -961,14 +961,14 @@
     "staffReference": "Practitioner/2c1e6df0-90f4-4a87-a4d9-c7a2fab72209"
   },
   "state": {
-    "registeredPatientId": "df513be5-7533-45e1-b5e7-be5177740fb0",
-    "registeredRelatedPersonId": "6275311e-70ae-4556-8318-6ba2ac240c44",
+    "registeredPatientId": "dae6f8cd-6f8b-49b6-b065-a1c4d046be1d",
+    "registeredRelatedPersonId": "037eaae6-def7-4315-ac8e-356eafce2a92",
     "registrationOwner": [
-      "f69ee854-bed6-4363-986e-c1ff457a57b2"
+      "56630e1f-0691-463d-b54a-6d85f6d8b7aa"
     ],
-    "repairedPatientId": "615cc79a-2ba5-43b7-b0fe-e942fdec65e6",
-    "repairedRelatedPersonId": "2338ba81-c8fb-437d-959b-80ee0974a5b8",
+    "repairedPatientId": "570b9379-36f6-4824-b435-aae3205be7f6",
+    "repairedRelatedPersonId": "9863ef55-53b2-42a5-8edc-4e254a3f4b2d",
     "finalOwnersAfterUndo": [],
-    "failedAttachTaskId": "88413971-1537-4530-920c-76d015f56c18"
+    "failedAttachTaskId": "68fdfdc8-96ae-4f2e-a7e3-ab030490567a"
   }
 }
