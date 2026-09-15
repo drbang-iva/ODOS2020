@@ -24,7 +24,7 @@ import type {
 export interface ProtocolProjection {
   commitFinding(finding: ProtocolFindingInstance): Promise<string | undefined>;
   materializeAction(action: PlanActionInstance): Promise<string | undefined>;
-  removeMaterialized?(reference: string): Promise<void>;
+  removeMaterialized?(reference: string): Promise<void | (() => Promise<void>)>;
 }
 
 export interface OpenProtocolInput {
@@ -712,7 +712,7 @@ export class ProtocolService {
     const removed: string[] = [];
     const preserved: string[] = [];
     const originalFindings = (await this.findings.list()).filter((row) => row.protocolApplicationId === applicationId);
-    const removedProjections = new Set<string>();
+    const removedProjections = new Map<string, void | (() => Promise<void>)>();
     try {
       for (const action of actions) {
         const transfer = transfers.get(action.id);
@@ -721,8 +721,8 @@ export class ProtocolService {
           preserved.push(action.id);
         } else if (action.state === "selected" && action.modifiedFields.length === 0) {
           if (action.materializedFhirRef && this.projection.removeMaterialized) {
-            await this.projection.removeMaterialized(action.materializedFhirRef);
-            removedProjections.add(action.materializedFhirRef);
+            const restore = await this.projection.removeMaterialized(action.materializedFhirRef);
+            removedProjections.set(action.materializedFhirRef, restore);
           }
           await this.actions.save({ ...action, state: "removed" });
           removed.push(action.id);
@@ -731,8 +731,8 @@ export class ProtocolService {
       for (const finding of (await this.findings.list()).filter((row) => row.protocolApplicationId === applicationId)) {
         if (finding.state === "committed" && finding.provenance.source === "protocol-default") {
           if (finding.observationReference && this.projection.removeMaterialized) {
-            await this.projection.removeMaterialized(finding.observationReference);
-            removedProjections.add(finding.observationReference);
+            const restore = await this.projection.removeMaterialized(finding.observationReference);
+            removedProjections.set(finding.observationReference, restore);
           }
           await this.findings.save({ ...finding, state: "removed" });
           removed.push(finding.id);
@@ -755,7 +755,11 @@ export class ProtocolService {
         const projectionRemoved = Boolean(action.materializedFhirRef && removedProjections.has(action.materializedFhirRef));
         if (!current || (!projectionRemoved && JSON.stringify(current) === JSON.stringify(action))) continue;
         const restored = { ...action };
-        if (projectionRemoved) restored.materializedFhirRef = await this.projection.materializeAction(action);
+        if (projectionRemoved) {
+          const restore = removedProjections.get(action.materializedFhirRef!);
+          if (restore) await restore();
+          else restored.materializedFhirRef = await this.projection.materializeAction(action);
+        }
         await this.actions.saveWithIdentifiersIfCurrent(restored, [], (row) => JSON.stringify(row) === JSON.stringify(current));
       }
       for (const finding of originalFindings) {
@@ -763,7 +767,11 @@ export class ProtocolService {
         const projectionRemoved = Boolean(finding.observationReference && removedProjections.has(finding.observationReference));
         if (!current || (!projectionRemoved && JSON.stringify(current) === JSON.stringify(finding))) continue;
         const restored = { ...finding };
-        if (projectionRemoved) restored.observationReference = await this.projection.commitFinding(finding);
+        if (projectionRemoved) {
+          const restore = removedProjections.get(finding.observationReference!);
+          if (restore) await restore();
+          else restored.observationReference = await this.projection.commitFinding(finding);
+        }
         await this.findings.saveWithIdentifiersIfCurrent(restored, [], (row) => JSON.stringify(row) === JSON.stringify(current));
       }
       for (const charge of linkedCharges) {

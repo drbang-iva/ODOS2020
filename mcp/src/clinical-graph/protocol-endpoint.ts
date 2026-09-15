@@ -921,12 +921,15 @@ function liveService(
       if (resourceType === "Observation") {
         const resource = await staff.fhir.read<Observation>("Observation", id);
         await updateProjected(staff.fhir, "Observation", id, { ...resource, status: "entered-in-error" });
+        return () => updateProjected(staff.fhir, "Observation", id, resource);
       } else if (resourceType === "ServiceRequest") {
         const resource = await staff.fhir.read<ServiceRequest>("ServiceRequest", id);
         await updateProjected(staff.fhir, "ServiceRequest", id, { ...resource, status: "revoked" });
+        return () => updateProjected(staff.fhir, "ServiceRequest", id, resource);
       } else {
         const resource = await staff.fhir.read<CarePlan>("CarePlan", id);
         await updateProjected(staff.fhir, "CarePlan", id, { ...resource, status: "revoked" });
+        return () => updateProjected(staff.fhir, "CarePlan", id, resource);
       }
     },
   }, now);

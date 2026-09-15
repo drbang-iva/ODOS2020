@@ -3641,3 +3641,40 @@ for (const kind of ["action", "finding"] as const) {
     for (const finding of await service.findings.list()) if (finding.observationReference) assert.ok(projections.has(finding.observationReference));
   });
 }
+
+for (const kind of ["action", "finding"] as const) {
+  test(`shared rollback endpoint: ${kind} revocation rollback preserves original FHIR IDs and statuses`, async () => {
+    const fhir = new EndpointFhir();
+    fhir.resources.push(confirmedCondition());
+    const applied = await handleProtocolApplyRequest(endpointDeps(fhir), { authHeader: "Bearer test", body: applyBody("H40.021") });
+    assert.equal(applied.status, 200);
+    const service = endpointProtocolService(fhir);
+    const application = (await service.applications.list())[0];
+    const originalProjections = structuredClone(fhir.resources.filter((row) => ["ServiceRequest", "Observation", "CarePlan"].includes(row.resourceType)));
+    assert.ok(originalProjections.some((row) => row.resourceType === (kind === "action" ? "ServiceRequest" : "Observation")));
+    const originalActions = await service.actions.list();
+    const originalFindings = await service.findings.list();
+    const update = fhir.update;
+    let failed = false;
+    fhir.update = async (...args) => {
+      const resource = args[2];
+      if (!failed && resource.resourceType === "Basic") {
+        const basic = resource as Basic;
+        const expectedCode = kind === "action" ? PROTOCOL_BASIC_CODES.planActionInstance : PROTOCOL_BASIC_CODES.findingInstance;
+        const payload = basic.code?.coding?.some((row) => row.code === expectedCode) ? basic.extension?.[0]?.valueString : undefined;
+        const row = payload ? JSON.parse(payload) : undefined;
+        if (row?.state === "removed" && (kind === "action" ? row.materializedFhirRef : row.observationReference)) {
+          failed = true;
+          throw new Error("Basic write after revocation failed");
+        }
+      }
+      return update(...args);
+    };
+    await assert.rejects(handleProtocolUnapplyRequest(endpointDeps(fhir), { authHeader: "Bearer test", params: { applicationId: application.id } }), /Basic write after revocation failed/);
+    assert.equal(failed, true);
+    assert.deepEqual(fhir.resources.filter((row) => ["ServiceRequest", "Observation", "CarePlan"].includes(row.resourceType)), originalProjections);
+    assert.deepEqual(await service.actions.list(), originalActions);
+    assert.deepEqual(await service.findings.list(), originalFindings);
+    assert.equal((await service.applications.get(application.id))?.undoState, "active");
+  });
+}
