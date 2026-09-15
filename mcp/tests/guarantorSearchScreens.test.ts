@@ -13,6 +13,20 @@ async function route(rows: any[], run: (base: string, writes: any[]) => Promise<
 }
 test("K1 search refuses a prefix-only family",async()=>route([person("ann"),person("anna","Anna")],async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,200);assert.deepEqual((await r.json()).map((x:any)=>x.personId),["ann"]);}));
 test("K2 phone compares digits and rejects a different digit",async()=>route([person("ann")],async base=>{for(const [phone,count] of [["(864) 555-0102",1],["8645550103",0]] as const){const r=await fetch(base+"/guarantors/search?lastName=Ann&phone="+encodeURIComponent(phone));assert.equal(r.status,200);assert.equal((await r.json()).length,count);}}));
+test("Follow-up F2: US phone search matches country-code and ten-digit forms without trimming ten-digit leading 1",async()=>{
+ await route([person("ann")],async base=>{
+  for(const phone of ["+1 864 555 0102","18645550102","864 555 0102"]){
+   const r=await fetch(base+"/guarantors/search?lastName=Ann&phone="+encodeURIComponent(phone));
+   assert.equal(r.status,200);
+   assert.deepEqual((await r.json()).map((x:any)=>x.personId),["ann"]);
+  }
+ });
+ await route([person("leading-one","One",{telecom:[{system:"phone",value:"1234567890"}]})],async base=>{
+  const r=await fetch(base+"/guarantors/search?lastName=One&phone=1234567890");
+  assert.equal(r.status,200);
+  assert.deepEqual((await r.json()).map((x:any)=>x.personId),["leading-one"]);
+ });
+});
 test("K3 search card exposes exactly six keys",async()=>route([person("ann","Ann",{extension:[{url:"urn:sentinel",valueString:"private"}],address:[{line:["Private street"],city:"Town",postalCode:"00000"}]})],async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,200);assert.deepEqual(Object.keys((await r.json())[0]).sort(),["personId","versionId","name","phones","city","postalCode"].sort());}));
 for(const [kind,extra] of [["inactive",{active:false}],["zero-link",{link:[]}],["non-RelatedPerson",{link:[{target:{reference:"Patient/child"}}]}]] as const)test(`K4 ${kind} excluded`,async()=>route([person("ann","Ann",extra)],async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,200);assert.deepEqual(await r.json(),[]);}));
 for(const count of [21,201])test(`K5 ${count} matches return 422`,async()=>route(Array.from({length:count},(_,i)=>person("ann"+i)),async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,422);assert.equal((await r.json()).error,"Too many matches; add a first name or phone.");}));
