@@ -4,7 +4,7 @@ Status: locally implemented and reverified; NOT EVALUATED. Published as PR #607.
 
 Branch: `drbang-iva/registration-guarantor-dob-age-majority`.
 Initial base: `6d41a717060fe7d01a185496279ee67f47e82fa5`. Refreshed base: `40c19a9e442015e1d32396958b661394318713d2` (#606 merged). Only rebase conflict was appended editor tests; both K4 and D4 retained. The claim writeConstraint remains intact.
-Rebased source tested: `befd48ef2888acf796ad82be7091b09f2b9a17b7`. Final production change: `5f244a9c` corrects the seed client type to declare existing baseUrl/searchUrl pagination requirements; no runtime change. Evidence commits follow. Final publication SHA is recorded in PR #607 and the delivery message.
+Rebased source tested: `befd48ef2888acf796ad82be7091b09f2b9a17b7`. Later implementation fixes declare the seed client pagination properties (`5f244a9c`) and validate optional editor DOB values (`1c6e04b3`). Later fixes strengthen test guards, scanner annotation, and authorization-fixture cleanup; production role permissions remain unchanged. Final publication SHA is recorded in PR #607 and the delivery message.
 
 ## Summary and files
 
@@ -110,3 +110,11 @@ Final-at-that-time CI at `af7d08a0` passed full MCP (5,029 passed / 51 skipped),
 A fresh ordinary synthetic project reproduced it using the actual CI operator membership contract: distinct non-admin ClientApplication, no access policy, versus caller human project administrator. Original test3 passed /1 failed with three membership-delete403 responses. Corrected test4 passed /0 failed /0 skipped: identity metadata cleanup uses caller admin; Basic cleanup uses the operator; both groups are attempted and cleanup failures still reject. No production policy changes. Exact evidence and fixture limitations: `../registration-majority/cleanup/verification.md` and `nonadmin-operator-*.txt`.
 
 All temporary proof resources were cleaned. All three task fixture containers are again stopped, not removed (`fixture-stopped-final.txt`). A new final-head CI run is required; the earlier failed lane is not represented as green.
+
+### Exact repaired-caller cleanup and preserved failures
+
+CI at `5338b719` still failed cleanup despite the prior unbound-admin local green. The corrected reproduction binds the human caller to the actual canonical Staff/Admin/Provider composite policy while keeping its project-admin flag; the distinct operator remains non-admin and unbound. That reproduces three ClientApplication DELETE403 responses in the previous cleanup split. The corrected test passes4/4 with zero skips using the existing project-admin membership DELETE endpoint first, followed by Basic and ClientApplication deletion by the operator. No new identity permissions or production grants; no cleanup skip. Exact red/green: `../registration-majority/admin-cleanup/`.
+
+The test captures original body errors and all cleanup rejections after cleanup, avoiding throws from finally. Its AggregateError preserves original error objects and includes nested messages. A harness executes the actual callback with simulated body and cleanup failures; removing body-error capture fails, restoration passes (`../registration-majority/cleanup-errors/`).
+
+All11 outer synthetic resources were cleaned. Containers again verified exited and retained in `fixture-stopped-final.txt`. Final CI must confirm this corrected identity/endpoint combination.

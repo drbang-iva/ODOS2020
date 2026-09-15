@@ -1,7 +1,7 @@
  Container registration-majority-live-medplum-1 Stopping 
  Container registration-majority-live-medplum-1 Stopped 
- Container registration-majority-live-postgres-1 Stopping 
  Container registration-majority-live-redis-1 Stopping 
+ Container registration-majority-live-postgres-1 Stopping 
  Container registration-majority-live-postgres-1 Stopped 
  Container registration-majority-live-redis-1 Stopped 
 registration-majority-live-medplum-1 exited

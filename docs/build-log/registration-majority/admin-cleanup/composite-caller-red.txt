@@ -23,7 +23,7 @@ not ok 1 - age-of-majority singleton grants enforce provider reads and staff/adm
   ---
   duration_ms: 414.332583
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityAuthzLive.test.ts:1:673'
+  location: '<workspace>/mcp/tests/ageOfMajorityAuthzLive.test.ts:1:673'
   failureType: 'testCodeFailure'
   error: |-
     Live authorization fixture failed: Synthetic live-proof cleanup failures: ClientApplication/07923850-8b28-456a-8cda-11ea16a8ba41: HTTP 403, ClientApplication/25e13d53-c357-438a-a868-643ba5f3702a: HTTP 403, ClientApplication/0753d329-aa62-47ab-9d78-fab18a8278bd: HTTP 403
@@ -39,7 +39,7 @@ not ok 1 - age-of-majority singleton grants enforce provider reads and staff/adm
   code: 'ERR_TEST_FAILURE'
   name: 'AggregateError'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityAuthzLive.test.ts:71:11)
+    TestContext.<anonymous> (<workspace>/mcp/tests/ageOfMajorityAuthzLive.test.ts:71:11)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
