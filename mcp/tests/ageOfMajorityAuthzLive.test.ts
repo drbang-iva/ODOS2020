@@ -56,12 +56,19 @@ test("age-of-majority singleton grants enforce provider reads and staff/admin ed
   } catch (error) {
     bodyFailure = { error };
   }
-  const metadata = cleanup.filter((reference) => reference.startsWith("ClientApplication/") || reference.startsWith("ProjectMembership/"));
-  const clinical = cleanup.filter((reference) => !metadata.includes(reference));
-  const results = await Promise.allSettled([
-    cleanupReferences(baseUrl, callerAccessToken, metadata),
-    cleanupReferences(baseUrl, seederAccessToken, clinical),
+  const membershipResults = await Promise.allSettled(cleanup
+    .filter((reference) => reference.startsWith("ProjectMembership/"))
+    .map(async (reference) => {
+      const id = reference.slice("ProjectMembership/".length);
+      const response = await fetch(`${baseUrl}/admin/projects/${projectId}/members/${id}`, {
+        method: "DELETE", headers: { Authorization: `Bearer ${callerAccessToken}` },
+      });
+      assert.ok([200, 204, 404, 410].includes(response.status), `${reference}: HTTP ${response.status}`);
+    }));
+  const resourceResults = await Promise.allSettled([
+    cleanupReferences(baseUrl, seederAccessToken, cleanup.filter((reference) => !reference.startsWith("ProjectMembership/"))),
   ]);
+  const results = [...membershipResults, ...resourceResults];
   const failures = results.filter((result): result is PromiseRejectedResult => result.status === "rejected");
   if (failures.length) {
     const errors = [
