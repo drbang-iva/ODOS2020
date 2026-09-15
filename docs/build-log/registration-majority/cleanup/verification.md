@@ -19,4 +19,4 @@ With that non-admin unbound operator, the original `af7d08a0` test reproduced th
 
 The prior bootstrap-project and admin=true operator greens were unsuitable controls: neither reproduced the actual operator metadata boundary. The non-admin run above supplies the missing reproduction.
 
-Ten outer setup resources were cleaned. The three memberships left behind by the deliberately failing original test were explicitly deleted with the fixture service token (HTTP 200). No project A identities or settings were changed. Containers remain running.
+Ten outer setup resources were cleaned. The three memberships left behind by the deliberately failing original test were rechecked with the fixture service token after project cleanup; all returned HTTP 410 (already removed). No project A identities or settings were changed. Containers remain running.
