@@ -20,6 +20,7 @@
     "install-profiles": "tsx scripts/install-profiles.ts",
     "setup-practice": "node --env-file-if-exists=.env --import tsx scripts/setup-practice.ts",
     "operator-identity": "tsx --env-file-if-exists=.env scripts/operator-identity.ts",
+    "guarantor-census": "tsx --env-file-if-exists=.env scripts/guarantor-census.ts",
     "generate-medplum-signing-keys": "tsx scripts/generate-medplum-signing-keys.ts",
     "setup-legacy-importer": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/setup-legacy-importer.ts",
     "gate:legacy-import-m2a": "tsx --env-file-if-exists=.env scripts/gate-legacy-import-m2a.ts",
