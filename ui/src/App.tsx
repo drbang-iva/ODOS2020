@@ -42,6 +42,7 @@ import { PlanProfilesSettings } from "./scenes/settings/PlanProfilesSettings";
 import { StaffSettings } from "./scenes/settings/StaffSettings";
 import { PackageDefinitionsSettings } from "./components/commercial/PackageDefinitionsSettings";
 import { ProtocolDefinitionsSettings } from "./components/series-tracker/ProtocolDefinitionsSettings";
+import { AgeOfMajoritySettings } from "./scenes/settings/AgeOfMajoritySettings";
 import { StatementMessagesSettings } from "./scenes/settings/StatementMessagesSettings";
 import { BillingIdentitySettings } from "./scenes/settings/BillingIdentitySettings";
 import { AppearanceSettings } from "./scenes/settings/AppearanceSettings";
@@ -487,6 +488,8 @@ export function RouteSwitch({
       return <ProtocolDefinitionsSettings canWrite={roles.includes("admin")} />;
     case "/settings/procedure-definitions":
       return <ProcedureDefinitionsSettings canWrite={roles.includes("admin")} />;
+    case "/settings/age-of-majority":
+      return <AgeOfMajoritySettings canWrite={roles.includes("admin")} />;
     case "/settings/statement-messages":
       return <StatementMessagesSettings canWrite={roles.includes("admin")} />;
     case "/settings/billing-identity":

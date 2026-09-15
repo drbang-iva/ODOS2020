@@ -177,6 +177,13 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
     tone: "slate",
     links: [
       {
+        href: "/settings/age-of-majority",
+        title: "Age of majority",
+        description: "Set the age used for registration, statements, and communication recipients.",
+        synonyms: ["minor", "adult", "guardian", "consent", "registration"],
+        practiceAdminOnly: true,
+      },
+      {
         href: "/settings/floor-config",
         title: "Floor config",
         description: "Manage floor stations, lane thresholds, and payer cues.",

@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../../mcp/src/clinic/age-of-majority-config";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
@@ -83,6 +84,7 @@ test("diagnosis Engage prefilters content, names guardian recipients, blocks mar
   const listCalls: Array<{ dxCode?: string; channel?: string }> = [];
   const dispatches: EducationDispatchInput[] = [];
   const api: EngageSheetApi = {
+    async loadAgeOfMajorityConfig() { return JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))); },
     async listEducation(query) {
       listCalls.push(query);
       return educationList(ITEMS);
@@ -166,6 +168,7 @@ test("marketing companion: a withheld cell disables despite no legacy record", a
   const matrix = Object.fromEntries(purposes.map(purpose => [purpose, Object.fromEntries(channels.map(channel => [channel, { value: false, source: "explicit" }]))]));
   globalThis.fetch = async input => {
     const url = String(input);
+    if (url.includes("Basic?")) return Response.json({resourceType: "Bundle", entry: [{resource: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18})))}]});
     if (url.includes("/communications/preferences")) return new Response(JSON.stringify({ patientReference: "Patient/patient-1", matrix, rows }));
     if (url.includes("/communications/education")) return new Response(JSON.stringify(educationList([ITEMS[1]!])));
     return unsuppressedSmsFetch();
@@ -185,6 +188,7 @@ test("toolbar Engage stays unfiltered and a locked practice pins retail content 
   const listCalls: Array<{ dxCode?: string; channel?: string }> = [];
   const dispatches: EducationDispatchInput[] = [];
   const api: EngageSheetApi = {
+    async loadAgeOfMajorityConfig() { return JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))); },
     async listEducation(query) {
       listCalls.push(query);
       return educationList([ITEMS[2]!], "locked_clinical");
@@ -319,6 +323,7 @@ test("an unavailable email channel stays visible, disabled, and explained", asyn
   const originalFetch = globalThis.fetch;
   globalThis.fetch = unsuppressedSmsFetch;
   const api: EngageSheetApi = {
+    async loadAgeOfMajorityConfig() { return JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))); },
     async listEducation() {
       return educationList([ITEMS[0]!], "staff_switchable", {
         clinicalSms: true,
@@ -367,6 +372,7 @@ test("card notices distinguish no SMS lane from the unavailable default lane", a
       },
     ]) {
       const api: EngageSheetApi = {
+    async loadAgeOfMajorityConfig() { return JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))); },
         async listEducation() { return educationList([item], "staff_switchable", availableChannels); },
         async dispatchEducation() { return { outcome: "sent", providerMessageId: "should-not-send" }; },
         async listConsentGuardians() { return []; },
@@ -405,6 +411,7 @@ test("the SMS lane toggle explains only the unavailable selected lane", async ()
       },
     ] as const) {
       const api: EngageSheetApi = {
+    async loadAgeOfMajorityConfig() { return JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))); },
         async listEducation() { return educationList([item], "staff_switchable", availableChannels); },
         async dispatchEducation() { return { outcome: "sent", providerMessageId: "should-not-send" }; },
         async listConsentGuardians() { return []; },
@@ -436,6 +443,7 @@ test("a minor without a recorded consent-authority guardian cannot dispatch educ
   const originalFetch = globalThis.fetch;
   globalThis.fetch = unsuppressedSmsFetch;
   const api: EngageSheetApi = {
+    async loadAgeOfMajorityConfig() { return JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))); },
     async listEducation() { return educationList([ITEMS[0]!]); },
     async dispatchEducation() { return { outcome: "sent", providerMessageId: "should-not-send" }; },
     async listConsentGuardians() { return []; },
@@ -464,6 +472,7 @@ test("a suppressed default SMS lane disables Text before compose and names the s
     smsLanes: [{ label: "Clinical texts", number: "+18485550100", roles: ["clinical-sms"] }],
   }), { status: 200, headers: { "Content-Type": "application/json" } });
   const api: EngageSheetApi = {
+    async loadAgeOfMajorityConfig() { return JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))); },
     async listEducation() { return educationList([ITEMS[0]!]); },
     async dispatchEducation() { return { outcome: "sent", providerMessageId: "should-not-send" }; },
     async listConsentGuardians() { return []; },
@@ -513,6 +522,7 @@ test("a provider-shaped 403 preference probe keeps Text available for dispatch e
   });
   const dispatches: EducationDispatchInput[] = [];
   const api: EngageSheetApi = {
+    async loadAgeOfMajorityConfig() { return JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))); },
     async listEducation() { return educationList([ITEMS[0]!]); },
     async dispatchEducation(input) {
       dispatches.push(input);
@@ -551,6 +561,7 @@ test("suppressed and rescheduled education outcomes render actionable sentences"
     { outcome: "rescheduled", reason: "quiet-hours", rescheduledAt: "2026-08-31T22:00:00.000Z" } as const,
   ];
   const api: EngageSheetApi = {
+    async loadAgeOfMajorityConfig() { return JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))); },
     async listEducation() { return educationList([ITEMS[0]!]); },
     async dispatchEducation() { return outcomes.shift()!; },
     async listConsentGuardians() { return []; },
@@ -586,6 +597,7 @@ test("a failed confirmation reuses its idempotency key until the send succeeds",
   const keys: string[] = [];
   let attempts = 0;
   const api: EngageSheetApi = {
+    async loadAgeOfMajorityConfig() { return JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))); },
     async listEducation() { return educationList([ITEMS[0]!]); },
     async dispatchEducation(input) {
       keys.push(input.idempotencyKey);
@@ -622,6 +634,7 @@ test("selecting a second guardian clears and disables a one-person override", as
   globalThis.fetch = unsuppressedSmsFetch;
   const dispatches: EducationDispatchInput[] = [];
   const api: EngageSheetApi = {
+    async loadAgeOfMajorityConfig() { return JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))); },
     async listEducation() { return educationList([ITEMS[0]!]); },
     async dispatchEducation(input) { dispatches.push(input); return { outcome: "sent", providerMessageId: `SM-${dispatches.length}` }; },
     async listConsentGuardians() { return GUARDIANS; },
@@ -658,6 +671,7 @@ test("chart update appears only after an override value and print returns a user
   const originalFetch = globalThis.fetch;
   globalThis.fetch = unsuppressedSmsFetch;
   const api: EngageSheetApi = {
+    async loadAgeOfMajorityConfig() { return JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))); },
     async listEducation() { return educationList([ITEMS[2]!]); },
     async dispatchEducation() { return { outcome: "print", url: "https://education.invalid/retail-home-care/v1/print" }; },
     async listConsentGuardians() { return []; },
@@ -758,6 +772,7 @@ test("chart contact conflict is sent success and clears pending using real dispa
   let sends = 0;
   globalThis.fetch = async (input) => {
     const url = String(input);
+    if (url.includes("Basic?")) return Response.json({resourceType: "Bundle", entry: [{resource: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18})))}]});
     if (url.includes("/education/dispatch")) {
       sends++;
       return new Response(JSON.stringify({ outcome: "sent", providerMessageId: "synthetic-receipt", chartUpdate: "conflict" }));

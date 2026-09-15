@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../../mcp/src/clinic/age-of-majority-config";
 import assert from "node:assert/strict";
 import test from "node:test";
 import React from "react";
@@ -44,6 +45,7 @@ test("B3: registration offers an existing guarantor, serializes only owned field
   let renderer!: ReactTestRenderer;
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input), "http://synthetic.test");
+    if (url.pathname.endsWith("/Basic")) return Response.json({resourceType: "Bundle", entry: [{resource: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18})))}]});
     const body = init?.body ? JSON.parse(String(init.body)) : undefined;
     calls.push({ path: url.pathname, ...(body ? { body } : {}) });
     if (url.pathname.endsWith("/preferences/defaults")) return Response.json(defaults);
@@ -113,7 +115,7 @@ test("B3: registration rejects a non-string guarantor link status", async () => 
     patient: { resourceType: "Patient", id: "registered-child" },
     guarantorLinks: [{ relatedPersonId: "related-created", personId: card.personId, status: ["linked"], message: "Guarantor linked." }],
   }, { status: 201 });
-  await assert.rejects(registerPatient(draft, {}, fetchImpl), /Patient registration returned an invalid response/);
+  await assert.rejects(registerPatient(draft, {ageOfMajorityConfig: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18})))}, fetchImpl), /Patient registration returned an invalid response/);
 });
 
 test("F4: the created screen renders an unconfirmed guarantor row without a RelatedPerson id", async () => {
@@ -133,7 +135,7 @@ test("F4: the created screen renders an unconfirmed guarantor row without a Rela
       message: "Open the chart to attach the guarantor.",
     }],
   }, { status: 201 });
-  const result = await registerPatient(draft, {}, fetchImpl);
+  const result = await registerPatient(draft, {ageOfMajorityConfig: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18})))}, fetchImpl);
   assert.equal(result.kind, "created");
   if (result.kind !== "created") return;
   let renderer!: ReactTestRenderer;

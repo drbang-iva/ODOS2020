@@ -56,6 +56,7 @@ const BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   "/settings/floor-config": [{ label: "Settings", href: "/settings" }, { label: "Floor config" }],
   "/settings/vision-plan-templates": [{ label: "Settings", href: "/settings" }, { label: "Vision plan templates" }],
   "/settings/visit-types": [{ label: "Settings", href: "/settings" }, { label: "Visit types" }],
+  "/settings/age-of-majority": [{ label: "Settings", href: "/settings" }, { label: "Age of majority" }],
   "/settings/statement-messages": [{ label: "Settings", href: "/settings" }, { label: "Statement and receipt messages" }],
   "/settings/billing-identity": [{ label: "Settings", href: "/settings" }, { label: "Billing identity" }],
   "/settings/appearance": [{ label: "Settings", href: "/settings" }, { label: "Appearance" }],

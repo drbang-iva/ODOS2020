@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { Patient, RelatedPerson } from "@medplum/fhirtypes";
+import { loadAgeOfMajorityConfig } from "../../lib/age-of-majority";
+import { resolveAgeOfMajorityYears } from "../../../../mcp/src/clinic/age-of-majority-config";
+import type { Basic, Patient, RelatedPerson } from "@medplum/fhirtypes";
 import {
   dispatchEducation,
   readCommunicationPreferences,
@@ -30,6 +32,7 @@ const UNAVAILABLE_CHANNELS: EducationChannelAvailability = {
 };
 
 export interface EngageSheetApi {
+  loadAgeOfMajorityConfig(): Promise<Basic | undefined>;
   listEducation(query: { dxCode?: string; channel?: "sms" | "email" | "print" }): Promise<EducationCatalogResult>;
   dispatchEducation(input: EducationDispatchInput): Promise<EducationDispatchResult>;
   listConsentGuardians(patientReference: string): Promise<RelatedPerson[]>;
@@ -49,6 +52,7 @@ interface PendingSend {
 }
 
 const defaultApi: EngageSheetApi = {
+  loadAgeOfMajorityConfig,
   listEducation,
   dispatchEducation,
   async listConsentGuardians(patientReference) {
@@ -102,7 +106,8 @@ export function EngageSheet({
   const [error, setError] = useState<string>();
   const [printUrl, setPrintUrl] = useState<string>();
   const [sending, setSending] = useState(false);
-  const minor = patient.birthDate ? isMinorOn(patient.birthDate, today()) : false;
+  const [minor, setMinor] = useState<boolean>();
+  const [majorityError, setMajorityError] = useState<string>();
   const [preferences, setPreferences] = useState<CommunicationPreferencesResponse>();
   const [preferenceAvailability, setPreferenceAvailability] = useState<"loading" | "available" | "unavailable">("loading");
   const [preferenceRevision, setPreferenceRevision] = useState(0);
@@ -132,6 +137,10 @@ export function EngageSheet({
   useEffect(() => {
     if (!open) return;
     let active = true;
+    setMinor(undefined);
+    setMajorityError(undefined);
+    setGuardians([]);
+    setSelectedRecipients([]);
     setPending(undefined);
     setStatus(undefined);
     setError(undefined);
@@ -141,12 +150,23 @@ export function EngageSheet({
     setAvailableChannels(UNAVAILABLE_CHANNELS);
     Promise.all([
       api.listEducation(diagnosis?.code ? { dxCode: diagnosis.code } : {}),
-      minor ? api.listConsentGuardians(patientReference) : Promise.resolve([]),
-    ]).then(([catalog, relatedPeople]) => {
+      api.loadAgeOfMajorityConfig().then(config => {
+        resolveAgeOfMajorityYears(config);
+        return config;
+      }).catch(cause => {
+        if (active) setMajorityError("Age of majority is not configured");
+        throw cause;
+      }).then(async config => {
+        const isMinor = isMinorOn(patient.birthDate, today(), config);
+        const relatedPeople = isMinor ? await api.listConsentGuardians(patientReference) : [];
+        return { isMinor, relatedPeople };
+      }),
+    ]).then(([catalog, { isMinor, relatedPeople }]) => {
       if (!active) return;
       setItems(catalog.items.filter((item) => item.audience === "patient"));
       setChartDispatchLane(catalog.chartDispatchLane);
       setAvailableChannels(catalog.availableChannels);
+      setMinor(isMinor);
       setGuardians(relatedPeople);
       const primary = relatedPeople.find(isPrimaryGuardian) ?? relatedPeople[0];
       setSelectedRecipients(primary?.id ? [`RelatedPerson/${primary.id}`] : [patientReference]);
@@ -154,9 +174,10 @@ export function EngageSheet({
       if (active) setError(cause instanceof Error ? cause.message : "Education could not load.");
     });
     return () => { active = false; };
-  }, [api, diagnosis?.code, minor, open, patientReference]);
+  }, [api, diagnosis?.code, open, patientReference, patient.birthDate]);
 
   const recipients = useMemo(() => {
+    if (minor === undefined) return [];
     return minor ? guardians.map(guardianRecipient) : [patientRecipient(patient)];
   }, [guardians, minor, patient]);
 
@@ -285,6 +306,7 @@ export function EngageSheet({
           {diagnosis && <p className="text-sm text-[color:var(--odos-muted)]">{`For: ${diagnosis.display} (${diagnosis.code})`}</p>}
         </header>
 
+        {majorityError && <p role="alert">{majorityError}</p>}
         <section className="grid gap-3 rounded border border-[color:var(--odos-line)] p-4" aria-label="Education recipients">
           <h3 className="font-semibold">Recipient</h3>
           {recipients.map((recipient) => (

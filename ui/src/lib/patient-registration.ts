@@ -1,5 +1,5 @@
 import type { CommunicationPreferencesInput } from "./communications-client";
-import type { Patient } from "@medplum/fhirtypes";
+import type { Basic, Patient } from "@medplum/fhirtypes";
 import type { PatientDraftPhone, PatientTelecomSnapshot, PatientTextableAnswer } from "../../../mcp/src/clinic/patient-telecom";
 import { applyPhoneDraft, emptyPatientPhone, phoneDraft, telecomSnapshot, validatePatientPhones } from "../../../mcp/src/clinic/patient-telecom";
 import { fhir } from "./fhir";
@@ -53,6 +53,7 @@ export type PatientRegistrationResult =
 export type CreatedPatientRegistrationResult = Extract<PatientRegistrationResult, { kind: "created" }>;
 
 export interface PatientRegistrationOptions {
+  ageOfMajorityConfig?: Basic;
   responsibleParties?: readonly ResponsiblePartyDraft[];
   today?: string;
   communicationPreferences?: CommunicationPreferencesInput;
@@ -180,6 +181,7 @@ export function validatePatientRegistration(
       registrationResponsibleParties(options),
       draft.birthDate,
       registrationToday(options),
+      options.ageOfMajorityConfig,
     ),
   };
 }

@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../../mcp/src/clinic/age-of-majority-config";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Patient } from "@medplum/fhirtypes";
@@ -21,6 +22,7 @@ async function fixture(options: { view?: CommunicationPreferencesResponse; resul
   const reads: string[] = [];
   globalThis.fetch = async (input, init) => {
     const url = String(input); reads.push(url);
+    if (url.includes("Basic?")) return Response.json({resourceType: "Bundle", entry: [{resource: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18})))}]});
     if (url.includes("/communications/preferences")) return options.failedRead ? new Response(JSON.stringify({ error: "Unreadable" }), { status: 500 }) : new Response(JSON.stringify(view));
     if (url.includes("/education/dispatch")) { sends.push(JSON.parse(String(init?.body))); return new Response(JSON.stringify(options.result ?? { outcome: "sent", providerMessageId: "synthetic-receipt" })); }
     if (url.includes("/communications/education")) return new Response(JSON.stringify({ items: [education, marketing], chartDispatchLane: "staff_switchable", availableChannels: { clinicalSms: true, frontdeskSms: true, email: true, print: true } }));
@@ -100,6 +102,7 @@ test("matrix read loading holds electronic buttons while Print remains available
   let finish!: (response: Response) => void;
   globalThis.fetch = async input => {
     const url = String(input);
+    if (url.includes("Basic?")) return Response.json({resourceType: "Bundle", entry: [{resource: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18})))}]});
     if (url.includes("/communications/preferences")) return new Promise<Response>(resolve => { finish = resolve; });
     if (url.includes("/communications/education")) return new Response(JSON.stringify({ items: [education], chartDispatchLane: "staff_switchable", availableChannels: { clinicalSms: true, frontdeskSms: true, email: true, print: true } }));
     return new Response(JSON.stringify({ patientReference: "Patient/synthetic-engage", smsOptedOut: false, remainingOptOuts: { global: false, numbers: [] }, smsLanes: [] }));

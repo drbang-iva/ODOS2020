@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../../mcp/src/clinic/age-of-majority-config";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Patient } from "@medplum/fhirtypes";
@@ -43,7 +44,7 @@ test("registration posts only the typed form contract to the clinic orchestrator
 
   const result = await registerPatient(
     DEMOGRAPHICS,
-    { responsibleParties: parties, today: "2026-08-25" },
+    { ageOfMajorityConfig: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18}))), responsibleParties: parties, today: "2026-08-25" },
     fetchImpl,
   );
 
@@ -64,7 +65,7 @@ test("create anyway is a server-side duplicate override, not a browser FHIR writ
     return Response.json({ kind: "created", patient: CREATED_PATIENT }, { status: 201 });
   };
 
-  const result = await createPatient(DEMOGRAPHICS, {}, fetchImpl);
+  const result = await createPatient(DEMOGRAPHICS, {ageOfMajorityConfig: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18})))}, fetchImpl);
 
   assert.equal(result.patient.id, "patient-1");
   assert.deepEqual(body, {
@@ -85,7 +86,7 @@ test("create anyway preserves a successful registration access warning", async (
     },
   }, { status: 201 });
 
-  const result = await createPatient(DEMOGRAPHICS, {}, fetchImpl);
+  const result = await createPatient(DEMOGRAPHICS, {ageOfMajorityConfig: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18})))}, fetchImpl);
 
   assert.equal(result.warning?.code, "access-grant-repair-required");
   assert.match(result.warning?.message ?? "", /repair your patient access/);
@@ -97,7 +98,7 @@ test("registration surfaces an actionable permission error without raw FHIR deta
   }, { status: 403 });
 
   await assert.rejects(
-    registerPatient(DEMOGRAPHICS, {}, fetchImpl),
+    registerPatient(DEMOGRAPHICS, {ageOfMajorityConfig: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18})))}, fetchImpl),
     /Ask an administrator to grant patient registration access/,
   );
 });
