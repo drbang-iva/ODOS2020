@@ -6,7 +6,7 @@ The caller Practitioner membership had admin=true AND the canonical composite Ac
 
 Command: `node --import tsx --test mcp/tests/ageOfMajorityAuthzLive.test.ts`.
 
-- Original FHIR metadata cleanup: 4 tests, 3 role subtests passed, 1 outer failure, exit 1; three ProjectMembership DELETEs returned HTTP 403. Exact output: `composite-caller-red.txt`.
+- Original FHIR metadata cleanup: 4 tests, 3 role subtests passed, 1 outer failure, exit 1; three ClientApplication DELETEs returned HTTP 403 under the composite caller. Exact output: `composite-caller-red.txt`.
 - Administrative membership endpoint cleanup: 4 tests passed, 0 failed, 0 skipped, exit 0. Exact output: `composite-caller-green.txt`.
 
 The corrected test deletes memberships through DELETE `/admin/projects/{projectId}/members/{id}` with the caller's project-administrator token before deleting their ClientApplications. Basic and ClientApplication cleanup uses the non-admin operator seeder. All cleanup failures remain collected alongside any original body failure. Production authorization grants are unchanged.
