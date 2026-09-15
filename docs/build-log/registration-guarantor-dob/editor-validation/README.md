@@ -18,3 +18,5 @@ npx tsc --noEmit -p ui/tsconfig.json
 ```
 
 Focused MCP: 62 pass, 0 fail. Focused UI: 52 pass, 0 fail. UI typecheck and diff whitespace check exit 0. Local paths in logs normalized to `<workspace>` / `<home>`. No containers started or runtime operations performed.
+
+D4 reproof after validation (source `e7712e146e03207dd8246676532b61a1d994aadf`): remove the shorthand `birthDate` field from the intended Person write. Green 1 pass / 0 fail; mutant 0 pass / 1 fail; restored 1 pass / 0 fail. Command from `ui/`: `node --import tsx --test --test-name-pattern=D4 tests/guarantorEditor.test.tsx`. Mutation restored byte-for-byte.
