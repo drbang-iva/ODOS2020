@@ -8,5 +8,6 @@ export async function loadAgeOfMajorityConfig(client: Pick<typeof fhir, "search"
     code: `${ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM}|${ODOS_AGE_OF_MAJORITY_CONFIG_CODE}`,
     _count: "10",
   });
-  return [...resources].sort((a, b) => (Date.parse(b.meta?.lastUpdated ?? "") || 0) - (Date.parse(a.meta?.lastUpdated ?? "") || 0))[0];
+  if (resources.length > 1) throw new Error("Age of majority is not configured: multiple settings were found.");
+  return resources[0];
 }

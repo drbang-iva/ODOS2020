@@ -8,6 +8,7 @@ import { EngageSheet, type EngageSheetApi } from "../src/components/comms/Engage
 import { buildResponsiblePartyDemographics } from "../../mcp/src/clinic/responsible-party-demographics";
 import { buildPatientResource, emptyPatientDemographics } from "../src/lib/patient-registration";
 import { isMinorOn } from "../src/lib/patient-identity";
+import { loadAgeOfMajorityConfig } from "../src/lib/age-of-majority";
 import { AgeOfMajoritySettings } from "../src/scenes/settings/AgeOfMajoritySettings";
 
 function config(age: number): Basic { return JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: age }))); }
@@ -83,4 +84,21 @@ test("D7 UI reopening after setting deletion clears previously loaded guardian r
     assert.equal(tree.root.findByProps({ "aria-label": "Education recipients" }).findAllByType("label").length, 0);
     assert.equal(reads(), 1);
   });
+});
+
+
+test("D7 UI duplicate singleton search refuses ambiguity and Engage exposes no recipients", async () => {
+  const duplicates = [config(18), config(21)];
+  const client = { async search() { return { resourceType: "Bundle", entry: duplicates.map(resource => ({ resource })) }; } };
+  await assert.rejects(loadAgeOfMajorityConfig(client as never), /multiple settings/);
+  const original = globalThis.fetch;
+  globalThis.fetch = async input => String(input).includes("Basic?")
+    ? Response.json({ resourceType: "Bundle", entry: duplicates.map(resource => ({ resource })) })
+    : Response.json({ items: [], chartDispatchLane: "staff_switchable", availableChannels: { clinicalSms: false, frontdeskSms: false, email: false, print: false } });
+  let tree!: ReactTestRenderer;
+  try {
+    await act(async () => { tree = create(<EngageSheet open patient={patient} onClose={() => undefined} />); });
+    assert.match(JSON.stringify(tree.toJSON()), /Age of majority is not configured/);
+    assert.equal(tree.root.findByProps({ "aria-label": "Education recipients" }).findAllByType("label").length, 0);
+  } finally { if (tree) await act(async () => tree.unmount()); globalThis.fetch = original; }
 });
