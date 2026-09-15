@@ -55,3 +55,16 @@ test('atomic replacement preserves existing permission bits despite umask', () =
  const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
  assert.equal(result.status,0,result.stderr); assert.equal(statSync(target).mode & 0o777,0o660); assert.ok(readdirSync(dir).every(name => !name.startsWith('.odos-frontdoor-')));
 }));
+test('target changed during staging is preserved and replacement refused', () => fixture(({dir,target}) => {
+ const input = `import fs from 'node:fs'; import { syncBuiltinESMExports } from 'node:module';
+ const originalWrite = fs.writeFileSync;
+ fs.writeFileSync = function(path, data, options) {
+   const result = originalWrite(path,data,options);
+   if (String(path).startsWith(process.argv[2] + '/')) originalWrite(process.argv[3], 'newer config');
+   return result;
+ };
+ syncBuiltinESMExports(); const { main } = await import('./scripts/frontdoor-install.mjs');
+ process.exitCode = main(['--ui-dist',process.argv[2] + '/dist','--target',process.argv[3],'--apply']);`;
+ const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
+ assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/Target changed/); assert.equal(readFileSync(target,'utf8'),'newer config'); assert.deepEqual(readdirSync(dir).sort(),['Caddyfile','dist']);
+}));

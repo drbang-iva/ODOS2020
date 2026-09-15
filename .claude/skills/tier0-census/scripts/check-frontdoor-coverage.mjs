@@ -44,6 +44,11 @@ function parseCaddy(source) {
   const sites = tree.children.filter(n => n.children && n.words.length);
   if (sites.length !== 1) throw new Error('expected exactly one Caddy site block');
   const site = sites[0];
+  if (tree.children.some(n => n.children === null) || ['route', 'handle_path', 'import'].some(name => descendants(tree, name).length)) throw new Error('unsupported Caddy routing directive');
+  for (const node of site.children) {
+    if (!['root', 'encode', 'handle'].includes(node.words[0]) && !node.words[0]?.startsWith('@')) throw new Error('unsupported Caddy site directive');
+    if (node.words.join(' ') === 'handle' && (!node.children || node.children.length !== 2 || node.children.some(n => n.children !== null) || !sameSet(node.children.map(n => n.words.join(' ')), ['try_files {path} /index.html', 'file_server']))) throw new Error('unsupported SPA fallback shape');
+  }
   const routes = new Map();
   for (const node of site.children.filter(n => n.words[0] === 'handle' && n.words.length > 1)) {
     if (!node.children || node.words.length !== 2 || !/^\/[\w-]+\*$/.test(node.words[1])) throw new Error('unsupported front-door handle matcher');
@@ -133,7 +138,7 @@ export function checkFrontdoorCoverage({ backendFamilies, viteSource, caddySourc
   for (const prefix of vite.keys()) if (!routes.has(prefix) && !excluded.has(prefix)) add('missing-vite', prefix, 'Vite proxy key has no front-door block');
   for (const [prefix, block] of routes) {
     if (!vite.has(prefix) && !backendFamilies.includes(prefix)) add('stale-route', prefix, 'front-door block exists in neither backend nor Vite');
-    const entry = vite.get(prefix);
+    const entry = vite.get(prefix) ?? (backendFamilies.includes(prefix) ? { expectedTarget: '127.0.0.1:3333', bypass: false, pages: [] } : null);
     if (!entry) continue;
     const proxies = descendants(block, 'reverse_proxy');
     if (!proxies.length || proxies.some(p => p.words.length !== 2 || p.words[1] !== entry.expectedTarget)) add('target-mismatch', prefix, `expected reverse_proxy ${entry.expectedTarget}`);

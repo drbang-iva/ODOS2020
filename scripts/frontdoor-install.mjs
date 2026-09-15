@@ -46,15 +46,18 @@ export function main(args = process.argv.slice(2)) {
     if (diff.error || ![0, 1].includes(diff.status)) throw new Error(`diff failed: ${diff.error?.message ?? diff.stderr}`);
     process.stdout.write(diff.stdout || 'No differences.\n');
     if (!options.apply) { console.log('Dry run: target unchanged.'); return 0; }
+    let stagedFile;
+    if (diff.status !== 0) {
+      staging = mkdtempSync(join(dirname(target), '.odos-frontdoor-'));
+      stagedFile = join(staging, 'Caddyfile');
+      writeFileSync(stagedFile, rendered, { flag: 'wx', mode: original === null ? 0o600 : statSync(target).mode & 0o777 });
+      if (original !== null) chmodSync(stagedFile, statSync(target).mode & 0o777);
+      const stagedFd = openSync(stagedFile, 'r');
+      try { fsyncSync(stagedFd); } finally { closeSync(stagedFd); }
+    }
     const current = existsSync(target) ? readFileSync(target) : null;
-    if (original === null ? current !== null : current === null || !current.equals(original)) throw new Error('Target changed during validation; rerun before applying');
+    if (original === null ? current !== null : current === null || !current.equals(original)) throw new Error('Target changed during validation or staging; rerun before applying');
     if (diff.status === 0) { console.log('Target already matches; no write required.'); return 0; }
-    staging = mkdtempSync(join(dirname(target), '.odos-frontdoor-'));
-    const stagedFile = join(staging, 'Caddyfile');
-    writeFileSync(stagedFile, rendered, { flag: 'wx', mode: original === null ? 0o600 : statSync(target).mode & 0o777 });
-    if (original !== null) chmodSync(stagedFile, statSync(target).mode & 0o777);
-    const stagedFd = openSync(stagedFile, 'r');
-    try { fsyncSync(stagedFd); } finally { closeSync(stagedFd); }
     if (original !== null) {
       const backup = `${target}.bak-${new Date().toISOString().replaceAll(':', '-')}`;
       copyFileSync(target, backup, constants.COPYFILE_EXCL);
