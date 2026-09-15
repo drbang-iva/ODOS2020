@@ -115,7 +115,9 @@ function parseVite(source, warnings) {
     if (!keys.includes(prefix) || entries.has(prefix)) throw new Error(`Vite key discovery disagreement or duplicate: ${prefix}`);
     const fields = prop.initializer.properties;
     if (fields.some(p => !p.name || (!ts.isIdentifier(p.name) && !ts.isStringLiteral(p.name)))) throw new Error(`unsupported Vite proxy field for ${prefix}`);
-    const target = fields.find(p => p.name.text === 'target');
+    const targets = fields.filter(p => p.name.text === 'target');
+    if (targets.length !== 1) throw new Error(`expected exactly one Vite target for ${prefix}`);
+    const target = targets[0];
     const value = target && ts.isPropertyAssignment(target) ? target.initializer : null;
     let expectedTarget;
     if (value && ts.isIdentifier(value) && value.text === 'mcpTarget') {

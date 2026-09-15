@@ -134,3 +134,5 @@ test('unknown Vite destination value refuses parsing', () => finding({ viteSourc
 test('duplicate Vite bypass cannot hide an overriding condition', () => finding({ viteSource: proxy().replace('bypass(req) {', 'bypass(req) { return "/index.html"; }, bypass(req) {') }, 'parse'));
 test('Vite spread cannot override recognized bypass', () => finding({ viteSource: proxy().replace('bypass(req) {', '...override, bypass(req) {') }, 'parse'));
 test('quoted bypass names still receive predicate validation', () => finding({ viteSource: proxy().replace('bypass(req)', '"bypass"(req)').replace('.includes("text/html")', '.includes("anything")') }, 'parse'));
+
+test('duplicate Vite target cannot override the validated destination', () => finding({ viteSource: proxy().replace('"/watchers": { target: mcpTarget }', '"/watchers": { target: mcpTarget, target: "http://localhost:8103" }') }, 'parse'));
