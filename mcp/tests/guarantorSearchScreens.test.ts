@@ -38,6 +38,17 @@ test("K9 draft versions reject changed child at create",async()=>{const f=fixtur
 
 test("K13 history filters trusted child plans and queries newest 50 once",async()=>{const f=fixture();const a=await run(f,"create",f.input("transfer",["r1"]));assert.equal(a.status,200);const b=await run(f,"create",f.input("transfer",["r2"]));assert.equal(b.status,200);const t1={...a.body.task,meta:{...a.body.task.meta,lastUpdated:"2026-09-14T10:00:00Z"}};const forged={...t1,id:"forged",meta:{...t1.meta,author:{reference:"Practitioner/forger"}}};let searches=0;const original=f.deps.serviceFhir.searchProject;f.deps.serviceFhir.searchProject=async(type:any,project:any,params:any)=>{if(type!=="Task")return original(type,project,params);searches++;assert.equal(params._count,"50");assert.equal(params._sort,"-_lastUpdated");assert.match(params.code,/guarantor-link-operation\|$/);return {resourceType:"Bundle",type:"searchset",entry:[b.body.task,forged,t1].map(resource=>({resource})),link:[{relation:"next",url:"http://synthetic.test/do-not-follow"}]};};const result=await run(f,"history",{relatedPersonId:"r1"});assert.equal(result.status,200);assert.deepEqual(result.body.map((x:any)=>x.task.id),[t1.id]);assert.equal(searches,1);});
 
+test("Follow-up F3: history skips one malformed trusted Task and returns every valid entry",async()=>{
+ const f=fixture(1);
+ const completed=await run(f,"create",f.input("transfer",["r1"]));
+ assert.equal(completed.status,200);
+ const valid=completed.body.task;
+ f.seed({...valid,id:"malformed-history",input:valid.input.filter((input:any)=>input.type.text!=="reason")});
+ const result=await run(f,"history",{relatedPersonId:"r1"});
+ assert.equal(result.status,200);
+ assert.deepEqual(result.body.map((entry:any)=>entry.task.id),[valid.id]);
+});
+
 test("K8 empty consolidation draft refuses with zero writes",async()=>{const f=fixture(0);const result=await run(f,"draft",{kind:"consolidate",sourcePersonId:"S",destinationPersonId:"D"});assert.equal(result.status,422);assert.equal(f.writes.length,0);});
 
 for (const [label,path,body] of [
