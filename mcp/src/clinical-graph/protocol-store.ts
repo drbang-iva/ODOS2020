@@ -1,8 +1,23 @@
-import type { Basic, Bundle } from "@medplum/fhirtypes";
+import { createHash } from "node:crypto";
+import type { Basic, Bundle, Identifier } from "@medplum/fhirtypes";
 import type { ProtocolDefinition } from "./protocol-types.js";
 
 export const PROTOCOL_WRITE_HEADERS = { "X-ODOS-Source": "protocol-module" } as const;
 const BASE = "https://odos2020.com/fhir";
+export const PROTOCOL_ITEM_CLAIM_IDENTIFIER_SYSTEM = `${BASE}/NamingSystem/protocol-item-claim`;
+
+export function protocolItemClaimIdentifier(
+  encounterId: string,
+  protocolId: string,
+  itemKey: string,
+): Required<Pick<Identifier, "system" | "value">> {
+  return {
+    system: PROTOCOL_ITEM_CLAIM_IDENTIFIER_SYSTEM,
+    value: createHash("sha256")
+      .update(JSON.stringify([encounterId, protocolId, itemKey]))
+      .digest("base64url"),
+  };
+}
 
 export const PROTOCOL_BASIC_CODES = {
   protocolDefinition: "odos-protocol-definition",
@@ -113,14 +128,29 @@ export class ProtocolBasicStore<T extends { id: string }> {
   }
 
   async save(value: T): Promise<T> {
+    return this.saveWithIdentifiers(value, []);
+  }
+
+  async saveWithIdentifiers(value: T, additionalIdentifiers: Identifier[]): Promise<T> {
     const existing = await this.rawById(value.id);
     const resource = buildProtocolBasic(value, this.code, existing);
+    resource.identifier?.push(...additionalIdentifiers);
     const persisted = existing?.id
       ? await this.fhir.update("Basic", existing.id, resource, PROTOCOL_WRITE_HEADERS)
       : await this.fhir.create(resource, {
           ...PROTOCOL_WRITE_HEADERS,
           "If-None-Exist": `identifier=${identifierSystem(this.code)}|${value.id}`,
         });
+    return parseProtocolBasic<T>(persisted, this.code);
+  }
+
+  async createConditional(value: T, identifier: Required<Pick<Identifier, "system" | "value">>): Promise<T> {
+    const resource = buildProtocolBasic(value, this.code);
+    resource.identifier?.push(identifier);
+    const persisted = await this.fhir.create(resource, {
+      ...PROTOCOL_WRITE_HEADERS,
+      "If-None-Exist": `identifier=${identifier.system}|${identifier.value}`,
+    });
     return parseProtocolBasic<T>(persisted, this.code);
   }
 

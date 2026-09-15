@@ -594,11 +594,12 @@ test("item add suppresses a sibling charge when another protocol already owns th
     actor: "Practitioner/test",
   };
 
-  await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  const first = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
   const second = await service.addItem(secondProtocol.id, "order-gonioscopy", input);
 
-  assert.equal((await service.applications.list()).length, 2);
-  assert.deepEqual(second.application.dispositions.map((row) => row.itemKey), ["order-gonioscopy"]);
+  assert.equal((await service.applications.list()).length, 1);
+  assert.equal(second.alreadyApplied, true);
+  assert.equal(second.application.id, first.application.id);
   assert.equal((await service.actions.list()).length, 1);
   assert.equal((await service.charges.list()).length, 1);
 });
@@ -614,7 +615,7 @@ test("item add rejects finding seeds without creating an application", async () 
       diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
       actor: "Practitioner/test",
     }),
-    /Finding-seed items cannot be added as plans/,
+    /finding-seed.*not tappable/i,
   );
   assert.equal((await service.applications.list()).length, 0);
   assert.equal((await service.findings.list()).length, 0);
@@ -635,6 +636,88 @@ test("whole-protocol open remains blocked after an item-level add", async () => 
     service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, input),
     /Protocol is already applied to this encounter/,
   );
+});
+
+test("cross-protocol dedupe returns the live owner and permits replacement after owner unapply", async () => {
+  const { service } = harness();
+  const copiedProtocol: ProtocolDefinition = {
+    ...structuredClone(GLAUCOMA_SUSPECT_PROTOCOL),
+    id: "copied-glaucoma-suspect-before",
+  };
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  await service.definitions.save(copiedProtocol);
+  const input = {
+    encounterId: "enc-orphaned-before",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  const owner = await service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, input);
+  await service.commit(owner.application.id, [], [input.diagnosis.reference]);
+  const deduped = await service.addItem(copiedProtocol.id, "order-gonioscopy", input);
+  assert.equal(deduped.alreadyApplied, true);
+  assert.equal(deduped.application.id, owner.application.id);
+  assert.equal((await service.applications.list()).length, 1);
+  await service.unapply(owner.application.id);
+  const retried = await service.addItem(copiedProtocol.id, "order-gonioscopy", input);
+  const liveOrders = (await service.actions.list()).filter((row) =>
+    row.actionType === "order" && !["removed", "cancelled"].includes(row.state)
+  ).length;
+  const liveCharges = (await service.charges.list()).filter((row) => row.state !== "removed").length;
+
+  console.log("S1_AFTER", JSON.stringify({ liveOrders, liveCharges, alreadyApplied: retried.alreadyApplied }));
+  assert.deepEqual({ liveOrders, liveCharges, alreadyApplied: retried.alreadyApplied }, {
+    liveOrders: 1,
+    liveCharges: 1,
+    alreadyApplied: false,
+  });
+});
+
+test("charge seeds are not tappable and cannot precede their owning order", async () => {
+  const { service } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-bare-charge-before",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  await assert.rejects(
+    service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "charge-gonioscopy", input),
+    /charge-seed.*not tappable/i,
+  );
+  await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  const liveOrders = (await service.actions.list()).filter((row) =>
+    row.actionType === "order" && !["removed", "cancelled"].includes(row.state)
+  ).length;
+  const liveCharges = (await service.charges.list()).filter((row) => row.state !== "removed").length;
+
+  console.log("S7_AFTER", JSON.stringify({ liveOrders, liveCharges }));
+  assert.deepEqual({ liveOrders, liveCharges }, { liveOrders: 1, liveCharges: 1 });
+});
+
+test("concurrent taps converge on one item application", async () => {
+  const { service } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-concurrent-before",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  const results = await Promise.all([
+    service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input),
+    service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input),
+  ]);
+  const liveOrders = (await service.actions.list()).filter((row) =>
+    row.actionType === "order" && !["removed", "cancelled"].includes(row.state)
+  ).length;
+  const liveCharges = (await service.charges.list()).filter((row) => row.state !== "removed").length;
+
+  console.log("S2_AFTER", JSON.stringify({ liveOrders, liveCharges }));
+  assert.deepEqual({ liveOrders, liveCharges }, { liveOrders: 1, liveCharges: 1 });
+  assert.equal(new Set(results.map((result) => result.application.id)).size, 1);
+  assert.deepEqual(results.map((result) => result.alreadyApplied).sort(), [false, true]);
 });
 
 test("manual mergeKey collision resumes existing action and unapply preserves clinician changes", async () => {
@@ -1716,6 +1799,35 @@ test("item-add endpoint stages only the requested order and refuses charge accep
     assert.equal(rejected.status, 400);
   }
   assert.equal((await endpointProtocolService(fhir).applications.list()).length, 1);
+});
+
+test("item-add endpoint rejects a charge seed before allowing its owning order", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition),
+    buildProtocolBasic(
+      { id: `${GLAUCOMA_SUSPECT_PROTOCOL.id}@v1`, definition: GLAUCOMA_SUSPECT_PROTOCOL },
+      PROTOCOL_BASIC_CODES.protocolDefinitionSnapshot,
+    ),
+    confirmedCondition(),
+  );
+
+  const rejected = await handleProtocolItemAddRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    body: { ...applyBody("H40.021"), itemKey: "charge-gonioscopy" },
+  });
+
+  assert.equal(rejected.status, 400);
+  assert.match(String((rejected.body as { error: string }).error), /charge-seed.*not tappable/i);
+
+  const added = await handleProtocolItemAddRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    body: { ...applyBody("H40.021"), itemKey: "order-gonioscopy" },
+  });
+  const service = endpointProtocolService(fhir);
+  assert.equal(added.status, 200);
+  assert.equal((await service.actions.list()).filter((row) => row.actionType === "order").length, 1);
+  assert.equal((await service.charges.list()).filter((row) => row.state !== "removed").length, 1);
 });
 
 test("follow-up materialization stores the six-month due date and verbatim reason on a coded ServiceRequest", async () => {

@@ -1,5 +1,6 @@
 import type { Condition, Observation } from "@medplum/fhirtypes";
 import {
+  protocolItemClaimIdentifier,
   PROTOCOL_BASIC_CODES,
   ProtocolBasicStore,
   ProtocolDefinitionStore,
@@ -14,6 +15,7 @@ import type {
   ProtocolDefinitionDraft,
   ProtocolFindingInstance,
   ProtocolItem,
+  ProtocolItemType,
   ProtocolOfferDiagnosis,
   ProcedureChargeRule,
 } from "./protocol-types.js";
@@ -37,7 +39,23 @@ export interface CommitSelection {
   payload?: Record<string, unknown>;
 }
 
-type ItemApplicationResult = "created" | "existing-application" | "merge-deduped";
+type ItemApplicationResult =
+  | { outcome: "created" | "existing-application" }
+  | { outcome: "merge-deduped" };
+
+const TAPPABLE_PROTOCOL_ITEM_TYPES: ReadonlySet<ProtocolItemType> = new Set([
+  "order",
+  "medication",
+  "counseling",
+  "education",
+  "instruction",
+  "follow-up",
+  "series-prescription",
+]);
+
+export function isTappableProtocolItem(item: ProtocolItem): boolean {
+  return TAPPABLE_PROTOCOL_ITEM_TYPES.has(item.itemType);
+}
 
 export class AcceptedChargeUnapplyError extends Error {}
 
@@ -388,19 +406,10 @@ export class ProtocolService {
     const protocol = await this.requireActiveDiagnosisProtocol(protocolId, input);
     const item = protocol.items.find((candidate) => candidate.itemKey === itemKey);
     if (!item) throw new Error("Protocol item not found.");
-    if (item.itemType === "finding-seed") throw new Error("Finding-seed items cannot be added as plans.");
+    if (!isTappableProtocolItem(item)) {
+      throw new Error(`Protocol item type ${item.itemType} is not tappable.`);
+    }
     const applications = await this.applications.list();
-    const existing = applications.find((application) =>
-      application.encounterId === input.encounterId &&
-      application.protocolId === protocolId &&
-      application.confirmed &&
-      application.undoState === "active" &&
-      application.dispositions.some((disposition) =>
-        disposition.itemKey === itemKey && disposition.outcome !== "opted-out"
-      )
-    );
-    if (existing) return { application: existing, alreadyApplied: true };
-
     const chargeSeedRef = typeof item.payload.chargeSeedRef === "string"
       ? item.payload.chargeSeedRef
       : undefined;
@@ -411,12 +420,16 @@ export class ProtocolService {
       throw new Error(`Protocol item ${itemKey} references an invalid charge seed.`);
     }
 
+    const liveOwner = await this.findLiveItemOwner(protocol, item, chargeSeed, input, applications);
+    if (liveOwner) return { application: liveOwner, alreadyApplied: true };
+
     const dispositions: ProtocolApplication["dispositions"] = [
       { itemKey: item.itemKey, outcome: "applied-default" },
       ...(chargeSeed ? [{ itemKey: chargeSeed.itemKey, outcome: "applied-default" as const }] : []),
     ];
+    const claimIdentifier = protocolItemClaimIdentifier(input.encounterId, protocolId, itemKey);
     const at = this.now();
-    const application = applications.find((candidate) =>
+    const pending = applications.find((candidate) =>
       candidate.encounterId === input.encounterId &&
       candidate.protocolId === protocolId &&
       !candidate.confirmed &&
@@ -424,17 +437,47 @@ export class ProtocolService {
       candidate.dispositions.some((disposition) =>
         disposition.itemKey === itemKey && disposition.outcome !== "opted-out"
       )
-    ) ?? await this.createApplication(protocol, input, at, dispositions);
+    );
+    let application = pending;
+    if (!application) {
+      const proposed = this.newApplication(protocol, input, at, dispositions);
+      const claimed = await this.applications.createConditional(proposed, claimIdentifier);
+      if (claimed.id !== proposed.id) {
+        const settled = await this.waitForClaimedApplication(claimed.id);
+        const owner = await this.findLiveItemOwner(
+          protocol,
+          item,
+          chargeSeed,
+          input,
+          await this.applications.list(),
+        );
+        if (owner) return { application: owner, alreadyApplied: true };
+        await this.applications.save(settled);
+        return this.addItem(protocolId, itemKey, input);
+      }
+      application = claimed;
+    }
     const linkedDx = [input.diagnosis.reference];
     const primaryResult = await this.applySelectedItem(application, item, item.payload, linkedDx, [], at);
-    if (primaryResult !== "merge-deduped" && chargeSeed) {
+    if (primaryResult.outcome === "merge-deduped") {
+      await this.applications.remove(application.id);
+      const owner = await this.findLiveItemOwner(
+        protocol,
+        item,
+        chargeSeed,
+        input,
+        await this.applications.list(),
+      );
+      if (!owner) throw new Error("The existing plan action does not have all required live facts.");
+      return { application: owner, alreadyApplied: true };
+    }
+    if (chargeSeed) {
       await this.applySelectedItem(application, chargeSeed, chargeSeed.payload, linkedDx, [], at);
     }
-    const confirmed = await this.applications.save({
-      ...application,
-      confirmed: true,
-      dispositions: primaryResult === "merge-deduped" ? dispositions.slice(0, 1) : dispositions,
-    });
+    const confirmed = await this.applications.saveWithIdentifiers(
+      { ...application, confirmed: true, dispositions },
+      [claimIdentifier],
+    );
     return { application: confirmed, alreadyApplied: false };
   }
 
@@ -572,12 +615,12 @@ export class ProtocolService {
       row.sourceItemKey === item.itemKey &&
       !["removed", "cancelled"].includes(row.state)
     );
-    if (existingForItem) return "existing-application";
+    if (existingForItem) return { outcome: "existing-application" };
     const existing = item.mergeKey ? actions.find((row) =>
       row.encounterId === application.encounterId && row.mergeKey === item.mergeKey &&
       !["removed", "cancelled"].includes(row.state)
     ) : undefined;
-    if (existing) return "merge-deduped";
+    if (existing) return { outcome: "merge-deduped" };
     const action: PlanActionInstance = {
       id: this.id(),
       encounterId: application.encounterId,
@@ -607,7 +650,7 @@ export class ProtocolService {
       action.materializationRefusal = { code: error.code, message: error.message };
     }
     await this.actions.save(action);
-    return "created";
+    return { outcome: "created" };
   }
 
   private async stageCharge(
@@ -690,23 +733,55 @@ export class ProtocolService {
         if (observationReference) committed.observationReference = observationReference;
         await this.findings.save(committed);
       }
-      return "created";
+      return { outcome: "created" };
     }
     if (item.itemType === "charge-seed") {
       return await this.stageCharge(application, item, payload, linkedDx, at)
-        ? "created"
-        : "existing-application";
+        ? { outcome: "created" }
+        : { outcome: "existing-application" };
     }
     return this.upsertAction(application, item, payload, linkedDx, at);
   }
 
-  private async createApplication(
+  private async findLiveItemOwner(
+    protocol: ProtocolDefinition,
+    item: ProtocolItem,
+    chargeSeed: ProtocolItem | undefined,
+    input: OpenProtocolInput,
+    applications: ProtocolApplication[],
+  ): Promise<ProtocolApplication | undefined> {
+    const applicationById = new Map(applications.map((application) => [application.id, application]));
+    const action = (await this.actions.list()).find((candidate) => {
+      if (candidate.encounterId !== input.encounterId || ["removed", "cancelled"].includes(candidate.state)) {
+        return false;
+      }
+      if (!candidate.protocolApplicationId) return false;
+      const owner = applicationById.get(candidate.protocolApplicationId);
+      if (!owner?.confirmed || owner.undoState !== "active") return false;
+      return item.mergeKey
+        ? candidate.mergeKey === item.mergeKey
+        : owner.protocolId === protocol.id && candidate.sourceItemKey === item.itemKey;
+    });
+    if (!action?.protocolApplicationId) return undefined;
+    const owner = applicationById.get(action.protocolApplicationId);
+    if (!owner) return undefined;
+    if (!chargeSeed) return owner;
+    const charge = (await this.charges.list()).find((candidate) =>
+      candidate.encounterId === input.encounterId &&
+      candidate.protocolApplicationId === owner.id &&
+      candidate.planActionRef === chargeSeed.itemKey &&
+      candidate.state !== "removed"
+    );
+    return charge ? owner : undefined;
+  }
+
+  private newApplication(
     protocol: ProtocolDefinition,
     input: OpenProtocolInput,
     at: string,
     dispositions: ProtocolApplication["dispositions"] = [],
-  ): Promise<ProtocolApplication> {
-    return this.applications.save({
+  ): ProtocolApplication {
+    return {
       id: this.id(),
       encounterId: input.encounterId,
       patientId: input.patientId,
@@ -719,7 +794,19 @@ export class ProtocolService {
       dedupResolutions: [],
       undoState: "active",
       confirmed: false,
-    });
+    };
+  }
+
+  private async waitForClaimedApplication(id: string): Promise<ProtocolApplication> {
+    for (let attempt = 0; attempt < 400; attempt += 1) {
+      const application = await this.applications.get(id);
+      if (application?.confirmed || application?.undoState !== "active") {
+        if (!application) throw new Error("Claimed protocol application disappeared.");
+        return application;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    throw new Error("Protocol item add is already in progress.");
   }
 
   private async requireActiveDiagnosisProtocol(

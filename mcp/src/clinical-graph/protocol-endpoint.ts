@@ -22,6 +22,7 @@ import {
 } from "./protocol-fixtures.js";
 import {
   AcceptedChargeUnapplyError,
+  isTappableProtocolItem,
   matchesCode,
   ProtocolActionMaterializationRefusal,
   ProtocolPublishValidationError,
@@ -425,8 +426,8 @@ export async function handleProtocolItemAddRequest(
   if ("response" in validation) return validation.response;
   const item = validation.protocol.items.find((candidate) => candidate.itemKey === parsed.data.itemKey);
   if (!item) return { status: 400, body: { error: "Protocol item not found." } };
-  if (item.itemType === "finding-seed") {
-    return { status: 400, body: { error: "Finding-seed items cannot be added as plans." } };
+  if (!isTappableProtocolItem(item)) {
+    return { status: 400, body: { error: `Protocol item type ${item.itemType} is not tappable.` } };
   }
   const seriesResolution = await resolveSeriesProtocols(deps, [item]);
   if ("response" in seriesResolution) return seriesResolution.response;
