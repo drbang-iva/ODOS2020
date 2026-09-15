@@ -21,7 +21,8 @@ The default run renders the root placeholder, runs `caddy validate --adapter
 caddyfile` in a temporary directory, and prints a unified diff without writing the
 target. Review the diff, then repeat the command with `--apply`. Before replacing
 an existing target, the installer makes `<target>.bak-<UTC timestamp>` containing
-the original bytes. A new target has no prior file to back up. An unchanged target
+the original bytes. The rendered bytes are written and synced in a temporary file
+beside the target, then installed atomically. A new target has no prior file to back up. An unchanged target
 is left alone. Temporary validation files are removed on both success and failure.
 
 After a successful apply, the operator restarts the configured front-door service

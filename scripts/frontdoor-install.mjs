@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { constants, realpathSync, copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { constants, openSync, closeSync, fsyncSync, renameSync, linkSync, realpathSync, copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -15,6 +15,7 @@ export function renderFrontdoor(template, uiDist) {
 
 export function main(args = process.argv.slice(2)) {
   let temp;
+  let staging;
   try {
     const options = {};
     for (let i = 0; i < args.length; i++) {
@@ -48,15 +49,24 @@ export function main(args = process.argv.slice(2)) {
     const current = existsSync(target) ? readFileSync(target) : null;
     if (original === null ? current !== null : current === null || !current.equals(original)) throw new Error('Target changed during validation; rerun before applying');
     if (diff.status === 0) { console.log('Target already matches; no write required.'); return 0; }
+    staging = mkdtempSync(join(dirname(target), '.odos-frontdoor-'));
+    const stagedFile = join(staging, 'Caddyfile');
+    writeFileSync(stagedFile, rendered, { flag: 'wx', mode: original === null ? 0o600 : statSync(target).mode & 0o777 });
+    const stagedFd = openSync(stagedFile, 'r');
+    try { fsyncSync(stagedFd); } finally { closeSync(stagedFd); }
     if (original !== null) {
       const backup = `${target}.bak-${new Date().toISOString().replaceAll(':', '-')}`;
       copyFileSync(target, backup, constants.COPYFILE_EXCL);
       console.log(`Backup: ${backup}`);
     }
-    writeFileSync(target, rendered, { flag: original === null ? 'wx' : 'w' });
+    if (original === null) linkSync(stagedFile, target);
+    else renameSync(stagedFile, target);
     console.log('Applied. No service restarted; restart remains an operator step.');
     return 0;
   } catch (err) { console.error(`Front-door install: ${err.message}`); return 1; }
-  finally { if (temp) rmSync(temp, { recursive: true, force: true }); }
+  finally {
+    if (staging) rmSync(staging, { recursive: true, force: true });
+    if (temp) rmSync(temp, { recursive: true, force: true });
+  }
 }
 if (process.argv[1] && existsSync(process.argv[1]) && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) process.exitCode = main();

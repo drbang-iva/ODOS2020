@@ -35,3 +35,16 @@ test('pure renderer can be imported from stdin with CLI-style arguments', () => 
  const result = spawnSync(process.execPath,['--input-type=module','-','--ui-dist','/tmp/dist'], { input: 'import { renderFrontdoor } from "./scripts/frontdoor-install.mjs"; console.log(renderFrontdoor("root * {$ODOS_UI_DIST}", process.argv[3]));', encoding:'utf8' });
  assert.equal(result.status,0,result.stderr); assert.equal(result.stdout,'root * /tmp/dist\n');
 });
+test('a partial write failure never damages the existing target', () => fixture(({dir,target}) => {
+ const input = `import fs from 'node:fs'; import { syncBuiltinESMExports } from 'node:module';
+ const originalWrite = fs.writeFileSync;
+ fs.writeFileSync = function(path, data, options) {
+   if (String(path).startsWith(process.argv[2] + '/')) { originalWrite(path, 'partial', options); throw new Error('simulated disk-full write failure'); }
+   return originalWrite(path, data, options);
+ };
+ syncBuiltinESMExports();
+ const { main } = await import('./scripts/frontdoor-install.mjs');
+ process.exitCode = main(['--ui-dist', process.argv[2] + '/dist', '--target', process.argv[3], '--apply']);`;
+ const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
+ assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/simulated disk-full/); assert.equal(readFileSync(target,'utf8'),'old config\n');
+}));
