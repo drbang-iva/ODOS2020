@@ -237,13 +237,22 @@ export class CensusFixtureFhir {
     return page;
   }
 
-  async searchUrl<T extends Resource>(): Promise<Bundle<T>> { throw new Error("unexpected fixture paging"); }
+  async searchUrl<T extends Resource>(url: string, type: T["resourceType"]): Promise<Bundle<T>> {
+    this.requests.push({ method: "GET", target: url });
+    const match = url.match(/^\/fhir\/R4\/RelatedPerson\/([^/]+)\/_history\?_count=100&_offset=100$/);
+    if (type !== "RelatedPerson" || !match) throw new Error("unexpected fixture paging");
+    const rows = this.histories.get(`RelatedPerson/${match[1]}`) ?? [];
+    return { resourceType: "Bundle", type: "history", entry: rows.slice(100).map(resource => ({ resource: jsonRoundTrip(resource) as T })) };
+  }
   async searchProjectUrl<T extends Resource>(): Promise<Bundle<T>> { throw new Error("unexpected fixture project paging"); }
 
   async history<T extends Resource>(type: T["resourceType"], id?: string): Promise<Bundle<T>> {
     this.requests.push({ method: "GET", target: `${type}/${id}/_history` });
     const rows = this.histories.get(`${type}/${id}`) ?? [];
-    return { resourceType: "Bundle", type: "history", entry: rows.map(resource => ({ resource: jsonRoundTrip(resource) as T })) };
+    return {
+      resourceType: "Bundle", type: "history", entry: rows.slice(0, 100).map(resource => ({ resource: jsonRoundTrip(resource) as T })),
+      ...(rows.length > 100 ? { link: [{ relation: "next", url: `/fhir/R4/RelatedPerson/${id}/_history?_count=100&_offset=100` }] } : {}),
+    };
   }
 
   private write(method: string, target: string): never {

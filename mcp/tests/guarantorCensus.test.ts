@@ -156,3 +156,20 @@ test("C2 Person counters distinguish valid, missing, and non-RelatedPerson links
     linksToNonRelatedPerson: 1,
   });
 });
+
+test("insurance history follows an exact instance-level history next link", async () => {
+  const built = await buildWriterDerivedCensusFixture();
+  const current = built.rows.damaged;
+  const history = Array.from({ length: 101 }, (_, index) => ({
+    ...current,
+    meta: { ...current.meta, versionId: String(101 - index), author: { reference: CENSUS_SERVICE } },
+  }));
+  built.histories = [[`RelatedPerson/${current.id}`, history]];
+  const transport = new CensusFixtureFhir(built);
+  const result = await collectGuarantorCensus(createReadOnlyGuarantorCensusFhir(transport), {
+    today: CENSUS_TODAY,
+    serviceReference: CENSUS_SERVICE,
+  });
+  assert.equal(result.summary.projects.find(row => row.project === "project-1")!.insuranceDamage.historyVersionsExamined, 101);
+  assert.equal(transport.requests.some(request => request.target === `/fhir/R4/RelatedPerson/${current.id}/_history?_count=100&_offset=100`), true);
+});

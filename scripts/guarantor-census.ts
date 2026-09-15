@@ -25,7 +25,7 @@ import {
   createOperatorScriptFhirClient,
   type MedplumClient,
 } from "../mcp/src/fhir-client.js";
-import { collectBoundedSearch, FhirSearchLimitError, searchAll } from "../mcp/src/fhir-search.js";
+import { FhirSearchLimitError, searchAll } from "../mcp/src/fhir-search.js";
 import { assertLocalOrPrivateBaseUrl } from "./backfill-patient-mrns.js";
 
 const MAX_ROWS = 50_000;
@@ -225,8 +225,32 @@ async function readHistoryAll(
   resourceType: "RelatedPerson",
   id: string,
 ): Promise<RelatedPerson[]> {
-  const bundle = await fhir.history<RelatedPerson>(resourceType, id, { _count: "100" });
-  return collectBoundedSearch(fhir, resourceType, bundle, { maxRows: MAX_ROWS, maxPages: MAX_ROWS });
+  let bundle = await fhir.history<RelatedPerson>(resourceType, id, { _count: "100" });
+  const resources: RelatedPerson[] = [];
+  let pagesRead = 0;
+  for (;;) {
+    pagesRead += 1;
+    const page = (bundle.entry ?? []).map(entry => entry.resource).filter((resource): resource is RelatedPerson => Boolean(resource));
+    if (resources.length + page.length > MAX_ROWS) {
+      throw new FhirSearchLimitError(resourceType, MAX_ROWS, resources.length + page.length, pagesRead);
+    }
+    resources.push(...page);
+    const next = bundle.link?.find(link => link.relation === "next")?.url;
+    if (!next) return resources;
+    if (pagesRead >= MAX_ROWS) throw new FhirSearchLimitError(resourceType, MAX_ROWS, resources.length, pagesRead);
+    bundle = await fhir.searchUrl<RelatedPerson>(historyNextPath(next, fhir.baseUrl, id), resourceType);
+  }
+}
+
+function historyNextPath(value: string, baseUrl: string, id: string): string {
+  const base = new URL(baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
+  const next = new URL(value, base);
+  const basePath = base.pathname.replace(/\/$/, "");
+  const expectedPath = `${basePath}/fhir/R4/RelatedPerson/${encodeURIComponent(id)}/_history`;
+  if (next.origin !== base.origin || next.username || next.password || next.pathname !== expectedPath || !next.search || next.hash) {
+    throw new Error("FHIR RelatedPerson history next link is invalid.");
+  }
+  return `${next.pathname}${next.search}`;
 }
 
 function normalizedDuplicateKey(person: RelatedPerson | Person): string | undefined {
@@ -263,6 +287,27 @@ export async function collectGuarantorCensus(
   const projects: ProjectSummary[] = [];
   const relatedById = new Map(relatedPeople.filter(row => row.id).map(row => [row.id!, row]));
   const patientByProjectId = new Map(patients.filter(row => row.id).map(row => [`${projectOf(row)}/${row.id}`, row]));
+  const ownersByProject = new Map<string, Map<string, Person[]>>();
+  const crossRelatedByProject = new Map<string, Set<string>>();
+  for (const person of persons) {
+    for (const link of person.link ?? []) {
+      const relatedId = referenceId(link.target.reference, "RelatedPerson");
+      const related = relatedId ? relatedById.get(relatedId) : undefined;
+      if (!relatedId || !related) continue;
+      const relatedProject = projectOf(related);
+      if (projectOf(person) !== relatedProject) {
+        const crossRelated = crossRelatedByProject.get(relatedProject) ?? new Set<string>();
+        crossRelated.add(relatedId);
+        crossRelatedByProject.set(relatedProject, crossRelated);
+        continue;
+      }
+      const owners = ownersByProject.get(relatedProject) ?? new Map<string, Person[]>();
+      const rows = owners.get(relatedId) ?? [];
+      rows.push(person);
+      owners.set(relatedId, rows);
+      ownersByProject.set(relatedProject, owners);
+    }
+  }
 
   for (const projectId of projectIds) {
     const summary = emptyProjectSummary(aliases.get(projectId)!);
@@ -273,24 +318,8 @@ export async function collectGuarantorCensus(
     const localAccounts = accounts.filter(row => projectOf(row) === projectId);
     const localCoverages = coverages.filter(row => projectOf(row) === projectId);
     const localTasks = tasks.filter(row => isTrustedTask(row, projectId, options.serviceReference));
-    const owners = new Map<string, Person[]>();
-    const crossRelated = new Set<string>();
-
-    for (const person of persons) {
-      for (const link of person.link ?? []) {
-        const relatedId = referenceId(link.target.reference, "RelatedPerson");
-        if (!relatedId) continue;
-        const related = relatedById.get(relatedId);
-        if (!related) continue;
-        if (projectOf(person) !== projectOf(related)) {
-          if (projectOf(related) === projectId) crossRelated.add(relatedId);
-          continue;
-        }
-        const rows = owners.get(relatedId) ?? [];
-        rows.push(person);
-        owners.set(relatedId, rows);
-      }
-    }
+    const owners = ownersByProject.get(projectId) ?? new Map<string, Person[]>();
+    const crossRelated = crossRelatedByProject.get(projectId) ?? new Set<string>();
     summary.crossProject = crossRelated.size;
 
     const accountGuarantors = new Set(localAccounts.flatMap(account => account.guarantor ?? [])
