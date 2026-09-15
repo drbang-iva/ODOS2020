@@ -12,6 +12,7 @@ import type {
 import express from "express";
 import {
   handleProtocolApplyRequest,
+  handleProtocolItemAddRequest,
   handleProtocolUnapplyRequest,
 } from "../src/clinical-graph/protocol-endpoint.js";
 import {
@@ -69,6 +70,26 @@ test("selected IPL initiation creates a real series CarePlan returned by the tra
     periodMax: 28,
     periodUnit: "d",
   });
+});
+
+test("item add resolves a series definition and carries its package charge", async () => {
+  const fhir = dryEyeFhir();
+
+  const result = await addProtocolItem(fhir, DRY_EYE_IPL_INIT_PROTOCOL.id, "series-ipl");
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(
+    (result.body as { application: { dispositions: Array<{ itemKey: string }> } })
+      .application.dispositions.map((row) => row.itemKey),
+    ["series-ipl", "charge-ipl-package"],
+  );
+  assert.equal(fhir.resourcesOf("CarePlan").length, 1);
+  assert.equal(fhir.protocolBasics(PROTOCOL_BASIC_CODES.chargeProposal).length, 1);
+  assert.equal(
+    JSON.parse(fhir.protocolBasics(PROTOCOL_BASIC_CODES.chargeProposal)[0]?.extension?.[0]?.valueString ?? "{}")
+      .state,
+    "staged",
+  );
 });
 
 test("series prescriptions reject client payloads that differ from the canonical protocol item", async () => {
@@ -402,6 +423,35 @@ async function applyProtocol(
   }, {
     authHeader: AUTHORIZATION,
     body: protocolApplyBody(protocolId, overrides),
+  });
+}
+
+async function addProtocolItem(
+  fhir: MemoryDryEyeFhir,
+  protocolId: string,
+  itemKey: string,
+) {
+  return handleProtocolItemAddRequest({
+    authenticate: async () => ({
+      staffReference: "Practitioner/synthetic-clinician",
+      actorRole: "provider",
+      fhir: fhir as never,
+    }),
+    serviceFhir: fhir as never,
+    now: () => NOW,
+  }, {
+    authHeader: AUTHORIZATION,
+    body: {
+      protocolId,
+      itemKey,
+      encounterId: ENCOUNTER_ID,
+      patientId: PATIENT_ID,
+      diagnosis: {
+        reference: `Condition/${CONDITION_ID}`,
+        code: "H16.223",
+        confirmed: true,
+      },
+    },
   });
 }
 

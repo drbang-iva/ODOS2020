@@ -168,6 +168,7 @@ import {
   handleProtocolCreateRequest,
   handleProtocolDraftRequest,
   handleProtocolForkRequest,
+  handleProtocolItemAddRequest,
   handleProtocolLibraryRequest,
   handleProtocolOffersRequest,
   handleProtocolPublishRequest,
@@ -6983,6 +6984,20 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: protocol apply route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "protocol apply route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/protocols/items/add", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProtocolItemAddRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.write"), serviceFhir: fhir },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: protocol item add route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "protocol item add route failed" });
         }
       });
 

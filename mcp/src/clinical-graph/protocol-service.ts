@@ -37,6 +37,8 @@ export interface CommitSelection {
   payload?: Record<string, unknown>;
 }
 
+type ItemApplicationResult = "created" | "existing-application" | "merge-deduped";
+
 export class AcceptedChargeUnapplyError extends Error {}
 
 export class ProtocolActionMaterializationRefusal extends Error {
@@ -379,6 +381,63 @@ export class ProtocolService {
     return { application, proposedFindings };
   }
 
+  async addItem(protocolId: string, itemKey: string, input: OpenProtocolInput): Promise<{
+    application: ProtocolApplication;
+    alreadyApplied: boolean;
+  }> {
+    const protocol = await this.requireActiveDiagnosisProtocol(protocolId, input);
+    const item = protocol.items.find((candidate) => candidate.itemKey === itemKey);
+    if (!item) throw new Error("Protocol item not found.");
+    if (item.itemType === "finding-seed") throw new Error("Finding-seed items cannot be added as plans.");
+    const applications = await this.applications.list();
+    const existing = applications.find((application) =>
+      application.encounterId === input.encounterId &&
+      application.protocolId === protocolId &&
+      application.confirmed &&
+      application.undoState === "active" &&
+      application.dispositions.some((disposition) =>
+        disposition.itemKey === itemKey && disposition.outcome !== "opted-out"
+      )
+    );
+    if (existing) return { application: existing, alreadyApplied: true };
+
+    const chargeSeedRef = typeof item.payload.chargeSeedRef === "string"
+      ? item.payload.chargeSeedRef
+      : undefined;
+    const chargeSeed = chargeSeedRef
+      ? protocol.items.find((candidate) => candidate.itemKey === chargeSeedRef)
+      : undefined;
+    if (chargeSeedRef && chargeSeed?.itemType !== "charge-seed") {
+      throw new Error(`Protocol item ${itemKey} references an invalid charge seed.`);
+    }
+
+    const dispositions: ProtocolApplication["dispositions"] = [
+      { itemKey: item.itemKey, outcome: "applied-default" },
+      ...(chargeSeed ? [{ itemKey: chargeSeed.itemKey, outcome: "applied-default" as const }] : []),
+    ];
+    const at = this.now();
+    const application = applications.find((candidate) =>
+      candidate.encounterId === input.encounterId &&
+      candidate.protocolId === protocolId &&
+      !candidate.confirmed &&
+      candidate.undoState === "active" &&
+      candidate.dispositions.some((disposition) =>
+        disposition.itemKey === itemKey && disposition.outcome !== "opted-out"
+      )
+    ) ?? await this.createApplication(protocol, input, at, dispositions);
+    const linkedDx = [input.diagnosis.reference];
+    const primaryResult = await this.applySelectedItem(application, item, item.payload, linkedDx, [], at);
+    if (primaryResult !== "merge-deduped" && chargeSeed) {
+      await this.applySelectedItem(application, chargeSeed, chargeSeed.payload, linkedDx, [], at);
+    }
+    const confirmed = await this.applications.save({
+      ...application,
+      confirmed: true,
+      dispositions: primaryResult === "merge-deduped" ? dispositions.slice(0, 1) : dispositions,
+    });
+    return { application: confirmed, alreadyApplied: false };
+  }
+
   async commit(applicationId: string, selections: CommitSelection[], linkedDx: string[]): Promise<void> {
     const application = await this.requireApplication(applicationId);
     if (application.confirmed) throw new Error("Protocol application is already confirmed.");
@@ -401,33 +460,7 @@ export class ProtocolService {
       const payload = choice?.payload ?? item.payload;
       const modified = JSON.stringify(payload) !== JSON.stringify(item.payload);
       dispositions.push({ itemKey: item.itemKey, outcome: modified ? "applied-modified" : "applied-default" });
-      if (item.itemType === "finding-seed") {
-        const itemFindings = proposed.filter((row) => row.sourceItemKey === item.itemKey);
-        if (!itemFindings.length) throw new Error(`Proposed finding ${item.itemKey} is missing.`);
-        for (const finding of itemFindings.filter((row) => row.state === "proposed")) {
-          const committed: ProtocolFindingInstance = {
-            ...finding,
-            state: "committed",
-            ...(payload.mode === "seedValue" ? { value: findingDefaultValue(payload, finding.laterality) } : {}),
-            editedBeforeCommit: modified,
-            provenance: {
-              ...finding.provenance,
-              source: modified ? "clinician-entered" : "protocol-default",
-              actor: application.appliedBy,
-              at,
-            },
-          };
-          const observationReference = committed.value === undefined
-            ? undefined
-            : await this.projection.commitFinding(committed);
-          if (observationReference) committed.observationReference = observationReference;
-          await this.findings.save(committed);
-        }
-      } else if (item.itemType === "charge-seed") {
-        await this.stageCharge(application, item, payload, linkedDx, at);
-      } else {
-        await this.upsertAction(application, item, payload, linkedDx, at);
-      }
+      await this.applySelectedItem(application, item, payload, linkedDx, proposed, at);
     }
     await this.applications.save({ ...application, confirmed: true, dispositions });
   }
@@ -532,19 +565,19 @@ export class ProtocolService {
     payload: Record<string, unknown>,
     linkedDx: string[],
     at: string,
-  ): Promise<void> {
+  ): Promise<ItemApplicationResult> {
     const actions = await this.actions.list();
     const existingForItem = actions.find((row) =>
       row.protocolApplicationId === application.id &&
       row.sourceItemKey === item.itemKey &&
       !["removed", "cancelled"].includes(row.state)
     );
-    if (existingForItem) return;
+    if (existingForItem) return "existing-application";
     const existing = item.mergeKey ? actions.find((row) =>
       row.encounterId === application.encounterId && row.mergeKey === item.mergeKey &&
       !["removed", "cancelled"].includes(row.state)
     ) : undefined;
-    if (existing) return;
+    if (existing) return "merge-deduped";
     const action: PlanActionInstance = {
       id: this.id(),
       encounterId: application.encounterId,
@@ -574,6 +607,7 @@ export class ProtocolService {
       action.materializationRefusal = { code: error.code, message: error.message };
     }
     await this.actions.save(action);
+    return "created";
   }
 
   private async stageCharge(
@@ -582,13 +616,13 @@ export class ProtocolService {
     payload: Record<string, unknown>,
     linkedDx: string[],
     at: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const existing = (await this.charges.list()).find((row) =>
       row.protocolApplicationId === application.id &&
       row.planActionRef === item.itemKey &&
       row.state !== "removed"
     );
-    if (existing) return;
+    if (existing) return false;
     const modifiedFields = changedFields(item.payload, payload);
     const ruleId = Array.isArray(payload.chargeRuleRefs) ? String(payload.chargeRuleRefs[0] ?? "") : "";
     const rule = ruleId ? await this.chargeRules.get(ruleId) : undefined;
@@ -622,6 +656,84 @@ export class ProtocolService {
         protocolVersion: application.protocolVersion,
       },
     });
+    return true;
+  }
+
+  private async applySelectedItem(
+    application: ProtocolApplication,
+    item: ProtocolItem,
+    payload: Record<string, unknown>,
+    linkedDx: string[],
+    proposed: ProtocolFindingInstance[],
+    at: string,
+  ): Promise<ItemApplicationResult> {
+    const modified = JSON.stringify(payload) !== JSON.stringify(item.payload);
+    if (item.itemType === "finding-seed") {
+      const itemFindings = proposed.filter((row) => row.sourceItemKey === item.itemKey);
+      if (!itemFindings.length) throw new Error(`Proposed finding ${item.itemKey} is missing.`);
+      for (const finding of itemFindings.filter((row) => row.state === "proposed")) {
+        const committed: ProtocolFindingInstance = {
+          ...finding,
+          state: "committed",
+          ...(payload.mode === "seedValue" ? { value: findingDefaultValue(payload, finding.laterality) } : {}),
+          editedBeforeCommit: modified,
+          provenance: {
+            ...finding.provenance,
+            source: modified ? "clinician-entered" : "protocol-default",
+            actor: application.appliedBy,
+            at,
+          },
+        };
+        const observationReference = committed.value === undefined
+          ? undefined
+          : await this.projection.commitFinding(committed);
+        if (observationReference) committed.observationReference = observationReference;
+        await this.findings.save(committed);
+      }
+      return "created";
+    }
+    if (item.itemType === "charge-seed") {
+      return await this.stageCharge(application, item, payload, linkedDx, at)
+        ? "created"
+        : "existing-application";
+    }
+    return this.upsertAction(application, item, payload, linkedDx, at);
+  }
+
+  private async createApplication(
+    protocol: ProtocolDefinition,
+    input: OpenProtocolInput,
+    at: string,
+    dispositions: ProtocolApplication["dispositions"] = [],
+  ): Promise<ProtocolApplication> {
+    return this.applications.save({
+      id: this.id(),
+      encounterId: input.encounterId,
+      patientId: input.patientId,
+      protocolId: protocol.id,
+      protocolVersion: protocol.version,
+      appliedBy: input.actor,
+      appliedAt: at,
+      stackedWith: [],
+      dispositions,
+      dedupResolutions: [],
+      undoState: "active",
+      confirmed: false,
+    });
+  }
+
+  private async requireActiveDiagnosisProtocol(
+    protocolId: string,
+    input: OpenProtocolInput,
+  ): Promise<ProtocolDefinition> {
+    const head = await this.definitions.get(protocolId);
+    const protocol = head ? publishedFromHead(head) : undefined;
+    if (!protocol || protocol.status !== "active") throw new Error("Active protocol not found.");
+    if (!input.diagnosis.confirmed || protocol.trigger.kind !== "diagnosis" ||
+      !protocol.trigger.dxKeys.some((pattern) => matchesCode(input.diagnosis.code, pattern))) {
+      throw new Error("Confirmed diagnosis does not match protocol trigger.");
+    }
+    return protocol;
   }
 
   private async requireApplication(id: string): Promise<ProtocolApplication> {

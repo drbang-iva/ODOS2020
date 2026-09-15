@@ -18,6 +18,7 @@ import {
   handleProtocolDraftRequest,
   handleProtocolForkRequest,
   handleProtocolLibraryRequest,
+  handleProtocolItemAddRequest,
   handleProtocolOffersRequest,
   handleProtocolPublishRequest,
   handleProtocolRetireRequest,
@@ -48,6 +49,7 @@ class MemoryFhir implements ProtocolFhirClient {
   paginateAt?: number;
   nextRows: Basic[] = [];
   searchParams: Array<Record<string, string> | undefined> = [];
+  rejectNextChargeWrite = false;
 
   async search<T extends Basic>(_type: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>> {
     this.searchParams.push(params);
@@ -67,6 +69,12 @@ class MemoryFhir implements ProtocolFhirClient {
     return { resourceType: "Bundle", type: "searchset", entry: this.nextRows.map((resource) => ({ resource: resource as T })) };
   }
   async create<T extends Basic>(resource: T, headers?: Record<string, string>): Promise<T> {
+    if (this.rejectNextChargeWrite && resource.code?.coding?.some((coding) =>
+      coding.code === PROTOCOL_BASIC_CODES.chargeProposal
+    )) {
+      this.rejectNextChargeWrite = false;
+      throw new Error("Simulated one-time charge write failure.");
+    }
     const conditional = headers?.["If-None-Exist"]?.replace(/^identifier=/, "");
     if (conditional) {
       const [system, value] = conditional.split("|");
@@ -437,6 +445,196 @@ test("H40.02x offer is deliberate; open remains inert; commit creates the exact 
   const application = await service.applications.get(opened.application.id);
   assert.equal(application?.protocolVersion, 1);
   assert.equal(application?.dispositions.length, GLAUCOMA_SUSPECT_PROTOCOL.items.length);
+});
+
+test("item add carries an order's referenced charge and unapply removes both", async () => {
+  const { service } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+
+  const added = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", {
+    encounterId: "enc-item-charge",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  });
+
+  assert.deepEqual(added.application.dispositions.map((row) => row.itemKey), [
+    "order-gonioscopy",
+    "charge-gonioscopy",
+  ]);
+  assert.equal((await service.actions.list()).filter((row) => row.actionType === "order").length, 1);
+  assert.equal((await service.charges.list()).filter((row) =>
+    row.procedureConceptKey === "gonioscopy" && row.state === "staged"
+  ).length, 1);
+
+  await service.unapply(added.application.id);
+
+  assert.equal((await service.actions.list()).filter((row) => row.state === "removed").length, 1);
+  assert.equal((await service.charges.list()).filter((row) =>
+    row.procedureConceptKey === "gonioscopy" && row.state === "removed"
+  ).length, 1);
+});
+
+test("item add retries the same application after a charge write failure", async () => {
+  const { fhir, service } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-item-charge-retry",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  fhir.rejectNextChargeWrite = true;
+
+  await assert.rejects(
+    service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input),
+    /Simulated one-time charge write failure/,
+  );
+  const pending = (await service.applications.list())[0];
+  assert.equal(pending?.confirmed, false);
+  assert.equal((await service.actions.list()).length, 1);
+  assert.equal((await service.charges.list()).length, 0);
+
+  const retried = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+
+  assert.equal(retried.application.id, pending?.id);
+  assert.equal(retried.application.confirmed, true);
+  assert.equal((await service.applications.list()).length, 1);
+  assert.equal((await service.actions.list()).length, 1);
+  assert.equal((await service.charges.list()).length, 1);
+});
+
+test("item add commits a second item from the same protocol without applying other defaults", async () => {
+  const { service } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-two-items",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+
+  await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  await assert.doesNotReject(
+    service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-corneal-pachymetry", input),
+  );
+
+  assert.deepEqual(
+    (await service.actions.list()).map((row) => row.sourceItemKey).sort(),
+    ["order-corneal-pachymetry", "order-gonioscopy"],
+  );
+  assert.deepEqual(
+    (await service.charges.list()).map((row) => row.procedureConceptKey).sort(),
+    ["corneal-pachymetry", "gonioscopy"],
+  );
+  assert.equal((await service.findings.list()).length, 0);
+  assert.equal((await service.applications.list()).length, 2);
+});
+
+test("item add returns the existing application when the same item is tapped twice", async () => {
+  const { service } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-repeat-item",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+
+  const first = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  const second = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+
+  assert.equal(first.alreadyApplied, false);
+  assert.equal(second.alreadyApplied, true);
+  assert.equal(second.application.id, first.application.id);
+  assert.equal((await service.applications.list()).length, 1);
+  assert.equal((await service.actions.list()).length, 1);
+  assert.equal((await service.charges.list()).length, 1);
+});
+
+test("item add reuses a whole-protocol application that already applied the item", async () => {
+  const { service } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-whole-then-item",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  const opened = await service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, input);
+  await service.commit(opened.application.id, [], [input.diagnosis.reference]);
+
+  const added = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+
+  assert.equal((await service.charges.list()).filter((row) =>
+    row.procedureConceptKey === "gonioscopy" && row.state === "staged"
+  ).length, 1);
+  assert.equal((await service.applications.list()).length, 1);
+  assert.equal(added.alreadyApplied, true);
+  assert.equal(added.application.id, opened.application.id);
+});
+
+test("item add suppresses a sibling charge when another protocol already owns the merge-key action", async () => {
+  const { service } = harness();
+  const sharedItems = GLAUCOMA_SUSPECT_PROTOCOL.items.filter((item) =>
+    ["order-gonioscopy", "charge-gonioscopy"].includes(item.itemKey)
+  );
+  const secondProtocol: ProtocolDefinition = {
+    ...structuredClone(GLAUCOMA_SUSPECT_PROTOCOL),
+    id: "second-gonioscopy-protocol",
+    title: "Second gonioscopy protocol",
+    items: structuredClone(sharedItems),
+  };
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  await service.definitions.save(secondProtocol);
+  const input = {
+    encounterId: "enc-cross-protocol",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+
+  await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  const second = await service.addItem(secondProtocol.id, "order-gonioscopy", input);
+
+  assert.equal((await service.applications.list()).length, 2);
+  assert.deepEqual(second.application.dispositions.map((row) => row.itemKey), ["order-gonioscopy"]);
+  assert.equal((await service.actions.list()).length, 1);
+  assert.equal((await service.charges.list()).length, 1);
+});
+
+test("item add rejects finding seeds without creating an application", async () => {
+  const { service } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+
+  await assert.rejects(
+    service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "cd-ratio", {
+      encounterId: "enc-finding-item",
+      patientId: "patient-1",
+      diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+      actor: "Practitioner/test",
+    }),
+    /Finding-seed items cannot be added as plans/,
+  );
+  assert.equal((await service.applications.list()).length, 0);
+  assert.equal((await service.findings.list()).length, 0);
+});
+
+test("whole-protocol open remains blocked after an item-level add", async () => {
+  const { service } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-item-then-whole",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+
+  await assert.rejects(
+    service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, input),
+    /Protocol is already applied to this encounter/,
+  );
 });
 
 test("manual mergeKey collision resumes existing action and unapply preserves clinician changes", async () => {
@@ -1479,6 +1677,45 @@ test("apply verifies the persisted Condition and creates no prompt-only Observat
   assert.equal(observations.some((observation) =>
     ["iop", "pachymetry_um", "gonio_tm_pigmentation"].includes(observation.code.coding?.[0]?.code ?? "")
   ), false);
+});
+
+test("item-add endpoint stages only the requested order and refuses charge acceptance or payload overrides", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition),
+    buildProtocolBasic(
+      { id: `${GLAUCOMA_SUSPECT_PROTOCOL.id}@v1`, definition: GLAUCOMA_SUSPECT_PROTOCOL },
+      PROTOCOL_BASIC_CODES.protocolDefinitionSnapshot,
+    ),
+    confirmedCondition(),
+  );
+  const body = { ...applyBody("H40.021"), itemKey: "order-gonioscopy" };
+
+  const added = await handleProtocolItemAddRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    body,
+  });
+
+  assert.equal(added.status, 200);
+  assert.equal((added.body as { alreadyApplied: boolean }).alreadyApplied, false);
+  assert.deepEqual(
+    (added.body as { application: ProtocolApplication }).application.dispositions.map((row) => row.itemKey),
+    ["order-gonioscopy", "charge-gonioscopy"],
+  );
+  assert.equal((added.body as { actions: PlanActionInstance[] }).actions.length, 1);
+  assert.equal((added.body as { charges: ChargeProposal[] }).charges[0]?.state, "staged");
+
+  for (const forbiddenField of [
+    { acceptCharges: true },
+    { payload: { orderableKey: "different" } },
+  ]) {
+    const rejected = await handleProtocolItemAddRequest(endpointDeps(fhir), {
+      authHeader: "Bearer test",
+      body: { ...body, ...forbiddenField },
+    });
+    assert.equal(rejected.status, 400);
+  }
+  assert.equal((await endpointProtocolService(fhir).applications.list()).length, 1);
 });
 
 test("follow-up materialization stores the six-month due date and verbatim reason on a coded ServiceRequest", async () => {
