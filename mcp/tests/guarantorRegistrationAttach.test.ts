@@ -124,7 +124,11 @@ class RegistrationAttachFhir {
         resource.subject = resource.subject?.map(subject => ({ ...subject, reference: subject.reference ? resolvedReferences.get(subject.reference) ?? subject.reference : subject.reference }));
         resource.guarantor = resource.guarantor?.map(guarantor => ({ ...guarantor, party: { ...guarantor.party, reference: guarantor.party.reference ? resolvedReferences.get(guarantor.party.reference) ?? guarantor.party.reference : guarantor.party.reference } }));
       }
-      const accepted = { ...resource, id, meta: { ...resource.meta, versionId: resource.resourceType === "Account" ? "2" : "1" } } as Resource;
+      const accepted = JSON.parse(JSON.stringify({
+        ...resource,
+        id,
+        meta: { ...resource.meta, versionId: resource.resourceType === "Account" ? "2" : "1" },
+      })) as Resource;
       this.resources.set(`${resource.resourceType}/${id}`, accepted);
       return { resource: structuredClone(accepted), response: { status: entry.request?.method === "PUT" ? "200 OK" : "201 Created", location: `${resource.resourceType}/${id}/_history/${accepted.meta?.versionId}` } };
     });
@@ -214,6 +218,19 @@ test("A10: an attach claim conflict after the registration bundle preserves 201 
   assert.deepEqual(body.guarantorLinks, [{ relatedPersonId: "related-1", personId: "guarantor-existing", taskId: "failed-attach", status: "failed", message: "Pending: Complete or Correct." }]);
 });
 
+test("F3: an attach refusal without a Task is reported as failed with its refusal message", async () => {
+  const { response, body } = await postRegistration({
+    attachResult: { status: 409, body: { error: "The responsible party changed; preview again." } },
+  });
+  assert.equal(response.status, 201);
+  assert.deepEqual(body.guarantorLinks, [{
+    relatedPersonId: "related-1",
+    personId: "guarantor-existing",
+    status: "failed",
+    message: "The responsible party changed; preview again.",
+  }]);
+});
+
 test("B3: a lost committed registration reply is recovered before the existing guarantor attach", async () => {
   const { fhir, response, body, attachedInput } = await postRegistration({ dropRegistrationReply: true });
   assert.equal(response.status, 201);
@@ -223,7 +240,23 @@ test("B3: a lost committed registration reply is recovered before the existing g
   assert.deepEqual(body.guarantorLinks, [{ relatedPersonId: "related-1", personId: "guarantor-existing", taskId: "attach-task", status: "linked", message: "Guarantor linked." }]);
 });
 
-test("B3: ambiguous committed-state recovery preserves registration without guessing an attach target", async () => {
+test("F1: a lost registration reply still links an existing guarantor without telecom", async () => {
+  const { response, body, attachedInput } = await postRegistration({
+    dropRegistrationReply: true,
+    mutatePerson: person => ({ ...person, telecom: undefined }),
+  });
+  assert.equal(response.status, 201);
+  assert.deepEqual((attachedInput as any).relatedPersonIds, ["related-1"]);
+  assert.deepEqual(body.guarantorLinks, [{
+    relatedPersonId: "related-1",
+    personId: "guarantor-existing",
+    taskId: "attach-task",
+    status: "linked",
+    message: "Guarantor linked.",
+  }]);
+});
+
+test("F2: ambiguous committed-state recovery emits one unconfirmed row without guessing an attach target", async () => {
   const adultRegistration = {
     ...registrationBody,
     demographics: { ...registrationBody.demographics, birthDate: "1980-04-03" },
@@ -246,7 +279,11 @@ test("B3: ambiguous committed-state recovery preserves registration without gues
   assert.equal(attachedInput, undefined);
   assert.equal(body.kind, "created");
   assert.equal(body.patient.id, "patient-registered");
-  assert.equal(body.guarantorLinks, undefined);
+  assert.deepEqual(body.guarantorLinks, [{
+    personId: "guarantor-existing",
+    status: "unconfirmed",
+    message: "Open the chart to attach the guarantor.",
+  }]);
 });
 
 test("A11: registration with an existing party requires guarantor.link before any write or MRN reservation", async () => {

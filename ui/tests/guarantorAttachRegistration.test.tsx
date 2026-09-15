@@ -4,7 +4,7 @@ import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { COMMS_PREFERENCE_CHANNELS, COMMS_PURPOSES } from "../src/lib/communications-client";
 import { emptyPatientDemographics, registerPatient } from "../src/lib/patient-registration";
-import { NewPatient } from "../src/scenes/NewPatient";
+import { NewPatient, RegistrationRepairNotice } from "../src/scenes/NewPatient";
 
 const card = { personId: "existing-guardian", versionId: "7", name: "Existing Guardian", phones: ["864-555-0199"], city: "Greenville", postalCode: "29601" };
 const defaults = { version: "2026-09-14", defaults: Object.fromEntries(COMMS_PURPOSES.map(purpose => [purpose, Object.fromEntries(COMMS_PREFERENCE_CHANNELS.map(channel => [channel, true]))])) };
@@ -114,4 +114,40 @@ test("B3: registration rejects a non-string guarantor link status", async () => 
     guarantorLinks: [{ relatedPersonId: "related-created", personId: card.personId, status: ["linked"], message: "Guarantor linked." }],
   }, { status: 201 });
   await assert.rejects(registerPatient(draft, {}, fetchImpl), /Patient registration returned an invalid response/);
+});
+
+test("F4: the created screen renders an unconfirmed guarantor row without a RelatedPerson id", async () => {
+  const draft = {
+    ...emptyPatientDemographics(),
+    firstName: "Synthetic",
+    lastName: "Child",
+    birthDate: "1980-04-03",
+    gender: "female" as const,
+  };
+  const fetchImpl: typeof fetch = async () => Response.json({
+    kind: "created",
+    patient: { resourceType: "Patient", id: "registered-child" },
+    guarantorLinks: [{
+      personId: card.personId,
+      status: "unconfirmed",
+      message: "Open the chart to attach the guarantor.",
+    }],
+  }, { status: 201 });
+  const result = await registerPatient(draft, {}, fetchImpl);
+  assert.equal(result.kind, "created");
+  if (result.kind !== "created") return;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<RegistrationRepairNotice
+        guarantorLinks={result.guarantorLinks}
+        patient={result.patient}
+        onBack={() => undefined}
+      />);
+    });
+    assert.match(text(renderer), /unconfirmed/);
+    assert.match(text(renderer), /Open the chart to attach the guarantor\./);
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+  }
 });

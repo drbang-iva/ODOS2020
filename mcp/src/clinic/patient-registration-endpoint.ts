@@ -193,9 +193,9 @@ export async function registerPatientFromDemographics(
     };
   }
   const guarantorLinks = warning
-    ? existingRegistrationParties(input).flatMap(party => {
+    ? existingRegistrationParties(input).map(party => {
         const relatedPersonId = createdIdFromEntryIfPresent(response, built.existingRelatedPersonEntryIndexes.get(party.localId)!, "RelatedPerson");
-        return relatedPersonId ? [{ relatedPersonId, personId: party.personId, status: "unconfirmed" as const, message: "Guarantor attach was not started because patient access needs repair." }] : [];
+        return { ...(relatedPersonId ? { relatedPersonId } : {}), personId: party.personId, status: "unconfirmed" as const, message: "Guarantor attach was not started because patient access needs repair." };
       })
     : await attachExistingRegistrationGuarantors(input, staff, deps, response, built.existingRelatedPersonEntryIndexes, existingPersons);
   return { status: 201, body: { kind: "created", patient, ...(warning ? { warning } : {}), ...(guarantorLinks.length ? { guarantorLinks } : {}) } };
@@ -266,11 +266,14 @@ async function attachExistingRegistrationGuarantors(
   entryIndexes: Map<string, number>,
   persons: Map<string, Person>,
 ) {
-  const outcomes: Array<{ relatedPersonId: string; personId: string; taskId?: string; status: "linked" | "pending" | "failed" | "unconfirmed"; message: string }> = [];
+  const outcomes: Array<{ relatedPersonId?: string; personId: string; taskId?: string; status: "linked" | "pending" | "failed" | "unconfirmed"; message: string }> = [];
   for (const party of existingRegistrationParties(input)) {
     const relatedPersonId = createdIdFromEntryIfPresent(response, entryIndexes.get(party.localId)!, "RelatedPerson");
-    if (!relatedPersonId) continue;
     const personId = persons.get(party.localId)!.id!;
+    if (!relatedPersonId) {
+      outcomes.push({ personId, status: "unconfirmed", message: "Open the chart to attach the guarantor." });
+      continue;
+    }
     try {
       if (!deps.attachRegistrationGuarantor) throw new Error("Registration guarantor attach service is unavailable.");
       const [person, relatedPerson] = await Promise.all([
@@ -283,7 +286,7 @@ async function attachExistingRegistrationGuarantors(
         reason: "Registration attach",
       });
       const body = result.body as { task?: { id?: string; status?: string }; error?: string; phase?: string };
-      const status = body.task?.status === "completed" ? "linked" : body.task?.status === "failed" ? "failed" : body.task?.status === "in-progress" ? "pending" : "unconfirmed";
+      const status = body.task?.status === "completed" ? "linked" : body.task?.status === "failed" ? "failed" : body.task?.status === "in-progress" ? "pending" : result.status >= 400 ? "failed" : "unconfirmed";
       outcomes.push({ relatedPersonId, personId, ...(body.task?.id ? { taskId: body.task.id } : {}), status,
         message: status === "linked" ? "Guarantor linked." : body.error ?? (status === "pending" ? "Guarantor attach is pending." : status === "failed" ? "Guarantor attach failed." : "Guarantor attach result is unconfirmed.") });
     } catch {
@@ -577,7 +580,10 @@ function recoveredAccountRelatedPersonId(request: Bundle, account: Account, rela
 function sameRegistrationRelatedPerson(requested: RelatedPerson, committed: RelatedPerson): boolean {
   const { id: _requestedId, meta: _requestedMeta, patient: _requestedPatient, ...requestedFields } = requested;
   const { id: _committedId, meta: _committedMeta, patient: _committedPatient, ...committedFields } = committed;
-  return isDeepStrictEqual(requestedFields, committedFields);
+  return isDeepStrictEqual(
+    JSON.parse(JSON.stringify(requestedFields)),
+    JSON.parse(JSON.stringify(committedFields)),
+  );
 }
 
 function isUnchangedReservation(account: Account, reservation: ReservedMrn): boolean {

@@ -149,7 +149,7 @@ export function RegistrationRepairNotice({
         <p className="text-xs uppercase tracking-widest text-[color:var(--odos-muted)]">Registration complete</p>
         <h1 className="mt-2 text-2xl font-semibold">Patient registered</h1>
         {warning && <p role="alert" className="mt-4 text-sm text-[color:var(--odos-text)]">{warning.message}</p>}
-        {guarantorLinks?.length ? <ul className="mt-4 grid gap-2">{guarantorLinks.map(link => <li key={link.relatedPersonId} className="rounded border border-[color:var(--odos-line)] p-3"><strong className="capitalize">{link.status}</strong> — {link.message}</li>)}</ul> : null}
+        {guarantorLinks?.length ? <ul className="mt-4 grid gap-2">{guarantorLinks.map(link => <li key={link.relatedPersonId ?? link.personId} className="rounded border border-[color:var(--odos-line)] p-3"><strong className="capitalize">{link.status}</strong> — {link.message}</li>)}</ul> : null}
         <div className="mt-6 flex flex-wrap gap-3">
           {patient?.id && onOpenPatient && <button type="button" onClick={() => onOpenPatient(patient)} className="rounded bg-blue-500 px-4 py-2 text-sm font-semibold">Open patient chart</button>}
           <button type="button" onClick={onBack} className="rounded border border-[color:var(--odos-line-2)] px-4 py-2 text-sm text-[color:var(--odos-muted)]">Back to patient search</button>

@@ -31,7 +31,7 @@ export interface PatientDemographicsDraft {
 }
 
 export interface GuarantorRegistrationLink {
-  relatedPersonId: string;
+  relatedPersonId?: string;
   personId: string;
   taskId?: string;
   status: "linked" | "pending" | "failed" | "unconfirmed";
@@ -346,7 +346,8 @@ function isCreatedResult(value: unknown): value is Extract<PatientRegistrationRe
     && typeof value.warning.message === "string"
     && typeof value.warning.patientReference === "string");
   const linksValid = value.guarantorLinks === undefined || (Array.isArray(value.guarantorLinks) && value.guarantorLinks.every(link => isObject(link)
-    && typeof link.relatedPersonId === "string" && typeof link.personId === "string"
+    && (link.relatedPersonId === undefined || typeof link.relatedPersonId === "string")
+    && typeof link.personId === "string"
     && (link.taskId === undefined || typeof link.taskId === "string")
     && typeof link.status === "string"
     && ["linked", "pending", "failed", "unconfirmed"].includes(link.status)
