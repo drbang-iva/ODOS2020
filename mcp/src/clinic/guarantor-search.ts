@@ -8,7 +8,7 @@ import type { GuarantorOperationDeps, GuarantorOperationResult, GuarantorOperati
 
 const normalName = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
 const digits = (value: string) => value.replace(/\D/g, "");
-const searchPhoneDigits = (value: string) => {
+export const searchPhoneDigits = (value: string) => {
   const valueDigits = digits(value);
   return valueDigits.length === 11 && valueDigits.startsWith("1") ? valueDigits.slice(1) : valueDigits;
 };
