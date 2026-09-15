@@ -28,7 +28,10 @@ test("age-of-majority singleton grants enforce provider reads and staff/admin ed
     
     for (const roleId of ["provider", "staff", "admin"] as const) {
       await t.test(roleId, async () => {
-        const matches = policies.filter((policy) => policy.meta?.tag?.some((tag) => tag.system === ODOS_PRACTICE_ROLE_SYSTEM && tag.code === roleId));
+        const matches = policies.filter((policy) => {
+          const tags = policy.meta?.tag?.filter((tag) => tag.system === ODOS_PRACTICE_ROLE_SYSTEM) ?? [];
+          return tags.length === 1 && tags[0]?.code === roleId;
+        });
         assert.equal(matches.length, 1);
         const { token } = await createRoleClient({ baseUrl, roleId, policyReference: `AccessPolicy/${matches[0]!.id}`, patientReference: `Patient/${patient.id}`, practitionerReference: `${me.profile!.resourceType}/${me.profile!.id}`, projectId, runId: randomUUID(), adminToken: callerAccessToken, track });
         const create = await fhirRequest<Basic>(baseUrl, token, "POST", "Basic", buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }));
