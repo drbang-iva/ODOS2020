@@ -82,3 +82,13 @@ Latest accepted local regression: MCP **5,025 passed / 52 skipped / 0 failed**; 
 Workstation paths in this PR’s text and compressed artifacts are normalized to `<workspace>` or `<home>`; assertions, counts, status codes and other output remain intact. Thus logs are exact except for this disclosed path normalization.
 
 Raw authorized FHIR clients can create duplicate coded Basic resources if they bypass conditional creation. This is the existing practice-config convention, not a storage uniqueness constraint. C3 explicitly requires the existing singleton pattern and matching write grants. The UI and seed use atomic conditional creation; duplicate readers refuse explicitly. The proposed new privileged creation operation and removal of Staff/Admin create grants were not applied because they change the approved contract.
+
+### Bounded bot fixes after the rebased proof
+
+Editor runtime validation now refuses malformed, impossible and future nonblank DOBs before any Person write; today, absent legacy DOB, and explicit clearing remain allowed under C1/R1. Writer-derived JSON guards: 2/2; initial2 failures; deleted validation mutant1 failure; forced-required mutant1 failure; each restored2/2. Focused MCP62/62 and UI52/52; UI typecheck passes. Evidence: `../registration-guarantor-dob/editor-validation/`. Person-only projection and existing claim fence remain unchanged.
+
+The age test uses a valid January1 birth date19 years before the mocked current year. The full6-test age suite passes at a leap-day clock and an ordinary clock; restoring the old fixture fails with the impossible non-leap birth date; restored6/6. Evidence: `../registration-majority-ui/leap-day/`.
+
+The full local regression counts above precede these bounded fixes. Final-head full CI regression and live-authorization results are required and will be attached to PR607 by the coordinating task. No fixture restart was needed for these UI validation/test and evidence-only changes.
+
+Integrated fixback checks: **58/58 UI**, UI production build exit0, preflight0 warnings0 hard blocks (`fixback-ui-integrated.txt`, `fixback-ui-build.txt`, `fixback-preflight.txt`).
