@@ -1,0 +1,453 @@
+TAP version 13
+# Subtest: K5: the real registration route accepts blank slots and rejects the scalar contract
+ok 1 - K5: the real registration route accepts blank slots and rejects the scalar contract
+  ---
+  duration_ms: 40.985583
+  type: 'test'
+  ...
+# Subtest: K16: registration and editor emit the same marker state through preference application
+ok 2 - K16: registration and editor emit the same marker state through preference application
+  ---
+  duration_ms: 11.54775
+  type: 'test'
+  ...
+# Subtest: registration phone validation rejects bad choices before reserving an MRN
+ok 3 - registration phone validation rejects bad choices before reserving an MRN
+  ---
+  duration_ms: 13.159167
+  type: 'test'
+  ...
+# Subtest: Provider, Staff, and Admin may register a patient
+ok 4 - Provider, Staff, and Admin may register a patient
+  ---
+  duration_ms: 0.104333
+  type: 'test'
+  ...
+# Subtest: no user AccessPolicy authorizes a compartment-less Account create
+ok 5 - no user AccessPolicy authorizes a compartment-less Account create
+  ---
+  duration_ms: 0.234
+  type: 'test'
+  ...
+# Subtest: provider registers Patient, RelatedPerson, Person, and Account through one service transaction
+ok 6 - provider registers Patient, RelatedPerson, Person, and Account through one service transaction
+  ---
+  duration_ms: 1.667667
+  type: 'test'
+  ...
+# Subtest: staff registers Patient, RelatedPerson, Person, and Account through one service transaction
+ok 7 - staff registers Patient, RelatedPerson, Person, and Account through one service transaction
+  ---
+  duration_ms: 1.30225
+  type: 'test'
+  ...
+# Subtest: admin registers Patient, RelatedPerson, Person, and Account through one service transaction
+ok 8 - admin registers Patient, RelatedPerson, Person, and Account through one service transaction
+  ---
+  duration_ms: 1.430834
+  type: 'test'
+  ...
+# Subtest: registration creates the MRN reservation and identity resources in the caller project
+ok 9 - registration creates the MRN reservation and identity resources in the caller project
+  ---
+  duration_ms: 1.4715
+  type: 'test'
+  ...
+# Subtest: a caller in project A never submits registration writes to service project B
+ok 10 - a caller in project A never submits registration writes to service project B
+  ---
+  duration_ms: 1.2
+  type: 'test'
+  ...
+# odos-mcp: patient registration failed: Error: Registration resource belongs to Project/project-b, not Project/practice-1.
+#     at registrationResourceInProject (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-server-proof/mcp/src/clinic/patient-registration-endpoint.ts:453:11)
+#     at buildPatientIdentityTransaction (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-server-proof/mcp/src/clinic/patient-registration-endpoint.ts:427:19)
+#     at registerPatientFromDemographics (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-server-proof/mcp/src/clinic/patient-registration-endpoint.ts:149:17)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async handlePatientRegistration (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-server-proof/mcp/src/clinic/clinic-routes.ts:219:20)
+# Subtest: registration stops when an MRN reservation is returned from another project
+ok 11 - registration stops when an MRN reservation is returned from another project
+  ---
+  duration_ms: 2.968833
+  type: 'test'
+  ...
+# Subtest: registration access grant rejects a Patient outside the caller project
+ok 12 - registration access grant rejects a Patient outside the caller project
+  ---
+  duration_ms: 0.2635
+  type: 'test'
+  ...
+# Subtest: a role without patients.register is refused before any service FHIR call
+ok 13 - a role without patients.register is refused before any service FHIR call
+  ---
+  duration_ms: 0.097167
+  type: 'test'
+  ...
+# odos-mcp: patient registration failed: Error: synthetic transaction failure
+#     at RegistrationFhir.executeTransaction (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-server-proof/mcp/tests/patientRegistrationAuthz.test.ts:719:37)
+#     at RegistrationFhir.executeTransactionAsActor (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-server-proof/mcp/tests/patientRegistrationAuthz.test.ts:777:35)
+#     at registerPatientFromDemographics (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-server-proof/mcp/src/clinic/patient-registration-endpoint.ts:153:39)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async handlePatientRegistration (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-server-proof/mcp/src/clinic/clinic-routes.ts:219:20)
+# Subtest: a failed identity transaction leaves no Patient and marks its MRN reservation entered-in-error
+ok 14 - a failed identity transaction leaves no Patient and marks its MRN reservation entered-in-error
+  ---
+  duration_ms: 2.7045
+  type: 'test'
+  ...
+# Subtest: a committed identity transaction with a dropped response is reconciled and preserved
+ok 15 - a committed identity transaction with a dropped response is reconciled and preserved
+  ---
+  duration_ms: 1.606209
+  type: 'test'
+  ...
+# Subtest: a membership version conflict is refetched and retried before registration returns
+ok 16 - a membership version conflict is refetched and retried before registration returns
+  ---
+  duration_ms: 1.372042
+  type: 'test'
+  ...
+# Subtest: registration grants access when the caller membership omits active
+ok 17 - registration grants access when the caller membership omits active
+  ---
+  duration_ms: 1.369167
+  type: 'test'
+  ...
+# Subtest: inactive memberships do not consume the registration membership search count
+ok 18 - inactive memberships do not consume the registration membership search count
+  ---
+  duration_ms: 3.0465
+  type: 'test'
+  ...
+# Subtest: registration appends every named compartment parameter on a stacked composite membership
+ok 19 - registration appends every named compartment parameter on a stacked composite membership
+  ---
+  duration_ms: 6.797416
+  type: 'test'
+  ...
+# Subtest: persistent grant failure preserves the active registration and returns asserted repair guidance
+ok 20 - persistent grant failure preserves the active registration and returns asserted repair guidance
+  ---
+  duration_ms: 1.506209
+  type: 'test'
+  ...
+# Subtest: an exact pre-existing Patient is returned as a duplicate and never receives a registration grant
+ok 21 - an exact pre-existing Patient is returned as a duplicate and never receives a registration grant
+  ---
+  duration_ms: 1.175375
+  type: 'test'
+  ...
+# Subtest: an exact duplicate on a later project-scoped search page still requires confirmation
+ok 22 - an exact duplicate on a later project-scoped search page still requires confirmation
+  ---
+  duration_ms: 1.082875
+  type: 'test'
+  ...
+# odos-mcp: patient registration failed: Error: Project-scoped duplicate search returned a Patient outside the caller project.
+#     at findExactDuplicates (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-server-proof/mcp/src/clinic/patient-registration-endpoint.ts:483:11)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async registerPatientFromDemographics (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-server-proof/mcp/src/clinic/patient-registration-endpoint.ts:143:22)
+#     at async handlePatientRegistration (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-server-proof/mcp/src/clinic/clinic-routes.ts:219:20)
+# Subtest: duplicate detection never returns a Patient owned by another project
+ok 23 - duplicate detection never returns a Patient owned by another project
+  ---
+  duration_ms: 1.049041
+  type: 'test'
+  ...
+# Subtest: confirmDuplicate creates a distinct server-owned Patient after the duplicate warning
+ok 24 - confirmDuplicate creates a distinct server-owned Patient after the duplicate warning
+  ---
+  duration_ms: 1.390167
+  type: 'test'
+  ...
+# Subtest: a caller-supplied Patient id is rejected before registration FHIR calls
+ok 25 - a caller-supplied Patient id is rejected before registration FHIR calls
+  ---
+  duration_ms: 0.978833
+  type: 'test'
+  ...
+# Subtest: authoritative registration validation rejects form-invalid input before service FHIR
+ok 26 - authoritative registration validation rejects form-invalid input before service FHIR
+  ---
+  duration_ms: 4.402041
+  type: 'test'
+  ...
+# Subtest: G15 registration includes explicit communication cells attributed to registering staff
+ok 27 - G15 registration includes explicit communication cells attributed to registering staff
+  ---
+  duration_ms: 1.525458
+  type: 'test'
+  ...
+# Subtest: G20 registration without effective preference permission creates nothing
+ok 28 - G20 registration without effective preference permission creates nothing
+  ---
+  duration_ms: 0.137042
+  type: 'test'
+  ...
+# Subtest: registration paper evidence and preference references share the Patient creation transaction
+ok 29 - registration paper evidence and preference references share the Patient creation transaction
+  ---
+  duration_ms: 1.684875
+  type: 'test'
+  ...
+# Subtest: T13 initial registration child refusal survives lost reply=false
+ok 30 - T13 initial registration child refusal survives lost reply=false
+  ---
+  duration_ms: 1.144542
+  type: 'test'
+  ...
+# Subtest: T13 initial registration child refusal survives lost reply=true
+ok 31 - T13 initial registration child refusal survives lost reply=true
+  ---
+  duration_ms: 0.953
+  type: 'test'
+  ...
+# Subtest: T8 guardian blank selected Phone 2 refuses before all writes
+ok 32 - T8 guardian blank selected Phone 2 refuses before all writes
+  ---
+  duration_ms: 0.754584
+  type: 'test'
+  ...
+# Subtest: T7 guardian marked Phone 2 survives registration and lost-reply recovery
+ok 33 - T7 guardian marked Phone 2 survives registration and lost-reply recovery
+  ---
+  duration_ms: 0.88675
+  type: 'test'
+  ...
+# Subtest: D6 registration: configured 21 makes a 19-year-old require consent authority
+ok 34 - D6 registration: configured 21 makes a 19-year-old require consent authority
+  ---
+  duration_ms: 1.283125
+  type: 'test'
+  ...
+# Subtest: D7 registration: absent or invalid majority setting refuses before any write
+ok 35 - D7 registration: absent or invalid majority setting refuses before any write
+  ---
+  duration_ms: 1.973167
+  type: 'test'
+  ...
+# Subtest: D1 new guarantor requires DOB before any registration write
+ok 36 - D1 new guarantor requires DOB before any registration write
+  ---
+  duration_ms: 0.803208
+  type: 'test'
+  ...
+# Subtest: a partial payment produces a balance-forward statement exactly reconciled to its Invoice
+ok 37 - a partial payment produces a balance-forward statement exactly reconciled to its Invoice
+  ---
+  duration_ms: 1.171334
+  type: 'test'
+  ...
+# Subtest: a record-only tender Invoice is fully paid without a separate PaymentReconciliation
+ok 38 - a record-only tender Invoice is fully paid without a separate PaymentReconciliation
+  ---
+  duration_ms: 0.098917
+  type: 'test'
+  ...
+# Subtest: a record-only tender Invoice with an active linked allocation is rejected as ambiguous
+ok 39 - a record-only tender Invoice with an active linked allocation is rejected as ambiguous
+  ---
+  duration_ms: 0.214292
+  type: 'test'
+  ...
+# Subtest: an issued Invoice with a record-only tender is rejected because a partial deposit is not full settlement
+ok 40 - an issued Invoice with a record-only tender is rejected because a partial deposit is not full settlement
+  ---
+  duration_ms: 0.060375
+  type: 'test'
+  ...
+# Subtest: configured statement message originates in the Basic singleton and round-trips through persisted statement data
+ok 41 - configured statement message originates in the Basic singleton and round-trips through persisted statement data
+  ---
+  duration_ms: 2.580083
+  type: 'test'
+  ...
+# Subtest: operator statement generation invokes the domain workflow without request authentication
+ok 42 - operator statement generation invokes the domain workflow without request authentication
+  ---
+  duration_ms: 0.578292
+  type: 'test'
+  ...
+# Subtest: operator statement generation completes its run with the persisted Task id and version metadata
+ok 43 - operator statement generation completes its run with the persisted Task id and version metadata
+  ---
+  duration_ms: 0.49125
+  type: 'test'
+  ...
+# Subtest: an internally inconsistent Invoice is rejected instead of emitting a wrong balance
+ok 44 - an internally inconsistent Invoice is rejected instead of emitting a wrong balance
+  ---
+  duration_ms: 0.098208
+  type: 'test'
+  ...
+# Subtest: insurance detail passes through linked Claim diagnoses, ERA adjustments, provider identity, and patient payments
+ok 45 - insurance detail passes through linked Claim diagnoses, ERA adjustments, provider identity, and patient payments
+  ---
+  duration_ms: 0.753
+  type: 'test'
+  ...
+# Subtest: minor statements mail to the current Account guarantor
+ok 46 - minor statements mail to the current Account guarantor
+  ---
+  duration_ms: 0.6595
+  type: 'test'
+  ...
+# Subtest: minor statements reject an addressless Account guarantor instead of redirecting to the patient
+ok 47 - minor statements reject an addressless Account guarantor instead of redirecting to the patient
+  ---
+  duration_ms: 0.379875
+  type: 'test'
+  ...
+# Subtest: minor statements reject the patient as their own Account guarantor
+ok 48 - minor statements reject the patient as their own Account guarantor
+  ---
+  duration_ms: 0.249542
+  type: 'test'
+  ...
+# Subtest: statements reject a guarantor without a usable name
+ok 49 - statements reject a guarantor without a usable name
+  ---
+  duration_ms: 0.471209
+  type: 'test'
+  ...
+# Subtest: statements reject an unresolved Account guarantor even when another guarantor resolves
+ok 50 - statements reject an unresolved Account guarantor even when another guarantor resolves
+  ---
+  duration_ms: 0.293583
+  type: 'test'
+  ...
+# Subtest: statements reject an unsupported Account guarantor reference
+ok 51 - statements reject an unsupported Account guarantor reference
+  ---
+  duration_ms: 0.256417
+  type: 'test'
+  ...
+# Subtest: statements reject a RelatedPerson owned by another patient
+ok 52 - statements reject a RelatedPerson owned by another patient
+  ---
+  duration_ms: 0.291083
+  type: 'test'
+  ...
+# Subtest: self-responsible adult statements mail to the patient
+ok 53 - self-responsible adult statements mail to the patient
+  ---
+  duration_ms: 0.287459
+  type: 'test'
+  ...
+# Subtest: statements reject self-guarantee when the patient's age is indeterminate
+ok 54 - statements reject self-guarantee when the patient's age is indeterminate
+  ---
+  duration_ms: 0.233375
+  type: 'test'
+  ...
+# Subtest: exactly one primary RelatedPerson disambiguates multiple current guarantors
+ok 55 - exactly one primary RelatedPerson disambiguates multiple current guarantors
+  ---
+  duration_ms: 0.301
+  type: 'test'
+  ...
+# Subtest: multiple primary guarantors are rejected as ambiguous
+ok 56 - multiple primary guarantors are rejected as ambiguous
+  ---
+  duration_ms: 0.269292
+  type: 'test'
+  ...
+# Subtest: on-hold and expired guarantors are excluded from statement recipients
+ok 57 - on-hold and expired guarantors are excluded from statement recipients
+  ---
+  duration_ms: 0.303209
+  type: 'test'
+  ...
+# Subtest: a pre-seam Claim degrades to an invoice-only Order without changing the T0 balance
+ok 58 - a pre-seam Claim degrades to an invoice-only Order without changing the T0 balance
+  ---
+  duration_ms: 0.139084
+  type: 'test'
+  ...
+# Subtest: an unapplied patient credit is displayed separately and reduces only the account-level balance due
+ok 59 - an unapplied patient credit is displayed separately and reduces only the account-level balance due
+  ---
+  duration_ms: 0.307916
+  type: 'test'
+  ...
+# Subtest: credit above the open Invoice balance produces zero due and an honest credit balance
+ok 60 - credit above the open Invoice balance produces zero due and an honest credit balance
+  ---
+  duration_ms: 0.231458
+  type: 'test'
+  ...
+# Subtest: batch persists one atomic run, generates every open balance, skips zero balances, and records invalid rejects
+ok 61 - batch persists one atomic run, generates every open balance, skips zero balances, and records invalid rejects
+  ---
+  duration_ms: 0.486833
+  type: 'test'
+  ...
+# Subtest: statement list returns completed snapshots newest-first and never exposes failed reject Tasks
+ok 62 - statement list returns completed snapshots newest-first and never exposes failed reject Tasks
+  ---
+  duration_ms: 5.64375
+  type: 'test'
+  ...
+# Subtest: generate then list preserves an insurance-aware statement under server-assigned Task ids
+ok 63 - generate then list preserves an insurance-aware statement under server-assigned Task ids
+  ---
+  duration_ms: 0.886625
+  type: 'test'
+  ...
+# Subtest: a run larger than the child ceiling commits in chunks and publishes its completed marker last
+ok 64 - a run larger than the child ceiling commits in chunks and publishes its completed marker last
+  ---
+  duration_ms: 2.447667
+  type: 'test'
+  ...
+# Subtest: a failed child chunk leaves no completed run visible to either statement reader
+ok 65 - a failed child chunk leaves no completed run visible to either statement reader
+  ---
+  duration_ms: 1.722875
+  type: 'test'
+  ...
+# Subtest: a cleanup failure never masks the original child-chunk error
+ok 66 - a cleanup failure never masks the original child-chunk error
+  ---
+  duration_ms: 1.457625
+  type: 'test'
+  ...
+# Subtest: a failed completion marker cleans children only after confirming no completed run exists
+ok 67 - a failed completion marker cleans children only after confirming no completed run exists
+  ---
+  duration_ms: 0.275292
+  type: 'test'
+  ...
+# Subtest: generate-one distinguishes no issued Invoices from a paid-in-full balance
+ok 68 - generate-one distinguishes no issued Invoices from a paid-in-full balance
+  ---
+  duration_ms: 0.459542
+  type: 'test'
+  ...
+# Subtest: statement list skips one corrupt Task while returning a valid statement from a completed run
+ok 69 - statement list skips one corrupt Task while returning a valid statement from a completed run
+  ---
+  duration_ms: 0.145
+  type: 'test'
+  ...
+# Subtest: D6 statements: configured 21 refuses a 19-year-old self recipient
+ok 70 - D6 statements: configured 21 refuses a 19-year-old self recipient
+  ---
+  duration_ms: 0.172375
+  type: 'test'
+  ...
+# Subtest: D7 statements: absent majority raises StatementValidationError and writes no Tasks
+ok 71 - D7 statements: absent majority raises StatementValidationError and writes no Tasks
+  ---
+  duration_ms: 0.130667
+  type: 'test'
+  ...
+1..71
+# tests 71
+# suites 0
+# pass 71
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 445.626208

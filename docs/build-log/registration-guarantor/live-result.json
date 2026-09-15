@@ -3,7 +3,7 @@
     {
       "seed": {
         "mode": "apply",
-        "action": "unchanged",
+        "action": "seeded",
         "projectId": "62023a15-f13a-4f4e-b8d8-3da238ded8eb"
       }
     },
@@ -16,7 +16,7 @@
     {
       "statementGuardianAt21": true,
       "statement": {
-        "runReference": "Task/5b1be3d2-b645-4427-946e-1652c4722ad2",
+        "runReference": "Task/56588cf6-665b-461c-8714-46b5c591ad94",
         "generatedAt": "2026-09-15T12:00:00.000Z",
         "generatedCount": 1,
         "invalidRejects": 0,
@@ -24,12 +24,12 @@
         "statements": [
           {
             "generatedAt": "2026-09-15T12:00:00.000Z",
-            "patientReference": "Patient/16074a33-3af4-45a2-8f2c-e2894614de76",
+            "patientReference": "Patient/e9e30e44-43a2-4749-8fbf-2455be48b36c",
             "patientName": "Synthetic Majority Nineteen",
             "paymentReconciliationReferences": [],
             "invoices": [
               {
-                "invoiceReference": "Invoice/c2375290-5593-4055-8027-d59c16f3a516",
+                "invoiceReference": "Invoice/666a4fb3-04bb-4b17-9cdf-fa240bcd6164",
                 "date": "2026-09-15T12:00:00.000Z",
                 "grossCents": 1000,
                 "netCents": 1000,
@@ -58,16 +58,16 @@
               },
               "orders": [
                 {
-                  "invoiceReference": "Invoice/c2375290-5593-4055-8027-d59c16f3a516",
-                  "orderNumber": "c2375290-5593-4055-8027-d59c16f3a516",
+                  "invoiceReference": "Invoice/666a4fb3-04bb-4b17-9cdf-fa240bcd6164",
+                  "orderNumber": "666a4fb3-04bb-4b17-9cdf-fa240bcd6164",
                   "mode": "invoice-only",
                   "lines": [],
                   "patientPayments": []
                 }
               ]
             },
-            "statementReference": "Task/ae88a75f-d81d-403e-a245-d7389d49e85c",
-            "runReference": "Task/5b1be3d2-b645-4427-946e-1652c4722ad2"
+            "statementReference": "Task/720fb0c3-72ec-4941-b9b4-3c31686c17b2",
+            "runReference": "Task/56588cf6-665b-461c-8714-46b5c591ad94"
           }
         ],
         "rejects": []

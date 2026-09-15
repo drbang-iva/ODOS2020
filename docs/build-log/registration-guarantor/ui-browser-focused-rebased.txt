@@ -1,0 +1,47 @@
+TAP version 13
+# Subtest: education review uses the real route, proxy, client, and server capabilities
+    # Subtest: direct navigation and Sections link reach the page; reason and encounter review are required
+    ok 1 - direct navigation and Sections link reach the page; reason and encounter review are required
+      ---
+      duration_ms: 3050.924584
+      type: 'test'
+      ...
+    # Subtest: 409 stays visible and blocks repeat actions until a fresh list is loaded
+    ok 2 - 409 stays visible and blocks repeat actions until a fresh list is loaded
+      ---
+      duration_ms: 260.760042
+      type: 'test'
+      ...
+    # Subtest: staff can read work without clinician controls even if capabilities are returned
+    ok 3 - staff can read work without clinician controls even if capabilities are returned
+      ---
+      duration_ms: 72.089625
+      type: 'test'
+      ...
+    # Subtest: missing capabilities and settled work cannot expose clinician actions
+    ok 4 - missing capabilities and settled work cannot expose clinician actions
+      ---
+      duration_ms: 199.9685
+      type: 'test'
+      ...
+    # Subtest: unavailable capabilities stay read-only and print work is a handout task
+    ok 5 - unavailable capabilities stay read-only and print work is a handout task
+      ---
+      duration_ms: 106.106917
+      type: 'test'
+      ...
+    1..5
+ok 1 - education review uses the real route, proxy, client, and server capabilities
+  ---
+  duration_ms: 4305.42925
+  type: 'test'
+  ...
+1..1
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4827.936125

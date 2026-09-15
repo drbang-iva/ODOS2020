@@ -1,10 +1,10 @@
 # Registration guarantor DOB and practice age of majority
 
-Status: locally implemented and verified; NOT EVALUATED. PR publication is pending operator coordination with overlapping PR #606. CI and bot review have not run for this branch. No merge or Iris write.
+Status: locally implemented and reverified; NOT EVALUATED. Published as PR #607. Rebased onto merged sibling #606, preserving its RelatedPerson claim fence and K4 editor guard. Final remote CI and bot gates are pending. No merge or Iris write.
 
 Branch: `drbang-iva/registration-guarantor-dob-age-majority`.
-Base verified by task-worktree fetch: `6d41a717060fe7d01a185496279ee67f47e82fa5` (no anchor drift).
-Implementation and integrated evidence commit: `72faa970` (subsequent bundle/fixture documentation commit only).
+Initial base: `6d41a717060fe7d01a185496279ee67f47e82fa5`. Refreshed base: `40c19a9e442015e1d32396958b661394318713d2` (#606 merged). Only rebase conflict was appended editor tests; both K4 and D4 retained. The claim writeConstraint remains intact.
+Rebased source tested: `befd48ef2888acf796ad82be7091b09f2b9a17b7`. Final production change: `5f244a9c` corrects the seed client type to declare existing baseUrl/searchUrl pagination requirements; no runtime change. Evidence commits follow. Final publication SHA is recorded in PR #607 and the delivery message.
 
 ## Summary and files
 
@@ -65,4 +65,14 @@ All three fixture containers were stopped, not removed; `fixture-stopped.txt` re
 
 Only the approved South Carolina value 18 is seeded. Both primary sources were accessed 2026-09-15 and agree: [S.C. Code §15-1-320(a)](https://www.scstatehouse.gov/code/t15c001.php) and [S.C. Constitution art. XVII §14](https://www.scstatehouse.gov/scconstitution/A17.pdf). Ledger: `data/code-bindings/age-of-majority-ledger.md`. No new medical code values. No new design decision or PerformanceOD INDEX change; implementation follows the existing kickoff.
 
-Remaining gates: operator coordination for PR #606 (overlap in roles.ts and guarantorEditor.test.tsx); open requested PR; final-head CI including blocking live authorization; final-head CodeRabbit commit status and PR-Agent check-run; zero unresolved threads; separate Claude Opus evaluation. Do not post an Evaluated-by marker from this author session. Retain NOT EVALUATED in PR body.
+Remaining gates: coordinating task publishes the verified rebased head to PR #607 and reports final-head CI including live authorization, CodeRabbit commit status, PR-Agent check-run, and zero unresolved threads; separate Claude Opus evaluation. Do not post an Evaluated-by marker from this author session. Retain NOT EVALUATED in PR body.
+
+## Rebase verification
+
+All mutations ran in isolated worktrees, separate from full regressions. D1–D5 each green 1 / red 1 failure / restored 1, with restored editor 11/11 including both K4 and D4 (`../registration-guarantor-dob/rebased/`). D6/D7 server combined suite 71/71 green and restored; four individual mutants each fail (`*-rebased-red.txt`). UI D6, D7 fallback, and duplicate-singleton mutants each fail; restored guards 8/8 (`../registration-majority-ui/rebase/`). D8/D9 each red 1 failure, 16/16 green/restored (`../registration-majority/rebase/`). Local live authz repeated: 4/4, zero skipped; scoped Provider denial and Staff/Admin grants proved alongside the merged policy rules.
+
+Live walkthrough repeated successfully with current policies (`live-rebased.txt`, refreshed request trace/final resources/screenshots). MCP rebase regression: 5,077 tests, 5,025 passed, 52 skipped, zero failures. Script typecheck initially found the seed client declaration missing baseUrl/searchUrl; corrected typecheck and seed/config suite4/4 pass. The first full UI run encountered educationSequenceReview browser timeouts; that unchanged file passes6/6 in isolation. Full restored UI rerun: **1,567 passed, 0 failed, 0 skipped**, exit0, `ui-rebased-restored.txt.gz` (187645.420042ms). No production or test change was needed for the browser timeout. The first run’s exact output is retained in `ui-rebased.txt.gz` (1,561 passed, 6 failed).
+
+Rebased fixture shutdown verified all three containers exited; containers and volumes were not removed (`fixture-stopped-rebased.txt`).
+
+Latest accepted local regression: MCP **5,025 passed / 52 skipped / 0 failed**; UI **1,567 passed / 0 skipped / 0 failed**. Builds and preflight pass. Earlier counts above describe the pre-rebase proof and are preserved for provenance.
