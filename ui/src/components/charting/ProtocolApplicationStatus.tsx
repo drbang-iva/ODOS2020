@@ -38,7 +38,7 @@ export function ProtocolApplicationStatus({
         <div key={a.id}>
           <span>Applied{showProtocolIds ? `: ${a.protocolId}` : ""}</span>{" "}
           <button
-            className="m-1 rounded border border-slate-400 px-3 py-1 disabled:opacity-50"
+            className="m-1 min-h-11 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface)] px-3 py-1 focus-visible:outline focus-visible:outline-2 disabled:opacity-50"
             type="button"
             disabled={busy}
             onClick={() => onUndo(a.id)}
@@ -64,7 +64,7 @@ export function ProtocolApplicationStatus({
         return (
           <div key={a.id}>
             <button
-              className="m-1 rounded border border-slate-400 px-3 py-1 disabled:opacity-50"
+              className="m-1 min-h-11 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface)] px-3 py-1 focus-visible:outline focus-visible:outline-2 disabled:opacity-50"
               type="button"
               disabled={busy}
               onClick={() => onUndo(a.id)}
@@ -133,7 +133,7 @@ export function FollowUpConfirmation({
         — confirm or change
       </p>
       <button
-        className="m-1 rounded border border-slate-400 px-3 py-1 disabled:opacity-50"
+        className="m-1 min-h-11 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface)] px-3 py-1 focus-visible:outline focus-visible:outline-2 disabled:opacity-50"
         type="button"
         disabled={busy || readOnly}
         onClick={() => save({})}
@@ -141,7 +141,7 @@ export function FollowUpConfirmation({
         Confirm follow-up
       </button>
       <input
-        className="m-1 w-20 rounded border border-slate-400 px-2 py-1"
+        className="m-1 min-h-11 w-20 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface)] px-2 py-1"
         aria-label="Follow-up interval"
         disabled={readOnly}
         type="number"
@@ -151,7 +151,7 @@ export function FollowUpConfirmation({
       />
       <select
         disabled={readOnly}
-        className="m-1 rounded border border-slate-400 px-2 py-1"
+        className="m-1 min-h-11 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface)] px-2 py-1"
         aria-label="Follow-up unit"
         value={unit}
         onChange={(e) => setUnit(e.target.value)}
@@ -161,7 +161,7 @@ export function FollowUpConfirmation({
         ))}
       </select>
       <button
-        className="m-1 rounded border border-slate-400 px-3 py-1 disabled:opacity-50"
+        className="m-1 min-h-11 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface)] px-3 py-1 focus-visible:outline focus-visible:outline-2 disabled:opacity-50"
         type="button"
         disabled={
           busy ||
