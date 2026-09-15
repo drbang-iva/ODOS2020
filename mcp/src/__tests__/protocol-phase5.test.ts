@@ -27,7 +27,13 @@ import {
   materializeProtocolFollowUp,
   protocolFindingObservation,
 } from "../clinical-graph/protocol-endpoint.js";
-import { buildProtocolBasic, PROTOCOL_BASIC_CODES, ProtocolBasicStore, type ProtocolFhirClient } from "../clinical-graph/protocol-store.js";
+import {
+  buildProtocolBasic,
+  protocolItemClaimIdentifier,
+  PROTOCOL_BASIC_CODES,
+  ProtocolBasicStore,
+  type ProtocolFhirClient,
+} from "../clinical-graph/protocol-store.js";
 import { committedFindingEvidence, ProtocolService } from "../clinical-graph/protocol-service.js";
 import type {
   ChargeProposal,
@@ -105,6 +111,12 @@ function harness() {
   const projectionControl: { failOnceOnActionType?: PlanActionInstance["actionType"]; failed: boolean } = {
     failed: false,
   };
+  const actionGate: {
+    actionType?: PlanActionInstance["actionType"];
+    entered?: () => void;
+    release?: Promise<void>;
+  } = {};
+  let currentTime = "2026-07-18T12:00:00.000Z";
   let id = 1;
   const service = new ProtocolService(fhir, {
     async commitFinding(finding) {
@@ -112,6 +124,10 @@ function harness() {
       return `Observation/${finding.id}`;
     },
     async materializeAction(action) {
+      if (action.actionType === actionGate.actionType) {
+        actionGate.entered?.();
+        await actionGate.release;
+      }
       if (!projectionControl.failed && action.actionType === projectionControl.failOnceOnActionType) {
         projectionControl.failed = true;
         throw new Error(`Simulated ${action.actionType} projection failure.`);
@@ -119,8 +135,16 @@ function harness() {
       materialized.push(action.id);
       return action.actionType === "order" ? `ServiceRequest/${action.id}` : `CarePlan/${action.id}`;
     },
-  }, () => "2026-07-18T12:00:00.000Z", () => `id-${id++}`);
-  return { fhir, service, projectedFindings, materialized, projectionControl };
+  }, () => currentTime, () => `id-${id++}`);
+  return {
+    fhir,
+    service,
+    projectedFindings,
+    materialized,
+    projectionControl,
+    actionGate,
+    setCurrentTime(value: string) { currentTime = value; },
+  };
 }
 
 function protocolCatalogs() {
@@ -475,7 +499,7 @@ test("item add carries an order's referenced charge and unapply removes both", a
   ).length, 1);
 });
 
-test("item add retries the same application after a charge write failure", async () => {
+test("item add cleans a failed charge write before retrying a fresh application", async () => {
   const { fhir, service } = harness();
   await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
   const input = {
@@ -490,18 +514,17 @@ test("item add retries the same application after a charge write failure", async
     service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input),
     /Simulated one-time charge write failure/,
   );
-  const pending = (await service.applications.list())[0];
-  assert.equal(pending?.confirmed, false);
-  assert.equal((await service.actions.list()).length, 1);
-  assert.equal((await service.charges.list()).length, 0);
+  assert.equal((await service.applications.list()).filter((row) => row.undoState === "active").length, 0);
+  assert.equal((await service.actions.list()).filter((row) => row.state !== "removed").length, 0);
+  assert.equal((await service.charges.list()).filter((row) => row.state !== "removed").length, 0);
 
   const retried = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
 
-  assert.equal(retried.application.id, pending?.id);
   assert.equal(retried.application.confirmed, true);
-  assert.equal((await service.applications.list()).length, 1);
-  assert.equal((await service.actions.list()).length, 1);
-  assert.equal((await service.charges.list()).length, 1);
+  assert.equal((await service.applications.list()).filter((row) => row.undoState === "active").length, 1);
+  assert.equal((await service.actions.list()).filter((row) => row.state !== "removed").length, 1);
+  assert.equal((await service.charges.list()).filter((row) => row.state !== "removed").length, 1);
+  console.log("R7_AFTER", JSON.stringify({ liveOrders: 1, liveCharges: 1 }));
 });
 
 test("item add commits a second item from the same protocol without applying other defaults", async () => {
@@ -718,6 +741,84 @@ test("concurrent taps converge on one item application", async () => {
   assert.deepEqual({ liveOrders, liveCharges }, { liveOrders: 1, liveCharges: 1 });
   assert.equal(new Set(results.map((result) => result.application.id)).size, 1);
   assert.deepEqual(results.map((result) => result.alreadyApplied).sort(), [false, true]);
+});
+
+test("a staggered second tap never resumes the first request's in-flight application", async () => {
+  const { service, actionGate } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-staggered-concurrent",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  let releaseAction!: () => void;
+  let actionEntered!: () => void;
+  const entered = new Promise<void>((resolve) => { actionEntered = resolve; });
+  actionGate.actionType = "order";
+  actionGate.entered = actionEntered;
+  actionGate.release = new Promise<void>((resolve) => { releaseAction = resolve; });
+
+  const first = service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  await entered;
+  const second = service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  releaseAction();
+  const results = await Promise.all([first, second]);
+  const liveOrders = (await service.actions.list()).filter((row) =>
+    row.actionType === "order" && !["removed", "cancelled"].includes(row.state)
+  ).length;
+  const liveCharges = (await service.charges.list()).filter((row) => row.state !== "removed").length;
+
+  console.log("R6_AFTER", JSON.stringify({
+    liveOrders,
+    liveCharges,
+    alreadyApplied: results.map((result) => result.alreadyApplied).sort(),
+  }));
+  assert.equal(liveOrders, 1);
+  assert.equal(liveCharges, 1);
+  assert.equal(new Set(results.map((result) => result.application.id)).size, 1);
+  assert.deepEqual(results.map((result) => result.alreadyApplied).sort(), [false, true]);
+});
+
+test("an abandoned item claim is replaced after its lease expires", async () => {
+  const { service, setCurrentTime } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-abandoned-claim",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  const abandoned: ProtocolApplication = {
+    id: "abandoned-item-application",
+    encounterId: input.encounterId,
+    patientId: input.patientId,
+    protocolId: GLAUCOMA_SUSPECT_PROTOCOL.id,
+    protocolVersion: GLAUCOMA_SUSPECT_PROTOCOL.version,
+    appliedBy: input.actor,
+    appliedAt: "2026-07-18T11:59:00.000Z",
+    stackedWith: [],
+    dispositions: [
+      { itemKey: "order-gonioscopy", outcome: "applied-default" },
+      { itemKey: "charge-gonioscopy", outcome: "applied-default" },
+    ],
+    dedupResolutions: [],
+    undoState: "active",
+    confirmed: false,
+  };
+  await service.applications.createConditional(
+    abandoned,
+    protocolItemClaimIdentifier(input.encounterId, GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy"),
+  );
+  setCurrentTime("2026-07-18T12:00:00.000Z");
+
+  const added = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+
+  assert.notEqual(added.application.id, abandoned.id);
+  assert.equal((await service.applications.get(abandoned.id))?.undoState, "unapplied");
+  assert.equal((await service.actions.list()).filter((row) => row.state !== "removed").length, 1);
+  assert.equal((await service.charges.list()).filter((row) => row.state !== "removed").length, 1);
 });
 
 test("manual mergeKey collision resumes existing action and unapply preserves clinician changes", async () => {
@@ -1828,6 +1929,69 @@ test("item-add endpoint rejects a charge seed before allowing its owning order",
   assert.equal(added.status, 200);
   assert.equal((await service.actions.list()).filter((row) => row.actionType === "order").length, 1);
   assert.equal((await service.charges.list()).filter((row) => row.state !== "removed").length, 1);
+});
+
+test("item-add endpoint respects an owning application's opted-out charge", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition),
+    confirmedCondition(),
+  );
+  const applied = await handleProtocolApplyRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    body: {
+      ...applyBody("H40.021"),
+      selections: [{ itemKey: "charge-gonioscopy", selected: false }],
+    },
+  });
+  assert.equal(applied.status, 200);
+
+  const added = await handleProtocolItemAddRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    body: { ...applyBody("H40.021"), itemKey: "order-gonioscopy" },
+  });
+  const service = endpointProtocolService(fhir);
+  const liveOrders = (await service.actions.list()).filter((row) =>
+    row.sourceItemKey === "order-gonioscopy" && !["removed", "cancelled"].includes(row.state)
+  ).length;
+  const liveCharges = (await service.charges.list()).filter((row) =>
+    row.planActionRef === "charge-gonioscopy" && row.state !== "removed"
+  ).length;
+
+  console.log("R5_OPTOUT_AFTER", JSON.stringify({ status: added.status, liveOrders, liveCharges }));
+  assert.equal(added.status, 200);
+  assert.equal((added.body as { alreadyApplied: boolean }).alreadyApplied, true);
+  assert.deepEqual({ liveOrders, liveCharges }, { liveOrders: 1, liveCharges: 0 });
+});
+
+test("item-add endpoint returns 409 when an owning application's required charge is missing", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition),
+    confirmedCondition(),
+  );
+  const applied = await handleProtocolApplyRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    body: applyBody("H40.021"),
+  });
+  assert.equal(applied.status, 200);
+  const service = endpointProtocolService(fhir);
+  const charge = (await service.charges.list()).find((row) => row.planActionRef === "charge-gonioscopy");
+  assert.ok(charge);
+  await service.charges.save({ ...charge, state: "removed" });
+  const liveActionsBefore = (await service.actions.list()).filter((row) => row.state !== "removed").length;
+  const liveChargesBefore = (await service.charges.list()).filter((row) => row.state !== "removed").length;
+
+  const added = await handleProtocolItemAddRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    body: { ...applyBody("H40.021"), itemKey: "order-gonioscopy" },
+  });
+
+  console.log("R5_MISSING_AFTER", JSON.stringify({ status: added.status }));
+  assert.equal(added.status, 409);
+  assert.match(String((added.body as { error: string }).error), /required charge.*missing/i);
+  assert.equal((await service.actions.list()).filter((row) => row.state !== "removed").length, liveActionsBefore);
+  assert.equal((await service.charges.list()).filter((row) => row.state !== "removed").length, liveChargesBefore);
 });
 
 test("follow-up materialization stores the six-month due date and verbatim reason on a coded ServiceRequest", async () => {

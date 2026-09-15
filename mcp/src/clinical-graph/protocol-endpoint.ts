@@ -25,6 +25,7 @@ import {
   isTappableProtocolItem,
   matchesCode,
   ProtocolActionMaterializationRefusal,
+  ProtocolItemAddConflictError,
   ProtocolPublishValidationError,
   ProtocolService,
   rankProtocolOffers,
@@ -432,12 +433,20 @@ export async function handleProtocolItemAddRequest(
   const seriesResolution = await resolveSeriesProtocols(deps, [item]);
   if ("response" in seriesResolution) return seriesResolution.response;
   const itemService = liveService(staff, deps.now, seriesResolution.protocols);
-  const added = await itemService.addItem(parsed.data.protocolId, parsed.data.itemKey, {
-    encounterId: parsed.data.encounterId,
-    patientId: parsed.data.patientId,
-    diagnosis: parsed.data.diagnosis,
-    actor: staff.staffReference,
-  });
+  let added;
+  try {
+    added = await itemService.addItem(parsed.data.protocolId, parsed.data.itemKey, {
+      encounterId: parsed.data.encounterId,
+      patientId: parsed.data.patientId,
+      diagnosis: parsed.data.diagnosis,
+      actor: staff.staffReference,
+    });
+  } catch (error) {
+    if (error instanceof ProtocolItemAddConflictError) {
+      return { status: 409, body: { error: error.message } };
+    }
+    throw error;
+  }
   return {
     status: 200,
     body: {
