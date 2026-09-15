@@ -3,6 +3,10 @@ import subprocess, json, hashlib, sys, tempfile
 root=Path(__file__).resolve().parents[2]; service=root/'mcp/src/clinical-graph/protocol-service.ts'; endpoint=root/'mcp/src/clinical-graph/protocol-endpoint.ts'
 originals={service:service.read_text(),endpoint:endpoint.read_text()}; evidence=Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(tempfile.mkdtemp(prefix='protocol-sharing-')); evidence.mkdir(parents=True, exist_ok=True)
 cases=[
+ ('overwrite-clinician-follow-up',service,'const sooner = !clinicianOwned && protocolFollowUpDue','const sooner = protocolFollowUpDue','follow-up fixback clinician'),
+ ('retain-undone-recommendation',service,'.filter((entry) => entry.applicationId !== application.id)', '.filter(() => true)', 'follow-up fixback undo'),
+ ('reverse-dependent-order',service,'a.appliedAt.localeCompare(b.appliedAt)', 'b.appliedAt.localeCompare(a.appliedAt)', 'shared guard chronological'),
+ ('skip-under-lock-whole-check',service,'if ((await this.applications.list()).some((row) => row.id !== application.id', 'if (false && (await this.applications.list()).some((row) => row.id !== application.id', 'shared guard concurrent whole'),
  ('skip-item-dependency',service,'if (liveState.outcome === "already-applied") {','if (liveState.outcome === "already-applied") { return { application: liveState.application, alreadyApplied: true };','sibling charge|preserves shared records'),
  ('skip-action-liveness',service,'if (resolution.reason === "action-exists" && !actions.some','if (false && resolution.reason === "action-exists" && !actions.some','shared ownership J action: dead'),
  ('application-charge-dedupe',service,'row.encounterId === application.encounterId &&\n      row.procedureConceptKey === String(payload.procedureConceptKey)', 'row.protocolApplicationId === application.id &&\n      row.procedureConceptKey === String(payload.procedureConceptKey)', 'shared ownership (A:|D:)'),

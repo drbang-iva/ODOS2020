@@ -82,7 +82,10 @@ export interface FollowUpAction {
     unit?: string;
     needsConfirmation?: boolean;
     alternatives?: Array<{
-      protocolId: string;
+      protocolId?: string;
+      applicationId?: string;
+      source?: "clinician";
+      actor?: string;
       interval: number;
       unit: string;
       reason?: string;
@@ -130,7 +133,7 @@ export function FollowUpConfirmation({
         {action.payload.alternatives
           ?.map(
             (a) =>
-              `${a.interval} ${a.unit} (${protocolTitles[a.protocolId] ?? a.protocolId})${a.reason ? ` — ${a.reason}` : ""}`,
+              `${a.interval} ${a.unit} (${a.source === "clinician" ? "your change" : protocolTitles[a.protocolId ?? ""] ?? a.protocolId})${a.reason ? ` — ${a.reason}` : ""}`,
           )
           .join(" · ")}{" "}
         — confirm or change

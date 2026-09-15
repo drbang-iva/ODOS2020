@@ -452,3 +452,15 @@ test("followup fields stay fixed while saving", async () => {
   });
   tree.unmount();
 });
+
+test("followup clinician recommendation is labelled your change", () => {
+  const tree = create(<FollowUpConfirmation action={{ id: "doctor", payload: {
+    interval: 12, unit: "months", needsConfirmation: true,
+    alternatives: [
+      { source: "clinician", interval: 12, unit: "months", reason: "Doctor review", actor: "Practitioner/test" },
+      { protocolId: "poag", applicationId: "poag-application", interval: 3, unit: "months" },
+    ],
+  } }} protocolTitles={{ poag: "POAG plan" }} onSave={async () => {}} />);
+  assert.match(JSON.stringify(tree.toJSON()), /12 months \(your change\)/);
+  assert.match(JSON.stringify(tree.toJSON()), /3 months \(POAG plan\)/);
+});

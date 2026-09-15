@@ -3678,3 +3678,157 @@ for (const kind of ["action", "finding"] as const) {
     assert.equal((await service.applications.get(application.id))?.undoState, "active");
   });
 }
+
+async function followUpFixbackFixture() {
+  const fhir = new EndpointFhir();
+  let id = 0;
+  const service = new ProtocolService(fhir, {
+    async commitFinding() { return undefined; },
+    async materializeAction(action) { return materializeProtocolFollowUp(fhir, action); },
+  }, () => "2026-07-18T12:00:00.000Z", () => `follow-fix-${++id}`);
+  const input = { encounterId: "enc-1", patientId: "patient-1", diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true }, actor: "Practitioner/test" };
+  const apply = async (protocolId: string, interval: number, reason: string, item = false) => {
+    const definition = structuredClone(GLAUCOMA_SUSPECT_PROTOCOL);
+    definition.id = protocolId;
+    definition.items = definition.items.filter((row) => row.itemType === "follow-up");
+    definition.items[0].payload = { ...definition.items[0].payload, interval, reason };
+    await service.definitions.save(definition);
+    if (item) {
+      await service.addItem(protocolId, definition.items[0].itemKey, input);
+      return (await service.applications.list()).find((row) => row.protocolId === protocolId)!;
+    }
+    const opened = await service.open(protocolId, input);
+    await service.commit(opened.application.id, [], [input.diagnosis.reference]);
+    return (await service.applications.get(opened.application.id))!;
+  };
+  const action = async () => (await service.actions.list()).find((row) => row.actionType === "follow-up" && row.state !== "removed")!;
+  return { fhir, service, input, apply, action };
+}
+
+for (const ownership of ["edit", "state", "provenance"] as const) {
+  test(`follow-up fixback clinician ${ownership}: plan recommendation preserves doctor's choice`, async () => {
+    const h = await followUpFixbackFixture();
+    await h.apply("suspect", 6, "Suspect monitoring");
+    let doctor = await h.service.confirmFollowUp(h.input.encounterId, (await h.action()).id, h.input.actor, { interval: 12, unit: "months", reason: "Doctor review" });
+    if (ownership === "state") doctor = await h.service.actions.save({ ...doctor, provenance: { ...doctor.provenance, source: "protocol-default" } });
+    if (ownership === "provenance") doctor = await h.service.actions.save({ ...doctor, state: "selected", modifiedFields: [] });
+    const poag = await h.apply("poag", 3, "POAG monitoring");
+    const current = await h.action();
+    assert.deepEqual({ ...current, payload: doctor.payload, linkedDx: doctor.linkedDx }, doctor);
+    assert.equal(current.payload.interval, 12);
+    assert.equal(current.payload.unit, doctor.payload.unit);
+    assert.equal(current.payload.reason, doctor.payload.reason);
+    assert.equal(current.payload.needsConfirmation, true);
+    assert.deepEqual(current.payload.alternatives, [
+      { source: "clinician", interval: 12, unit: "months", reason: "Doctor review", actor: h.input.actor },
+      { applicationId: poag.id, protocolId: "poag", interval: 3, unit: "months", reason: "POAG monitoring" },
+    ]);
+  });
+}
+
+for (const owner of [false, true]) {
+  for (const item of [false, true]) {
+    test(`follow-up fixback undo ${owner ? "owner" : "dependent"} ${item ? "item" : "whole"}: removes recommendation and rematerializes`, async () => {
+      const h = await followUpFixbackFixture();
+      const suspect = await h.apply("suspect", 6, "Suspect monitoring", item && owner);
+      const poag = await h.apply("poag", 3, "POAG monitoring", item && !owner);
+      const before = await h.action();
+      assert.deepEqual((before.payload.alternatives as Array<{ applicationId: string }>).map((row) => row.applicationId), [suspect.id, poag.id]);
+      await h.service.unapply(owner ? suspect.id : poag.id);
+      const current = await h.action();
+      assert.equal(current.id, before.id);
+      assert.equal(current.protocolApplicationId, owner ? poag.id : suspect.id);
+      assert.equal(current.payload.interval, owner ? 3 : 6);
+      assert.equal(current.payload.reason, owner ? "POAG monitoring" : "Suspect monitoring");
+      assert.equal(current.payload.needsConfirmation, false);
+      assert.equal(current.payload.alternatives, undefined);
+      const request = h.fhir.resources.find((row) => `${row.resourceType}/${row.id}` === current.materializedFhirRef) as ServiceRequest;
+      assert.equal(request.occurrenceDateTime, owner ? "2026-10-18" : "2027-01-18");
+      assert.equal(current.materializedFhirRef, before.materializedFhirRef);
+    });
+  }
+}
+
+test("follow-up fixback undo soonest of three retains two recommendations", async () => {
+  const h = await followUpFixbackFixture();
+  const suspect = await h.apply("suspect", 6, "Suspect monitoring");
+  const poag = await h.apply("poag", 3, "POAG monitoring");
+  const third = await h.apply("third", 1, "Earlier review");
+  await h.service.unapply(third.id);
+  const current = await h.action();
+  assert.equal(current.payload.interval, 3);
+  assert.equal(current.payload.reason, "POAG monitoring");
+  assert.equal(current.payload.needsConfirmation, true);
+  assert.deepEqual((current.payload.alternatives as Array<{ applicationId: string }>).map((row) => row.applicationId), [suspect.id, poag.id]);
+});
+
+test("follow-up fixback undo last recommendation clears doctor flag", async () => {
+  const h = await followUpFixbackFixture();
+  await h.apply("suspect", 6, "Suspect monitoring");
+  const doctor = await h.service.confirmFollowUp(h.input.encounterId, (await h.action()).id, h.input.actor, { interval: 12, unit: "months" });
+  const poag = await h.apply("poag", 3, "POAG monitoring");
+  await h.service.unapply(poag.id);
+  const current = await h.action();
+  assert.equal(current.payload.alternatives, undefined);
+  assert.deepEqual(current, doctor);
+});
+
+test("follow-up fixback failed undo restores action and ServiceRequest after follow-up write", async () => {
+  const h = await followUpFixbackFixture();
+  const suspect = await h.apply("suspect", 6, "Suspect monitoring");
+  const poag = await h.apply("poag", 3, "POAG monitoring");
+  const original = await h.action();
+  const requests = structuredClone(h.fhir.resources.filter((row) => row.resourceType === "ServiceRequest"));
+  const save = h.service.actions.save.bind(h.service.actions);
+  let failed = false;
+  h.service.actions.save = async (row) => {
+    const result = await save(row);
+    if (!failed && row.payload.needsConfirmation === false) {
+      failed = true;
+      assert.equal(row.payload.interval, 6);
+      assert.equal((h.fhir.resources.find((entry) => `${entry.resourceType}/${entry.id}` === row.materializedFhirRef) as ServiceRequest).occurrenceDateTime, "2027-01-18");
+      throw new Error("after follow-up write");
+    }
+    return result;
+  };
+  await assert.rejects(h.service.unapply(poag.id), /after follow-up write/);
+  assert.equal(failed, true);
+  assert.deepEqual(await h.action(), original);
+  assert.deepEqual(h.fhir.resources.filter((row) => row.resourceType === "ServiceRequest"), requests);
+  assert.equal((await h.service.applications.get(suspect.id))?.undoState, "active");
+  assert.equal((await h.service.applications.get(poag.id))?.undoState, "active");
+});
+
+test("shared guard chronological dependents: earliest then next own unchanged gonioscopy records", async () => {
+  const h = await sharedOwnershipFixture();
+  h.setCurrentTime("2026-07-18T13:00:00.000Z");
+  const earlier = await h.applySecond();
+  h.setCurrentTime("2026-07-18T14:00:00.000Z");
+  const third = { ...structuredClone(h.second), id: "third-dependent" };
+  await h.service.definitions.save(third);
+  const opened = await h.service.open(third.id, h.input);
+  await h.service.commit(opened.application.id, [], [h.input.diagnosis.reference]);
+  const order = (await h.service.actions.list()).find((row) => row.payload.orderableKey === "gonioscopy")!;
+  const charge = (await h.service.charges.list()).find((row) => row.procedureConceptKey === "gonioscopy")!;
+  for (const [undo, next] of [[h.first.id, earlier.id], [earlier.id, opened.application.id]]) {
+    await h.service.unapply(undo);
+    assert.deepEqual(await h.service.actions.get(order.id), { ...order, linkedDx: ["Condition/c1", "Condition/c2"], protocolApplicationId: next });
+    assert.deepEqual(await h.service.charges.get(charge.id), { ...charge, protocolApplicationId: next });
+  }
+});
+
+test("shared guard concurrent whole commits: only one confirms with one live order", async () => {
+  const h = harness();
+  const definition = structuredClone(GLAUCOMA_SUSPECT_PROTOCOL);
+  definition.items = definition.items.filter((row) => row.itemKey === "order-gonioscopy" || row.itemKey === "charge-gonioscopy");
+  await h.service.definitions.save(definition);
+  const input = { encounterId: "enc-concurrent-whole", patientId: "patient-1", diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true }, actor: "Practitioner/test" };
+  const first = await h.service.open(definition.id, input);
+  const second = await h.service.open(definition.id, input);
+  assert.notEqual(first.application.id, second.application.id);
+  const results = await Promise.allSettled([first, second].map((row) => h.service.commit(row.application.id, [], [input.diagnosis.reference])));
+  assert.equal(results.filter((row) => row.status === "fulfilled").length, 1);
+  assert.equal(results.filter((row) => row.status === "rejected").length, 1);
+  assert.equal((await h.service.applications.list()).filter((row) => row.confirmed && row.undoState === "active").length, 1);
+  assert.equal((await h.service.actions.list()).filter((row) => row.state !== "removed").length, 1);
+});

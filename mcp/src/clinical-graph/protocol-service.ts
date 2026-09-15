@@ -21,6 +21,10 @@ import type {
   ProcedureChargeRule,
 } from "./protocol-types.js";
 
+function clinicianOwnedFollowUp(action: PlanActionInstance): boolean {
+  return action.state === "modified" || action.provenance.source === "clinician-entered";
+}
+
 export interface ProtocolProjection {
   commitFinding(finding: ProtocolFindingInstance): Promise<string | undefined>;
   materializeAction(action: PlanActionInstance): Promise<string | undefined>;
@@ -682,7 +686,12 @@ export class ProtocolService {
       );
     }
     if (application.undoState !== "active") return { removed: [], preserved: [] };
-    const actions = (await this.actions.list()).filter((row) => row.protocolApplicationId === application.id);
+    const encounterActions = (await this.actions.list()).filter((row) => row.encounterId === application.encounterId);
+    const actions = encounterActions.filter((row) => row.protocolApplicationId === application.id);
+    const followUps = encounterActions.filter((row) => row.actionType === "follow-up" && !["removed", "cancelled"].includes(row.state) &&
+      Array.isArray(row.payload.alternatives) && row.payload.alternatives.some((entry) => entry.applicationId === application.id));
+    const actionOriginals = new Map([...actions, ...followUps].map((row) => [row.id, row]));
+    const changedFollowUpProjections = new Set<string>();
     const candidates = (await this.applications.list()).filter((row) => row.id !== application.id && row.encounterId === application.encounterId && row.confirmed && row.undoState === "active")
       .sort((a, b) => a.appliedAt.localeCompare(b.appliedAt));
     const originals = new Map(candidates.map((row) => [row.id, structuredClone(row)]));
@@ -728,6 +737,31 @@ export class ProtocolService {
           removed.push(action.id);
         } else preserved.push(action.id);
       }
+      for (const original of followUps) {
+        const action = (await this.actions.get(original.id))!;
+        if (["removed", "cancelled"].includes(action.state)) continue;
+        const alternatives = (action.payload.alternatives as Array<Record<string, unknown>>).filter((entry) => entry.applicationId !== application.id);
+        const plans = alternatives.filter((entry) => entry.source !== "clinician");
+        const clinicianOwned = clinicianOwnedFollowUp(action);
+        const payload = { ...action.payload };
+        if (!clinicianOwned && plans.length) {
+          const soonest = [...plans].sort((a, b) => protocolFollowUpDue(a, action.provenance.at) - protocolFollowUpDue(b, action.provenance.at))[0];
+          Object.assign(payload, { interval: soonest.interval, unit: soonest.unit, reason: soonest.reason });
+        }
+        if (clinicianOwned ? plans.length === 0 : alternatives.length < 2) {
+          delete payload.alternatives;
+          payload.needsConfirmation = false;
+        } else {
+          payload.alternatives = alternatives;
+          payload.needsConfirmation = true;
+        }
+        const updated = { ...action, payload };
+        if (["interval", "unit", "reason"].some((key) => payload[key] !== action.payload[key])) {
+          changedFollowUpProjections.add(action.id);
+          updated.materializedFhirRef = await this.projection.materializeAction(updated);
+        }
+        await this.actions.save(updated);
+      }
       for (const finding of (await this.findings.list()).filter((row) => row.protocolApplicationId === applicationId)) {
         if (finding.state === "committed" && finding.provenance.source === "protocol-default") {
           if (finding.observationReference && this.projection.removeMaterialized) {
@@ -750,16 +784,17 @@ export class ProtocolService {
       }
       return { removed, preserved };
     } catch (error) {
-      for (const action of actions) {
+      for (const action of actionOriginals.values()) {
         const current = await this.actions.get(action.id);
         const projectionRemoved = Boolean(action.materializedFhirRef && removedProjections.has(action.materializedFhirRef));
-        if (!current || (!projectionRemoved && JSON.stringify(current) === JSON.stringify(action))) continue;
+        if (!current || (!projectionRemoved && !changedFollowUpProjections.has(action.id) && JSON.stringify(current) === JSON.stringify(action))) continue;
         const restored = { ...action };
         if (projectionRemoved) {
           const restore = removedProjections.get(action.materializedFhirRef!);
           if (restore) await restore();
           else restored.materializedFhirRef = await this.projection.materializeAction(action);
         }
+        if (changedFollowUpProjections.has(action.id)) restored.materializedFhirRef = await this.projection.materializeAction(action);
         await this.actions.saveWithIdentifiersIfCurrent(restored, [], (row) => JSON.stringify(row) === JSON.stringify(current));
       }
       for (const finding of originalFindings) {
@@ -829,11 +864,15 @@ export class ProtocolService {
       application.dedupResolutions.push({ itemKey: item.itemKey, reason: "action-exists", existingActionId: existing.id });
       const updated = { ...existing, linkedDx: [...new Set([...existing.linkedDx, ...linkedDx])] };
       if (item.itemType === "follow-up" && (payload.interval !== existing.payload.interval || payload.unit !== existing.payload.unit)) {
-        const original = { protocolId: existing.provenance.protocolId, interval: existing.payload.interval, unit: existing.payload.unit, reason: existing.payload.reason };
-        const alternative = { protocolId: application.protocolId, interval: payload.interval, unit: payload.unit, reason: payload.reason };
-        const alternatives = Array.isArray(existing.payload.alternatives) ? [...existing.payload.alternatives] : [original];
+        const clinicianOwned = clinicianOwnedFollowUp(existing);
+        const original = clinicianOwned
+          ? { source: "clinician", interval: existing.payload.interval, unit: existing.payload.unit, reason: existing.payload.reason, actor: existing.provenance.actor }
+          : { applicationId: existing.protocolApplicationId, protocolId: existing.provenance.protocolId, interval: existing.payload.interval, unit: existing.payload.unit, reason: existing.payload.reason };
+        const alternative = { applicationId: application.id, protocolId: application.protocolId, interval: payload.interval, unit: payload.unit, reason: payload.reason };
+        const prior = Array.isArray(existing.payload.alternatives) ? existing.payload.alternatives : [];
+        const alternatives = clinicianOwned ? [original, ...prior.filter((row) => row.source !== "clinician")] : prior.length ? [...prior] : [original];
         if (!alternatives.some((row) => JSON.stringify(row) === JSON.stringify(alternative))) alternatives.push(alternative);
-        const sooner = protocolFollowUpDue(payload, existing.provenance.at) < protocolFollowUpDue(existing.payload, existing.provenance.at);
+        const sooner = !clinicianOwned && protocolFollowUpDue(payload, existing.provenance.at) < protocolFollowUpDue(existing.payload, existing.provenance.at);
         updated.payload = { ...existing.payload, ...(sooner ? { interval: payload.interval, unit: payload.unit, reason: payload.reason } : {}), alternatives, needsConfirmation: true };
         writes?.sharedActions.set(existing.id, { before: existing, after: updated });
         updated.materializedFhirRef = await this.projection.materializeAction(updated);
