@@ -257,6 +257,18 @@ test("A11: registration with an existing party requires guarantor.link before an
   assert.deepEqual(fhir.events, []);
 });
 
+test("B3: one existing Person cannot be selected twice in the same registration", async () => {
+  const duplicatePartyRegistration = {
+    ...registrationBody,
+    responsibleParties: [existingParty, { ...existingParty, localId: "guardian-existing-duplicate", financialResponsible: false, primary: false }],
+  };
+  const { fhir, response, body } = await postRegistration({ registrationBody: duplicatePartyRegistration });
+  assert.equal(response.status, 400);
+  assert.equal(body.error, "An existing guarantor can be selected only once.");
+  assert.equal(fhir.reservationWrites, 0);
+  assert.equal(fhir.transaction, undefined);
+});
+
 for (const [label, mutate] of [
   ["foreign", (person: Person) => ({ ...person, meta: { ...person.meta, project: "other-practice" } })],
   ["inactive", (person: Person) => ({ ...person, active: false })],

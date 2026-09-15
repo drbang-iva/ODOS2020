@@ -220,6 +220,9 @@ async function loadExistingGuarantors(
   if (parties.length && !staffHasBusinessAction(staff, "guarantor.link")) {
     throw Object.assign(new Error("guarantor.link action required."), { status: 403 });
   }
+  if (new Set(parties.map(party => party.personId)).size !== parties.length) {
+    throw Object.assign(new Error("An existing guarantor can be selected only once."), { status: 400 });
+  }
   const persons = new Map<string, Person>();
   for (const party of parties) {
     const person = await fhir.readExtended<Person>("Person", party.personId);
