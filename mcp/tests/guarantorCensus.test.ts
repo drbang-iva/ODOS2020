@@ -173,3 +173,32 @@ test("insurance history follows an exact instance-level history next link", asyn
   assert.equal(result.summary.projects.find(row => row.project === "project-1")!.insuranceDamage.historyVersionsExamined, 101);
   assert.equal(transport.requests.some(request => request.target === `/fhir/R4/RelatedPerson/${current.id}/_history?_count=100&_offset=100`), true);
 });
+
+test("history ceiling counts entries without resources", async () => {
+  const built = await buildWriterDerivedCensusFixture();
+  const transport = new CensusFixtureFhir(built);
+  transport.history = (async () => ({
+    resourceType: "Bundle",
+    type: "history",
+    entry: Array.from({ length: 50_001 }, () => ({})),
+  } as never)) as CensusFixtureFhir["history"];
+  await assert.rejects(
+    collectGuarantorCensus(createReadOnlyGuarantorCensusFhir(transport), {
+      today: CENSUS_TODAY,
+      serviceReference: CENSUS_SERVICE,
+    }),
+    /exceeded 50000 rows/,
+  );
+});
+
+test("duplicate links from one Person count as one owner", async () => {
+  const built = await buildWriterDerivedCensusFixture();
+  const owner = built.resources.find(resource => resource.resourceType === "Person" && resource.id === "person-owner");
+  assert(owner?.link?.[0]);
+  owner.link.push(JSON.parse(JSON.stringify(owner.link[0])));
+  const result = await collectGuarantorCensus(
+    createReadOnlyGuarantorCensusFhir(new CensusFixtureFhir(built)),
+    { today: CENSUS_TODAY, serviceReference: CENSUS_SERVICE },
+  );
+  assert.equal(result.detail.find(row => row.resourceId === "rp-owned")?.ownership, "ownedByOnePerson");
+});

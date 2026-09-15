@@ -228,16 +228,19 @@ async function readHistoryAll(
   let bundle = await fhir.history<RelatedPerson>(resourceType, id, { _count: "100" });
   const resources: RelatedPerson[] = [];
   let pagesRead = 0;
+  let rowsRead = 0;
   for (;;) {
     pagesRead += 1;
-    const page = (bundle.entry ?? []).map(entry => entry.resource).filter((resource): resource is RelatedPerson => Boolean(resource));
-    if (resources.length + page.length > MAX_ROWS) {
-      throw new FhirSearchLimitError(resourceType, MAX_ROWS, resources.length + page.length, pagesRead);
+    const entries = bundle.entry ?? [];
+    rowsRead += entries.length;
+    const page = entries.map(entry => entry.resource).filter((resource): resource is RelatedPerson => Boolean(resource));
+    if (rowsRead > MAX_ROWS) {
+      throw new FhirSearchLimitError(resourceType, MAX_ROWS, rowsRead, pagesRead);
     }
     resources.push(...page);
     const next = bundle.link?.find(link => link.relation === "next")?.url;
     if (!next) return resources;
-    if (pagesRead >= MAX_ROWS) throw new FhirSearchLimitError(resourceType, MAX_ROWS, resources.length, pagesRead);
+    if (pagesRead >= MAX_ROWS) throw new FhirSearchLimitError(resourceType, MAX_ROWS, rowsRead, pagesRead);
     bundle = await fhir.searchUrl<RelatedPerson>(historyNextPath(next, fhir.baseUrl, id), resourceType);
   }
 }
@@ -303,7 +306,7 @@ export async function collectGuarantorCensus(
       }
       const owners = ownersByProject.get(relatedProject) ?? new Map<string, Person[]>();
       const rows = owners.get(relatedId) ?? [];
-      rows.push(person);
+      if (!rows.includes(person)) rows.push(person);
       owners.set(relatedId, rows);
       ownersByProject.set(relatedProject, owners);
     }
