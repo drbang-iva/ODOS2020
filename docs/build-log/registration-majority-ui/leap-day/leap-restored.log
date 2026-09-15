@@ -1,0 +1,49 @@
+TAP version 13
+# Age-of-majority guard clock: 2028-02-29T12:00:00.000Z
+# (node:70499) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: D6 UI setting 21 routes a 19-year-old to the guardian through shared isMinorOn
+ok 1 - D6 UI setting 21 routes a 19-year-old to the guardian through shared isMinorOn
+  ---
+  duration_ms: 17.5095
+  type: 'test'
+  ...
+# Subtest: D7 UI missing setting is visible and exposes neither patient nor guardian recipients
+ok 2 - D7 UI missing setting is visible and exposes neither patient nor guardian recipients
+  ---
+  duration_ms: 3.265833
+  type: 'test'
+  ...
+# Subtest: D7 UI invalid setting is visible and exposes neither patient nor guardian recipients
+ok 3 - D7 UI invalid setting is visible and exposes neither patient nor guardian recipients
+  ---
+  duration_ms: 1.45125
+  type: 'test'
+  ...
+# Subtest: settings saves writer-derived value with loaded version and shows current value
+ok 4 - settings saves writer-derived value with loaded version and shows current value
+  ---
+  duration_ms: 1.67425
+  type: 'test'
+  ...
+# Subtest: D7 UI reopening after setting deletion clears previously loaded guardian recipients
+ok 5 - D7 UI reopening after setting deletion clears previously loaded guardian recipients
+  ---
+  duration_ms: 2.916709
+  type: 'test'
+  ...
+# Subtest: D7 UI duplicate singleton search refuses ambiguity and Engage exposes no recipients
+ok 6 - D7 UI duplicate singleton search refuses ambiguity and Engage exposes no recipients
+  ---
+  duration_ms: 1.500333
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 180.0815

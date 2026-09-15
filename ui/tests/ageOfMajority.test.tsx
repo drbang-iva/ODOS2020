@@ -13,7 +13,7 @@ import { AgeOfMajoritySettings } from "../src/scenes/settings/AgeOfMajoritySetti
 
 function config(age: number): Basic { return JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: age }))); }
 const now = new Date().toISOString().slice(0, 10);
-const birthDate = `${Number(now.slice(0, 4)) - 19}${now.slice(4)}`;
+const birthDate = `${Number(now.slice(0, 4)) - 19}-01-01`;
 const patient: Patient = JSON.parse(JSON.stringify({ ...buildPatientResource({ ...emptyPatientDemographics(), firstName: "PatientOnly", lastName: "Synthetic", birthDate, gender: "unknown" }), id: "synthetic-majority" }));
 async function engage(setting: Basic | undefined, check: (tree: ReactTestRenderer, guardianReads: () => number, reopenWithoutSetting: () => Promise<void>) => void | Promise<void>) {
   const original = globalThis.fetch;
