@@ -195,7 +195,7 @@ test("glaucoma finding definitions seed cup/disc, IOP, and CH data while later f
     fields.discAppearanceDescriptors.options
       ?.filter((option) => option.highRiskDriver)
       .map((option) => option.code),
-    ["inferior-thinning", "splinter-heme", "pallor"],
+    ["notching", "inferior-thinning", "splinter-heme", "pallor", "nerve-fiber-layer-defect"],
   );
   const thresholdParameters = (cupDisc.normalSemantics?.riskPredicate as {
     thresholdParameters: Record<string, { defaultValue: number }>;
@@ -542,7 +542,7 @@ test("Phase 3 pure evaluator turns large C/D into an unreviewed suggestion, not 
   assert.equal(conditions.length, 0);
 });
 
-test("each cup/disc high-risk driver independently maps to H40.02x without confirming a diagnosis", () => {
+test("each cup/disc high-risk driver independently maps to H40.02x without confirming a diagnosis", async (t) => {
   const definitions = glaucomaDefinitions();
   const cupDisc = definitions.find((definition) => definition.stableKey === "cup_disc_ratio");
   assert.ok(cupDisc);
@@ -556,6 +556,16 @@ test("each cup/disc high-risk driver independently maps to H40.02x without confi
       id: "splinter-heme",
       value: { type: "json" as const, value: { verticalCupDiscRatio: 0.3, discAppearanceDescriptors: ["splinter-heme"] } },
       signal: "descriptor:splinter-heme",
+    },
+    {
+      id: "notching",
+      value: { type: "json" as const, value: { discAppearanceDescriptors: ["notching"] } },
+      signal: "descriptor:notching",
+    },
+    {
+      id: "nerve-fiber-layer-defect",
+      value: { type: "json" as const, value: { discAppearanceDescriptors: ["nerve-fiber-layer-defect"] } },
+      signal: "descriptor:nerve-fiber-layer-defect",
     },
     {
       id: "inferior-thinning",
@@ -582,28 +592,31 @@ test("each cup/disc high-risk driver independently maps to H40.02x without confi
   ];
 
   for (const testCase of cases) {
-    const captured = captureGlaucomaFinding({
-      definition: cupDisc,
-      patientReference: "Patient/p1",
-      encounterReference: "Encounter/e1",
-      findingInstanceId: `finding-${testCase.id}`,
-      laterality: "OD",
-      value: testCase.value,
-      recordedAt: "2026-06-14T13:21:00.000Z",
-      provenance,
-    });
-    const [suggestion] = evaluateGlaucomaDiagnosisSuggestions({
-      findings: [captured.finding],
-      findingDefinitions: definitions,
-      provenance,
-    });
-    const signals = suggestion.suggestionEdge.predicateExpression.highRiskSignals as string[];
+    await t.test(testCase.id, () => {
+      const captured = captureGlaucomaFinding({
+        definition: cupDisc,
+        patientReference: "Patient/p1",
+        encounterReference: "Encounter/e1",
+        findingInstanceId: `finding-${testCase.id}`,
+        laterality: "OD",
+        value: testCase.value,
+        recordedAt: "2026-06-14T13:21:00.000Z",
+        provenance,
+      });
+      const [suggestion] = evaluateGlaucomaDiagnosisSuggestions({
+        findings: [captured.finding],
+        findingDefinitions: definitions,
+        provenance,
+      });
 
-    assert.equal(suggestion.diagnosisDefinition.icd10Code, "H40.021", testCase.id);
-    assert.equal(suggestion.suggestionEdge.visitState, "unreviewed");
-    assert.equal(signals.includes(testCase.signal), true, testCase.id);
-    assert.match(suggestion.suggestionEdge.explanation, /High-risk glaucoma-suspect suggestion/);
-    assert.equal("resourceType" in suggestion.suggestionEdge, false);
+      assert.ok(suggestion, testCase.id);
+      assert.equal(suggestion.diagnosisDefinition.icd10Code, "H40.021", testCase.id);
+      assert.equal(suggestion.suggestionEdge.visitState, "unreviewed");
+      assert.equal(suggestion.suggestionEdge.predicateExpression.riskTier, "high");
+      assert.deepEqual(suggestion.suggestionEdge.predicateExpression.highRiskSignals, [testCase.signal]);
+      assert.match(suggestion.suggestionEdge.explanation, /High-risk glaucoma-suspect suggestion/);
+      assert.equal("resourceType" in suggestion.suggestionEdge, false);
+    });
   }
 });
 
@@ -623,7 +636,7 @@ test("pure low-risk cup/disc path maps to H40.01x when no high-risk signal fires
         verticalCupDiscRatio: 0.5,
         verticalCupDiscRatioOd: 0.35,
         verticalCupDiscRatioOs: 0.5,
-        discAppearanceDescriptors: ["notching", "ppa", "deep"],
+        discAppearanceDescriptors: ["ppa", "deep"],
       },
     },
     recordedAt: "2026-06-14T13:22:00.000Z",
@@ -647,15 +660,16 @@ test("pure low-risk cup/disc path maps to H40.01x when no high-risk signal fires
   assert.match(suggestion.suggestionEdge.explanation, /Low-risk glaucoma-suspect suggestion/);
 });
 
-test("new disc appearance descriptors preserve cup/disc and IOP risk tiers", () => {
+test("neutral disc appearance descriptors preserve cup/disc and IOP risk tiers", async (t) => {
   const cupDisc = cupDiscDefinition();
   const iop = iopDefinition();
   const descriptorCodes = [
+    "ppa",
+    "deep",
     "tilted-disc",
     "myopic-crescent",
     "choroidal-crescent",
     "disc-drusen",
-    "nerve-fiber-layer-defect",
   ];
   const iopFinding = captureGlaucomaFinding({
     definition: iop,
@@ -689,6 +703,27 @@ test("new disc appearance descriptors preserve cup/disc and IOP risk tiers", () 
       .map((option) => ({ code: option.code, highRiskDriver: option.highRiskDriver })),
     descriptorCodes.map((code) => ({ code, highRiskDriver: undefined })),
   );
+
+  for (const code of descriptorCodes) {
+    await t.test(`${code} alone raises no glaucoma signal`, () => {
+      const captured = captureGlaucomaFinding({
+        definition: cupDisc,
+        patientReference: "Patient/p1",
+        encounterReference: "Encounter/e1",
+        findingInstanceId: `finding-neutral-${code}`,
+        laterality: "OD",
+        value: { type: "json", value: { discAppearanceDescriptors: [code] } },
+        recordedAt: provenance.recordedAt,
+        provenance,
+      });
+
+      assert.deepEqual(evaluateGlaucomaDiagnosisSuggestions({
+        findings: [captured.finding],
+        findingDefinitions: [cupDisc],
+        provenance,
+      }), []);
+    });
+  }
 });
 
 test("cup/disc asymmetry is auto-computed across OD and OS findings at the 0.2 boundary", () => {

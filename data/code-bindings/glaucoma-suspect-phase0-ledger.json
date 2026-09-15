@@ -240,7 +240,7 @@
               "type": "multi-select",
               "editable": true,
               "options": [
-                { "code": "notching", "display": "Notching", "active": true },
+                { "code": "notching", "display": "Notching", "active": true, "highRiskDriver": true },
                 { "code": "inferior-thinning", "display": "Inferior thinning", "active": true, "highRiskDriver": true },
                 { "code": "splinter-heme", "display": "Splinter heme", "active": true, "highRiskDriver": true },
                 { "code": "ppa", "display": "Peripapillary atrophy (PPA)", "active": true },
@@ -250,7 +250,7 @@
                 { "code": "myopic-crescent", "display": "Myopic crescent", "active": true },
                 { "code": "choroidal-crescent", "display": "Choroidal crescent", "active": true },
                 { "code": "disc-drusen", "display": "Disc drusen", "active": true },
-                { "code": "nerve-fiber-layer-defect", "display": "Nerve fiber layer defect", "active": true }
+                { "code": "nerve-fiber-layer-defect", "display": "Nerve fiber layer defect", "active": true, "highRiskDriver": true }
               ]
             },
             "methodSource": {
