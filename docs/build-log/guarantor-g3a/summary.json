@@ -4,6 +4,11 @@
   "projects": [
     {
       "project": "project-1",
+      "guarantorOperationTasks": {
+        "total": 1,
+        "trusted": 1,
+        "untrusted": 0
+      },
       "responsibleParties": {
         "total": 5,
         "ownedByOnePerson": 1,
@@ -28,13 +33,14 @@
         "linksToNonRelatedPerson": 0
       },
       "insuranceDamage": {
-        "coverageCount": 2,
-        "subscriberRelatedPersonReferences": 2,
-        "subscriberRefsToResponsibleParties": 1,
+        "coverageCount": 3,
+        "subscriberRelatedPersonReferences": 3,
+        "subscriberRefsToResponsibleParties": 2,
         "ofThoseActiveFalse": 1,
         "unreadableSubscriberReferences": 0,
-        "historyVersionsExamined": 1,
-        "suspectedOverwrites": 0
+        "historyVersionsExamined": 3,
+        "suspectedOverwrites": 0,
+        "nameOrAddressChangedByNonService": 1
       },
       "duplicateCandidates": {
         "groups": 1,
@@ -55,6 +61,11 @@
     },
     {
       "project": "project-2",
+      "guarantorOperationTasks": {
+        "total": 0,
+        "trusted": 0,
+        "untrusted": 0
+      },
       "responsibleParties": {
         "total": 1,
         "ownedByOnePerson": 1,
@@ -85,7 +96,8 @@
         "ofThoseActiveFalse": 0,
         "unreadableSubscriberReferences": 0,
         "historyVersionsExamined": 0,
-        "suspectedOverwrites": 0
+        "suspectedOverwrites": 0,
+        "nameOrAddressChangedByNonService": 0
       },
       "duplicateCandidates": {
         "groups": 0,

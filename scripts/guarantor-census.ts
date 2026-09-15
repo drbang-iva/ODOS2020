@@ -31,6 +31,8 @@ import { assertLocalOrPrivateBaseUrl } from "./backfill-patient-mrns.js";
 const MAX_ROWS = 50_000;
 const READ_ONLY_ERROR = "guarantor-census is read-only";
 
+class GuarantorOperationIdentityError extends Error {}
+
 type ResourceType = Resource["resourceType"];
 type SearchParams = Record<string, string>;
 
@@ -101,6 +103,7 @@ export function createReadOnlyGuarantorCensusFhir(transport: CensusReadTransport
 
 type Ownership = "ownedByOnePerson" | "unowned" | "ownedByMultiplePersons";
 type LatestOperation = "failedAttach" | "undoneAttach" | "none";
+type InsuranceFingerprintField = "relationship" | "birthDate" | "gender" | "active";
 
 export interface GuarantorCensusDetailRow {
   bucket: string;
@@ -121,6 +124,8 @@ export interface GuarantorCensusDetailRow {
   crossProject?: boolean;
   coverageIds?: string[];
   changedHistoryVersionIds?: string[];
+  changedFingerprintFields?: InsuranceFingerprintField[];
+  nameOrAddressChangedByNonService?: true;
   suspectedInsuranceOverwrite?: true;
   duplicateGroupId?: string;
   linkCounts?: { missingRelatedPerson: number; nonRelatedPerson: number };
@@ -128,6 +133,7 @@ export interface GuarantorCensusDetailRow {
 
 interface ProjectSummary {
   project: string;
+  guarantorOperationTasks: { total: number; trusted: number; untrusted: number };
   responsibleParties: {
     total: number;
     ownedByOnePerson: number;
@@ -159,6 +165,7 @@ interface ProjectSummary {
     unreadableSubscriberReferences: number;
     historyVersionsExamined: number;
     suspectedOverwrites: number;
+    nameOrAddressChangedByNonService: number;
   };
   duplicateCandidates: {
     groups: number;
@@ -186,6 +193,7 @@ const hasRole = (person: RelatedPerson) => (person.extension ?? []).some(extensi
   extension.url === CONSENT_AUTHORITY_EXTENSION_URL || extension.url === RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL);
 const emptyProjectSummary = (project: string): ProjectSummary => ({
   project,
+  guarantorOperationTasks: { total: 0, trusted: 0, untrusted: 0 },
   responsibleParties: { total: 0, ownedByOnePerson: 0, unowned: 0, ownedByMultiplePersons: 0, withActiveClaim: 0, withInertClaim: 0 },
   unowned: {
     active: { true: 0, false: 0 }, period: { current: 0, ended: 0, none: 0 },
@@ -196,6 +204,7 @@ const emptyProjectSummary = (project: string): ProjectSummary => ({
   insuranceDamage: {
     coverageCount: 0, subscriberRelatedPersonReferences: 0, subscriberRefsToResponsibleParties: 0,
     ofThoseActiveFalse: 0, unreadableSubscriberReferences: 0, historyVersionsExamined: 0, suspectedOverwrites: 0,
+    nameOrAddressChangedByNonService: 0,
   },
   duplicateCandidates: { groups: 0, recordsInGroups: 0, sizeHistogram: { "2": 0, "3": 0, "4+": 0 } },
   g3bPreview: { wouldCreatePersonAndAttach: 0, skipped: { claimed: 0, multipleOwners: 0, crossProject: 0, suspectedInsuranceOverwrite: 0, inDuplicateGroup: 0 } },
@@ -212,12 +221,24 @@ function taskKind(task: Task): string | undefined {
     ?? task.input?.find(input => input.type?.text === "kind")?.valueCode;
 }
 
-const isTrustedTask = (task: Task, project: string, serviceReference: string) =>
-  projectOf(task) === project && task.meta?.author?.reference === serviceReference
-  && Boolean(task.code?.coding?.some(coding => coding.system === GUARANTOR_OPERATION_SYSTEM));
+const isGuarantorOperationTask = (task: Task) =>
+  Boolean(task.code?.coding?.some(coding => coding.system === GUARANTOR_OPERATION_SYSTEM));
 
-function demographicSignature(person: RelatedPerson): string {
-  return JSON.stringify({ name: person.name ?? [], address: person.address ?? [], active: person.active });
+const isTrustedTask = (task: Task, project: string, serviceReference: string) =>
+  projectOf(task) === project && task.meta?.author?.reference === serviceReference && isGuarantorOperationTask(task);
+
+function changedInsuranceFingerprintFields(prior: RelatedPerson, current: RelatedPerson): InsuranceFingerprintField[] {
+  const fields: InsuranceFingerprintField[] = [];
+  if (JSON.stringify(prior.relationship ?? null) !== JSON.stringify(current.relationship ?? null)) fields.push("relationship");
+  if (current.birthDate !== undefined && current.birthDate !== prior.birthDate) fields.push("birthDate");
+  if (current.gender !== undefined && current.gender !== prior.gender) fields.push("gender");
+  if (current.active === false && prior.active !== false) fields.push("active");
+  return fields;
+}
+
+function nameOrAddressChanged(prior: RelatedPerson, current: RelatedPerson): boolean {
+  return JSON.stringify({ name: prior.name ?? [], address: prior.address ?? [] })
+    !== JSON.stringify({ name: current.name ?? [], address: current.address ?? [] });
 }
 
 async function readHistoryAll(
@@ -320,7 +341,18 @@ export async function collectGuarantorCensus(
     const localPersons = persons.filter(row => projectOf(row) === projectId);
     const localAccounts = accounts.filter(row => projectOf(row) === projectId);
     const localCoverages = coverages.filter(row => projectOf(row) === projectId);
-    const localTasks = tasks.filter(row => isTrustedTask(row, projectId, options.serviceReference));
+    const localOperationTasks = tasks.filter(row => projectOf(row) === projectId && isGuarantorOperationTask(row));
+    const localTasks = localOperationTasks.filter(row => isTrustedTask(row, projectId, options.serviceReference));
+    summary.guarantorOperationTasks = {
+      total: localOperationTasks.length,
+      trusted: localTasks.length,
+      untrusted: localOperationTasks.length - localTasks.length,
+    };
+    if (summary.guarantorOperationTasks.total > 0 && summary.guarantorOperationTasks.trusted === 0) {
+      throw new GuarantorOperationIdentityError(
+        `No guarantor operation Task is authored by ${options.serviceReference}; check MEDPLUM_CLIENT_ID / ODOS_REGISTRATION_WRITER_REFERENCE.`,
+      );
+    }
     const owners = ownersByProject.get(projectId) ?? new Map<string, Person[]>();
     const crossRelated = crossRelatedByProject.get(projectId) ?? new Set<string>();
     summary.crossProject = crossRelated.size;
@@ -363,7 +395,9 @@ export async function collectGuarantorCensus(
     }
 
     const suspected = new Set<string>();
+    const informational = new Set<string>();
     const changedVersions = new Map<string, string[]>();
+    const fingerprintFields = new Map<string, Set<InsuranceFingerprintField>>();
     for (const related of responsible) {
       if (!related.id || !coverageIdsByRelated.has(related.id)) continue;
       summary.insuranceDamage.subscriberRefsToResponsibleParties += 1;
@@ -379,9 +413,17 @@ export async function collectGuarantorCensus(
       for (let index = 1; index < chronological.length; index += 1) {
         const prior = chronological[index - 1]!;
         const current = chronological[index]!;
-        if (demographicSignature(prior) !== demographicSignature(current)
-          && current.meta?.author?.reference !== options.serviceReference) {
-          suspected.add(related.id);
+        if (current.meta?.author?.reference !== options.serviceReference) {
+          const changedFields = changedInsuranceFingerprintFields(prior, current);
+          const informationalChange = nameOrAddressChanged(prior, current);
+          if (changedFields.length) {
+            suspected.add(related.id);
+            const fields = fingerprintFields.get(related.id) ?? new Set<InsuranceFingerprintField>();
+            for (const field of changedFields) fields.add(field);
+            fingerprintFields.set(related.id, fields);
+          }
+          if (informationalChange) informational.add(related.id);
+          if (!changedFields.length && !informationalChange) continue;
           const ids = changedVersions.get(related.id) ?? [];
           if (current.meta?.versionId) ids.push(current.meta.versionId);
           changedVersions.set(related.id, ids);
@@ -389,6 +431,7 @@ export async function collectGuarantorCensus(
       }
     }
     summary.insuranceDamage.suspectedOverwrites = suspected.size;
+    summary.insuranceDamage.nameOrAddressChangedByNonService = informational.size;
 
     const duplicateGroups = new Map<string, string[]>();
     const duplicateEligible: Array<RelatedPerson | Person> = [
@@ -495,6 +538,8 @@ export async function collectGuarantorCensus(
         patientId, name: related.name, telecom: related.telecom, address: related.address, active: related.active,
         period: related.period, ownership, claimState, latestOperation, accountGuarantor, crossProject,
         coverageIds: coverageIdsByRelated.get(related.id!), changedHistoryVersionIds: changedVersions.get(related.id!),
+        changedFingerprintFields: fingerprintFields.get(related.id!) ? [...fingerprintFields.get(related.id!)!] : undefined,
+        ...(informational.has(related.id!) ? { nameOrAddressChangedByNonService: true as const } : {}),
         ...(suspected.has(related.id!) ? { suspectedInsuranceOverwrite: true as const } : {}),
         duplicateGroupId: duplicateMembers.get(`RelatedPerson/${related.id}`),
       });
@@ -559,7 +604,9 @@ export async function executeGuarantorCensusCommand(options: {
     return 0;
   } catch (error) {
     options.stderr(error instanceof Error ? error.message : String(error));
-    return error instanceof FhirSearchLimitError ? 2 : 1;
+    if (error instanceof FhirSearchLimitError) return 2;
+    if (error instanceof GuarantorOperationIdentityError) return 3;
+    return 1;
   }
 }
 

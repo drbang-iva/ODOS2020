@@ -3,6 +3,7 @@ import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
+import type { Coverage, Patient, RelatedPerson, Task } from "@medplum/fhirtypes";
 import {
   collectGuarantorCensus,
   createReadOnlyGuarantorCensusFhir,
@@ -27,6 +28,28 @@ async function fixture() {
   const transport = new CensusFixtureFhir(built);
   const fhir = createReadOnlyGuarantorCensusFhir(transport as never);
   return { built, transport, fhir };
+}
+
+const jsonRoundTrip = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+async function insuranceHistoryScenario(currentChanges: Partial<RelatedPerson>) {
+  const built = await buildWriterDerivedCensusFixture();
+  const current = jsonRoundTrip(built.rows.owned);
+  const previous = jsonRoundTrip(current);
+  Object.assign(current, currentChanges);
+  previous.meta = { ...previous.meta, versionId: "1", author: { reference: CENSUS_SERVICE } };
+  current.meta = { ...current.meta, versionId: "2", author: { reference: "Practitioner/synthetic-editor" } };
+  const patient = built.resources.find((resource): resource is Patient => resource.resourceType === "Patient" && resource.id === "patient-owned")!;
+  const coverage = jsonRoundTrip(built.resources.find((resource): resource is Coverage => resource.resourceType === "Coverage" && resource.id === "coverage-guardian")!);
+  coverage.subscriber = { reference: `RelatedPerson/${current.id}` };
+  const transport = new CensusFixtureFhir({
+    resources: [current, patient, coverage],
+    histories: [[`RelatedPerson/${current.id}`, [current, previous]]],
+  });
+  return collectGuarantorCensus(createReadOnlyGuarantorCensusFhir(transport), {
+    today: CENSUS_TODAY,
+    serviceReference: CENSUS_SERVICE,
+  });
 }
 
 test("G1 read-only facade refuses every write before transport and a full census emits zero writes", async () => {
@@ -67,7 +90,7 @@ test("G4 failed attach, undone attach, and pre-G-1 unowned records remain distin
   assert.equal(result.detail.find(row => row.resourceId === "rp-pre-g1")?.latestOperation, "none");
 });
 
-test("G5 insurance census counts only responsible-party subscribers and flags a non-service address change as suspected", async () => {
+test("G5 insurance census counts only responsible-party subscribers and flags non-service fingerprint fields", async () => {
   const { fhir } = await fixture();
   const result = await collectGuarantorCensus(fhir, { today: CENSUS_TODAY, serviceReference: CENSUS_SERVICE });
   const insurance = result.summary.projects.find(row => row.project === "project-1")!.insuranceDamage;
@@ -79,10 +102,12 @@ test("G5 insurance census counts only responsible-party subscribers and flags a 
     unreadableSubscriberReferences: 1,
     historyVersionsExamined: 2,
     suspectedOverwrites: 1,
+    nameOrAddressChangedByNonService: 0,
   });
   const damaged = result.detail.find(row => row.resourceId === "rp-damaged")!;
   assert.deepEqual(damaged.coverageIds, ["coverage-guardian"]);
   assert.deepEqual(damaged.changedHistoryVersionIds, ["2"]);
+  assert.deepEqual(damaged.changedFingerprintFields, ["birthDate", "gender", "active"]);
   assert.equal(result.detail.find(row => row.resourceId === "subscriber-only")?.suspectedInsuranceOverwrite, undefined);
 });
 
@@ -201,4 +226,91 @@ test("duplicate links from one Person count as one owner", async () => {
     { today: CENSUS_TODAY, serviceReference: CENSUS_SERVICE },
   );
   assert.equal(result.detail.find(row => row.resourceId === "rp-owned")?.ownership, "ownedByOnePerson");
+});
+
+test("G10 staff address-only history is informational while birthDate and active fingerprints are suspected", async () => {
+  const addressOnly = await insuranceHistoryScenario({ address: [{ line: ["4 Synthetic Editor Way"], city: "Greenville" }] });
+  const birthDateAdded = await insuranceHistoryScenario({ birthDate: "1978-03-04" });
+  const deactivated = await insuranceHistoryScenario({ active: false });
+  const outcome = (result: typeof addressOnly) => {
+    const project = result.summary.projects[0]!;
+    const row = result.detail.find(detail => detail.resourceId === "rp-owned")!;
+    return {
+      suspected: project.insuranceDamage.suspectedOverwrites,
+      informational: project.insuranceDamage.nameOrAddressChangedByNonService,
+      wouldCreate: project.g3bPreview.wouldCreatePersonAndAttach,
+      skippedSuspected: project.g3bPreview.skipped.suspectedInsuranceOverwrite,
+      changedFingerprintFields: row.changedFingerprintFields,
+      nameOrAddressChangedByNonService: row.nameOrAddressChangedByNonService,
+    };
+  };
+  assert.deepEqual(outcome(addressOnly), {
+    suspected: 0,
+    informational: 1,
+    wouldCreate: 1,
+    skippedSuspected: 0,
+    changedFingerprintFields: undefined,
+    nameOrAddressChangedByNonService: true,
+  });
+  assert.deepEqual(outcome(birthDateAdded), {
+    suspected: 1,
+    informational: 0,
+    wouldCreate: 0,
+    skippedSuspected: 1,
+    changedFingerprintFields: ["birthDate"],
+    nameOrAddressChangedByNonService: undefined,
+  });
+  assert.deepEqual(outcome(deactivated), {
+    suspected: 1,
+    informational: 0,
+    wouldCreate: 0,
+    skippedSuspected: 1,
+    changedFingerprintFields: ["active"],
+    nameOrAddressChangedByNonService: undefined,
+  });
+});
+
+test("G11 a wholly untrusted guarantor operation Task population exits 3 without a summary", async () => {
+  const built = await buildWriterDerivedCensusFixture();
+  const related = jsonRoundTrip(built.rows.activeClaim);
+  const task = jsonRoundTrip(built.resources.find((resource): resource is Task => resource.resourceType === "Task" && resource.id === "task-active")!);
+  const censusInput = { resources: [related, task], histories: [] };
+  const output: string[] = [];
+  const errors: string[] = [];
+  const wrongServiceReference = "ClientApplication/misconfigured";
+  const exitCode = await executeGuarantorCensusCommand({
+    args: [],
+    fhir: createReadOnlyGuarantorCensusFhir(new CensusFixtureFhir(censusInput)),
+    today: CENSUS_TODAY,
+    serviceReference: wrongServiceReference,
+    checkoutRoots: [resolve(".")],
+    stdout: value => output.push(value),
+    stderr: value => errors.push(value),
+  });
+  const wrongSummary = output[0] ? JSON.parse(output[0]) as {
+    projects?: Array<{
+      responsibleParties: { withActiveClaim: number };
+      g3bPreview: { wouldCreatePersonAndAttach: number };
+    }>;
+  } : undefined;
+  const wrongProject = wrongSummary?.projects?.[0];
+  const correct = await collectGuarantorCensus(
+    createReadOnlyGuarantorCensusFhir(new CensusFixtureFhir(censusInput)),
+    { today: CENSUS_TODAY, serviceReference: CENSUS_SERVICE },
+  );
+  assert.deepEqual({
+    exitCode,
+    stdoutCount: output.length,
+    error: errors.join("\n"),
+    withActiveClaim: wrongProject?.responsibleParties.withActiveClaim,
+    wouldCreatePersonAndAttach: wrongProject?.g3bPreview.wouldCreatePersonAndAttach,
+    correctTaskTrust: correct.summary.projects[0]!.guarantorOperationTasks,
+  }, {
+    exitCode: 3,
+    stdoutCount: 0,
+    error: `No guarantor operation Task is authored by ${wrongServiceReference}; check MEDPLUM_CLIENT_ID / ODOS_REGISTRATION_WRITER_REFERENCE.`,
+    withActiveClaim: undefined,
+    wouldCreatePersonAndAttach: undefined,
+    correctTaskTrust: { total: 1, trusted: 1, untrusted: 0 },
+  });
 });

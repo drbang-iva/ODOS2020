@@ -164,7 +164,13 @@ export async function buildWriterDerivedCensusFixture() {
     duplicateA: add(relatedFrom(registration.relatedPerson, "rp-duplicate-a", "patient-dupe-a", { name: [{ given: ["Taylor"], family: "Same" }], telecom: [{ system: "phone", value: "+1 (864) 555-0133" }] })),
     duplicateB: add(relatedFrom(registration.relatedPerson, "rp-duplicate-b", "patient-dupe-b", { name: [{ given: [" Taylor "], family: " SAME " }], telecom: [{ system: "phone", value: "864-555-0133" }] })),
     differentPhone: add(relatedFrom(registration.relatedPerson, "rp-different-phone", "patient-different", { name: [{ given: ["Taylor"], family: "Same" }], telecom: [{ system: "phone", value: "864-555-9999" }] })),
-    damaged: add(relatedFrom(registration.relatedPerson, "rp-damaged", "patient-damaged", { active: false, name: [{ given: ["History"], family: "Guardian" }], address: [{ line: ["9 Changed Way"], city: "Greenville" }] })),
+    damaged: add(relatedFrom(registration.relatedPerson, "rp-damaged", "patient-damaged", {
+      active: false,
+      birthDate: "1978-03-04",
+      gender: "female",
+      name: [{ given: ["History"], family: "Guardian" }],
+      address: [{ line: ["9 Changed Way"], city: "Greenville" }],
+    })),
     primaryOnly: add(relatedFrom(registration.relatedPerson, "rp-primary-only", "patient-primary", { extension: primaryOnly })),
     cross: add(relatedFrom(registration.relatedPerson, "rp-cross", "patient-cross")),
   };
@@ -193,7 +199,13 @@ export async function buildWriterDerivedCensusFixture() {
   add(withIdentity({ ...insurance.coverage, subscriber: { reference: "RelatedPerson/subscriber-only" } }, "coverage-subscriber"));
   add(withIdentity({ ...insurance.coverage, subscriber: { reference: "RelatedPerson/missing-subscriber" } }, "coverage-unreadable"));
 
-  const oldDamaged = jsonRoundTrip({ ...rows.damaged, meta: { ...rows.damaged.meta, versionId: "1", author: { reference: CENSUS_SERVICE } }, address: [{ line: ["8 Original Way"], city: "Greenville" }], active: true });
+  const oldDamaged = jsonRoundTrip({
+    ...rows.damaged,
+    meta: { ...rows.damaged.meta, versionId: "1", author: { reference: CENSUS_SERVICE } },
+    birthDate: undefined,
+    gender: undefined,
+    active: true,
+  });
   rows.damaged.meta = { ...rows.damaged.meta, versionId: "2", author: { reference: "Practitioner/synthetic-insurance-staff" } };
   histories.set(`RelatedPerson/${rows.damaged.id}`, [jsonRoundTrip(rows.damaged), oldDamaged]);
 
