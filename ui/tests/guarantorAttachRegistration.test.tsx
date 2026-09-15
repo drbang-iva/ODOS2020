@@ -7,7 +7,13 @@ import { COMMS_PREFERENCE_CHANNELS, COMMS_PURPOSES } from "../src/lib/communicat
 import { emptyPatientDemographics, registerPatient } from "../src/lib/patient-registration";
 import { NewPatient, RegistrationRepairNotice } from "../src/scenes/NewPatient";
 
-const card = { personId: "existing-guardian", versionId: "7", name: "Existing Guardian", phones: ["864-555-0199"], city: "Greenville", postalCode: "29601" };
+const { world, staff } = await import("../../mcp/tests/helpers/guarantor-phone-fixture.js");
+const { handleGuarantorSearch } = await import("../../mcp/src/clinic/guarantor-search.js");
+const fixture = await world();
+const search = await handleGuarantorSearch(fixture.deps as never, staff, { lastName: "Guardian", firstName: "EXAMPLEV" });
+assert.equal(search.status, 200);
+const [card] = JSON.parse(JSON.stringify(search.body)) as import("../src/lib/guarantor-link-operations").GuarantorSearchCard[];
+assert.equal(card.birthDate, "1980-01-02");
 const defaults = { version: "2026-09-14", defaults: Object.fromEntries(COMMS_PURPOSES.map(purpose => [purpose, Object.fromEntries(COMMS_PREFERENCE_CHANNELS.map(channel => [channel, true]))])) };
 
 function text(renderer: ReactTestRenderer): string {
@@ -63,28 +69,29 @@ test("B3: registration offers an existing guarantor, serializes only owned field
     }
     await act(async () => labelledInput(renderer, "Date of birth").props.onChange({ target: { value: "1980-04-03" } }));
     await act(async () => button(renderer, "Add related person").props.onClick());
-    await act(async () => labelledInput(renderer, "First name").props.onChange({ target: { value: "Existing" } }));
+    await act(async () => labelledInput(renderer, "First name").props.onChange({ target: { value: "EXAMPLEV" } }));
     await act(async () => labelledInput(renderer, "Last name").props.onChange({ target: { value: "Guardian" } }));
 
     assert.match(text(renderer), /Already on file\?/);
     assert.equal(calls.filter(call => call.path === "/guarantors/search").length, 1);
-    await act(async () => button(renderer, "Use Existing Guardian").props.onClick());
-    assert.match(text(renderer), /Existing Guardian.*864-555-0199.*Greenville.*29601/);
+    assert.match(text(renderer), /Date of birth:.*1980-01-02/);
+    await act(async () => button(renderer, "Use EXAMPLEV Guardian").props.onClick());
+    assert.match(text(renderer), /EXAMPLEV Guardian.*1980-01-02.*864-555-0101.*Greenville.*29601/);
     assert.ok(button(renderer, "Not this person"));
-    assert.equal(renderer.root.findAllByType("input").some(node => node.props.value === "Existing" && !node.props.readOnly), false);
+    assert.equal(renderer.root.findAllByType("input").some(node => node.props.value === "EXAMPLEV" && !node.props.readOnly), false);
 
     await act(async () => labelledControl(renderer, "Relationship", "select").props.onChange({ target: { value: "legal-guardian" } }));
     await act(async () => labelledInput(renderer, "Effective date").props.onChange({ target: { value: "2026-09-13" } }));
     await act(async () => labelledControl(renderer, "Court order / custody notes", "textarea").props.onChange({ target: { value: "Synthetic restriction" } }));
     await act(async () => labelledControl(renderer, "Consent authority", "input").props.onChange({ target: { checked: true } }));
     await act(async () => button(renderer, "Not this person").props.onClick());
-    assert.equal(labelledInput(renderer, "First name").props.value, "Existing");
+    assert.equal(labelledInput(renderer, "First name").props.value, "EXAMPLEV");
     assert.equal(labelledInput(renderer, "Last name").props.value, "Guardian");
     assert.equal(labelledControl(renderer, "Relationship", "select").props.value, "legal-guardian");
     assert.equal(labelledInput(renderer, "Effective date").props.value, "2026-09-13");
     assert.equal(labelledControl(renderer, "Court order / custody notes", "textarea").props.value, "Synthetic restriction");
     assert.equal(labelledControl(renderer, "Consent authority", "input").props.checked, true);
-    await act(async () => button(renderer, "Use Existing Guardian").props.onClick());
+    await act(async () => button(renderer, "Use EXAMPLEV Guardian").props.onClick());
     await act(async () => button(renderer, "Create patient").props.onClick());
 
     const payload = calls.find(call => call.path === "/clinic/patients")!.body;

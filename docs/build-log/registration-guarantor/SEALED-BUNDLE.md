@@ -98,3 +98,7 @@ Integrated fixback checks: **58/58 UI**, UI production build exit0, preflight0 w
 The actual statements age-setting query now carries its exact `fhir-scope-contract`. The guard runs the real source plus the real search helper through the preflight scanner and proves unrelated Basic grants cannot satisfy it. Guard1/1 green; deleting the marker1 failure; restored config/statements suites **40/40**. No query or role behavior changed. `scope-marker-*.txt` records the proof and refreshed preflight.
 
 `scripts-build-final.txt` was incorrectly named while retaining pre-fix TS2345 output. It now contains the successful current `npm run typecheck:scripts` run. The earlier failure remains explicitly preserved in `scripts-build-rebased.txt`; final script typecheck is exit0.
+
+### Registration search-card display guard
+
+The existing registration attach test now uses a JSON-round-tripped card returned by the actual search handler from a Person produced by the actual registration writer. It asserts DOB on both the candidate card and the selected existing-guarantor summary. Suite3/3 green; separately deleting either DOB render produces1 failure; restored3/3; UI typecheck exit0. Evidence: `card-dob-*.txt`. No production changes.
