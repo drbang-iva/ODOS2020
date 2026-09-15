@@ -87,3 +87,4 @@ test('CLI refuses missing config files with exit 1', async () => {
  } finally { rmSync(dir,{recursive:true,force:true}); }
 });
 test('unterminated Caddy string is a parser finding', () => finding({ caddySource: caddy.replace('root * {$ODOS_UI_DIST}', 'root * "unterminated') }, 'parse'));
+test('API proxy under a page-only matcher cannot replace unconditional fallback', () => finding({ caddySource: caddy.replace('handle {\n reverse_proxy 127.0.0.1:3333', 'handle @pages {\n reverse_proxy 127.0.0.1:3333') }, 'page-api-split', '/communications'));

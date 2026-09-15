@@ -132,7 +132,7 @@ export function checkFrontdoorCoverage({ backendFamilies, viteSource, caddySourc
     if (!proxies.length || proxies.some(p => p.words.length !== 2 || p.words[1] !== entry.expectedTarget)) add('target-mismatch', prefix, `expected reverse_proxy ${entry.expectedTarget}`);
     const handles = block.children.filter(n => n.words[0] === 'handle');
     const pages = handles.filter(h => descendants(h, 'rewrite').some(r => r.words.join(' ') === 'rewrite * /index.html'));
-    const nestedProxy = handles.some(h => descendants(h, 'reverse_proxy').length);
+    const nestedProxy = handles.some(h => h.words.length === 1 && h.children?.length === 1 && h.children[0].words[0] === 'reverse_proxy');
     const plain = handles.length === 0 && block.children.length === 1 && block.children[0].words[0] === 'reverse_proxy';
     if (entry.bypass ? !pages.length || !nestedProxy : !plain) add('page-api-split', prefix, entry.bypass ? 'expected nested page rewrite and API proxy' : 'expected plain proxy without page bypass');
     for (const page of pages) {
