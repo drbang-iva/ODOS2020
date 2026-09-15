@@ -105,6 +105,9 @@ export function FollowUpConfirmation({
   );
   const [unit, setUnit] = useState(action.payload.unit ?? "months");
   const [busy, setBusy] = useState(false);
+  const dirty =
+    Number(interval) !== action.payload.interval ||
+    unit !== action.payload.unit;
   const [error, setError] = useState<string>();
   async function save(change: { interval?: number; unit?: string }) {
     setBusy(true);
@@ -135,7 +138,7 @@ export function FollowUpConfirmation({
       <button
         className="m-1 min-h-11 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface)] px-3 py-1 focus-visible:outline focus-visible:outline-2 disabled:opacity-50"
         type="button"
-        disabled={busy || readOnly}
+        disabled={busy || readOnly || dirty}
         onClick={() => save({})}
       >
         Confirm follow-up
@@ -143,14 +146,14 @@ export function FollowUpConfirmation({
       <input
         className="m-1 min-h-11 w-20 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface)] px-2 py-1"
         aria-label="Follow-up interval"
-        disabled={readOnly}
+        disabled={readOnly || busy}
         type="number"
         min="1"
         value={interval}
         onChange={(e) => setInterval(e.target.value)}
       />
       <select
-        disabled={readOnly}
+        disabled={readOnly || busy}
         className="m-1 min-h-11 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface)] px-2 py-1"
         aria-label="Follow-up unit"
         value={unit}

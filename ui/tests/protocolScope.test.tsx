@@ -74,7 +74,7 @@ test("whole and item applications retain separate badges and undo targets", asyn
   assert.doesNotMatch(JSON.stringify(tree.toJSON()), /Applied|Undo plan/);
 });
 
-test("followup recommendations can be confirmed or changed without blocking visit completion", async () => {
+test("followup recommendations can be explicitly confirmed or edited", async () => {
   const saves: unknown[] = [];
   const tree = create(
     <FollowUpConfirmation
@@ -257,3 +257,198 @@ for (const editing of [false, true]) {
     }
   });
 }
+
+test("dirty followup requires saving the displayed change", async () => {
+  const tree = create(
+    <FollowUpConfirmation
+      action={{
+        id: "a",
+        payload: { interval: 3, unit: "months", needsConfirmation: true },
+      }}
+      protocolTitles={{}}
+      onSave={async () => {}}
+    />,
+  );
+  await act(async () =>
+    tree.root
+      .findByProps({ "aria-label": "Follow-up interval" })
+      .props.onChange({ target: { value: "4" } }),
+  );
+  assert.equal(
+    tree.root
+      .findAllByType("button")
+      .find((b) => b.props.children === "Confirm follow-up")!.props.disabled,
+    true,
+  );
+});
+
+test("Assessment preserves unmatched plan item undo alongside a current offer", async () => {
+  const savedFetch = globalThis.fetch,
+    savedWindow = globalThis.window,
+    read = fhir.read,
+    search = fhir.search;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: new EventTarget(),
+  });
+  fhir.read = (async () => ({
+    resourceType: "Encounter",
+    id: "e1",
+    status: "in-progress",
+    class: {},
+    subject: { reference: "Patient/p1" },
+  })) as typeof fhir.read;
+  fhir.search = (async () => ({
+    resourceType: "Bundle",
+    type: "searchset",
+    entry: [
+      {
+        resource: {
+          resourceType: "Condition",
+          id: "c1",
+          subject: { reference: "Patient/p1" },
+          encounter: { reference: "Encounter/e1" },
+          category: [
+            {
+              coding: [
+                {
+                  system:
+                    "http://terminology.hl7.org/CodeSystem/condition-category",
+                  code: "encounter-diagnosis",
+                },
+              ],
+            },
+          ],
+          verificationStatus: {
+            coding: [
+              {
+                system:
+                  "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+                code: "confirmed",
+              },
+            ],
+          },
+          code: { coding: [{ code: "synthetic-diagnosis" }] },
+        },
+      },
+    ],
+  })) as typeof fhir.search;
+  const writes: string[] = [];
+  let undone = false;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/unapply")) {
+      writes.push(url);
+      undone = true;
+      return Response.json({ removed: [] });
+    }
+    if (url.includes("/protocols/applications"))
+      return Response.json({
+        applications: [
+          {
+            id: "app-A",
+            protocolId: "Plan-A",
+            scope: "item",
+            confirmed: true,
+            undoState: undone ? "unapplied" : "active",
+            itemKeys: ["synthetic-item"],
+          },
+        ],
+      });
+    if (url.endsWith("/protocols/offers"))
+      return Response.json({
+        protocols: [
+          {
+            id: "Plan-B",
+            title: "Plan B",
+            version: 1,
+            trigger: { kind: "diagnosis", dxKeys: ["synthetic-diagnosis"] },
+            statusScope: [],
+            items: [],
+          },
+        ],
+      });
+    if (url.includes("/diagnosis-statuses"))
+      return Response.json({ statuses: [] });
+    if (url.includes("/procedure-charges"))
+      return Response.json({
+        options: [],
+        diagnoses: [],
+        proposals: [],
+        attachedProcedures: [],
+      });
+    return Response.json({ diagnoses: [], rows: [] });
+  };
+  let tree: ReturnType<typeof create> | undefined;
+  try {
+    await act(async () => {
+      tree = create(
+        <RoleProvider initialRole="provider">
+          <AssessmentSection
+            patientReference="Patient/p1"
+            encounterReference="Encounter/e1"
+            onSaved={() => {}}
+          />
+        </RoleProvider>,
+      );
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    assert.match(JSON.stringify(tree!.toJSON()), /Plan B/);
+    const undo = tree!.root
+      .findAllByType("button")
+      .find((b) => String(b.props.children).includes("synthetic item"));
+    assert.ok(undo, "unmatched application retains its own Undo");
+    await act(async () => {
+      await undo.props.onClick();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    assert.ok(writes[0]?.endsWith("/clinical-graph/protocols/app-A/unapply"));
+  } finally {
+    await act(async () => tree?.unmount());
+    globalThis.fetch = savedFetch;
+    fhir.read = read;
+    fhir.search = search;
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: savedWindow,
+    });
+  }
+});
+
+test("followup fields stay fixed while saving", async () => {
+  let finish!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const tree = create(
+    <FollowUpConfirmation
+      action={{
+        id: "a",
+        payload: { interval: 3, unit: "months", needsConfirmation: true },
+      }}
+      protocolTitles={{}}
+      onSave={() => pending}
+    />,
+  );
+  let save!: Promise<void>;
+  await act(async () => {
+    save = tree.root
+      .findAllByType("button")
+      .find((b) => b.props.children === "Confirm follow-up")!
+      .props.onClick();
+  });
+  assert.equal(
+    tree.root.findByProps({ "aria-label": "Follow-up interval" }).props
+      .disabled,
+    true,
+  );
+  assert.equal(
+    tree.root.findByProps({ "aria-label": "Follow-up unit" }).props.disabled,
+    true,
+  );
+  await act(async () => {
+    finish();
+    await save;
+  });
+  tree.unmount();
+});

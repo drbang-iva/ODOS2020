@@ -666,15 +666,21 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
           />
         ))}
 
-        {canShowEditing && !protocolOffer && (
-          <ProtocolApplicationStatus
-            applications={protocolApplications}
-            items={[]}
-            showProtocolIds
-            busy={busy !== null}
-            onUndo={unapplyProtocol}
-          />
-        )}
+        {canShowEditing && [...new Set(protocolApplications
+          .filter((application) => !protocolOffers.some((offer) => offer.id === application.protocolId))
+          .filter((application) => application.confirmed && application.undoState === "active")
+          .map((application) => application.protocolId))].map((protocolId) => (
+          <div key={protocolId} className="mt-3 rounded border border-[color:var(--odos-line)] p-3">
+            <div className="text-sm font-semibold">{protocolId.replace(/[-_]/g, " ")}</div>
+            <ProtocolApplicationStatus
+              applications={protocolApplications.filter((application) => application.protocolId === protocolId)}
+              items={[]}
+              showProtocolIds
+              busy={busy !== null}
+              onUndo={unapplyProtocol}
+            />
+          </div>
+        ))}
 
         {canShowEditing && protocolOffers.length > 0 && protocolOffer && (
           <div className="mt-4 rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-hi)] p-4">
