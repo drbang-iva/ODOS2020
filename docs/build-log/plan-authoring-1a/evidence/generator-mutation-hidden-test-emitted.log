@@ -1,0 +1,115 @@
+TAP version 13
+# Subtest: seven generated glaucoma built-ins replace the suspect v1 finding seeds
+ok 1 - seven generated glaucoma built-ins replace the suspect v1 finding seeds
+  ---
+  duration_ms: 0.407292
+  type: 'test'
+  ...
+# Subtest: hidden report is exact and hidden tests never become orders or charges
+not ok 2 - hidden report is exact and hidden tests never become orders or charges
+  ---
+  duration_ms: 1.702292
+  type: 'test'
+  location: '$GENERATOR_WORKTREE/mcp/src/__tests__/plan-set-generator.test.ts:1:1361'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+    -   'corneal-hysteresis',
+    -   'erg',
+    -   'oct-angiography',
+        'handout — no real catalog content'
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'corneal-hysteresis'
+    1: 'erg'
+    2: 'oct-angiography'
+    3: 'handout — no real catalog content'
+  actual:
+    0: 'handout — no real catalog content'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> ($GENERATOR_WORKTREE/mcp/src/__tests__/plan-set-generator.test.ts:23:12)
+    Array.forEach (<anonymous>)
+    TestContext.<anonymous> ($GENERATOR_WORKTREE/mcp/src/__tests__/plan-set-generator.test.ts:22:27)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: every named test is orderable or explicitly pending
+ok 3 - every named test is orderable or explicitly pending
+  ---
+  duration_ms: 0.0955
+  type: 'test'
+  ...
+# Subtest: independent catalog oracle assigns all 15 rows and 60 laterality slots to exactly the intended set
+ok 4 - independent catalog oracle assigns all 15 rows and 60 laterality slots to exactly the intended set
+  ---
+  duration_ms: 1.921667
+  type: 'test'
+  ...
+# Subtest: unresolved family and injected finding seeds are refused
+ok 5 - unresolved family and injected finding seeds are refused
+  ---
+  duration_ms: 0.736208
+  type: 'test'
+  ...
+# Subtest: missing and unknown handouts stay hidden without fabricated references
+ok 6 - missing and unknown handouts stay hidden without fabricated references
+  ---
+  duration_ms: 0.176583
+  type: 'test'
+  ...
+# Subtest: placeholder metadata blocks a handout including mixed real and placeholder URLs
+ok 7 - placeholder metadata blocks a handout including mixed real and placeholder URLs
+  ---
+  duration_ms: 0.107667
+  type: 'test'
+  ...
+# Subtest: real handout uses catalog title and accurate recording note
+ok 8 - real handout uses catalog title and accurate recording note
+  ---
+  duration_ms: 0.123209
+  type: 'test'
+  ...
+# Subtest: photo focus keeps first legacy identity and second focus shares one charge
+ok 9 - photo focus keeps first legacy identity and second focus shares one charge
+  ---
+  duration_ms: 0.521
+  type: 'test'
+  ...
+# Subtest: v2 glaucoma rules cover the union, remain provisional, and preserve legacy v1 rules
+ok 10 - v2 glaucoma rules cover the union, remain provisional, and preserve legacy v1 rules
+  ---
+  duration_ms: 0.636375
+  type: 'test'
+  ...
+# Subtest: dry-eye series v2 links the exact practice switch and preserves package dependency
+ok 11 - dry-eye series v2 links the exact practice switch and preserves package dependency
+  ---
+  duration_ms: 0.059125
+  type: 'test'
+  ...
+# Subtest: first and repeated photo focus must be distinct
+ok 12 - first and repeated photo focus must be distinct
+  ---
+  duration_ms: 0.266291
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 11
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 130.318
