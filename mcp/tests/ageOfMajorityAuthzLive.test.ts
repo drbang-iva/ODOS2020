@@ -52,5 +52,14 @@ test("age-of-majority singleton grants enforce provider reads and staff/admin ed
         cleanup.splice(cleanup.indexOf(`Basic/${config.id}`), 1);
       });
     }
-  } finally { await cleanupReferences(baseUrl, seederAccessToken, cleanup); }
+  } finally {
+    const metadata = cleanup.filter((reference) => reference.startsWith("ClientApplication/") || reference.startsWith("ProjectMembership/"));
+    const clinical = cleanup.filter((reference) => !metadata.includes(reference));
+    const results = await Promise.allSettled([
+      cleanupReferences(baseUrl, callerAccessToken, metadata),
+      cleanupReferences(baseUrl, seederAccessToken, clinical),
+    ]);
+    const failures = results.filter((result): result is PromiseRejectedResult => result.status === "rejected");
+    if (failures.length) throw new AggregateError(failures.map((result) => result.reason), "Live authorization fixture cleanup failed.");
+  }
 });
