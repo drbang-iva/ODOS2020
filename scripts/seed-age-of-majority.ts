@@ -9,7 +9,7 @@ import { searchAll } from "../mcp/src/fhir-search.js";
 import { buildAgeOfMajorityConfigResource, ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM, ODOS_AGE_OF_MAJORITY_CONFIG_CODE, resolveAgeOfMajorityYears } from "../mcp/src/clinic/age-of-majority-config.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
 
-export async function seedAgeOfMajority(fhir: Pick<MedplumClient, "search" | "create">, options: { projectId: string; apply?: boolean }) {
+export async function seedAgeOfMajority(fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl" | "create">, options: { projectId: string; apply?: boolean }) {
   if (!options.projectId.trim()) throw new Error("A named project id is required.");
   const code = `${ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM}|${ODOS_AGE_OF_MAJORITY_CONFIG_CODE}`;
   const existing = await searchAll<Basic>(fhir, "Basic", { code, _project: options.projectId });
