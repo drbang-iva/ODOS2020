@@ -477,8 +477,10 @@ test("every definition-backed clinical-graph HTTP closure receives the persisten
   // over HTTP by encounterVoidRoutes.test.ts — one inline route and one inline dependency
   // call fewer here.
   // GET diagnosis-newness and PUT diagnoses/:conditionId/newness use staff authentication and the status store, not definition-store route dependencies.
-  // Protocol item add authenticates with chart.write and service FHIR, matching protocol apply rather than definition-store route dependencies.
-  assert.equal(clinicalRoutes.length, 102);
+  // Protocol item add and follow-up confirmation authenticate with chart.write and service FHIR, matching protocol apply rather than definition-store route dependencies.
+  assert.equal(clinicalRoutes.length, 103);
+  assert.match(source, /app\.post\("\/clinical-graph\/protocols\/encounters\/:encounterId\/actions\/:actionId\/confirm-follow-up"/);
+  assert.match(source, /handleProtocolFollowUpConfirmRequest\(\s*\{ authenticate: authenticateStaffRouteForAction\("chart\.write"\) \}/);
   assert.equal(routeDependencies.length, 49);
   assert.equal(procedureRouteDependencies.length, 6);
   assert.match(source, /registerEncounterVoidRoutes\(app, authenticateWithMedplum, clinicalGraphRouteDeps\)/);
