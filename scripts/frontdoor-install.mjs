@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { constants, openSync, closeSync, fsyncSync, renameSync, linkSync, realpathSync, copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { constants, chmodSync, openSync, closeSync, fsyncSync, renameSync, linkSync, realpathSync, copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -52,6 +52,7 @@ export function main(args = process.argv.slice(2)) {
     staging = mkdtempSync(join(dirname(target), '.odos-frontdoor-'));
     const stagedFile = join(staging, 'Caddyfile');
     writeFileSync(stagedFile, rendered, { flag: 'wx', mode: original === null ? 0o600 : statSync(target).mode & 0o777 });
+    if (original !== null) chmodSync(stagedFile, statSync(target).mode & 0o777);
     const stagedFd = openSync(stagedFile, 'r');
     try { fsyncSync(stagedFd); } finally { closeSync(stagedFd); }
     if (original !== null) {

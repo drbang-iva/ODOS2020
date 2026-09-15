@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { chmodSync, statSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -46,5 +46,12 @@ test('a partial write failure never damages the existing target', () => fixture(
  const { main } = await import('./scripts/frontdoor-install.mjs');
  process.exitCode = main(['--ui-dist', process.argv[2] + '/dist', '--target', process.argv[3], '--apply']);`;
  const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
- assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/simulated disk-full/); assert.equal(readFileSync(target,'utf8'),'old config\n');
+ assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/simulated disk-full/); assert.equal(readFileSync(target,'utf8'),'old config\n'); assert.deepEqual(readdirSync(dir).sort(), ['Caddyfile', 'dist']);
+}));
+
+test('atomic replacement preserves existing permission bits despite umask', () => fixture(({dir,target}) => {
+ chmodSync(target,0o660);
+ const input = `process.umask(0o077); const { main } = await import('./scripts/frontdoor-install.mjs'); process.exitCode = main(['--ui-dist', process.argv[2] + '/dist', '--target', process.argv[3], '--apply']);`;
+ const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
+ assert.equal(result.status,0,result.stderr); assert.equal(statSync(target).mode & 0o777,0o660); assert.ok(readdirSync(dir).every(name => !name.startsWith('.odos-frontdoor-')));
 }));

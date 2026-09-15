@@ -88,3 +88,10 @@ test('CLI refuses missing config files with exit 1', async () => {
 });
 test('unterminated Caddy string is a parser finding', () => finding({ caddySource: caddy.replace('root * {$ODOS_UI_DIST}', 'root * "unterminated') }, 'parse'));
 test('API proxy under a page-only matcher cannot replace unconditional fallback', () => finding({ caddySource: caddy.replace('handle {\n reverse_proxy 127.0.0.1:3333', 'handle @pages {\n reverse_proxy 127.0.0.1:3333') }, 'page-api-split', '/communications'));
+test('changed mcpTarget declaration is refused', () => finding({ viteSource: proxy().replace("const mcpTarget = 'http://localhost:3333'", "const mcpTarget = 'http://localhost:4444'") }, 'parse'));
+test('supported development override preserves validated static fallback', () => assert.deepEqual(check({ viteSource: proxy().replace("const mcpTarget = 'http://localhost:3333'", 'const mcpTarget = env.ODOS_MCP_PROXY_TARGET || "http://localhost:3333"') }), []));
+test('missing mcpTarget binding is refused', () => finding({ viteSource: proxy().replace("const mcpTarget = 'http://localhost:3333';", '') }, 'parse'));
+test('changed mcpTarget fallback is refused', () => finding({ viteSource: proxy().replace("const mcpTarget = 'http://localhost:3333'", 'const mcpTarget = env.ODOS_MCP_PROXY_TARGET || "http://localhost:4444"') }, 'parse'));
+test('extra proxy in page handler cannot steal page navigation', () => finding({ caddySource: caddy.replace('rewrite * /index.html\n file_server', 'rewrite * /index.html\n reverse_proxy 127.0.0.1:3333\n file_server') }, 'page-api-split', '/communications'));
+test('extra top-level directive in bypass block is refused', () => finding({ caddySource: caddy.replace('handle /communications* {', 'handle /communications* {\n respond "oops"') }, 'page-api-split', '/communications'));
+test('missing file server in page handler is refused', () => finding({ caddySource: caddy.replace('rewrite * /index.html\n file_server', 'rewrite * /index.html') }, 'page-api-split', '/communications'));

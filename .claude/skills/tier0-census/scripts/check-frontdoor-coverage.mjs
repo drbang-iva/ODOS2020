@@ -61,7 +61,9 @@ function parseVite(source, warnings) {
   const ast = ts.createSourceFile('vite.config.ts', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   if (ast.parseDiagnostics.length) throw new Error('Vite syntax: ' + ast.parseDiagnostics.map(d => ts.flattenDiagnosticMessageText(d.messageText, ' ')).join('; '));
   const tables = [];
+  const mcpBindings = [];
   function visit(node) {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === 'mcpTarget') mcpBindings.push(node.initializer);
     if (ts.isPropertyAssignment(node) && node.name.getText(ast) === 'proxy' && ts.isObjectLiteralExpression(node.initializer)) tables.push(node.initializer);
     ts.forEachChild(node, visit);
   }
@@ -76,7 +78,12 @@ function parseVite(source, warnings) {
     const target = fields.find(p => p.name?.getText(ast) === 'target');
     const value = target && ts.isPropertyAssignment(target) ? target.initializer : null;
     let expectedTarget;
-    if (value && ts.isIdentifier(value) && value.text === 'mcpTarget') expectedTarget = '127.0.0.1:3333';
+    if (value && ts.isIdentifier(value) && value.text === 'mcpTarget') {
+      const binding = mcpBindings.length === 1 ? mcpBindings[0] : null;
+      const fallback = binding && ts.isBinaryExpression(binding) && binding.operatorToken.kind === ts.SyntaxKind.BarBarToken && binding.left.getText(ast) === 'env.ODOS_MCP_PROXY_TARGET' ? binding.right : binding;
+      if (!fallback || !ts.isStringLiteral(fallback) || fallback.text !== 'http://localhost:3333') throw new Error('unsupported or changed mcpTarget binding; expected localhost:3333 static fallback');
+      expectedTarget = '127.0.0.1:3333';
+    }
     else if (value && ts.isStringLiteral(value) && value.text === 'http://localhost:8103') expectedTarget = '127.0.0.1:8103';
     else throw new Error(`unsupported Vite target for ${prefix}`);
     const bypass = fields.find(p => p.name?.getText(ast) === 'bypass');
@@ -132,9 +139,11 @@ export function checkFrontdoorCoverage({ backendFamilies, viteSource, caddySourc
     if (!proxies.length || proxies.some(p => p.words.length !== 2 || p.words[1] !== entry.expectedTarget)) add('target-mismatch', prefix, `expected reverse_proxy ${entry.expectedTarget}`);
     const handles = block.children.filter(n => n.words[0] === 'handle');
     const pages = handles.filter(h => descendants(h, 'rewrite').some(r => r.words.join(' ') === 'rewrite * /index.html'));
-    const nestedProxy = handles.some(h => h.words.length === 1 && h.children?.length === 1 && h.children[0].words[0] === 'reverse_proxy');
+    const fallbacks = handles.filter(h => h.words.length === 1 && h.children?.length === 1 && h.children[0].words[0] === 'reverse_proxy' && h.children[0].children === null);
+    const validPages = pages.length > 0 && pages.every(h => h.children?.length === 2 && h.children.every(n => n.children === null) && sameSet(h.children.map(n => n.words.join(' ')), ['rewrite * /index.html', 'file_server']));
+    const validSplit = validPages && fallbacks.length === 1 && handles.length === pages.length + 1 && block.children.length === handles.length;
     const plain = handles.length === 0 && block.children.length === 1 && block.children[0].words[0] === 'reverse_proxy';
-    if (entry.bypass ? !pages.length || !nestedProxy : !plain) add('page-api-split', prefix, entry.bypass ? 'expected nested page rewrite and API proxy' : 'expected plain proxy without page bypass');
+    if (entry.bypass ? !validSplit : !plain) add('page-api-split', prefix, entry.bypass ? 'expected nested page rewrite and API proxy' : 'expected plain proxy without page bypass');
     for (const page of pages) {
       const matches = matchers.filter(m => m.words[0] === page.words[1]);
       if (page.words.length !== 2 || matches.length !== 1) { add('parse', prefix, 'unresolved or ambiguous page matcher'); continue; }
