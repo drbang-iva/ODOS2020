@@ -789,7 +789,20 @@ const STAFF_CORRESPONDENCE_RESOURCE_RULES: OdosResourceRule[] = [
  * generated in memory. HealthcareService writes use Admin's explicit practice-scoped correction
  * rule. No scheduling resource gets delete; cancellation and deactivation are state changes.
  */
+const AGE_OF_MAJORITY_CONFIG_READ_RULE: OdosResourceRule = {
+  resourceType: "Basic",
+  interactions: READ_INTERACTIONS,
+  scope: { kind: "practice-search", criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config" },
+};
+const AGE_OF_MAJORITY_CONFIG_WRITE_RULE: OdosResourceRule = {
+  resourceType: "Basic",
+  interactions: CREATE_UPDATE_INTERACTIONS,
+  scope: { kind: "practice-search", criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config" },
+};
+
 const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
+  AGE_OF_MAJORITY_CONFIG_READ_RULE,
+  AGE_OF_MAJORITY_CONFIG_WRITE_RULE,
   { resourceType: "Appointment", interactions: CREATE_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
   // Phase 4a: the practice scheduling-config singleton (hours/templates/blocked time/offices).
   // Criteria-fenced so the desk touches exactly one coded Basic — never Basic at large.
@@ -1006,6 +1019,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       ...PROTOCOL_MODULE_RESOURCE_RULES,
       ...PROCEDURE_CHARGE_RULE_BASIC_RESOURCE_RULES,
       APPEARANCE_CONFIG_READ_RULE,
+      AGE_OF_MAJORITY_CONFIG_READ_RULE,
     ],
   },
   staff: {

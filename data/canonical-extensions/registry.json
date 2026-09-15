@@ -3,6 +3,12 @@
   "generatedAt": "2026-09-07",
   "extensions": [
     {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-age-of-majority-practice-config",
+      "namespace": "clinic",
+      "status": "active",
+      "sliceConsumer": "registration-guarantor"
+    },
+    {
       "url": "https://odos2020.com/fhir/StructureDefinition/claim-touch-count",
       "namespace": "claims-follow-up",
       "status": "active",

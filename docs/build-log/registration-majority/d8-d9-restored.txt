@@ -1,0 +1,106 @@
+TAP version 13
+# Subtest: age-of-majority writer round trips, preserves version, rejects invalid values and has no fallback
+ok 1 - age-of-majority writer round trips, preserves version, rejects invalid values and has no fallback
+  ---
+  duration_ms: 0.593875
+  type: 'test'
+  ...
+# Subtest: D8 age-of-majority canonical extension is registered
+ok 2 - D8 age-of-majority canonical extension is registered
+  ---
+  duration_ms: 0.182417
+  type: 'test'
+  ...
+# Subtest: D9 seed defaults to dry-run and preserves an existing configured project
+ok 3 - D9 seed defaults to dry-run and preserves an existing configured project
+  ---
+  duration_ms: 0.451333
+  type: 'test'
+  ...
+# Subtest: age-of-majority policy grants match scheduling writes and cover all communication roles
+ok 4 - age-of-majority policy grants match scheduling writes and cover all communication roles
+  ---
+  duration_ms: 0.35625
+  type: 'test'
+  ...
+# Subtest: front-desk reads the visit-type catalog (HealthcareService) at practice scope
+ok 5 - front-desk reads the visit-type catalog (HealthcareService) at practice scope
+  ---
+  duration_ms: 0.580583
+  type: 'test'
+  ...
+# Subtest: front-desk reads the frame catalog but cannot manage DeviceDefinition
+ok 6 - front-desk reads the frame catalog but cannot manage DeviceDefinition
+  ---
+  duration_ms: 0.316416
+  type: 'test'
+  ...
+# Subtest: front-desk reads Schedule and Slot (the resource columns + availability) at practice scope
+ok 7 - front-desk reads Schedule and Slot (the resource columns + availability) at practice scope
+  ---
+  duration_ms: 0.090917
+  type: 'test'
+  ...
+# Subtest: front-desk books/edits Appointments for the whole practice day (create/read/update, no delete)
+ok 8 - front-desk books/edits Appointments for the whole practice day (create/read/update, no delete)
+  ---
+  duration_ms: 0.068667
+  type: 'test'
+  ...
+# Subtest: front-desk demographic/financial-context resources stay patient-compartment scoped (unchanged)
+ok 9 - front-desk demographic/financial-context resources stay patient-compartment scoped (unchanged)
+  ---
+  duration_ms: 0.199209
+  type: 'test'
+  ...
+# Subtest: the scheduling.manage business action and the role↔policy meta.tag link are preserved
+ok 10 - the scheduling.manage business action and the role↔policy meta.tag link are preserved
+  ---
+  duration_ms: 0.069792
+  type: 'test'
+  ...
+# Subtest: Provider has practice-wide scheduling reads but no scheduling writes
+ok 11 - Provider has practice-wide scheduling reads but no scheduling writes
+  ---
+  duration_ms: 0.133541
+  type: 'test'
+  ...
+# Subtest: front-desk Basic grants stay criteria-scoped to approved records and the practitioner tally
+ok 12 - front-desk Basic grants stay criteria-scoped to approved records and the practitioner tally
+  ---
+  duration_ms: 0.246125
+  type: 'test'
+  ...
+# Subtest: clinician appearance access remains one read-only coded Basic grant
+ok 13 - clinician appearance access remains one read-only coded Basic grant
+  ---
+  duration_ms: 0.2395
+  type: 'test'
+  ...
+# Subtest: every non-admin app role can read but never write the appearance singleton
+ok 14 - every non-admin app role can read but never write the appearance singleton
+  ---
+  duration_ms: 0.33025
+  type: 'test'
+  ...
+# Subtest: no non-admin role can create or update the billing identity singleton
+ok 15 - no non-admin role can create or update the billing identity singleton
+  ---
+  duration_ms: 0.206084
+  type: 'test'
+  ...
+# Subtest: Staff can read billing identity while Admin has an explicit criteria-fenced write rule
+ok 16 - Staff can read billing identity while Admin has an explicit criteria-fenced write rule
+  ---
+  duration_ms: 0.103625
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 118.730583

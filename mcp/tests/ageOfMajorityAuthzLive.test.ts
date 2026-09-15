@@ -1,0 +1,42 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { test } from "node:test";
+import type { AccessPolicy, Resource, Basic, Patient } from "@medplum/fhirtypes";
+import { requireMedplumAdmin, createAuthenticatedFhirClient } from "./integration-helpers.js";
+import { createRoleClient, fhirRequest, cleanupReferences } from "./liveRoleClient.js";
+import { searchAll } from "../src/fhir-search.js";
+import { ODOS_PRACTICE_ROLE_SYSTEM } from "../src/authz/roles.js";
+import { buildAgeOfMajorityConfigResource, resolveAgeOfMajorityYears } from "../src/clinic/age-of-majority-config.js";
+
+test("age-of-majority singleton grants enforce provider reads and staff/admin edits on live Medplum", async (t) => {
+  const credentials = requireMedplumAdmin(t, "ageOfMajorityAuthzLive");
+  if (!credentials) return;
+  const baseUrl = process.env.MEDPLUM_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8103";
+  const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, ...credentials });
+  const meResponse = await fetch(`${baseUrl}/auth/me`, { headers: { Authorization: `Bearer ${accessToken}` } });
+  assert.equal(meResponse.status, 200);
+  const me = await meResponse.json() as { project?: { id?: string }; profile?: Resource };
+  const projectId = process.env.MEDPLUM_PROJECT_ID || me.project?.id;
+  assert.ok(projectId && me.profile?.id);
+  const cleanup: string[] = [];
+  const track = <T extends Resource>(resource: T): T => { assert.ok(resource.id); cleanup.push(`${resource.resourceType}/${resource.id}`); return resource; };
+  try {
+    const policies = await searchAll<AccessPolicy>(fhir, "AccessPolicy", { _project: projectId });
+    const patients = await searchAll<Patient>(fhir, "Patient", { _count: "1000" });
+    const patient = patients.find((candidate) => candidate.name?.some((name) => name.family?.startsWith("ContractSearch")));
+    assert.ok(patient?.id);
+    const config = track(await fhir.create(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 })));
+    for (const roleId of ["provider", "staff", "admin"] as const) {
+      await t.test(roleId, async () => {
+        const matches = policies.filter((policy) => policy.meta?.tag?.some((tag) => tag.system === ODOS_PRACTICE_ROLE_SYSTEM && tag.code === roleId));
+        assert.equal(matches.length, 1);
+        const { token } = await createRoleClient({ baseUrl, roleId, policyReference: `AccessPolicy/${matches[0]!.id}`, patientReference: `Patient/${patient.id}`, practitionerReference: `${me.profile!.resourceType}/${me.profile!.id}`, projectId, runId: randomUUID(), adminToken: accessToken, track });
+        const read = await fhirRequest<Basic>(baseUrl, token, "GET", `Basic/${config.id}`);
+        assert.equal(read.status, 200, read.summary);
+        assert.ok([18, 21].includes(resolveAgeOfMajorityYears(read.body)));
+        const write = await fhirRequest<Basic>(baseUrl, token, "PUT", `Basic/${config.id}`, buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 21 }, read.body));
+        assert.equal(write.status, roleId === "provider" ? 403 : 200, write.summary);
+      });
+    }
+  } finally { await cleanupReferences(baseUrl, accessToken, cleanup); }
+});
