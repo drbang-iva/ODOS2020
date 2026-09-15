@@ -87,3 +87,13 @@ test('target changed during backup is preserved and replacement refused', () => 
  const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
  assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/Target changed/); assert.equal(readFileSync(target,'utf8'),'newer during backup'); assert.ok(readdirSync(dir).every(name => !name.startsWith('.odos-frontdoor-')));
 }));
+test('post-replacement sync failure reports installed state and preserves backup', () => fixture(({dir,target}) => {
+ const input = `import fs from 'node:fs'; import { syncBuiltinESMExports } from 'node:module';
+ const originalSync = fs.fsyncSync; let directorySyncs = 0;
+ fs.fsyncSync = function(fd) { if (fs.fstatSync(fd).isDirectory() && ++directorySyncs === 2) throw new Error('simulated post-install sync failure'); return originalSync(fd); };
+ syncBuiltinESMExports(); const { main } = await import('./scripts/frontdoor-install.mjs');
+ process.exitCode = main(['--ui-dist',process.argv[2] + '/dist','--target',process.argv[3],'--apply']);`;
+ const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
+ assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/Installed but durability is unknown/); assert.match(readFileSync(target,'utf8'),/ODOS front door/);
+ const backup = readdirSync(dir).find(name => name.startsWith('Caddyfile.bak-')); assert.ok(backup); assert.equal(readFileSync(join(dir,backup),'utf8'),'old config\n');
+}));

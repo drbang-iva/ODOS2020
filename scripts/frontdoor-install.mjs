@@ -26,6 +26,7 @@ function assertTargetUnchanged(target, original) {
 export function main(args = process.argv.slice(2)) {
   let temp;
   let staging;
+  let installed = false;
   try {
     const options = {};
     for (let i = 0; i < args.length; i++) {
@@ -76,10 +77,14 @@ export function main(args = process.argv.slice(2)) {
     assertTargetUnchanged(target, original);
     if (original === null) linkSync(stagedFile, target);
     else renameSync(stagedFile, target);
+    installed = true;
     syncPath(dirname(target));
     console.log('Applied. No service restarted; restart remains an operator step.');
     return 0;
-  } catch (err) { console.error(`Front-door install: ${err.message}`); return 1; }
+  } catch (err) {
+    console.error(`Front-door install: ${installed ? 'Installed but durability is unknown; verify target and backup before restarting. ' : ''}${err.message}`);
+    return 1;
+  }
   finally {
     if (staging) rmSync(staging, { recursive: true, force: true });
     if (temp) rmSync(temp, { recursive: true, force: true });

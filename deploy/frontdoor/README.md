@@ -27,6 +27,10 @@ entries are synced before reporting success. Existing permission bits are preser
 a new config is mode `0644`. A new target has no prior file to back up. An unchanged target
 is left alone. Temporary validation files are removed on both success and failure.
 
+If the final directory sync fails after replacement, the command exits 1 and reports
+that the config was installed but durability is unknown. Inspect the target and backup
+before restarting; an error after replacement does not mean the target is unchanged.
+
 Coordinate with other config writers and run one installer at a time. The installer
 checks for observed target changes after staging and immediately before replacement;
 these checks are not a lock against arbitrary concurrent writers.
