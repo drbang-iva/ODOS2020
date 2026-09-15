@@ -32,7 +32,7 @@ export async function handleGuarantorSearch(deps: GuarantorOperationDeps, staff:
     if (person.meta?.project?.replace(/^Project\//, "") !== project) throw new Error("Guarantor search returned a foreign-practice Person.");
     if (!person.link?.length || !guarantorPersonIsAttachable(person, project)) return false;
     return person.name?.some(name => normalName(name.family ?? "") === normalName(key.lastName) &&
-      (key.firstName !== undefined ? normalName(name.given?.[0] ?? "") === normalName(key.firstName) : person.telecom?.some(contact => contact.system === "phone" && digits(contact.value ?? "") === searchPhoneDigits(key.phone!))));
+      (key.firstName !== undefined ? normalName(name.given?.[0] ?? "") === normalName(key.firstName) : person.telecom?.some(contact => contact.system === "phone" && searchPhoneDigits(contact.value ?? "") === searchPhoneDigits(key.phone!))));
   });
   if (found.length > 20) return tooMany;
   return { status: 200, body: found.map(person => ({ personId: person.id, versionId: person.meta?.versionId,

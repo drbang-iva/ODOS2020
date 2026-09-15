@@ -27,6 +27,19 @@ test("Follow-up F2: US phone search matches country-code and ten-digit forms wit
   assert.deepEqual((await r.json()).map((x:any)=>x.personId),["leading-one"]);
  });
 });
+test("Fixback F2: stored country-code and ten-digit phones match every supported US search form",async()=>{
+ for(const storedPhone of ["+1 864-555-0102","864-555-0102"]){
+  await route([person("ann","Ann",{telecom:[{system:"phone",value:storedPhone}]})],async base=>{
+   const matches=[];
+   for(const searchPhone of ["+1 864 555 0102","18645550102","864 555 0102"]){
+    const r=await fetch(base+"/guarantors/search?lastName=Ann&phone="+encodeURIComponent(searchPhone));
+    assert.equal(r.status,200);
+    matches.push((await r.json()).map((x:any)=>x.personId));
+   }
+   assert.deepEqual(matches,[["ann"],["ann"],["ann"]],`stored phone ${storedPhone}`);
+  });
+ }
+});
 test("K3 search card exposes exactly six keys",async()=>route([person("ann","Ann",{extension:[{url:"urn:sentinel",valueString:"private"}],address:[{line:["Private street"],city:"Town",postalCode:"00000"}]})],async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,200);assert.deepEqual(Object.keys((await r.json())[0]).sort(),["personId","versionId","name","phones","city","postalCode"].sort());}));
 for(const [kind,extra] of [["inactive",{active:false}],["zero-link",{link:[]}],["non-RelatedPerson",{link:[{target:{reference:"Patient/child"}}]}]] as const)test(`K4 ${kind} excluded`,async()=>route([person("ann","Ann",extra)],async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,200);assert.deepEqual(await r.json(),[]);}));
 for(const count of [21,201])test(`K5 ${count} matches return 422`,async()=>route(Array.from({length:count},(_,i)=>person("ann"+i)),async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,422);assert.equal((await r.json()).error,"Too many matches; add a first name or phone.");}));
