@@ -1,0 +1,1 @@
+{"browser":"Chromium","surface":"Actual ProtocolStagingList and FollowUpConfirmation components, synthetic fixture; not full app route or Medplum","checks":5,"pass":5,"pageErrors":[],"port":19361,"serverClosed":true}

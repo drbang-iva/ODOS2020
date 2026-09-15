@@ -1,0 +1,86 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs src/__tests__/plan-seeding.test.ts src/__tests__/plan-offered.test.ts
+
+TAP version 13
+# Subtest: offered uses the explicit procedure link and active switch
+ok 1 - offered uses the explicit procedure link and active switch
+  ---
+  duration_ms: 2.1575
+  type: 'test'
+  ...
+# Subtest: unoffered whole apply opts out series and its package before series resolution; item add refuses
+ok 2 - unoffered whole apply opts out series and its package before series resolution; item add refuses
+  ---
+  duration_ms: 2.518542
+  type: 'test'
+  ...
+# Subtest: offers annotate every item and reload current offered definitions
+ok 3 - offers annotate every item and reload current offered definitions
+  ---
+  duration_ms: 5.695416
+  type: 'test'
+  ...
+# Subtest: offered series without active configuration keeps 400
+ok 4 - offered series without active configuration keeps 400
+  ---
+  duration_ms: 0.684083
+  type: 'test'
+  ...
+# Subtest: seeding advances a legacy system head conditionally and preserves its pinned snapshot
+ok 5 - seeding advances a legacy system head conditionally and preserves its pinned snapshot
+  ---
+  duration_ms: 2.098833
+  type: 'test'
+  ...
+# Subtest: seeding preserves a draft head
+ok 6 - seeding preserves a draft head
+  ---
+  duration_ms: 0.433542
+  type: 'test'
+  ...
+# Subtest: seeding preserves a retired head
+ok 7 - seeding preserves a retired head
+  ---
+  duration_ms: 0.229709
+  type: 'test'
+  ...
+# Subtest: seeding preserves a staff head
+ok 8 - seeding preserves a staff head
+  ---
+  duration_ms: 0.295
+  type: 'test'
+  ...
+# Subtest: seeding preserves a missing-publisher head
+ok 9 - seeding preserves a missing-publisher head
+  ---
+  duration_ms: 0.276792
+  type: 'test'
+  ...
+# Subtest: double boot keeps one new head and immutable snapshots
+ok 10 - double boot keeps one new head and immutable snapshots
+  ---
+  duration_ms: 1.48825
+  type: 'test'
+  ...
+# Subtest: equal version conflict is logged and never overwritten
+ok 11 - equal version conflict is logged and never overwritten
+  ---
+  duration_ms: 0.481666
+  type: 'test'
+  ...
+# Subtest: a concurrent staff edit wins the version-conditional seed
+ok 12 - a concurrent staff edit wins the version-conditional seed
+  ---
+  duration_ms: 0.554333
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 237.006583

@@ -6,77 +6,77 @@ TAP version 13
 # Subtest: carried apply maps the losing whole-apply commit race to 409
 ok 1 - carried apply maps the losing whole-apply commit race to 409
   ---
-  duration_ms: 5.495125
+  duration_ms: 4.698083
   type: 'test'
   ...
 # Subtest: carried unapply maps a conditional application save conflict to 409
 ok 2 - carried unapply maps a conditional application save conflict to 409
   ---
-  duration_ms: 1.381917
+  duration_ms: 2.598875
   type: 'test'
   ...
 # Subtest: carried confirm checks liveness after the encounter lock and returns 404
-not ok 3 - carried confirm checks liveness after the encounter lock and returns 404
+ok 3 - carried confirm checks liveness after the encounter lock and returns 404
   ---
-  duration_ms: 5.083625
+  duration_ms: 4.21175
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:1:2948'
+  ...
+# Subtest: carried undo preserves clinician resolution at 4 months
+not ok 4 - carried undo preserves clinician resolution at 4 months
+  ---
+  duration_ms: 3.344292
+  type: 'test'
+  location: '$CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:1:3695'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
-    200 !== 404
-    
+
+    true !== false
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
-  expected: 404
-  actual: 200
+  expected: false
+  actual: true
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:72:10)
+    TestContext.<anonymous> ($CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:88:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
-  ...
-# Subtest: carried undo preserves clinician resolution at 4 months
-ok 4 - carried undo preserves clinician resolution at 4 months
-  ---
-  duration_ms: 2.379042
-  type: 'test'
   ...
 # Subtest: carried undo preserves clinician resolution at 6 months
 ok 5 - carried undo preserves clinician resolution at 6 months
   ---
-  duration_ms: 1.587416
+  duration_ms: 1.905
   type: 'test'
   ...
 # Subtest: carried ServiceRequest rollback reports a newer version conflict without overwriting it
 ok 6 - carried ServiceRequest rollback reports a newer version conflict without overwriting it
   ---
-  duration_ms: 1.413458
+  duration_ms: 1.500459
   type: 'test'
   ...
 # Subtest: carried CarePlan rollback reports a newer version conflict without overwriting it
 ok 7 - carried CarePlan rollback reports a newer version conflict without overwriting it
   ---
-  duration_ms: 1.029917
+  duration_ms: 1.10725
   type: 'test'
   ...
 # Subtest: carried Observation rollback reports a newer version conflict without overwriting it
 ok 8 - carried Observation rollback reports a newer version conflict without overwriting it
   ---
-  duration_ms: 1.150208
+  duration_ms: 0.992375
   type: 'test'
   ...
 # Subtest: carried rollback restores the captured version conditionally
 ok 9 - carried rollback restores the captured version conditionally
   ---
-  duration_ms: 1.165084
+  duration_ms: 1.567833
   type: 'test'
   ...
 # Subtest: carried rollback refuses missing revoke version
 ok 10 - carried rollback refuses missing revoke version
   ---
-  duration_ms: 2.491584
+  duration_ms: 1.353208
   type: 'test'
   ...
 1..10
@@ -87,4 +87,4 @@ ok 10 - carried rollback refuses missing revoke version
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 190.180708
+# duration_ms 197.116209

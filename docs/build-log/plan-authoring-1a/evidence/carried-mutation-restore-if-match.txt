@@ -38,32 +38,32 @@ not ok 6 - carried ServiceRequest rollback reports a newer version conflict with
   ---
   duration_ms: 2.410208
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:1:4783'
+  location: '$CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:1:4783'
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /rollback.*412|412.*rollback/i. Input:
-    
+
     'Error: Synthetic Basic removal failure'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
   actual:
   error: 'Synthetic Basic removal failure'
   stack: |-
-    PlanAuthoringFhir.h.fhir.beforeUpdate (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:106:15)
-    async PlanAuthoringFhir.update (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/helpers/plan-authoring-fhir.ts:37:5)
-    async ProtocolBasicStore.saveWithIdentifiers (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-store.ts:149:9)
-    async ProtocolService.unapplyLocked (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-service.ts:740:11)
-    async InProcessProtocolItemAddLock.run (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-service.ts:74:14)
-    async handleProtocolUnapplyRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-endpoint.ts:828:33)
+    PlanAuthoringFhir.h.fhir.beforeUpdate ($CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:106:15)
+    async PlanAuthoringFhir.update ($CARRIED_WORKTREE/mcp/src/__tests__/helpers/plan-authoring-fhir.ts:37:5)
+    async ProtocolBasicStore.saveWithIdentifiers ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-store.ts:149:9)
+    async ProtocolService.unapplyLocked ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-service.ts:740:11)
+    async InProcessProtocolItemAddLock.run ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-service.ts:74:14)
+    async handleProtocolUnapplyRequest ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-endpoint.ts:828:33)
     async waitForActual (node:assert:644:5)
     async Function.rejects (node:assert:767:25)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:109:5)
+    async TestContext.<anonymous> ($CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:109:5)
     async Test.run (node:internal/test_runner/test:1054:7)
   operator: 'rejects'
   stack: |-
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:109:5)
+    async TestContext.<anonymous> ($CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:109:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -72,32 +72,32 @@ not ok 7 - carried CarePlan rollback reports a newer version conflict without ov
   ---
   duration_ms: 1.24625
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:1:4783'
+  location: '$CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:1:4783'
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /rollback.*412|412.*rollback/i. Input:
-    
+
     'Error: Synthetic Basic removal failure'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
   actual:
   error: 'Synthetic Basic removal failure'
   stack: |-
-    PlanAuthoringFhir.h.fhir.beforeUpdate (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:106:15)
-    async PlanAuthoringFhir.update (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/helpers/plan-authoring-fhir.ts:37:5)
-    async ProtocolBasicStore.saveWithIdentifiers (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-store.ts:149:9)
-    async ProtocolService.unapplyLocked (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-service.ts:740:11)
-    async InProcessProtocolItemAddLock.run (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-service.ts:74:14)
-    async handleProtocolUnapplyRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-endpoint.ts:828:33)
+    PlanAuthoringFhir.h.fhir.beforeUpdate ($CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:106:15)
+    async PlanAuthoringFhir.update ($CARRIED_WORKTREE/mcp/src/__tests__/helpers/plan-authoring-fhir.ts:37:5)
+    async ProtocolBasicStore.saveWithIdentifiers ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-store.ts:149:9)
+    async ProtocolService.unapplyLocked ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-service.ts:740:11)
+    async InProcessProtocolItemAddLock.run ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-service.ts:74:14)
+    async handleProtocolUnapplyRequest ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-endpoint.ts:828:33)
     async waitForActual (node:assert:644:5)
     async Function.rejects (node:assert:767:25)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:109:5)
+    async TestContext.<anonymous> ($CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:109:5)
     async Test.run (node:internal/test_runner/test:1054:7)
   operator: 'rejects'
   stack: |-
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:109:5)
+    async TestContext.<anonymous> ($CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:109:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -106,32 +106,32 @@ not ok 8 - carried Observation rollback reports a newer version conflict without
   ---
   duration_ms: 2.121208
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:1:4783'
+  location: '$CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:1:4783'
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /rollback.*412|412.*rollback/i. Input:
-    
+
     'Error: Synthetic Basic removal failure'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
   actual:
   error: 'Synthetic Basic removal failure'
   stack: |-
-    PlanAuthoringFhir.h.fhir.beforeUpdate (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:106:15)
-    async PlanAuthoringFhir.update (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/helpers/plan-authoring-fhir.ts:37:5)
-    async ProtocolBasicStore.saveWithIdentifiers (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-store.ts:149:9)
-    async ProtocolService.unapplyLocked (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-service.ts:775:11)
-    async InProcessProtocolItemAddLock.run (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-service.ts:74:14)
-    async handleProtocolUnapplyRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-endpoint.ts:828:33)
+    PlanAuthoringFhir.h.fhir.beforeUpdate ($CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:106:15)
+    async PlanAuthoringFhir.update ($CARRIED_WORKTREE/mcp/src/__tests__/helpers/plan-authoring-fhir.ts:37:5)
+    async ProtocolBasicStore.saveWithIdentifiers ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-store.ts:149:9)
+    async ProtocolService.unapplyLocked ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-service.ts:775:11)
+    async InProcessProtocolItemAddLock.run ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-service.ts:74:14)
+    async handleProtocolUnapplyRequest ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-endpoint.ts:828:33)
     async waitForActual (node:assert:644:5)
     async Function.rejects (node:assert:767:25)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:109:5)
+    async TestContext.<anonymous> ($CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:109:5)
     async Test.run (node:internal/test_runner/test:1054:7)
   operator: 'rejects'
   stack: |-
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:109:5)
+    async TestContext.<anonymous> ($CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:109:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -140,21 +140,21 @@ not ok 9 - carried rollback restores the captured version conditionally
   ---
   duration_ms: 1.36325
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:1:5609'
+  location: '$CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:1:5609'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'W/"2"'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'W/"2"'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:139:12)
+    TestContext.<anonymous> ($CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:139:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

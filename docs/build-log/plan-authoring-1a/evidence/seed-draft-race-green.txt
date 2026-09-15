@@ -1,0 +1,68 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs src/__tests__/plan-seeding.test.ts
+
+TAP version 13
+# Subtest: seeding advances a legacy system head conditionally and preserves its pinned snapshot
+ok 1 - seeding advances a legacy system head conditionally and preserves its pinned snapshot
+  ---
+  duration_ms: 2.045334
+  type: 'test'
+  ...
+# Subtest: seeding preserves a draft head
+ok 2 - seeding preserves a draft head
+  ---
+  duration_ms: 0.337458
+  type: 'test'
+  ...
+# Subtest: seeding preserves a retired head
+ok 3 - seeding preserves a retired head
+  ---
+  duration_ms: 0.266125
+  type: 'test'
+  ...
+# Subtest: seeding preserves a staff head
+ok 4 - seeding preserves a staff head
+  ---
+  duration_ms: 0.21375
+  type: 'test'
+  ...
+# Subtest: seeding preserves a missing-publisher head
+ok 5 - seeding preserves a missing-publisher head
+  ---
+  duration_ms: 0.26475
+  type: 'test'
+  ...
+# Subtest: double boot keeps one new head and immutable snapshots
+ok 6 - double boot keeps one new head and immutable snapshots
+  ---
+  duration_ms: 1.139166
+  type: 'test'
+  ...
+# Subtest: equal version conflict is logged and never overwritten
+ok 7 - equal version conflict is logged and never overwritten
+  ---
+  duration_ms: 0.571667
+  type: 'test'
+  ...
+# Subtest: a concurrent staff edit wins the version-conditional seed
+ok 8 - a concurrent staff edit wins the version-conditional seed
+  ---
+  duration_ms: 0.866666
+  type: 'test'
+  ...
+# Subtest: a staff draft winning the seed race can still publish the next version
+ok 9 - a staff draft winning the seed race can still publish the next version
+  ---
+  duration_ms: 1.3335
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 152.411209

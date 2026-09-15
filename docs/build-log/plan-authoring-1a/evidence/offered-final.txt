@@ -1,0 +1,51 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs src/__tests__/plan-offered.test.ts
+
+TAP version 13
+# Built-in dry-eye-ipl-init: stored head preserved.
+# Subtest: offered uses the explicit procedure link and active switch
+ok 1 - offered uses the explicit procedure link and active switch
+  ---
+  duration_ms: 1.213625
+  type: 'test'
+  ...
+# Subtest: unoffered whole apply opts out series and its package before series resolution; item add refuses
+ok 2 - unoffered whole apply opts out series and its package before series resolution; item add refuses
+  ---
+  duration_ms: 5.166209
+  type: 'test'
+  ...
+# Subtest: offers annotate every item and reload current offered definitions
+ok 3 - offers annotate every item and reload current offered definitions
+  ---
+  duration_ms: 5.920167
+  type: 'test'
+  ...
+# Subtest: offered series without active configuration keeps 400
+ok 4 - offered series without active configuration keeps 400
+  ---
+  duration_ms: 4.67375
+  type: 'test'
+  ...
+# Subtest: an offered selected order retains the charge shared with an unoffered item
+ok 5 - an offered selected order retains the charge shared with an unoffered item
+  ---
+  duration_ms: 3.465041
+  type: 'test'
+  ...
+# Subtest: strict authoring round-trips a titled series item and its offered-service link
+ok 6 - strict authoring round-trips a titled series item and its offered-service link
+  ---
+  duration_ms: 0.674209
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 179.014

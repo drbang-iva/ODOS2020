@@ -1,0 +1,223 @@
+{
+  "hidden": [
+    {
+      "planSetKey": "glaucoma-suspect-initial",
+      "kind": "test",
+      "title": "Corneal hysteresis",
+      "orderable": "corneal-hysteresis",
+      "reason": "not-orderable"
+    },
+    {
+      "planSetKey": "glaucoma-suspect-initial",
+      "kind": "test",
+      "title": "ERG PhNR",
+      "orderable": "erg",
+      "reason": "not-orderable"
+    },
+    {
+      "planSetKey": "glaucoma-suspect-initial",
+      "kind": "test",
+      "title": "OCT angiography, optic nerve vessel density",
+      "orderable": "oct-angiography",
+      "reason": "not-orderable"
+    },
+    {
+      "planSetKey": "glaucoma-suspect-initial",
+      "kind": "handout",
+      "reason": "handout — no real catalog content"
+    },
+    {
+      "planSetKey": "glaucoma-oht",
+      "kind": "test",
+      "title": "Corneal hysteresis",
+      "orderable": "corneal-hysteresis",
+      "reason": "not-orderable"
+    },
+    {
+      "planSetKey": "glaucoma-oht",
+      "kind": "handout",
+      "reason": "handout — no real catalog content"
+    },
+    {
+      "planSetKey": "glaucoma-narrow-angle",
+      "kind": "test",
+      "title": "Anterior segment OCT",
+      "orderable": "anterior-segment-oct",
+      "reason": "not-orderable"
+    },
+    {
+      "planSetKey": "glaucoma-narrow-angle",
+      "kind": "handout",
+      "reason": "handout — no real catalog content"
+    },
+    {
+      "planSetKey": "glaucoma-pac",
+      "kind": "test",
+      "title": "Anterior segment OCT",
+      "orderable": "anterior-segment-oct",
+      "reason": "not-orderable"
+    },
+    {
+      "planSetKey": "glaucoma-pac",
+      "kind": "handout",
+      "reason": "handout — no real catalog content"
+    },
+    {
+      "planSetKey": "glaucoma-steroid-responder",
+      "kind": "handout",
+      "reason": "handout — no real catalog content"
+    },
+    {
+      "planSetKey": "glaucoma-poag",
+      "kind": "test",
+      "title": "Corneal hysteresis",
+      "orderable": "corneal-hysteresis",
+      "reason": "not-orderable"
+    },
+    {
+      "planSetKey": "glaucoma-poag",
+      "kind": "test",
+      "title": "ERG",
+      "orderable": "erg",
+      "reason": "not-orderable"
+    },
+    {
+      "planSetKey": "glaucoma-poag",
+      "kind": "test",
+      "title": "OCT angiography, optic nerve vessel density",
+      "orderable": "oct-angiography",
+      "reason": "not-orderable"
+    },
+    {
+      "planSetKey": "glaucoma-poag",
+      "kind": "handout",
+      "reason": "handout — no real catalog content"
+    },
+    {
+      "planSetKey": "glaucoma-ltg",
+      "kind": "test",
+      "title": "Corneal hysteresis",
+      "orderable": "corneal-hysteresis",
+      "reason": "not-orderable"
+    },
+    {
+      "planSetKey": "glaucoma-ltg",
+      "kind": "test",
+      "title": "ERG",
+      "orderable": "erg",
+      "reason": "not-orderable"
+    },
+    {
+      "planSetKey": "glaucoma-ltg",
+      "kind": "test",
+      "title": "OCT angiography, optic nerve vessel density",
+      "orderable": "oct-angiography",
+      "reason": "not-orderable"
+    },
+    {
+      "planSetKey": "glaucoma-ltg",
+      "kind": "test",
+      "title": "Anterior segment OCT",
+      "orderable": "anterior-segment-oct",
+      "reason": "not-orderable"
+    },
+    {
+      "planSetKey": "glaucoma-ltg",
+      "kind": "handout",
+      "reason": "handout — no real catalog content"
+    }
+  ],
+  "clinicalStrings": [
+    {
+      "id": "glaucoma-suspect-initial",
+      "counseling": [
+        "Discussed Glaucoma suspect: Glaucoma suspect. Questions answered."
+      ],
+      "followUp": {
+        "interval": 6,
+        "unit": "months",
+        "reason": "Glaucoma suspect",
+        "followUpKind": "medical",
+        "schedulingOrder": true
+      }
+    },
+    {
+      "id": "glaucoma-oht",
+      "counseling": [
+        "Discussed Ocular hypertension: Ocular hypertension. Questions answered."
+      ],
+      "followUp": {
+        "interval": 6,
+        "unit": "months",
+        "reason": "Ocular hypertension",
+        "followUpKind": "medical",
+        "schedulingOrder": true
+      }
+    },
+    {
+      "id": "glaucoma-narrow-angle",
+      "counseling": [
+        "Discussed Anatomical narrow angle: angle-closure warning signs · medications that dilate (antihistamines, decongestants, anticholinergics). Questions answered."
+      ],
+      "followUp": {
+        "interval": 6,
+        "unit": "months",
+        "reason": "Anatomical narrow angle",
+        "followUpKind": "medical",
+        "schedulingOrder": true
+      }
+    },
+    {
+      "id": "glaucoma-pac",
+      "counseling": [
+        "Discussed Primary angle closure without damage: Primary angle closure without damage. Questions answered."
+      ],
+      "followUp": {
+        "interval": 1,
+        "unit": "months",
+        "reason": "Primary angle closure without damage",
+        "followUpKind": "medical",
+        "schedulingOrder": true
+      }
+    },
+    {
+      "id": "glaucoma-steroid-responder",
+      "counseling": [
+        "Discussed Steroid responder: Steroid responder. Questions answered."
+      ],
+      "followUp": {
+        "interval": 2,
+        "unit": "weeks",
+        "reason": "Steroid responder",
+        "followUpKind": "medical",
+        "schedulingOrder": true
+      }
+    },
+    {
+      "id": "glaucoma-poag",
+      "counseling": [
+        "Discussed Primary open-angle glaucoma: adherence and drop technique. Questions answered."
+      ],
+      "followUp": {
+        "interval": 3,
+        "unit": "months",
+        "reason": "Primary open-angle glaucoma",
+        "followUpKind": "medical",
+        "schedulingOrder": true
+      }
+    },
+    {
+      "id": "glaucoma-ltg",
+      "counseling": [
+        "Discussed Low-tension glaucoma: Low-tension glaucoma. Questions answered."
+      ],
+      "followUp": {
+        "interval": 3,
+        "unit": "months",
+        "reason": "Low-tension glaucoma",
+        "followUpKind": "medical",
+        "schedulingOrder": true
+      }
+    }
+  ]
+}

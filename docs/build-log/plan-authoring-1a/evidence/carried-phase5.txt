@@ -718,20 +718,20 @@ not ok 117 - shared rollback endpoint: finding revocation rollback preserves ori
   ---
   duration_ms: 7.958209
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/protocol-phase5.test.ts:1:139475'
+  location: '$CARRIED_WORKTREE/mcp/src/__tests__/protocol-phase5.test.ts:1:139475'
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
-    
+
       assert.ok(originalProjections.some((row) => row.resourceType === (kind === "action" ? "ServiceRequest" : "Observation")))
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
   actual: false
   operator: '=='
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/protocol-phase5.test.ts:3669:12)
+    TestContext.<anonymous> ($CARRIED_WORKTREE/mcp/src/__tests__/protocol-phase5.test.ts:3669:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

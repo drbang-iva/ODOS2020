@@ -1,0 +1,54 @@
+[
+  {
+    "mutation": "ui-offer-count",
+    "redExit": 1,
+    "greenExit": 0,
+    "redFailures": [
+      "not ok 3 - Assessment shows each offer's added count once and keeps the nonselected count"
+    ],
+    "greenSummary": [
+      "# tests 3",
+      "# pass 3",
+      "# fail 0"
+    ]
+  },
+  {
+    "mutation": "ui-confirm-defaults",
+    "redExit": 1,
+    "greenExit": 0,
+    "redFailures": [
+      "not ok 2 - follow-up with missing interval and unit can be confirmed before editing"
+    ],
+    "greenSummary": [
+      "# tests 3",
+      "# pass 3",
+      "# fail 0"
+    ]
+  },
+  {
+    "mutation": "ui-hide",
+    "redExit": 1,
+    "greenExit": 0,
+    "redFailures": [
+      "not ok 1 - staging shows authored titles and hides unavailable items"
+    ],
+    "greenSummary": [
+      "# tests 3",
+      "# pass 3",
+      "# fail 0"
+    ]
+  },
+  {
+    "mutation": "ui-title",
+    "redExit": 1,
+    "greenExit": 0,
+    "redFailures": [
+      "not ok 1 - staging shows authored titles and hides unavailable items"
+    ],
+    "greenSummary": [
+      "# tests 3",
+      "# pass 3",
+      "# fail 0"
+    ]
+  }
+]

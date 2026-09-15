@@ -1,0 +1,1188 @@
+{
+  "base": "52c6ec4926e95e78344082add8522e74743ffb33",
+  "head": "7891ed1724ac0744468d187784519ec1e50143a3",
+  "reports": [
+    {
+      "file": "mcp/src/__tests__/protocol-phase5.test.ts",
+      "baselineTestBodies": 115,
+      "finalTestBodies": 115,
+      "allAssertionsUnchanged": true,
+      "bodyExceptions": [
+        "`shared rollback endpoint: ${kind} revocation rollback preserves original FHIR IDs and statuses`"
+      ],
+      "tests": [
+        {
+          "name": "\"protocol-phase5.test.ts is included in full MCP discovery\"",
+          "bodyHash": "273ae3ca3c0d8e1d8c845aa95fbd57e6f6d7ae73514139ac4382fbbd854e6aa0",
+          "assertionHash": "31b6c93502d3533c264d911411c65c71ba2a6a9ee66bab9aa518a730c2aaa388",
+          "assertionCount": 1,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "273ae3ca3c0d8e1d8c845aa95fbd57e6f6d7ae73514139ac4382fbbd854e6aa0"
+        },
+        {
+          "name": "\"fixture stores seven Basic entity codes with X-ODOS-Source writes\"",
+          "bodyHash": "0b84020e1405a289e34a9eeec3ea1158410e6eaa619288d8be9424dc6af80de1",
+          "assertionHash": "19838d90671df5ba4244ba2462df086ea3d17dc16dd1251241cf18d20d43ded5",
+          "assertionCount": 7,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "0b84020e1405a289e34a9eeec3ea1158410e6eaa619288d8be9424dc6af80de1"
+        },
+        {
+          "name": "\"publishing v2 preserves a byte-identical v1 snapshot and a v1-pinned application still commits\"",
+          "bodyHash": "ac2ed546546ecee5ec1f0674706a1b7f4fe31c166a4cb4b64b7fc40fe89d7d29",
+          "assertionHash": "bb882a0f841e734d0349a31d14adbac0734fa0eb33f205716f45930fadf4e698",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "ac2ed546546ecee5ec1f0674706a1b7f4fe31c166a4cb4b64b7fc40fe89d7d29"
+        },
+        {
+          "name": "\"publishing v2 preserves definition-owned charge acceptance in the snapshot\"",
+          "bodyHash": "914b84dbe566fbb755eaf05d1933719cd4989a132ae51facadf867f977d8cc49",
+          "assertionHash": "2d7a6bdac751150a1702c4f11a9736676622f86f707afae75f16a3a041a2ba91",
+          "assertionCount": 1,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "914b84dbe566fbb755eaf05d1933719cd4989a132ae51facadf867f977d8cc49"
+        },
+        {
+          "name": "\"legacy heads without authoring provenance are normalized at the read boundary\"",
+          "bodyHash": "8cf0e61b40aea7bd0f2c1169507049e39c4ca770f92846a649248601c79412a0",
+          "assertionHash": "cc0c64c5eb4fe03ba5594d5ed0442b666ae8982060e71434968a2f66b915e5a2",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "8cf0e61b40aea7bd0f2c1169507049e39c4ca770f92846a649248601c79412a0"
+        },
+        {
+          "name": "\"statusScope ranks a matching variant first without filtering the non-match\"",
+          "bodyHash": "aa29cb0396ec3be8a3bea2a99dcfd1019550623290cc493baa34c73a5f2cf471",
+          "assertionHash": "addd03ff7aee4a5b78fa4f6de26f07b6856b0eb4efd3d6b05272c2b8ebfa8f5b",
+          "assertionCount": 1,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "aa29cb0396ec3be8a3bea2a99dcfd1019550623290cc493baa34c73a5f2cf471"
+        },
+        {
+          "name": "\"forked protocols retain object lineage and publish as independent offerable definitions\"",
+          "bodyHash": "e6bc22d0a6b8667b6c9c032446524c2895e0f73ee6af664abeb714fe0cfbb3a9",
+          "assertionHash": "c74abe66468a27bb5a5958e6eb2f440d08e3340601d9de4653d82a45f7fc1e9c",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "e6bc22d0a6b8667b6c9c032446524c2895e0f73ee6af664abeb714fe0cfbb3a9"
+        },
+        {
+          "name": "\"forking an unpublished draft omits snapshot lineage instead of inventing version zero\"",
+          "bodyHash": "564a77f26ba4fce115ed97ce7f4034aa0ab3fa3b35ec952d94cf655b01a45625",
+          "assertionHash": "a1f4fda9cbbd70a92d17e8faf18bda010e744b6f4b2590471c9d7820d34bf1ea",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "564a77f26ba4fce115ed97ce7f4034aa0ab3fa3b35ec952d94cf655b01a45625"
+        },
+        {
+          "name": "\"encounter capture strips device values and free text while retaining staged charge rule references\"",
+          "bodyHash": "9506de1cd27a09c0a3f088356725b429c046013056e74bb35a1e9ef8a9b32465",
+          "assertionHash": "a1c4828d11266a5e7039ab26964f88bbcdd7ec509568a4ac629652d6e0521d2d",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "9506de1cd27a09c0a3f088356725b429c046013056e74bb35a1e9ef8a9b32465"
+        },
+        {
+          "name": "\"encounter capture preserves repeat and format while excluding actual temporal payload keys\"",
+          "bodyHash": "ad543e8ae7a9dd024ac4c454fe4a9d247a977108c246549f9bf7c34ee0a94d6d",
+          "assertionHash": "e08a4aeeececbef07cebf54a4f4f381e3d72a1553b7736581df02b170867084e",
+          "assertionCount": 1,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "ad543e8ae7a9dd024ac4c454fe4a9d247a977108c246549f9bf7c34ee0a94d6d"
+        },
+        {
+          "name": "\"ProtocolBasicStore follows next links and uses identifier-scoped conditional first writes\"",
+          "bodyHash": "b2f44ddfabfb7f38cd4d0764ebe9e7d5f560f157685c920147a6c0d3b4760ed5",
+          "assertionHash": "e355df9217e593d202a1a780e047aa2541534c27ff329522505a217d4a9dd539",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "b2f44ddfabfb7f38cd4d0764ebe9e7d5f560f157685c920147a6c0d3b4760ed5"
+        },
+        {
+          "name": "\"H40.02x offer is deliberate; open remains inert; commit creates the exact Phase 5 shape\"",
+          "bodyHash": "2b523a0028e13b3e22a0f4d95a0aceae5d66c8d7f5a8b9ba5ee9b9f24851fbd6",
+          "assertionHash": "9ad3a661e5f1417563a1ba01a4834aab9af5866314d2d91007758e612a7771f4",
+          "assertionCount": 22,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "2b523a0028e13b3e22a0f4d95a0aceae5d66c8d7f5a8b9ba5ee9b9f24851fbd6"
+        },
+        {
+          "name": "\"item add carries an order's referenced charge and unapply removes both\"",
+          "bodyHash": "9642dd26416f4e9438a4aa6120d728e1a5808027259486dd2daa275886c02f78",
+          "assertionHash": "0638b18777bdb15e64065183f8a2caa9681a6a1e4ffeb32cff7771732b9e0474",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "9642dd26416f4e9438a4aa6120d728e1a5808027259486dd2daa275886c02f78"
+        },
+        {
+          "name": "\"item add cleans a failed charge write before retrying a fresh application\"",
+          "bodyHash": "b27c09d1e37dd3b5bfdb9b5bf2648eeba6eb7fea221623d686e8d74e105734c8",
+          "assertionHash": "6f8e5418da64e0f00281e2f10995889da44d2ed2d504b637d18af6ebc6a6ea23",
+          "assertionCount": 8,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "b27c09d1e37dd3b5bfdb9b5bf2648eeba6eb7fea221623d686e8d74e105734c8"
+        },
+        {
+          "name": "\"item add keeps live facts when confirmation lands but its response is lost\"",
+          "bodyHash": "b1f15596e1d5f1c93b66c7281fb7962fcb2412959aeb3923a24c2b661b672db1",
+          "assertionHash": "d78be6e311091c3fb8bc4bfc21eb32246b603e180dad5f445cd71efa3331f4c2",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "b1f15596e1d5f1c93b66c7281fb7962fcb2412959aeb3923a24c2b661b672db1"
+        },
+        {
+          "name": "\"item add releases and replaces a confirmed claim with no live facts\"",
+          "bodyHash": "3d74383b5eb7e4ebc523c2421bf4c24ffbd78c0008389c0b9928fdc6cb2bf01d",
+          "assertionHash": "3c6b8ee9b2e7cea4f6dbe33620bad8894a319a3a972bb51cecdd24a9ef2bc7da",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "3d74383b5eb7e4ebc523c2421bf4c24ffbd78c0008389c0b9928fdc6cb2bf01d"
+        },
+        {
+          "name": "\"item add commits a second item from the same protocol without applying other defaults\"",
+          "bodyHash": "e840d98dfb5af084ae2fb667c0780d920c1ba3a73a5de67dafbaff4ddd849682",
+          "assertionHash": "5f0e8d4080359982a6856e68c4649dd98fecde3d017616d87956972cfce3c044",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "e840d98dfb5af084ae2fb667c0780d920c1ba3a73a5de67dafbaff4ddd849682"
+        },
+        {
+          "name": "\"item add returns the existing application when the same item is tapped twice\"",
+          "bodyHash": "f2c04e20861c6ba02fd945eedf49a52a01a248857240a67744039ee94f149bba",
+          "assertionHash": "7b72dd49550d70c0f2db96477f0b52656b7f36c3d7500ae35d1a43f47d4515f8",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "f2c04e20861c6ba02fd945eedf49a52a01a248857240a67744039ee94f149bba"
+        },
+        {
+          "name": "\"item add reuses a whole-protocol application that already applied the item\"",
+          "bodyHash": "773a44d45f6ff5cb86bee82ee68ba535cb0ee53f2b3d313910100e368728f083",
+          "assertionHash": "6f36e5bc2992fd6922a1b7f145b895600326163d02c929df9844b38c209028d3",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "773a44d45f6ff5cb86bee82ee68ba535cb0ee53f2b3d313910100e368728f083"
+        },
+        {
+          "name": "\"item add suppresses a sibling charge when another protocol already owns the merge-key action\"",
+          "bodyHash": "f251a8bc55d8e891b9d6de507b2b5eb98fdd02c29e401637d5b93b90edf9847c",
+          "assertionHash": "28382a7bcf27b6763d255da4b5ea13f15b21e395d0f970f0c0050a490c97ee0d",
+          "assertionCount": 10,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "f251a8bc55d8e891b9d6de507b2b5eb98fdd02c29e401637d5b93b90edf9847c"
+        },
+        {
+          "name": "\"item add rejects finding seeds without creating an application\"",
+          "bodyHash": "da6f4b361d16ad44fdc279dec6197488447527b06c67df6056997c79dbb1cb8a",
+          "assertionHash": "a29b3feed1bf5ced2964a09ccf6f6def0a0dce8c3003b952631fac32df2cf234",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "da6f4b361d16ad44fdc279dec6197488447527b06c67df6056997c79dbb1cb8a"
+        },
+        {
+          "name": "\"whole-protocol open permits apply after an item-level add\"",
+          "bodyHash": "d8373067ab5555bed600ce57e4ec81afa138f723ff3ee8f819aa2ab078c9dcad",
+          "assertionHash": "a1f9ae6dc7ce04e0ad9c2a9e737e7ae8421925beecb3b9707caee213bcf814e2",
+          "assertionCount": 1,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "d8373067ab5555bed600ce57e4ec81afa138f723ff3ee8f819aa2ab078c9dcad"
+        },
+        {
+          "name": "\"cross-protocol dedupe returns the live owner and preserves shared records after owner unapply\"",
+          "bodyHash": "f8af37994ab331ad57dc3f133d2590fc4676c91c77ef5013764612c5072eaa8b",
+          "assertionHash": "b7aa65b12175cb2b2dc61bc6bc49e49a0a17a44475bbd567e32dd3fd8c8ef00e",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "f8af37994ab331ad57dc3f133d2590fc4676c91c77ef5013764612c5072eaa8b"
+        },
+        {
+          "name": "\"charge seeds are not tappable and cannot precede their owning order\"",
+          "bodyHash": "98d3eedba5d71d6e23786235a51a38d484b6720f2b132f3522496ac628db8f68",
+          "assertionHash": "d8daaf325764bf70c65aa50fbfab248dd1d53bb9e1bc8e34db48d410e34f1dfd",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "98d3eedba5d71d6e23786235a51a38d484b6720f2b132f3522496ac628db8f68"
+        },
+        {
+          "name": "\"concurrent taps converge on one item application\"",
+          "bodyHash": "f30e622abc25ecf7fb096f42d82665b1c37034b761367cc1517209838aab8733",
+          "assertionHash": "000d1e0197fa489f63d14004bffa898646d68149cd64e6945eca4550ecc8cab2",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "f30e622abc25ecf7fb096f42d82665b1c37034b761367cc1517209838aab8733"
+        },
+        {
+          "name": "\"a staggered second tap never resumes the first request's in-flight application\"",
+          "bodyHash": "d45b6e30b3995e1c45641d9c4f775a62efcd6a9e45e4fc7f5eeff3349ac6999d",
+          "assertionHash": "10a8cedfd0c4808fcaf554661939a273251c5b6f5627fc422323e05188e9385b",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "d45b6e30b3995e1c45641d9c4f775a62efcd6a9e45e4fc7f5eeff3349ac6999d"
+        },
+        {
+          "name": "\"H1 serializes a live action writer past the claim lease\"",
+          "bodyHash": "e809836136931a2dcb66888e60727c6aa776f471810769a110eea9fba44b65a2",
+          "assertionHash": "872c634ebc6a8e00fde8be32b3089a9d4afb2c6f95097fbe22cf4f0bcecdd993",
+          "assertionCount": 7,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "e809836136931a2dcb66888e60727c6aa776f471810769a110eea9fba44b65a2"
+        },
+        {
+          "name": "\"H2 serializes a live charge writer past the claim lease\"",
+          "bodyHash": "45291e56749c976917831524ec896a109a42ee6a6938fd93d6938a3226bf3cd0",
+          "assertionHash": "872c634ebc6a8e00fde8be32b3089a9d4afb2c6f95097fbe22cf4f0bcecdd993",
+          "assertionCount": 7,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "45291e56749c976917831524ec896a109a42ee6a6938fd93d6938a3226bf3cd0"
+        },
+        {
+          "name": "\"H1 cleans a late materialized order after an expired claim is taken over without the process lock\"",
+          "bodyHash": "4b0a2e6b8d524c1c4851bbd3d8550f8d13557fccab3a16180f5acfda33a01d89",
+          "assertionHash": "1e015e67779224facfd083863d4f625aea51cb3ecd0b7569eed6f9d58ead664d",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "4b0a2e6b8d524c1c4851bbd3d8550f8d13557fccab3a16180f5acfda33a01d89"
+        },
+        {
+          "name": "\"H2 cleans a late staged charge after an expired claim is taken over without the process lock\"",
+          "bodyHash": "be159352ff6860f1ac4202b73a7c027b4e92f65b1e841610bfc96c5d0f7f54ce",
+          "assertionHash": "1e015e67779224facfd083863d4f625aea51cb3ecd0b7569eed6f9d58ead664d",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "be159352ff6860f1ac4202b73a7c027b4e92f65b1e841610bfc96c5d0f7f54ce"
+        },
+        {
+          "name": "\"a stale confirmation cannot resurrect an application released by lease takeover\"",
+          "bodyHash": "e0648e0167df3569ee5c53350c17894d8758268eccdda133a58bbbfb8c65ffbf",
+          "assertionHash": "b4ba30a09ab7406670c4362e4677374d2a48a926b0cb347b0c959d7e7749e04b",
+          "assertionCount": 8,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "e0648e0167df3569ee5c53350c17894d8758268eccdda133a58bbbfb8c65ffbf"
+        },
+        {
+          "name": "\"an abandoned item claim is replaced after its lease expires\"",
+          "bodyHash": "0a43af6b31ba898319849c15494315533503287a8c720a050d43c32051bdb743",
+          "assertionHash": "37da336d6a1948abba992537aaccf014889113869feb67396752a7d8ef46e517",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "0a43af6b31ba898319849c15494315533503287a8c720a050d43c32051bdb743"
+        },
+        {
+          "name": "\"manual mergeKey collision resumes existing action and unapply preserves clinician changes\"",
+          "bodyHash": "796d04f2c09b1543c86ddd8e8d62ffedaeba4f9d6c00a965670e9d2ab953eaa9",
+          "assertionHash": "a5ae97a31837cafd31a95e2b6298bf5cca9d1ff5e3878308a4bb1d71bb83b005",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "796d04f2c09b1543c86ddd8e8d62ffedaeba4f9d6c00a965670e9d2ab953eaa9"
+        },
+        {
+          "name": "\"unapply removes only charges staged by its protocol application\"",
+          "bodyHash": "5848a38bad597b481456f17f26ee1790ffbb4aa6ba4ba3e841d1e036e25742d0",
+          "assertionHash": "0c442262e65e5e60f3dd2af8b73d80b952fde2dc9377e1a953bc9961941152ae",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "5848a38bad597b481456f17f26ee1790ffbb4aa6ba4ba3e841d1e036e25742d0"
+        },
+        {
+          "name": "\"unapply returns 409 before any mutation when an accepted charge is unresolved\"",
+          "bodyHash": "ede00c33ec20eaa04ebcc6e873d8298ab277bbdb3725b87c4481368149392463",
+          "assertionHash": "387df139729df4cc1a2611e219968aa77588ba5adba3b44b10325958832d369e",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "ede00c33ec20eaa04ebcc6e873d8298ab277bbdb3725b87c4481368149392463"
+        },
+        {
+          "name": "\"unapply succeeds with finalized charges and preserves their billed state\"",
+          "bodyHash": "eafaf8dc72bb8af06b9c9c1b18ec2dc0fbab147ddf649950230d65da1507b023",
+          "assertionHash": "c8fb556b9d44078740acae5cdb39a749499a33b048b19fe37144a92835b66cfd",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "eafaf8dc72bb8af06b9c9c1b18ec2dc0fbab147ddf649950230d65da1507b023"
+        },
+        {
+          "name": "\"commit rollback after a late failure restores proposed findings and retry confirms once\"",
+          "bodyHash": "86069ef5d5c641afda0eb4974f643e94a44f200b21f80595efb1135d53e15752",
+          "assertionHash": "a5d76a8fa2b3690b37a8690f799418ff10513732a2feb7944ad63574c8550291",
+          "assertionCount": 15,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "86069ef5d5c641afda0eb4974f643e94a44f200b21f80595efb1135d53e15752"
+        },
+        {
+          "name": "\"deselected finding seeds are removed and never projected\"",
+          "bodyHash": "e23862b326fadb408c6dfbd0a087c6d320311abeae80ea655bb67e97c1ac7a97",
+          "assertionHash": "3834cda224b28f81947210cac7958f76ac7162569f87c57469b47592d0c6c013",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "e23862b326fadb408c6dfbd0a087c6d320311abeae80ea655bb67e97c1ac7a97"
+        },
+        {
+          "name": "\"retry restores one live action without a mergeKey\"",
+          "bodyHash": "5d6057057087e4ed0a3e2c5c7128f769ca3ab18aab9d6c52d6498f6789f423f3",
+          "assertionHash": "1032149c186349713ff06d857df0aca81b2444ef264b8576b6e298554114cb09",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "5d6057057087e4ed0a3e2c5c7128f769ca3ab18aab9d6c52d6498f6789f423f3"
+        },
+        {
+          "name": "\"offers performs no writes on the chart.read path\"",
+          "bodyHash": "a81c33adc1a557a1e5e45b4a8e070e96594972cdfb7ed9fbd84d13781549a32c",
+          "assertionHash": "3dd2abe97bd64108a812a48c4cd0793997f9e6e8b118df506b63899662dc35a9",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "a81c33adc1a557a1e5e45b4a8e070e96594972cdfb7ed9fbd84d13781549a32c"
+        },
+        {
+          "name": "\"sign cleanup requires clinical.sign at the handler boundary\"",
+          "bodyHash": "595fa644508c54e7171f0ccf14c99532b49c4e59f22acdafbadace53bec6d5d8",
+          "assertionHash": "28e784bb3cf907e7960e90615aeca9629982df41457a539485d32345a7a361e0",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "595fa644508c54e7171f0ccf14c99532b49c4e59f22acdafbadace53bec6d5d8"
+        },
+        {
+          "name": "\"a full eye exam creates a service-date annual, and the next full exam completes it without touching medical follow-up\"",
+          "bodyHash": "aa3ead1972f1aca48f63b617632f0c0c6779ff1cd1e19c237385b75adec082c2",
+          "assertionHash": "9c16222bdbfe04957d98cc1242c88f9e7f69b80237154bb45c712546b3913aa3",
+          "assertionCount": 13,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "aa3ead1972f1aca48f63b617632f0c0c6779ff1cd1e19c237385b75adec082c2"
+        },
+        {
+          "name": "\"re-signing an older full exam does not replace the newer active annual\"",
+          "bodyHash": "56aa7968effe70b34e4cc28816feb8edd472bfffef1bd9c28ec03c4c72e08d72",
+          "assertionHash": "915ec6c89f121bf42709aad788c79aed430533350207d7f41cd4c7e1aa787a6d",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "56aa7968effe70b34e4cc28816feb8edd472bfffef1bd9c28ec03c4c72e08d72"
+        },
+        {
+          "name": "\"re-signing a completed source reconciles separate active annual duplicates\"",
+          "bodyHash": "032e893261858fd72c7cd540177bfe8e184669e967e1233afd3f7df0ad23abe3",
+          "assertionHash": "92c1fc030fbb4d0869f47df6af7b24047b7d09f1efc61eb5bbf34216fda8f1a2",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "032e893261858fd72c7cd540177bfe8e184669e967e1233afd3f7df0ad23abe3"
+        },
+        {
+          "name": "\"late signing an older full exam keeps the annual from the latest service date\"",
+          "bodyHash": "9d74698c208309f966ab8594d9214d94395d55e3ec7de7e0ae8b6634a93f2dd6",
+          "assertionHash": "14a51dbfc1fbd8657626baaa77c6c5364a025ce1f4e527afd7a0ebc79310de6b",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "9d74698c208309f966ab8594d9214d94395d55e3ec7de7e0ae8b6634a93f2dd6"
+        },
+        {
+          "name": "\"an adjusted due date cannot override verified full-exam service chronology\"",
+          "bodyHash": "6e8792692a1ce0ef0b02c10498b6074e4d5f52f5485a5cb03a36efccb214a7b0",
+          "assertionHash": "605be1e087f9e6551b1816378a092857f876b7f0057e17980713b572182c0a5b",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "6e8792692a1ce0ef0b02c10498b6074e4d5f52f5485a5cb03a36efccb214a7b0"
+        },
+        {
+          "name": "\"same-day annual reconciliation keeps the encounter with the latest service time\"",
+          "bodyHash": "e8b1e0a3e9a2d2ba12a8bfe639157ab74a0094b0b07fc0959748fc7381ea9506",
+          "assertionHash": "89248ca6cf6b5183bf9fd078859428356aee27eed9481de5ea4ddd2322df8ee2",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "e8b1e0a3e9a2d2ba12a8bfe639157ab74a0094b0b07fc0959748fc7381ea9506"
+        },
+        {
+          "name": "\"concurrent full-exam signing converges to one annual from the latest service time\"",
+          "bodyHash": "7c049b9f20a68690cc9556e8b77c814e243fa48c2cc2c402d267e9b019611e34",
+          "assertionHash": "979e32f991d7bb0cd70ce574190e1879e7ce60be7001ee7668610b22dba7eace",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "7c049b9f20a68690cc9556e8b77c814e243fa48c2cc2c402d267e9b019611e34"
+        },
+        {
+          "name": "\"annual due date preserves the Encounter service calendar day across timezone offsets\"",
+          "bodyHash": "2a061a33b25f90b04d193b71dcede53132cb1fa2cc8e7e9664c78d0278b571ad",
+          "assertionHash": "ff7fcceb95133a1089803cf2c1e34bc8660f0be0ff1975b5e6323f52f8d3269e",
+          "assertionCount": 1,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "2a061a33b25f90b04d193b71dcede53132cb1fa2cc8e7e9664c78d0278b571ad"
+        },
+        {
+          "name": "\"a failed stale-annual closure annotates that duplicate when a retry can write it\"",
+          "bodyHash": "146e11ce0f93897dbc4582294265b824c67033633f45aa8ae8f568d322a15df3",
+          "assertionHash": "fcb53ff519d8ee8b3430f0675193599f8c2dabb3ed1852faf7ab7303eff1e021",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "146e11ce0f93897dbc4582294265b824c67033633f45aa8ae8f568d322a15df3"
+        },
+        {
+          "name": "\"an annual with unavailable Encounter provenance cannot abort reconciliation\"",
+          "bodyHash": "42fd778a253cd5e9d1f06ff8d3ee16b098ab2d314d56481dc15f1a45552a3ea6",
+          "assertionHash": "e967e420c9730a448e0fd077f2fcc7c1057c16812cb6b9390a6bc8ede3c447bf",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "42fd778a253cd5e9d1f06ff8d3ee16b098ab2d314d56481dc15f1a45552a3ea6"
+        },
+        {
+          "name": "\"a realistic post-cataract office visit with refraction and examined anterior segment creates no annual\"",
+          "bodyHash": "d7dcd47ae4919fa95844915d00404769175500aa2ea71fcef16df37c0a90bf31",
+          "assertionHash": "741294c76fc1cf9de0ba8bb86aa44222a95b84f0f6886b4dbff4ae7cdd5dfd5c",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "d7dcd47ae4919fa95844915d00404769175500aa2ea71fcef16df37c0a90bf31"
+        },
+        {
+          "name": "\"a contact-lens booking with manifest refraction and examined ocular content does not create an annual\"",
+          "bodyHash": "ae3f2f1b9ae793ab637d4b60ef821dc513c79e1601df9488ba7af42a2dfa48bd",
+          "assertionHash": "741294c76fc1cf9de0ba8bb86aa44222a95b84f0f6886b4dbff4ae7cdd5dfd5c",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "ae3f2f1b9ae793ab637d4b60ef821dc513c79e1601df9488ba7af42a2dfa48bd"
+        },
+        {
+          "name": "\"annual recall follows an inactive renamed service's Exams category without enumerating its code\"",
+          "bodyHash": "e9ba9e31f41833cfc36d4a0c770761008591c275ca5ce690a9106591e519221d",
+          "assertionHash": "80bfe7912e41dac1f8b7f9ca9e1f5e6d7c9d0c9b04776bbb5bee9f9d04dfea06",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "e9ba9e31f41833cfc36d4a0c770761008591c275ca5ce690a9106591e519221d"
+        },
+        {
+          "name": "\"a stand-alone Encounter resolves its visit type through the HealthcareService Exams category\"",
+          "bodyHash": "a49f019bf68541f0e7cd1f78009d9b0a334130a823ed9b8de2773b0fd51753c9",
+          "assertionHash": "80bfe7912e41dac1f8b7f9ca9e1f5e6d7c9d0c9b04776bbb5bee9f9d04dfea06",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "a49f019bf68541f0e7cd1f78009d9b0a334130a823ed9b8de2773b0fd51753c9"
+        },
+        {
+          "name": "\"hard gate: a historical Medicaid exam without an Appointment retains its annual recall\"",
+          "bodyHash": "4e4c0ad000f02b367db47457d0fc90094058d72113403037e0c6610b7913ed25",
+          "assertionHash": "80bfe7912e41dac1f8b7f9ca9e1f5e6d7c9d0c9b04776bbb5bee9f9d04dfea06",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "4e4c0ad000f02b367db47457d0fc90094058d72113403037e0c6610b7913ed25"
+        },
+        {
+          "name": "\"a standalone contact-lens exam with only over-refraction creates no annual\"",
+          "bodyHash": "8df930ba941959473120ee1129ab8d95ef5b847ac841ca613581d14852b03b12",
+          "assertionHash": "741294c76fc1cf9de0ba8bb86aa44222a95b84f0f6886b4dbff4ae7cdd5dfd5c",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "8df930ba941959473120ee1129ab8d95ef5b847ac841ca613581d14852b03b12"
+        },
+        {
+          "name": "\"autorefraction alone creates no annual at a full-exam visit type\"",
+          "bodyHash": "7688827517e4a92123761588ac6babe75e9bbfc6cdbbd054af90ff3c6edc3190",
+          "assertionHash": "741294c76fc1cf9de0ba8bb86aa44222a95b84f0f6886b4dbff4ae7cdd5dfd5c",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "7688827517e4a92123761588ac6babe75e9bbfc6cdbbd054af90ff3c6edc3190"
+        },
+        {
+          "name": "\"annual recall requires both refraction and an examined ocular component\"",
+          "bodyHash": "436961625f883362947b3731e0ad8d15d024160f2b12b0257186fdf787ba39a5",
+          "assertionHash": "741294c76fc1cf9de0ba8bb86aa44222a95b84f0f6886b4dbff4ae7cdd5dfd5c",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "436961625f883362947b3731e0ad8d15d024160f2b12b0257186fdf787ba39a5"
+        },
+        {
+          "name": "\"annual closure failure stays observable without blocking encounter signing\"",
+          "bodyHash": "01fbdde52a8e398853084698761afaf1773526d7a78566a47634304a7a624e77",
+          "assertionHash": "b7ad59beaa8579a4582e3e3e4807c4ced3e9e9abe9c4eb0d70bf715cee1dbe35",
+          "assertionCount": 7,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "01fbdde52a8e398853084698761afaf1773526d7a78566a47634304a7a624e77"
+        },
+        {
+          "name": "\"annual closure annotation cannot reactivate a concurrently completed annual\"",
+          "bodyHash": "24610619f677abc3a9faafe9a1c1b260f37767f66914a773b3293dd058508731",
+          "assertionHash": "27c37ea94eb55e5ff5799e2bb84a301e1665ac12bef0017c16e4ced26441db34",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "24610619f677abc3a9faafe9a1c1b260f37767f66914a773b3293dd058508731"
+        },
+        {
+          "name": "\"all Phase A authoring endpoints reject a non-author and admit a clinician\"",
+          "bodyHash": "b2620387b32d4973e4364ce35ca4b4a951222b1b899a08d4aae4257b720db243",
+          "assertionHash": "7b11e5e19599c3e73272696c17f41a1809856d75ea12863445ade514c42e9306",
+          "assertionCount": 8,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "b2620387b32d4973e4364ce35ca4b4a951222b1b899a08d4aae4257b720db243"
+        },
+        {
+          "name": "\"encounter capture does not treat two absent subject references as a patient match\"",
+          "bodyHash": "cd581e2207967f69c6ad1c9ee97002f563646b5bd38435efca13d6658002033d",
+          "assertionHash": "c6c3a8f87ba7d6c208e144163b1113e2027070f877e2a1a0c329736fa6cd33c1",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "cd581e2207967f69c6ad1c9ee97002f563646b5bd38435efca13d6658002033d"
+        },
+        {
+          "name": "\"publish returns a named 400 reason for every deterministic validation failure\"",
+          "bodyHash": "be7a9345c892e20cf71d4509682dbe1b2239e579a06e99fa7be03fd52c9f6f37",
+          "assertionHash": "a42cbab9264b4bc0d6444928a13e7882418259330f1fad696bc4a9e82b64f8b7",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "be7a9345c892e20cf71d4509682dbe1b2239e579a06e99fa7be03fd52c9f6f37"
+        },
+        {
+          "name": "\"persisted legacy dry-eye built-in inherits charge acceptance, then applies reviewed charges\"",
+          "bodyHash": "df2c50deed142964c179b59bc5577539fe2720830635e0ead49dcb4908fd164b",
+          "assertionHash": "4b25ae1a689682faefc90c8a7914b9f3aaa2f93676dfdcddf7d04fb1e8636148",
+          "assertionCount": 12,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "df2c50deed142964c179b59bc5577539fe2720830635e0ead49dcb4908fd164b"
+        },
+        {
+          "name": "\"unpersisted dry-eye built-in offers charge acceptance without a read-path write\"",
+          "bodyHash": "c3839a0214e868778cd0e83f4bf0825050e1bace11c3bcfbdac7e5112f2fc4fa",
+          "assertionHash": "5f47ca3a355e125c8607bdfc4d6efb4ba3caea2fa1013d46d01fa448190654dd",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "c3839a0214e868778cd0e83f4bf0825050e1bace11c3bcfbdac7e5112f2fc4fa"
+        },
+        {
+          "name": "\"combined offers rank a matching stored scope before an unscoped built-in and a non-match\"",
+          "bodyHash": "1826b34adc3f61e38b0d7ce669c6db8f5852c704734c6e847206569bf73c9782",
+          "assertionHash": "2d742ba64e09bc554d452fa1c116fecd880f097d0c036cd8ab981ad15bb11ada",
+          "assertionCount": 1,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "1826b34adc3f61e38b0d7ce669c6db8f5852c704734c6e847206569bf73c9782"
+        },
+        {
+          "name": "\"apply verifies the persisted Condition and creates no prompt-only Observations\"",
+          "bodyHash": "236f4a68735c62ad674f25a0a4c24fbe89460b6b5f6f762e04600c91770a2959",
+          "assertionHash": "e12d05cdefdaea3288ddd820d5f1cf6592eeaeb709944c9b19afc85977d880f2",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "236f4a68735c62ad674f25a0a4c24fbe89460b6b5f6f762e04600c91770a2959"
+        },
+        {
+          "name": "\"item-add endpoint stages only the requested order and refuses charge acceptance or payload overrides\"",
+          "bodyHash": "b09498e506ce1c293e00cabbe5db90b7065eac19dbc388cffde0b456f25f2c06",
+          "assertionHash": "28db9652005d947f7b8a0b48449870534c0a2741e87e4de44b6a1002decc2185",
+          "assertionCount": 7,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "b09498e506ce1c293e00cabbe5db90b7065eac19dbc388cffde0b456f25f2c06"
+        },
+        {
+          "name": "\"item-add endpoint rejects a charge seed before allowing its owning order\"",
+          "bodyHash": "dbbd950e8776d27353d5ab001b6fd72239b7b89e21c7c7d4f8548b7c47bea96f",
+          "assertionHash": "22b490c34eb9f4a521bf22d23b894fe0d6394c502917d2aa9d4240139904e111",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "dbbd950e8776d27353d5ab001b6fd72239b7b89e21c7c7d4f8548b7c47bea96f"
+        },
+        {
+          "name": "\"item-add endpoint respects an owning application's opted-out charge\"",
+          "bodyHash": "56465d49a0795721fb94018188dba451b877c735ed5d1a8478a8960dd9522996",
+          "assertionHash": "e19f8a37312b82431c50f891a4fb2159544e45c3fa5b5edc2d13be0db5e3d386",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "56465d49a0795721fb94018188dba451b877c735ed5d1a8478a8960dd9522996"
+        },
+        {
+          "name": "\"item-add endpoint returns 409 when an owning application's required charge is missing\"",
+          "bodyHash": "f19434d3975962b8f9fcb64cfc448cf03b885a4bbc1d29ad6321c66bdcb041d7",
+          "assertionHash": "93e1ae598eb835f85b315e1ec72bbd46318abc0b588dfd75ed05baa384d9d1a1",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "f19434d3975962b8f9fcb64cfc448cf03b885a4bbc1d29ad6321c66bdcb041d7"
+        },
+        {
+          "name": "\"follow-up materialization stores the six-month due date and verbatim reason on a coded ServiceRequest\"",
+          "bodyHash": "a23048d1778c66cdf718e6028515e7ddfa779991df98a63856b0e5dbb4821413",
+          "assertionHash": "c72a560e4124a22b9c4d7ae4866a4691c36901842ef52b30420086dcb36498d7",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "a23048d1778c66cdf718e6028515e7ddfa779991df98a63856b0e5dbb4821413"
+        },
+        {
+          "name": "\"a clinician follow-up override computes from the selected two-week payload\"",
+          "bodyHash": "5d7a2eb7a8bfade496cf0d123cc6dcb670e34cbb655afb2ee47a6fe72e846086",
+          "assertionHash": "b11c07eb5ae558e9d04cd23b0c32f397aebe473bb1dc1bc042dccfb0639802b2",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "5d7a2eb7a8bfade496cf0d123cc6dcb670e34cbb655afb2ee47a6fe72e846086"
+        },
+        {
+          "name": "\"re-materializing the same follow-up updates a corrected due date without creating a duplicate\"",
+          "bodyHash": "83edc6ea2c60887c4ca1a7564f59de37121261457ce3adf6732c69154205bb30",
+          "assertionHash": "7322959bb93053476bddea05792ce9e3b8804671b164e6a32de19a2e35951b70",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "83edc6ea2c60887c4ca1a7564f59de37121261457ce3adf6732c69154205bb30"
+        },
+        {
+          "name": "`${refusal.name} refuses only the follow-up and commits the plan's other actions`",
+          "bodyHash": "b713d7b70f5122002655980feb09fa0b41a93fb630d6816663644cc41eb78f29",
+          "assertionHash": "2435b66bb31def28405aabdc65a48a70aa0966070487f8a0f6c8a758093f29a8",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "b713d7b70f5122002655980feb09fa0b41a93fb630d6816663644cc41eb78f29"
+        },
+        {
+          "name": "\"follow-up month arithmetic clamps January 31 to the last day of February\"",
+          "bodyHash": "d465f94e74bb19c06ff0befea830b641b739b78ec75bf054112fa17f963d0749",
+          "assertionHash": "a0554a2e4a9090348334700647bcb367043bf770f2588ab55f74918d6f68c2d1",
+          "assertionCount": 1,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "d465f94e74bb19c06ff0befea830b641b739b78ec75bf054112fa17f963d0749"
+        },
+        {
+          "name": "\"stored follow-up kind and occurrence support a date-range query without loading unrelated CarePlans\"",
+          "bodyHash": "3ac15645efa15d3f22669b4412294001a64aba2bb2a6d78e3b18cd0647f7f5ed",
+          "assertionHash": "a78fe9c9b984a90cd5db4a9c792334f07b65e99e37aea1b0e71ba0e3c5112026",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "3ac15645efa15d3f22669b4412294001a64aba2bb2a6d78e3b18cd0647f7f5ed"
+        },
+        {
+          "name": "\"applications read enforces chart.read, returns the hydration shape, and duplicate apply is rejected\"",
+          "bodyHash": "64b77e9460c75772ebec855f3eeccedd90e235b4640a2465bb082e50500d8a2e",
+          "assertionHash": "082efef123c180dd0450f3053af25399df648b10eb627dfd88bae2b3d2d7cf78",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "64b77e9460c75772ebec855f3eeccedd90e235b4640a2465bb082e50500d8a2e"
+        },
+        {
+          "name": "\"protocol numeric findings require the explicit cup-disc ratio unit mapping\"",
+          "bodyHash": "5dca841f484ea50d78cf0a7edf693bad9b7859c794dacf8f0bc99f351a7751bd",
+          "assertionHash": "ee2e6ddf32a3f05a570f3810a3a8bccf2fd1a2ae08c0921a522c350005f33fc4",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "5dca841f484ea50d78cf0a7edf693bad9b7859c794dacf8f0bc99f351a7751bd"
+        },
+        {
+          "name": "\"signing abandons an unconfirmed application and deletes all proposed findings\"",
+          "bodyHash": "3f98a9397a1f90245ee34d26fd36ccc3f6c1aa15d0dcc7ab65e562612ef7d94c",
+          "assertionHash": "5e4ac84f8315f068896f7024b4112f3322d6757400bee662bbdd5419ee7d6e83",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "3f98a9397a1f90245ee34d26fd36ccc3f6c1aa15d0dcc7ab65e562612ef7d94c"
+        },
+        {
+          "name": "`shared ownership ${retina ? \"D\" : \"A\"}: encounter charge dedupe and action dependencies`",
+          "bodyHash": "a7eb9f27f868a44e89cb72f9400e810c144053daf87fcdb7a9bb91a2d672718a",
+          "assertionHash": "bc90cfb9187f446a0ca051bd52cd0a61566f075eb0c2c4c2d78a29482bd9cf64",
+          "assertionCount": 7,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "a7eb9f27f868a44e89cb72f9400e810c144053daf87fcdb7a9bb91a2d672718a"
+        },
+        {
+          "name": "`shared ownership ${retina ? \"E\" : \"A2\"}: owner undo transfers identical records`",
+          "bodyHash": "2acdc50dbb9114dd02ce1f1381c3cbac89459b4b0a5caeb2e8657dba7843c4b2",
+          "assertionHash": "c658253673aee7bea828b5e936c1b2da64a57978a30ccb28312802a915e48255",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "2acdc50dbb9114dd02ce1f1381c3cbac89459b4b0a5caeb2e8657dba7843c4b2"
+        },
+        {
+          "name": "`shared ownership ${retina ? \"F\" : \"A3\"}: dependent undo preserves source`",
+          "bodyHash": "315255f517bf5acda97da18e8ff400eb1443fdb89fcbbede1801e86c2bc8e4b7",
+          "assertionHash": "ec20bb1f3cbaa1ece3afde92e27340ec847160041e1b938b9722c3e1fdd124fe",
+          "assertionCount": 1,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "315255f517bf5acda97da18e8ff400eb1443fdb89fcbbede1801e86c2bc8e4b7"
+        },
+        {
+          "name": "\"shared ownership H I: any live charge dedupes regardless of owner or state\"",
+          "bodyHash": "62bf7e32a782f18e621aff06e40aeca6b114b47cb636d67ab3444e69a9746b3a",
+          "assertionHash": "38e183a6ce2f88bd8a0bc1b6016d5ded585d032bff96f171365765fc2618fce2",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "62bf7e32a782f18e621aff06e40aeca6b114b47cb636d67ab3444e69a9746b3a"
+        },
+        {
+          "name": "\"shared ownership J: removed dependency charge allows fresh charge on re-tap\"",
+          "bodyHash": "269a4b6175eb9954ef3ffb96f704192bf084189e87641375f3227c78626fbd64",
+          "assertionHash": "ecb5e0046e035f96803275bd829e106732c855f941f245670b5300d549622fe9",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "269a4b6175eb9954ef3ffb96f704192bf084189e87641375f3227c78626fbd64"
+        },
+        {
+          "name": "\"shared ownership C route: item then whole lists scopes and preserves tapped order on whole undo\"",
+          "bodyHash": "425f3121c6824d8fa219818bcf84c44b9d8c434befbbaebce8e6962340a66b2e",
+          "assertionHash": "50518d2677b025a91c05c89187b879ae34b5955745cf4bc88d854ff990e98737",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "425f3121c6824d8fa219818bcf84c44b9d8c434befbbaebce8e6962340a66b2e"
+        },
+        {
+          "name": "\"shared ownership K: paused commit serializes source undo and transfers one live order and charge\"",
+          "bodyHash": "2fcc21d8223fac9f4ca4ffbfc9619a5cfcfc1952da4df61e0505f3794b4dbd1c",
+          "assertionHash": "bb48aece3f0bd46b825e82659538911231b9742dad54de16372e0d1ae57d8cf7",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "2fcc21d8223fac9f4ca4ffbfc9619a5cfcfc1952da4df61e0505f3794b4dbd1c"
+        },
+        {
+          "name": "\"shared ownership L: sooner follow-up records both recommendations and confirmation clears flag\"",
+          "bodyHash": "bc14f639d9d6165bc078a46a7b882c5b06656159f6d8127d0357cd10afc8de03",
+          "assertionHash": "f6c70cbc22466abd7a05e60e71d3e0f937f62ef176eb8c96b265935d4a6d2c70",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "bc14f639d9d6165bc078a46a7b882c5b06656159f6d8127d0357cd10afc8de03"
+        },
+        {
+          "name": "\"shared ownership K failure: commit rolls back newly created and shared facts after write failure\"",
+          "bodyHash": "87f5a8273d4cb5019e619612972dca4efd4908a29a58e4356359a44fc8457b3a",
+          "assertionHash": "791d5f20d9b3d89e49dc215797d1e7f522e4ee929d3427b9e82f8e398be6de3b",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "87f5a8273d4cb5019e619612972dca4efd4908a29a58e4356359a44fc8457b3a"
+        },
+        {
+          "name": "\"shared ownership K failure: undo rolls back after a transfer write fails\"",
+          "bodyHash": "45f1d695aadc9d03a5c8131b4aee3bbbba6ee7c304950f39e6cda84d00fb5caf",
+          "assertionHash": "cfc04da0700bdc527d97c1e930132c1ab8d4ddc94ac2bf35e11b1cef5390572e",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "45f1d695aadc9d03a5c8131b4aee3bbbba6ee7c304950f39e6cda84d00fb5caf"
+        },
+        {
+          "name": "\"shared ownership L route: clash rematerializes one request; confirm and edit clear flag\"",
+          "bodyHash": "72b04a5e4e9d03cba2da523a79c5dea478d9e34408790b3b90a06ca57bfcb32b",
+          "assertionHash": "828981d785c01ab2ac46dab337b0d98eecc5dd2f35652e09c8a3c998e6b7f005",
+          "assertionCount": 13,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "72b04a5e4e9d03cba2da523a79c5dea478d9e34408790b3b90a06ca57bfcb32b"
+        },
+        {
+          "name": "\"shared ownership L equal: same interval adds no confirmation flag\"",
+          "bodyHash": "d1e1bc9171ad8bfd36a06d2074c69c54388ac376daa60ba7d22c41d0a0b03b13",
+          "assertionHash": "23abaf9af0f85b9ba0a79c24b0c83539b773f40b13c87901675613c917c39125",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "d1e1bc9171ad8bfd36a06d2074c69c54388ac376daa60ba7d22c41d0a0b03b13"
+        },
+        {
+          "name": "\"shared ownership G: surviving focused charge is reused by a fresh original order\"",
+          "bodyHash": "698af3fa8d9d025c616ea9b343b6256bc9eb1f9a007e704782ed17c3a12683e5",
+          "assertionHash": "33aca2aaf9b9424e9ce5b177ba8a8150e2aa1a4d5d3b0c03169ea9201c2d52bd",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "698af3fa8d9d025c616ea9b343b6256bc9eb1f9a007e704782ed17c3a12683e5"
+        },
+        {
+          "name": "\"shared ownership K: commit before sign completes; sign before commit refuses without facts\"",
+          "bodyHash": "85e9c698136cb61b8f0bea9de39dbb4ed32352999307c30a4fd659740309e386",
+          "assertionHash": "602ff9c6a5af1e635d33b0c4d3ea3f1e27ac9011045f9a636a55ecad6b7d2b48",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "85e9c698136cb61b8f0bea9de39dbb4ed32352999307c30a4fd659740309e386"
+        },
+        {
+          "name": "\"shared ownership K: simultaneous source and dependent undo leave no live shared records\"",
+          "bodyHash": "cdb30251fe95af316e60db7e26eb68fcd7a94ac176d592e3dd01e84a9915c91e",
+          "assertionHash": "dfeb34b3da65c94a0563e079ac3a4dc197f5f2a3c3d2cf10eebfaafbc5a67db9",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "cdb30251fe95af316e60db7e26eb68fcd7a94ac176d592e3dd01e84a9915c91e"
+        },
+        {
+          "name": "\"shared ownership K: distinct item taps serialize an encounter charge concept\"",
+          "bodyHash": "6e6c476ed9d2d000014139d053f27ffde4de4d0ac31129628ab0a1f7c76507cf",
+          "assertionHash": "b6c110b113882ee05f5689f1ed869b653d639c487c828bafe45a879dc69f8cd4",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "6e6c476ed9d2d000014139d053f27ffde4de4d0ac31129628ab0a1f7c76507cf"
+        },
+        {
+          "name": "\"shared ownership J action: dead referenced action cannot be satisfied by another same-key action\"",
+          "bodyHash": "24f1e9f13808c96f3f44c571f274ba8cad8bbf119c8518cf59042bee491e2d21",
+          "assertionHash": "eb07118cde7d819f84ae902b9a28976aba190b891ad43c7cbb47a8310a063628",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "24f1e9f13808c96f3f44c571f274ba8cad8bbf119c8518cf59042bee491e2d21"
+        },
+        {
+          "name": "\"shared ownership J action: modified live dependency survives its inactive owner\"",
+          "bodyHash": "4d8c68d42a67d4cdb2190ef7691a03a2950fc6cf85e35fa47395de73e692f09f",
+          "assertionHash": "6a31cd497a77e5cbf282ae8f81cc57d5605a4f6c4878b11233496dd6d3d05411",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "4d8c68d42a67d4cdb2190ef7691a03a2950fc6cf85e35fa47395de73e692f09f"
+        },
+        {
+          "name": "\"shared ownership L sign: unresolved recommendation remains advisory during sign cleanup\"",
+          "bodyHash": "3283d99ead9689ae9d5fd7e887753c3b107e045b75573766540c9b109fa44e68",
+          "assertionHash": "a57d3b4cbfbe833990ed7c5e6127fc08b0aba3c067c0109260323149dd10c80d",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "3283d99ead9689ae9d5fd7e887753c3b107e045b75573766540c9b109fa44e68"
+        },
+        {
+          "name": "\"shared ownership B: repeated cross-plan tap records only one dependent and returns original owner\"",
+          "bodyHash": "6524f628d6784b52de24728b460e81417ecfaf7f62c7767024944b8e2bbb261b",
+          "assertionHash": "85aaa7a1cba11690e67aa82d8fc722178cd426fcae8f8f40c97cd3c951d62bb2",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "6524f628d6784b52de24728b460e81417ecfaf7f62c7767024944b8e2bbb261b"
+        },
+        {
+          "name": "\"shared ownership K failure: rejected later dependent preflight restores earlier dependencies\"",
+          "bodyHash": "3bd8a3b047d7b695f905d4e986f74d595e14ffcdbc450c22ffb7a7c15dcd7c9d",
+          "assertionHash": "96599514f2157f3dcccfcfabbd4a871f629e2245f590af9aeb44e426142bf5ba",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "3bd8a3b047d7b695f905d4e986f74d595e14ffcdbc450c22ffb7a7c15dcd7c9d"
+        },
+        {
+          "name": "\"shared ownership K failure: sign cleanup restores proposed findings after write failure\"",
+          "bodyHash": "b0dd90d018a2e55c20a10daea3f47c7af95984d80401fa5abcf045ae31e51f14",
+          "assertionHash": "0583fa2147d200ab5a5f05419926276956514b413e4aeecde97ffa5a24720e50",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "b0dd90d018a2e55c20a10daea3f47c7af95984d80401fa5abcf045ae31e51f14"
+        },
+        {
+          "name": "\"shared ownership B optout: cross-plan dependency preserves deliberate charge opt-out through undo\"",
+          "bodyHash": "9a6c19d317d45860fede84dfb39e7a87958e152743beaa9f3224f2be1a08c1d2",
+          "assertionHash": "f430b8ed13a7039e1ab4d7c469c470811b86817df70c999aff239065300b7d0b",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "9a6c19d317d45860fede84dfb39e7a87958e152743beaa9f3224f2be1a08c1d2"
+        },
+        {
+          "name": "\"shared ownership B lost response: persisted dependency still returns original owner already applied\"",
+          "bodyHash": "b314b3fd0af3ff2002aa928ddbc793c1268528402c5b989809eb44c7c04575c8",
+          "assertionHash": "788431719863450e43a5f00f2655871f7547118602a783e8d541c8fe04088cc8",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "b314b3fd0af3ff2002aa928ddbc793c1268528402c5b989809eb44c7c04575c8"
+        },
+        {
+          "name": "\"shared rollback: deselected finding returns to proposed after failed commit and retry materializes it\"",
+          "bodyHash": "973fcfe27ec2c2f134c2ec15b38b7051d9dae071ae7e6d878350d6bca0ddcc37",
+          "assertionHash": "583cfb6088e2e90cdea88b0492b84b9bf2502e7b3d523b29f34047c0f1e43e97",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "973fcfe27ec2c2f134c2ec15b38b7051d9dae071ae7e6d878350d6bca0ddcc37"
+        },
+        {
+          "name": "`shared rollback: ${kind} projection survives successful deletion followed by failed Basic removal`",
+          "bodyHash": "47218eef528749f2b72879d475e0fcf63325d188d3fda856c304bf54abfa1039",
+          "assertionHash": "a70256cf15e859d156c59bd54608729b61a22dc00fa8831c226ae7b2cfafd31d",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "47218eef528749f2b72879d475e0fcf63325d188d3fda856c304bf54abfa1039"
+        },
+        {
+          "name": "`shared rollback endpoint: ${kind} revocation rollback preserves original FHIR IDs and statuses`",
+          "bodyHash": "01e42c8304830b47766952f8ed1d0e14cd46e6344b661f9de5fe993b24c12817",
+          "assertionHash": "00b63ed86a7ba98a8d34ff6932669d622b00c7d3982c89649deab7a919beabb5",
+          "assertionCount": 8,
+          "bodyUnchanged": false,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "4f7e3b6b6e8f9124f9b082ad94e98b0b5a2de6ad822fc669081f3bd03ae620d9"
+        },
+        {
+          "name": "`follow-up fixback clinician ${ownership}: plan recommendation preserves doctor's choice`",
+          "bodyHash": "8d8d389efe3940a289be1b8cc9a87d7e65eed583c8bf6d468c0e9f960136bd7e",
+          "assertionHash": "911c4691cba914545e7a38ee4c7145653c942ed6f1dc84d175dfa31dad7ee2f8",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "8d8d389efe3940a289be1b8cc9a87d7e65eed583c8bf6d468c0e9f960136bd7e"
+        },
+        {
+          "name": "`follow-up fixback undo ${owner ? \"owner\" : \"dependent\"} ${item ? \"item\" : \"whole\"}: removes recommendation and rematerializes`",
+          "bodyHash": "8e893670c76b6d123be7283efa6c41b83ddcbe93b8013b20e8efd6f94936b849",
+          "assertionHash": "06e0302df81b54a4964448653ef4bab24c4e96e49bbc476cb63b9492b1d25b8b",
+          "assertionCount": 9,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "8e893670c76b6d123be7283efa6c41b83ddcbe93b8013b20e8efd6f94936b849"
+        },
+        {
+          "name": "\"follow-up fixback undo soonest of three retains two recommendations\"",
+          "bodyHash": "275ec32408b67e630f9fa7fd8a92567cd12ce2eb8ce0d22b7fdc8e20089ad30a",
+          "assertionHash": "873a1362b96eb3f69669b530fa88e0d44010b273c92dd6814f1e3090b1415178",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "275ec32408b67e630f9fa7fd8a92567cd12ce2eb8ce0d22b7fdc8e20089ad30a"
+        },
+        {
+          "name": "\"follow-up fixback undo last recommendation clears doctor flag\"",
+          "bodyHash": "f575a7101cd04fd196f93604e2cd41e40a1d78a56c603da17d1aace03f149241",
+          "assertionHash": "80dfb910059f133256769f3b935c79d52d5566f168315333b39e3d32e4c810de",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "f575a7101cd04fd196f93604e2cd41e40a1d78a56c603da17d1aace03f149241"
+        },
+        {
+          "name": "\"follow-up fixback failed undo restores action and ServiceRequest after follow-up write\"",
+          "bodyHash": "a64e5e112e2d3a010fe2dccea60ef9bbc7e931979257a96bd1d705211ddb28c5",
+          "assertionHash": "e08fadfa61600b78d7752859669ceb618e61dfe939be231e2619e38a8142f654",
+          "assertionCount": 8,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "a64e5e112e2d3a010fe2dccea60ef9bbc7e931979257a96bd1d705211ddb28c5"
+        },
+        {
+          "name": "\"shared guard chronological dependents: earliest then next own unchanged gonioscopy records\"",
+          "bodyHash": "7c816ce02499f28670397fe89131f40579eb1a746b08b45ddb6b65917e9f7c13",
+          "assertionHash": "e95cc40a71d6df404fa4253b8364022fc3501dee6512d61e10b9d7f57c8beb65",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "7c816ce02499f28670397fe89131f40579eb1a746b08b45ddb6b65917e9f7c13"
+        },
+        {
+          "name": "\"shared guard concurrent whole commits: only one confirms with one live order\"",
+          "bodyHash": "3107ae5bd4c004b223997c939c9a68909acafa7ba7ceeb35ef87660fcc11674b",
+          "assertionHash": "aee02fdf9fece99cbdd94b88d1a6e1e61199dbe49b614549a1b127cbb5dfce6e",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "3107ae5bd4c004b223997c939c9a68909acafa7ba7ceeb35ef87660fcc11674b"
+        }
+      ]
+    },
+    {
+      "file": "mcp/tests/procedureChargeMaterialization.test.ts",
+      "baselineTestBodies": 7,
+      "finalTestBodies": 7,
+      "allAssertionsUnchanged": true,
+      "bodyExceptions": [],
+      "tests": [
+        {
+          "name": "\"sign cleanup materializes five accepted proposals once and existing money surfaces consume them\"",
+          "bodyHash": "00ce08ec2b32c19d8c4a6ea55e8b2eb1f87751e7e8523990ca5b5a7a826854b5",
+          "assertionHash": "e0ba000ad2a2298ae29b16c51f0aca053e0f04d06ad1cd0700fa43be7cedc7d8",
+          "assertionCount": 18,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "00ce08ec2b32c19d8c4a6ea55e8b2eb1f87751e7e8523990ca5b5a7a826854b5"
+        },
+        {
+          "name": "\"fee schedule endpoint seeds empty definitions, saves integer cents, and deactivates instead of deleting\"",
+          "bodyHash": "4bb1b2e18ecee04b16d54ab3ed314e2dec48c04a2403d2883cb64d105e624309",
+          "assertionHash": "de1db55a6bcf04ada0666945500ac0141c0626026c3d051565717246c452618c",
+          "assertionCount": 16,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "4bb1b2e18ecee04b16d54ab3ed314e2dec48c04a2403d2883cb64d105e624309"
+        },
+        {
+          "name": "\"fee schedule creation endpoint is admin-only and reports key conflicts without a write\"",
+          "bodyHash": "a076178c94d099e02d9437340eadde08e17cb76e100b6a3936081853dd4bb185",
+          "assertionHash": "995f3161aaef46e8dc2d9c4a184a07922e5e635c7a963457af4ab4461b3452dc",
+          "assertionCount": 8,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "a076178c94d099e02d9437340eadde08e17cb76e100b6a3936081853dd4bb185"
+        },
+        {
+          "name": "\"accepted proposals with an invalid patient link fail before any ChargeItem write\"",
+          "bodyHash": "e48fa8a1cc2154c695aadcfb3b069de01b5464478a6bd961682b2152765ec2e9",
+          "assertionHash": "310a1fa111405b909c9a7756c5405ef5bf3a6d36f0fcd92a769e11b8528ba24d",
+          "assertionCount": 2,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "e48fa8a1cc2154c695aadcfb3b069de01b5464478a6bd961682b2152765ec2e9"
+        },
+        {
+          "name": "\"sign cleanup abandons unrelated open applications before a corrupt accepted proposal fails\"",
+          "bodyHash": "9e17b6d599763faaa94138fdd1e232dd14cad1abd56a55bc023d8e286e7bec47",
+          "assertionHash": "c260db42fc3a0d584c98c40c1319f0dc43b075d0b464ec05154649bf3c9026b8",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "9e17b6d599763faaa94138fdd1e232dd14cad1abd56a55bc023d8e286e7bec47"
+        },
+        {
+          "name": "\"a retry after ChargeItem creation but before proposal finalization reuses the conditional charge identity\"",
+          "bodyHash": "361cbbe128c875c9aa1e318f0dbbcdb8a15e36ae1c730ba64744357e09e490b5",
+          "assertionHash": "f9e3aba5bcc7a97a27b88dbb00e950f78bfebd5a504ce4ec00a40416e311df19",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "361cbbe128c875c9aa1e318f0dbbcdb8a15e36ae1c730ba64744357e09e490b5"
+        },
+        {
+          "name": "\"materialization FHIR fake increments versions and refuses stale conditional writes\"",
+          "bodyHash": "8593f55bffad1d4b3e872c4c1a6e2103914e2af107801ac0f2726760da53c2a0",
+          "assertionHash": "e438f49f683659edd617d5948f4fd19aa5d6999b57188ddc1930e4db426ccf2a",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "8593f55bffad1d4b3e872c4c1a6e2103914e2af107801ac0f2726760da53c2a0"
+        }
+      ]
+    },
+    {
+      "file": "mcp/src/__tests__/gonioscopy-phase5.test.ts",
+      "baselineTestBodies": 6,
+      "finalTestBodies": 6,
+      "allAssertionsUnchanged": true,
+      "bodyExceptions": [],
+      "tests": [
+        {
+          "name": "\"gonioscopy-phase5.test.ts is included in full MCP discovery\"",
+          "bodyHash": "273ae3ca3c0d8e1d8c845aa95fbd57e6f6d7ae73514139ac4382fbbd854e6aa0",
+          "assertionHash": "31b6c93502d3533c264d911411c65c71ba2a6a9ee66bab9aa518a730c2aaa388",
+          "assertionCount": 1,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "273ae3ca3c0d8e1d8c845aa95fbd57e6f6d7ae73514139ac4382fbbd854e6aa0"
+        },
+        {
+          "name": "\"protocol default round-trips as 8 SS quadrant records and one override preserves the other seven\"",
+          "bodyHash": "10daaae64399b34c21e0e7b48adb3268d1974dabc3d49573437bb281a7eede83",
+          "assertionHash": "22cfea14cac6d332cdea86c74ff1331fa58e8fe9cb916d0300adec48df0d7ea1",
+          "assertionCount": 6,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "10daaae64399b34c21e0e7b48adb3268d1974dabc3d49573437bb281a7eede83"
+        },
+        {
+          "name": "\"gonioscopy read returns the latest quadrant, pigmentation, and note records\"",
+          "bodyHash": "fbe9fd89e646ebc6baf2b7bf783cc8c3e51c31224c927910e40925f29af0f2ae",
+          "assertionHash": "9664643b9a0ad8463aa9dc2b6a6699bbf37d5e40f954592e8989c36c7925c12f",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "fbe9fd89e646ebc6baf2b7bf783cc8c3e51c31224c927910e40925f29af0f2ae"
+        },
+        {
+          "name": "\"gonioscopy read ignores newer invalidated quadrant, pigmentation, and note records\"",
+          "bodyHash": "d9bc7b0ea252f39767fee4cbdea751d630470e8414c38c75301fa7ced2fd1839",
+          "assertionHash": "9991470f913fefb1ccfb6d6bcd7023b11fefe622c6c1ca11e61f14ccf0a1fe27",
+          "assertionCount": 3,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "d9bc7b0ea252f39767fee4cbdea751d630470e8414c38c75301fa7ced2fd1839"
+        },
+        {
+          "name": "\"gonioscopy parser rejects missing or invalid provenance extensions\"",
+          "bodyHash": "c8ef5d289c477090f12077eb20f12f9a639d4b5fbc0577b1b18ddf348b6f92fe",
+          "assertionHash": "01c7756d2230e8bd39dcf9a1a7afeebb15d8bdcbc2dbf3652da45143a918a19c",
+          "assertionCount": 4,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "c8ef5d289c477090f12077eb20f12f9a639d4b5fbc0577b1b18ddf348b6f92fe"
+        },
+        {
+          "name": "\"gonioscopy capture verifies encounter ownership and codes pigmentation\"",
+          "bodyHash": "1515835cee1165e5a4afc95a5183a503d060296044c381ebe7b31edd803665e4",
+          "assertionHash": "67912af9e795e093770f39b87ece6e74df99529b3ca0852cdf67a6b6e7202068",
+          "assertionCount": 5,
+          "bodyUnchanged": true,
+          "assertionsUnchanged": true,
+          "finalBodyHash": "1515835cee1165e5a4afc95a5183a503d060296044c381ebe7b31edd803665e4"
+        }
+      ]
+    }
+  ],
+  "exceptionReason": "Parameterized rollback route test: finding case explicitly saves staff-published legacy v1 because generated v2 no longer has finding-seeds. Assertions unchanged. EndpointFhir helper gains sidecar version metadata and If-Match enforcement; helper is not a test body. Other changes in mandatory files are import alias only."
+}

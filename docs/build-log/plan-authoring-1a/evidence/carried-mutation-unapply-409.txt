@@ -4,76 +4,76 @@
 
 TAP version 13
 # Subtest: carried apply maps the losing whole-apply commit race to 409
-not ok 1 - carried apply maps the losing whole-apply commit race to 409
+ok 1 - carried apply maps the losing whole-apply commit race to 409
   ---
-  duration_ms: 4.7765
+  duration_ms: 3.772583
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:1:2117'
+  ...
+# Subtest: carried unapply maps a conditional application save conflict to 409
+not ok 2 - carried unapply maps a conditional application save conflict to 409
+  ---
+  duration_ms: 1.288041
+  type: 'test'
+  location: '$CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:1:2420'
   failureType: 'testCodeFailure'
-  error: 'Protocol is already applied to this encounter.'
+  error: 'Protocol application changed during the operation; retry.'
   code: 'ERR_TEST_FAILURE'
   name: 'ProtocolItemAddConflictError'
   stack: |-
-    ProtocolService.commitLocked (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-service.ts:576:13)
-    async InProcessProtocolItemAddLock.run (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-service.ts:74:14)
-    async handleProtocolApplyRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-endpoint.ts:407:5)
-    async Promise.all (index 1)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:34:19)
+    ProtocolService.saveApplication ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-service.ts:1194:23)
+    async ProtocolService.unapplyLocked ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-service.ts:720:7)
+    async InProcessProtocolItemAddLock.run ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-service.ts:74:14)
+    async handleProtocolUnapplyRequest ($CARRIED_WORKTREE/mcp/src/clinical-graph/protocol-endpoint.ts:828:33)
+    async TestContext.<anonymous> ($CARRIED_WORKTREE/mcp/src/__tests__/plan-carried.test.ts:50:17)
     async Test.run (node:internal/test_runner/test:1054:7)
-    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
-  ...
-# Subtest: carried unapply maps a conditional application save conflict to 409
-ok 2 - carried unapply maps a conditional application save conflict to 409
-  ---
-  duration_ms: 1.28625
-  type: 'test'
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: carried confirm checks liveness after the encounter lock and returns 404
 ok 3 - carried confirm checks liveness after the encounter lock and returns 404
   ---
-  duration_ms: 8.203042
+  duration_ms: 11.805791
   type: 'test'
   ...
 # Subtest: carried undo preserves clinician resolution at 4 months
 ok 4 - carried undo preserves clinician resolution at 4 months
   ---
-  duration_ms: 2.37925
+  duration_ms: 2.351959
   type: 'test'
   ...
 # Subtest: carried undo preserves clinician resolution at 6 months
 ok 5 - carried undo preserves clinician resolution at 6 months
   ---
-  duration_ms: 1.660042
+  duration_ms: 1.916917
   type: 'test'
   ...
 # Subtest: carried ServiceRequest rollback reports a newer version conflict without overwriting it
 ok 6 - carried ServiceRequest rollback reports a newer version conflict without overwriting it
   ---
-  duration_ms: 1.255917
+  duration_ms: 1.618208
   type: 'test'
   ...
 # Subtest: carried CarePlan rollback reports a newer version conflict without overwriting it
 ok 7 - carried CarePlan rollback reports a newer version conflict without overwriting it
   ---
-  duration_ms: 2.03125
+  duration_ms: 1.049417
   type: 'test'
   ...
 # Subtest: carried Observation rollback reports a newer version conflict without overwriting it
 ok 8 - carried Observation rollback reports a newer version conflict without overwriting it
   ---
-  duration_ms: 1.186459
+  duration_ms: 1.071917
   type: 'test'
   ...
 # Subtest: carried rollback restores the captured version conditionally
 ok 9 - carried rollback restores the captured version conditionally
   ---
-  duration_ms: 1.0285
+  duration_ms: 0.98425
   type: 'test'
   ...
 # Subtest: carried rollback refuses missing revoke version
 ok 10 - carried rollback refuses missing revoke version
   ---
-  duration_ms: 1.25725
+  duration_ms: 1.141
   type: 'test'
   ...
 1..10
@@ -84,4 +84,4 @@ ok 10 - carried rollback refuses missing revoke version
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 194.007417
+# duration_ms 204.064583
