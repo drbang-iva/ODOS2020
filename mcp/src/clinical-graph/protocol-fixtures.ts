@@ -1,3 +1,6 @@
+import { buildPlanSetProtocols } from "./plan-sets/generator.js";
+import { GLAUCOMA_PLAN_SET_SPECS } from "./plan-sets/glaucoma.js";
+import { PROCEDURE_FEE_SEEDS } from "./procedure-fee-schedule.js";
 import type { ProcedureChargeRule, ProtocolDefinition } from "./protocol-types.js";
 import {
   DRY_EYE_CONJUNCTIVAL_STAINING_KEY,
@@ -26,7 +29,7 @@ const PROCEDURES = [
   { key: "fundus-photography", context: "in-office-today" },
 ] as const;
 
-export const GLAUCOMA_SUSPECT_PROTOCOL: ProtocolDefinition = {
+export const GLAUCOMA_SUSPECT_PROTOCOL_V1: ProtocolDefinition = {
   id: "glaucoma-suspect-initial",
   version: 1,
   title: "Glaucoma Suspect — Initial Workup",
@@ -204,7 +207,7 @@ function dryEyeSeriesInitiationProtocol(input: {
 }): ProtocolDefinition {
   return {
     id: input.id,
-    version: 1,
+    version: 2,
     title: input.title,
     trigger: {
       kind: "diagnosis",
@@ -230,6 +233,7 @@ function dryEyeSeriesInitiationProtocol(input: {
         ...OU,
         itemKey: `series-${input.modality}`,
         itemType: "series-prescription",
+        procedureDefinitionKey: DRY_EYE_PROCEDURE_STABLE_KEYS[input.modality],
         payload: {
           seriesProtocolId: input.seriesProtocolId,
           chargeSeedRef: `charge-${input.modality}-package`,
@@ -394,8 +398,15 @@ export const DRY_EYE_CHARGE_RULES: ProcedureChargeRule[] = [
   })),
 ];
 
+export const GLAUCOMA_PLAN_SET_BUILD = buildPlanSetProtocols(GLAUCOMA_PLAN_SET_SPECS, new Set(PROCEDURE_FEE_SEEDS.map(seed => seed.procedureConceptKey)));
+export const GLAUCOMA_SUSPECT_PROTOCOL = GLAUCOMA_PLAN_SET_BUILD.protocols[0];
+export const GLAUCOMA_CHARGE_RULES: ProcedureChargeRule[] = GLAUCOMA_SUSPECT_CHARGE_RULES.map(rule => ({
+  ...rule, id: `rule-${rule.procedureConceptKey}-glaucoma`, version: 2,
+  dxScope: [...new Set(GLAUCOMA_PLAN_SET_BUILD.protocols.flatMap(protocol => protocol.trigger.kind === "diagnosis" ? protocol.trigger.dxKeys : []))].sort(),
+}));
+
 export const BUILTIN_PROTOCOLS = [
-  GLAUCOMA_SUSPECT_PROTOCOL,
+  ...GLAUCOMA_PLAN_SET_BUILD.protocols,
   DRY_EYE_EVALUATION_PROTOCOL,
   DRY_EYE_IPL_INIT_PROTOCOL,
   DRY_EYE_RF_INIT_PROTOCOL,
@@ -404,6 +415,6 @@ export const BUILTIN_PROTOCOLS = [
 ] as const;
 
 export const BUILTIN_CHARGE_RULES = [
-  ...GLAUCOMA_SUSPECT_CHARGE_RULES,
+  ...GLAUCOMA_CHARGE_RULES,
   ...DRY_EYE_CHARGE_RULES,
 ] as const;

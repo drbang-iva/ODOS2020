@@ -8,7 +8,7 @@ import {
   DRY_EYE_LLLT_INIT_PROTOCOL,
   DRY_EYE_RF_INIT_PROTOCOL,
   GLAUCOMA_SUSPECT_CHARGE_RULES,
-  GLAUCOMA_SUSPECT_PROTOCOL,
+  GLAUCOMA_SUSPECT_PROTOCOL_V1 as GLAUCOMA_SUSPECT_PROTOCOL,
 } from "../clinical-graph/protocol-fixtures.js";
 import {
   handleProtocolApplicationsRequest,
