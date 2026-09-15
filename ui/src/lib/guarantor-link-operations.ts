@@ -5,10 +5,10 @@ export interface GuarantorLinkOperation {
   task: Task;
   active: boolean;
   correctionInProgress?: boolean;
-  kind: "transfer" | "consolidate" | "correct";
+  kind: "attach" | "transfer" | "consolidate" | "correct";
   phase: string;
-  sourcePersonId: string;
-  destinationPersonId: string;
+  sourcePersonId?: string;
+  destinationPersonId?: string;
   relatedPersonIds: string[];
   patients: { relatedPersonId: string; patientId: string; name: string }[];
 }
@@ -57,19 +57,30 @@ export async function correctGuarantorLinkOperation(taskId: string, reason: stri
 }
 
 export interface GuarantorSearchCard { personId: string; versionId: string; name: string; phones: string[]; city: string; postalCode: string }
-export interface GuarantorDraftInput { kind: "transfer" | "consolidate"; sourcePersonId: string; destinationPersonId: string; relatedPersonIds?: string[] }
+export type GuarantorDraftInput = {
+  kind: "attach"; destinationPersonId: string; relatedPersonIds: [string];
+} | {
+  kind: "transfer"; sourcePersonId: string; destinationPersonId: string; relatedPersonIds: [string];
+} | {
+  kind: "consolidate"; sourcePersonId: string; destinationPersonId: string; relatedPersonIds?: string[];
+};
 export interface GuarantorDraft { expected: Record<string, string>; relatedPersonIds: string[]; patients: { relatedPersonId: string; patientId: string; name?: import("@medplum/fhirtypes").HumanName[]; current: Pick<import("@medplum/fhirtypes").Person,"name"|"telecom"|"address">; resulting: Pick<import("@medplum/fhirtypes").Person,"name"|"telecom"|"address"> }[] }
+type GuarantorCreateFields = { operationId: string; expected: Record<string, string>; relatedPersonIds: string[]; reason: string };
+type GuarantorCreateInput =
+  | (Omit<Extract<GuarantorDraftInput, { kind: "attach" }>, "relatedPersonIds"> & GuarantorCreateFields)
+  | (Omit<Extract<GuarantorDraftInput, { kind: "transfer" }>, "relatedPersonIds"> & GuarantorCreateFields)
+  | (Omit<Extract<GuarantorDraftInput, { kind: "consolidate" }>, "relatedPersonIds"> & GuarantorCreateFields);
 export type NewGuarantor = Record<"firstName"|"middleName"|"lastName"|"phone"|"address"|"city"|"state"|"postalCode",string>;
 export class GuarantorScreenError extends Error { constructor(message: string, readonly status: number, readonly body?: { task?: unknown }) { super(message); } }
 async function screenRequest<T>(path: string, body?: object): Promise<T> {
   const authorization = fhir.authHeader();
   const response = await fetch(`/guarantors${path}`, { method: body ? "POST" : "GET", headers: { ...(authorization ? { Authorization: authorization } : {}), ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
-  const result = await response.json();
+  const result = await response.json() as { error?: unknown; task?: unknown };
   if (!response.ok) throw new GuarantorScreenError(typeof result.error === "string" ? result.error : "The guarantor result could not be confirmed. Reload before continuing.", response.status, result);
   return result as T;
 }
 export const searchGuarantors = (keys: { lastName: string; firstName?: string; phone?: string }) => screenRequest<GuarantorSearchCard[]>(`/search?${new URLSearchParams(keys)}`);
 export const createNewGuarantor = (body: NewGuarantor) => screenRequest<{personId:string;versionId:string}>("",body);
 export const draftGuarantorOperation = (body: GuarantorDraftInput) => screenRequest<GuarantorDraft>("/link-operations/draft",body);
-export const createGuarantorOperation = (body: GuarantorDraftInput & { operationId:string; expected:Record<string,string>; relatedPersonIds:string[]; reason:string }) => screenRequest<GuarantorLinkOperation>("/link-operations",body);
+export const createGuarantorOperation = (body: GuarantorCreateInput) => screenRequest<GuarantorLinkOperation>("/link-operations",body);
 export const guarantorOperationHistory = (id: string) => screenRequest<GuarantorLinkOperation[]>(`/link-operations?${new URLSearchParams({relatedPersonId:id})}`);

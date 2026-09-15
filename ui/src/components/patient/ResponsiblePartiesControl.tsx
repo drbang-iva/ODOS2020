@@ -100,14 +100,17 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
       setBusy(false);
     }
   };
-  if (!editable) return <section className="grid gap-2 rounded border border-[var(--odos-line)] p-3">
+  if (!editable) {
+    const displayedMessage = loaded.kind === "missing" && loaded.message === "No linked guarantor record — pre-migration." ? "No linked guarantor record." : loaded.message;
+    return <section className="grid gap-2 rounded border border-[var(--odos-line)] p-3">
     <h3 className="font-semibold">{displayName(loaded.relatedPerson ?? {})}</h3>
     <p>{loaded.relatedPerson.telecom?.map(contact => `${contact.system ?? "Contact"}: ${contact.value ?? "Not recorded"}`).join(" · ") || "No contact details recorded."}</p>
     <p>{loaded.relatedPerson.address?.map(address => address.text || [...address.line ?? [], address.city, address.state, address.postalCode, address.country].filter(Boolean).join(", ")).join(" · ") || "No address recorded."}</p>
-    <p role="status">{loaded.message}</p>
+    <p role="status">{displayedMessage}</p>
     {notice && <p role="status">{notice}</p>}
     {loaded.personIds?.length ? <p>Guarantor records: {loaded.personIds.join(", ")}</p> : null}
     <button type="button" disabled onClick={() => save()}>Save guarantor</button>
+    {loaded.kind === "missing" && <GuarantorLinkScreens relatedPersonId={loaded.relatedPerson.id!} disabled={busy} onReload={refresh} attachOnly />}
     {loaded.kind === "pending" && <>
       <ul aria-label="Patients affected by this operation">{loaded.operation.patients.map(patient => <li key={patient.relatedPersonId}>{patient.name || patient.patientId}</li>)}</ul>
       <button type="button" disabled onClick={() => save(true)}>Repair guarantor</button>
@@ -116,7 +119,8 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
       <button type="button" disabled={busy || loaded.operation.kind === "correct" || !correctionReason.trim()} onClick={() => recover(true)}>Correct</button>
     </>}
     <button type="button" disabled={busy} onClick={() => void reload()}>Reload guarantor</button>
-  </section>;
+    </section>;
+  }
   const names = draft.name?.length ? draft.name : [{}];
   const telecom = draft.telecom?.length ? draft.telecom : [{ system: "phone" as const }];
   const addresses = draft.address?.length ? draft.address : [{}];

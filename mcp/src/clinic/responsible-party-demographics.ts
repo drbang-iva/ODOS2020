@@ -1,4 +1,4 @@
-import type { RelatedPerson } from "@medplum/fhirtypes";
+import type { Person, RelatedPerson } from "@medplum/fhirtypes";
 
 export type ResponsiblePartyDemographics = Pick<RelatedPerson, "name" | "telecom" | "address">;
 type RegistrationDemographics = Record<"firstName" | "middleName" | "lastName" | "phone" | "address" | "city" | "state" | "postalCode", string>;
@@ -15,4 +15,10 @@ export function buildResponsiblePartyDemographics(party: RegistrationDemographic
       ? [{ use: "home", line: party.address.trim() ? [party.address.trim()] : undefined, city: party.city.trim() || undefined, state: party.state.trim() || undefined, postalCode: party.postalCode.trim() || undefined }]
       : undefined,
   });
+}
+
+export function guarantorPersonIsAttachable(person: Person, projectId: string): boolean {
+  return person.meta?.project?.replace(/^Project\//, "") === projectId
+    && person.active !== false
+    && (person.link ?? []).every(link => /^RelatedPerson\/[A-Za-z0-9.-]{1,64}$/.test(link.target.reference ?? ""));
 }

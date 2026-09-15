@@ -1,7 +1,7 @@
 import type { Bundle, Patient, Person, RelatedPerson, Resource } from "@medplum/fhirtypes";
 import { projectResponsiblePartyDemographics, type ResponsiblePartyDemographics } from "../../../mcp/src/clinic/responsible-party-demographics";
 import { CONCURRENT_EDIT_MESSAGE, fhir } from "./fhir";
-import { getGuarantorLinkOperation, type GuarantorLinkOperation } from "./guarantor-link-operations";
+import { getGuarantorLinkOperation, guarantorOperationHistory, type GuarantorLinkOperation } from "./guarantor-link-operations";
 
 export type GuarantorDemographics = ResponsiblePartyDemographics;
 export interface GuarantorChild { resource: RelatedPerson; patientName: string }
@@ -106,7 +106,7 @@ async function activeOperation(resource: RelatedPerson): Promise<GuarantorLinkOp
   }
 }
 function pending(relatedPerson: RelatedPerson, operation: GuarantorLinkOperation): GuarantorLoad {
-  return { kind: "pending", relatedPerson, operation, personIds: [operation.sourcePersonId, operation.destinationPersonId],
+  return { kind: "pending", relatedPerson, operation, personIds: [operation.sourcePersonId, operation.destinationPersonId].filter((id): id is string => Boolean(id)),
     message: `Guarantor ${operation.kind === "correct" ? "correction" : operation.kind} ${operation.task.id} is pending. ${operation.kind === "correct" ? "Complete the correction" : "Complete or correct the operation"} before editing contact details.` };
 }
 async function resolveGuarantor(relatedPerson: RelatedPerson): Promise<GuarantorLoad> {
@@ -114,7 +114,13 @@ async function resolveGuarantor(relatedPerson: RelatedPerson): Promise<Guarantor
     const operation = await activeOperation(relatedPerson);
     if (operation) return pending(relatedPerson, operation);
     const persons = await searchAll<Person>("Person", { link: `RelatedPerson/${relatedPerson.id}` });
-    if (!persons.length) return { kind: "missing", relatedPerson, personIds: [], message: "No linked guarantor record — pre-migration." };
+    if (!persons.length) {
+      let failedAttach = false;
+      let historyReadable = true;
+      try { failedAttach = (await guarantorOperationHistory(relatedPerson.id!)).find(operation => operation.kind === "attach")?.task.status === "failed"; }
+      catch { historyReadable = false; }
+      return { kind: "missing", relatedPerson, personIds: [], message: failedAttach ? "No linked guarantor record. The guarantor attach did not finish." : historyReadable ? "No linked guarantor record." : "No linked guarantor record — pre-migration." };
+    }
     if (persons.length !== 1) return { kind: "ambiguous", relatedPerson, personIds: persons.map(p => p.id!), message: `Ambiguous guarantor for ${relatedPerson.patient.reference}, RelatedPerson/${relatedPerson.id}: ${persons.map(p => `Person/${p.id}`).join(", ")}. Editing refused.` };
     const snapshot = await readSnapshot(persons[0]);
     for (const item of snapshot.children) {

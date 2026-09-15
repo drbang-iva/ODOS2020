@@ -1,0 +1,6 @@
+{
+  "sourceHead": "22b190d93cb62701b9f2690f6547e015524022bd",
+  "command": "node --import tsx scripts/sync-practice-role-policy-rules.ts --project <synthetic-project-A> --bootstrap-service-identity --apply",
+  "output": "Target: Project/d27f3a9e-b195-4e44-bc58-8e8f5ffb5664 (source: --project)\nMode: apply\nprovider: MATCH AccessPolicy/ff8fe22c-ac89-4a2c-8f0a-693e3b947315 \"ODOS Provider\"\nstaff: MATCH AccessPolicy/07aab4e7-5fa6-44dc-9140-6d3bca8e212e \"ODOS Staff\"\nadmin: MATCH AccessPolicy/c0bd8328-c746-4939-97c1-cb7044676ea2 \"ODOS Admin / Manager\"\nprovider+staff+admin: MATCH AccessPolicy/6bb16399-baf8-4e6f-9a6f-713d63019688 \"ODOS Composite Provider + Staff + Admin / Manager\"\nComposite policies required: 0\nComposite policies created: 0\nPolicies updated: 0\nMemberships requiring compilation: 0\nMemberships updated: 0\n",
+  "diagnostics": "BREAK-GLASS: BOOTSTRAP SERVICE IDENTITY ACTIVE. Target is restricted to AccessPolicy and ProjectMembership resources in --project d27f3a9e-b195-4e44-bc58-8e8f5ffb5664.\n"
+}

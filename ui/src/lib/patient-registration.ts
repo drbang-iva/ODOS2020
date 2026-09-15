@@ -30,11 +30,20 @@ export interface PatientDemographicsDraft {
   postalCode: string;
 }
 
+export interface GuarantorRegistrationLink {
+  relatedPersonId?: string;
+  personId: string;
+  taskId?: string;
+  status: "linked" | "pending" | "failed" | "unconfirmed";
+  message: string;
+}
+
 export type PatientRegistrationResult =
   | { kind: "duplicates"; patients: Patient[] }
   | {
       kind: "created";
       patient: Patient;
+      guarantorLinks?: GuarantorRegistrationLink[];
       warning?: {
         code: "access-grant-repair-required";
         message: string;
@@ -290,7 +299,7 @@ async function requestPatientRegistration(
     },
     body: JSON.stringify({
       demographics: { ...draft, phones: draft.phones.map(({ value, use }) => ({ value, use })) },
-      responsibleParties: registrationResponsibleParties(options),
+      responsibleParties: registrationResponsibleParties(options).map(registrationPartyPayload),
       confirmDuplicate,
       ...(options.communicationPreferences?.cells.length ? { communicationPreferences: options.communicationPreferences } : {}),
     }),
@@ -332,11 +341,18 @@ function isDuplicateResult(value: unknown): value is Extract<PatientRegistration
 
 function isCreatedResult(value: unknown): value is Extract<PatientRegistrationResult, { kind: "created" }> {
   if (!isObject(value) || value.kind !== "created" || !isPatient(value.patient)) return false;
-  if (value.warning === undefined) return true;
-  return isObject(value.warning)
+  const warningValid = value.warning === undefined || (isObject(value.warning)
     && value.warning.code === "access-grant-repair-required"
     && typeof value.warning.message === "string"
-    && typeof value.warning.patientReference === "string";
+    && typeof value.warning.patientReference === "string");
+  const linksValid = value.guarantorLinks === undefined || (Array.isArray(value.guarantorLinks) && value.guarantorLinks.every(link => isObject(link)
+    && (link.relatedPersonId === undefined || typeof link.relatedPersonId === "string")
+    && typeof link.personId === "string"
+    && (link.taskId === undefined || typeof link.taskId === "string")
+    && typeof link.status === "string"
+    && ["linked", "pending", "failed", "unconfirmed"].includes(link.status)
+    && typeof link.message === "string"));
+  return warningValid && linksValid;
 }
 
 function isErrorResponse(value: unknown): value is { error: string } {
@@ -379,6 +395,12 @@ function registrationResponsibleParties(
   options: PatientRegistrationOptions,
 ): readonly ResponsiblePartyDraft[] {
   return options.responsibleParties ?? [emptySelfResponsibleParty("self")];
+}
+
+function registrationPartyPayload(party: ResponsiblePartyDraft) {
+  if (party.kind !== "existing") return party;
+  const { card: _card, previous: _previous, ...payload } = party;
+  return payload;
 }
 
 function registrationToday(options: PatientRegistrationOptions): string {
