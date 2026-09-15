@@ -1,0 +1,27 @@
+TAP version 13
+# Subtest: majority missing prevents all MRN backfill writes
+not ok 1 - majority missing prevents all MRN backfill writes
+  ---
+  duration_ms: 7.691083
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/tests/setup-wizard/patient-mrn-backfill.test.ts:1:16864'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-dob-worker/tests/setup-wizard/patient-mrn-backfill.test.ts:545:2)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 118.864916

@@ -1,3 +1,6 @@
+import { buildAgeOfMajorityConfigResource } from "../../mcp/src/clinic/age-of-majority-config.ts";
+const wire = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+const majority = (ageOfMajorityYears = 18) => JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears })));
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type {
@@ -8,6 +11,7 @@ import type {
 import {
   assertLocalOrPrivateBaseUrl,
   backfillPatientMrns,
+  loadBackfillAgeOfMajorityConfig,
   type PatientMrnBackfillAdapter,
 } from "../../scripts/backfill-patient-mrns.ts";
 import {
@@ -44,7 +48,7 @@ test("MRN backfill is idempotent, preserves migrated identifiers, and never inve
   const bases = [510_001, 510_002];
 
   const first = await backfillPatientMrns(adapter, {
-    today: "2026-07-30",
+    today: "2026-07-30", ageOfMajorityConfig: majority(),
     nextMrnBase: () => bases.shift()!,
     nextUuid: sequentialUuid(),
   });
@@ -73,7 +77,7 @@ test("MRN backfill is idempotent, preserves migrated identifiers, and never inve
   assert.equal(adultAccount.identifier?.some((identifier) => identifier.system === ODOS_MRN_ALLOCATION_TOKEN_SYSTEM), false);
 
   const second = await backfillPatientMrns(adapter, {
-    today: "2026-07-30",
+    today: "2026-07-30", ageOfMajorityConfig: majority(),
     nextMrnBase: () => {
       throw new Error("idempotent rerun must not request another MRN");
     },
@@ -116,7 +120,7 @@ test("MRN backfill preserves unrelated fields on an existing Account full-resour
   });
 
   const result = await backfillPatientMrns(adapter, {
-    today: "2026-07-30",
+    today: "2026-07-30", ageOfMajorityConfig: majority(),
     nextMrnBase: () => {
       throw new Error("existing MRN must not allocate another");
     },
@@ -156,7 +160,7 @@ test("MRN backfill preserves inactive and entered-in-error Account status", asyn
   });
 
   const result = await backfillPatientMrns(adapter, {
-    today: "2026-07-30",
+    today: "2026-07-30", ageOfMajorityConfig: majority(),
     nextMrnBase: () => {
       throw new Error("existing MRNs must not allocate another");
     },
@@ -180,7 +184,7 @@ test("MRN backfill surfaces an indeterminate birth date without creating a self 
   const adapter = new FakePatientMrnBackfillAdapter([missingBirthDate]);
 
   const result = await backfillPatientMrns(adapter, {
-    today: "2026-07-30",
+    today: "2026-07-30", ageOfMajorityConfig: majority(),
     nextMrnBase: () => 622_001,
     nextUuid: sequentialUuid(),
   });
@@ -220,7 +224,7 @@ test("MRN backfill treats a complete Account with reordered identifiers as uncha
   });
 
   const result = await backfillPatientMrns(adapter, {
-    today: "2026-07-30",
+    today: "2026-07-30", ageOfMajorityConfig: majority(),
     nextMrnBase: () => {
       throw new Error("existing MRN must not allocate another");
     },
@@ -291,14 +295,14 @@ test("MRN backfill fails before writes for ambiguous or inconsistent identity st
     await context.test(fixture.name, async () => {
       const adapter = new FakePatientMrnBackfillAdapter([fixture.patient]);
       for (const candidate of fixture.accounts) adapter.accounts.set(candidate.id!, candidate);
-      const before = structuredClone({
+      const before = wire({
         patients: [...adapter.patients.entries()],
         accounts: [...adapter.accounts.entries()],
       });
 
       await assert.rejects(
         backfillPatientMrns(adapter, {
-          today: "2026-07-30",
+          today: "2026-07-30", ageOfMajorityConfig: majority(),
           nextMrnBase: () => 650_001,
           nextUuid: sequentialUuid(),
         }),
@@ -320,7 +324,7 @@ test("MRN backfill validates every Patient before reserving or writing an earlie
 
   await assert.rejects(
     backfillPatientMrns(adapter, {
-      today: "2026-07-30",
+      today: "2026-07-30", ageOfMajorityConfig: majority(),
       nextMrnBase: () => {
         allocationCalls += 1;
         return 650_001;
@@ -354,7 +358,7 @@ test("MRN backfill rejects an existing-MRN reservation owned by another allocati
 
   await assert.rejects(
     backfillPatientMrns(adapter, {
-      today: "2026-07-30",
+      today: "2026-07-30", ageOfMajorityConfig: majority(),
       nextMrnBase: () => {
         throw new Error("existing MRN must not allocate another");
       },
@@ -385,7 +389,7 @@ test("MRN backfill honors Patient and Account ifMatch versions atomically", asyn
 
       await assert.rejects(
         backfillPatientMrns(adapter, {
-          today: "2026-07-30",
+          today: "2026-07-30", ageOfMajorityConfig: majority(),
           nextMrnBase: () => 650_003,
           nextUuid: sequentialUuid(),
         }),
@@ -408,15 +412,15 @@ class FakePatientMrnBackfillAdapter implements PatientMrnBackfillAdapter {
   private accountSequence = 0;
 
   constructor(patients: Patient[]) {
-    for (const patient of patients) this.patients.set(patient.id!, structuredClone(patient));
+    for (const patient of patients) this.patients.set(patient.id!, wire(patient));
   }
 
   async listPatients(): Promise<Patient[]> {
-    return [...this.patients.values()].map((patient) => structuredClone(patient));
+    return [...this.patients.values()].map((patient) => wire(patient));
   }
 
   async listAccounts(): Promise<Account[]> {
-    return [...this.accounts.values()].map((account) => structuredClone(account));
+    return [...this.accounts.values()].map((account) => wire(account));
   }
 
   async patientIdentifierExists(mrn: string): Promise<boolean> {
@@ -431,18 +435,18 @@ class FakePatientMrnBackfillAdapter implements PatientMrnBackfillAdapter {
     const existing = [...this.accounts.values()].find((candidate) =>
       candidate.identifier?.some((identifier) => identifier.system === ODOS_MRN_SYSTEM && identifier.value === mrn),
     );
-    if (existing) return structuredClone(existing);
+    if (existing) return wire(existing);
     const created = {
-      ...structuredClone(account),
+      ...wire(account),
       id: `account-${++this.accountSequence}`,
       meta: { versionId: "1" },
     };
     this.accounts.set(created.id, created);
-    return structuredClone(created);
+    return wire(created);
   }
 
   async executeTransaction(bundle: Bundle): Promise<Bundle> {
-    this.transactions.push(structuredClone(bundle));
+    this.transactions.push(wire(bundle));
     this.beforeTransaction?.();
     const statuses = (bundle.entry ?? []).map((entry) => {
       if (!entry.request?.ifMatch || !entry.resource?.id) return "200 OK";
@@ -470,7 +474,7 @@ class FakePatientMrnBackfillAdapter implements PatientMrnBackfillAdapter {
         const current = this.patients.get(entry.resource.id!);
         assert.ok(current);
         this.patients.set(entry.resource.id!, {
-          ...structuredClone(entry.resource),
+          ...wire(entry.resource),
           meta: { versionId: String(Number(current.meta?.versionId ?? "0") + 1) },
         });
       }
@@ -478,7 +482,7 @@ class FakePatientMrnBackfillAdapter implements PatientMrnBackfillAdapter {
         const current = this.accounts.get(entry.resource.id!);
         assert.ok(current);
         this.accounts.set(entry.resource.id!, {
-          ...structuredClone(entry.resource),
+          ...wire(entry.resource),
           meta: { versionId: String(Number(current.meta?.versionId ?? "0") + 1) },
         });
       }
@@ -529,3 +533,26 @@ function sequentialUuid(): () => string {
   let sequence = 0;
   return () => `token-${++sequence}`;
 }
+
+ test("majority setting21 prevents nineteen-year-old self guarantor in MRN backfill", async()=>{
+ const adapter = new FakePatientMrnBackfillAdapter([patient("nineteen","2007-01-02",[])]);
+ const result=await backfillPatientMrns(adapter,{today:"2026-07-30",ageOfMajorityConfig:majority(21),nextMrnBase:()=>510001,nextUuid:sequentialUuid()});
+ assert.equal(result.minorsNeedingResponsibleParty,1);
+ assert.deepEqual(accountFor(adapter.accounts,"Patient/nineteen").guarantor,[]);
+ });
+ test("majority missing prevents all MRN backfill writes", async()=>{
+ const adapter=new FakePatientMrnBackfillAdapter([patient("adult","1980-01-02",[])]);
+ await assert.rejects(backfillPatientMrns(adapter,{today:"2026-07-30",nextMrnBase:()=>510001,nextUuid:sequentialUuid()}),/Age of majority is not configured/);
+ assert.equal(adapter.transactions.length,0);assert.equal(adapter.accounts.size,0);
+ });
+
+ test("majority CLI lookup is project scoped and refuses duplicate singleton rows", async()=>{
+ for(const count of [0,1,2]) {
+ const rows=Array.from({length:count},(_,i)=>({...majority(),id:`majority-${i}`,meta:{project:"practice"}}));
+ const fhir={baseUrl:"http://synthetic.test",getActiveProjectId:async()=>"practice",searchProject:async(type:string,projectId:string,params:Record<string,string>)=>{
+ assert.equal(type,"Basic");assert.equal(projectId,"practice");assert.match(params.code,/odos-age-of-majority-config$/);
+ return wire({resourceType:"Bundle",type:"searchset",entry:rows.map(resource=>({resource}))});},searchProjectUrl:async()=>{throw new Error("Unexpected pagination");}};
+ if(count===2) await assert.rejects(loadBackfillAgeOfMajorityConfig(fhir as never),/multiple practice settings/);
+ else assert.deepEqual(await loadBackfillAgeOfMajorityConfig(fhir as never),rows[0]);
+ }
+ });

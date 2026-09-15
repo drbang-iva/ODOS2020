@@ -1,0 +1,132 @@
+TAP version 13
+# Subtest: MRN backfill URL guard accepts bracketed IPv6 loopback and rejects public hosts
+ok 1 - MRN backfill URL guard accepts bracketed IPv6 loopback and rejects public hosts
+  ---
+  duration_ms: 0.582917
+  type: 'test'
+  ...
+# Subtest: MRN backfill is idempotent, preserves migrated identifiers, and never invents a minor guarantor
+ok 2 - MRN backfill is idempotent, preserves migrated identifiers, and never invents a minor guarantor
+  ---
+  duration_ms: 6.303708
+  type: 'test'
+  ...
+# Subtest: MRN backfill preserves unrelated fields on an existing Account full-resource update
+ok 3 - MRN backfill preserves unrelated fields on an existing Account full-resource update
+  ---
+  duration_ms: 0.747167
+  type: 'test'
+  ...
+# Subtest: MRN backfill preserves inactive and entered-in-error Account status
+ok 4 - MRN backfill preserves inactive and entered-in-error Account status
+  ---
+  duration_ms: 0.3655
+  type: 'test'
+  ...
+# Subtest: MRN backfill surfaces an indeterminate birth date without creating a self guarantor
+ok 5 - MRN backfill surfaces an indeterminate birth date without creating a self guarantor
+  ---
+  duration_ms: 0.243583
+  type: 'test'
+  ...
+# Subtest: MRN backfill treats a complete Account with reordered identifiers as unchanged
+ok 6 - MRN backfill treats a complete Account with reordered identifiers as unchanged
+  ---
+  duration_ms: 0.190375
+  type: 'test'
+  ...
+# Subtest: MRN backfill fails before writes for ambiguous or inconsistent identity state
+    # Subtest: multiple patient Accounts
+    ok 1 - multiple patient Accounts
+      ---
+      duration_ms: 0.194792
+      type: 'test'
+      ...
+    # Subtest: invalid Patient ODOS MRN
+    ok 2 - invalid Patient ODOS MRN
+      ---
+      duration_ms: 0.197125
+      type: 'test'
+      ...
+    # Subtest: Patient and Account MRN mismatch
+    ok 3 - Patient and Account MRN mismatch
+      ---
+      duration_ms: 0.190375
+      type: 'test'
+      ...
+    # Subtest: existing Account without an ODOS MRN
+    ok 4 - existing Account without an ODOS MRN
+      ---
+      duration_ms: 0.12025
+      type: 'test'
+      ...
+    # Subtest: shared or multi-subject Account
+    ok 5 - shared or multi-subject Account
+      ---
+      duration_ms: 0.068333
+      type: 'test'
+      ...
+    1..5
+ok 7 - MRN backfill fails before writes for ambiguous or inconsistent identity state
+  ---
+  duration_ms: 1.215292
+  type: 'test'
+  ...
+# Subtest: MRN backfill validates every Patient before reserving or writing an earlier valid row
+ok 8 - MRN backfill validates every Patient before reserving or writing an earlier valid row
+  ---
+  duration_ms: 0.094167
+  type: 'test'
+  ...
+# Subtest: MRN backfill rejects an existing-MRN reservation owned by another allocation token
+ok 9 - MRN backfill rejects an existing-MRN reservation owned by another allocation token
+  ---
+  duration_ms: 0.155
+  type: 'test'
+  ...
+# Subtest: MRN backfill honors Patient and Account ifMatch versions atomically
+    # Subtest: stale Patient
+    ok 1 - stale Patient
+      ---
+      duration_ms: 0.145792
+      type: 'test'
+      ...
+    # Subtest: stale Account
+    ok 2 - stale Account
+      ---
+      duration_ms: 0.08475
+      type: 'test'
+      ...
+    1..2
+ok 10 - MRN backfill honors Patient and Account ifMatch versions atomically
+  ---
+  duration_ms: 0.29875
+  type: 'test'
+  ...
+# Subtest: majority setting21 prevents nineteen-year-old self guarantor in MRN backfill
+ok 11 - majority setting21 prevents nineteen-year-old self guarantor in MRN backfill
+  ---
+  duration_ms: 0.089042
+  type: 'test'
+  ...
+# Subtest: majority missing prevents all MRN backfill writes
+ok 12 - majority missing prevents all MRN backfill writes
+  ---
+  duration_ms: 0.091625
+  type: 'test'
+  ...
+# Subtest: majority CLI lookup is project scoped and refuses duplicate singleton rows
+ok 13 - majority CLI lookup is project scoped and refuses duplicate singleton rows
+  ---
+  duration_ms: 0.248
+  type: 'test'
+  ...
+1..13
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 98.808792
