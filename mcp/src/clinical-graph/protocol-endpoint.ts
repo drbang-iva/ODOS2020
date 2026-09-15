@@ -1,3 +1,4 @@
+import { normalizeApplicationScope } from "../../../src/protocol-application-scope.js";
 import { DIAGNOSIS_VISIT_STATUSES } from "./diagnosis-visit-status-store.js";
 import type { Basic, Bundle, CarePlan, Condition, Encounter, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import { isDeepStrictEqual } from "node:util";
@@ -28,6 +29,7 @@ import {
   ProtocolItemAddConflictError,
   ProtocolPublishValidationError,
   ProtocolService,
+  protocolFollowUpDue,
   rankProtocolOffers,
   validateProtocolDefinition,
   type ProtocolCatalogs,
@@ -356,7 +358,7 @@ export async function handleProtocolApplyRequest(
   if ((await service.applications.list()).some((application) =>
     application.encounterId === parsed.data.encounterId &&
     application.protocolId === parsed.data.protocolId &&
-    application.confirmed && application.undoState === "active"
+    application.confirmed && application.undoState === "active" && normalizeApplicationScope(application) === "whole"
   )) return { status: 409, body: { error: "Protocol is already applied to this encounter." } };
   const selectedPinnedItems = protocol.items.flatMap((item) => {
     if (item.itemType !== "series-prescription" && item.itemType !== "charge-seed") return [];
@@ -565,16 +567,20 @@ export async function handleProtocolApplicationsRequest(
   if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const parsed = z.object({ encounterId: z.string().min(1) }).strict().safeParse(input.query);
   if (!parsed.success) return { status: 400, body: { error: "encounterId is required." } };
-  const applications = (await liveService(staff, deps.now).applications.list())
+  const service = liveService(staff, deps.now);
+  const applications = (await service.applications.list())
     .filter((application) => application.encounterId === parsed.data.encounterId)
     .map((application) => ({
       id: application.id,
       protocolId: application.protocolId,
       version: application.protocolVersion,
+      scope: normalizeApplicationScope(application),
+      itemKeys: application.dispositions.filter((row) => row.outcome !== "opted-out").map((row) => row.itemKey),
       confirmed: application.confirmed,
       undoState: application.undoState,
     }));
-  return { status: 200, body: { applications } };
+  const actions = (await service.actions.list()).filter((row) => row.encounterId === parsed.data.encounterId && row.actionType === "follow-up" && !["removed", "cancelled"].includes(row.state));
+  return { status: 200, body: { applications, actions } };
 }
 
 export async function handleVisitChargeRequest(
@@ -772,6 +778,25 @@ async function initialPrincipalDiagnosisPointers(
     return reference?.match(/^Condition\/[A-Za-z0-9.-]+$/) ? [reference] : [];
   });
   return principalReferences.length === 1 ? principalReferences : [];
+}
+
+export async function handleProtocolFollowUpConfirmRequest(
+  deps: ProtocolEndpointDeps,
+  input: { authHeader: string | undefined; params: unknown; body: unknown },
+) {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to confirm follow-up." } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  const params = z.object({ encounterId: z.string().min(1), actionId: z.string().min(1) }).strict().safeParse(input.params);
+  const body = z.union([z.object({}).strict(), z.object({ interval: z.number().int().positive(), unit: z.enum(["days", "weeks", "months"]), reason: z.string().trim().min(1).optional() }).strict()]).safeParse(input.body);
+  if (!params.success || !body.success) return { status: 400, body: { error: "Valid encounter, action, and follow-up are required." } };
+  const service = liveService(staff, deps.now);
+  const action = await service.actions.get(params.data.actionId);
+  if (!action || action.encounterId !== params.data.encounterId || action.actionType !== "follow-up" || ["removed", "cancelled"].includes(action.state)) {
+    return { status: 404, body: { error: "Live follow-up not found for this encounter." } };
+  }
+  return { status: 200, body: { action: await service.confirmFollowUp(params.data.encounterId, params.data.actionId, staff.staffReference,
+    "interval" in body.data ? body.data : undefined) } };
 }
 
 export async function handleProtocolUnapplyRequest(
@@ -992,15 +1017,7 @@ function followUpServiceRequest(action: PlanActionInstance): ServiceRequest {
       "Follow-up provenance time is invalid.",
     );
   }
-  if (unit === "days" || unit === "weeks") {
-    due.setUTCDate(due.getUTCDate() + Number(interval) * (unit === "weeks" ? 7 : 1));
-  } else {
-    const originalDay = due.getUTCDate();
-    due.setUTCDate(1);
-    due.setUTCMonth(due.getUTCMonth() + Number(interval));
-    const lastDay = new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth() + 1, 0)).getUTCDate();
-    due.setUTCDate(Math.min(originalDay, lastDay));
-  }
+  due.setTime(protocolFollowUpDue(action.payload, action.provenance.at));
   if (Number.isNaN(due.getTime())) {
     throw new ProtocolActionMaterializationRefusal(
       "FOLLOW_UP_INTERVAL_OVERFLOW",

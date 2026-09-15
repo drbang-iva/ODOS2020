@@ -1,3 +1,4 @@
+import { normalizeApplicationScope } from "../../../src/protocol-application-scope.js";
 import type { Condition, Observation } from "@medplum/fhirtypes";
 import {
   protocolItemClaimIdentifier,
@@ -47,6 +48,7 @@ interface ItemAddWrites {
   actionIds: Set<string>;
   materializedRefs: Set<string>;
   chargeIds: Set<string>;
+  sharedActions: Map<string, { before: PlanActionInstance; after: PlanActionInstance }>;
 }
 
 export interface ProtocolItemAddLock {
@@ -75,6 +77,7 @@ class InProcessProtocolItemAddLock implements ProtocolItemAddLock {
 // docker-compose runs one MCP server process with no replicas, so this lock fences live writers in that process.
 // The conditional FHIR claim and lease below remain the cross-process backstop and crash recovery mechanism.
 const IN_PROCESS_ITEM_ADD_LOCK = new InProcessProtocolItemAddLock();
+const IN_PROCESS_ENCOUNTER_LOCK = new InProcessProtocolItemAddLock();
 
 const TAPPABLE_PROTOCOL_ITEM_TYPES: ReadonlySet<ProtocolItemType> = new Set([
   "order",
@@ -156,6 +159,7 @@ export class ProtocolService {
     private readonly now: () => string = () => new Date().toISOString(),
     private readonly id: () => string = () => crypto.randomUUID(),
     private readonly itemAddLock: ProtocolItemAddLock = IN_PROCESS_ITEM_ADD_LOCK,
+    private readonly encounterLock: ProtocolItemAddLock = itemAddLock === IN_PROCESS_ITEM_ADD_LOCK ? IN_PROCESS_ENCOUNTER_LOCK : itemAddLock,
   ) {
     this.definitions = new ProtocolDefinitionStore(fhir);
     this.applications = new ProtocolBasicStore(fhir, PROTOCOL_BASIC_CODES.protocolApplication);
@@ -393,7 +397,7 @@ export class ProtocolService {
     if (!protocol || protocol.status !== "active") throw new Error("Active protocol not found.");
     if ((await this.applications.list()).some((application) =>
       application.encounterId === input.encounterId && application.protocolId === protocolId &&
-      application.confirmed && application.undoState === "active"
+      application.confirmed && application.undoState === "active" && normalizeApplicationScope(application) === "whole"
     )) throw new Error("Protocol is already applied to this encounter.");
     if (!input.diagnosis.confirmed || protocol.trigger.kind !== "diagnosis" ||
       !protocol.trigger.dxKeys.some((pattern) => matchesCode(input.diagnosis.code, pattern))) {
@@ -413,6 +417,7 @@ export class ProtocolService {
       dedupResolutions: [],
       undoState: "active",
       confirmed: false,
+      scope: "whole",
     });
     const proposedFindings = [];
     for (const item of protocol.items.filter((row) => row.itemType === "finding-seed")) {
@@ -448,7 +453,8 @@ export class ProtocolService {
     alreadyApplied: boolean;
   }> {
     const claimKey = protocolItemClaimIdentifier(input.encounterId, protocolId, itemKey).value;
-    return this.itemAddLock.run(claimKey, () => this.addItemWithoutProcessLock(protocolId, itemKey, input));
+    return this.encounterLock.run(input.encounterId, () =>
+      this.itemAddLock.run(claimKey, () => this.addItemWithoutProcessLock(protocolId, itemKey, input)));
   }
 
   private async addItemWithoutProcessLock(
@@ -474,7 +480,13 @@ export class ProtocolService {
     }
     const liveState = await this.inspectLiveItemOwner(protocol, item, chargeSeed, input);
     if (liveState.outcome === "already-applied") {
-      return { application: liveState.application, alreadyApplied: true };
+      if (liveState.application.protocolId === protocolId || (await this.applications.list()).some((row) =>
+        row.encounterId === input.encounterId && row.protocolId === protocolId && row.confirmed &&
+        row.undoState === "active" && row.dedupResolutions.some((resolution) =>
+          resolution.itemKey === itemKey && resolution.reason === "action-exists" &&
+          resolution.existingActionId === liveState.actionId))) {
+        return { application: liveState.application, alreadyApplied: true };
+      }
     }
     if (liveState.outcome === "missing-charge") throw missingRequiredCharge();
 
@@ -499,43 +511,43 @@ export class ProtocolService {
       }
       throw new ProtocolItemAddConflictError("The completed protocol item claim has no live plan action.");
     }
+    const originalApplication = structuredClone(application);
     const writes: ItemAddWrites = {
       actionIds: new Set(),
       materializedRefs: new Set(),
       chargeIds: new Set(),
+      sharedActions: new Map(),
     };
     try {
       const linkedDx = [input.diagnosis.reference];
       const primaryResult = await this.applySelectedItem(application, item, item.payload, linkedDx, [], at, writes);
-      if (primaryResult.outcome === "merge-deduped") {
-        await this.releaseItemApplication(application);
-        const ownerState = await this.inspectLiveItemOwner(protocol, item, chargeSeed, input);
-        if (ownerState.outcome === "already-applied") {
-          return { application: ownerState.application, alreadyApplied: true };
-        }
-        if (ownerState.outcome === "missing-charge") throw missingRequiredCharge();
-        throw new ProtocolItemAddConflictError("The existing plan action has no active owning application.");
-      }
       await this.requireInFlightItemApplication(application.id);
-      if (chargeSeed) {
+      if (chargeSeed && liveState.outcome === "already-applied" && !(await this.charges.list()).some((row) =>
+        row.encounterId === input.encounterId && row.procedureConceptKey === String(chargeSeed.payload.procedureConceptKey) && row.state !== "removed")) {
+        dispositions.find((row) => row.itemKey === chargeSeed.itemKey)!.outcome = "opted-out";
+      } else if (chargeSeed) {
         await this.applySelectedItem(application, chargeSeed, chargeSeed.payload, linkedDx, [], at, writes);
+        if (primaryResult.outcome !== "merge-deduped" && application.dedupResolutions.some((row) => row.reason === "charge-exists" && row.itemKey === chargeSeed.itemKey)) {
+          dispositions.find((row) => row.itemKey === chargeSeed.itemKey)!.outcome = "opted-out";
+        }
       }
       await this.requireInFlightItemApplication(application.id);
       const confirmed = await this.applications.saveWithIdentifiersIfCurrent(
         { ...application, confirmed: true, dispositions },
         [claimIdentifier],
-        (current) => current.undoState === "active" && !current.confirmed &&
-          current.itemClaimLeaseExpiresAt === application.itemClaimLeaseExpiresAt,
+        (current) => JSON.stringify(current) === JSON.stringify(originalApplication),
       );
       if (!confirmed) {
         throw new ProtocolItemAddConflictError("Protocol item claim expired while the item was being added; retry.");
       }
-      return { application: confirmed, alreadyApplied: false };
+      return { application: liveState.outcome === "already-applied" && recoverConfirmedOrphan ? liveState.application : confirmed,
+        alreadyApplied: liveState.outcome === "already-applied" && recoverConfirmedOrphan };
     } catch (error) {
       const current = await this.applications.get(application.id);
       if (current?.undoState === "active" && current.confirmed &&
         current.itemClaimLeaseExpiresAt === application.itemClaimLeaseExpiresAt) {
-        return { application: current, alreadyApplied: false };
+        return { application: liveState.outcome === "already-applied" && recoverConfirmedOrphan ? liveState.application : current,
+          alreadyApplied: liveState.outcome === "already-applied" && recoverConfirmedOrphan };
       }
       await this.releaseItemApplication(application);
       await this.cleanupItemAddWrites(writes);
@@ -544,30 +556,56 @@ export class ProtocolService {
   }
 
   async commit(applicationId: string, selections: CommitSelection[], linkedDx: string[]): Promise<void> {
+    return this.encounterLock.run((await this.requireApplication(applicationId)).encounterId, () => this.commitLocked(applicationId, selections, linkedDx));
+  }
+
+  private async commitLocked(applicationId: string, selections: CommitSelection[], linkedDx: string[]): Promise<void> {
     const application = await this.requireApplication(applicationId);
+    const originalApplication = structuredClone(application);
     if (application.confirmed) throw new Error("Protocol application is already confirmed.");
+    if (application.undoState !== "active") throw new ProtocolItemAddConflictError("Protocol application is no longer active.");
+    if ((await this.applications.list()).some((row) => row.id !== application.id && row.encounterId === application.encounterId &&
+      row.protocolId === application.protocolId && row.confirmed && row.undoState === "active" && normalizeApplicationScope(row) === "whole")) {
+      throw new ProtocolItemAddConflictError("Protocol is already applied to this encounter.");
+    }
     const protocol = await this.requirePinnedProtocol(application);
     const choices = new Map(selections.map((row) => [row.itemKey, row]));
     const at = this.now();
     const proposed = (await this.findings.list()).filter((row) => row.protocolApplicationId === application.id);
     const dispositions: ProtocolApplication["dispositions"] = [];
-
-    for (const item of protocol.items) {
-      const choice = choices.get(item.itemKey);
-      const selected = choice?.selected ?? item.defaultSelected;
-      if (!selected) {
-        dispositions.push({ itemKey: item.itemKey, outcome: "opted-out" });
-        for (const finding of proposed.filter((row) =>
-          row.sourceItemKey === item.itemKey && row.state === "proposed"
-        )) await this.findings.save({ ...finding, state: "removed" });
-        continue;
+    const writes: ItemAddWrites = { actionIds: new Set(), chargeIds: new Set(), materializedRefs: new Set(), sharedActions: new Map() };
+    try {
+      for (const item of protocol.items) {
+        const choice = choices.get(item.itemKey);
+        const selected = choice?.selected ?? item.defaultSelected;
+        if (!selected) {
+          dispositions.push({ itemKey: item.itemKey, outcome: "opted-out" });
+          for (const finding of proposed.filter((row) =>
+            row.sourceItemKey === item.itemKey && row.state === "proposed"
+          )) await this.findings.save({ ...finding, state: "removed" });
+          continue;
+        }
+        const payload = choice?.payload ?? item.payload;
+        const modified = JSON.stringify(payload) !== JSON.stringify(item.payload);
+        dispositions.push({ itemKey: item.itemKey, outcome: modified ? "applied-modified" : "applied-default" });
+        await this.applySelectedItem(application, item, payload, linkedDx, proposed, at, writes);
+        if (item.itemType === "charge-seed" && application.dedupResolutions.some((row) => row.itemKey === item.itemKey && row.reason === "charge-exists")) {
+          dispositions[dispositions.length - 1].outcome = "opted-out";
+        }
       }
-      const payload = choice?.payload ?? item.payload;
-      const modified = JSON.stringify(payload) !== JSON.stringify(item.payload);
-      dispositions.push({ itemKey: item.itemKey, outcome: modified ? "applied-modified" : "applied-default" });
-      await this.applySelectedItem(application, item, payload, linkedDx, proposed, at);
+      await this.saveApplication(originalApplication, { ...application, scope: "whole", confirmed: true, dispositions });
+    } catch (error) {
+      const current = await this.applications.get(application.id);
+      if (current?.confirmed && current.undoState === "active" && JSON.stringify(current.dispositions) === JSON.stringify(dispositions) && JSON.stringify(current.dedupResolutions) === JSON.stringify(application.dedupResolutions)) return;
+      await this.cleanupItemAddWrites(writes);
+      for (const finding of await this.findings.list()) {
+        if (finding.protocolApplicationId !== application.id || finding.state === "removed") continue;
+        if (finding.observationReference) await this.projection.removeMaterialized?.(finding.observationReference);
+        const original = proposed.find((row) => row.id === finding.id);
+        await this.findings.save(current?.undoState === "active" && !current.confirmed && original ? original : { ...finding, state: "removed" });
+      }
+      throw error;
     }
-    await this.applications.save({ ...application, confirmed: true, dispositions });
   }
 
   async addManualAction(input: Omit<PlanActionInstance, "id" | "protocolApplicationId" | "modifiedFields">): Promise<PlanActionInstance> {
@@ -580,7 +618,7 @@ export class ProtocolService {
       const changed = changedFields(collision.payload, input.payload);
       const updated = {
         ...collision,
-        payload: input.payload,
+        payload: collision.actionType === "follow-up" ? { ...input.payload, needsConfirmation: false } : input.payload,
         state: "modified" as const,
         modifiedFields: [...new Set([...collision.modifiedFields, ...changed])],
         provenance: { ...input.provenance, source: "clinician-entered" as const },
@@ -596,6 +634,22 @@ export class ProtocolService {
     };
     await this.actions.save(created);
     return created;
+  }
+
+  async confirmFollowUp(encounterId: string, actionId: string, actor: string, edit?: { interval: number; unit: "days" | "weeks" | "months"; reason?: string }): Promise<PlanActionInstance> {
+    return this.encounterLock.run(encounterId, async () => {
+      const action = await this.actions.get(actionId);
+      if (!action || action.encounterId !== encounterId || action.actionType !== "follow-up" || ["removed", "cancelled"].includes(action.state)) {
+        throw new Error("Live follow-up not found for this encounter.");
+      }
+      const payload = { ...action.payload, ...edit, needsConfirmation: false };
+      const updated: PlanActionInstance = { ...action, payload, ...(edit ? {
+        state: "modified", modifiedFields: [...new Set([...action.modifiedFields, ...changedFields(action.payload, payload)])],
+        provenance: { ...action.provenance, source: "clinician-entered", actor },
+      } : {}) };
+      if (edit) updated.materializedFhirRef = await this.projection.materializeAction(updated);
+      return this.actions.save(updated);
+    });
   }
 
   async editFinding(id: string, value: unknown, actor: string): Promise<ProtocolFindingInstance> {
@@ -615,51 +669,122 @@ export class ProtocolService {
   }
 
   async unapply(applicationId: string): Promise<{ removed: string[]; preserved: string[] }> {
+    return this.encounterLock.run((await this.requireApplication(applicationId)).encounterId, () => this.unapplyLocked(applicationId));
+  }
+
+  private async unapplyLocked(applicationId: string): Promise<{ removed: string[]; preserved: string[] }> {
     const application = await this.requireApplication(applicationId);
-    const linkedCharges = (await this.charges.list()).filter((row) =>
-      row.protocolApplicationId === application.id
-    );
+    const linkedCharges = (await this.charges.list()).filter((row) => row.protocolApplicationId === application.id);
     const acceptedChargeCount = linkedCharges.filter((charge) => charge.state === "accepted").length;
     if (acceptedChargeCount) {
       throw new AcceptedChargeUnapplyError(
         `Cannot un-apply: ${acceptedChargeCount} accepted charge${acceptedChargeCount === 1 ? "" : "s"} must be resolved first.`,
       );
     }
+    if (application.undoState !== "active") return { removed: [], preserved: [] };
+    const actions = (await this.actions.list()).filter((row) => row.protocolApplicationId === application.id);
+    const candidates = (await this.applications.list()).filter((row) => row.id !== application.id && row.encounterId === application.encounterId && row.confirmed && row.undoState === "active")
+      .sort((a, b) => a.appliedAt.localeCompare(b.appliedAt));
+    const originals = new Map(candidates.map((row) => [row.id, structuredClone(row)]));
+    const transfers = new Map<string, { applicationId: string; itemKey: string }>();
+    for (const record of [
+      ...actions.filter((row) => row.state === "selected" && row.modifiedFields.length === 0).map((row) => ({ id: row.id, field: "existingActionId" })),
+      ...linkedCharges.filter((row) => row.state === "staged" && !row.chargeItemRef).map((row) => ({ id: row.id, field: "existingChargeId" })),
+    ]) {
+      const candidate = candidates.find((row) => row.dedupResolutions.some((resolution) => resolution[record.field] === record.id));
+      if (!candidate) continue;
+      const resolution = candidate.dedupResolutions.find((row) => row[record.field] === record.id)!;
+      const itemKey = String(resolution.itemKey);
+      candidate.dispositions = candidate.dispositions.map((row) => row.itemKey === itemKey ? { ...row, outcome: "applied-default" } : row);
+      candidate.dedupResolutions = candidate.dedupResolutions.filter((row) => row !== resolution);
+      transfers.set(record.id, { applicationId: candidate.id, itemKey });
+    }
+    const saved: ProtocolApplication[] = [];
+    try {
+      for (const candidate of candidates.filter((row) => JSON.stringify(row) !== JSON.stringify(originals.get(row.id)))) {
+        saved.push(await this.saveApplication(originals.get(candidate.id)!, candidate));
+      }
+      await this.saveApplication(application, { ...application, undoState: "unapplied" });
+    } catch (error) {
+      for (const candidate of saved.reverse()) await this.saveApplication(candidate, originals.get(candidate.id)!);
+      throw error;
+    }
     const removed: string[] = [];
     const preserved: string[] = [];
-    for (const action of (await this.actions.list()).filter((row) => row.protocolApplicationId === applicationId)) {
-      if (action.state === "selected" && action.modifiedFields.length === 0) {
-        if (action.materializedFhirRef) await this.projection.removeMaterialized?.(action.materializedFhirRef);
-        await this.actions.save({ ...action, state: "removed" });
-        removed.push(action.id);
-      } else preserved.push(action.id);
+    const originalFindings = (await this.findings.list()).filter((row) => row.protocolApplicationId === applicationId);
+    try {
+      for (const action of actions) {
+        const transfer = transfers.get(action.id);
+        if (transfer) {
+          await this.actions.save({ ...action, protocolApplicationId: transfer.applicationId });
+          preserved.push(action.id);
+        } else if (action.state === "selected" && action.modifiedFields.length === 0) {
+          if (action.materializedFhirRef) await this.projection.removeMaterialized?.(action.materializedFhirRef);
+          await this.actions.save({ ...action, state: "removed" });
+          removed.push(action.id);
+        } else preserved.push(action.id);
+      }
+      for (const finding of (await this.findings.list()).filter((row) => row.protocolApplicationId === applicationId)) {
+        if (finding.state === "committed" && finding.provenance.source === "protocol-default") {
+          if (finding.observationReference) await this.projection.removeMaterialized?.(finding.observationReference);
+          await this.findings.save({ ...finding, state: "removed" });
+          removed.push(finding.id);
+        } else if (finding.state !== "removed") preserved.push(finding.id);
+      }
+      for (const charge of linkedCharges) {
+        const transfer = transfers.get(charge.id);
+        if (transfer) {
+          await this.charges.save({ ...charge, protocolApplicationId: transfer.applicationId, planActionRef: transfer.itemKey });
+          preserved.push(charge.id);
+        } else if (charge.state === "staged" && !charge.chargeItemRef) {
+          await this.charges.save({ ...charge, state: "removed" });
+          removed.push(charge.id);
+        } else preserved.push(charge.id);
+      }
+      return { removed, preserved };
+    } catch (error) {
+      for (const action of actions) {
+        const current = await this.actions.get(action.id);
+        if (!current || JSON.stringify(current) === JSON.stringify(action)) continue;
+        const restored = { ...action };
+        if (current.state === "removed" && action.materializedFhirRef) restored.materializedFhirRef = await this.projection.materializeAction(action);
+        await this.actions.saveWithIdentifiersIfCurrent(restored, [], (row) => JSON.stringify(row) === JSON.stringify(current));
+      }
+      for (const finding of originalFindings) {
+        const current = await this.findings.get(finding.id);
+        if (!current || JSON.stringify(current) === JSON.stringify(finding)) continue;
+        const restored = { ...finding };
+        if (current.state === "removed" && finding.observationReference) restored.observationReference = await this.projection.commitFinding(finding);
+        await this.findings.saveWithIdentifiersIfCurrent(restored, [], (row) => JSON.stringify(row) === JSON.stringify(current));
+      }
+      for (const charge of linkedCharges) {
+        const current = await this.charges.get(charge.id);
+        if (current && JSON.stringify(current) !== JSON.stringify(charge)) await this.charges.saveWithIdentifiersIfCurrent(charge, [], (row) => JSON.stringify(row) === JSON.stringify(current));
+      }
+      for (const candidate of saved.reverse()) await this.saveApplication(candidate, originals.get(candidate.id)!);
+      await this.saveApplication({ ...application, undoState: "unapplied" }, application);
+      throw error;
     }
-    for (const finding of (await this.findings.list()).filter((row) => row.protocolApplicationId === applicationId)) {
-      if (finding.state === "committed" && finding.provenance.source === "protocol-default") {
-        if (finding.observationReference) await this.projection.removeMaterialized?.(finding.observationReference);
-        await this.findings.save({ ...finding, state: "removed" });
-        removed.push(finding.id);
-      } else if (finding.state !== "removed") preserved.push(finding.id);
-    }
-    for (const charge of linkedCharges) {
-      if (charge.state === "staged") {
-        await this.charges.save({ ...charge, state: "removed" });
-        removed.push(charge.id);
-      } else preserved.push(charge.id);
-    }
-    await this.applications.save({ ...application, undoState: "unapplied" });
-    return { removed, preserved };
   }
 
   async abandonOpenForSignedEncounter(encounterId: string): Promise<number> {
+    return this.encounterLock.run(encounterId, () => this.abandonOpenForSignedEncounterLocked(encounterId));
+  }
+
+  private async abandonOpenForSignedEncounterLocked(encounterId: string): Promise<number> {
     const open = (await this.applications.list()).filter((row) =>
       row.encounterId === encounterId && !row.confirmed && row.undoState === "active"
     );
     for (const application of open) {
-      for (const finding of (await this.findings.list()).filter((row) =>
-        row.protocolApplicationId === application.id && row.state === "proposed"
-      )) await this.findings.save({ ...finding, state: "removed" });
-      await this.applications.save({ ...application, undoState: "unapplied" });
+      const findings = (await this.findings.list()).filter((row) => row.protocolApplicationId === application.id && row.state === "proposed");
+      await this.saveApplication(application, { ...application, undoState: "unapplied" });
+      try {
+        for (const finding of findings) await this.findings.save({ ...finding, state: "removed" });
+      } catch (error) {
+        for (const finding of findings) await this.findings.saveWithIdentifiersIfCurrent(finding, [], (row) => JSON.stringify(row) === JSON.stringify({ ...finding, state: "removed" }));
+        await this.saveApplication({ ...application, undoState: "unapplied" }, application);
+        throw error;
+      }
     }
     return open.length;
   }
@@ -683,7 +808,23 @@ export class ProtocolService {
       row.encounterId === application.encounterId && row.mergeKey === item.mergeKey &&
       !["removed", "cancelled"].includes(row.state)
     ) : undefined;
-    if (existing) return { outcome: "merge-deduped" };
+    if (existing) {
+      application.dedupResolutions.push({ itemKey: item.itemKey, reason: "action-exists", existingActionId: existing.id });
+      const updated = { ...existing, linkedDx: [...new Set([...existing.linkedDx, ...linkedDx])] };
+      if (item.itemType === "follow-up" && (payload.interval !== existing.payload.interval || payload.unit !== existing.payload.unit)) {
+        const original = { protocolId: existing.provenance.protocolId, interval: existing.payload.interval, unit: existing.payload.unit, reason: existing.payload.reason };
+        const alternative = { protocolId: application.protocolId, interval: payload.interval, unit: payload.unit, reason: payload.reason };
+        const alternatives = Array.isArray(existing.payload.alternatives) ? [...existing.payload.alternatives] : [original];
+        if (!alternatives.some((row) => JSON.stringify(row) === JSON.stringify(alternative))) alternatives.push(alternative);
+        const sooner = protocolFollowUpDue(payload, existing.provenance.at) < protocolFollowUpDue(existing.payload, existing.provenance.at);
+        updated.payload = { ...existing.payload, ...(sooner ? { interval: payload.interval, unit: payload.unit, reason: payload.reason } : {}), alternatives, needsConfirmation: true };
+        writes?.sharedActions.set(existing.id, { before: existing, after: updated });
+        updated.materializedFhirRef = await this.projection.materializeAction(updated);
+      }
+      writes?.sharedActions.set(existing.id, { before: existing, after: updated });
+      await this.actions.save(updated);
+      return { outcome: "merge-deduped" };
+    }
     const action: PlanActionInstance = {
       id: this.id(),
       encounterId: application.encounterId,
@@ -727,11 +868,15 @@ export class ProtocolService {
     writes?: ItemAddWrites,
   ): Promise<boolean> {
     const existing = (await this.charges.list()).find((row) =>
-      row.protocolApplicationId === application.id &&
-      row.planActionRef === item.itemKey &&
+      row.encounterId === application.encounterId &&
+      row.procedureConceptKey === String(payload.procedureConceptKey) &&
       row.state !== "removed"
     );
-    if (existing) return false;
+    if (existing) {
+      if (existing.protocolApplicationId === application.id && existing.planActionRef === item.itemKey) return false;
+      application.dedupResolutions.push({ itemKey: item.itemKey, reason: "charge-exists", existingChargeId: existing.id });
+      return false;
+    }
     const modifiedFields = changedFields(item.payload, payload);
     const ruleId = Array.isArray(payload.chargeRuleRefs) ? String(payload.chargeRuleRefs[0] ?? "") : "";
     const rule = ruleId ? await this.chargeRules.get(ruleId) : undefined;
@@ -819,26 +964,33 @@ export class ProtocolService {
     input: OpenProtocolInput,
   ): Promise<
     | { outcome: "absent" }
-    | { outcome: "already-applied"; application: ProtocolApplication }
+    | { outcome: "already-applied"; application: ProtocolApplication; actionId: string }
     | { outcome: "missing-charge"; application: ProtocolApplication }
   > {
     const applications = await this.applications.list();
     const applicationById = new Map(applications.map((application) => [application.id, application]));
-    const action = (await this.actions.list()).find((candidate) => {
-      if (candidate.encounterId !== input.encounterId || ["removed", "cancelled"].includes(candidate.state)) {
-        return false;
-      }
+    const actions = await this.actions.list();
+    const charges = await this.charges.list();
+    const requested = applications.find((row) => row.encounterId === input.encounterId && row.protocolId === protocol.id && row.confirmed && row.undoState === "active" &&
+      row.dedupResolutions.some((resolution) => resolution.itemKey === item.itemKey && resolution.reason === "action-exists"));
+    const relevantResolutions = requested?.dedupResolutions.filter((row) => row.itemKey === item.itemKey || row.itemKey === chargeSeed?.itemKey) ?? [];
+    for (const resolution of relevantResolutions) {
+      if (resolution.reason === "action-exists" && !actions.some((row) => row.id === resolution.existingActionId && row.encounterId === input.encounterId && !["removed", "cancelled"].includes(row.state))) return { outcome: "absent" };
+      if (resolution.reason === "charge-exists" && !charges.some((row) => row.id === resolution.existingChargeId && row.encounterId === input.encounterId && row.state !== "removed")) return { outcome: "absent" };
+    }
+    const referencedActionId = relevantResolutions.find((row) => row.reason === "action-exists" && row.itemKey === item.itemKey)?.existingActionId;
+    const action = actions.find((row) => row.id === referencedActionId) ?? actions.find((candidate) => {
+      if (candidate.encounterId !== input.encounterId || ["removed", "cancelled"].includes(candidate.state)) return false;
       if (!candidate.protocolApplicationId) return false;
       const owner = applicationById.get(candidate.protocolApplicationId);
       if (!owner?.confirmed || owner.undoState !== "active") return false;
-      return item.mergeKey
-        ? candidate.mergeKey === item.mergeKey
-        : owner.protocolId === protocol.id && candidate.sourceItemKey === item.itemKey;
+      return item.mergeKey ? candidate.mergeKey === item.mergeKey : owner.protocolId === protocol.id && candidate.sourceItemKey === item.itemKey;
     });
-    if (!action?.protocolApplicationId) return { outcome: "absent" };
-    const owner = applicationById.get(action.protocolApplicationId);
+    if (!action) return { outcome: "absent" };
+    const storedOwner = action.protocolApplicationId ? applicationById.get(action.protocolApplicationId) : undefined;
+    const owner = storedOwner?.confirmed && storedOwner.undoState === "active" ? storedOwner : requested;
     if (!owner) return { outcome: "absent" };
-    if (!chargeSeed) return { outcome: "already-applied", application: owner };
+    if (!chargeSeed || relevantResolutions.some((row) => row.reason === "charge-exists")) return { outcome: "already-applied", application: owner, actionId: action.id };
     const ownerProtocol = await this.definitions.getSnapshot(owner.protocolId, owner.protocolVersion);
     const ownerItem = ownerProtocol?.items.find((candidate) => candidate.itemKey === action.sourceItemKey);
     const ownerChargeSeedKey = typeof ownerItem?.payload.chargeSeedRef === "string"
@@ -847,12 +999,15 @@ export class ProtocolService {
     const charge = (await this.charges.list()).find((candidate) =>
       candidate.encounterId === input.encounterId &&
       candidate.protocolApplicationId === owner.id &&
-      candidate.planActionRef === ownerChargeSeedKey &&
+      candidate.procedureConceptKey === String(chargeSeed.payload.procedureConceptKey) &&
       candidate.state !== "removed"
     );
-    if (charge || owner.dispositions.some((disposition) =>
-      disposition.itemKey === ownerChargeSeedKey && disposition.outcome === "opted-out"
-    )) return { outcome: "already-applied", application: owner };
+    const dependency = owner.dedupResolutions.find((row) => row.itemKey === ownerChargeSeedKey && row.reason === "charge-exists");
+    const dependentCharge = dependency ? await this.charges.get(String(dependency.existingChargeId)) : undefined;
+    if (dependency && (!dependentCharge || dependentCharge.state === "removed")) return { outcome: "absent" };
+    if (charge || dependentCharge || owner.dispositions.some((disposition) =>
+      disposition.itemKey === ownerChargeSeedKey && disposition.outcome === "opted-out" && !dependency
+    )) return { outcome: "already-applied", application: owner, actionId: action.id };
     return { outcome: "missing-charge", application: owner };
   }
 
@@ -873,6 +1028,7 @@ export class ProtocolService {
       stackedWith: [],
       dispositions,
       dedupResolutions: [],
+      scope: "item",
       itemClaimLeaseExpiresAt: new Date(Date.parse(at) + ITEM_CLAIM_LEASE_MS).toISOString(),
       undoState: "active",
       confirmed: false,
@@ -934,6 +1090,11 @@ export class ProtocolService {
   }
 
   private async cleanupItemAddWrites(writes: ItemAddWrites): Promise<void> {
+    for (const { before, after } of writes.sharedActions.values()) {
+      const restored = await this.actions.saveWithIdentifiersIfCurrent(before, [], (current) => JSON.stringify(current) === JSON.stringify(after));
+      const unchanged = !restored && JSON.stringify(await this.actions.get(before.id)) === JSON.stringify(before);
+      if ((restored || unchanged) && JSON.stringify(before.payload) !== JSON.stringify(after.payload)) await this.projection.materializeAction(before);
+    }
     const removedMaterialized = new Set<string>();
     for (const actionId of writes.actionIds) {
       const action = await this.actions.get(actionId);
@@ -965,6 +1126,13 @@ export class ProtocolService {
       throw new Error("Confirmed diagnosis does not match protocol trigger.");
     }
     return protocol;
+  }
+
+  private async saveApplication(original: ProtocolApplication, updated: ProtocolApplication): Promise<ProtocolApplication> {
+    const saved = await this.applications.saveWithIdentifiersIfCurrent(updated, [],
+      (current) => JSON.stringify(current) === JSON.stringify(original));
+    if (!saved) throw new ProtocolItemAddConflictError("Protocol application changed during the operation; retry.");
+    return saved;
   }
 
   private async requireApplication(id: string): Promise<ProtocolApplication> {
@@ -1224,4 +1392,15 @@ function findingDefaultValue(payload: Record<string, unknown>, laterality: "OD" 
     return (payload.defaultValues as Record<string, unknown>)[laterality];
   }
   return payload.defaultValue;
+}
+
+export function protocolFollowUpDue(payload: Record<string, unknown>, at: string): number {
+  const due = new Date(at);
+  if (payload.unit === "months") {
+    const day = due.getUTCDate();
+    due.setUTCDate(1);
+    due.setUTCMonth(due.getUTCMonth() + Number(payload.interval));
+    due.setUTCDate(Math.min(day, new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth() + 1, 0)).getUTCDate()));
+  } else due.setUTCDate(due.getUTCDate() + Number(payload.interval) * (payload.unit === "weeks" ? 7 : 1));
+  return due.getTime();
 }

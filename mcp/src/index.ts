@@ -163,6 +163,7 @@ import {
 } from "./clinical-graph/gonioscopy-endpoint.js";
 import {
   handleProtocolApplyRequest,
+  handleProtocolFollowUpConfirmRequest,
   handleProtocolApplicationsRequest,
   handleProtocolCaptureRequest,
   handleProtocolCreateRequest,
@@ -7026,6 +7027,20 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: protocol un-apply route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "protocol un-apply route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/protocols/encounters/:encounterId/actions/:actionId/confirm-follow-up", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProtocolFollowUpConfirmRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: protocol follow-up confirmation route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "protocol follow-up confirmation route failed" });
         }
       });
 
