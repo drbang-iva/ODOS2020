@@ -1,0 +1,82 @@
+TAP version 13
+# Subtest: T10 real editor preserves email third phone old and period-bounded identities
+not ok 1 - T10 real editor preserves email third phone old and period-bounded identities
+  ---
+  duration_ms: 31.060917
+  type: 'test'
+  location: '<worktree>/ui/tests/guarantorPhoneForm.test.tsx:1:2802'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + []
+    - [
+    -   {
+    -     id: 'email',
+    -     system: 'email',
+    -     value: 'synthetic@example.test'
+    -   },
+    -   {
+    -     id: 'third',
+    -     system: 'phone',
+    -     use: 'work',
+    -     value: '864-555-0103'
+    -   },
+    -   {
+    -     id: 'old',
+    -     system: 'phone',
+    -     use: 'old',
+    -     value: '864-555-0104'
+    -   },
+    -   {
+    -     id: 'expired',
+    -     period: {
+    -       end: '2020-01-01'
+    -     },
+    -     system: 'phone',
+    -     value: '864-555-0105'
+    -   }
+    - ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      system: 'email'
+      value: 'synthetic@example.test'
+      id: 'email'
+    1:
+      system: 'phone'
+      use: 'work'
+      value: '864-555-0103'
+      id: 'third'
+    2:
+      system: 'phone'
+      use: 'old'
+      value: '864-555-0104'
+      id: 'old'
+    3:
+      system: 'phone'
+      value: '864-555-0105'
+      period:
+        end: '2020-01-01'
+      id: 'expired'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (<worktree>/ui/tests/guarantorPhoneForm.test.tsx:62:39)
+    async withEditor (<worktree>/mcp/tests/helpers/guarantor-phone-fixture.ts:111:16)
+    async TestContext.<anonymous> (<worktree>/ui/tests/guarantorPhoneForm.test.tsx:55:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 193.634125

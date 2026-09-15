@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: T4 writer-derived guarantor without refusal remains verified for every absent representation
+ok 1 - T4 writer-derived guarantor without refusal remains verified for every absent representation
+  ---
+  duration_ms: 19.685083
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 193.413833

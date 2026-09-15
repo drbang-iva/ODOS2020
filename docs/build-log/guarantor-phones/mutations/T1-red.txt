@@ -1,0 +1,49 @@
+TAP version 13
+# Subtest: T1 Person and RelatedPerson answer leaves one marker and clears refusal on number selection
+not ok 1 - T1 Person and RelatedPerson answer leaves one marker and clears refusal on number selection
+  ---
+  duration_ms: 1.537917
+  type: 'test'
+  location: '<worktree>/mcp/tests/guarantorPhoneContract.test.ts:1:1104'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+    -   false,
+        true,
+    +   true
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: false
+    1: true
+  actual:
+    0: true
+    1: true
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/guarantorPhoneContract.test.ts:24:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: T11 refusal profile accepts Patient Person and RelatedPerson
+ok 2 - T11 refusal profile accepts Patient Person and RelatedPerson
+  ---
+  duration_ms: 0.140625
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 131.209916

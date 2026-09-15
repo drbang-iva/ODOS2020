@@ -8,7 +8,7 @@
   "status": "active",
   "date": "2026-09-12",
   "publisher": "ODOS",
-  "description": "The patient reported that none of their own numbers accepts text messages. Presence records that response; absence means the question has not been recorded. This is not communication opt-out and does not govern another recipient.",
+  "description": "The person reported that none of their own numbers accepts text messages. Presence records that response; absence means the question has not been recorded. This is not communication opt-out and does not govern another recipient.",
   "fhirVersion": "4.0.1",
   "kind": "complex-type",
   "abstract": false,
@@ -16,7 +16,9 @@
     {
       "type": "element",
       "expression": "Patient"
-    }
+    },
+    { "type": "element", "expression": "Person" },
+    { "type": "element", "expression": "RelatedPerson" }
   ],
   "type": "Extension",
   "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",

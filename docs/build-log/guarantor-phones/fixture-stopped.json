@@ -1,0 +1,20 @@
+[
+  {
+    "Names": "guarantor-phones-live-medplum-1",
+    "State": "exited",
+    "Status": "Exited (0) 3 minutes ago",
+    "Ports": ""
+  },
+  {
+    "Names": "guarantor-phones-live-postgres-1",
+    "State": "exited",
+    "Status": "Exited (0) 3 minutes ago",
+    "Ports": ""
+  },
+  {
+    "Names": "guarantor-phones-live-redis-1",
+    "State": "exited",
+    "Status": "Exited (0) 3 minutes ago",
+    "Ports": ""
+  }
+]

@@ -1,0 +1,40 @@
+TAP version 13
+# odos-mcp: patient registration failed: Error: Phone 2 was chosen as the texting number — enter it, choose another, or Neither.
+#     at applyPhoneDraft (<worktree>/mcp/src/clinic/patient-telecom.ts:123:41)
+#     at buildResponsiblePartyDemographics (<worktree>/mcp/src/clinic/responsible-party-demographics.ts:20:46)
+#     at buildPatientIdentityTransaction (<worktree>/mcp/src/clinic/patient-registration-endpoint.ts:395:123)
+#     at registerPatientFromDemographics (<worktree>/mcp/src/clinic/patient-registration-endpoint.ts:135:17)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async handlePatientRegistration (<worktree>/mcp/src/clinic/clinic-routes.ts:219:20)
+# Subtest: T8 guardian blank selected Phone 2 refuses before all writes
+not ok 1 - T8 guardian blank selected Phone 2 refuses before all writes
+  ---
+  duration_ms: 32.288125
+  type: 'test'
+  location: '<worktree>/mcp/tests/patientRegistrationAuthz.test.ts:1:30051'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    500 !== 400
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 500
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/patientRegistrationAuthz.test.ts:915:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 233.026333

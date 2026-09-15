@@ -1,0 +1,1160 @@
+{
+  "sourceHead": "52c6ec4926e95e78344082add8522e74743ffb33",
+  "events": [
+    {
+      "sequence": 1,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/auth/me",
+      "status": 200
+    },
+    {
+      "sequence": 2,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Project",
+      "status": 201,
+      "request": {
+        "resourceType": "Project",
+        "name": "G2b1 build synthetic A",
+        "features": [],
+        "link": []
+      },
+      "response": {
+        "resourceType": "Project",
+        "name": "G2b1 build synthetic A",
+        "id": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+        "meta": {
+          "versionId": "7890fc73-95a9-40cb-aeef-29c0b41f7017",
+          "lastUpdated": "2026-09-15T14:29:13.425Z",
+          "author": {
+            "reference": "Practitioner/efae6932-154e-48b9-9148-afbed11fe87d",
+            "display": "Medplum Admin"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 3,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Project",
+      "status": 201,
+      "request": {
+        "resourceType": "Project",
+        "name": "G2b1 build synthetic B",
+        "features": [],
+        "link": []
+      },
+      "response": {
+        "resourceType": "Project",
+        "name": "G2b1 build synthetic B",
+        "id": "a88b0f22-1d1a-495f-b68d-27231bcfc63a",
+        "meta": {
+          "versionId": "21993654-051b-4319-80e8-6fde0d78425b",
+          "lastUpdated": "2026-09-15T14:29:13.433Z",
+          "author": {
+            "reference": "Practitioner/efae6932-154e-48b9-9148-afbed11fe87d",
+            "display": "Medplum Admin"
+          },
+          "project": "a88b0f22-1d1a-495f-b68d-27231bcfc63a",
+          "compartment": [
+            {
+              "reference": "Project/a88b0f22-1d1a-495f-b68d-27231bcfc63a"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 4,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "meta": {
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97"
+        },
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "G2b1",
+              "Bootstrap"
+            ]
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Patient",
+        "meta": {
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "versionId": "84dab3a7-fbf4-4f11-a144-9f3652ff707a",
+          "lastUpdated": "2026-09-15T14:29:13.438Z",
+          "author": {
+            "reference": "Practitioner/efae6932-154e-48b9-9148-afbed11fe87d",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            },
+            {
+              "reference": "Patient/e7651c83-79aa-4f8d-b3c5-d922c265633f"
+            }
+          ]
+        },
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "G2b1",
+              "Bootstrap"
+            ]
+          }
+        ],
+        "id": "e7651c83-79aa-4f8d-b3c5-d922c265633f"
+      }
+    },
+    {
+      "sequence": 5,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/AccessPolicy",
+      "status": 201,
+      "request": {
+        "resourceType": "AccessPolicy",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "staff"
+            }
+          ],
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97"
+        },
+        "name": "ODOS Staff",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "919fefd56a99b157403665c2b63deda43b7697c7f47cbe334017581682747cc1",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "create",
+              "update"
+            ],
+            "writeConstraint": [
+              {
+                "language": "text/fhirpath",
+                "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty()) and (%before.exists() implies ((%before.active.exists() or %after.active.exists()) implies (%before.active = %after.active)))"
+              }
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "create",
+              "update"
+            ],
+            "writeConstraint": [
+              {
+                "language": "text/fhirpath",
+                "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+              }
+            ]
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "AccessPolicy",
+        "id": "cc30e550-d37b-43c2-a0b4-d8327cf32a13",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "staff"
+            }
+          ],
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "versionId": "3344210e-070e-435e-85e4-385615c0254e",
+          "lastUpdated": "2026-09-15T14:29:13.449Z",
+          "author": {
+            "reference": "Practitioner/efae6932-154e-48b9-9148-afbed11fe87d",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        },
+        "name": "ODOS Staff",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "21151974d4d7f82cd5448b69339800d890699abb8caa900ebb3f7f195dd84c92",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "create",
+              "update"
+            ],
+            "writeConstraint": [
+              {
+                "language": "text/fhirpath",
+                "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty()) and (%before.exists() implies ((%before.active.exists() or %after.active.exists()) implies (%before.active = %after.active)))"
+              }
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "create",
+              "update"
+            ],
+            "writeConstraint": [
+              {
+                "language": "text/fhirpath",
+                "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 6,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/AccessPolicy",
+      "status": 201,
+      "request": {
+        "resourceType": "AccessPolicy",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "provider"
+            }
+          ],
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97"
+        },
+        "name": "ODOS Provider",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "47d30968c76f52cd1fcaf92611e37e247844c9be56ae38e81699be6308ded9e8",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "AccessPolicy",
+        "id": "8dab7d45-915d-4f3c-ab26-c39ab6c9934b",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "provider"
+            }
+          ],
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "versionId": "c6c9cc85-89c1-441f-8ca9-f404a08f9fb2",
+          "lastUpdated": "2026-09-15T14:29:13.460Z",
+          "author": {
+            "reference": "Practitioner/efae6932-154e-48b9-9148-afbed11fe87d",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        },
+        "name": "ODOS Provider",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "7e8894958f32d12ea6f1cda311f1411197f1df0547cd1b821acb737dc6fac5af",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 7,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/AccessPolicy",
+      "status": 201,
+      "request": {
+        "resourceType": "AccessPolicy",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "admin"
+            }
+          ],
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97"
+        },
+        "name": "ODOS Admin / Manager",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "1501e38c4d6f3381a5fb4d141caed9fa7671cd4da04de7575ca4f956e7de33c3",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "AccessPolicy",
+        "id": "4d7535df-3ed2-4762-a811-d2a7dc930d46",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "admin"
+            }
+          ],
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "versionId": "7cb3dbbc-031c-4985-9209-49f412c7a21e",
+          "lastUpdated": "2026-09-15T14:29:13.470Z",
+          "author": {
+            "reference": "Practitioner/efae6932-154e-48b9-9148-afbed11fe87d",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        },
+        "name": "ODOS Admin / Manager",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "e598992c29cbf1302da9eab66f46f35b49371ec5aba9296b7c03798c84fd93d9",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read",
+              "search",
+              "history",
+              "vread"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 8,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/AccessPolicy",
+      "status": 201,
+      "request": {
+        "resourceType": "AccessPolicy",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "provider"
+            },
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "staff"
+            },
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "admin"
+            }
+          ],
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97"
+        },
+        "name": "ODOS Composite Provider + Staff + Admin / Manager",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "cafda5c544ceff62e79b8d01154c36e9a2547d27327c214228073bd5f5997c3d",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "search"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "history"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "search"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "history"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "create"
+            ],
+            "writeConstraint": [
+              {
+                "language": "text/fhirpath",
+                "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty()) and (%before.exists() implies ((%before.active.exists() or %after.active.exists()) implies (%before.active = %after.active)))"
+              }
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "update"
+            ],
+            "writeConstraint": [
+              {
+                "language": "text/fhirpath",
+                "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty()) and (%before.exists() implies ((%before.active.exists() or %after.active.exists()) implies (%before.active = %after.active)))"
+              }
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "create"
+            ],
+            "writeConstraint": [
+              {
+                "language": "text/fhirpath",
+                "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+              }
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "update"
+            ],
+            "writeConstraint": [
+              {
+                "language": "text/fhirpath",
+                "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+              }
+            ]
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "AccessPolicy",
+        "id": "6fd2ca8d-301e-401d-9bc8-1beb65cdf5fb",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "provider"
+            },
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "staff"
+            },
+            {
+              "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+              "code": "admin"
+            }
+          ],
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "versionId": "4817ee02-3588-4e98-990e-d17ad7e7325e",
+          "lastUpdated": "2026-09-15T14:29:13.483Z",
+          "author": {
+            "reference": "Practitioner/efae6932-154e-48b9-9148-afbed11fe87d",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        },
+        "name": "ODOS Composite Provider + Staff + Admin / Manager",
+        "evidenceProjection": "Person and Task rules only; digest covers the full resource",
+        "fullResourceSha256": "4f2d0756059c9f84ba6cca1d0d14d270abc9cfe5df4f048d9614ac23cec2b743",
+        "resource": [
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "read"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "search"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "history"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "read"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "search"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "history"
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "vread"
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "create"
+            ],
+            "writeConstraint": [
+              {
+                "language": "text/fhirpath",
+                "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty()) and (%before.exists() implies ((%before.active.exists() or %after.active.exists()) implies (%before.active = %after.active)))"
+              }
+            ]
+          },
+          {
+            "resourceType": "Person",
+            "interaction": [
+              "update"
+            ],
+            "writeConstraint": [
+              {
+                "language": "text/fhirpath",
+                "description": "Person links are managed by service operations; staff may edit demographics without changing links.",
+                "expression": "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty()) and (%before.exists() implies ((%before.active.exists() or %after.active.exists()) implies (%before.active = %after.active)))"
+              }
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "create"
+            ],
+            "writeConstraint": [
+              {
+                "language": "text/fhirpath",
+                "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+              }
+            ]
+          },
+          {
+            "resourceType": "Task",
+            "interaction": [
+              "update"
+            ],
+            "writeConstraint": [
+              {
+                "language": "text/fhirpath",
+                "description": "Guarantor link-operation Tasks are service-authored and cannot be changed by staff.",
+                "expression": "%before.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty() and %after.code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/guarantor-link-operation').empty()"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 9,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/admin/projects/b185e3e5-4179-4072-96fe-ea27c36cdb97/invite",
+      "status": 200
+    },
+    {
+      "sequence": 10,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/31c36cec-0ca8-4c4c-91f1-02f6553eb4a7",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/6908ee00-0174-48fa-b717-54dec1de339e",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/de8b4e4a-c94b-4d1b-b5bf-d80e3599f641",
+          "display": "g2b1-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/ba4f31b7-83ef-4c86-9193-f9e657542628",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "31c36cec-0ca8-4c4c-91f1-02f6553eb4a7",
+        "meta": {
+          "versionId": "f7e5fb0f-bd05-4cf7-82cb-7719144f7969",
+          "lastUpdated": "2026-09-15T14:29:13.563Z",
+          "author": {
+            "reference": "system"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 11,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/admin/super/setpassword",
+      "status": 200
+    },
+    {
+      "sequence": 12,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/31c36cec-0ca8-4c4c-91f1-02f6553eb4a7",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/6908ee00-0174-48fa-b717-54dec1de339e",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/de8b4e4a-c94b-4d1b-b5bf-d80e3599f641",
+          "display": "g2b1-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/ba4f31b7-83ef-4c86-9193-f9e657542628",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "31c36cec-0ca8-4c4c-91f1-02f6553eb4a7",
+        "meta": {
+          "versionId": "f7e5fb0f-bd05-4cf7-82cb-7719144f7969",
+          "lastUpdated": "2026-09-15T14:29:13.563Z",
+          "author": {
+            "reference": "system"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 13,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "PUT",
+      "path": "/fhir/R4/ProjectMembership/31c36cec-0ca8-4c4c-91f1-02f6553eb4a7",
+      "status": 200,
+      "ifMatch": "W/\"f7e5fb0f-bd05-4cf7-82cb-7719144f7969\"",
+      "request": {
+        "invitedBy": {
+          "reference": "User/6908ee00-0174-48fa-b717-54dec1de339e",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/de8b4e4a-c94b-4d1b-b5bf-d80e3599f641",
+          "display": "g2b1-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/ba4f31b7-83ef-4c86-9193-f9e657542628",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "31c36cec-0ca8-4c4c-91f1-02f6553eb4a7",
+        "meta": {
+          "versionId": "f7e5fb0f-bd05-4cf7-82cb-7719144f7969",
+          "lastUpdated": "2026-09-15T14:29:13.563Z",
+          "author": {
+            "reference": "system"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/cc30e550-d37b-43c2-a0b4-d8327cf32a13"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/e7651c83-79aa-4f8d-b3c5-d922c265633f"
+              }
+            ]
+          }
+        ]
+      },
+      "response": {
+        "invitedBy": {
+          "reference": "User/6908ee00-0174-48fa-b717-54dec1de339e",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/de8b4e4a-c94b-4d1b-b5bf-d80e3599f641",
+          "display": "g2b1-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/ba4f31b7-83ef-4c86-9193-f9e657542628",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "31c36cec-0ca8-4c4c-91f1-02f6553eb4a7",
+        "meta": {
+          "versionId": "48b8768b-817d-47c0-8366-b729a4680f08",
+          "lastUpdated": "2026-09-15T14:29:13.698Z",
+          "author": {
+            "reference": "Practitioner/efae6932-154e-48b9-9148-afbed11fe87d",
+            "display": "Medplum Admin"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/cc30e550-d37b-43c2-a0b4-d8327cf32a13"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/e7651c83-79aa-4f8d-b3c5-d922c265633f"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 14,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/admin/projects/b185e3e5-4179-4072-96fe-ea27c36cdb97/invite",
+      "status": 200
+    },
+    {
+      "sequence": 15,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/d6323264-ab7a-44a8-be0b-ac7763d1cb38",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/6908ee00-0174-48fa-b717-54dec1de339e",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/1522a17f-f6bf-493c-82c1-6dde2fcd02c4",
+          "display": "g2b1-composite@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/7d2e46a0-deda-4007-bc46-fae22c8a3880",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "d6323264-ab7a-44a8-be0b-ac7763d1cb38",
+        "meta": {
+          "versionId": "356845c0-33c6-4958-924d-b1e34ed7510b",
+          "lastUpdated": "2026-09-15T14:29:13.761Z",
+          "author": {
+            "reference": "system"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 16,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/admin/super/setpassword",
+      "status": 200
+    },
+    {
+      "sequence": 17,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/d6323264-ab7a-44a8-be0b-ac7763d1cb38",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/6908ee00-0174-48fa-b717-54dec1de339e",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/1522a17f-f6bf-493c-82c1-6dde2fcd02c4",
+          "display": "g2b1-composite@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/7d2e46a0-deda-4007-bc46-fae22c8a3880",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "d6323264-ab7a-44a8-be0b-ac7763d1cb38",
+        "meta": {
+          "versionId": "356845c0-33c6-4958-924d-b1e34ed7510b",
+          "lastUpdated": "2026-09-15T14:29:13.761Z",
+          "author": {
+            "reference": "system"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 18,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "PUT",
+      "path": "/fhir/R4/ProjectMembership/d6323264-ab7a-44a8-be0b-ac7763d1cb38",
+      "status": 200,
+      "ifMatch": "W/\"356845c0-33c6-4958-924d-b1e34ed7510b\"",
+      "request": {
+        "invitedBy": {
+          "reference": "User/6908ee00-0174-48fa-b717-54dec1de339e",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/1522a17f-f6bf-493c-82c1-6dde2fcd02c4",
+          "display": "g2b1-composite@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/7d2e46a0-deda-4007-bc46-fae22c8a3880",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "d6323264-ab7a-44a8-be0b-ac7763d1cb38",
+        "meta": {
+          "versionId": "356845c0-33c6-4958-924d-b1e34ed7510b",
+          "lastUpdated": "2026-09-15T14:29:13.761Z",
+          "author": {
+            "reference": "system"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/6fd2ca8d-301e-401d-9bc8-1beb65cdf5fb"
+            },
+            "parameter": [
+              {
+                "name": "admin_patient_compartment",
+                "valueString": "Patient/e7651c83-79aa-4f8d-b3c5-d922c265633f"
+              },
+              {
+                "name": "provider_patient_compartment",
+                "valueString": "Patient/e7651c83-79aa-4f8d-b3c5-d922c265633f"
+              },
+              {
+                "name": "provider_provider_profile",
+                "valueReference": {
+                  "reference": "Practitioner/7d2e46a0-deda-4007-bc46-fae22c8a3880"
+                }
+              },
+              {
+                "name": "staff_patient_compartment",
+                "valueString": "Patient/e7651c83-79aa-4f8d-b3c5-d922c265633f"
+              }
+            ]
+          }
+        ]
+      },
+      "response": {
+        "invitedBy": {
+          "reference": "User/6908ee00-0174-48fa-b717-54dec1de339e",
+          "display": "g2b1-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "display": "G2b1 build synthetic A"
+        },
+        "user": {
+          "reference": "User/1522a17f-f6bf-493c-82c1-6dde2fcd02c4",
+          "display": "g2b1-composite@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/7d2e46a0-deda-4007-bc46-fae22c8a3880",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "d6323264-ab7a-44a8-be0b-ac7763d1cb38",
+        "meta": {
+          "versionId": "068f8227-dc5c-4fc0-a29d-776a4a3cdea7",
+          "lastUpdated": "2026-09-15T14:29:13.866Z",
+          "author": {
+            "reference": "Practitioner/efae6932-154e-48b9-9148-afbed11fe87d",
+            "display": "Medplum Admin"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/6fd2ca8d-301e-401d-9bc8-1beb65cdf5fb"
+            },
+            "parameter": [
+              {
+                "name": "admin_patient_compartment",
+                "valueString": "Patient/e7651c83-79aa-4f8d-b3c5-d922c265633f"
+              },
+              {
+                "name": "provider_patient_compartment",
+                "valueString": "Patient/e7651c83-79aa-4f8d-b3c5-d922c265633f"
+              },
+              {
+                "name": "provider_provider_profile",
+                "valueReference": {
+                  "reference": "Practitioner/7d2e46a0-deda-4007-bc46-fae22c8a3880"
+                }
+              },
+              {
+                "name": "staff_patient_compartment",
+                "valueString": "Patient/e7651c83-79aa-4f8d-b3c5-d922c265633f"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: T10 real editor preserves email third phone old and period-bounded identities
+ok 1 - T10 real editor preserves email third phone old and period-bounded identities
+  ---
+  duration_ms: 28.878708
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 190.019

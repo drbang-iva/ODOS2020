@@ -1,5 +1,5 @@
 import type { Bundle, Patient, Person, RelatedPerson, Resource } from "@medplum/fhirtypes";
-import { projectResponsiblePartyDemographics, type ResponsiblePartyDemographics } from "../../../mcp/src/clinic/responsible-party-demographics";
+import { applyResponsiblePartyDemographics, projectResponsiblePartyDemographics, type ResponsiblePartyDemographics } from "../../../mcp/src/clinic/responsible-party-demographics";
 import { CONCURRENT_EDIT_MESSAGE, fhir } from "./fhir";
 import { getGuarantorLinkOperation, guarantorOperationHistory, type GuarantorLinkOperation } from "./guarantor-link-operations";
 
@@ -169,7 +169,7 @@ function stopped(snapshot: GuarantorSnapshot, status: "not-saved" | "unknown", m
 }
 async function writeChild(item: GuarantorChild, person: Person): Promise<GuarantorChildResult["writeStatus"]> {
   try {
-    await fhir.update({ ...item.resource, ...projectResponsiblePartyDemographics(person) }, source, version(item.resource));
+    await fhir.update(applyResponsiblePartyDemographics(item.resource, person), source, version(item.resource));
     return "updated";
   } catch (error) {
     if (error instanceof Error && error.message === CONCURRENT_EDIT_MESSAGE) return "conflict";
@@ -192,7 +192,7 @@ export async function saveGuarantor(snapshot: GuarantorSnapshot, demographics: G
     const verification = await verifyGuarantor(snapshot);
     return { ...verification, status: verification.status === "saved" ? "unchanged" : verification.status };
   }
-  const intended = { ...snapshot.person, ...projectResponsiblePartyDemographics(demographics) };
+  const intended = applyResponsiblePartyDemographics(snapshot.person, demographics);
   let accepted: Person;
   try {
     accepted = await fhir.update(intended, source, version(snapshot.person));

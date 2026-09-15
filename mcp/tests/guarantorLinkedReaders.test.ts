@@ -52,7 +52,7 @@ test("L7: actual statement recipient remains the moved primary RelatedPerson bef
     for (const write of childWrites) {
       const child = write.resource as RelatedPerson;
       for (const field of ["active", "patient", "period", "relationship"] as const) assert.deepEqual(child[field], original[index][field], `${id} preserves ${field}`);
-      assert.deepEqual(child.extension?.filter(extension => extension.url !== "https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim"), original[index].extension, `${id} retains its own role and sentinel values`);
+      assert.deepEqual(child.extension?.filter(extension => extension.url !== "https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim" && !extension.url.endsWith("/odos-no-textable-number")), original[index].extension?.filter(e => !e.url.endsWith("/odos-no-textable-number")), `${id} retains its own role and sentinel values`);
     }
   }
 });

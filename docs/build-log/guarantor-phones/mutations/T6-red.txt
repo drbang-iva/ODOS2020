@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: T6 lost projecting reply plus competing refusal pauses interfered without domain writes
+not ok 1 - T6 lost projecting reply plus competing refusal pauses interfered without domain writes
+  ---
+  duration_ms: 13.244792
+  type: 'test'
+  location: '<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:1:1345'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:30:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 152.764333

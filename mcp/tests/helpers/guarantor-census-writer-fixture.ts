@@ -30,7 +30,7 @@ async function registrationWriterResources(): Promise<{ patient: Patient; relate
     responsibleParties: [{
       localId: "guardian-new", kind: "person", relationship: "parent", financialResponsible: true,
       consentAuthority: true, primary: true, courtOrderNotes: "", effectiveDate: "2026-01-01", endDate: "",
-      firstName: "ODOS", middleName: "", lastName: "EXAM", phone: "864-555-0101",
+      firstName: "ODOS", middleName: "", lastName: "EXAM", phones: [{ value: "864-555-0101", use: "home" }, { value: "", use: "mobile" }], textable: "",
       address: "2 Synthetic Way", city: "Greenville", state: "SC", postalCode: "29601",
     }],
     confirmDuplicate: false,

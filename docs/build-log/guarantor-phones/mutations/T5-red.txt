@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: T5 attach projects refusal=true and correction restores the required snapshot
+not ok 1 - T5 attach projects refusal=true and correction restores the required snapshot
+  ---
+  duration_ms: 10.306542
+  type: 'test'
+  location: '<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:1:346'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    409 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:11:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: T5 attach projects refusal=false and correction restores the required snapshot
+not ok 2 - T5 attach projects refusal=false and correction restores the required snapshot
+  ---
+  duration_ms: 1.681042
+  type: 'test'
+  location: '<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:1:346'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    409 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:11:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: T5 transfer projects refusal=true and correction restores the required snapshot
+not ok 3 - T5 transfer projects refusal=true and correction restores the required snapshot
+  ---
+  duration_ms: 3.103541
+  type: 'test'
+  location: '<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:1:346'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    409 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:11:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: T5 transfer projects refusal=false and correction restores the required snapshot
+not ok 4 - T5 transfer projects refusal=false and correction restores the required snapshot
+  ---
+  duration_ms: 2.033791
+  type: 'test'
+  location: '<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:1:346'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    409 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:11:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: T5 consolidate projects refusal=true and correction restores the required snapshot
+not ok 5 - T5 consolidate projects refusal=true and correction restores the required snapshot
+  ---
+  duration_ms: 2.358958
+  type: 'test'
+  location: '<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:1:346'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    409 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:11:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: T5 consolidate projects refusal=false and correction restores the required snapshot
+not ok 6 - T5 consolidate projects refusal=false and correction restores the required snapshot
+  ---
+  duration_ms: 2.410416
+  type: 'test'
+  location: '<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:1:346'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    409 !== 200
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:11:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 0
+# fail 6
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 162.688875

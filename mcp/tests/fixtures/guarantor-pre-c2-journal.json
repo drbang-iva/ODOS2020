@@ -1,0 +1,485 @@
+{
+  "head": "02cdf89e0b964cb442bd42287c86435102fcccc9",
+  "taskId": "dc6b6d19-828e-48fc-b334-f490a85ba81c",
+  "resources": [
+    {
+      "resourceType": "Person",
+      "name": [
+        {
+          "use": "official",
+          "given": [
+            "EXAMPLEV"
+          ],
+          "family": "Guardian"
+        }
+      ],
+      "telecom": [
+        {
+          "system": "phone",
+          "use": "home",
+          "value": "864-555-0101"
+        },
+        {
+          "system": "phone",
+          "use": "mobile",
+          "value": "864-555-0102"
+        }
+      ],
+      "link": [
+        {
+          "target": {
+            "reference": "RelatedPerson/r2"
+          },
+          "assurance": "level2"
+        }
+      ],
+      "meta": {
+        "versionId": "2",
+        "project": "g2b1-synthetic",
+        "author": {
+          "reference": "ClientApplication/g2b1-service"
+        }
+      },
+      "id": "S"
+    },
+    {
+      "resourceType": "Person",
+      "name": [
+        {
+          "use": "official",
+          "given": [
+            "EXAMPLEV"
+          ],
+          "family": "Destination"
+        }
+      ],
+      "telecom": [
+        {
+          "system": "phone",
+          "use": "home",
+          "value": "864-555-0101"
+        },
+        {
+          "system": "phone",
+          "use": "mobile",
+          "value": "864-555-0102"
+        }
+      ],
+      "link": [
+        {
+          "target": {
+            "reference": "RelatedPerson/k"
+          },
+          "assurance": "level2"
+        },
+        {
+          "target": {
+            "reference": "RelatedPerson/r1"
+          },
+          "assurance": "level2"
+        }
+      ],
+      "meta": {
+        "versionId": "2",
+        "project": "g2b1-synthetic",
+        "author": {
+          "reference": "ClientApplication/g2b1-service"
+        }
+      },
+      "id": "D",
+      "active": true
+    },
+    {
+      "resourceType": "Patient",
+      "active": true,
+      "identifier": [
+        {
+          "use": "usual",
+          "type": {
+            "text": "ODOS medical record number"
+          },
+          "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+          "value": "4634655"
+        }
+      ],
+      "name": [
+        {
+          "use": "official",
+          "given": [
+            "EXAMPLEV"
+          ],
+          "family": "Child"
+        }
+      ],
+      "gender": "female",
+      "telecom": [
+        {
+          "system": "phone",
+          "use": "home",
+          "value": "864-555-0100"
+        }
+      ],
+      "meta": {
+        "versionId": "1",
+        "project": "g2b1-synthetic",
+        "author": {
+          "reference": "ClientApplication/g2b1-service"
+        }
+      },
+      "id": "p-r1"
+    },
+    {
+      "resourceType": "RelatedPerson",
+      "active": true,
+      "patient": {
+        "reference": "Patient/p-r1"
+      },
+      "relationship": [
+        {
+          "text": "Parent"
+        }
+      ],
+      "period": {
+        "start": "2026-01-01"
+      },
+      "extension": [
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+          "valueBoolean": true
+        },
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+          "valueBoolean": true
+        },
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+          "valueString": "Synthetic court note"
+        },
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim",
+          "valueReference": {
+            "reference": "Task/dc6b6d19-828e-48fc-b334-f490a85ba81c"
+          }
+        }
+      ],
+      "name": [
+        {
+          "use": "official",
+          "given": [
+            "EXAMPLEV"
+          ],
+          "family": "Destination"
+        }
+      ],
+      "telecom": [
+        {
+          "system": "phone",
+          "use": "home",
+          "value": "864-555-0101"
+        },
+        {
+          "system": "phone",
+          "use": "mobile",
+          "value": "864-555-0102"
+        }
+      ],
+      "meta": {
+        "versionId": "3",
+        "project": "g2b1-synthetic",
+        "author": {
+          "reference": "ClientApplication/g2b1-service"
+        }
+      },
+      "id": "r1"
+    },
+    {
+      "resourceType": "Patient",
+      "active": true,
+      "identifier": [
+        {
+          "use": "usual",
+          "type": {
+            "text": "ODOS medical record number"
+          },
+          "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+          "value": "4634655"
+        }
+      ],
+      "name": [
+        {
+          "use": "official",
+          "given": [
+            "EXAMPLEV"
+          ],
+          "family": "Child"
+        }
+      ],
+      "gender": "female",
+      "telecom": [
+        {
+          "system": "phone",
+          "use": "home",
+          "value": "864-555-0100"
+        }
+      ],
+      "meta": {
+        "versionId": "1",
+        "project": "g2b1-synthetic",
+        "author": {
+          "reference": "ClientApplication/g2b1-service"
+        }
+      },
+      "id": "p-r2"
+    },
+    {
+      "resourceType": "RelatedPerson",
+      "active": true,
+      "patient": {
+        "reference": "Patient/p-r2"
+      },
+      "relationship": [
+        {
+          "text": "Parent"
+        }
+      ],
+      "period": {
+        "start": "2026-01-01"
+      },
+      "extension": [
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+          "valueBoolean": true
+        },
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+          "valueBoolean": true
+        },
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+          "valueString": "Synthetic court note"
+        }
+      ],
+      "name": [
+        {
+          "use": "official",
+          "given": [
+            "EXAMPLEV"
+          ],
+          "family": "Guardian"
+        }
+      ],
+      "telecom": [
+        {
+          "system": "phone",
+          "use": "home",
+          "value": "864-555-0101"
+        },
+        {
+          "system": "phone",
+          "use": "mobile",
+          "value": "864-555-0102"
+        }
+      ],
+      "meta": {
+        "versionId": "1",
+        "project": "g2b1-synthetic",
+        "author": {
+          "reference": "ClientApplication/g2b1-service"
+        }
+      },
+      "id": "r2"
+    },
+    {
+      "resourceType": "Patient",
+      "active": true,
+      "identifier": [
+        {
+          "use": "usual",
+          "type": {
+            "text": "ODOS medical record number"
+          },
+          "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+          "value": "9761297"
+        }
+      ],
+      "name": [
+        {
+          "use": "official",
+          "given": [
+            "EXAMPLEV"
+          ],
+          "family": "Child"
+        }
+      ],
+      "gender": "female",
+      "telecom": [
+        {
+          "system": "phone",
+          "use": "home",
+          "value": "864-555-0100"
+        }
+      ],
+      "meta": {
+        "versionId": "1",
+        "project": "g2b1-synthetic",
+        "author": {
+          "reference": "ClientApplication/g2b1-service"
+        }
+      },
+      "id": "p-k"
+    },
+    {
+      "resourceType": "RelatedPerson",
+      "active": true,
+      "patient": {
+        "reference": "Patient/p-k"
+      },
+      "relationship": [
+        {
+          "text": "Parent"
+        }
+      ],
+      "period": {
+        "start": "2026-01-01"
+      },
+      "extension": [
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+          "valueBoolean": true
+        },
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+          "valueBoolean": true
+        },
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+          "valueString": "Synthetic court note"
+        }
+      ],
+      "name": [
+        {
+          "use": "official",
+          "given": [
+            "EXAMPLEV"
+          ],
+          "family": "Destination"
+        }
+      ],
+      "telecom": [
+        {
+          "system": "phone",
+          "use": "home",
+          "value": "864-555-0101"
+        },
+        {
+          "system": "phone",
+          "use": "mobile",
+          "value": "864-555-0102"
+        }
+      ],
+      "meta": {
+        "versionId": "1",
+        "project": "g2b1-synthetic",
+        "author": {
+          "reference": "ClientApplication/g2b1-service"
+        }
+      },
+      "id": "k"
+    },
+    {
+      "resourceType": "Task",
+      "id": "dc6b6d19-828e-48fc-b334-f490a85ba81c",
+      "intent": "order",
+      "status": "in-progress",
+      "identifier": [
+        {
+          "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+          "value": "f56071b0-409a-4617-9237-a3fcebb31ad2"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+            "code": "transfer"
+          }
+        ]
+      },
+      "input": [
+        {
+          "type": {
+            "text": "kind"
+          },
+          "valueCode": "transfer"
+        },
+        {
+          "type": {
+            "text": "source"
+          },
+          "valueReference": {
+            "reference": "Person/S"
+          }
+        },
+        {
+          "type": {
+            "text": "destination"
+          },
+          "valueReference": {
+            "reference": "Person/D"
+          }
+        },
+        {
+          "type": {
+            "text": "moved"
+          },
+          "valueReference": {
+            "reference": "RelatedPerson/r1"
+          }
+        },
+        {
+          "type": {
+            "text": "expected:Person/S"
+          },
+          "valueString": "1"
+        },
+        {
+          "type": {
+            "text": "expected:Person/D"
+          },
+          "valueString": "1"
+        },
+        {
+          "type": {
+            "text": "expected:RelatedPerson/r1"
+          },
+          "valueString": "1"
+        },
+        {
+          "type": {
+            "text": "reason"
+          },
+          "valueString": "Synthetic guarantor phone regression"
+        }
+      ],
+      "requester": {
+        "reference": "Practitioner/g2b1-staff"
+      },
+      "meta": {
+        "versionId": "9",
+        "project": "g2b1-synthetic",
+        "author": {
+          "reference": "ClientApplication/g2b1-service"
+        }
+      },
+      "businessStatus": {
+        "text": "project-pending"
+      },
+      "extension": [
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+          "valueString": "{\"intents\":[{\"id\":\"8ae1b886-e99a-440f-9ac2-557ae7d766e1\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/r1\",\"expectedVersion\":\"1\",\"intendedContentHash\":\"9c3b1c14a4ff1a180433235eb637bbfd99f58a71192f1852fe35719a9c27a144\",\"ownedHash\":\"b5fe33e703845e9766c215051f0a908d6b4b91d75a78ee8d6872b455063b0370\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"ClientApplication/g2b1-service\"},{\"id\":\"bb52827d-0b72-4338-bfb0-5803a2b92a0b\",\"phase\":\"detaching\",\"target\":\"Person/S\",\"expectedVersion\":\"1\",\"intendedContentHash\":\"0a6e4733cd5e1e2efc2237d8216742db2f552ab18969e6a076f05b22705d9672\",\"ownedHash\":\"9429312b80756e19e6cf50d43438d04085e42f4d971ed04a44b3e514f0c04215\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"ClientApplication/g2b1-service\"},{\"id\":\"705b2418-0a5f-40b6-9cf7-cd1120ed95ee\",\"phase\":\"attaching\",\"target\":\"Person/D\",\"expectedVersion\":\"1\",\"intendedContentHash\":\"23c7639e1088cd7838539d6655b0df1258af207c5f30499dfacbfdd6506f8a04\",\"ownedHash\":\"bab2bfcbec81f17ba1d6fff4909b91beae2610eb3628f2f00f7858a1f875848c\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"ClientApplication/g2b1-service\"},{\"id\":\"582a1465-b854-4f24-a0a7-133480ce5524\",\"phase\":\"projecting\",\"target\":\"RelatedPerson/r1\",\"expectedVersion\":\"2\",\"intendedContentHash\":\"32c90395257e74a78bd5494632e93119fa7805abffbd213362ccc67c2b9368bb\",\"ownedHash\":\"89492bdb9df4674f55db0f6a1eb603a535fe222efb442147ca7f21ca77306847\"}],\"generation\":\"2\"}"
+        }
+      ]
+    }
+  ]
+}

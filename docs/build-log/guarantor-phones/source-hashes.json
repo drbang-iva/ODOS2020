@@ -1,0 +1,18 @@
+{
+  "data/canonical-extensions/odos-no-textable-number.json": "0d10ccf076e621d35f57aa5a0dbb4170e9fbb59ef72cde612bfeb1db8beb4324",
+  "mcp/src/clinic/guarantor-link-operation.ts": "5ab3bfc17c43733389de1ca260535d5671c4d5dfdc5ccdc9df7daa6e85c0fe91",
+  "mcp/src/clinic/guarantor-search.ts": "3d718222e9e697575456db735e1f3f966275ca25e48a517e68c27766a0696ee3",
+  "mcp/src/clinic/patient-registration-endpoint.ts": "a7f95a94f72839c5b2b7d1fbdc8802469203d169daca45d3a9e3bcec0c179d1d",
+  "mcp/src/clinic/patient-telecom.ts": "a1b396006ff950569b984cb4cf76ddc38cc73d25e2012d65f8a6dd103e53231f",
+  "mcp/src/clinic/responsible-party-demographics.ts": "c2c4844b8ed0d17ae2883ffb0ba9ae7fc441bdb55adeb65647cedda97068c672",
+  "scripts/fhir-read-grant-check.ts": "1d9217a15782910b095866d357699b2723f6e3c37c1238dd12255dfc79d89c33",
+  "ui/src/components/patient/GuarantorLinkScreens.tsx": "0834b02edc38e73679eceb045cff0167e6607ad054280ee2d2159d8b7372f50d",
+  "ui/src/components/patient/PatientDemographicsEditor.tsx": "92cb1a31a8793c213a9088ec33281c28f8534a51fa9d18d42b4ce89ebc2c4ae3",
+  "ui/src/components/patient/ResponsiblePartiesControl.tsx": "722f21a4a99b1bce307ea3bc538ad2520134d2cd10b8b019d9d7dcae8326942c",
+  "ui/src/lib/guarantor-editor.ts": "8bd80f86bfab21b277c42889fcff36554c6fde9d229160ccae2593965dca2f8a",
+  "ui/src/lib/guarantor-link-operations.ts": "c0bcc381bb680c04c3062df9a471e7c3e5a458d2123a72371f421b11ceca3f51",
+  "ui/src/lib/patient-identity.ts": "4816b22783929d97608cdbffab1bea11b70aed3f5273debff4377dd749cfae1d",
+  "ui/src/lib/patient-registration.ts": "25ac3fb4e5397a79e15f9f3a4509de1f5d4a16725ab49ce129dfeb74aeddace7",
+  "ui/src/scenes/NewPatient.tsx": "12ac88422813200cecb84d539098e2c3d2616942dd408290f9f57112bf860a66",
+  "ui/src/components/patient/PhoneFields.tsx": "c41a26bf0b20410dbf72d5177493b16d2492ee3f614a48bf4d73c210de0cbc8c"
+}

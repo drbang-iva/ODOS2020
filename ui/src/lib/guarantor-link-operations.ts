@@ -64,13 +64,13 @@ export type GuarantorDraftInput = {
 } | {
   kind: "consolidate"; sourcePersonId: string; destinationPersonId: string; relatedPersonIds?: string[];
 };
-export interface GuarantorDraft { expected: Record<string, string>; relatedPersonIds: string[]; patients: { relatedPersonId: string; patientId: string; name?: import("@medplum/fhirtypes").HumanName[]; current: Pick<import("@medplum/fhirtypes").Person,"name"|"telecom"|"address">; resulting: Pick<import("@medplum/fhirtypes").Person,"name"|"telecom"|"address"> }[] }
+export interface GuarantorDraft { expected: Record<string, string>; relatedPersonIds: string[]; patients: { relatedPersonId: string; patientId: string; name?: import("@medplum/fhirtypes").HumanName[]; current: import("../../../mcp/src/clinic/responsible-party-demographics").ResponsiblePartyDemographics; resulting: import("../../../mcp/src/clinic/responsible-party-demographics").ResponsiblePartyDemographics }[] }
 type GuarantorCreateFields = { operationId: string; expected: Record<string, string>; relatedPersonIds: string[]; reason: string };
 type GuarantorCreateInput =
   | (Omit<Extract<GuarantorDraftInput, { kind: "attach" }>, "relatedPersonIds"> & GuarantorCreateFields)
   | (Omit<Extract<GuarantorDraftInput, { kind: "transfer" }>, "relatedPersonIds"> & GuarantorCreateFields)
   | (Omit<Extract<GuarantorDraftInput, { kind: "consolidate" }>, "relatedPersonIds"> & GuarantorCreateFields);
-export type NewGuarantor = Record<"firstName"|"middleName"|"lastName"|"phone"|"address"|"city"|"state"|"postalCode",string>;
+export type NewGuarantor = Record<"firstName"|"middleName"|"lastName"|"address"|"city"|"state"|"postalCode",string> & import("../../../mcp/src/clinic/patient-telecom").PhoneDraft;
 export class GuarantorScreenError extends Error { constructor(message: string, readonly status: number, readonly body?: { task?: unknown }) { super(message); } }
 async function screenRequest<T>(path: string, body?: object): Promise<T> {
   const authorization = fhir.authHeader();
@@ -80,7 +80,7 @@ async function screenRequest<T>(path: string, body?: object): Promise<T> {
   return result as T;
 }
 export const searchGuarantors = (keys: { lastName: string; firstName?: string; phone?: string }) => screenRequest<GuarantorSearchCard[]>(`/search?${new URLSearchParams(keys)}`);
-export const createNewGuarantor = (body: NewGuarantor) => screenRequest<{personId:string;versionId:string}>("",body);
+export const createNewGuarantor = (body: NewGuarantor) => screenRequest<{personId:string;versionId:string}>("",{ ...body, phones: body.phones.map(({ value, use }) => ({ value, use })) });
 export const draftGuarantorOperation = (body: GuarantorDraftInput) => screenRequest<GuarantorDraft>("/link-operations/draft",body);
 export const createGuarantorOperation = (body: GuarantorCreateInput) => screenRequest<GuarantorLinkOperation>("/link-operations",body);
 export const guarantorOperationHistory = (id: string) => screenRequest<GuarantorLinkOperation[]>(`/link-operations?${new URLSearchParams({relatedPersonId:id})}`);

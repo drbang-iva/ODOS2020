@@ -168,7 +168,7 @@ test("structured address edits clear stale display text only on the edited addre
 
 test("clearing then replacing the first phone keeps the second phone in its original slot", async () => {
   await withEditor(1, async (renderer) => {
-    const firstPhone = () => renderer.root.findAllByType("label").find(label => label.children[0] === "Phone 1 (home)")!.findByType("input");
+    const firstPhone = () => renderer.root.findAllByType("label").find(label => label.children[0] === "Phone 1")!.findByType("input");
     await act(async () => { firstPhone().props.onChange({ target: { value: "" } }); });
     await act(async () => { firstPhone().props.onChange({ target: { value: "864-555-0199" } }); });
     const save = renderer.root.findAllByType("button").find(button => button.children.join("") === "Save guarantor")!;
@@ -185,7 +185,7 @@ test("clearing then replacing the first phone keeps the second phone in its orig
 
 test("saving an intentionally blank phone removes only that contact and retains untouched valueless entries", async () => {
   await withEditor(1, async (renderer) => {
-    const first = renderer.root.findAllByType("label").find(label => label.children[0] === "Phone 1 (home)")!.findByType("input");
+    const first = renderer.root.findAllByType("label").find(label => label.children[0] === "Phone 1")!.findByType("input");
     await act(async () => { first.props.onChange({ target: { value: "   " } }); });
     const save = renderer.root.findAllByType("button").find(button => button.children.join("") === "Save guarantor")!;
     await act(async () => { await save.props.onClick(); });

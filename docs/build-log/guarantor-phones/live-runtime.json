@@ -1,0 +1,24 @@
+{
+  "composeProject": "guarantor-phones-live",
+  "ports": {
+    "medplum": 28970,
+    "postgres": 28971,
+    "redis": 28972,
+    "odos": 28973,
+    "ui": 28974,
+    "proof": 28975
+  },
+  "image": "medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de",
+  "health": {
+    "ok": true,
+    "version": "5.1.30-9b1bd92",
+    "platform": "linux",
+    "runtime": "v24.18.1",
+    "postgres": true,
+    "redis": true,
+    "redisInstances": {
+      "default": true
+    }
+  },
+  "baseHead": "52c6ec4926e95e78344082add8522e74743ffb33"
+}

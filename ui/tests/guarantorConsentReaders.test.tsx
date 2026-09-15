@@ -59,7 +59,8 @@ test("L7: default consent-guardian list and primary selection retain the moved p
     for (const [index, reference] of ["Patient/sam", "RelatedPerson/secondary", "RelatedPerson/no-consent", "RelatedPerson/inactive"].entries()) assert.deepEqual(f.get(reference), unrelatedBefore[index]);
     for (const [index, id] of ["r1", "r2"].entries()) {
       const after = f.get<RelatedPerson>(`RelatedPerson/${id}`);
-      for (const field of ["active", "patient", "period", "relationship", "extension"] as const) assert.deepEqual(after[field], beforeChildren[index][field]);
+      for (const field of ["active", "patient", "period", "relationship"] as const) assert.deepEqual(after[field], beforeChildren[index][field]);
+      assert.deepEqual(after.extension, beforeChildren[index].extension?.filter(e => !e.url.endsWith("/odos-no-textable-number")));
     }
   } finally { globalThis.fetch = originalFetch; }
 });

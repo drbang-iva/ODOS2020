@@ -6,7 +6,7 @@ import { buildOdosAuditEventRow, type OdosAuditEventRecord, type OdosAuditEventT
 import type { MedplumClient } from "../fhir-client.js";
 import { searchProjectAll } from "../fhir-search.js";
 import { registrationProjectId, registrationResourceInProject } from "./patient-registration-endpoint.js";
-import { projectResponsiblePartyDemographics } from "./responsible-party-demographics.js";
+import { hasResponsiblePartyRefusal, applyResponsiblePartyDemographics, projectResponsiblePartyDemographics } from "./responsible-party-demographics.js";
 
 export const GUARANTOR_OPERATION_SYSTEM = "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation";
 export const GUARANTOR_CLAIM_URL = "https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim";
@@ -238,7 +238,7 @@ export function guarantorOwnedHash(resource: Resource, phase: string): string {
     owned = { link: [...new Set((person.link ?? []).map(link => link.target.reference ?? ""))].sort(), active: person.active };
   } else if (phase === "claiming" || phase === "releasing" || phase === "projecting") {
     const child = resource as RelatedPerson;
-    owned = { claims: [...new Set(claimReferences(child))].sort(), ...(phase === "projecting" ? { name: child.name, telecom: child.telecom, address: child.address } : {}) };
+    owned = { claims: [...new Set(claimReferences(child))].sort(), ...(phase === "projecting" ? { name: child.name, telecom: child.telecom, address: child.address, ...(hasResponsiblePartyRefusal(child) ? { noTextableNumber: true } : {}) } : {}) };
   } else return guarantorContentHash(resource);
   return createHash("sha256").update(JSON.stringify(canonical(owned) ?? null)).digest("hex");
 }
@@ -554,12 +554,12 @@ class Run {
       if (!ownClaim(child, this.task.id!)) return this.pause("interfered", reference(child));
       const currentDestination = await this.operation.read<Person>("Person", destination.id!);
       if (version(currentDestination) !== version(destination)) return this.pause("project-pending", reference(destination));
-      const projected = { ...child, ...projectResponsiblePartyDemographics(destination) };
+      const projected = applyResponsiblePartyDemographics(child, destination);
       if (this.resuming) await this.recoveryWrite("projecting", projected, async fresh => {
         if (!ownClaim(fresh, this.task.id!)) return this.pause("interfered", reference(fresh));
         const current = await this.operation.read<Person>("Person", destination.id!);
         if (version(current) !== version(destination)) return this.pause("project-pending", reference(current));
-        return { ...fresh, ...projectResponsiblePartyDemographics(current) };
+        return applyResponsiblePartyDemographics(fresh, current);
       });
       else try { await this.write("projecting", projected); }
       catch { return this.pause("project-pending", reference(child)); }

@@ -1,0 +1,31 @@
+{
+  "ui-full.log": {
+    "tests": 1556,
+    "pass": 1556,
+    "fail": 0,
+    "skipped": 0
+  },
+  "mcp-full.log": {
+    "tests": 4992,
+    "pass": 4941,
+    "fail": 0,
+    "skipped": 51
+  },
+  "ui-focused.log": {
+    "tests": 123,
+    "pass": 123,
+    "fail": 0,
+    "skipped": 0
+  },
+  "mcp-focused.log": {
+    "tests": 214,
+    "pass": 214,
+    "fail": 0,
+    "skipped": 0
+  },
+  "preflight.log": {},
+  "proxy-coverage.log": {},
+  "mcp-typecheck.log": {},
+  "ui-typecheck.log": {},
+  "script-typecheck.log": {}
+}

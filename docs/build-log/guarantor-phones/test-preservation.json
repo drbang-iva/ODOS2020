@@ -1,0 +1,95 @@
+[
+  {
+    "path": "mcp/tests/guarantorLinkOperation.test.ts",
+    "originalTests": 38,
+    "addedTests": 0,
+    "changes": []
+  },
+  {
+    "path": "mcp/tests/guarantorOwnedRecovery.test.ts",
+    "originalTests": 7,
+    "addedTests": 0,
+    "changes": []
+  },
+  {
+    "path": "mcp/tests/guarantorRegistrationAttach.test.ts",
+    "originalTests": 12,
+    "addedTests": 0,
+    "changes": []
+  },
+  {
+    "path": "mcp/tests/guarantorSearchScreens.test.ts",
+    "originalTests": 14,
+    "addedTests": 0,
+    "changes": []
+  },
+  {
+    "path": "mcp/tests/patientInsuranceHonestSave.test.ts",
+    "originalTests": 15,
+    "addedTests": 0,
+    "changes": []
+  },
+  {
+    "path": "mcp/tests/patientRegistrationAuthz.test.ts",
+    "originalTests": 27,
+    "addedTests": 3,
+    "changes": []
+  },
+  {
+    "path": "ui/tests/guarantorAttachRegistration.test.tsx",
+    "originalTests": 3,
+    "addedTests": 0,
+    "changes": []
+  },
+  {
+    "path": "ui/tests/guarantorEditor.test.tsx",
+    "originalTests": 9,
+    "addedTests": 0,
+    "changes": [
+      {
+        "name": "\"clearing then replacing the first phone keeps the second phone in its original slot\"",
+        "allowedSelectorOnly": true
+      },
+      {
+        "name": "\"saving an intentionally blank phone removes only that contact and retains untouched valueless entries\"",
+        "allowedSelectorOnly": true
+      }
+    ]
+  },
+  {
+    "path": "ui/tests/guarantorLinkOperations.test.tsx",
+    "originalTests": 14,
+    "addedTests": 0,
+    "changes": []
+  },
+  {
+    "path": "ui/tests/guarantorPropagation.test.tsx",
+    "originalTests": 22,
+    "addedTests": 0,
+    "changes": []
+  },
+  {
+    "path": "ui/tests/guarantorSearchScreens.test.tsx",
+    "originalTests": 13,
+    "addedTests": 0,
+    "changes": []
+  },
+  {
+    "path": "ui/tests/patientPhoneForm.test.tsx",
+    "originalTests": 16,
+    "addedTests": 0,
+    "changes": []
+  },
+  {
+    "path": "ui/tests/patientRegistration.test.tsx",
+    "originalTests": 20,
+    "addedTests": 0,
+    "changes": []
+  },
+  {
+    "path": "ui/tests/patientRegistrationEndpoint.test.tsx",
+    "originalTests": 4,
+    "addedTests": 0,
+    "changes": []
+  }
+]

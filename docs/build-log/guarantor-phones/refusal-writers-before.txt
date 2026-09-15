@@ -1,0 +1,44 @@
+./mcp/tests/commsApi.test.ts:2655:    fixture.patients[0].extension = [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }];
+./mcp/tests/commsApi.test.ts:2671:    fixture.patients[0].extension = [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }];
+./data/canonical-extensions/odos-no-textable-number.json:3:  "id": "odos-no-textable-number",
+./data/canonical-extensions/odos-no-textable-number.json:4:  "url": "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number",
+./data/canonical-extensions/odos-no-textable-number.json:41:        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number"
+./mcp/tests/helpers/guarantor-reader-fixture.ts:6:import { ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, ODOS_TEXTABLE_NUMBER_EXTENSION_URL } from "../../src/clinic/patient-telecom.js";
+./mcp/tests/helpers/guarantor-reader-fixture.ts:44:      ...(id === "r1" ? [{ url: ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, valueBoolean: true }] : []),
+./data/canonical-extensions/registry.json:1002:      "url": "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number",
+./ui/src/lib/patient-registration.ts:4:import { applyPatientTextableAnswer, createPatientPhone, validatePatientPhones, ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, ODOS_TEXTABLE_NUMBER_EXTENSION_URL } from "../../../mcp/src/clinic/patient-telecom";
+./ui/src/lib/patient-registration.ts:109:    textable: patient.extension?.some(entry => entry.url === ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL && entry.valueBoolean === true)
+./mcp/tests/commsProfileBindings.test.ts:39:  const definition = read<StructureDefinition>("canonical-extensions/odos-no-textable-number.json");
+./mcp/src/clinic/patient-telecom.ts:2:import noTextableNumber from "../../../data/canonical-extensions/odos-no-textable-number.json" with { type: "json" };
+./mcp/src/clinic/patient-telecom.ts:5:export const ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL = noTextableNumber.url;
+./mcp/src/clinic/patient-telecom.ts:42:  const otherExtensions = patient.extension?.filter(e => e.url !== ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL);
+./mcp/src/clinic/patient-telecom.ts:44:    return { ...patient, extension: [...(otherExtensions ?? []), { url: ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, valueBoolean: true }] };
+./mcp/src/comms/suppression-gate.ts:17:export const ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL =
+./mcp/src/comms/suppression-gate.ts:18:  "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number";
+./mcp/src/comms/suppression-gate.ts:820:  return resource.extension?.some((entry) => entry.url === ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL && entry.valueBoolean === true) ?? false;
+./mcp/tests/commsSuppression.test.ts:12:  ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL,
+./mcp/tests/commsSuppression.test.ts:1066:const NO_TEXTABLE_NUMBER = "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number";
+./mcp/tests/commsSuppression.test.ts:1069:  return patient({ telecom, extension: [{ url: NO_TEXTABLE_NUMBER, valueBoolean: true }] });
+./mcp/tests/commsSuppression.test.ts:1136:    subject.extension = [{ url: ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, ...(value === undefined ? {} : { valueBoolean: value }) }];
+./mcp/tests/patientRegistrationAuthz.test.ts:24:import { ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, ODOS_TEXTABLE_NUMBER_EXTENSION_URL } from "../src/comms/suppression-gate.js";
+./mcp/tests/patientRegistrationAuthz.test.ts:64:      refusal: p.extension?.filter(e => e.url === ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL) ?? [],
+./mcp/tests/commsConfig.test.ts:795:  const subject: Patient = { resourceType: "Patient", id: "synthetic-1", telecom: [{ system: "phone", use: "mobile", value: "+12025550101" }], extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }] };
+./mcp/tests/commsConfig.test.ts:808:  const subject: Patient = { resourceType: "Patient", telecom: [{ system: "phone", use: "mobile", value: "+12025550101" }], extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }] };
+./mcp/tests/commsConfig.test.ts:833:  const subject: Patient = { resourceType: "Patient", id: "synthetic-1", extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }] };
+./mcp/tests/commsConfig.test.ts:849:      extension: refusal ? [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number", valueBoolean: true }] : [],
+./ui/tests/patientPhoneForm.test.tsx:10:import { effectiveCommsPreferences, ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, ODOS_TEXTABLE_NUMBER_EXTENSION_URL, resolveSmsHistoryNumber, resolveSmsNumber, resolveVoiceNumber } from "../../mcp/src/comms/suppression-gate";
+./ui/tests/patientPhoneForm.test.tsx:15:const refusal = (patient: Patient) => patient.extension?.filter(e => e.url === ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL) ?? [];
+./ui/tests/patientPhoneForm.test.tsx:18:  const unrelated = (patient: Patient) => patient.extension?.filter(e => e.url !== ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL);
+./ui/tests/patientPhoneForm.test.tsx:143:  assert.deepEqual(refusal(saved), [{ url: ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, valueBoolean: true }]);
+./ui/tests/fixtures/patient-telecom.ts:2:import { buildCommsOptOutExtension, ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, ODOS_TEXTABLE_NUMBER_EXTENSION_URL } from "../../../mcp/src/comms/suppression-gate";
+./ui/tests/fixtures/patient-telecom.ts:7:export const REFUSAL_MARKER = { url: ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, valueBoolean: true };
+./docs/build-log/item1a-textable-marker.md:10:- `data/canonical-extensions/odos-no-textable-number.json` and `registry.json`: singular Patient marker with required boolean fixed true.
+./docs/build-log/item1a-textable-marker.md:69:created https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number (382cffc7-4e86-4d13-ad5d-0be0d6d65df6)
+./docs/build-log/item1bi-textable-number/voice-parity.mjs:18: const resource={resourceType:'Patient',telecom:[{...point,extension:[{url:current.ODOS_TEXTABLE_NUMBER_EXTENSION_URL??'https://odos2020.com/fhir/StructureDefinition/odos-textable-number',valueBoolean:mark}]},{system:'phone',use:'mobile',value:'+12025550102'},{system:'sms',value:'+12025550103'}],extension:refusal?[{url:current.ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL,valueBoolean:true}]:[]};
+./docs/build-log/item1bii-phone-form/browser/results.json:539:              "url": "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number",
+./docs/build-log/item1bii-phone-form/browser/results.json:658:            "url": "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number",
+./docs/build-log/item1bii-phone-form/mutations.py:27:    ("K8", SHARED, 'const otherExtensions = patient.extension?.filter(e => e.url !== ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL);', 'const otherExtensions = patient.extension;', "Leave the Patient refusal when choosing a phone"),
+./docs/build-log/item1bii-phone-form/guard-results.json:342:    "original": "const otherExtensions = patient.extension?.filter(e => e.url !== ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL);",
+./docs/build-log/item1bii-phone-form/capture.ts:11:import { effectiveCommsPreferences, ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, ODOS_TEXTABLE_NUMBER_EXTENSION_URL, resolveSmsHistoryNumber, resolveSmsNumber, resolveVoiceNumber } from "../../../mcp/src/comms/suppression-gate.js";
+./docs/build-log/item1bii-phone-form/capture.ts:112:    const unrelated = (p: Patient) => p.extension?.filter(e => e.url !== ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL);
+./docs/build-log/item1bii-phone-form/capture.ts:154:  assert.equal(patient.extension?.some(e => e.url === ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL), false);

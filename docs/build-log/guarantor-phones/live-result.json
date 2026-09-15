@@ -1,0 +1,791 @@
+{
+  "route": "/clinic?patientId=6818f583-dfe1-4023-a1b6-707ff3425123",
+  "initial": {
+    "resources": [
+      {
+        "resourceType": "Person",
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Phone Parent"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "value": "864-555-0101"
+          },
+          {
+            "system": "phone",
+            "use": "mobile",
+            "value": "864-555-0102",
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                "valueBoolean": true
+              }
+            ]
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Synthetic Town",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/a11ca394-7203-4c00-b5d2-1e99a47c6bca"
+            },
+            "assurance": "level2"
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/76477987-838d-4102-8cdf-3a72b495eb79"
+            },
+            "assurance": "level2"
+          }
+        ],
+        "meta": {
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "versionId": "1af953c6-e209-4924-928e-d13a8fe9208c",
+          "lastUpdated": "2026-09-15T14:35:17.853Z",
+          "author": {
+            "reference": "Practitioner/efae6932-154e-48b9-9148-afbed11fe87d",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        },
+        "id": "e4d767c0-2ea9-4ffc-9e2e-e9228e7c44e9"
+      },
+      {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/6818f583-dfe1-4023-a1b6-707ff3425123"
+        },
+        "relationship": [
+          {
+            "text": "Parent"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic custody sentinel"
+          }
+        ],
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Phone Parent"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "value": "864-555-0101"
+          },
+          {
+            "system": "phone",
+            "use": "mobile",
+            "value": "864-555-0102",
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                "valueBoolean": true
+              }
+            ]
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Synthetic Town",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "meta": {
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "versionId": "724f1450-26d8-4090-aee2-96e36bae69e2",
+          "lastUpdated": "2026-09-15T14:35:17.391Z",
+          "author": {
+            "reference": "Practitioner/efae6932-154e-48b9-9148-afbed11fe87d",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            },
+            {
+              "reference": "Patient/6818f583-dfe1-4023-a1b6-707ff3425123"
+            }
+          ]
+        },
+        "id": "a11ca394-7203-4c00-b5d2-1e99a47c6bca"
+      },
+      {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/e7afdf33-bb50-4785-a783-410e046e6cf0"
+        },
+        "relationship": [
+          {
+            "text": "Parent"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic custody sentinel"
+          }
+        ],
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Phone Parent"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "value": "864-555-0101"
+          },
+          {
+            "system": "phone",
+            "use": "mobile",
+            "value": "864-555-0102",
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                "valueBoolean": true
+              }
+            ]
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Synthetic Town",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "meta": {
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "versionId": "6d205ee8-b089-4fea-8aae-a725cbbd8936",
+          "lastUpdated": "2026-09-15T14:35:18.043Z",
+          "author": {
+            "reference": "Practitioner/efae6932-154e-48b9-9148-afbed11fe87d",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            },
+            {
+              "reference": "Patient/e7afdf33-bb50-4785-a783-410e046e6cf0"
+            }
+          ]
+        },
+        "id": "76477987-838d-4102-8cdf-3a72b495eb79"
+      }
+    ],
+    "refusals": [
+      false,
+      false,
+      false
+    ],
+    "sms": [
+      "864-555-0102",
+      "864-555-0102"
+    ]
+  },
+  "neither": {
+    "resources": [
+      {
+        "resourceType": "Person",
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Phone Parent"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "value": "864-555-0101"
+          },
+          {
+            "system": "phone",
+            "use": "mobile",
+            "value": "864-555-0102",
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                "valueBoolean": true
+              }
+            ]
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Synthetic Town",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/a11ca394-7203-4c00-b5d2-1e99a47c6bca"
+            },
+            "assurance": "level2"
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/76477987-838d-4102-8cdf-3a72b495eb79"
+            },
+            "assurance": "level2"
+          }
+        ],
+        "meta": {
+          "versionId": "198b01f2-1b54-4293-971a-9623ca2497d2",
+          "lastUpdated": "2026-09-15T14:35:24.320Z",
+          "author": {
+            "reference": "Practitioner/ba4f31b7-83ef-4c86-9193-f9e657542628",
+            "display": "ODOS EXAMPLEV"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        },
+        "id": "e4d767c0-2ea9-4ffc-9e2e-e9228e7c44e9",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number",
+            "valueBoolean": true
+          }
+        ]
+      },
+      {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/6818f583-dfe1-4023-a1b6-707ff3425123"
+        },
+        "relationship": [
+          {
+            "text": "Parent"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic custody sentinel"
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number",
+            "valueBoolean": true
+          }
+        ],
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Phone Parent"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "value": "864-555-0101"
+          },
+          {
+            "system": "phone",
+            "use": "mobile",
+            "value": "864-555-0102",
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                "valueBoolean": true
+              }
+            ]
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Synthetic Town",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "meta": {
+          "versionId": "44d2a6b6-b3b7-4e22-be1d-f7741003508b",
+          "lastUpdated": "2026-09-15T14:35:24.343Z",
+          "author": {
+            "reference": "Practitioner/ba4f31b7-83ef-4c86-9193-f9e657542628",
+            "display": "ODOS EXAMPLEV"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            },
+            {
+              "reference": "Patient/6818f583-dfe1-4023-a1b6-707ff3425123"
+            }
+          ]
+        },
+        "id": "a11ca394-7203-4c00-b5d2-1e99a47c6bca"
+      },
+      {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/e7afdf33-bb50-4785-a783-410e046e6cf0"
+        },
+        "relationship": [
+          {
+            "text": "Parent"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic custody sentinel"
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number",
+            "valueBoolean": true
+          }
+        ],
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Phone Parent"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "value": "864-555-0101"
+          },
+          {
+            "system": "phone",
+            "use": "mobile",
+            "value": "864-555-0102",
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                "valueBoolean": true
+              }
+            ]
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Synthetic Town",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "meta": {
+          "versionId": "42bd2fcd-206d-4b72-bab7-77eeb13a086e",
+          "lastUpdated": "2026-09-15T14:35:24.363Z",
+          "author": {
+            "reference": "Practitioner/ba4f31b7-83ef-4c86-9193-f9e657542628",
+            "display": "ODOS EXAMPLEV"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            },
+            {
+              "reference": "Patient/e7afdf33-bb50-4785-a783-410e046e6cf0"
+            }
+          ]
+        },
+        "id": "76477987-838d-4102-8cdf-3a72b495eb79"
+      }
+    ],
+    "refusals": [
+      true,
+      true,
+      true
+    ],
+    "sms": [
+      null,
+      null
+    ]
+  },
+  "restored": {
+    "resources": [
+      {
+        "resourceType": "Person",
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Phone Parent"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "value": "864-555-0101"
+          },
+          {
+            "system": "phone",
+            "use": "mobile",
+            "value": "864-555-0102",
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                "valueBoolean": true
+              }
+            ]
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Synthetic Town",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "link": [
+          {
+            "target": {
+              "reference": "RelatedPerson/a11ca394-7203-4c00-b5d2-1e99a47c6bca"
+            },
+            "assurance": "level2"
+          },
+          {
+            "target": {
+              "reference": "RelatedPerson/76477987-838d-4102-8cdf-3a72b495eb79"
+            },
+            "assurance": "level2"
+          }
+        ],
+        "meta": {
+          "versionId": "fd8e4619-837b-4d24-8a9b-cda883315604",
+          "lastUpdated": "2026-09-15T14:35:24.661Z",
+          "author": {
+            "reference": "Practitioner/ba4f31b7-83ef-4c86-9193-f9e657542628",
+            "display": "ODOS EXAMPLEV"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            }
+          ]
+        },
+        "id": "e4d767c0-2ea9-4ffc-9e2e-e9228e7c44e9"
+      },
+      {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/6818f583-dfe1-4023-a1b6-707ff3425123"
+        },
+        "relationship": [
+          {
+            "text": "Parent"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic custody sentinel"
+          }
+        ],
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Phone Parent"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "value": "864-555-0101"
+          },
+          {
+            "system": "phone",
+            "use": "mobile",
+            "value": "864-555-0102",
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                "valueBoolean": true
+              }
+            ]
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Synthetic Town",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "meta": {
+          "versionId": "8520cf53-a1f6-4f13-9584-f0718653b0de",
+          "lastUpdated": "2026-09-15T14:35:24.682Z",
+          "author": {
+            "reference": "Practitioner/ba4f31b7-83ef-4c86-9193-f9e657542628",
+            "display": "ODOS EXAMPLEV"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            },
+            {
+              "reference": "Patient/6818f583-dfe1-4023-a1b6-707ff3425123"
+            }
+          ]
+        },
+        "id": "a11ca394-7203-4c00-b5d2-1e99a47c6bca"
+      },
+      {
+        "resourceType": "RelatedPerson",
+        "active": true,
+        "patient": {
+          "reference": "Patient/e7afdf33-bb50-4785-a783-410e046e6cf0"
+        },
+        "relationship": [
+          {
+            "text": "Parent"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+            "valueBoolean": true
+          },
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+            "valueString": "Synthetic custody sentinel"
+          }
+        ],
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "Phone Parent"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "home",
+            "value": "864-555-0101"
+          },
+          {
+            "system": "phone",
+            "use": "mobile",
+            "value": "864-555-0102",
+            "extension": [
+              {
+                "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+                "valueBoolean": true
+              }
+            ]
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "1 Synthetic Way"
+            ],
+            "city": "Synthetic Town",
+            "state": "SC",
+            "postalCode": "29601"
+          }
+        ],
+        "meta": {
+          "versionId": "415b3483-411e-470a-82f6-ef9d2fad1f7f",
+          "lastUpdated": "2026-09-15T14:35:24.705Z",
+          "author": {
+            "reference": "Practitioner/ba4f31b7-83ef-4c86-9193-f9e657542628",
+            "display": "ODOS EXAMPLEV"
+          },
+          "project": "b185e3e5-4179-4072-96fe-ea27c36cdb97",
+          "compartment": [
+            {
+              "reference": "Project/b185e3e5-4179-4072-96fe-ea27c36cdb97"
+            },
+            {
+              "reference": "Patient/e7afdf33-bb50-4785-a783-410e046e6cf0"
+            }
+          ]
+        },
+        "id": "76477987-838d-4102-8cdf-3a72b495eb79"
+      }
+    ],
+    "refusals": [
+      false,
+      false,
+      false
+    ],
+    "sms": [
+      "864-555-0102",
+      "864-555-0102"
+    ]
+  },
+  "pageErrors": [],
+  "registrationStatus": [
+    201,
+    201
+  ],
+  "siblingAttach": [
+    {
+      "relatedPersonId": "76477987-838d-4102-8cdf-3a72b495eb79",
+      "personId": "e4d767c0-2ea9-4ffc-9e2e-e9228e7c44e9",
+      "taskId": "672a2db0-d3f7-4a9c-a758-1c77b2439ce0",
+      "status": "linked",
+      "message": "Guarantor linked."
+    }
+  ],
+  "limits": "Real route modules and Medplum policies; ancillary communications preferences and clinical-graph services are not provisioned. SMS selection executes the shipped resolver; no SMS is sent."
+}
