@@ -3,7 +3,7 @@
   "projectCount": 2,
   "projects": [
     {
-      "project": "project-1",
+      "project": "project-2",
       "responsibleParties": {
         "total": 5,
         "ownedByOnePerson": 1,
@@ -54,7 +54,7 @@
       "crossProject": 0
     },
     {
-      "project": "project-2",
+      "project": "project-1",
       "responsibleParties": {
         "total": 1,
         "ownedByOnePerson": 1,
