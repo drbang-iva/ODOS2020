@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: T9 guardian refusal prevents SMS and the marked Phone 2 controls delivery
+ok 1 - T9 guardian refusal prevents SMS and the marked Phone 2 controls delivery
+  ---
+  duration_ms: 18.643
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 184.187875

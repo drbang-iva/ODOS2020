@@ -1,3 +1,6 @@
+import { PhoneFields } from "./PhoneFields";
+import { applyPhoneDraft, phoneDraft, telecomSnapshot, validatePatientPhones } from "../../../../mcp/src/clinic/patient-telecom";
+import { projectResponsiblePartyDemographics, type ResponsiblePartyDemographics } from "../../../../mcp/src/clinic/responsible-party-demographics";
 import { useEffect, useState } from "react";
 import type { Person } from "@medplum/fhirtypes";
 import {
@@ -10,8 +13,8 @@ import { GuarantorLinkScreens } from "./GuarantorLinkScreens";
 
 const writeStatusMessages = { stopped: "not updated — the guarantor changed or a link operation is pending", updated: "update accepted", conflict: "record changed while you were editing", error: "update failed", "no-response": "update response not received" };
 
-type Demographics = Pick<Person, "name" | "telecom" | "address">;
-const demographics = (person: Person): Demographics => structuredClone({ name: person.name, telecom: person.telecom, address: person.address });
+type Demographics = ResponsiblePartyDemographics;
+const demographics = projectResponsiblePartyDemographics;
 const displayName = (person: Demographics) => person.name?.[0]?.text || [...(person.name?.[0]?.given ?? []), person.name?.[0]?.family].filter(Boolean).join(" ") || "Unnamed responsible party";
 
 export function ResponsiblePartiesControl({ patientId }: { patientId: string }) {
@@ -37,19 +40,21 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
   const [loaded, setLoaded] = useState(initial);
   const [draft, setDraft] = useState<Demographics>(() => initial.kind === "editable" ? demographics(initial.snapshot.person) : {});
   const [result, setResult] = useState(initial.kind === "editable" ? initial.verification : undefined);
-  const [editedContacts, setEditedContacts] = useState<Set<number>>(() => new Set());
+  const initialPhoneState = () => { const person: Person = initial.kind === "editable" ? initial.snapshot.person : { resourceType: "Person" }; const now = new Date().toISOString(); return { draft: phoneDraft(person, now), snapshot: telecomSnapshot(person, now) }; };
+  const [phoneState, setPhoneState] = useState(initialPhoneState);
+  const resetPhones = (person: Person) => { const now = new Date().toISOString(); setPhoneState({ draft: phoneDraft(person, now), snapshot: telecomSnapshot(person, now) }); };
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string>();
   const [correctionReason, setCorrectionReason] = useState("");
   const editable = loaded.kind === "editable";
-  const dirty = editable && JSON.stringify(draft) !== JSON.stringify(demographics(loaded.snapshot.person));
+  const dirty = editable && (JSON.stringify(draft) !== JSON.stringify(demographics(loaded.snapshot.person)) || JSON.stringify(phoneState.draft) !== JSON.stringify(phoneDraft(loaded.snapshot.person, phoneState.snapshot.now)));
   const refresh = async () => {
     const next = await loadGuarantor(loaded.relatedPerson.id!);
     const loadedTaskId = loaded.kind === "pending" ? loaded.operation.task.id : undefined;
     const nextTaskId = next.kind === "pending" ? next.operation.task.id : undefined;
     if (loadedTaskId !== nextTaskId) setCorrectionReason("");
     setLoaded(next);
-    setEditedContacts(new Set());
+    resetPhones(next.kind === "editable" ? next.snapshot.person : { resourceType: "Person" });
     setDraft(next.kind === "editable" ? demographics(next.snapshot.person) : {});
     setResult(next.kind === "editable" ? next.verification : undefined);
   };
@@ -58,7 +63,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
     setBusy(true);
     setNotice(undefined);
     try {
-      const next = repair ? await repairGuarantor(loaded.snapshot) : await saveGuarantor(loaded.snapshot, { ...draft, telecom: draft.telecom?.filter((contact, index) => !editedContacts.has(index) || Boolean(contact.value?.trim())) });
+      const next = repair ? await repairGuarantor(loaded.snapshot) : await saveGuarantor(loaded.snapshot, applyPhoneDraft({ ...draft, resourceType: "Person" }, phoneState.draft, phoneState.snapshot));
       setResult(next);
       setNotice(next.message);
       if (next.status === "superseded") {
@@ -68,7 +73,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
         setLoaded({ ...loaded, snapshot: next.snapshot });
         if (repair || next.status === "saved" || next.status === "unchanged" || next.status === "partial") {
           setDraft(demographics(next.snapshot.person));
-          setEditedContacts(new Set());
+          resetPhones(next.snapshot.person);
         }
       }
     } catch (cause) {
@@ -122,7 +127,6 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
     </section>;
   }
   const names = draft.name?.length ? draft.name : [{}];
-  const telecom = draft.telecom?.length ? draft.telecom : [{ system: "phone" as const }];
   const addresses = draft.address?.length ? draft.address : [{}];
   const mismatched = result?.children.filter(child => child.classification === "mismatched") ?? [];
   return <section className="grid gap-3 rounded border border-[var(--odos-line)] p-3" aria-label={displayName(loaded.snapshot.person)}>
@@ -133,7 +137,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
         <Field label={`Family name ${index + 1}`} value={name.family ?? ""} change={value => setDraft({ ...draft, name: names.map((entry, i) => i === index ? { ...entry, family: value || undefined } : entry) })} />
         {name.text !== undefined && <Field label={`Display name ${index + 1}`} value={name.text} change={value => setDraft({ ...draft, name: names.map((entry, i) => i === index ? { ...entry, text: value || undefined } : entry) })} />}
       </div>)}
-      {telecom.map((contact, index) => <Field key={`contact-${index}`} label={`${contact.system === "phone" ? "Phone" : contact.system ?? "Contact"} ${index + 1}${contact.use ? ` (${contact.use})` : ""}`} value={contact.value ?? ""} change={value => { setEditedContacts(previous => new Set([...previous, index])); setDraft({ ...draft, telecom: telecom.map((entry, i) => i === index ? { ...entry, value } : entry) }); }} />)}
+      <div className="grid gap-3 sm:col-span-2"><PhoneFields draft={phoneState.draft} errors={validatePatientPhones(phoneState.draft.phones, phoneState.draft.textable)} onChange={draft => setPhoneState({ ...phoneState, draft })} /></div>
       {addresses.map((address, index) => <div key={`address-${index}`} className="grid gap-2">
         {(address.line?.length ? address.line : [""]).map((line, lineIndex) => <Field key={lineIndex} label={`Address ${index + 1} line ${lineIndex + 1}`} value={line} change={value => setDraft({ ...draft, address: addresses.map((entry, i) => i === index ? { ...entry, text: undefined, line: (entry.line?.length ? entry.line : [""]).map((old, j) => j === lineIndex ? value : old) } : entry) })} />)}
         {(["city", "state", "postalCode", "country"] as const).map(key => <Field key={key} label={`${key === "postalCode" ? "Postal code" : key[0].toUpperCase() + key.slice(1)} ${index + 1}`} value={address[key] ?? ""} change={value => setDraft({ ...draft, address: addresses.map((entry, i) => i === index ? { ...entry, text: undefined, [key]: value || undefined } : entry) })} />)}

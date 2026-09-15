@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: T5 consolidate projects refusal=true and correction restores the required snapshot
+ok 1 - T5 consolidate projects refusal=true and correction restores the required snapshot
+  ---
+  duration_ms: 17.656459
+  type: 'test'
+  ...
+# Subtest: T5 consolidate projects refusal=false and correction restores the required snapshot
+ok 2 - T5 consolidate projects refusal=false and correction restores the required snapshot
+  ---
+  duration_ms: 8.508333
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 141.234834

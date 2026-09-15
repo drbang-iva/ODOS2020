@@ -1,7 +1,7 @@
 import type { CommunicationPreferencesInput } from "./communications-client";
 import type { Patient } from "@medplum/fhirtypes";
-import type { PatientDraftPhone, PatientPhoneUse, PatientTelecomSnapshot, PatientTextableAnswer } from "../../../mcp/src/clinic/patient-telecom";
-import { applyPatientTextableAnswer, createPatientPhone, validatePatientPhones, ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, ODOS_TEXTABLE_NUMBER_EXTENSION_URL } from "../../../mcp/src/clinic/patient-telecom";
+import type { PatientDraftPhone, PatientTelecomSnapshot, PatientTextableAnswer } from "../../../mcp/src/clinic/patient-telecom";
+import { applyPhoneDraft, emptyPatientPhone, phoneDraft, telecomSnapshot, validatePatientPhones } from "../../../mcp/src/clinic/patient-telecom";
 import { fhir } from "./fhir";
 import { emptySubscriber, subscriberFromPatient } from "./patient-insurance";
 import {
@@ -76,66 +76,9 @@ export function patientDemographicsFromPatient(patient: Patient, now = new Date(
   return {
     ...subscriber,
     preferredName: preferred?.given?.join(" ") ?? "",
-    ...patientPhoneDraft(patient, now),
+    ...phoneDraft(patient, now),
     email: email?.value ?? "",
   };
-}
-
-function emptyPatientPhone(): PatientDraftPhone {
-  return { value: "", use: "mobile", sourceIndex: null };
-}
-
-function patientPhoneDraft(patient: Patient, now: string): Pick<PatientDemographicsDraft, "phones" | "textable"> {
-  const time = Date.parse(now);
-  const marked = (point: NonNullable<Patient["telecom"]>[number]) => point.extension?.some(
-    entry => entry.url === ODOS_TEXTABLE_NUMBER_EXTENSION_URL && entry.valueBoolean === true,
-  ) ?? false;
-  const priority = (point: NonNullable<Patient["telecom"]>[number]) => marked(point) ? 0 : point.system === "sms" ? 1 : point.use === "mobile" ? 2 : 3;
-  const candidates = (patient.telecom ?? []).map((point, sourceIndex) => ({ point, sourceIndex })).filter(({ point }) =>
-    (point.system === "sms" || point.system === "phone")
-    && point.use !== "old"
-    && Boolean(point.value?.trim())
-    && (!point.period?.start || Date.parse(point.period.start) <= time)
-    && (!point.period?.end || Date.parse(point.period.end) > time))
-    .sort((a, b) => priority(a.point) - priority(b.point) || a.sourceIndex - b.sourceIndex);
-  const slot = (index: number): PatientDraftPhone => {
-    const candidate = candidates[index];
-    if (!candidate) return emptyPatientPhone();
-    const { point, sourceIndex } = candidate;
-    return { value: point.value!, use: point.use === "mobile" || point.use === "home" || point.use === "work" ? point.use : "other", sourceIndex };
-  };
-  return {
-    phones: [slot(0), slot(1)],
-    textable: patient.extension?.some(entry => entry.url === ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL && entry.valueBoolean === true)
-      ? "neither" : candidates[0] && marked(candidates[0].point) ? "phone1" : candidates[1] && marked(candidates[1].point) ? "phone2" : "",
-  };
-}
-
-function freezeTelecomValue<T>(value: T): T {
-  if (value !== null && typeof value === "object") {
-    Object.values(value).forEach(freezeTelecomValue);
-    Object.freeze(value);
-  }
-  return value;
-}
-
-// ContactPoints contain FHIR JSON values; compare their structure without depending on key order.
-function equalTelecomValue(left: unknown, right: unknown): boolean {
-  if (Object.is(left, right)) return true;
-  if (left === null || right === null || typeof left !== "object" || typeof right !== "object") return false;
-  if (Object.getPrototypeOf(left) !== Object.getPrototypeOf(right)) return false;
-  if (Array.isArray(left) && left.length !== (right as unknown[]).length) return false;
-  const keys = Object.keys(left);
-  return keys.length === Object.keys(right).length && keys.every(key =>
-    Object.hasOwn(right, key) && equalTelecomValue((left as Record<string, unknown>)[key], (right as Record<string, unknown>)[key]));
-}
-
-export function patientTelecomSnapshot(patient: Patient, now: string): PatientTelecomSnapshot {
-  return Object.freeze({
-    now,
-    loadedTextable: patientPhoneDraft(patient, now).textable,
-    entries: freezeTelecomValue(structuredClone(patient.telecom ?? [])),
-  });
 }
 
 export function validatePatientDemographics(draft: PatientDemographicsDraft): Record<string, string> {
@@ -189,34 +132,10 @@ export function buildPatientResource(draft: PatientDemographicsDraft, existing?:
     });
   }
 
-  const phoneEntries = new Map<PatientDraftPhone, NonNullable<Patient["telecom"]>[number]>();
-  for (const slot of draft.phones) {
-    if (slot.sourceIndex === null) continue;
-    const original = snapshot?.entries[slot.sourceIndex];
-    const held = existing?.telecom?.[slot.sourceIndex];
-    if (!original || !held || !equalTelecomValue(held, original)) {
-      throw new Error("Contact information changed on the server. Reload before saving.");
-    }
-  }
-  let telecom = (existing?.telecom ?? []).flatMap((point, index) => {
-    const slot = draft.phones.find(phone => phone.sourceIndex === index);
-    if (!slot) return [point];
-    if (!slot.value.trim()) return [];
-    const original = snapshot!.entries[index];
-    const useChanged = slot.use !== "other" && slot.use !== original.use;
-    const changed = slot.value !== original.value || useChanged;
-    const entry = changed ? { ...point, value: slot.value.trim(), ...(useChanged ? { use: slot.use as PatientPhoneUse } : {}) } : point;
-    phoneEntries.set(slot, entry);
-    return [entry];
-  });
-  for (const slot of draft.phones) {
-    if (slot.sourceIndex !== null) continue;
-    const entry = createPatientPhone({ value: slot.value, use: slot.use as PatientPhoneUse });
-    if (entry) { telecom.push(entry); phoneEntries.set(slot, entry); }
-  }
-  telecom = replacePreferredTelecom(telecom, "email", draft.email.trim());
+  const phonePatient = applyPhoneDraft(existing ?? { resourceType: "Patient" }, draft, snapshot);
+  const telecom = replacePreferredTelecom(phonePatient.telecom ?? [], "email", draft.email.trim());
   let patient: Patient = {
-    ...(existing ?? {}),
+    ...phonePatient,
     resourceType: "Patient",
     name: names,
     birthDate: draft.birthDate,
@@ -224,10 +143,6 @@ export function buildPatientResource(draft: PatientDemographicsDraft, existing?:
     telecom: existing?.telecom === undefined && !telecom.length ? undefined : telecom,
     address: addresses,
   };
-  if (draft.textable !== (snapshot?.loadedTextable ?? "") && draft.textable) {
-    const answer = draft.textable === "neither" ? "neither" : phoneEntries.get(draft.phones[draft.textable === "phone1" ? 0 : 1])!;
-    patient = applyPatientTextableAnswer(patient, answer);
-  }
   return patient;
 }
 
@@ -398,7 +313,8 @@ function registrationResponsibleParties(
 }
 
 function registrationPartyPayload(party: ResponsiblePartyDraft) {
-  if (party.kind !== "existing") return party;
+  if (party.kind === "self") return party;
+  if (party.kind === "person") { return { ...party, phones: party.phones.map(({ value, use }) => ({ value, use })) }; }
   const { card: _card, previous: _previous, ...payload } = party;
   return payload;
 }
@@ -414,3 +330,5 @@ export function localCalendarDate(date = new Date()): string {
     String(date.getDate()).padStart(2, "0"),
   ].join("-");
 }
+
+export const patientTelecomSnapshot = (patient: Patient, now: string): PatientTelecomSnapshot => telecomSnapshot(patient, now);

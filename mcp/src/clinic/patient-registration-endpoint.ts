@@ -1,4 +1,4 @@
-import { buildResponsiblePartyDemographics, guarantorPersonIsAttachable, projectResponsiblePartyDemographics } from "./responsible-party-demographics.js";
+import { buildResponsiblePartyDemographics, guarantorPersonIsAttachable, applyResponsiblePartyDemographics } from "./responsible-party-demographics.js";
 import { resolvePractitionerReference } from "../authz/practitioner-reference.js";
 import { buildCommsConsent, communicationPreferencesInputSchema, parsePreferenceWriteInput } from "../comms/comms-preferences.js";
 import { replaceCommsPreferenceCells } from "../comms/suppression-gate.js";
@@ -55,9 +55,10 @@ const responsiblePartyDemographicFields = {
   firstName: z.string(), middleName: z.string(), lastName: z.string(), phone: z.string(),
   address: z.string(), city: z.string(), state: z.string(), postalCode: z.string(),
 };
+const { phone: _legacyPartyPhone, ...personDemographicFields } = responsiblePartyDemographicFields;
 const responsiblePartySchema = z.discriminatedUnion("kind", [
   z.object({ ...responsiblePartyFields, ...responsiblePartyDemographicFields, kind: z.literal("self") }).strict(),
-  z.object({ ...responsiblePartyFields, ...responsiblePartyDemographicFields, kind: z.literal("person") }).strict(),
+  z.object({ ...responsiblePartyFields, ...personDemographicFields, kind: z.literal("person"), phones: z.tuple([patientPhoneSchema, patientPhoneSchema]), textable: z.enum(["phone1", "phone2", "neither", ""]) }).strict(),
   z.object({ ...responsiblePartyFields, kind: z.literal("existing"), personId: idSchema }).strict(),
 ]);
 
@@ -124,7 +125,7 @@ export async function registerPatientFromDemographics(
   const projectId = registrationProjectId(staff.project);
   const existingPersons = await loadExistingGuarantors(input, staff, deps.serviceFhir, projectId);
   const resolvedInput = resolveExistingParties(input, existingPersons);
-  validateRegistration(resolvedInput, today);
+  validateRegistration(resolvedInput, today, new Set(existingPersons.keys()));
   const duplicates = await findExactDuplicates(deps.serviceFhir, projectId, input.demographics);
   if (duplicates.length > 0 && !input.confirmDuplicate) {
     return { status: 409, body: { kind: "duplicates", patients: duplicates } };
@@ -248,7 +249,8 @@ function resolveExistingParties(input: PatientRegistrationInput, persons: Map<st
         firstName: name?.given?.[0] ?? "",
         middleName: name?.given?.slice(1).join(" ") ?? "",
         lastName: name?.family ?? "",
-        phone: person.telecom?.find(contact => contact.system === "phone")?.value ?? "",
+        phones: [{ value: "", use: "mobile" }, { value: "", use: "mobile" }],
+        textable: "",
         address: address?.line?.join(" ") ?? "",
         city: address?.city ?? "",
         state: address?.state ?? "",
@@ -390,17 +392,17 @@ function buildPatientIdentityTransaction(
     const fullUrl = `urn:uuid:${randomUUID()}`;
     partyReferences.set(party.localId, fullUrl);
     if (party.kind === "existing") existingRelatedPersonEntryIndexes.set(party.localId, entries.length);
+    const source: Person = party.kind === "existing" ? existingPersons.get(party.localId)! : { resourceType: "Person", ...buildResponsiblePartyDemographics(party) };
     entries.push({
       fullUrl,
-      resource: registrationResourceInProject(buildRelatedPerson(party, patientFullUrl, today, existingPersons.get(party.localId)), projectId),
+      resource: registrationResourceInProject(buildRelatedPerson(party, patientFullUrl, today, source), projectId),
       request: { method: "POST", url: "RelatedPerson" },
     });
     if (party.kind === "person") {
       entries.push({
         fullUrl: `urn:uuid:${randomUUID()}`,
         resource: registrationResourceInProject<Person>({
-          resourceType: "Person",
-          ...buildResponsiblePartyDemographics(party),
+          ...source,
           link: [{ target: { reference: fullUrl }, assurance: "level2" }],
         }, projectId),
         request: { method: "POST", url: "Person" },
@@ -438,20 +440,19 @@ export function registrationResourceInProject<T extends Resource>(resource: T, p
   return { ...resource, meta: { ...resource.meta, project: projectId } };
 }
 
-function buildRelatedPerson(party: ResponsiblePartyInput, patientReference: string, today: string, existingPerson?: Person): RelatedPerson {
-  return {
+function buildRelatedPerson(party: Exclude<ResponsiblePartyInput, { kind: "self" }>, patientReference: string, today: string, source: Person): RelatedPerson {
+  return applyResponsiblePartyDemographics({
     resourceType: "RelatedPerson",
     active: responsiblePartyActiveOn(party, today),
     patient: { reference: patientReference },
     relationship: [{ text: party.relationship === "legal-guardian" ? "Legal guardian" : capitalize(party.relationship) }],
-    ...(party.kind === "existing" ? projectResponsiblePartyDemographics(existingPerson!) : buildResponsiblePartyDemographics(party)),
     period: responsiblePartyPeriod(party),
     extension: [
       { url: CONSENT_AUTHORITY_EXTENSION_URL, valueBoolean: party.consentAuthority },
       { url: RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL, valueBoolean: party.primary },
       ...(party.courtOrderNotes.trim() ? [{ url: COURT_ORDER_NOTES_EXTENSION_URL, valueString: party.courtOrderNotes.trim() }] : []),
     ],
-  };
+  }, source);
 }
 
 
@@ -479,7 +480,7 @@ export function registrationProjectId(project: Reference<Project>): string {
   return projectId;
 }
 
-function validateRegistration(input: PatientRegistrationInput, today: string): void {
+function validateRegistration(input: PatientRegistrationInput, today: string, existingIds: ReadonlySet<string>): void {
   const errors: string[] = [];
   if (!input.demographics.firstName.trim()) errors.push("Legal first name is required.");
   if (!input.demographics.lastName.trim()) errors.push("Legal last name is required.");
@@ -503,6 +504,7 @@ function validateRegistration(input: PatientRegistrationInput, today: string): v
     if (party.financialResponsible && (party.kind === "existing" || [party.address, party.city, party.state, party.postalCode].some((value) => !value.trim()))) errors.push("A guarantor mailing address is required.");
   }
   for (const party of relatedParties) {
+    if (!existingIds.has(party.localId)) errors.push(...Object.values(validatePatientPhones(party.phones, party.textable)));
     if (!party.firstName.trim() || !party.lastName.trim()) errors.push("Responsible-party name is required.");
     if (!isR4Date(party.effectiveDate)) errors.push("A valid responsible-party effective date is required.");
     if (party.endDate && !isR4Date(party.endDate)) errors.push("Responsible-party end date must be valid.");

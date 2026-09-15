@@ -17,7 +17,7 @@ const INPUT: PatientRegistrationInput = {
   },
   responsibleParties: [{
     localId: "guardian", kind: "person", relationship: "legal-guardian",
-    firstName: " Responsible ", middleName: " Middle ", lastName: " Synthetic ", phone: " 864-555-0101 ",
+    firstName: " Responsible ", middleName: " Middle ", lastName: " Synthetic ", phones: [{ value: " 864-555-0101 ", use: "home" }, { value: "", use: "mobile" }], textable: "",
     address: " 1 Synthetic Way ", city: " Greenville ", state: " SC ", postalCode: " 29601 ",
     financialResponsible: true, consentAuthority: true, primary: true,
     courtOrderNotes: "", effectiveDate: "2026-08-25", endDate: "",

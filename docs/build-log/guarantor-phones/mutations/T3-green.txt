@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: T3 real editor selecting a number clears refusal on both children
+ok 1 - T3 real editor selecting a number clears refusal on both children
+  ---
+  duration_ms: 29.490584
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 197.091875

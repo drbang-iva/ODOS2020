@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: T2 merge preserves every target role and operation extension
+ok 1 - T2 merge preserves every target role and operation extension
+  ---
+  duration_ms: 0.803791
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 102.981667

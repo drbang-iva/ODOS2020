@@ -1,4 +1,5 @@
 import type { Bundle, Person } from "@medplum/fhirtypes";
+import { validatePatientPhones } from "./patient-telecom.js";
 import { z } from "zod";
 import { FhirSearchLimitError, searchProjectAll } from "../fhir-search.js";
 import { staffHasBusinessAction } from "../authz/roles.js";
@@ -16,7 +17,7 @@ const keys = z.object({ lastName: z.string().trim().min(1), firstName: z.string(
   .refine(v => Boolean(v.firstName) !== (v.phone !== undefined))
   .refine(v => v.phone === undefined || searchPhoneDigits(v.phone).length >= 10);
 const createSchema = z.object({ firstName: z.string().trim().min(1), lastName: z.string().trim().min(1),
-  middleName: z.string().default(""), phone: z.string().default(""), address: z.string().default(""), city: z.string().default(""), state: z.string().default(""), postalCode: z.string().default("") }).strict();
+  middleName: z.string().default(""), phones: z.tuple([z.object({ value: z.string(), use: z.enum(["mobile", "home", "work"]) }).strict(), z.object({ value: z.string(), use: z.enum(["mobile", "home", "work"]) }).strict()]).default([{ value: "", use: "mobile" }, { value: "", use: "mobile" }]), textable: z.enum(["phone1", "phone2", "neither", ""]).default(""), address: z.string().default(""), city: z.string().default(""), state: z.string().default(""), postalCode: z.string().default("") }).strict();
 const tooMany = { status: 422, body: { error: "Too many matches; add a first name or phone." } };
 
 export async function handleGuarantorSearch(deps: GuarantorOperationDeps, staff: GuarantorOperationStaff, input: unknown): Promise<GuarantorOperationResult> {
@@ -46,6 +47,8 @@ export async function createGuarantor(deps: GuarantorOperationDeps, staff: Guara
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { status: 400, body: { error: "First and last name are required; guarantor details are invalid." } };
   if (!staff.project) return { status: 422, body: { error: "Staff practice is unavailable." } };
+  const errors = validatePatientPhones(parsed.data.phones, parsed.data.textable);
+  if (Object.keys(errors).length) return { status: 400, body: { error: Object.values(errors).join(" ") } };
   const person: Person = { resourceType: "Person", active: true, meta: { project: registrationProjectId(staff.project) }, ...buildResponsiblePartyDemographics(parsed.data) };
   const bundle: Bundle = { resourceType: "Bundle", type: "transaction", entry: [{ resource: person, request: { method: "POST", url: "Person" } }] };
   // fhir-service-write: Person

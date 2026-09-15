@@ -35,9 +35,9 @@ for (const name of Object.values(vocabularies)) {
   });
 }
 
-test("textable marker is Patient-only, singular, simple, and fixed true", () => {
+test("textable marker supports Patient Person and RelatedPerson, singular, simple, and fixed true", () => {
   const definition = read<StructureDefinition>("canonical-extensions/odos-no-textable-number.json");
-  assert.deepEqual(definition.context, [{ type: "element", expression: "Patient" }]);
+  assert.deepEqual(definition.context, ["Patient", "Person", "RelatedPerson"].map(expression => ({ type: "element", expression })));
   const elements = definition.differential!.element;
   assert.deepEqual(elements.find(element => element.path === "Extension"), { id: "Extension", path: "Extension", short: "No textable number reported", min: 0, max: "1" });
   assert.equal(elements.find(element => element.path === "Extension.extension")?.max, "0");

@@ -1,3 +1,4 @@
+import { emptyPatientPhone, validatePatientPhones, type PhoneDraft } from "../../../mcp/src/clinic/patient-telecom";
 import type { Patient } from "@medplum/fhirtypes";
 
 export const ODOS_MRN_SYSTEM = "https://odos2020.com/fhir/NamingSystem/odos-mrn";
@@ -32,8 +33,9 @@ interface ResponsiblePartyCommon {
 }
 
 export interface PersonResponsiblePartyDraft extends ResponsiblePartyCommon {
-  kind: "self" | "person";
-  firstName: string; middleName: string; lastName: string; phone: string;
+  kind: "person";
+  firstName: string; middleName: string; lastName: string;
+  phones: PhoneDraft["phones"]; textable: PhoneDraft["textable"];
   address: string; city: string; state: string; postalCode: string;
 }
 
@@ -44,9 +46,10 @@ export interface ExistingResponsiblePartyDraft extends ResponsiblePartyCommon {
   previous: PersonResponsiblePartyDraft;
 }
 
-export type ResponsiblePartyDraft = PersonResponsiblePartyDraft | ExistingResponsiblePartyDraft;
+export type SelfResponsiblePartyDraft = Omit<PersonResponsiblePartyDraft, "kind" | "phones" | "textable"> & { kind: "self"; phone: string };
+export type ResponsiblePartyDraft = SelfResponsiblePartyDraft | PersonResponsiblePartyDraft | ExistingResponsiblePartyDraft;
 
-export function emptySelfResponsibleParty(localId: string): PersonResponsiblePartyDraft {
+export function emptySelfResponsibleParty(localId: string): SelfResponsiblePartyDraft {
   return {
     localId,
     kind: "self",
@@ -72,9 +75,11 @@ export function emptyRelatedResponsibleParty(
   localId: string,
   today: string,
 ): PersonResponsiblePartyDraft {
+  const { phone: _phone, ...common } = emptySelfResponsibleParty(localId);
   return {
-    ...emptySelfResponsibleParty(localId),
+    ...common,
     kind: "person",
+    phones: [emptyPatientPhone(), emptyPatientPhone()], textable: "",
     relationship: "parent",
     financialResponsible: true,
     consentAuthority: true,
@@ -168,6 +173,7 @@ export function validateResponsibleParties(
       if (party.financialResponsible) activeFinancial += 1;
       return;
     }
+    if (party.kind === "person") Object.entries(validatePatientPhones(party.phones, party.textable)).forEach(([field, error]) => { errors[key(field)] = error; });
     if (party.kind === "person" && !party.firstName.trim()) errors[key("firstName")] = "First name is required.";
     if (party.kind === "person" && !party.lastName.trim()) errors[key("lastName")] = "Last name is required.";
     if (!party.relationship) errors[key("relationship")] = "Relationship is required.";

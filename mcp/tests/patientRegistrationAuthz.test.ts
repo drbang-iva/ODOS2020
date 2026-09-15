@@ -503,7 +503,8 @@ const REGISTRATION_BODY = {
     firstName: "Responsible",
     middleName: "",
     lastName: "Person",
-    phone: "864-555-0101",
+    phones: [{ value: "864-555-0101", use: "home" }, { value: "", use: "mobile" }],
+    textable: "",
     address: "1 Synthetic Way",
     city: "Greenville",
     state: "SC",
@@ -890,4 +891,35 @@ test("registration paper evidence and preference references share the Patient cr
   assert.equal(consent.performer?.[0].reference, patientEntry.fullUrl);
   assert.equal(consent.dateTime, "2026-08-24");
   assert.equal(readCommsPreferenceCells(patientEntry.resource as Patient)[0].evidence?.reference, consentEntry.fullUrl);
+});
+
+function guarantorPhoneBody(textable = 'neither') {
+  const party = REGISTRATION_BODY.responsibleParties[0];
+  return { ...REGISTRATION_BODY, responsibleParties: [{ ...party, phones: [{ value: '864-555-0101', use: 'home' }, { value: '864-555-0102', use: 'mobile' }], textable }] };
+}
+for (const lost of [false, true]) test(`T13 initial registration child refusal survives lost reply=${lost}`, async () => {
+  const fhir = new RegistrationFhir('staff');
+  fhir.dropCommittedTransactionResponse = lost;
+  const response = await postRegistration('staff', fhir, undefined, guarantorPhoneBody());
+  assert.equal(response.status, 201);
+  const initial = JSON.parse(JSON.stringify(fhir.transaction));
+  for (const type of ['Person', 'RelatedPerson']) {
+    const resource = initial.entry.find((e: any) => e.resource.resourceType === type).resource;
+    assert.equal(resource.extension?.some((e: any) => e.url === ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL && e.valueBoolean === true), true, `${type} initialRefusal`);
+    assert.deepEqual(resource.telecom.map((p: any) => p.use), ['home', 'mobile']);
+  }
+});
+test('T8 guardian blank selected Phone 2 refuses before all writes', async () => {
+  const fhir = new RegistrationFhir('staff');
+  const body = guarantorPhoneBody('phone2'); body.responsibleParties[0].phones[1].value = '';
+  assert.equal((await postRegistration('staff', fhir, undefined, body)).status, 400);
+  assert.equal(fhir.account, undefined); assert.equal(fhir.transaction, undefined);
+});
+test('T7 guardian marked Phone 2 survives registration and lost-reply recovery', async () => {
+  const fhir = new RegistrationFhir('staff'); fhir.dropCommittedTransactionResponse = true;
+  const response = await postRegistration('staff', fhir, undefined, guarantorPhoneBody('phone2'));
+  assert.equal(response.status, 201);
+  for (const entry of JSON.parse(JSON.stringify(fhir.transaction)).entry.filter((e: any) => ['Person', 'RelatedPerson'].includes(e.resource.resourceType))) {
+    assert.deepEqual(entry.resource.telecom.map((p: any) => p.extension?.some((e: any) => e.url === ODOS_TEXTABLE_NUMBER_EXTENSION_URL) ?? false), [false, true]);
+  }
 });

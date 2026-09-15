@@ -1,3 +1,4 @@
+import { PhoneFields } from "../components/patient/PhoneFields";
 import { useEffect, useState } from "react";
 import type { Patient } from "@medplum/fhirtypes";
 import { CommunicationPreferencesControl, communicationPreferencesInput, type CommunicationPreferencesDraft } from "../components/patient/CommunicationPreferencesControl";
@@ -225,7 +226,7 @@ function ResponsiblePartiesEditor({
                 <option value="spouse">Spouse</option>
                 <option value="other">Other</option>
               </select></label>
-              <ResponsibleInput label="Phone" value={party.phone} onChange={(value) => update(index, { phone: value })} />
+              <div className="grid gap-3 md:col-span-3"><PhoneFields draft={party} errors={Object.fromEntries(Object.entries(errors).filter(([key]) => key.startsWith(`responsibleParties.${index}.`)).map(([key, value]) => [key.slice(`responsibleParties.${index}.`.length), value]))} onChange={next => update(index, next)} /></div>
               <ResponsibleInput label="Mailing address" value={party.address} error={partyError(errors, index, "address")} onChange={(value) => update(index, { address: value })} />
               <ResponsibleInput label="City" value={party.city} error={partyError(errors, index, "city")} onChange={(value) => update(index, { city: value })} />
               <ResponsibleInput label="State" value={party.state} error={partyError(errors, index, "state")} onChange={(value) => update(index, { state: value })} />
@@ -269,14 +270,14 @@ function ExistingGuarantorOffer({ party, onSelect }: { party: PersonResponsibleP
   useEffect(() => {
     const lastName = party.lastName.trim();
     const firstName = party.firstName.trim();
-    const phone = party.phone.trim();
+    const phone = party.phones[0].value.trim();
     if (!lastName || (!firstName && phone.replace(/\D/g, "").length < 10)) { setCards(undefined); setError(undefined); return; }
     let active = true;
     setCards(undefined);
     setError(undefined);
     void searchGuarantors({ lastName, ...(firstName ? { firstName } : { phone }) }).then(found => { if (active) setCards(found); }).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : "Existing guarantors could not be checked."); });
     return () => { active = false; };
-  }, [party.lastName, party.firstName, party.phone]);
+  }, [party.lastName, party.firstName, party.phones[0].value]);
   if (!cards?.length && !error) return null;
   return <section aria-label="Already on file" className="grid gap-2 rounded border border-blue-300/30 p-3"><strong>Already on file?</strong>{error ? <p role="status">{error}</p> : <ul>{cards!.map(card => <li key={card.personId} className="grid gap-1 border-t border-[color:var(--odos-line)] py-2"><span>{card.name}</span><span>{card.phones.join(" · ") || "No phone recorded"}</span><span>{card.city} {card.postalCode}</span><button type="button" className="w-fit rounded border border-blue-300/30 px-3 py-2 text-sm" onClick={() => onSelect(card)}>Use {card.name}</button></li>)}</ul>}</section>;
 }

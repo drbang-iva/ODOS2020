@@ -1,0 +1,698 @@
+[
+  {
+    "guard": "T1",
+    "file": "mcp/src/clinic/patient-telecom.ts",
+    "original": "const extensions = point.extension?.filter(e => e.url !== ODOS_TEXTABLE_NUMBER_EXTENSION_URL);",
+    "mutation": "const extensions = point.extension;",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T1",
+      "mcp/tests/guarantorPhoneContract.test.ts"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 2",
+        "# pass 2",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T1 Person and RelatedPerson answer leaves one marker and clears refusal on number selection"
+      ],
+      "counts": [
+        "# tests 2",
+        "# pass 1",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 2",
+        "# pass 2",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "T2-merge",
+    "file": "mcp/src/clinic/responsible-party-demographics.ts",
+    "original": "return { ...target, ...fields, extension: extension.length ? extension : undefined };",
+    "mutation": "return { ...target, ...projectResponsiblePartyDemographics(source) };",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T2",
+      "mcp/tests/guarantorPhoneContract.test.ts"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T2 merge preserves every target role and operation extension"
+      ],
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "T2-component",
+    "file": "ui/src/components/patient/ResponsiblePartiesControl.tsx",
+    "original": "const demographics = projectResponsiblePartyDemographics;",
+    "mutation": "const demographics = (person: Person) => structuredClone({ name: person.name, telecom: person.telecom, address: person.address });",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T2",
+      "tests/guarantorPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T2 real editor name-only save keeps refusal on Person and both children"
+      ],
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "T3",
+    "file": "mcp/src/clinic/responsible-party-demographics.ts",
+    "original": "const { extension: refusal, ...fields } = projectResponsiblePartyDemographics(source);",
+    "mutation": "const { extension: refusal, ...fields } = projectResponsiblePartyDemographics(hasResponsiblePartyRefusal(source) ? source : { ...source, extension: target.extension });",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T3",
+      "tests/guarantorPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T3 real editor selecting a number clears refusal on both children"
+      ],
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "T4-raw",
+    "file": "mcp/src/clinic/responsible-party-demographics.ts",
+    "original": "...(hasResponsiblePartyRefusal(source) ? { extension: [{ url: ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, valueBoolean: true }] } : {})",
+    "mutation": "extension: source.extension",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T4",
+      "tests/guarantorPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T4 writer-derived guarantor without refusal remains verified for every absent representation"
+      ],
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "T4-empty",
+    "file": "mcp/src/clinic/responsible-party-demographics.ts",
+    "original": "...(hasResponsiblePartyRefusal(source) ? { extension: [{ url: ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, valueBoolean: true }] } : {})",
+    "mutation": "...(hasResponsiblePartyRefusal(source) ? { extension: [{ url: ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, valueBoolean: true }] } : (\"resourceType\" in source && source.resourceType === \"RelatedPerson\") ? { extension: [] } : {})",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T4",
+      "tests/guarantorPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T4 writer-derived guarantor without refusal remains verified for every absent representation"
+      ],
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "T5",
+    "file": "mcp/src/clinic/guarantor-link-operation.ts",
+    "original": "applyResponsiblePartyDemographics(child, destination)",
+    "mutation": "{ ...child, name: destination.name, telecom: destination.telecom, address: destination.address }",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T5",
+      "mcp/tests/guarantorPhoneRecovery.test.ts"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 6",
+        "# pass 6",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T5 attach projects refusal=true and correction restores the required snapshot",
+        "T5 attach projects refusal=false and correction restores the required snapshot",
+        "T5 transfer projects refusal=true and correction restores the required snapshot",
+        "T5 transfer projects refusal=false and correction restores the required snapshot",
+        "T5 consolidate projects refusal=true and correction restores the required snapshot",
+        "T5 consolidate projects refusal=false and correction restores the required snapshot"
+      ],
+      "counts": [
+        "# tests 6",
+        "# pass 0",
+        "# fail 6",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 6",
+        "# pass 6",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "T6",
+    "file": "mcp/src/clinic/guarantor-link-operation.ts",
+    "original": "...(hasResponsiblePartyRefusal(child) ? { noTextableNumber: true } : {})",
+    "mutation": "...{}",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T6",
+      "mcp/tests/guarantorPhoneRecovery.test.ts"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T6 lost projecting reply plus competing refusal pauses interfered without domain writes"
+      ],
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "T7",
+    "file": "mcp/src/clinic/patient-registration-endpoint.ts",
+    "original": "JSON.parse(JSON.stringify(requestedFields)),\n    JSON.parse(JSON.stringify(committedFields)),",
+    "mutation": "JSON.parse(JSON.stringify({name:requested.name,telecom:requested.telecom})),\n    JSON.parse(JSON.stringify({name:committed.name,telecom:committed.telecom})),",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T7",
+      "mcp/tests/guarantorPhoneRecovery.test.ts"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T7 lost registration reply refuses to match a child whose refusal changed"
+      ],
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "T8",
+    "file": "mcp/src/clinic/patient-registration-endpoint.ts",
+    "original": "if (!existingIds.has(party.localId)) errors.push(...Object.values(validatePatientPhones(party.phones, party.textable)));",
+    "mutation": "",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T8",
+      "mcp/tests/patientRegistrationAuthz.test.ts"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T8 guardian blank selected Phone 2 refuses before all writes"
+      ],
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "T9",
+    "file": "mcp/src/comms/suppression-gate.ts",
+    "original": "return resource.extension?.some((entry) => entry.url === ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL && entry.valueBoolean === true) ?? false;",
+    "mutation": "return resource.resourceType === \"Patient\" && (resource.extension?.some((entry) => entry.url === ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL && entry.valueBoolean === true) ?? false);",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T9",
+      "tests/guarantorPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T9 guardian refusal prevents SMS and the marked Phone 2 controls delivery"
+      ],
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "T10",
+    "file": "mcp/src/clinic/patient-telecom.ts",
+    "original": "if (!slot) return [point];",
+    "mutation": "if (!slot) return [];",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T10",
+      "tests/guarantorPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T10 real editor preserves email third phone old and period-bounded identities"
+      ],
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "T11",
+    "file": "data/canonical-extensions/odos-no-textable-number.json",
+    "original": ",\n    { \"type\": \"element\", \"expression\": \"RelatedPerson\" }",
+    "mutation": "",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T11",
+      "mcp/tests/guarantorPhoneContract.test.ts"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T11 refusal profile accepts Patient Person and RelatedPerson"
+      ],
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "T12",
+    "file": "mcp/src/clinic/guarantor-link-operation.ts",
+    "original": "...(hasResponsiblePartyRefusal(child) ? { noTextableNumber: true } : {})",
+    "mutation": "noTextableNumber: hasResponsiblePartyRefusal(child)",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T12",
+      "mcp/tests/guarantorPhoneRecovery.test.ts"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T12 exact pre-C2 projecting journal resumes with no-refusal child"
+      ],
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "T13",
+    "file": "mcp/src/clinic/patient-registration-endpoint.ts",
+    "original": "return applyResponsiblePartyDemographics({\n    resourceType: \"RelatedPerson\",",
+    "mutation": "const target: RelatedPerson = {\n    resourceType: \"RelatedPerson\",",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T13",
+      "mcp/tests/guarantorPhoneRecovery.test.ts"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 2",
+        "# pass 2",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T13 existing-guarantor initial child refusal before attach with none reply",
+        "T13 existing-guarantor initial child refusal before attach with registration reply"
+      ],
+      "counts": [
+        "# tests 2",
+        "# pass 0",
+        "# fail 2",
+        "# skipped 0"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": [],
+      "counts": [
+        "# tests 2",
+        "# pass 2",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  }
+]
