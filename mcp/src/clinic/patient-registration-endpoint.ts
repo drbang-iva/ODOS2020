@@ -1,3 +1,4 @@
+import { ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM, ODOS_AGE_OF_MAJORITY_CONFIG_CODE, resolveAgeOfMajorityYears, isMinorAtAge } from "./age-of-majority-config.js";
 import { buildResponsiblePartyDemographics, guarantorPersonIsAttachable, applyResponsiblePartyDemographics } from "./responsible-party-demographics.js";
 import { resolvePractitionerReference } from "../authz/practitioner-reference.js";
 import { buildCommsConsent, communicationPreferencesInputSchema, parsePreferenceWriteInput } from "../comms/comms-preferences.js";
@@ -6,6 +7,7 @@ import { randomInt, randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type {
   Account,
+  Basic,
   Bundle,
   BundleEntry,
   Patient,
@@ -125,7 +127,19 @@ export async function registerPatientFromDemographics(
   const projectId = registrationProjectId(staff.project);
   const existingPersons = await loadExistingGuarantors(input, staff, deps.serviceFhir, projectId);
   const resolvedInput = resolveExistingParties(input, existingPersons);
-  validateRegistration(resolvedInput, today, new Set(existingPersons.keys()));
+  const majorityResources = await searchProjectAll<Basic>(deps.serviceFhir, "Basic", projectId, {
+    code: `${ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM}|${ODOS_AGE_OF_MAJORITY_CONFIG_CODE}`,
+  });
+  let ageOfMajorityYears: number;
+  try {
+    if (majorityResources.length > 1) throw new Error("Age of majority is not configured: multiple settings found.");
+    const setting = majorityResources[0];
+    if (setting && setting.meta?.project?.replace(/^Project\//, "") !== projectId) throw new Error("Age of majority is not configured for this practice.");
+    ageOfMajorityYears = resolveAgeOfMajorityYears(setting);
+  } catch (error) {
+    return { status: 422, body: { error: "Age of majority is not configured (ageOfMajorityYears)." } };
+  }
+  validateRegistration(resolvedInput, today, new Set(existingPersons.keys()), ageOfMajorityYears);
   const duplicates = await findExactDuplicates(deps.serviceFhir, projectId, input.demographics);
   if (duplicates.length > 0 && !input.confirmDuplicate) {
     return { status: 409, body: { kind: "duplicates", patients: duplicates } };
@@ -480,7 +494,7 @@ export function registrationProjectId(project: Reference<Project>): string {
   return projectId;
 }
 
-function validateRegistration(input: PatientRegistrationInput, today: string, existingIds: ReadonlySet<string>): void {
+function validateRegistration(input: PatientRegistrationInput, today: string, existingIds: ReadonlySet<string>, ageOfMajorityYears: number): void {
   const errors: string[] = [];
   if (!input.demographics.firstName.trim()) errors.push("Legal first name is required.");
   if (!input.demographics.lastName.trim()) errors.push("Legal last name is required.");
@@ -491,7 +505,7 @@ function validateRegistration(input: PatientRegistrationInput, today: string, ex
   if (new Set(input.responsibleParties.map((party) => party.localId)).size !== input.responsibleParties.length) {
     errors.push("Responsible-party identifiers must be unique.");
   }
-  const minor = isR4Date(input.demographics.birthDate) && `${Number(input.demographics.birthDate.slice(0, 4)) + 18}${input.demographics.birthDate.slice(4)}` > today;
+  const minor = isR4Date(input.demographics.birthDate) && isMinorAtAge(input.demographics.birthDate, today, ageOfMajorityYears);
   const selfCount = input.responsibleParties.filter((party) => party.kind === "self").length;
   if (selfCount > 1) errors.push("The patient can appear as self only once.");
   if (minor && input.responsibleParties.some((party) => party.kind === "self")) errors.push("A minor cannot be registered as their own responsible party.");
