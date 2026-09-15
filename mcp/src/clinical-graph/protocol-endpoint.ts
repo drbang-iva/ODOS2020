@@ -22,8 +22,10 @@ import {
 } from "./protocol-fixtures.js";
 import {
   AcceptedChargeUnapplyError,
+  isTappableProtocolItem,
   matchesCode,
   ProtocolActionMaterializationRefusal,
+  ProtocolItemAddConflictError,
   ProtocolPublishValidationError,
   ProtocolService,
   rankProtocolOffers,
@@ -35,8 +37,10 @@ import { protocolFindingToGonioObservation } from "./gonioscopy.js";
 import type {
   ChargeProposal,
   PlanActionInstance,
+  ProtocolDefinition,
   ProtocolDefinitionDraft,
   ProtocolFindingInstance,
+  ProtocolItem,
 } from "./protocol-types.js";
 import {
   annualRecallMaterializationRefusal,
@@ -139,6 +143,10 @@ const applySchema = z.object({
   }).strict()).optional(),
   acceptCharges: z.boolean().optional(),
 }).strict();
+const itemAddSchema = applySchema
+  .omit({ selections: true, acceptCharges: true })
+  .extend({ itemKey: z.string().min(1) })
+  .strict();
 
 export async function handleProtocolLibraryRequest(
   deps: ProtocolEndpointDeps,
@@ -342,31 +350,9 @@ export async function handleProtocolApplyRequest(
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid protocol application." } };
   const service = liveService(staff, deps.now);
   await ensureBuiltInProtocol(service, parsed.data.protocolId);
-  const conditionId = parsed.data.diagnosis.reference.slice("Condition/".length);
-  let condition: Condition;
-  try {
-    condition = await staff.fhir.read<Condition>("Condition", conditionId);
-  } catch {
-    return { status: 400, body: { error: "Submitted Condition does not exist." } };
-  }
-  const submittedCoding = condition.code?.coding?.find((coding) => coding.code === parsed.data.diagnosis.code);
-  const protocol = await service.definitions.get(parsed.data.protocolId);
-  if (!condition.verificationStatus?.coding?.some((coding) => coding.code === "confirmed")) {
-    return { status: 400, body: { error: "Condition must be confirmed before applying a protocol." } };
-  }
-  if (!submittedCoding) {
-    return { status: 400, body: { error: "Submitted diagnosis code does not match the Condition." } };
-  }
-  if (condition.subject.reference !== `Patient/${parsed.data.patientId}`) {
-    return { status: 400, body: { error: "Condition does not belong to the submitted patient." } };
-  }
-  if (condition.encounter?.reference && condition.encounter.reference !== `Encounter/${parsed.data.encounterId}`) {
-    return { status: 400, body: { error: "Condition does not belong to the submitted encounter." } };
-  }
-  if (!protocol || protocol.trigger.kind !== "diagnosis" ||
-    !protocol.trigger.dxKeys.some((pattern) => matchesCode(parsed.data.diagnosis.code, pattern))) {
-    return { status: 400, body: { error: "Condition does not match the protocol trigger." } };
-  }
+  const validation = await validateProtocolDiagnosis(staff, service, parsed.data);
+  if ("response" in validation) return validation.response;
+  const { protocol } = validation;
   if ((await service.applications.list()).some((application) =>
     application.encounterId === parsed.data.encounterId &&
     application.protocolId === parsed.data.protocolId &&
@@ -386,34 +372,11 @@ export async function handleProtocolApplyRequest(
       };
     }
   }
-  const selectedSeriesItems = selectedPinnedItems.filter(({ item }) =>
-    item.itemType === "series-prescription"
+  const seriesResolution = await resolveSeriesProtocols(
+    deps,
+    selectedPinnedItems.map(({ item }) => item),
   );
-  const resolvedSeriesProtocols = new Map<string, SeriesProtocolDefinition>();
-  if (selectedSeriesItems.length > 0) {
-    if (!deps.serviceFhir) {
-      return {
-        status: 500,
-        body: { error: "Protocol series prescriptions require the service FHIR client." },
-      };
-    }
-    const definitions = await new FhirSeriesProtocolDefinitionStore(deps.serviceFhir, deps.now).list({
-      includeArchived: true,
-    });
-    for (const { item } of selectedSeriesItems) {
-      const seriesProtocolId = typeof item.payload.seriesProtocolId === "string"
-        ? item.payload.seriesProtocolId.trim()
-        : "";
-      const definition = definitions.find((candidate) => candidate.id === seriesProtocolId);
-      if (!seriesProtocolId || !definition?.active) {
-        return {
-          status: 400,
-          body: { error: `Selected series prescription ${item.itemKey} has no active series protocol definition.` },
-        };
-      }
-      resolvedSeriesProtocols.set(seriesProtocolId, definition);
-    }
-  }
+  if ("response" in seriesResolution) return seriesResolution.response;
   const canonicalSelections = parsed.data.selections?.map((selection) => {
     const item = protocol.items.find((candidate) =>
       candidate.itemKey === selection.itemKey &&
@@ -427,7 +390,7 @@ export async function handleProtocolApplyRequest(
     diagnosis: parsed.data.diagnosis,
     actor: staff.staffReference,
   });
-  await liveService(staff, deps.now, resolvedSeriesProtocols).commit(
+  await liveService(staff, deps.now, seriesResolution.protocols).commit(
     opened.application.id,
     canonicalSelections,
     [parsed.data.diagnosis.reference],
@@ -447,6 +410,133 @@ export async function handleProtocolApplyRequest(
       charges: (await service.charges.list()).filter((row) => row.protocolApplicationId === opened.application.id),
     },
   };
+}
+
+export async function handleProtocolItemAddRequest(
+  deps: ProtocolEndpointDeps,
+  input: { authHeader: string | undefined; body: unknown },
+) {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to add protocol items." } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  const parsed = itemAddSchema.safeParse(input.body);
+  if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid protocol item add." } };
+  const service = liveService(staff, deps.now);
+  await ensureBuiltInProtocol(service, parsed.data.protocolId);
+  const validation = await validateProtocolDiagnosis(staff, service, parsed.data);
+  if ("response" in validation) return validation.response;
+  const item = validation.protocol.items.find((candidate) => candidate.itemKey === parsed.data.itemKey);
+  if (!item) return { status: 400, body: { error: "Protocol item not found." } };
+  if (!isTappableProtocolItem(item)) {
+    return { status: 400, body: { error: `Protocol item type ${item.itemType} is not tappable.` } };
+  }
+  const seriesResolution = await resolveSeriesProtocols(deps, [item]);
+  if ("response" in seriesResolution) return seriesResolution.response;
+  const itemService = liveService(staff, deps.now, seriesResolution.protocols);
+  let added;
+  try {
+    added = await itemService.addItem(parsed.data.protocolId, parsed.data.itemKey, {
+      encounterId: parsed.data.encounterId,
+      patientId: parsed.data.patientId,
+      diagnosis: parsed.data.diagnosis,
+      actor: staff.staffReference,
+    });
+  } catch (error) {
+    if (error instanceof ProtocolItemAddConflictError) {
+      return { status: 409, body: { error: error.message } };
+    }
+    throw error;
+  }
+  return {
+    status: 200,
+    body: {
+      application: added.application,
+      alreadyApplied: added.alreadyApplied,
+      findings: (await itemService.findings.list()).filter((row) => row.protocolApplicationId === added.application.id),
+      actions: (await itemService.actions.list()).filter((row) => row.protocolApplicationId === added.application.id),
+      charges: (await itemService.charges.list()).filter((row) => row.protocolApplicationId === added.application.id),
+    },
+  };
+}
+
+async function validateProtocolDiagnosis(
+  staff: Staff,
+  service: ProtocolService,
+  input: {
+    protocolId: string;
+    encounterId: string;
+    patientId: string;
+    diagnosis: { reference: string; code: string; confirmed: true };
+  },
+): Promise<
+  | { protocol: ProtocolDefinition }
+  | { response: { status: number; body: { error: string } } }
+> {
+  const conditionId = input.diagnosis.reference.slice("Condition/".length);
+  let condition: Condition;
+  try {
+    condition = await staff.fhir.read<Condition>("Condition", conditionId);
+  } catch {
+    return { response: { status: 400, body: { error: "Submitted Condition does not exist." } } };
+  }
+  const submittedCoding = condition.code?.coding?.find((coding) => coding.code === input.diagnosis.code);
+  const protocol = await service.definitions.get(input.protocolId);
+  if (!condition.verificationStatus?.coding?.some((coding) => coding.code === "confirmed")) {
+    return { response: { status: 400, body: { error: "Condition must be confirmed before applying a protocol." } } };
+  }
+  if (!submittedCoding) {
+    return { response: { status: 400, body: { error: "Submitted diagnosis code does not match the Condition." } } };
+  }
+  if (condition.subject.reference !== `Patient/${input.patientId}`) {
+    return { response: { status: 400, body: { error: "Condition does not belong to the submitted patient." } } };
+  }
+  if (condition.encounter?.reference && condition.encounter.reference !== `Encounter/${input.encounterId}`) {
+    return { response: { status: 400, body: { error: "Condition does not belong to the submitted encounter." } } };
+  }
+  if (!protocol || protocol.trigger.kind !== "diagnosis" ||
+    !protocol.trigger.dxKeys.some((pattern) => matchesCode(input.diagnosis.code, pattern))) {
+    return { response: { status: 400, body: { error: "Condition does not match the protocol trigger." } } };
+  }
+  return { protocol };
+}
+
+async function resolveSeriesProtocols(
+  deps: ProtocolEndpointDeps,
+  items: ProtocolItem[],
+): Promise<
+  | { protocols: ReadonlyMap<string, SeriesProtocolDefinition> }
+  | { response: { status: number; body: { error: string } } }
+> {
+  const seriesItems = items.filter((item) => item.itemType === "series-prescription");
+  const protocols = new Map<string, SeriesProtocolDefinition>();
+  if (!seriesItems.length) return { protocols };
+  if (!deps.serviceFhir) {
+    return {
+      response: {
+        status: 500,
+        body: { error: "Protocol series prescriptions require the service FHIR client." },
+      },
+    };
+  }
+  const definitions = await new FhirSeriesProtocolDefinitionStore(deps.serviceFhir, deps.now).list({
+    includeArchived: true,
+  });
+  for (const item of seriesItems) {
+    const seriesProtocolId = typeof item.payload.seriesProtocolId === "string"
+      ? item.payload.seriesProtocolId.trim()
+      : "";
+    const definition = definitions.find((candidate) => candidate.id === seriesProtocolId);
+    if (!seriesProtocolId || !definition?.active) {
+      return {
+        response: {
+          status: 400,
+          body: { error: `Selected series prescription ${item.itemKey} has no active series protocol definition.` },
+        },
+      };
+    }
+    protocols.set(seriesProtocolId, definition);
+  }
+  return { protocols };
 }
 
 async function ensureBuiltInProtocol(service: ProtocolService, protocolId: string): Promise<void> {

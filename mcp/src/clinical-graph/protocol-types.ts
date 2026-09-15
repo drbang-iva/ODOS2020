@@ -99,6 +99,7 @@ export interface ProtocolApplication {
   }>;
   dedupResolutions: Array<Record<string, unknown>>;
   clinicalImpressionRef?: string;
+  itemClaimLeaseExpiresAt?: string;
   undoState: "active" | "unapplied";
   confirmed: boolean;
 }
