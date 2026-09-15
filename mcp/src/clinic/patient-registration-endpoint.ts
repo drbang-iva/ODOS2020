@@ -286,7 +286,7 @@ async function attachExistingRegistrationGuarantors(
         reason: "Registration attach",
       });
       const body = result.body as { task?: { id?: string; status?: string }; error?: string; phase?: string };
-      const status = body.task?.status === "completed" ? "linked" : body.task?.status === "failed" ? "failed" : body.task?.status === "in-progress" ? "pending" : result.status >= 400 ? "failed" : "unconfirmed";
+      const status = body.task?.status === "completed" ? "linked" : body.task?.status === "failed" ? "failed" : body.task?.status === "in-progress" ? "pending" : result.status >= 400 && result.status < 500 ? "failed" : "unconfirmed";
       outcomes.push({ relatedPersonId, personId, ...(body.task?.id ? { taskId: body.task.id } : {}), status,
         message: status === "linked" ? "Guarantor linked." : body.error ?? (status === "pending" ? "Guarantor attach is pending." : status === "failed" ? "Guarantor attach failed." : "Guarantor attach result is unconfirmed.") });
     } catch {

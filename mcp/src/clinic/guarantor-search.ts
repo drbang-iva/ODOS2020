@@ -8,9 +8,13 @@ import type { GuarantorOperationDeps, GuarantorOperationResult, GuarantorOperati
 
 const normalName = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
 const digits = (value: string) => value.replace(/\D/g, "");
+const searchPhoneDigits = (value: string) => {
+  const valueDigits = digits(value);
+  return valueDigits.length === 11 && valueDigits.startsWith("1") ? valueDigits.slice(1) : valueDigits;
+};
 const keys = z.object({ lastName: z.string().trim().min(1), firstName: z.string().trim().min(1).optional(), phone: z.string().trim().optional() }).strict()
   .refine(v => Boolean(v.firstName) !== (v.phone !== undefined))
-  .refine(v => v.phone === undefined || digits(v.phone).length >= 10);
+  .refine(v => v.phone === undefined || searchPhoneDigits(v.phone).length >= 10);
 const createSchema = z.object({ firstName: z.string().trim().min(1), lastName: z.string().trim().min(1),
   middleName: z.string().default(""), phone: z.string().default(""), address: z.string().default(""), city: z.string().default(""), state: z.string().default(""), postalCode: z.string().default("") }).strict();
 const tooMany = { status: 422, body: { error: "Too many matches; add a first name or phone." } };
@@ -28,7 +32,7 @@ export async function handleGuarantorSearch(deps: GuarantorOperationDeps, staff:
     if (person.meta?.project?.replace(/^Project\//, "") !== project) throw new Error("Guarantor search returned a foreign-practice Person.");
     if (!person.link?.length || !guarantorPersonIsAttachable(person, project)) return false;
     return person.name?.some(name => normalName(name.family ?? "") === normalName(key.lastName) &&
-      (key.firstName !== undefined ? normalName(name.given?.[0] ?? "") === normalName(key.firstName) : person.telecom?.some(contact => contact.system === "phone" && digits(contact.value ?? "") === digits(key.phone!))));
+      (key.firstName !== undefined ? normalName(name.given?.[0] ?? "") === normalName(key.firstName) : person.telecom?.some(contact => contact.system === "phone" && searchPhoneDigits(contact.value ?? "") === searchPhoneDigits(key.phone!))));
   });
   if (found.length > 20) return tooMany;
   return { status: 200, body: found.map(person => ({ personId: person.id, versionId: person.meta?.versionId,

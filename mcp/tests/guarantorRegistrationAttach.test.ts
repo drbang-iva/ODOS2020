@@ -231,6 +231,30 @@ test("F3: an attach refusal without a Task is reported as failed with its refusa
   }]);
 });
 
+test("Follow-up F1: a 500 attach result without a Task is unconfirmed while a 409 remains failed", async () => {
+  const serverError = await postRegistration({
+    attachResult: { status: 500, body: { error: "The guarantor attach outcome is unknown." } },
+  });
+  assert.equal(serverError.response.status, 201);
+  assert.deepEqual(serverError.body.guarantorLinks, [{
+    relatedPersonId: "related-1",
+    personId: "guarantor-existing",
+    status: "unconfirmed",
+    message: "The guarantor attach outcome is unknown.",
+  }]);
+
+  const refusal = await postRegistration({
+    attachResult: { status: 409, body: { error: "The responsible party changed; preview again." } },
+  });
+  assert.equal(refusal.response.status, 201);
+  assert.deepEqual(refusal.body.guarantorLinks, [{
+    relatedPersonId: "related-1",
+    personId: "guarantor-existing",
+    status: "failed",
+    message: "The responsible party changed; preview again.",
+  }]);
+});
+
 test("B3: a lost committed registration reply is recovered before the existing guarantor attach", async () => {
   const { fhir, response, body, attachedInput } = await postRegistration({ dropRegistrationReply: true });
   assert.equal(response.status, 201);

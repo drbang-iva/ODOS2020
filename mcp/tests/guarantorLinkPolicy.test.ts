@@ -64,6 +64,25 @@ for (const [name, policy] of [
   });
 }
 
+test("Follow-up F4: staff cannot change Person active but can edit demographics while active is unchanged", () => {
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("staff"));
+  const before: Person = {
+    resourceType: "Person",
+    id: "party",
+    active: true,
+    name: [{ family: "Original" }],
+    telecom: [{ system: "phone", value: "864-555-0102" }],
+    address: [{ city: "Greenville" }],
+  };
+  assert.equal(writeAllowed(policy, before, { ...before, active: false }), false, "active-only edit");
+  assert.equal(writeAllowed(policy, before, {
+    ...before,
+    name: [{ family: "Updated" }],
+    telecom: [{ system: "phone", value: "864-555-0199" }],
+    address: [{ city: "Travelers Rest" }],
+  }), true, "demographics-only edit");
+});
+
 test("L19: each role grants guarantor.link and a membership revocation removes it", () => {
   for (const role of ["provider", "staff", "admin"] as const) {
     const enabled = effectiveBusinessActions([role], [], []);

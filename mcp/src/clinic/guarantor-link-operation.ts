@@ -653,7 +653,11 @@ export async function handleGuarantorOperation(deps: GuarantorOperationDeps, sta
       const { relatedPersonId } = z.object({ relatedPersonId: idSchema }).strict().parse(request.body);
       const page = await deps.serviceFhir.searchProject<Task>("Task", operation.project, { code: `${GUARANTOR_OPERATION_SYSTEM}|`, _sort: "-_lastUpdated", _count: "50" });
       const tasks = (page.entry ?? []).flatMap(entry => entry.resource ? [entry.resource] : [])
-        .filter(task => operation.trusted(task) && readPlan(task).relatedPersonIds.includes(relatedPersonId));
+        .filter(task => {
+          if (!operation.trusted(task)) return false;
+          try { return readPlan(task).relatedPersonIds.includes(relatedPersonId); }
+          catch { return false; }
+        });
       const correcting = new Set(tasks.filter(task => task.status === "in-progress" && readPlan(task).kind === "correct").flatMap(task => task.basedOn?.map(r => r.reference) ?? []));
       return { status: 200, body: await Promise.all(tasks.map(async task => ({ ...await operation.summary(task), correctionInProgress: correcting.has(`Task/${task.id}`) }))) };
     }

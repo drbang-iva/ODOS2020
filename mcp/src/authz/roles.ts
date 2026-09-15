@@ -1047,7 +1047,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
         scope: { kind: "practice" },
         writeConstraint: [{
           description: "Person links are managed by service operations; staff may edit demographics without changing links.",
-          expression: "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty())",
+          expression: "(%before.exists() implies ((%before.link.exists() or %after.link.exists()) implies (%before.link = %after.link))) and (%before.empty() implies %after.link.empty()) and (%before.exists() implies ((%before.active.exists() or %after.active.exists()) implies (%before.active = %after.active)))",
         }],
       },
       APPEARANCE_CONFIG_READ_RULE,

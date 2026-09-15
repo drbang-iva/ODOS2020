@@ -13,6 +13,33 @@ async function route(rows: any[], run: (base: string, writes: any[]) => Promise<
 }
 test("K1 search refuses a prefix-only family",async()=>route([person("ann"),person("anna","Anna")],async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,200);assert.deepEqual((await r.json()).map((x:any)=>x.personId),["ann"]);}));
 test("K2 phone compares digits and rejects a different digit",async()=>route([person("ann")],async base=>{for(const [phone,count] of [["(864) 555-0102",1],["8645550103",0]] as const){const r=await fetch(base+"/guarantors/search?lastName=Ann&phone="+encodeURIComponent(phone));assert.equal(r.status,200);assert.equal((await r.json()).length,count);}}));
+test("Follow-up F2: US phone search matches country-code and ten-digit forms without trimming ten-digit leading 1",async()=>{
+ await route([person("ann")],async base=>{
+  for(const phone of ["+1 864 555 0102","18645550102","864 555 0102"]){
+   const r=await fetch(base+"/guarantors/search?lastName=Ann&phone="+encodeURIComponent(phone));
+   assert.equal(r.status,200);
+   assert.deepEqual((await r.json()).map((x:any)=>x.personId),["ann"]);
+  }
+ });
+ await route([person("leading-one","One",{telecom:[{system:"phone",value:"1234567890"}]})],async base=>{
+  const r=await fetch(base+"/guarantors/search?lastName=One&phone=1234567890");
+  assert.equal(r.status,200);
+  assert.deepEqual((await r.json()).map((x:any)=>x.personId),["leading-one"]);
+ });
+});
+test("Fixback F2: stored country-code and ten-digit phones match every supported US search form",async()=>{
+ for(const storedPhone of ["+1 864-555-0102","864-555-0102"]){
+  await route([person("ann","Ann",{telecom:[{system:"phone",value:storedPhone}]})],async base=>{
+   const matches=[];
+   for(const searchPhone of ["+1 864 555 0102","18645550102","864 555 0102"]){
+    const r=await fetch(base+"/guarantors/search?lastName=Ann&phone="+encodeURIComponent(searchPhone));
+    assert.equal(r.status,200);
+    matches.push((await r.json()).map((x:any)=>x.personId));
+   }
+   assert.deepEqual(matches,[["ann"],["ann"],["ann"]],`stored phone ${storedPhone}`);
+  });
+ }
+});
 test("K3 search card exposes exactly six keys",async()=>route([person("ann","Ann",{extension:[{url:"urn:sentinel",valueString:"private"}],address:[{line:["Private street"],city:"Town",postalCode:"00000"}]})],async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,200);assert.deepEqual(Object.keys((await r.json())[0]).sort(),["personId","versionId","name","phones","city","postalCode"].sort());}));
 for(const [kind,extra] of [["inactive",{active:false}],["zero-link",{link:[]}],["non-RelatedPerson",{link:[{target:{reference:"Patient/child"}}]}]] as const)test(`K4 ${kind} excluded`,async()=>route([person("ann","Ann",extra)],async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,200);assert.deepEqual(await r.json(),[]);}));
 for(const count of [21,201])test(`K5 ${count} matches return 422`,async()=>route(Array.from({length:count},(_,i)=>person("ann"+i)),async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,422);assert.equal((await r.json()).error,"Too many matches; add a first name or phone.");}));
@@ -23,6 +50,17 @@ test("K8 draft includes every source link, writes nothing, refuses consolidate s
 test("K9 draft versions reject changed child at create",async()=>{const f=fixture();const input={kind:"transfer",sourcePersonId:"S",destinationPersonId:"D",relatedPersonIds:["r1"]};const draft=await run(f,"draft",input);assert.equal(draft.status,200);f.compete("RelatedPerson/r1",r=>({...r,active:!r.active}));assert.equal((await run(f,"create",{...f.input("transfer",["r1"]),expected:draft.body.expected})).status,409);assert.equal(f.writes.length,0);});
 
 test("K13 history filters trusted child plans and queries newest 50 once",async()=>{const f=fixture();const a=await run(f,"create",f.input("transfer",["r1"]));assert.equal(a.status,200);const b=await run(f,"create",f.input("transfer",["r2"]));assert.equal(b.status,200);const t1={...a.body.task,meta:{...a.body.task.meta,lastUpdated:"2026-09-14T10:00:00Z"}};const forged={...t1,id:"forged",meta:{...t1.meta,author:{reference:"Practitioner/forger"}}};let searches=0;const original=f.deps.serviceFhir.searchProject;f.deps.serviceFhir.searchProject=async(type:any,project:any,params:any)=>{if(type!=="Task")return original(type,project,params);searches++;assert.equal(params._count,"50");assert.equal(params._sort,"-_lastUpdated");assert.match(params.code,/guarantor-link-operation\|$/);return {resourceType:"Bundle",type:"searchset",entry:[b.body.task,forged,t1].map(resource=>({resource})),link:[{relation:"next",url:"http://synthetic.test/do-not-follow"}]};};const result=await run(f,"history",{relatedPersonId:"r1"});assert.equal(result.status,200);assert.deepEqual(result.body.map((x:any)=>x.task.id),[t1.id]);assert.equal(searches,1);});
+
+test("Follow-up F3: history skips one malformed trusted Task and returns every valid entry",async()=>{
+ const f=fixture(1);
+ const completed=await run(f,"create",f.input("transfer",["r1"]));
+ assert.equal(completed.status,200);
+ const valid=completed.body.task;
+ f.seed({...valid,id:"malformed-history",input:valid.input.filter((input:any)=>input.type.text!=="reason")});
+ const result=await run(f,"history",{relatedPersonId:"r1"});
+ assert.equal(result.status,200);
+ assert.deepEqual(result.body.map((entry:any)=>entry.task.id),[valid.id]);
+});
 
 test("K8 empty consolidation draft refuses with zero writes",async()=>{const f=fixture(0);const result=await run(f,"draft",{kind:"consolidate",sourcePersonId:"S",destinationPersonId:"D"});assert.equal(result.status,422);assert.equal(f.writes.length,0);});
 
