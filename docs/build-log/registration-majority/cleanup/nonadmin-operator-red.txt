@@ -23,7 +23,7 @@ not ok 1 - age-of-majority singleton grants enforce provider reads and staff/adm
   ---
   duration_ms: 298.003208
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityAuthzLive.test.ts:1:673'
+  location: '<workspace>/mcp/tests/ageOfMajorityAuthzLive.test.ts:1:673'
   failureType: 'testCodeFailure'
   error: |-
     Synthetic live-proof cleanup failures: ProjectMembership/aa8b3f17-f16d-42d8-9c38-f563105dec7a: HTTP 403, ProjectMembership/58a53b59-7806-403e-b3d0-233b973d02c8: HTTP 403, ProjectMembership/dcb538d9-2ae0-4a4f-906c-8f47c5bfa4c4: HTTP 403
@@ -45,9 +45,9 @@ not ok 1 - age-of-majority singleton grants enforce provider reads and staff/adm
     2: 'ProjectMembership/dcb538d9-2ae0-4a4f-906c-8f47c5bfa4c4: HTTP 403'
   operator: 'deepStrictEqual'
   stack: |-
-    cleanupReferences (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/liveRoleClient.ts:145:10)
+    cleanupReferences (<workspace>/mcp/tests/liveRoleClient.ts:145:10)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-config-worker/mcp/tests/ageOfMajorityAuthzLive.test.ts:55:15)
+    async TestContext.<anonymous> (<workspace>/mcp/tests/ageOfMajorityAuthzLive.test.ts:55:15)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
