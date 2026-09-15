@@ -455,6 +455,7 @@ export class ProtocolService {
     protocolId: string,
     itemKey: string,
     input: OpenProtocolInput,
+    recoverConfirmedOrphan = true,
   ): Promise<{ application: ProtocolApplication; alreadyApplied: boolean }> {
     const protocol = await this.requireActiveDiagnosisProtocol(protocolId, input);
     const item = protocol.items.find((candidate) => candidate.itemKey === itemKey);
@@ -487,12 +488,15 @@ export class ProtocolService {
     const application = await this.applications.createConditional(proposed, claimIdentifier);
     if (application.id !== proposed.id) {
       const settled = await this.waitForClaimedApplication(application);
-      if (!settled) return this.addItemWithoutProcessLock(protocolId, itemKey, input);
+      if (!settled) return this.addItemWithoutProcessLock(protocolId, itemKey, input, recoverConfirmedOrphan);
       const settledState = await this.inspectLiveItemOwner(protocol, item, chargeSeed, input);
       if (settledState.outcome === "already-applied") {
         return { application: settledState.application, alreadyApplied: true };
       }
       if (settledState.outcome === "missing-charge") throw missingRequiredCharge();
+      if (recoverConfirmedOrphan && await this.releaseItemApplication(settled, true)) {
+        return this.addItemWithoutProcessLock(protocolId, itemKey, input, false);
+      }
       throw new ProtocolItemAddConflictError("The completed protocol item claim has no live plan action.");
     }
     const writes: ItemAddWrites = {
@@ -528,6 +532,11 @@ export class ProtocolService {
       }
       return { application: confirmed, alreadyApplied: false };
     } catch (error) {
+      const current = await this.applications.get(application.id);
+      if (current?.undoState === "active" && current.confirmed &&
+        current.itemClaimLeaseExpiresAt === application.itemClaimLeaseExpiresAt) {
+        return { application: current, alreadyApplied: false };
+      }
       await this.releaseItemApplication(application);
       await this.cleanupItemAddWrites(writes);
       throw error;
@@ -900,11 +909,14 @@ export class ProtocolService {
     }
   }
 
-  private async releaseItemApplication(application: ProtocolApplication): Promise<boolean> {
+  private async releaseItemApplication(
+    application: ProtocolApplication,
+    expectedConfirmed = false,
+  ): Promise<boolean> {
     const released = await this.applications.saveWithIdentifiersIfCurrent(
       { ...application, undoState: "unapplied" },
       [],
-      (current) => current.undoState === "active" && !current.confirmed &&
+      (current) => current.undoState === "active" && current.confirmed === expectedConfirmed &&
         current.itemClaimLeaseExpiresAt === application.itemClaimLeaseExpiresAt,
     );
     if (!released) return false;

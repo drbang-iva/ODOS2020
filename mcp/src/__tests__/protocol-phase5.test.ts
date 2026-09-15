@@ -151,8 +151,29 @@ class MemoryFhir implements ProtocolFhirClient {
   }
 }
 
-function harness(itemAddLock?: ProtocolItemAddLock) {
-  const fhir = new MemoryFhir();
+class LostConfirmResponseFhir extends MemoryFhir {
+  private loseConfirmedApplicationResponse = true;
+
+  override async update<T extends Basic>(
+    type: T["resourceType"],
+    id: string,
+    resource: T,
+    headers?: Record<string, string>,
+  ): Promise<T> {
+    const saved = await super.update(type, id, resource, headers);
+    const applicationJson = resource.code?.coding?.some((coding) =>
+      coding.code === PROTOCOL_BASIC_CODES.protocolApplication
+    ) ? resource.extension?.[0]?.valueString : undefined;
+    if (this.loseConfirmedApplicationResponse && applicationJson &&
+      (JSON.parse(applicationJson) as ProtocolApplication).confirmed) {
+      this.loseConfirmedApplicationResponse = false;
+      throw new Error("socket hang up");
+    }
+    return saved;
+  }
+}
+
+function harness(itemAddLock?: ProtocolItemAddLock, fhir = new MemoryFhir()) {
   const projectedFindings: string[] = [];
   const materialized: string[] = [];
   const liveMaterialized = new Set<string>();
@@ -581,6 +602,89 @@ test("item add cleans a failed charge write before retrying a fresh application"
   assert.equal((await service.actions.list()).filter((row) => row.state !== "removed").length, 1);
   assert.equal((await service.charges.list()).filter((row) => row.state !== "removed").length, 1);
   console.log("R7_AFTER", JSON.stringify({ liveOrders: 1, liveCharges: 1 }));
+});
+
+test("item add keeps live facts when confirmation lands but its response is lost", async () => {
+  const { service } = harness(undefined, new LostConfirmResponseFhir());
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-lost-confirm-response",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  const attempts: Array<boolean | string> = [];
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    attempts.push(await service.addItem(
+      GLAUCOMA_SUSPECT_PROTOCOL.id,
+      "order-gonioscopy",
+      input,
+    ).then(
+      (result) => result.alreadyApplied,
+      (error: unknown) => error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+    ));
+  }
+  const liveOrders = (await service.actions.list()).filter((row) =>
+    row.actionType === "order" && !["removed", "cancelled"].includes(row.state)
+  ).length;
+  const liveCharges = (await service.charges.list()).filter((row) => row.state !== "removed").length;
+
+  console.log("N1_AFTER", JSON.stringify({ attempts, liveOrders, liveCharges }));
+  assert.deepEqual(attempts, [false, true, true]);
+  assert.equal(liveOrders, 1);
+  assert.equal(liveCharges, 1);
+});
+
+test("item add releases and replaces a confirmed claim with no live facts", async () => {
+  const { service } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-confirmed-orphan-claim",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  const orphan: ProtocolApplication = {
+    id: "confirmed-orphan-item-application",
+    encounterId: input.encounterId,
+    patientId: input.patientId,
+    protocolId: GLAUCOMA_SUSPECT_PROTOCOL.id,
+    protocolVersion: GLAUCOMA_SUSPECT_PROTOCOL.version,
+    appliedBy: input.actor,
+    appliedAt: "2026-07-18T12:00:00.000Z",
+    stackedWith: [],
+    dispositions: [
+      { itemKey: "order-gonioscopy", outcome: "applied-default" },
+      { itemKey: "charge-gonioscopy", outcome: "applied-default" },
+    ],
+    dedupResolutions: [],
+    itemClaimLeaseExpiresAt: "2026-07-18T12:00:05.000Z",
+    undoState: "active",
+    confirmed: true,
+  };
+  await service.applications.createConditional(
+    orphan,
+    protocolItemClaimIdentifier(input.encounterId, GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy"),
+  );
+
+  const added = await service.addItem(
+    GLAUCOMA_SUSPECT_PROTOCOL.id,
+    "order-gonioscopy",
+    input,
+  ).then(
+    (result) => result.alreadyApplied,
+    (error: unknown) => error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+  );
+  const liveOrders = (await service.actions.list()).filter((row) =>
+    row.actionType === "order" && !["removed", "cancelled"].includes(row.state)
+  ).length;
+  const liveCharges = (await service.charges.list()).filter((row) => row.state !== "removed").length;
+
+  console.log("N1_ORPHAN_AFTER", JSON.stringify({ added, liveOrders, liveCharges }));
+  assert.equal(added, false);
+  assert.equal((await service.applications.get(orphan.id))?.undoState, "unapplied");
+  assert.equal(liveOrders, 1);
+  assert.equal(liveCharges, 1);
 });
 
 test("item add commits a second item from the same protocol without applying other defaults", async () => {

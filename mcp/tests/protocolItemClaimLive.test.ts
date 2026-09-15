@@ -6,6 +6,7 @@ import {
   protocolItemClaimIdentifier,
   PROTOCOL_BASIC_CODES,
   ProtocolBasicStore,
+  type ProtocolFhirClient,
 } from "../src/clinical-graph/protocol-store.js";
 import type { ProtocolApplication } from "../src/clinical-graph/protocol-types.js";
 import { createAuthenticatedFhirClient, requireMedplumAdmin } from "./integration-helpers.js";
@@ -62,4 +63,76 @@ test("Medplum conditional create gives concurrent protocol-item claims one appli
   );
   assert.equal(rows.length, 1);
   assert.equal(rows[0]?.id, createdId);
+});
+
+test("Medplum rejects a stale protocol Basic update and the store reports lost ownership", async (t) => {
+  const credentials = requireMedplumAdmin(t, "protocolItemClaimLive");
+  if (!credentials) return;
+  const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, ...credentials });
+  const runId = randomUUID();
+  const store = new ProtocolBasicStore<ProtocolApplication>(fhir, PROTOCOL_BASIC_CODES.protocolApplication);
+  const claim = protocolItemClaimIdentifier(`encounter-${runId}`, "protocol-stale", "order-gonioscopy");
+  const application: ProtocolApplication = {
+    id: `stale-claim-${runId}`,
+    encounterId: `encounter-${runId}`,
+    patientId: `patient-${runId}`,
+    protocolId: "protocol-stale",
+    protocolVersion: 1,
+    appliedBy: "Practitioner/synthetic",
+    appliedAt: "2026-09-14T20:00:00.000Z",
+    stackedWith: [],
+    dispositions: [{ itemKey: "order-gonioscopy", outcome: "applied-default" }],
+    dedupResolutions: [],
+    itemClaimLeaseExpiresAt: "2026-09-14T20:00:05.000Z",
+    undoState: "active",
+    confirmed: false,
+  };
+  await store.createConditional(application, claim);
+  t.after(async () => {
+    const bundle = await fhir.search<Basic>("Basic", {
+      identifier: `${claim.system}|${claim.value}`,
+      _count: "10",
+    });
+    for (const resource of (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : [])) {
+      if (!resource.id) continue;
+      const response = await fetch(`${baseUrl}/fhir/R4/Basic/${resource.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      assert.equal(response.ok, true, `Live stale-update cleanup returned ${response.status}.`);
+    }
+  });
+
+  let staleStatus: number | undefined;
+  const staleClient: ProtocolFhirClient = {
+    search: <T extends Basic>(type: T["resourceType"], params?: Record<string, string>) =>
+      fhir.search<T>(type, params),
+    searchUrl: <T extends Basic>(url: string, type: T["resourceType"]) => fhir.searchUrl<T>(url, type),
+    create: <T extends Basic>(resource: T, headers?: Record<string, string>) => fhir.create(resource, headers),
+    async update<T extends Basic>(type: T["resourceType"], id: string, resource: T, headers?: Record<string, string>) {
+      await fhir.update(type, id, resource, headers);
+      try {
+        return await fhir.update(type, id, resource, headers);
+      } catch (error) {
+        staleStatus = typeof error === "object" && error && "status" in error
+          ? Number(error.status)
+          : undefined;
+        throw error;
+      }
+    },
+    delete: (type: "Basic", id: string) => fhir.delete(type, id),
+  };
+  const staleStore = new ProtocolBasicStore<ProtocolApplication>(
+    staleClient,
+    PROTOCOL_BASIC_CODES.protocolApplication,
+  );
+
+  const saved = await staleStore.saveWithIdentifiersIfCurrent(
+    { ...application, confirmed: true },
+    [claim],
+    (current) => current.undoState === "active" && !current.confirmed,
+  );
+
+  assert.equal(staleStatus, 412);
+  assert.equal(saved, undefined);
 });
