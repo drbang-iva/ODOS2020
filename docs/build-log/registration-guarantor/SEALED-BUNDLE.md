@@ -102,3 +102,11 @@ The actual statements age-setting query now carries its exact `fhir-scope-contra
 ### Registration search-card display guard
 
 The existing registration attach test now uses a JSON-round-tripped card returned by the actual search handler from a Person produced by the actual registration writer. It asserts DOB on both the candidate card and the selected existing-guarantor summary. Suite3/3 green; separately deleting either DOB render produces1 failure; restored3/3; UI typecheck exit0. Evidence: `card-dob-*.txt`. No production changes.
+
+### CI cleanup failure reproduced and corrected
+
+Final-at-that-time CI at `af7d08a0` passed full MCP (5,029 passed / 51 skipped), credentialed integration (218 passed), and UI (1,567 passed), but live authorization failed56 passed /1 failed: all three new role assertions passed and cleanup of their memberships returned403. The earlier bootstrap-project local proof masked this permission boundary.
+
+A fresh ordinary synthetic project reproduced it using the actual CI operator membership contract: distinct non-admin ClientApplication, no access policy, versus caller human project administrator. Original test3 passed /1 failed with three membership-delete403 responses. Corrected test4 passed /0 failed /0 skipped: identity metadata cleanup uses caller admin; Basic cleanup uses the operator; both groups are attempted and cleanup failures still reject. No production policy changes. Exact evidence and fixture limitations: `../registration-majority/cleanup/verification.md` and `nonadmin-operator-*.txt`.
+
+All temporary proof resources were cleaned. All three task fixture containers are again stopped, not removed (`fixture-stopped-final.txt`). A new final-head CI run is required; the earlier failed lane is not represented as green.
