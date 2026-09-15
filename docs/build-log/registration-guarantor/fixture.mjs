@@ -21,6 +21,6 @@ writeFileSync(target,source,{mode:0o600});
 const action=process.argv[2];
 assert.ok(['up','start','seed','sync','status','audit-smoke','stop'].includes(action));
 const result=action==='stop'
-  ? spawnSync('docker',['compose','-p','registration-majority-live','-f',resolve(privateDirectory,'compose.json'),'stop'],{cwd:root,stdio:'inherit'})
+  ? spawnSync('docker-compose',['-p','registration-majority-live','-f',resolve(privateDirectory,'compose.json'),'stop'],{cwd:root,stdio:'inherit'})
   : spawnSync(process.execPath,['--import','tsx',target,action],{cwd:root,stdio:'inherit'});
 process.exitCode=result.status??1;

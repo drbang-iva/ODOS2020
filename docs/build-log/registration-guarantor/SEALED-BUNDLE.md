@@ -50,6 +50,8 @@ The harness uses real clinic, guarantor and communications routes, default educa
 
 Fixture: `registration-majority-live`, loopback Medplum 29160, PostgreSQL 29161, Redis 29162, temporary Vite 29164. Reproduction wrapper: `node --import tsx docs/build-log/registration-guarantor/fixture.mjs <up|seed|sync|audit-smoke|stop>`; proof: `node --import tsx docs/build-log/registration-guarantor/live-proof.mjs`. Credentials remain only in gitignored `.odos/registration-majority-live/`.
 
+All three fixture containers were stopped, not removed; `fixture-stopped.txt` records each as exited. Their volume and network remain available.
+
 ## Regression and build
 
 - Full MCP, owned PostgreSQL fixture: 5,076 tests; **5,024 passed, 0 failed, 52 skipped**. Command: `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test`, with ODOS_POSTGRES_URL injected from the private fixture. Exact output: `mcp-full-restored.txt.gz`. Skipped credentialed lanes are explicitly not an authz gate.
