@@ -1,0 +1,3 @@
+[
+  { "prefix": "/comms", "reason": "Cloudflare tunnel only (Twilio webhooks, tracked links); must not be on the front door" }
+]
