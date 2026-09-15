@@ -59,4 +59,4 @@ export function main(args = process.argv.slice(2)) {
   } catch (err) { console.error(`Front-door install: ${err.message}`); return 1; }
   finally { if (temp) rmSync(temp, { recursive: true, force: true }); }
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) process.exitCode = main();
+if (process.argv[1] && existsSync(process.argv[1]) && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) process.exitCode = main();

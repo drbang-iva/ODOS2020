@@ -31,3 +31,7 @@ test('apply backs up exact original before writing', () => fixture(({dir,target,
 test('invalid arguments do not write', () => fixture(({target,run}) => {
  const result = run(['--unknown']); assert.equal(result.status,1); assert.match(result.stderr,/argument/); assert.equal(readFileSync(target,'utf8'),'old config\n');
 }));
+test('pure renderer can be imported from stdin with CLI-style arguments', () => {
+ const result = spawnSync(process.execPath,['--input-type=module','-','--ui-dist','/tmp/dist'], { input: 'import { renderFrontdoor } from "./scripts/frontdoor-install.mjs"; console.log(renderFrontdoor("root * {$ODOS_UI_DIST}", process.argv[3]));', encoding:'utf8' });
+ assert.equal(result.status,0,result.stderr); assert.equal(result.stdout,'root * /tmp/dist\n');
+});
