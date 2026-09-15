@@ -1,0 +1,59 @@
+[
+  {
+    "mutation": "offered-active",
+    "redExit": 1,
+    "greenExit": 0,
+    "redFailures": [
+      "not ok 1 - offered uses the explicit procedure link and active switch",
+      "not ok 2 - unoffered whole apply opts out series and its package before series resolution; item add refuses",
+      "not ok 3 - offers annotate every item and reload current offered definitions",
+      "not ok 5 - an offered selected order retains the charge shared with an unoffered item"
+    ],
+    "greenSummary": [
+      "# tests 6",
+      "# pass 6",
+      "# fail 0"
+    ]
+  },
+  {
+    "mutation": "seed-no-draft",
+    "redExit": 1,
+    "greenExit": 0,
+    "redFailures": [
+      "not ok 2 - seeding preserves a draft head"
+    ],
+    "greenSummary": [
+      "# tests 14",
+      "# pass 14",
+      "# fail 0"
+    ]
+  },
+  {
+    "mutation": "seed-snapshot",
+    "redExit": 1,
+    "greenExit": 0,
+    "redFailures": [
+      "not ok 1 - seeding advances a legacy system head conditionally and preserves its pinned snapshot",
+      "not ok 6 - double boot keeps one new head and immutable snapshots",
+      "not ok 10 - an interrupted new snapshot is repaired by a later identical seed"
+    ],
+    "greenSummary": [
+      "# tests 14",
+      "# pass 14",
+      "# fail 0"
+    ]
+  },
+  {
+    "mutation": "offer-stored-ids",
+    "redExit": 1,
+    "greenExit": 0,
+    "redFailures": [
+      "not ok 2 - retired stored glaucoma head never returns through fixture fallback"
+    ],
+    "greenSummary": [
+      "# tests 4",
+      "# pass 4",
+      "# fail 0"
+    ]
+  }
+]

@@ -8,7 +8,7 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import { loadDayClose } from "../src/desk/day-close.js";
-import { GLAUCOMA_SUSPECT_PROTOCOL } from "../src/clinical-graph/protocol-fixtures.js";
+import { GLAUCOMA_SUSPECT_PROTOCOL_V1 as GLAUCOMA_SUSPECT_PROTOCOL } from "../src/clinical-graph/protocol-fixtures.js";
 import { handleProtocolSignCleanupRequest } from "../src/clinical-graph/protocol-endpoint.js";
 import {
   handleProcedureFeeScheduleCreateRequest,

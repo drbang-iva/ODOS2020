@@ -42,6 +42,7 @@ export interface CommitSelection {
   itemKey: string;
   selected: boolean;
   payload?: Record<string, unknown>;
+  skipReason?: "not-offered";
 }
 
 type ItemApplicationResult =
@@ -101,6 +102,8 @@ export function isTappableProtocolItem(item: ProtocolItem): boolean {
 }
 
 export class AcceptedChargeUnapplyError extends Error {}
+
+export class ProtocolFollowUpNotFoundError extends Error {}
 
 export class ProtocolItemAddConflictError extends Error {
   constructor(message: string) {
@@ -223,6 +226,7 @@ export class ProtocolService {
     if (!head) throw new Error("Protocol definition not found.");
     if (head.status === "retired") throw new Error("Retired protocols cannot be edited.");
     const normalized = normalizeDraft(draft);
+    await this.definitions.preservePublishedSnapshot(head);
     return this.definitions.saveHead({
       ...head,
       ...(head.version === 0 ? normalized : {}),
@@ -258,6 +262,7 @@ export class ProtocolService {
   async retire(id: string): Promise<ProtocolDefinition> {
     const head = await this.definitions.get(id);
     if (!head) throw new Error("Protocol definition not found.");
+    await this.definitions.preservePublishedSnapshot(head);
     return this.definitions.saveHead({ ...head, status: "retired" });
   }
 
@@ -583,6 +588,7 @@ export class ProtocolService {
         const choice = choices.get(item.itemKey);
         const selected = choice?.selected ?? item.defaultSelected;
         if (!selected) {
+          if (choice?.skipReason) application.dedupResolutions.push({ itemKey: item.itemKey, reason: choice.skipReason });
           dispositions.push({ itemKey: item.itemKey, outcome: "opted-out" });
           for (const finding of proposed.filter((row) =>
             row.sourceItemKey === item.itemKey && row.state === "proposed"
@@ -644,7 +650,7 @@ export class ProtocolService {
     return this.encounterLock.run(encounterId, async () => {
       const action = await this.actions.get(actionId);
       if (!action || action.encounterId !== encounterId || action.actionType !== "follow-up" || ["removed", "cancelled"].includes(action.state)) {
-        throw new Error("Live follow-up not found for this encounter.");
+        throw new ProtocolFollowUpNotFoundError("Live follow-up not found for this encounter.");
       }
       const payload = { ...action.payload, ...edit, needsConfirmation: false };
       const updated: PlanActionInstance = { ...action, payload, ...(edit ? {
@@ -748,12 +754,12 @@ export class ProtocolService {
           const soonest = [...plans].sort((a, b) => protocolFollowUpDue(a, action.provenance.at) - protocolFollowUpDue(b, action.provenance.at))[0];
           Object.assign(payload, { interval: soonest.interval, unit: soonest.unit, reason: soonest.reason });
         }
-        if (clinicianOwned ? plans.length === 0 : alternatives.length < 2) {
+        if (clinicianOwned ? plans.every((entry) => entry.interval === payload.interval && entry.unit === payload.unit) : alternatives.length < 2) {
           delete payload.alternatives;
           payload.needsConfirmation = false;
         } else {
           payload.alternatives = alternatives;
-          payload.needsConfirmation = true;
+          payload.needsConfirmation = clinicianOwned && action.payload.needsConfirmation === false ? false : true;
         }
         const updated = { ...action, payload };
         if (["interval", "unit", "reason"].some((key) => payload[key] !== action.payload[key])) {
@@ -784,6 +790,7 @@ export class ProtocolService {
       }
       return { removed, preserved };
     } catch (error) {
+      const projectionFailures: string[] = [];
       for (const action of actionOriginals.values()) {
         const current = await this.actions.get(action.id);
         const projectionRemoved = Boolean(action.materializedFhirRef && removedProjections.has(action.materializedFhirRef));
@@ -791,10 +798,20 @@ export class ProtocolService {
         const restored = { ...action };
         if (projectionRemoved) {
           const restore = removedProjections.get(action.materializedFhirRef!);
-          if (restore) await restore();
-          else restored.materializedFhirRef = await this.projection.materializeAction(action);
+          try {
+            if (restore) await restore();
+            else restored.materializedFhirRef = await this.projection.materializeAction(action);
+          } catch (restoreError) {
+            projectionFailures.push(`${action.materializedFhirRef}: ${String(restoreError)}`);
+          }
         }
-        if (changedFollowUpProjections.has(action.id)) restored.materializedFhirRef = await this.projection.materializeAction(action);
+        if (changedFollowUpProjections.has(action.id)) {
+          try {
+            restored.materializedFhirRef = await this.projection.materializeAction(action);
+          } catch (restoreError) {
+            projectionFailures.push(`${action.materializedFhirRef}: ${String(restoreError)}`);
+          }
+        }
         await this.actions.saveWithIdentifiersIfCurrent(restored, [], (row) => JSON.stringify(row) === JSON.stringify(current));
       }
       for (const finding of originalFindings) {
@@ -804,8 +821,12 @@ export class ProtocolService {
         const restored = { ...finding };
         if (projectionRemoved) {
           const restore = removedProjections.get(finding.observationReference!);
-          if (restore) await restore();
-          else restored.observationReference = await this.projection.commitFinding(finding);
+          try {
+            if (restore) await restore();
+            else restored.observationReference = await this.projection.commitFinding(finding);
+          } catch (restoreError) {
+            projectionFailures.push(`${finding.observationReference}: ${String(restoreError)}`);
+          }
         }
         await this.findings.saveWithIdentifiersIfCurrent(restored, [], (row) => JSON.stringify(row) === JSON.stringify(current));
       }
@@ -815,6 +836,7 @@ export class ProtocolService {
       }
       for (const candidate of saved.reverse()) await this.saveApplication(candidate, originals.get(candidate.id)!);
       await this.saveApplication({ ...application, undoState: "unapplied" }, application);
+      if (projectionFailures.length) throw new Error(`Unapply failed: ${String(error)}; projection rollback refused: ${projectionFailures.join("; ")}`, { cause: error });
       throw error;
     }
   }

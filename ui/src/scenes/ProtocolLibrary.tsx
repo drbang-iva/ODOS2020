@@ -860,6 +860,7 @@ function blankItem(type: ProtocolItemType, existing: ProtocolItem[]): ProtocolIt
     education: { assetRef: "", deliveryMode: "print" },
     instruction: { instructionKey: "" },
     "follow-up": { interval: 6, unit: "months", schedulingOrder: true },
+    "series-prescription": { seriesProtocolId: "", chargeSeedRef: "" },
     "charge-seed": { procedureConceptKey: "", chargeRuleRefs: [] },
   };
   return {

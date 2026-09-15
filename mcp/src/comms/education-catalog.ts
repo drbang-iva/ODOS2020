@@ -112,6 +112,7 @@ export type EducationCatalogManifest = z.infer<typeof educationCatalogManifestSc
 export type EducationCatalogLedger = z.infer<typeof educationCatalogLedgerSchema>;
 
 export interface EducationCatalogReader {
+  readonly placeholderUrlHost?: string;
   list(): readonly EducationContentItem[];
   get(id: string, version?: number): EducationContentItem | undefined;
 }
@@ -140,6 +141,7 @@ export function createManifestEducationCatalogReader(
   }
 
   return {
+    placeholderUrlHost: manifest.placeholderUrlHost,
     list: () => structuredClone(items),
     get(id, version) {
       const itemVersions = versions.get(id);

@@ -13,6 +13,8 @@ export type ProtocolItemType =
 
 export interface ProtocolItem {
   itemKey: string;
+  title?: string;
+  procedureDefinitionKey?: string;
   itemType: ProtocolItemType;
   defaultSelected: boolean;
   lateralityMode: LateralityMode;

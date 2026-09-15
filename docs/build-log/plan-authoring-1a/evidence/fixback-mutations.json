@@ -1,0 +1,57 @@
+[
+  {
+    "mutation": "restore-immediate",
+    "redExit": 1,
+    "greenExit": 0,
+    "redFailures": [
+      "not ok 11 - fixback rollback completes past 1 projection restore conflicts",
+      "not ok 12 - fixback rollback completes past 2 projection restore conflicts"
+    ],
+    "greenSummary": [
+      "# tests 12",
+      "# pass 12",
+      "# fail 0"
+    ]
+  },
+  {
+    "mutation": "seed-all",
+    "redExit": 1,
+    "greenExit": 0,
+    "redFailures": [
+      "not ok 5 - fixback warm tap seeds only its built-in and rules",
+      "not ok 6 - fixback warm whole seeds only its built-in and rules",
+      "not ok 7 - fixback first apply seeds only requested head and its five rules"
+    ],
+    "greenSummary": [
+      "# tests 7",
+      "# pass 7",
+      "# fail 0"
+    ]
+  },
+  {
+    "mutation": "charge-offer",
+    "redExit": 1,
+    "greenExit": 0,
+    "redFailures": [
+      "not ok 3 - offers annotate every item and reload current offered definitions"
+    ],
+    "greenSummary": [
+      "# tests 6",
+      "# pass 6",
+      "# fail 0"
+    ]
+  },
+  {
+    "mutation": "wording",
+    "redExit": 1,
+    "greenExit": 0,
+    "redFailures": [
+      "not ok 13 - fixback exact glaucoma counseling and monitoring reasons"
+    ],
+    "greenSummary": [
+      "# tests 13",
+      "# pass 13",
+      "# fail 0"
+    ]
+  }
+]

@@ -13,7 +13,7 @@ export function ProtocolStagingList({
 }) {
   return (
     <div className="space-y-2" data-testid={preview ? "protocol-staging-preview" : "protocol-staging-list"}>
-      {items.map((item) => (
+      {items.filter(item => item.offered !== false).map((item) => (
         <label
           key={item.itemKey}
           className="flex items-start gap-3 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-3"
@@ -49,6 +49,7 @@ export function ProtocolStagingList({
 }
 
 export function protocolItemLabel(item: ProtocolItem): string {
+  if (item.title) return item.title;
   return humanize(String(
     item.payload.procedureConceptKey ??
     item.payload.orderableKey ??

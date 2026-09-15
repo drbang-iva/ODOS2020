@@ -9,10 +9,14 @@ export type ProtocolItemType =
   | "education"
   | "instruction"
   | "follow-up"
+  | "series-prescription"
   | "charge-seed";
 
 export interface ProtocolItem {
   itemKey: string;
+  title?: string;
+  procedureDefinitionKey?: string;
+  offered?: boolean;
   itemType: ProtocolItemType;
   defaultSelected: boolean;
   lateralityMode: LateralityMode;

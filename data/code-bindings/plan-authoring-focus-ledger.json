@@ -1,0 +1,41 @@
+{
+  "ledger": "plan-authoring-focus",
+  "mandate": 14,
+  "status": "verified",
+  "accessDate": "2026-09-15",
+  "sources": [
+    {
+      "id": "hl7-r4-servicerequest-definitions",
+      "publisher": "HL7 International",
+      "title": "FHIR R4 ServiceRequest detailed element definitions",
+      "url": "https://hl7.org/fhir/R4/servicerequest-definitions.html",
+      "accessed": "2026-09-15",
+      "authority": "primary"
+    },
+    {
+      "id": "hl7-r4-servicerequest-json-schema",
+      "publisher": "HL7 International",
+      "title": "FHIR R4 ServiceRequest JSON schema",
+      "url": "https://hl7.org/fhir/R4/servicerequest.schema.json.html",
+      "accessed": "2026-09-15",
+      "authority": "primary"
+    }
+  ],
+  "elements": [
+    {
+      "path": "ServiceRequest.bodySite",
+      "type": "CodeableConcept",
+      "cardinality": "0..*",
+      "use": "Authored plain-text anatomical focus, such as optic nerve.",
+      "sourceRefs": ["hl7-r4-servicerequest-definitions", "hl7-r4-servicerequest-json-schema"]
+    },
+    {
+      "path": "ServiceRequest.orderDetail",
+      "type": "CodeableConcept",
+      "cardinality": "0..*",
+      "use": "Authored plain-text focus carried as order instructions; code is also supplied.",
+      "sourceRefs": ["hl7-r4-servicerequest-definitions", "hl7-r4-servicerequest-json-schema"]
+    }
+  ],
+  "limitations": "No new terminology code or coverage determination. Diagnosis triggers resolve existing verified catalog ledgers. This records source verification; the ledger is not a runtime enforcement gate."
+}

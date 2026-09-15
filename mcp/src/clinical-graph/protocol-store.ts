@@ -76,6 +76,21 @@ export class ProtocolDefinitionStore {
     return this.heads.save(definition);
   }
 
+  async preservePublishedSnapshot(definition: ProtocolDefinition): Promise<void> {
+    if (definition.version > 0 && !await this.snapshots.get(protocolSnapshotIdentifier(definition.id, definition.version))) {
+      await this.saveSnapshot(withoutDraft(definition));
+    }
+  }
+
+  async advanceHead(original: ProtocolDefinition, definition: ProtocolDefinition): Promise<ProtocolDefinition | undefined> {
+    return this.heads.saveWithIdentifiersIfCurrent(definition, [], current =>
+      JSON.stringify(normalizeStoredDefinition(current)) === JSON.stringify(original));
+  }
+
+  async createHead(definition: ProtocolDefinition): Promise<ProtocolDefinition> {
+    return this.heads.createImmutable(definition);
+  }
+
   async getSnapshot(id: string, version: number): Promise<ProtocolDefinition | undefined> {
     const row = await this.snapshots.get(protocolSnapshotIdentifier(id, version));
     if (row) return normalizeStoredDefinition(row.definition);

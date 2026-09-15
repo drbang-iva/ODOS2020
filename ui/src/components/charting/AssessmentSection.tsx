@@ -724,7 +724,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                       </span>
                     </span>
                     {applied && <span className="text-xs font-semibold text-[color:var(--odos-emerald)]">Applied</span>}
-                    {itemCount > 0 && <span>{itemCount} {itemCount === 1 ? 'item added' : 'items added'}</span>}
+                    {offer.id !== protocolOffer.id && itemCount > 0 && <span>{itemCount} {itemCount === 1 ? 'item added' : 'items added'}</span>}
                   </label>
                 );
               })}
