@@ -1,0 +1,42 @@
+TAP version 13
+# Subtest: D3 writer-derived DOB edit preserves both child insurance fingerprints and census
+not ok 1 - D3 writer-derived DOB edit preserves both child insurance fingerprints and census
+  ---
+  duration_ms: 27.27975
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/mcp/tests/guarantorDob.test.ts:1:419'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   '1981-03-04',
+    +   '1981-03-04'
+    -   '1970-01-02',
+    -   '1971-01-02'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '1970-01-02'
+    1: '1971-01-02'
+  actual:
+    0: '1981-03-04'
+    1: '1981-03-04'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/dob-rebased-proof/mcp/tests/guarantorDob.test.ts:20:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 190.710875
