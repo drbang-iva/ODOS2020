@@ -44,6 +44,7 @@ test("selected IPL initiation creates a real series CarePlan returned by the tra
     {
       itemKey: "series-ipl",
       itemType: "series-prescription",
+      procedureDefinitionKey: "procedure:dry-eye:ipl",
       defaultSelected: true,
       lateralityMode: "OU-always",
       payload: {

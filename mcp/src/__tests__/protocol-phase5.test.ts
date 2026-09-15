@@ -3646,6 +3646,10 @@ for (const kind of ["action", "finding"] as const) {
   test(`shared rollback endpoint: ${kind} revocation rollback preserves original FHIR IDs and statuses`, async () => {
     const fhir = new EndpointFhir();
     fhir.resources.push(confirmedCondition());
+    if (kind === "finding") {
+      await endpointProtocolService(fhir).definitions.save({ ...structuredClone(GLAUCOMA_SUSPECT_PROTOCOL),
+        audit: { ...GLAUCOMA_SUSPECT_PROTOCOL.audit, publishedBy: "Practitioner/test" } });
+    }
     const applied = await handleProtocolApplyRequest(endpointDeps(fhir), { authHeader: "Bearer test", body: applyBody("H40.021") });
     assert.equal(applied.status, 200);
     const service = endpointProtocolService(fhir);

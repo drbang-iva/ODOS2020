@@ -59,3 +59,15 @@ test("offered series without active configuration keeps 400", async () => {
   assert.equal((await handleProtocolApplyRequest(configuredDeps, { authHeader: "test", body })).status, 400);
   assert.equal((await handleProtocolItemAddRequest(configuredDeps, { authHeader: "test", body: { ...body, itemKey: "series-ipl" } })).status, 400);
 });
+
+test("an offered selected order retains the charge shared with an unoffered item", async () => {
+  const { deps, body, service, protocol } = await setup(false);
+  protocol.items.push({ itemKey: "shared-order", itemType: "order", defaultSelected: true, lateralityMode: "OU-always", payload: { orderableKey: "synthetic-procedure", chargeSeedRef: "charge-ipl-package" } });
+  protocol.version += 1;
+  await service.definitions.save(protocol);
+  const result = await handleProtocolApplyRequest(deps, { authHeader: "test", body });
+  assert.equal(result.status, 200);
+  const saved = result.body as { actions: unknown[]; charges: unknown[]; application: { dedupResolutions: unknown[] } };
+  assert.equal(saved.actions.length, 1); assert.equal(saved.charges.length, 1);
+  assert.deepEqual(saved.application.dedupResolutions, [{ itemKey: "series-ipl", reason: "not-offered" }]);
+});
