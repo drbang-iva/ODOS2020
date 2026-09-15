@@ -41,19 +41,19 @@ export function AgeOfMajoritySettings({ canWrite }: { canWrite: boolean }) {
     finally { setSaving(false); }
   }
 
-  return <main className="min-h-screen bg-bg-deep p-6 text-white">
+  return <main className="min-h-screen bg-[color:var(--odos-deep-surface)] p-6 text-[color:var(--odos-text)]">
     <div className="mx-auto max-w-3xl">
       <a href="/settings">← Practice settings</a>
       <h1 className="mt-4 text-2xl font-semibold">Age of majority</h1>
-      <p className="mt-2 text-sm text-white/65">Set the age used for registration consent, statement recipients, and patient communications.</p>
+      <p className="mt-2 text-sm text-[color:var(--odos-muted)]">Set the age used for registration consent, statement recipients, and patient communications.</p>
       {!loaded && !status && <p>Loading age of majority…</p>}
       <form className="mt-6 space-y-4" onSubmit={event => void save(event)}>
         <label className="block">Age of majority (years)
-          <input aria-label="Age of majority (years)" type="number" min="16" max="21" step="1" required value={value} disabled={!loaded || !canWrite || saving} onChange={event => setValue(event.target.value)} className="ml-3 rounded border border-white/20 bg-bg-deep p-2" />
+          <input aria-label="Age of majority (years)" type="number" min="16" max="21" step="1" required value={value} disabled={!loaded || !canWrite || saving} onChange={event => setValue(event.target.value)} className="ml-3 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-deep-surface)] p-2" />
         </label>
         {status && <p role="status">{status}</p>}
         {!canWrite && <p>Practice-admin access is required to edit this setting.</p>}
-        {canWrite && <button type="submit" disabled={!loaded || saving} className="rounded bg-blue-600 px-4 py-2">{saving ? "Saving…" : "Save age of majority"}</button>}
+        {canWrite && <button type="submit" disabled={!loaded || saving} className="rounded bg-[color:var(--odos-accent)] text-[color:var(--odos-accent-ink)] px-4 py-2">{saving ? "Saving…" : "Save age of majority"}</button>}
       </form>
     </div>
   </main>;
