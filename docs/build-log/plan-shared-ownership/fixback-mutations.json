@@ -1,0 +1,408 @@
+[
+  {
+    "mutation": "overwrite-clinician-follow-up",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=follow-up fixback clinician",
+      "mcp/src/__tests__/protocol-phase5.test.ts"
+    ],
+    "sourceHashes": {
+      "mcp/src/clinical-graph/protocol-service.ts": "803287d0c2c448f97e78fd71eef724c2bf4b26814d5250c1a08227e12b023fc8",
+      "mcp/src/clinical-graph/protocol-endpoint.ts": "0ab0c25685261cba8d18343a3a298ec1ecad0f74580771da60afb07ea8d533a9"
+    },
+    "redExit": 1,
+    "greenExit": 0,
+    "redCounts": [
+      "# tests 3",
+      "# pass 0",
+      "# fail 3",
+      "# cancelled 0"
+    ],
+    "greenCounts": [
+      "# tests 3",
+      "# pass 3",
+      "# fail 0",
+      "# cancelled 0"
+    ]
+  },
+  {
+    "mutation": "retain-undone-recommendation",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=follow-up fixback undo",
+      "mcp/src/__tests__/protocol-phase5.test.ts"
+    ],
+    "sourceHashes": {
+      "mcp/src/clinical-graph/protocol-service.ts": "803287d0c2c448f97e78fd71eef724c2bf4b26814d5250c1a08227e12b023fc8",
+      "mcp/src/clinical-graph/protocol-endpoint.ts": "0ab0c25685261cba8d18343a3a298ec1ecad0f74580771da60afb07ea8d533a9"
+    },
+    "redExit": 1,
+    "greenExit": 0,
+    "redCounts": [
+      "# tests 6",
+      "# pass 0",
+      "# fail 6",
+      "# cancelled 0"
+    ],
+    "greenCounts": [
+      "# tests 6",
+      "# pass 6",
+      "# fail 0",
+      "# cancelled 0"
+    ]
+  },
+  {
+    "mutation": "reverse-dependent-order",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=shared guard chronological",
+      "mcp/src/__tests__/protocol-phase5.test.ts"
+    ],
+    "sourceHashes": {
+      "mcp/src/clinical-graph/protocol-service.ts": "803287d0c2c448f97e78fd71eef724c2bf4b26814d5250c1a08227e12b023fc8",
+      "mcp/src/clinical-graph/protocol-endpoint.ts": "0ab0c25685261cba8d18343a3a298ec1ecad0f74580771da60afb07ea8d533a9"
+    },
+    "redExit": 1,
+    "greenExit": 0,
+    "redCounts": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# cancelled 0"
+    ],
+    "greenCounts": [
+      "# tests 1",
+      "# pass 1",
+      "# fail 0",
+      "# cancelled 0"
+    ]
+  },
+  {
+    "mutation": "skip-under-lock-whole-check",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=shared guard concurrent whole",
+      "mcp/src/__tests__/protocol-phase5.test.ts"
+    ],
+    "sourceHashes": {
+      "mcp/src/clinical-graph/protocol-service.ts": "803287d0c2c448f97e78fd71eef724c2bf4b26814d5250c1a08227e12b023fc8",
+      "mcp/src/clinical-graph/protocol-endpoint.ts": "0ab0c25685261cba8d18343a3a298ec1ecad0f74580771da60afb07ea8d533a9"
+    },
+    "redExit": 1,
+    "greenExit": 0,
+    "redCounts": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# cancelled 0"
+    ],
+    "greenCounts": [
+      "# tests 1",
+      "# pass 1",
+      "# fail 0",
+      "# cancelled 0"
+    ]
+  },
+  {
+    "mutation": "skip-item-dependency",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=sibling charge|preserves shared records",
+      "mcp/src/__tests__/protocol-phase5.test.ts"
+    ],
+    "sourceHashes": {
+      "mcp/src/clinical-graph/protocol-service.ts": "803287d0c2c448f97e78fd71eef724c2bf4b26814d5250c1a08227e12b023fc8",
+      "mcp/src/clinical-graph/protocol-endpoint.ts": "0ab0c25685261cba8d18343a3a298ec1ecad0f74580771da60afb07ea8d533a9"
+    },
+    "redExit": 1,
+    "greenExit": 0,
+    "redCounts": [
+      "# tests 2",
+      "# pass 0",
+      "# fail 2",
+      "# cancelled 0"
+    ],
+    "greenCounts": [
+      "# tests 2",
+      "# pass 2",
+      "# fail 0",
+      "# cancelled 0"
+    ]
+  },
+  {
+    "mutation": "skip-action-liveness",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=shared ownership J action: dead",
+      "mcp/src/__tests__/protocol-phase5.test.ts"
+    ],
+    "sourceHashes": {
+      "mcp/src/clinical-graph/protocol-service.ts": "803287d0c2c448f97e78fd71eef724c2bf4b26814d5250c1a08227e12b023fc8",
+      "mcp/src/clinical-graph/protocol-endpoint.ts": "0ab0c25685261cba8d18343a3a298ec1ecad0f74580771da60afb07ea8d533a9"
+    },
+    "redExit": 1,
+    "greenExit": 0,
+    "redCounts": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# cancelled 0"
+    ],
+    "greenCounts": [
+      "# tests 1",
+      "# pass 1",
+      "# fail 0",
+      "# cancelled 0"
+    ]
+  },
+  {
+    "mutation": "application-charge-dedupe",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=shared ownership (A:|D:)",
+      "mcp/src/__tests__/protocol-phase5.test.ts"
+    ],
+    "sourceHashes": {
+      "mcp/src/clinical-graph/protocol-service.ts": "803287d0c2c448f97e78fd71eef724c2bf4b26814d5250c1a08227e12b023fc8",
+      "mcp/src/clinical-graph/protocol-endpoint.ts": "0ab0c25685261cba8d18343a3a298ec1ecad0f74580771da60afb07ea8d533a9"
+    },
+    "redExit": 1,
+    "greenExit": 0,
+    "redCounts": [
+      "# tests 2",
+      "# pass 0",
+      "# fail 2",
+      "# cancelled 0"
+    ],
+    "greenCounts": [
+      "# tests 2",
+      "# pass 2",
+      "# fail 0",
+      "# cancelled 0"
+    ]
+  },
+  {
+    "mutation": "active-owner-only",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=shared ownership H I",
+      "mcp/src/__tests__/protocol-phase5.test.ts"
+    ],
+    "sourceHashes": {
+      "mcp/src/clinical-graph/protocol-service.ts": "803287d0c2c448f97e78fd71eef724c2bf4b26814d5250c1a08227e12b023fc8",
+      "mcp/src/clinical-graph/protocol-endpoint.ts": "0ab0c25685261cba8d18343a3a298ec1ecad0f74580771da60afb07ea8d533a9"
+    },
+    "redExit": 1,
+    "greenExit": 0,
+    "redCounts": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# cancelled 0"
+    ],
+    "greenCounts": [
+      "# tests 1",
+      "# pass 1",
+      "# fail 0",
+      "# cancelled 0"
+    ]
+  },
+  {
+    "mutation": "skip-rehome",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=shared ownership (A2|E):",
+      "mcp/src/__tests__/protocol-phase5.test.ts"
+    ],
+    "sourceHashes": {
+      "mcp/src/clinical-graph/protocol-service.ts": "803287d0c2c448f97e78fd71eef724c2bf4b26814d5250c1a08227e12b023fc8",
+      "mcp/src/clinical-graph/protocol-endpoint.ts": "0ab0c25685261cba8d18343a3a298ec1ecad0f74580771da60afb07ea8d533a9"
+    },
+    "redExit": 1,
+    "greenExit": 0,
+    "redCounts": [
+      "# tests 2",
+      "# pass 0",
+      "# fail 2",
+      "# cancelled 0"
+    ],
+    "greenCounts": [
+      "# tests 2",
+      "# pass 2",
+      "# fail 0",
+      "# cancelled 0"
+    ]
+  },
+  {
+    "mutation": "skip-charge-liveness",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=shared ownership J:",
+      "mcp/src/__tests__/protocol-phase5.test.ts"
+    ],
+    "sourceHashes": {
+      "mcp/src/clinical-graph/protocol-service.ts": "803287d0c2c448f97e78fd71eef724c2bf4b26814d5250c1a08227e12b023fc8",
+      "mcp/src/clinical-graph/protocol-endpoint.ts": "0ab0c25685261cba8d18343a3a298ec1ecad0f74580771da60afb07ea8d533a9"
+    },
+    "redExit": 1,
+    "greenExit": 0,
+    "redCounts": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# cancelled 0"
+    ],
+    "greenCounts": [
+      "# tests 1",
+      "# pass 1",
+      "# fail 0",
+      "# cancelled 0"
+    ]
+  },
+  {
+    "mutation": "old-open-guard",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=whole-protocol open permits",
+      "mcp/src/__tests__/protocol-phase5.test.ts"
+    ],
+    "sourceHashes": {
+      "mcp/src/clinical-graph/protocol-service.ts": "803287d0c2c448f97e78fd71eef724c2bf4b26814d5250c1a08227e12b023fc8",
+      "mcp/src/clinical-graph/protocol-endpoint.ts": "0ab0c25685261cba8d18343a3a298ec1ecad0f74580771da60afb07ea8d533a9"
+    },
+    "redExit": 1,
+    "greenExit": 0,
+    "redCounts": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# cancelled 0"
+    ],
+    "greenCounts": [
+      "# tests 1",
+      "# pass 1",
+      "# fail 0",
+      "# cancelled 0"
+    ]
+  },
+  {
+    "mutation": "old-route-guard",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=shared ownership C route",
+      "mcp/src/__tests__/protocol-phase5.test.ts"
+    ],
+    "sourceHashes": {
+      "mcp/src/clinical-graph/protocol-service.ts": "803287d0c2c448f97e78fd71eef724c2bf4b26814d5250c1a08227e12b023fc8",
+      "mcp/src/clinical-graph/protocol-endpoint.ts": "0ab0c25685261cba8d18343a3a298ec1ecad0f74580771da60afb07ea8d533a9"
+    },
+    "redExit": 1,
+    "greenExit": 0,
+    "redCounts": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# cancelled 0"
+    ],
+    "greenCounts": [
+      "# tests 1",
+      "# pass 1",
+      "# fail 0",
+      "# cancelled 0"
+    ]
+  },
+  {
+    "mutation": "drop-encounter-lock",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=shared ownership K: paused commit",
+      "mcp/src/__tests__/protocol-phase5.test.ts"
+    ],
+    "sourceHashes": {
+      "mcp/src/clinical-graph/protocol-service.ts": "803287d0c2c448f97e78fd71eef724c2bf4b26814d5250c1a08227e12b023fc8",
+      "mcp/src/clinical-graph/protocol-endpoint.ts": "0ab0c25685261cba8d18343a3a298ec1ecad0f74580771da60afb07ea8d533a9"
+    },
+    "redExit": 1,
+    "greenExit": 0,
+    "redCounts": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# cancelled 0"
+    ],
+    "greenCounts": [
+      "# tests 1",
+      "# pass 1",
+      "# fail 0",
+      "# cancelled 0"
+    ]
+  },
+  {
+    "mutation": "drop-alternatives",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=shared ownership L: sooner",
+      "mcp/src/__tests__/protocol-phase5.test.ts"
+    ],
+    "sourceHashes": {
+      "mcp/src/clinical-graph/protocol-service.ts": "803287d0c2c448f97e78fd71eef724c2bf4b26814d5250c1a08227e12b023fc8",
+      "mcp/src/clinical-graph/protocol-endpoint.ts": "0ab0c25685261cba8d18343a3a298ec1ecad0f74580771da60afb07ea8d533a9"
+    },
+    "redExit": 1,
+    "greenExit": 0,
+    "redCounts": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# cancelled 0"
+    ],
+    "greenCounts": [
+      "# tests 1",
+      "# pass 1",
+      "# fail 0",
+      "# cancelled 0"
+    ]
+  }
+]

@@ -1,5 +1,7 @@
 # Plan application shared ownership — author evidence
 
+**Follow-up:** Opus 5 returned NEEDS-WORK at `d864523e`. The local repair and its final checks are recorded in [the fixback bundle](FIXBACK.md); independent re-evaluation is pending. The original evidence below is retained for provenance.
+
 Status: locally committed implementation, author verification complete; **NOT independently evaluated**.
 
 Implementation head: `117da014`. No push or PR was created. Independent evaluation by Fable/Opus (high) remains required before merge.
