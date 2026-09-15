@@ -103,6 +103,8 @@ export function isTappableProtocolItem(item: ProtocolItem): boolean {
 
 export class AcceptedChargeUnapplyError extends Error {}
 
+export class ProtocolFollowUpNotFoundError extends Error {}
+
 export class ProtocolItemAddConflictError extends Error {
   constructor(message: string) {
     super(message);
@@ -646,7 +648,7 @@ export class ProtocolService {
     return this.encounterLock.run(encounterId, async () => {
       const action = await this.actions.get(actionId);
       if (!action || action.encounterId !== encounterId || action.actionType !== "follow-up" || ["removed", "cancelled"].includes(action.state)) {
-        throw new Error("Live follow-up not found for this encounter.");
+        throw new ProtocolFollowUpNotFoundError("Live follow-up not found for this encounter.");
       }
       const payload = { ...action.payload, ...edit, needsConfirmation: false };
       const updated: PlanActionInstance = { ...action, payload, ...(edit ? {
@@ -750,12 +752,12 @@ export class ProtocolService {
           const soonest = [...plans].sort((a, b) => protocolFollowUpDue(a, action.provenance.at) - protocolFollowUpDue(b, action.provenance.at))[0];
           Object.assign(payload, { interval: soonest.interval, unit: soonest.unit, reason: soonest.reason });
         }
-        if (clinicianOwned ? plans.length === 0 : alternatives.length < 2) {
+        if (clinicianOwned ? plans.every((entry) => entry.interval === payload.interval && entry.unit === payload.unit) : alternatives.length < 2) {
           delete payload.alternatives;
           payload.needsConfirmation = false;
         } else {
           payload.alternatives = alternatives;
-          payload.needsConfirmation = true;
+          payload.needsConfirmation = clinicianOwned && action.payload.needsConfirmation === false ? false : true;
         }
         const updated = { ...action, payload };
         if (["interval", "unit", "reason"].some((key) => payload[key] !== action.payload[key])) {

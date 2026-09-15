@@ -1,0 +1,818 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs src/__tests__/protocol-phase5.test.ts
+
+TAP version 13
+# R7_AFTER {"liveOrders":1,"liveCharges":1}
+# N1_AFTER {"attempts":[false,true,true],"liveOrders":1,"liveCharges":1}
+# N1_ORPHAN_AFTER {"added":false,"liveOrders":1,"liveCharges":1}
+# S7_AFTER {"liveOrders":1,"liveCharges":1}
+# S2_AFTER {"liveOrders":1,"liveCharges":1}
+# Subtest: protocol-phase5.test.ts is included in full MCP discovery
+ok 1 - protocol-phase5.test.ts is included in full MCP discovery
+  ---
+  duration_ms: 0.724541
+  type: 'test'
+  ...
+# Subtest: fixture stores seven Basic entity codes with X-ODOS-Source writes
+ok 2 - fixture stores seven Basic entity codes with X-ODOS-Source writes
+  ---
+  duration_ms: 1.43125
+  type: 'test'
+  ...
+# Subtest: publishing v2 preserves a byte-identical v1 snapshot and a v1-pinned application still commits
+ok 3 - publishing v2 preserves a byte-identical v1 snapshot and a v1-pinned application still commits
+  ---
+  duration_ms: 3.427833
+  type: 'test'
+  ...
+# Subtest: publishing v2 preserves definition-owned charge acceptance in the snapshot
+ok 4 - publishing v2 preserves definition-owned charge acceptance in the snapshot
+  ---
+  duration_ms: 0.583292
+  type: 'test'
+  ...
+# Subtest: legacy heads without authoring provenance are normalized at the read boundary
+ok 5 - legacy heads without authoring provenance are normalized at the read boundary
+  ---
+  duration_ms: 0.160541
+  type: 'test'
+  ...
+# Subtest: statusScope ranks a matching variant first without filtering the non-match
+ok 6 - statusScope ranks a matching variant first without filtering the non-match
+  ---
+  duration_ms: 0.577792
+  type: 'test'
+  ...
+# Subtest: forked protocols retain object lineage and publish as independent offerable definitions
+ok 7 - forked protocols retain object lineage and publish as independent offerable definitions
+  ---
+  duration_ms: 0.985291
+  type: 'test'
+  ...
+# Subtest: forking an unpublished draft omits snapshot lineage instead of inventing version zero
+ok 8 - forking an unpublished draft omits snapshot lineage instead of inventing version zero
+  ---
+  duration_ms: 0.383542
+  type: 'test'
+  ...
+# Subtest: encounter capture strips device values and free text while retaining staged charge rule references
+ok 9 - encounter capture strips device values and free text while retaining staged charge rule references
+  ---
+  duration_ms: 0.584541
+  type: 'test'
+  ...
+# Subtest: encounter capture preserves repeat and format while excluding actual temporal payload keys
+ok 10 - encounter capture preserves repeat and format while excluding actual temporal payload keys
+  ---
+  duration_ms: 0.660333
+  type: 'test'
+  ...
+# Subtest: ProtocolBasicStore follows next links and uses identifier-scoped conditional first writes
+ok 11 - ProtocolBasicStore follows next links and uses identifier-scoped conditional first writes
+  ---
+  duration_ms: 0.246125
+  type: 'test'
+  ...
+# Subtest: H40.02x offer is deliberate; open remains inert; commit creates the exact Phase 5 shape
+ok 12 - H40.02x offer is deliberate; open remains inert; commit creates the exact Phase 5 shape
+  ---
+  duration_ms: 4.618958
+  type: 'test'
+  ...
+# Subtest: item add carries an order's referenced charge and unapply removes both
+ok 13 - item add carries an order's referenced charge and unapply removes both
+  ---
+  duration_ms: 1.320583
+  type: 'test'
+  ...
+# Subtest: item add cleans a failed charge write before retrying a fresh application
+ok 14 - item add cleans a failed charge write before retrying a fresh application
+  ---
+  duration_ms: 1.31775
+  type: 'test'
+  ...
+# Subtest: item add keeps live facts when confirmation lands but its response is lost
+ok 15 - item add keeps live facts when confirmation lands but its response is lost
+  ---
+  duration_ms: 0.875208
+  type: 'test'
+  ...
+# Subtest: item add releases and replaces a confirmed claim with no live facts
+ok 16 - item add releases and replaces a confirmed claim with no live facts
+  ---
+  duration_ms: 0.678792
+  type: 'test'
+  ...
+# Subtest: item add commits a second item from the same protocol without applying other defaults
+ok 17 - item add commits a second item from the same protocol without applying other defaults
+  ---
+  duration_ms: 0.613209
+  type: 'test'
+  ...
+# Subtest: item add returns the existing application when the same item is tapped twice
+ok 18 - item add returns the existing application when the same item is tapped twice
+  ---
+  duration_ms: 0.592833
+  type: 'test'
+  ...
+# Subtest: item add reuses a whole-protocol application that already applied the item
+ok 19 - item add reuses a whole-protocol application that already applied the item
+  ---
+  duration_ms: 1.187917
+  type: 'test'
+  ...
+# Subtest: item add suppresses a sibling charge when another protocol already owns the merge-key action
+ok 20 - item add suppresses a sibling charge when another protocol already owns the merge-key action
+  ---
+  duration_ms: 0.624542
+  type: 'test'
+  ...
+# Subtest: item add rejects finding seeds without creating an application
+ok 21 - item add rejects finding seeds without creating an application
+  ---
+  duration_ms: 0.259541
+  type: 'test'
+  ...
+# Subtest: whole-protocol open permits apply after an item-level add
+ok 22 - whole-protocol open permits apply after an item-level add
+  ---
+  duration_ms: 0.495834
+  type: 'test'
+  ...
+# Subtest: cross-protocol dedupe returns the live owner and preserves shared records after owner unapply
+ok 23 - cross-protocol dedupe returns the live owner and preserves shared records after owner unapply
+  ---
+  duration_ms: 2.44075
+  type: 'test'
+  ...
+# Subtest: charge seeds are not tappable and cannot precede their owning order
+ok 24 - charge seeds are not tappable and cannot precede their owning order
+  ---
+  duration_ms: 0.511459
+  type: 'test'
+  ...
+# Subtest: concurrent taps converge on one item application
+ok 25 - concurrent taps converge on one item application
+  ---
+  duration_ms: 0.456209
+  type: 'test'
+  ...
+# R6_AFTER {"liveOrders":1,"liveCharges":1,"alreadyApplied":[false,true]}
+# Subtest: a staggered second tap never resumes the first request's in-flight application
+ok 26 - a staggered second tap never resumes the first request's in-flight application
+  ---
+  duration_ms: 6.755625
+  type: 'test'
+  ...
+# H1_LOCK_AFTER {"alreadyApplied":[false,true],"liveOrders":1,"liveMaterializedOrders":1,"liveCharges":1,"repeatAlreadyApplied":true}
+# Subtest: H1 serializes a live action writer past the claim lease
+ok 27 - H1 serializes a live action writer past the claim lease
+  ---
+  duration_ms: 1.201292
+  type: 'test'
+  ...
+# H2_LOCK_AFTER {"alreadyApplied":[false,true],"liveOrders":1,"liveMaterializedOrders":1,"liveCharges":1,"repeatAlreadyApplied":true}
+# H1_AFTER {"firstError":"Protocol item claim expired while the item was being added; retry.","secondAlreadyApplied":false,"liveOrders":1,"liveMaterializedOrders":1,"liveCharges":1,"repeatAlreadyApplied":true}
+# H2_AFTER {"firstError":"Protocol item claim expired while the item was being added; retry.","secondAlreadyApplied":false,"liveOrders":1,"liveMaterializedOrders":1,"liveCharges":1,"repeatAlreadyApplied":true}
+# Built-in dry-eye-evaluation: same-version content conflict.
+# Built-in glaucoma-suspect-initial: conditional head conflict; race refused.
+# R5_OPTOUT_AFTER {"status":200,"liveOrders":1,"liveCharges":0}
+# R5_MISSING_AFTER {"status":409}
+# Subtest: H2 serializes a live charge writer past the claim lease
+ok 28 - H2 serializes a live charge writer past the claim lease
+  ---
+  duration_ms: 0.991708
+  type: 'test'
+  ...
+# Subtest: H1 cleans a late materialized order after an expired claim is taken over without the process lock
+ok 29 - H1 cleans a late materialized order after an expired claim is taken over without the process lock
+  ---
+  duration_ms: 0.850916
+  type: 'test'
+  ...
+# Subtest: H2 cleans a late staged charge after an expired claim is taken over without the process lock
+ok 30 - H2 cleans a late staged charge after an expired claim is taken over without the process lock
+  ---
+  duration_ms: 0.774375
+  type: 'test'
+  ...
+# Subtest: a stale confirmation cannot resurrect an application released by lease takeover
+ok 31 - a stale confirmation cannot resurrect an application released by lease takeover
+  ---
+  duration_ms: 0.742334
+  type: 'test'
+  ...
+# Subtest: an abandoned item claim is replaced after its lease expires
+ok 32 - an abandoned item claim is replaced after its lease expires
+  ---
+  duration_ms: 0.44075
+  type: 'test'
+  ...
+# Subtest: manual mergeKey collision resumes existing action and unapply preserves clinician changes
+ok 33 - manual mergeKey collision resumes existing action and unapply preserves clinician changes
+  ---
+  duration_ms: 3.365667
+  type: 'test'
+  ...
+# Subtest: unapply removes only charges staged by its protocol application
+ok 34 - unapply removes only charges staged by its protocol application
+  ---
+  duration_ms: 3.235333
+  type: 'test'
+  ...
+# Subtest: unapply returns 409 before any mutation when an accepted charge is unresolved
+ok 35 - unapply returns 409 before any mutation when an accepted charge is unresolved
+  ---
+  duration_ms: 0.6445
+  type: 'test'
+  ...
+# Subtest: unapply succeeds with finalized charges and preserves their billed state
+ok 36 - unapply succeeds with finalized charges and preserves their billed state
+  ---
+  duration_ms: 0.248708
+  type: 'test'
+  ...
+# Subtest: commit rollback after a late failure restores proposed findings and retry confirms once
+ok 37 - commit rollback after a late failure restores proposed findings and retry confirms once
+  ---
+  duration_ms: 1.996917
+  type: 'test'
+  ...
+# Subtest: deselected finding seeds are removed and never projected
+ok 38 - deselected finding seeds are removed and never projected
+  ---
+  duration_ms: 0.819
+  type: 'test'
+  ...
+# Subtest: retry restores one live action without a mergeKey
+ok 39 - retry restores one live action without a mergeKey
+  ---
+  duration_ms: 2.101834
+  type: 'test'
+  ...
+# Subtest: offers performs no writes on the chart.read path
+ok 40 - offers performs no writes on the chart.read path
+  ---
+  duration_ms: 1.192417
+  type: 'test'
+  ...
+# Subtest: sign cleanup requires clinical.sign at the handler boundary
+ok 41 - sign cleanup requires clinical.sign at the handler boundary
+  ---
+  duration_ms: 0.249167
+  type: 'test'
+  ...
+# Subtest: a full eye exam creates a service-date annual, and the next full exam completes it without touching medical follow-up
+ok 42 - a full eye exam creates a service-date annual, and the next full exam completes it without touching medical follow-up
+  ---
+  duration_ms: 1.240625
+  type: 'test'
+  ...
+# Subtest: re-signing an older full exam does not replace the newer active annual
+ok 43 - re-signing an older full exam does not replace the newer active annual
+  ---
+  duration_ms: 0.501917
+  type: 'test'
+  ...
+# Subtest: re-signing a completed source reconciles separate active annual duplicates
+ok 44 - re-signing a completed source reconciles separate active annual duplicates
+  ---
+  duration_ms: 0.2705
+  type: 'test'
+  ...
+# Subtest: late signing an older full exam keeps the annual from the latest service date
+ok 45 - late signing an older full exam keeps the annual from the latest service date
+  ---
+  duration_ms: 0.336959
+  type: 'test'
+  ...
+# Subtest: an adjusted due date cannot override verified full-exam service chronology
+ok 46 - an adjusted due date cannot override verified full-exam service chronology
+  ---
+  duration_ms: 0.360667
+  type: 'test'
+  ...
+# Subtest: same-day annual reconciliation keeps the encounter with the latest service time
+ok 47 - same-day annual reconciliation keeps the encounter with the latest service time
+  ---
+  duration_ms: 0.26925
+  type: 'test'
+  ...
+# Subtest: concurrent full-exam signing converges to one annual from the latest service time
+ok 48 - concurrent full-exam signing converges to one annual from the latest service time
+  ---
+  duration_ms: 0.23175
+  type: 'test'
+  ...
+# Subtest: annual due date preserves the Encounter service calendar day across timezone offsets
+ok 49 - annual due date preserves the Encounter service calendar day across timezone offsets
+  ---
+  duration_ms: 0.0885
+  type: 'test'
+  ...
+# Subtest: a failed stale-annual closure annotates that duplicate when a retry can write it
+ok 50 - a failed stale-annual closure annotates that duplicate when a retry can write it
+  ---
+  duration_ms: 0.282292
+  type: 'test'
+  ...
+# Subtest: an annual with unavailable Encounter provenance cannot abort reconciliation
+ok 51 - an annual with unavailable Encounter provenance cannot abort reconciliation
+  ---
+  duration_ms: 0.235208
+  type: 'test'
+  ...
+# Subtest: a realistic post-cataract office visit with refraction and examined anterior segment creates no annual
+ok 52 - a realistic post-cataract office visit with refraction and examined anterior segment creates no annual
+  ---
+  duration_ms: 0.122708
+  type: 'test'
+  ...
+# Subtest: a contact-lens booking with manifest refraction and examined ocular content does not create an annual
+ok 53 - a contact-lens booking with manifest refraction and examined ocular content does not create an annual
+  ---
+  duration_ms: 0.090459
+  type: 'test'
+  ...
+# Subtest: annual recall follows an inactive renamed service's Exams category without enumerating its code
+ok 54 - annual recall follows an inactive renamed service's Exams category without enumerating its code
+  ---
+  duration_ms: 0.109625
+  type: 'test'
+  ...
+# Subtest: a stand-alone Encounter resolves its visit type through the HealthcareService Exams category
+ok 55 - a stand-alone Encounter resolves its visit type through the HealthcareService Exams category
+  ---
+  duration_ms: 0.172042
+  type: 'test'
+  ...
+# Subtest: hard gate: a historical Medicaid exam without an Appointment retains its annual recall
+ok 56 - hard gate: a historical Medicaid exam without an Appointment retains its annual recall
+  ---
+  duration_ms: 0.096
+  type: 'test'
+  ...
+# Subtest: a standalone contact-lens exam with only over-refraction creates no annual
+ok 57 - a standalone contact-lens exam with only over-refraction creates no annual
+  ---
+  duration_ms: 0.056667
+  type: 'test'
+  ...
+# Subtest: autorefraction alone creates no annual at a full-exam visit type
+ok 58 - autorefraction alone creates no annual at a full-exam visit type
+  ---
+  duration_ms: 0.063334
+  type: 'test'
+  ...
+# Subtest: annual recall requires both refraction and an examined ocular component
+ok 59 - annual recall requires both refraction and an examined ocular component
+  ---
+  duration_ms: 0.171666
+  type: 'test'
+  ...
+# Subtest: annual closure failure stays observable without blocking encounter signing
+ok 60 - annual closure failure stays observable without blocking encounter signing
+  ---
+  duration_ms: 0.236292
+  type: 'test'
+  ...
+# Subtest: annual closure annotation cannot reactivate a concurrently completed annual
+ok 61 - annual closure annotation cannot reactivate a concurrently completed annual
+  ---
+  duration_ms: 0.204083
+  type: 'test'
+  ...
+# Subtest: all Phase A authoring endpoints reject a non-author and admit a clinician
+ok 62 - all Phase A authoring endpoints reject a non-author and admit a clinician
+  ---
+  duration_ms: 1.089791
+  type: 'test'
+  ...
+# Subtest: encounter capture does not treat two absent subject references as a patient match
+ok 63 - encounter capture does not treat two absent subject references as a patient match
+  ---
+  duration_ms: 0.170625
+  type: 'test'
+  ...
+# Subtest: publish returns a named 400 reason for every deterministic validation failure
+ok 64 - publish returns a named 400 reason for every deterministic validation failure
+  ---
+  duration_ms: 0.6335
+  type: 'test'
+  ...
+# Subtest: persisted legacy dry-eye built-in inherits charge acceptance, then applies reviewed charges
+ok 65 - persisted legacy dry-eye built-in inherits charge acceptance, then applies reviewed charges
+  ---
+  duration_ms: 7.915833
+  type: 'test'
+  ...
+# Subtest: unpersisted dry-eye built-in offers charge acceptance without a read-path write
+ok 66 - unpersisted dry-eye built-in offers charge acceptance without a read-path write
+  ---
+  duration_ms: 0.275792
+  type: 'test'
+  ...
+# Subtest: combined offers rank a matching stored scope before an unscoped built-in and a non-match
+ok 67 - combined offers rank a matching stored scope before an unscoped built-in and a non-match
+  ---
+  duration_ms: 0.365417
+  type: 'test'
+  ...
+# Subtest: apply verifies the persisted Condition and creates no prompt-only Observations
+ok 68 - apply verifies the persisted Condition and creates no prompt-only Observations
+  ---
+  duration_ms: 14.225625
+  type: 'test'
+  ...
+# Subtest: item-add endpoint stages only the requested order and refuses charge acceptance or payload overrides
+ok 69 - item-add endpoint stages only the requested order and refuses charge acceptance or payload overrides
+  ---
+  duration_ms: 2.080084
+  type: 'test'
+  ...
+# Subtest: item-add endpoint rejects a charge seed before allowing its owning order
+ok 70 - item-add endpoint rejects a charge seed before allowing its owning order
+  ---
+  duration_ms: 2.152125
+  type: 'test'
+  ...
+# Subtest: item-add endpoint respects an owning application's opted-out charge
+ok 71 - item-add endpoint respects an owning application's opted-out charge
+  ---
+  duration_ms: 3.846958
+  type: 'test'
+  ...
+# Subtest: item-add endpoint returns 409 when an owning application's required charge is missing
+ok 72 - item-add endpoint returns 409 when an owning application's required charge is missing
+  ---
+  duration_ms: 4.7365
+  type: 'test'
+  ...
+# Subtest: follow-up materialization stores the six-month due date and verbatim reason on a coded ServiceRequest
+ok 73 - follow-up materialization stores the six-month due date and verbatim reason on a coded ServiceRequest
+  ---
+  duration_ms: 2.610791
+  type: 'test'
+  ...
+# Subtest: a clinician follow-up override computes from the selected two-week payload
+ok 74 - a clinician follow-up override computes from the selected two-week payload
+  ---
+  duration_ms: 2.681625
+  type: 'test'
+  ...
+# Subtest: re-materializing the same follow-up updates a corrected due date without creating a duplicate
+ok 75 - re-materializing the same follow-up updates a corrected due date without creating a duplicate
+  ---
+  duration_ms: 0.139417
+  type: 'test'
+  ...
+# Subtest: an underivable kind refuses only the follow-up and commits the plan's other actions
+ok 76 - an underivable kind refuses only the follow-up and commits the plan's other actions
+  ---
+  duration_ms: 0.342
+  type: 'test'
+  ...
+# Subtest: a malformed interval refuses only the follow-up and commits the plan's other actions
+ok 77 - a malformed interval refuses only the follow-up and commits the plan's other actions
+  ---
+  duration_ms: 0.206667
+  type: 'test'
+  ...
+# Subtest: a missing reason refuses only the follow-up and commits the plan's other actions
+ok 78 - a missing reason refuses only the follow-up and commits the plan's other actions
+  ---
+  duration_ms: 0.200958
+  type: 'test'
+  ...
+# Subtest: invalid provenance time refuses only the follow-up and commits the plan's other actions
+ok 79 - invalid provenance time refuses only the follow-up and commits the plan's other actions
+  ---
+  duration_ms: 0.188792
+  type: 'test'
+  ...
+# Subtest: an interval that overflows the due date refuses only the follow-up and commits the plan's other actions
+ok 80 - an interval that overflows the due date refuses only the follow-up and commits the plan's other actions
+  ---
+  duration_ms: 0.190875
+  type: 'test'
+  ...
+# Subtest: follow-up month arithmetic clamps January 31 to the last day of February
+ok 81 - follow-up month arithmetic clamps January 31 to the last day of February
+  ---
+  duration_ms: 0.22325
+  type: 'test'
+  ...
+# Subtest: stored follow-up kind and occurrence support a date-range query without loading unrelated CarePlans
+ok 82 - stored follow-up kind and occurrence support a date-range query without loading unrelated CarePlans
+  ---
+  duration_ms: 0.148458
+  type: 'test'
+  ...
+# Subtest: applications read enforces chart.read, returns the hydration shape, and duplicate apply is rejected
+ok 83 - applications read enforces chart.read, returns the hydration shape, and duplicate apply is rejected
+  ---
+  duration_ms: 1.33875
+  type: 'test'
+  ...
+# Subtest: protocol numeric findings require the explicit cup-disc ratio unit mapping
+ok 84 - protocol numeric findings require the explicit cup-disc ratio unit mapping
+  ---
+  duration_ms: 0.085208
+  type: 'test'
+  ...
+# Subtest: signing abandons an unconfirmed application and deletes all proposed findings
+ok 85 - signing abandons an unconfirmed application and deletes all proposed findings
+  ---
+  duration_ms: 0.578417
+  type: 'test'
+  ...
+# Subtest: shared ownership A: encounter charge dedupe and action dependencies
+ok 86 - shared ownership A: encounter charge dedupe and action dependencies
+  ---
+  duration_ms: 1.548042
+  type: 'test'
+  ...
+# Subtest: shared ownership A2: owner undo transfers identical records
+ok 87 - shared ownership A2: owner undo transfers identical records
+  ---
+  duration_ms: 1.929042
+  type: 'test'
+  ...
+# Subtest: shared ownership A3: dependent undo preserves source
+ok 88 - shared ownership A3: dependent undo preserves source
+  ---
+  duration_ms: 3.80775
+  type: 'test'
+  ...
+# Subtest: shared ownership D: encounter charge dedupe and action dependencies
+ok 89 - shared ownership D: encounter charge dedupe and action dependencies
+  ---
+  duration_ms: 1.214
+  type: 'test'
+  ...
+# Subtest: shared ownership E: owner undo transfers identical records
+ok 90 - shared ownership E: owner undo transfers identical records
+  ---
+  duration_ms: 1.477333
+  type: 'test'
+  ...
+# Subtest: shared ownership F: dependent undo preserves source
+ok 91 - shared ownership F: dependent undo preserves source
+  ---
+  duration_ms: 1.300417
+  type: 'test'
+  ...
+# Subtest: shared ownership H I: any live charge dedupes regardless of owner or state
+ok 92 - shared ownership H I: any live charge dedupes regardless of owner or state
+  ---
+  duration_ms: 6.848292
+  type: 'test'
+  ...
+# Subtest: shared ownership J: removed dependency charge allows fresh charge on re-tap
+ok 93 - shared ownership J: removed dependency charge allows fresh charge on re-tap
+  ---
+  duration_ms: 1.91
+  type: 'test'
+  ...
+# Subtest: shared ownership C route: item then whole lists scopes and preserves tapped order on whole undo
+ok 94 - shared ownership C route: item then whole lists scopes and preserves tapped order on whole undo
+  ---
+  duration_ms: 4.423375
+  type: 'test'
+  ...
+# Subtest: shared ownership K: paused commit serializes source undo and transfers one live order and charge
+ok 95 - shared ownership K: paused commit serializes source undo and transfers one live order and charge
+  ---
+  duration_ms: 22.274084
+  type: 'test'
+  ...
+# Subtest: shared ownership L: sooner follow-up records both recommendations and confirmation clears flag
+ok 96 - shared ownership L: sooner follow-up records both recommendations and confirmation clears flag
+  ---
+  duration_ms: 1.932458
+  type: 'test'
+  ...
+# Subtest: shared ownership K failure: commit rolls back newly created and shared facts after write failure
+ok 97 - shared ownership K failure: commit rolls back newly created and shared facts after write failure
+  ---
+  duration_ms: 1.780166
+  type: 'test'
+  ...
+# Subtest: shared ownership K failure: undo rolls back after a transfer write fails
+ok 98 - shared ownership K failure: undo rolls back after a transfer write fails
+  ---
+  duration_ms: 2.672167
+  type: 'test'
+  ...
+# Subtest: shared ownership L route: clash rematerializes one request; confirm and edit clear flag
+ok 99 - shared ownership L route: clash rematerializes one request; confirm and edit clear flag
+  ---
+  duration_ms: 2.612458
+  type: 'test'
+  ...
+# Subtest: shared ownership L equal: same interval adds no confirmation flag
+ok 100 - shared ownership L equal: same interval adds no confirmation flag
+  ---
+  duration_ms: 3.261291
+  type: 'test'
+  ...
+# Subtest: shared ownership G: surviving focused charge is reused by a fresh original order
+ok 101 - shared ownership G: surviving focused charge is reused by a fresh original order
+  ---
+  duration_ms: 2.038875
+  type: 'test'
+  ...
+# Subtest: shared ownership K: commit before sign completes; sign before commit refuses without facts
+ok 102 - shared ownership K: commit before sign completes; sign before commit refuses without facts
+  ---
+  duration_ms: 22.068459
+  type: 'test'
+  ...
+# Subtest: shared ownership K: simultaneous source and dependent undo leave no live shared records
+ok 103 - shared ownership K: simultaneous source and dependent undo leave no live shared records
+  ---
+  duration_ms: 2.383167
+  type: 'test'
+  ...
+# Subtest: shared ownership K: distinct item taps serialize an encounter charge concept
+ok 104 - shared ownership K: distinct item taps serialize an encounter charge concept
+  ---
+  duration_ms: 21.966958
+  type: 'test'
+  ...
+# Subtest: shared ownership J action: dead referenced action cannot be satisfied by another same-key action
+ok 105 - shared ownership J action: dead referenced action cannot be satisfied by another same-key action
+  ---
+  duration_ms: 2.15475
+  type: 'test'
+  ...
+# Subtest: shared ownership J action: modified live dependency survives its inactive owner
+ok 106 - shared ownership J action: modified live dependency survives its inactive owner
+  ---
+  duration_ms: 1.634375
+  type: 'test'
+  ...
+# Subtest: shared ownership L sign: unresolved recommendation remains advisory during sign cleanup
+ok 107 - shared ownership L sign: unresolved recommendation remains advisory during sign cleanup
+  ---
+  duration_ms: 2.115625
+  type: 'test'
+  ...
+# Subtest: shared ownership B: repeated cross-plan tap records only one dependent and returns original owner
+ok 108 - shared ownership B: repeated cross-plan tap records only one dependent and returns original owner
+  ---
+  duration_ms: 1.290042
+  type: 'test'
+  ...
+# Subtest: shared ownership K failure: rejected later dependent preflight restores earlier dependencies
+ok 109 - shared ownership K failure: rejected later dependent preflight restores earlier dependencies
+  ---
+  duration_ms: 1.839541
+  type: 'test'
+  ...
+# Subtest: shared ownership K failure: sign cleanup restores proposed findings after write failure
+ok 110 - shared ownership K failure: sign cleanup restores proposed findings after write failure
+  ---
+  duration_ms: 1.95425
+  type: 'test'
+  ...
+# Subtest: shared ownership B optout: cross-plan dependency preserves deliberate charge opt-out through undo
+ok 111 - shared ownership B optout: cross-plan dependency preserves deliberate charge opt-out through undo
+  ---
+  duration_ms: 1.955083
+  type: 'test'
+  ...
+# Subtest: shared ownership B lost response: persisted dependency still returns original owner already applied
+ok 112 - shared ownership B lost response: persisted dependency still returns original owner already applied
+  ---
+  duration_ms: 1.3785
+  type: 'test'
+  ...
+# Subtest: shared rollback: deselected finding returns to proposed after failed commit and retry materializes it
+ok 113 - shared rollback: deselected finding returns to proposed after failed commit and retry materializes it
+  ---
+  duration_ms: 2.030417
+  type: 'test'
+  ...
+# Subtest: shared rollback: action projection survives successful deletion followed by failed Basic removal
+ok 114 - shared rollback: action projection survives successful deletion followed by failed Basic removal
+  ---
+  duration_ms: 1.262667
+  type: 'test'
+  ...
+# Subtest: shared rollback: finding projection survives successful deletion followed by failed Basic removal
+ok 115 - shared rollback: finding projection survives successful deletion followed by failed Basic removal
+  ---
+  duration_ms: 1.345291
+  type: 'test'
+  ...
+# Subtest: shared rollback endpoint: action revocation rollback preserves original FHIR IDs and statuses
+ok 116 - shared rollback endpoint: action revocation rollback preserves original FHIR IDs and statuses
+  ---
+  duration_ms: 2.612625
+  type: 'test'
+  ...
+# Subtest: shared rollback endpoint: finding revocation rollback preserves original FHIR IDs and statuses
+not ok 117 - shared rollback endpoint: finding revocation rollback preserves original FHIR IDs and statuses
+  ---
+  duration_ms: 7.958209
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/protocol-phase5.test.ts:1:139475'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(originalProjections.some((row) => row.resourceType === (kind === "action" ? "ServiceRequest" : "Observation")))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/protocol-phase5.test.ts:3669:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: follow-up fixback clinician edit: plan recommendation preserves doctor's choice
+ok 118 - follow-up fixback clinician edit: plan recommendation preserves doctor's choice
+  ---
+  duration_ms: 3.345917
+  type: 'test'
+  ...
+# Subtest: follow-up fixback clinician state: plan recommendation preserves doctor's choice
+ok 119 - follow-up fixback clinician state: plan recommendation preserves doctor's choice
+  ---
+  duration_ms: 0.399
+  type: 'test'
+  ...
+# Subtest: follow-up fixback clinician provenance: plan recommendation preserves doctor's choice
+ok 120 - follow-up fixback clinician provenance: plan recommendation preserves doctor's choice
+  ---
+  duration_ms: 0.350083
+  type: 'test'
+  ...
+# Subtest: follow-up fixback undo dependent whole: removes recommendation and rematerializes
+ok 121 - follow-up fixback undo dependent whole: removes recommendation and rematerializes
+  ---
+  duration_ms: 0.468167
+  type: 'test'
+  ...
+# Subtest: follow-up fixback undo dependent item: removes recommendation and rematerializes
+ok 122 - follow-up fixback undo dependent item: removes recommendation and rematerializes
+  ---
+  duration_ms: 0.5835
+  type: 'test'
+  ...
+# Subtest: follow-up fixback undo owner whole: removes recommendation and rematerializes
+ok 123 - follow-up fixback undo owner whole: removes recommendation and rematerializes
+  ---
+  duration_ms: 0.425042
+  type: 'test'
+  ...
+# Subtest: follow-up fixback undo owner item: removes recommendation and rematerializes
+ok 124 - follow-up fixback undo owner item: removes recommendation and rematerializes
+  ---
+  duration_ms: 0.40525
+  type: 'test'
+  ...
+# Subtest: follow-up fixback undo soonest of three retains two recommendations
+ok 125 - follow-up fixback undo soonest of three retains two recommendations
+  ---
+  duration_ms: 0.638375
+  type: 'test'
+  ...
+# Subtest: follow-up fixback undo last recommendation clears doctor flag
+ok 126 - follow-up fixback undo last recommendation clears doctor flag
+  ---
+  duration_ms: 0.535583
+  type: 'test'
+  ...
+# Subtest: follow-up fixback failed undo restores action and ServiceRequest after follow-up write
+ok 127 - follow-up fixback failed undo restores action and ServiceRequest after follow-up write
+  ---
+  duration_ms: 0.54475
+  type: 'test'
+  ...
+# Subtest: shared guard chronological dependents: earliest then next own unchanged gonioscopy records
+ok 128 - shared guard chronological dependents: earliest then next own unchanged gonioscopy records
+  ---
+  duration_ms: 2.532125
+  type: 'test'
+  ...
+# Subtest: shared guard concurrent whole commits: only one confirms with one live order
+ok 129 - shared guard concurrent whole commits: only one confirms with one live order
+  ---
+  duration_ms: 0.2805
+  type: 'test'
+  ...
+1..129
+# tests 129
+# suites 0
+# pass 128
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 437.960834

@@ -2901,6 +2901,12 @@ class EndpointFhir {
   annualSearchesDelayed = 0;
   releaseDelayedAnnualSearch?: () => void;
   next = 1;
+  projectionVersions = new Map<string, string>();
+
+  projectionResponse<T extends Resource>(resource: T): T {
+    const versionId = this.projectionVersions.get(`${resource.resourceType}/${resource.id}`);
+    return versionId ? { ...resource, meta: { ...resource.meta, versionId } } : resource;
+  }
 
   async search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>> {
     this.searchResourceTypes.push(resourceType);
@@ -2958,13 +2964,14 @@ class EndpointFhir {
       const [system, value] = conditional.split("|");
       const existing = this.resources.find((candidate) => "identifier" in candidate && candidate.identifier?.some((identifier) =>
         identifier.system === system && identifier.value === value));
-      if (existing) return existing as T;
+      if (existing) return this.projectionResponse(existing) as T;
     }
     const saved = resource.resourceType === "Basic"
       ? { ...resource, id: resource.id ?? `resource-${this.next++}`, meta: { ...resource.meta, versionId: "1" } }
       : { ...resource, id: resource.id ?? `resource-${this.next++}` };
     this.resources.push(saved); this.writes.push(saved);
-    return saved;
+    if (resource.resourceType !== "Basic") this.projectionVersions.set(`${saved.resourceType}/${saved.id}`, "1");
+    return this.projectionResponse(saved);
   }
   update = async <T extends EndpointResource>(
     resourceType: T["resourceType"],
@@ -2985,7 +2992,8 @@ class EndpointFhir {
     const index = this.resources.findIndex((candidate) => candidate.resourceType === resourceType && candidate.id === id);
     const current = this.resources[index];
     const expected = headers?.["If-Match"];
-    if (expected && expected !== `W/"${current?.meta?.versionId}"`) {
+    const version = resourceType === "Basic" ? current?.meta?.versionId : this.projectionVersions.get(`${resourceType}/${id}`);
+    if (expected && expected !== `W/"${version}"`) {
       throw Object.assign(new Error("FHIR 412 Precondition Failed"), { status: 412 });
     }
     const saved = resourceType === "Basic"
@@ -2997,15 +3005,22 @@ class EndpointFhir {
             versionId: String(Number(current?.meta?.versionId ?? "0") + 1),
           },
         }
-      : { ...resource, id };
+      : { ...resource, id, ...(resource.meta ? { meta: { ...resource.meta } } : {}) };
+    if (resourceType !== "Basic") {
+      this.projectionVersions.set(`${resourceType}/${id}`, String(Number(version ?? "0") + 1));
+      if (saved.meta?.versionId) {
+        delete saved.meta.versionId;
+        if (!Object.keys(saved.meta).length) delete saved.meta;
+      }
+    }
     if (index >= 0) this.resources[index] = saved;
     this.writes.push(saved);
-    return saved;
+    return this.projectionResponse(saved);
   };
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
     const resource = this.resources.find((candidate) => candidate.resourceType === resourceType && candidate.id === id);
     if (!resource) throw new Error(`${resourceType}/${id} not found`);
-    return resource as T;
+    return this.projectionResponse(resource) as T;
   }
 }
 

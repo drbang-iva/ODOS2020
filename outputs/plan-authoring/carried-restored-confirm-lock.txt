@@ -1,0 +1,74 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs src/__tests__/plan-carried.test.ts
+
+TAP version 13
+# Subtest: carried apply maps the losing whole-apply commit race to 409
+ok 1 - carried apply maps the losing whole-apply commit race to 409
+  ---
+  duration_ms: 4.795666
+  type: 'test'
+  ...
+# Subtest: carried unapply maps a conditional application save conflict to 409
+ok 2 - carried unapply maps a conditional application save conflict to 409
+  ---
+  duration_ms: 1.254666
+  type: 'test'
+  ...
+# Subtest: carried confirm checks liveness after the encounter lock and returns 404
+ok 3 - carried confirm checks liveness after the encounter lock and returns 404
+  ---
+  duration_ms: 4.059625
+  type: 'test'
+  ...
+# Subtest: carried undo preserves clinician resolution at 4 months
+ok 4 - carried undo preserves clinician resolution at 4 months
+  ---
+  duration_ms: 2.369666
+  type: 'test'
+  ...
+# Subtest: carried undo preserves clinician resolution at 6 months
+ok 5 - carried undo preserves clinician resolution at 6 months
+  ---
+  duration_ms: 1.831458
+  type: 'test'
+  ...
+# Subtest: carried ServiceRequest rollback reports a newer version conflict without overwriting it
+ok 6 - carried ServiceRequest rollback reports a newer version conflict without overwriting it
+  ---
+  duration_ms: 1.542166
+  type: 'test'
+  ...
+# Subtest: carried CarePlan rollback reports a newer version conflict without overwriting it
+ok 7 - carried CarePlan rollback reports a newer version conflict without overwriting it
+  ---
+  duration_ms: 1.055458
+  type: 'test'
+  ...
+# Subtest: carried Observation rollback reports a newer version conflict without overwriting it
+ok 8 - carried Observation rollback reports a newer version conflict without overwriting it
+  ---
+  duration_ms: 1.137792
+  type: 'test'
+  ...
+# Subtest: carried rollback restores the captured version conditionally
+ok 9 - carried rollback restores the captured version conditionally
+  ---
+  duration_ms: 1.017542
+  type: 'test'
+  ...
+# Subtest: carried rollback refuses missing revoke version
+ok 10 - carried rollback refuses missing revoke version
+  ---
+  duration_ms: 2.321167
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 164.403875

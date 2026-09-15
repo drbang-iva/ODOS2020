@@ -33,7 +33,7 @@ export class PlanAuthoringFhir {
     this.writes.push({ resource: structuredClone(saved), headers });
     return structuredClone(saved);
   }
-  async update<T extends Resource>(type: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {
+  update = async <T extends Resource>(type: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> => {
     await this.beforeUpdate?.(resource, headers);
     const index = this.rows.findIndex(row => row.resourceType === type && row.id === id);
     const current = this.rows[index];

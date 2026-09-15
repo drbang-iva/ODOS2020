@@ -1,0 +1,175 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs src/__tests__/plan-carried.test.ts
+
+TAP version 13
+# Subtest: carried apply maps the losing whole-apply commit race to 409
+ok 1 - carried apply maps the losing whole-apply commit race to 409
+  ---
+  duration_ms: 3.512583
+  type: 'test'
+  ...
+# Subtest: carried unapply maps a conditional application save conflict to 409
+ok 2 - carried unapply maps a conditional application save conflict to 409
+  ---
+  duration_ms: 1.174875
+  type: 'test'
+  ...
+# Subtest: carried confirm checks liveness after the encounter lock and returns 404
+ok 3 - carried confirm checks liveness after the encounter lock and returns 404
+  ---
+  duration_ms: 4.446625
+  type: 'test'
+  ...
+# Subtest: carried undo preserves clinician resolution at 4 months
+ok 4 - carried undo preserves clinician resolution at 4 months
+  ---
+  duration_ms: 2.145042
+  type: 'test'
+  ...
+# Subtest: carried undo preserves clinician resolution at 6 months
+ok 5 - carried undo preserves clinician resolution at 6 months
+  ---
+  duration_ms: 1.579875
+  type: 'test'
+  ...
+# Subtest: carried ServiceRequest rollback reports a newer version conflict without overwriting it
+not ok 6 - carried ServiceRequest rollback reports a newer version conflict without overwriting it
+  ---
+  duration_ms: 2.410208
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:1:4783'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /rollback.*412|412.*rollback/i. Input:
+    
+    'Error: Synthetic Basic removal failure'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+  error: 'Synthetic Basic removal failure'
+  stack: |-
+    PlanAuthoringFhir.h.fhir.beforeUpdate (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:106:15)
+    async PlanAuthoringFhir.update (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/helpers/plan-authoring-fhir.ts:37:5)
+    async ProtocolBasicStore.saveWithIdentifiers (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-store.ts:149:9)
+    async ProtocolService.unapplyLocked (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-service.ts:740:11)
+    async InProcessProtocolItemAddLock.run (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-service.ts:74:14)
+    async handleProtocolUnapplyRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-endpoint.ts:828:33)
+    async waitForActual (node:assert:644:5)
+    async Function.rejects (node:assert:767:25)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:109:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:109:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: carried CarePlan rollback reports a newer version conflict without overwriting it
+not ok 7 - carried CarePlan rollback reports a newer version conflict without overwriting it
+  ---
+  duration_ms: 1.24625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:1:4783'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /rollback.*412|412.*rollback/i. Input:
+    
+    'Error: Synthetic Basic removal failure'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+  error: 'Synthetic Basic removal failure'
+  stack: |-
+    PlanAuthoringFhir.h.fhir.beforeUpdate (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:106:15)
+    async PlanAuthoringFhir.update (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/helpers/plan-authoring-fhir.ts:37:5)
+    async ProtocolBasicStore.saveWithIdentifiers (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-store.ts:149:9)
+    async ProtocolService.unapplyLocked (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-service.ts:740:11)
+    async InProcessProtocolItemAddLock.run (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-service.ts:74:14)
+    async handleProtocolUnapplyRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-endpoint.ts:828:33)
+    async waitForActual (node:assert:644:5)
+    async Function.rejects (node:assert:767:25)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:109:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:109:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: carried Observation rollback reports a newer version conflict without overwriting it
+not ok 8 - carried Observation rollback reports a newer version conflict without overwriting it
+  ---
+  duration_ms: 2.121208
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:1:4783'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /rollback.*412|412.*rollback/i. Input:
+    
+    'Error: Synthetic Basic removal failure'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+  error: 'Synthetic Basic removal failure'
+  stack: |-
+    PlanAuthoringFhir.h.fhir.beforeUpdate (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:106:15)
+    async PlanAuthoringFhir.update (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/helpers/plan-authoring-fhir.ts:37:5)
+    async ProtocolBasicStore.saveWithIdentifiers (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-store.ts:149:9)
+    async ProtocolService.unapplyLocked (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-service.ts:775:11)
+    async InProcessProtocolItemAddLock.run (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-service.ts:74:14)
+    async handleProtocolUnapplyRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/clinical-graph/protocol-endpoint.ts:828:33)
+    async waitForActual (node:assert:644:5)
+    async Function.rejects (node:assert:767:25)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:109:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:109:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: carried rollback restores the captured version conditionally
+not ok 9 - carried rollback restores the captured version conditionally
+  ---
+  duration_ms: 1.36325
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:1:5609'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - 'W/"2"'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'W/"2"'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/plan-carried/mcp/src/__tests__/plan-carried.test.ts:139:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: carried rollback refuses missing revoke version
+ok 10 - carried rollback refuses missing revoke version
+  ---
+  duration_ms: 1.19475
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 6
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 191.895333

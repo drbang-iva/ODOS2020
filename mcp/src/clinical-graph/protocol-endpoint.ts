@@ -28,6 +28,7 @@ import {
   matchesCode,
   ProtocolActionMaterializationRefusal,
   ProtocolItemAddConflictError,
+  ProtocolFollowUpNotFoundError,
   ProtocolPublishValidationError,
   ProtocolService,
   protocolFollowUpDue,
@@ -402,11 +403,18 @@ export async function handleProtocolApplyRequest(
     diagnosis: parsed.data.diagnosis,
     actor: staff.staffReference,
   });
-  await liveService(staff, deps.now, seriesResolution.protocols, deps.educationCatalog).commit(
-    opened.application.id,
-    offeredSelections,
-    [parsed.data.diagnosis.reference],
-  );
+  try {
+    await liveService(staff, deps.now, seriesResolution.protocols, deps.educationCatalog).commit(
+      opened.application.id,
+      offeredSelections,
+      [parsed.data.diagnosis.reference],
+    );
+  } catch (error) {
+    if (error instanceof ProtocolItemAddConflictError) {
+      return { status: 409, body: { error: error.message } };
+    }
+    throw error;
+  }
   if (parsed.data.acceptCharges) {
     for (const charge of (await service.charges.list()).filter((candidate) =>
       candidate.protocolApplicationId === opened.application.id &&
@@ -796,12 +804,15 @@ export async function handleProtocolFollowUpConfirmRequest(
   const body = z.union([z.object({}).strict(), z.object({ interval: z.number().int().positive(), unit: z.enum(["days", "weeks", "months"]), reason: z.string().trim().min(1).optional() }).strict()]).safeParse(input.body);
   if (!params.success || !body.success) return { status: 400, body: { error: "Valid encounter, action, and follow-up are required." } };
   const service = liveService(staff, deps.now, undefined, deps.educationCatalog);
-  const action = await service.actions.get(params.data.actionId);
-  if (!action || action.encounterId !== params.data.encounterId || action.actionType !== "follow-up" || ["removed", "cancelled"].includes(action.state)) {
-    return { status: 404, body: { error: "Live follow-up not found for this encounter." } };
+  try {
+    return { status: 200, body: { action: await service.confirmFollowUp(params.data.encounterId, params.data.actionId, staff.staffReference,
+      "interval" in body.data ? body.data : undefined) } };
+  } catch (error) {
+    if (error instanceof ProtocolFollowUpNotFoundError) {
+      return { status: 404, body: { error: error.message } };
+    }
+    throw error;
   }
-  return { status: 200, body: { action: await service.confirmFollowUp(params.data.encounterId, params.data.actionId, staff.staffReference,
-    "interval" in body.data ? body.data : undefined) } };
 }
 
 export async function handleProtocolUnapplyRequest(
@@ -816,7 +827,7 @@ export async function handleProtocolUnapplyRequest(
   try {
     return { status: 200, body: await liveService(staff, deps.now, undefined, deps.educationCatalog).unapply(parsed.data.applicationId) };
   } catch (error) {
-    if (error instanceof AcceptedChargeUnapplyError) {
+    if (error instanceof AcceptedChargeUnapplyError || error instanceof ProtocolItemAddConflictError) {
       return { status: 409, body: { error: error.message } };
     }
     throw error;
@@ -926,16 +937,16 @@ function liveService(
       if (!id || !["Observation", "ServiceRequest", "CarePlan"].includes(resourceType ?? "")) return;
       if (resourceType === "Observation") {
         const resource = await staff.fhir.read<Observation>("Observation", id);
-        await updateProjected(staff.fhir, "Observation", id, { ...resource, status: "entered-in-error" });
-        return () => updateProjected(staff.fhir, "Observation", id, resource);
+        const revoked = await updateProjected(staff.fhir, "Observation", id, { ...resource, status: "entered-in-error" });
+        return projectionRestore(staff.fhir, "Observation", id, resource, revoked.meta?.versionId);
       } else if (resourceType === "ServiceRequest") {
         const resource = await staff.fhir.read<ServiceRequest>("ServiceRequest", id);
-        await updateProjected(staff.fhir, "ServiceRequest", id, { ...resource, status: "revoked" });
-        return () => updateProjected(staff.fhir, "ServiceRequest", id, resource);
+        const revoked = await updateProjected(staff.fhir, "ServiceRequest", id, { ...resource, status: "revoked" });
+        return projectionRestore(staff.fhir, "ServiceRequest", id, resource, revoked.meta?.versionId);
       } else {
         const resource = await staff.fhir.read<CarePlan>("CarePlan", id);
-        await updateProjected(staff.fhir, "CarePlan", id, { ...resource, status: "revoked" });
-        return () => updateProjected(staff.fhir, "CarePlan", id, resource);
+        const revoked = await updateProjected(staff.fhir, "CarePlan", id, { ...resource, status: "revoked" });
+        return projectionRestore(staff.fhir, "CarePlan", id, resource, revoked.meta?.versionId);
       }
     },
   }, now);
@@ -946,14 +957,32 @@ async function updateProjected<T extends Observation | ServiceRequest | CarePlan
   resourceType: T["resourceType"],
   id: string,
   resource: T,
-): Promise<void> {
+  headers?: Record<string, string>,
+): Promise<T> {
   const update = fhir.update as unknown as (
     type: T["resourceType"],
     id: string,
     resource: T,
     headers?: Record<string, string>,
   ) => Promise<T>;
-  await update(resourceType, id, resource, { "X-ODOS-Source": "protocol-module" });
+  return update(resourceType, id, resource, { "X-ODOS-Source": "protocol-module", ...headers });
+}
+
+function projectionRestore<T extends Observation | ServiceRequest | CarePlan>(
+  fhir: LiveFhir,
+  resourceType: T["resourceType"],
+  id: string,
+  resource: T,
+  revokedVersion: string | undefined,
+): () => Promise<void> {
+  return async () => {
+    if (!revokedVersion) throw new Error(`Projection rollback refused for ${resourceType}/${id}: revoke returned no versionId.`);
+    try {
+      await updateProjected(fhir, resourceType, id, resource, { "If-Match": `W/"${revokedVersion}"` });
+    } catch (error) {
+      throw new Error(`Projection rollback failed for ${resourceType}/${id}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    }
+  };
 }
 
 export function protocolFindingObservation(finding: ProtocolFindingInstance): Observation {
