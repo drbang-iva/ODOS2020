@@ -571,6 +571,7 @@ async function runStatements(
   options: { generatedAt: string; patientReference?: string; generateId?: () => string },
 ): Promise<StatementHandlerResult> {
   try {
+    // fhir-scope-contract: Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config
     const majorityResources = await searchAll<Basic>(fhir, "Basic", {
       code: `${ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM}|${ODOS_AGE_OF_MAJORITY_CONFIG_CODE}`,
     });

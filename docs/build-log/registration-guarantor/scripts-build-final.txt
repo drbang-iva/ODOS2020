@@ -2,5 +2,3 @@
 > odos2020@0.0.1 typecheck:scripts
 > tsc -p tsconfig.scripts.json
 
-scripts/seed-age-of-majority.ts(15,43): error TS2345: Argument of type 'Pick<MedplumClient, "create" | "search">' is not assignable to parameter of type 'FhirSearchClient'.
-  Property 'baseUrl' is missing in type 'Pick<MedplumClient, "create" | "search">' but required in type 'FhirSearchClient'.

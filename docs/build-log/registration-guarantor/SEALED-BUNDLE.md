@@ -92,3 +92,9 @@ The age test uses a valid January1 birth date19 years before the mocked current 
 The full local regression counts above precede these bounded fixes. Final-head full CI regression and live-authorization results are required and will be attached to PR607 by the coordinating task. No fixture restart was needed for these UI validation/test and evidence-only changes.
 
 Integrated fixback checks: **58/58 UI**, UI production build exit0, preflight0 warnings0 hard blocks (`fixback-ui-integrated.txt`, `fixback-ui-build.txt`, `fixback-preflight.txt`).
+
+### Scope-marker and evidence correction
+
+The actual statements age-setting query now carries its exact `fhir-scope-contract`. The guard runs the real source plus the real search helper through the preflight scanner and proves unrelated Basic grants cannot satisfy it. Guard1/1 green; deleting the marker1 failure; restored config/statements suites **40/40**. No query or role behavior changed. `scope-marker-*.txt` records the proof and refreshed preflight.
+
+`scripts-build-final.txt` was incorrectly named while retaining pre-fix TS2345 output. It now contains the successful current `npm run typecheck:scripts` run. The earlier failure remains explicitly preserved in `scripts-build-rebased.txt`; final script typecheck is exit0.

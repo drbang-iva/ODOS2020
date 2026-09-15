@@ -1,0 +1,250 @@
+TAP version 13
+# Subtest: age-of-majority writer round trips, preserves version, rejects invalid values and has no fallback
+ok 1 - age-of-majority writer round trips, preserves version, rejects invalid values and has no fallback
+  ---
+  duration_ms: 0.551208
+  type: 'test'
+  ...
+# Subtest: D8 age-of-majority canonical extension is registered
+ok 2 - D8 age-of-majority canonical extension is registered
+  ---
+  duration_ms: 0.186917
+  type: 'test'
+  ...
+# Subtest: D9 seed defaults to dry-run and preserves an existing configured project
+ok 3 - D9 seed defaults to dry-run and preserves an existing configured project
+  ---
+  duration_ms: 0.647208
+  type: 'test'
+  ...
+# Subtest: age-of-majority policy grants match scheduling writes and cover all communication roles
+ok 4 - age-of-majority policy grants match scheduling writes and cover all communication roles
+  ---
+  duration_ms: 0.452958
+  type: 'test'
+  ...
+# Subtest: statement age query requires its exact scope grant
+ok 5 - statement age query requires its exact scope grant
+  ---
+  duration_ms: 377.028291
+  type: 'test'
+  ...
+# Subtest: a partial payment produces a balance-forward statement exactly reconciled to its Invoice
+ok 6 - a partial payment produces a balance-forward statement exactly reconciled to its Invoice
+  ---
+  duration_ms: 1.230666
+  type: 'test'
+  ...
+# Subtest: a record-only tender Invoice is fully paid without a separate PaymentReconciliation
+ok 7 - a record-only tender Invoice is fully paid without a separate PaymentReconciliation
+  ---
+  duration_ms: 0.158083
+  type: 'test'
+  ...
+# Subtest: a record-only tender Invoice with an active linked allocation is rejected as ambiguous
+ok 8 - a record-only tender Invoice with an active linked allocation is rejected as ambiguous
+  ---
+  duration_ms: 0.228875
+  type: 'test'
+  ...
+# Subtest: an issued Invoice with a record-only tender is rejected because a partial deposit is not full settlement
+ok 9 - an issued Invoice with a record-only tender is rejected because a partial deposit is not full settlement
+  ---
+  duration_ms: 0.068542
+  type: 'test'
+  ...
+# Subtest: configured statement message originates in the Basic singleton and round-trips through persisted statement data
+ok 10 - configured statement message originates in the Basic singleton and round-trips through persisted statement data
+  ---
+  duration_ms: 2.6885
+  type: 'test'
+  ...
+# Subtest: operator statement generation invokes the domain workflow without request authentication
+ok 11 - operator statement generation invokes the domain workflow without request authentication
+  ---
+  duration_ms: 0.565625
+  type: 'test'
+  ...
+# Subtest: operator statement generation completes its run with the persisted Task id and version metadata
+ok 12 - operator statement generation completes its run with the persisted Task id and version metadata
+  ---
+  duration_ms: 0.369041
+  type: 'test'
+  ...
+# Subtest: an internally inconsistent Invoice is rejected instead of emitting a wrong balance
+ok 13 - an internally inconsistent Invoice is rejected instead of emitting a wrong balance
+  ---
+  duration_ms: 0.07525
+  type: 'test'
+  ...
+# Subtest: insurance detail passes through linked Claim diagnoses, ERA adjustments, provider identity, and patient payments
+ok 14 - insurance detail passes through linked Claim diagnoses, ERA adjustments, provider identity, and patient payments
+  ---
+  duration_ms: 0.709417
+  type: 'test'
+  ...
+# Subtest: minor statements mail to the current Account guarantor
+ok 15 - minor statements mail to the current Account guarantor
+  ---
+  duration_ms: 0.63575
+  type: 'test'
+  ...
+# Subtest: minor statements reject an addressless Account guarantor instead of redirecting to the patient
+ok 16 - minor statements reject an addressless Account guarantor instead of redirecting to the patient
+  ---
+  duration_ms: 0.447167
+  type: 'test'
+  ...
+# Subtest: minor statements reject the patient as their own Account guarantor
+ok 17 - minor statements reject the patient as their own Account guarantor
+  ---
+  duration_ms: 0.268959
+  type: 'test'
+  ...
+# Subtest: statements reject a guarantor without a usable name
+ok 18 - statements reject a guarantor without a usable name
+  ---
+  duration_ms: 0.491375
+  type: 'test'
+  ...
+# Subtest: statements reject an unresolved Account guarantor even when another guarantor resolves
+ok 19 - statements reject an unresolved Account guarantor even when another guarantor resolves
+  ---
+  duration_ms: 0.269375
+  type: 'test'
+  ...
+# Subtest: statements reject an unsupported Account guarantor reference
+ok 20 - statements reject an unsupported Account guarantor reference
+  ---
+  duration_ms: 0.259541
+  type: 'test'
+  ...
+# Subtest: statements reject a RelatedPerson owned by another patient
+ok 21 - statements reject a RelatedPerson owned by another patient
+  ---
+  duration_ms: 0.308625
+  type: 'test'
+  ...
+# Subtest: self-responsible adult statements mail to the patient
+ok 22 - self-responsible adult statements mail to the patient
+  ---
+  duration_ms: 0.3215
+  type: 'test'
+  ...
+# Subtest: statements reject self-guarantee when the patient's age is indeterminate
+ok 23 - statements reject self-guarantee when the patient's age is indeterminate
+  ---
+  duration_ms: 0.535333
+  type: 'test'
+  ...
+# Subtest: exactly one primary RelatedPerson disambiguates multiple current guarantors
+ok 24 - exactly one primary RelatedPerson disambiguates multiple current guarantors
+  ---
+  duration_ms: 0.283916
+  type: 'test'
+  ...
+# Subtest: multiple primary guarantors are rejected as ambiguous
+ok 25 - multiple primary guarantors are rejected as ambiguous
+  ---
+  duration_ms: 0.233666
+  type: 'test'
+  ...
+# Subtest: on-hold and expired guarantors are excluded from statement recipients
+ok 26 - on-hold and expired guarantors are excluded from statement recipients
+  ---
+  duration_ms: 0.299584
+  type: 'test'
+  ...
+# Subtest: a pre-seam Claim degrades to an invoice-only Order without changing the T0 balance
+ok 27 - a pre-seam Claim degrades to an invoice-only Order without changing the T0 balance
+  ---
+  duration_ms: 0.144167
+  type: 'test'
+  ...
+# Subtest: an unapplied patient credit is displayed separately and reduces only the account-level balance due
+ok 28 - an unapplied patient credit is displayed separately and reduces only the account-level balance due
+  ---
+  duration_ms: 0.322167
+  type: 'test'
+  ...
+# Subtest: credit above the open Invoice balance produces zero due and an honest credit balance
+ok 29 - credit above the open Invoice balance produces zero due and an honest credit balance
+  ---
+  duration_ms: 0.230667
+  type: 'test'
+  ...
+# Subtest: batch persists one atomic run, generates every open balance, skips zero balances, and records invalid rejects
+ok 30 - batch persists one atomic run, generates every open balance, skips zero balances, and records invalid rejects
+  ---
+  duration_ms: 0.488334
+  type: 'test'
+  ...
+# Subtest: statement list returns completed snapshots newest-first and never exposes failed reject Tasks
+ok 31 - statement list returns completed snapshots newest-first and never exposes failed reject Tasks
+  ---
+  duration_ms: 4.947083
+  type: 'test'
+  ...
+# Subtest: generate then list preserves an insurance-aware statement under server-assigned Task ids
+ok 32 - generate then list preserves an insurance-aware statement under server-assigned Task ids
+  ---
+  duration_ms: 0.735292
+  type: 'test'
+  ...
+# Subtest: a run larger than the child ceiling commits in chunks and publishes its completed marker last
+ok 33 - a run larger than the child ceiling commits in chunks and publishes its completed marker last
+  ---
+  duration_ms: 2.2755
+  type: 'test'
+  ...
+# Subtest: a failed child chunk leaves no completed run visible to either statement reader
+ok 34 - a failed child chunk leaves no completed run visible to either statement reader
+  ---
+  duration_ms: 1.7655
+  type: 'test'
+  ...
+# Subtest: a cleanup failure never masks the original child-chunk error
+ok 35 - a cleanup failure never masks the original child-chunk error
+  ---
+  duration_ms: 1.434292
+  type: 'test'
+  ...
+# Subtest: a failed completion marker cleans children only after confirming no completed run exists
+ok 36 - a failed completion marker cleans children only after confirming no completed run exists
+  ---
+  duration_ms: 0.277542
+  type: 'test'
+  ...
+# Subtest: generate-one distinguishes no issued Invoices from a paid-in-full balance
+ok 37 - generate-one distinguishes no issued Invoices from a paid-in-full balance
+  ---
+  duration_ms: 0.485792
+  type: 'test'
+  ...
+# Subtest: statement list skips one corrupt Task while returning a valid statement from a completed run
+ok 38 - statement list skips one corrupt Task while returning a valid statement from a completed run
+  ---
+  duration_ms: 0.506375
+  type: 'test'
+  ...
+# Subtest: D6 statements: configured 21 refuses a 19-year-old self recipient
+ok 39 - D6 statements: configured 21 refuses a 19-year-old self recipient
+  ---
+  duration_ms: 0.257459
+  type: 'test'
+  ...
+# Subtest: D7 statements: absent majority raises StatementValidationError and writes no Tasks
+ok 40 - D7 statements: absent majority raises StatementValidationError and writes no Tasks
+  ---
+  duration_ms: 0.14825
+  type: 'test'
+  ...
+1..40
+# tests 40
+# suites 0
+# pass 40
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 452.649959

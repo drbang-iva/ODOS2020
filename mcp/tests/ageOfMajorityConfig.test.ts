@@ -55,3 +55,24 @@ test("age-of-majority policy grants match scheduling writes and cover all commun
     assert.equal(interactions.includes("delete"), false);
   }
 });
+
+
+test("statement age query requires its exact scope grant", async () => {
+  const { collectFhirOperations, findMissingFhirOperationGrants } = await import("../../scripts/fhir-read-grant-check.js");
+  const { buildMedplumAccessPolicy, getRoleDeclaration } = await import("../src/authz/roles.js");
+  const criteria = "Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config";
+  const operations = collectFhirOperations([{
+    path: "mcp/src/statements/statements.ts",
+    text: readFileSync(new URL("../src/statements/statements.ts", import.meta.url), "utf8"),
+  }, {
+    path: "mcp/src/fhir-search.ts",
+    text: readFileSync(new URL("../src/fhir-search.ts", import.meta.url), "utf8"),
+  }]).filter(operation => operation.scopeContract === criteria);
+  assert.equal(operations.length, 1, "the real statements query must carry its exact scope contract");
+  for (const role of ["provider", "staff", "admin"] as const) {
+    const rules = buildMedplumAccessPolicy(getRoleDeclaration(role)).resource!;
+    assert.deepEqual(findMissingFhirOperationGrants(operations, rules), []);
+    assert.deepEqual(findMissingFhirOperationGrants(operations, rules.filter(rule => rule.criteria !== criteria)), operations,
+      "other Basic grants must not mask a missing age-of-majority grant");
+  }
+});
