@@ -8,17 +8,23 @@ const proxy = (extra = '') => `const mcpTarget = 'http://localhost:3333'; const 
 "/fhir": { target: "http://localhost:8103" },
 "/comms": { target: mcpTarget },
 "/communications": { target: mcpTarget, bypass(req) {
-if (req.method === "GET" && ["/communications/education/review", "/communications/consent-evidence"].includes(req.url)) return "/index.html";
+if (req.method === "GET" && ["/communications/education/review", "/communications/consent-evidence"].includes(req.url?.split("?")[0] ?? "") && (req.headers["sec-fetch-dest"] === "document" || (req.headers.accept || "").includes("text/html"))) return "/index.html";
 }},
 ${extra}
 }}};`;
 const plain = (prefix, target = '3333') => `handle ${prefix}* {\n reverse_proxy 127.0.0.1:${target}\n}\n`;
 const comms = `handle /communications* {
+handle @dest {\n rewrite * /index.html\n file_server\n}
 handle @pages {\n rewrite * /index.html\n file_server\n}
 handle {\n reverse_proxy 127.0.0.1:3333\n}
 }`;
 const caddy = `:8090 {
 root * {$ODOS_UI_DIST}
+@dest {
+method GET
+path /communications/education/review /communications/consent-evidence
+header Sec-Fetch-Dest document
+}
 @pages {
 method GET
 path /communications/education/review /communications/consent-evidence
@@ -101,3 +107,30 @@ test('site-level proxy cannot bypass route inventory', () => finding({ caddySour
 test('fallback cannot conceal additional routes', () => finding({ caddySource: caddy.replace('try_files {path} /index.html', 'reverse_proxy /hidden* 127.0.0.1:3333') }, 'parse'));
 test('backend-only family must still proxy to MCP', () => finding({ backendFamilies: [...base.backendFamilies,'/new-api'], caddySource: caddy.replace(comms,plain('/new-api','8103') + comms) }, 'target-mismatch','/new-api'));
 test('backend-only MCP route does not change advisory Vite coverage', () => assert.deepEqual(check({ backendFamilies: [...base.backendFamilies,'/new-api'], caddySource: caddy.replace(comms,plain('/new-api') + comms) }), []));
+
+test('F12 wildcard Accept is a page-predicate finding', () => finding({ caddySource: caddy.replace('header Accept *text/html*', 'header Accept *') }, 'page-predicate'));
+test('F13 missing Accept predicate is a page-predicate finding', () => finding({ caddySource: caddy.replace('header Accept *text/html*', '') }, 'page-predicate'));
+test('F14 both navigation alternatives are required per block', () => finding({ caddySource: caddy.replace('handle @pages {\n rewrite * /index.html\n file_server\n}', '') }, 'page-predicate'));
+test('F15 extra header narrows navigation and is refused', () => finding({ caddySource: caddy.replace('header Sec-Fetch-Dest document', 'header Sec-Fetch-Dest document\nheader X-Other yes') }, 'page-predicate'));
+test('two navigation predicates in one matcher are refused', () => finding({ caddySource: caddy.replace('header Accept *text/html*', 'header Accept *text/html*\nheader Sec-Fetch-Dest document') }, 'page-predicate'));
+test('extra matcher directive is refused', () => finding({ caddySource: caddy.replace('header Accept *text/html*', 'header Accept *text/html*\nquery foo=bar') }, 'page-predicate'));
+test('unrecognizable Vite navigation condition is a parse finding', () => finding({ viteSource: proxy().replace('.includes("text/html")', '.startsWith("text/html")') }, 'parse'));
+test('changed Vite boolean composition is a parse finding', () => finding({ viteSource: proxy().replace('=== "document" ||', '=== "document" &&') }, 'parse'));
+test('unguarded Vite page return is a parse finding', () => finding({ viteSource: proxy().replace('bypass(req) {', 'bypass(req) { return "/index.html";') }, 'parse'));
+
+const navigationVite = proxy('"/clinic": { target: mcpTarget, bypass(req) { if (req.headers["sec-fetch-dest"] === "document" || (req.headers.accept || "").includes("text/html")) return "/index.html"; } },');
+const navigationCaddy = caddy.replace('root * {$ODOS_UI_DIST}', `root * {$ODOS_UI_DIST}
+@navdest header Sec-Fetch-Dest document
+@navaccept header Accept *text/html*
+${comms.replace('/communications*', '/clinic*').replace('@dest', '@navdest').replace('@pages', '@navaccept')}`);
+test('shared single-line navigation matchers are supported', () => assert.deepEqual(check({ viteSource: navigationVite, caddySource: navigationCaddy }), []));
+test('F12 shared Accept wildcard refuses each affected route', () => finding({ viteSource: navigationVite, caddySource: navigationCaddy.replace('@navaccept header Accept *text/html*', '@navaccept header Accept *') }, 'page-predicate', '/clinic'));
+test('F14 shared navigation block requires both alternatives', () => finding({ viteSource: navigationVite, caddySource: navigationCaddy.replace('handle @navaccept {\n rewrite * /index.html\n file_server\n}', '') }, 'page-predicate', '/clinic'));
+test('F15 shared matcher extra header refuses', () => finding({ viteSource: navigationVite, caddySource: navigationCaddy.replace('@navdest header Sec-Fetch-Dest document', '@navdest {\nheader Sec-Fetch-Dest document\nheader X-Other yes\n}') }, 'page-predicate', '/clinic'));
+test('GET constraint is allowed only on communications page matchers', () => finding({ viteSource: navigationVite, caddySource: navigationCaddy.replace('@navdest header Sec-Fetch-Dest document', '@navdest {\nheader Sec-Fetch-Dest document\nmethod GET\n}') }, 'page-predicate', '/clinic'));
+test('changed destination value is refused', () => finding({ caddySource: caddy.replace('Sec-Fetch-Dest document', 'Sec-Fetch-Dest iframe') }, 'page-predicate'));
+test('unknown Vite destination value refuses parsing', () => finding({ viteSource: proxy().replace('=== "document"', '=== "iframe"') }, 'parse'));
+
+test('duplicate Vite bypass cannot hide an overriding condition', () => finding({ viteSource: proxy().replace('bypass(req) {', 'bypass(req) { return "/index.html"; }, bypass(req) {') }, 'parse'));
+test('Vite spread cannot override recognized bypass', () => finding({ viteSource: proxy().replace('bypass(req) {', '...override, bypass(req) {') }, 'parse'));
+test('quoted bypass names still receive predicate validation', () => finding({ viteSource: proxy().replace('bypass(req)', '"bypass"(req)').replace('.includes("text/html")', '.includes("anything")') }, 'parse'));

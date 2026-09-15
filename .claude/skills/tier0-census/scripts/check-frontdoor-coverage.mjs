@@ -60,6 +60,40 @@ function parseCaddy(source) {
   return { routes, matchers: site.children.filter(n => n.words[0]?.startsWith('@')) };
 }
 
+function syntaxShape(node) {
+  if (ts.isParenthesizedExpression(node)) return syntaxShape(node.expression);
+  const children = [];
+  ts.forEachChild(node, child => { children.push(syntaxShape(child)); });
+  return [node.kind, ts.isIdentifier(node) || ts.isStringLiteral(node) || ts.isNumericLiteral(node) ? node.text : null, children];
+}
+
+function navigationPredicates(bypass, prefix, paths) {
+  const fail = () => { throw new Error(`unrecognizable Vite bypass condition for ${prefix}`); };
+  if (!ts.isMethodDeclaration(bypass) || bypass.modifiers?.length || bypass.asteriskToken || bypass.parameters.length !== 1 || !ts.isIdentifier(bypass.parameters[0].name) || !bypass.body || bypass.body.statements.length !== 1) return fail();
+  const request = bypass.parameters[0].name.text;
+  const branch = bypass.body.statements[0];
+  if (!ts.isIfStatement(branch) || branch.elseStatement) return fail();
+  const returns = ts.isBlock(branch.thenStatement) ? branch.thenStatement.statements : [branch.thenStatement];
+  if (returns.length !== 1 || !ts.isReturnStatement(returns[0]) || !returns[0].expression || !ts.isStringLiteral(returns[0].expression) || returns[0].expression.text !== '/index.html') return fail();
+  const navigation = `${request}.headers["sec-fetch-dest"] === "document" || (${request}.headers.accept || "").includes("text/html")`;
+  const condition = prefix === '/communications'
+    ? `${request}.method === "GET" && ${JSON.stringify(paths)}.includes(${request}.url?.split("?")[0] ?? "") && (${navigation})`
+    : navigation;
+  const expected = ts.createSourceFile('condition.ts', `if (${condition}) {}`, ts.ScriptTarget.Latest, true).statements[0].expression;
+  if (JSON.stringify(syntaxShape(branch.expression)) !== JSON.stringify(syntaxShape(expected))) return fail();
+  let expression = branch.expression;
+  if (prefix === '/communications') expression = expression.right;
+  while (ts.isParenthesizedExpression(expression)) expression = expression.expression;
+  const destination = expression.left;
+  const accept = expression.right;
+  // Read the recognized source literals so matcher expectations share Vite's source of truth.
+  const headerName = value => value.split('-').map(part => part[0].toUpperCase() + part.slice(1)).join('-');
+  return [
+    ['header', headerName(destination.left.argumentExpression.text), destination.right.text],
+    ['header', headerName(accept.expression.expression.expression.left.name.text), `*${accept.arguments[0].text}*`],
+  ];
+}
+
 function parseVite(source, warnings) {
   const keys = parseProxyKeys(source, warnings);
   if (!keys.length) throw new Error('zero Vite proxy keys found');
@@ -80,7 +114,8 @@ function parseVite(source, warnings) {
     const prefix = prop.name.text;
     if (!keys.includes(prefix) || entries.has(prefix)) throw new Error(`Vite key discovery disagreement or duplicate: ${prefix}`);
     const fields = prop.initializer.properties;
-    const target = fields.find(p => p.name?.getText(ast) === 'target');
+    if (fields.some(p => !p.name || (!ts.isIdentifier(p.name) && !ts.isStringLiteral(p.name)))) throw new Error(`unsupported Vite proxy field for ${prefix}`);
+    const target = fields.find(p => p.name.text === 'target');
     const value = target && ts.isPropertyAssignment(target) ? target.initializer : null;
     let expectedTarget;
     if (value && ts.isIdentifier(value) && value.text === 'mcpTarget') {
@@ -91,7 +126,9 @@ function parseVite(source, warnings) {
     }
     else if (value && ts.isStringLiteral(value) && value.text === 'http://localhost:8103') expectedTarget = '127.0.0.1:8103';
     else throw new Error(`unsupported Vite target for ${prefix}`);
-    const bypass = fields.find(p => p.name?.getText(ast) === 'bypass');
+    const bypasses = fields.filter(p => p.name.text === 'bypass');
+    if (bypasses.length > 1) throw new Error(`duplicate Vite bypass for ${prefix}`);
+    const bypass = bypasses[0];
     const pageLists = [];
     function findPaths(n) {
       if (ts.isArrayLiteralExpression(n) && n.elements.every(e => ts.isStringLiteral(e) && e.text.startsWith('/'))) pageLists.push(n.elements.map(e => e.text));
@@ -99,7 +136,7 @@ function parseVite(source, warnings) {
     }
     if (bypass) findPaths(bypass);
     if (prefix === '/communications' && bypass && pageLists.length !== 1) throw new Error('cannot discover /communications bypass page list');
-    entries.set(prefix, { expectedTarget, bypass: Boolean(bypass), pages: pageLists[0] ?? [] });
+    entries.set(prefix, { expectedTarget, bypass: Boolean(bypass), pages: pageLists[0] ?? [], predicates: bypass ? navigationPredicates(bypass, prefix, pageLists[0] ?? []) : [] });
   }
   if (entries.size !== keys.length) throw new Error('Vite key discovery disagreement');
   return entries;
@@ -149,16 +186,24 @@ export function checkFrontdoorCoverage({ backendFamilies, viteSource, caddySourc
     const validSplit = validPages && fallbacks.length === 1 && handles.length === pages.length + 1 && block.children.length === handles.length;
     const plain = handles.length === 0 && block.children.length === 1 && block.children[0].words[0] === 'reverse_proxy';
     if (entry.bypass ? !validSplit : !plain) add('page-api-split', prefix, entry.bypass ? 'expected nested page rewrite and API proxy' : 'expected plain proxy without page bypass');
+    const coveredPredicates = new Set();
     for (const page of pages) {
       const matches = matchers.filter(m => m.words[0] === page.words[1]);
       if (page.words.length !== 2 || matches.length !== 1) { add('parse', prefix, 'unresolved or ambiguous page matcher'); continue; }
-      if (prefix !== '/communications') continue;
       const matcher = matches[0];
+      const directives = matcher.children ?? [{ words: matcher.words.slice(1), children: null }];
+      const headers = directives.filter(n => n.words[0] === 'header');
+      const predicateIndex = (entry.predicates ?? []).findIndex(expected => headers.length === 1 && headers[0].words.length === expected.length && headers[0].words.every((word, i) => word === expected[i]));
+      const allowed = directives.every(n => n.children === null && (n.words[0] === 'header' || (prefix === '/communications' && (n.words.join(' ') === 'method GET' || n.words[0] === 'path'))));
+      if (predicateIndex < 0 || !allowed || (matcher.children && matcher.words.length !== 1)) add('page-predicate', prefix, `${matcher.words[0]} must contain exactly one Vite navigation predicate and only permitted constraints`);
+      else coveredPredicates.add(predicateIndex);
+      if (prefix !== '/communications') continue;
       const paths = descendants(matcher, 'path').flatMap(n => n.words.slice(1));
       if (!sameSet(paths, entry.pages)) add('page-path', prefix, `page-path mismatch: expected ${entry.pages.join(', ')}, got ${paths.join(', ')}`);
       const methods = descendants(matcher, 'method').flatMap(n => n.words.slice(1));
       if (methods.length !== 1 || methods[0] !== 'GET') add('page-method', prefix, 'page matcher must require method GET');
     }
+    if (entry.bypass && coveredPredicates.size !== entry.predicates.length) add('page-predicate', prefix, 'page handles must cover both Vite navigation predicates');
   }
   return findings;
 }

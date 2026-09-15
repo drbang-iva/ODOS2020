@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { chmodSync, statSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { renderFrontdoor } from './frontdoor-install.mjs';
 
 test('render preserves bytes apart from root substitution', () => assert.equal(renderFrontdoor('root * {$ODOS_UI_DIST}\n', '/tmp/dist'), 'root * /tmp/dist\n'));
@@ -97,3 +97,57 @@ test('post-replacement sync failure reports installed state and preserves backup
  assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/Installed but durability is unknown/); assert.match(readFileSync(target,'utf8'),/ODOS front door/);
  const backup = readdirSync(dir).find(name => name.startsWith('Caddyfile.bak-')); assert.ok(backup); assert.equal(readFileSync(join(dir,backup),'utf8'),'old config\n');
 }));
+
+
+test('F12 real Caddy: wildcard Accept sends an API-style GET to HTML', async (t) => {
+ const { createServer } = await import('node:net');
+ const { setTimeout: delay } = await import('node:timers/promises');
+ const dir = mkdtempSync(join(tmpdir(), 'frontdoor-navigation-'));
+ const html = '<!doctype html><title>frontdoor F12 fixture</title>';
+ writeFileSync(join(dir, 'index.html'), html);
+ const template = readFileSync(resolve('deploy/frontdoor/Caddyfile'), 'utf8');
+ try {
+  for (const loosened of [false, true]) {
+   const reservation = createServer();
+   await new Promise((accept, reject) => { reservation.once('error', reject); reservation.listen(0, '127.0.0.1', accept); });
+   const port = reservation.address().port;
+   await new Promise((accept, reject) => reservation.close(error => error ? reject(error) : accept()));
+   const config = join(dir, 'Caddyfile');
+   const source = loosened ? template.replace('@navaccept header Accept *text/html*', '@navaccept header Accept *') : template;
+   writeFileSync(config, renderFrontdoor(source, dir).replace(':8090 {', `http://127.0.0.1:${port} {`));
+   const child = spawn('caddy', ['run', '--adapter', 'caddyfile', '--config', config], { stdio: ['ignore', 'pipe', 'pipe'] });
+   let logs = '';
+   child.stdout.on('data', chunk => { logs += chunk; });
+   child.stderr.on('data', chunk => { logs += chunk; });
+   let spawnError;
+   child.on('error', error => { spawnError = error; });
+   const closed = new Promise(accept => child.once('close', accept));
+   try {
+    let response;
+    for (let attempt = 0; attempt < 100; attempt++) {
+     if (spawnError) throw spawnError;
+     if (child.exitCode !== null) throw new Error(`Caddy exited: ${logs}`);
+     if (logs.includes('server running')) {
+      try {
+       response = await fetch(`http://127.0.0.1:${port}/clinic/x`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(1000) });
+       break;
+      } catch { /* Listener startup may follow the startup log. */ }
+     }
+     await delay(50);
+    }
+    assert.ok(response, `Caddy did not become ready: ${logs}`);
+    const contentType = response.headers.get('content-type') ?? '(absent)';
+    const body = await response.text();
+    t.diagnostic(`${loosened ? 'F12 variant' : 'Original'}: GET /clinic/x Accept: application/json -> ${response.status}; Content-Type: ${contentType}`);
+    if (loosened) { assert.match(contentType, /text\/html/); assert.equal(body, html); }
+    else assert.doesNotMatch(contentType, /text\/html/);
+   } finally {
+    if (child.exitCode === null && !spawnError) child.kill('SIGTERM');
+    const timer = setTimeout(() => child.kill('SIGKILL'), 5000);
+    await closed;
+    clearTimeout(timer);
+    t.diagnostic(`${loosened ? 'F12 variant' : 'Original'} Caddy process stopped`);
+   }
+  }
+ } finally { rmSync(dir, { recursive: true, force: true }); }
+});
