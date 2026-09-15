@@ -13,4 +13,4 @@ The corrected test deletes memberships through DELETE `/admin/projects/{projectI
 
 Re-ran `node docs/build-log/registration-majority/cleanup-errors/callback-harness.cjs`: original+cleanup errors retained; removing capture fails; restoration passes.
 
-All 11 outer setup resources were cleaned; project A was not changed. Containers remain running. Final-head CI remains a separate requirement.
+All 11 outer setup resources were cleaned; project A was not changed. Containers were running at this proof stage; they were subsequently [stopped and retained](../../registration-guarantor/fixture-stopped-final.txt). Final-head CI remains a separate requirement.

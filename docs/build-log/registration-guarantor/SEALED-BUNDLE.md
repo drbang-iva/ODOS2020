@@ -1,6 +1,6 @@
 # Registration guarantor DOB and practice age of majority
 
-Status: locally implemented and reverified; NOT EVALUATED. Published as PR #607. Rebased onto merged sibling #606, preserving its RelatedPerson claim fence and K4 editor guard. Final remote CI and bot gates are pending. No merge or Iris write.
+Status: implementation and local verification complete; NOT EVALUATED. [PR #607](https://github.com/drbang-iva/ODOS2020/pull/607) records final-head CI and bot results; this document preserves local proof and clearly identified earlier attempts. Rebased onto merged sibling #606, preserving its RelatedPerson claim fence and K4 editor guard. No merge or Iris write.
 
 Branch: `drbang-iva/registration-guarantor-dob-age-majority`.
 Initial base: `6d41a717060fe7d01a185496279ee67f47e82fa5`. Refreshed base: `40c19a9e442015e1d32396958b661394318713d2` (#606 merged). Only rebase conflict was appended editor tests; both K4 and D4 retained. The claim writeConstraint remains intact.
@@ -52,7 +52,7 @@ Fixture: `registration-majority-live`, loopback Medplum 29160, PostgreSQL 29161,
 
 All three fixture containers were stopped, not removed; `fixture-stopped.txt` records each as exited. Their volume and network remain available.
 
-## Regression and build
+## Initial regression and build (historical pre-rebase)
 
 - Full MCP, owned PostgreSQL fixture: 5,076 tests; **5,024 passed, 0 failed, 52 skipped**. Command: `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test`, with ODOS_POSTGRES_URL injected from the private fixture. Exact output: `mcp-full-restored.txt.gz`. Skipped credentialed lanes are explicitly not an authz gate.
 - Full UI from `ui/`: **1,566 passed, 0 failed, 0 skipped**, `npm test`, `ui-full-final.txt.gz`.
@@ -65,7 +65,7 @@ All three fixture containers were stopped, not removed; `fixture-stopped.txt` re
 
 Only the approved South Carolina value 18 is seeded. Both primary sources were accessed 2026-09-15 and agree: [S.C. Code §15-1-320(a)](https://www.scstatehouse.gov/code/t15c001.php) and [S.C. Constitution art. XVII §14](https://www.scstatehouse.gov/scconstitution/A17.pdf). Ledger: `data/code-bindings/age-of-majority-ledger.md`. No new medical code values. No new design decision or PerformanceOD INDEX change; implementation follows the existing kickoff.
 
-Remaining gates: coordinating task publishes the verified rebased head to PR #607 and reports final-head CI including live authorization, CodeRabbit commit status, PR-Agent check-run, and zero unresolved threads; separate Claude Opus evaluation. Do not post an Evaluated-by marker from this author session. Retain NOT EVALUATED in PR body.
+Required delivery gates are final-head CI including live authorization, CodeRabbit commit status, PR-Agent check-run, and zero unresolved threads. Their final results and exact SHA are recorded on PR #607. Separate Claude Opus evaluation is required before merge. Do not post an Evaluated-by marker from this author session. Retain NOT EVALUATED in PR body.
 
 ## Rebase verification
 
@@ -117,4 +117,4 @@ CI at `5338b719` still failed cleanup despite the prior unbound-admin local gree
 
 The test captures original body errors and all cleanup rejections after cleanup, avoiding throws from finally. Its AggregateError preserves original error objects and includes nested messages. A harness executes the actual callback with simulated body and cleanup failures; removing body-error capture fails, restoration passes (`../registration-majority/cleanup-errors/`).
 
-All11 outer synthetic resources were cleaned. Containers again verified exited and retained in `fixture-stopped-final.txt`. Final CI must confirm this corrected identity/endpoint combination.
+All11 outer synthetic resources were cleaned. Containers again verified exited and retained in `fixture-stopped-final.txt`. Final-head CI results for this corrected identity/endpoint combination are recorded on PR #607, separately from the local proof.

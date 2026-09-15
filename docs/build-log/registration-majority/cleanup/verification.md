@@ -9,7 +9,7 @@ Local result after correction: 4 passed, 0 failed, 0 skipped. Exact output: `loc
 
 LIMIT: this local run used the fixture bootstrap project and does not reproduce CI's metadata permission boundary. Explicitly restricting the temporary seeder's policy still left the old code green locally, so this is a regression check, not a local reproduction of the CI failure. Final-head CI must confirm the correction.
 
-All seven outer setup resources were cleaned, along with the test-created clients, memberships and configs. Containers remain running; registration project was not changed.
+All seven outer setup resources were cleaned, along with the test-created clients, memberships and configs. Containers were running at this proof stage; they were subsequently [stopped and retained](../../registration-guarantor/fixture-stopped-final.txt). The registration project was not changed.
 
 ## CI-equivalent metadata boundary reproduced
 
@@ -19,4 +19,4 @@ With that non-admin unbound operator, the original `af7d08a0` test reproduced th
 
 The prior bootstrap-project and admin=true operator greens were unsuitable controls: neither reproduced the actual operator metadata boundary. The non-admin run above supplies the missing reproduction.
 
-Ten outer setup resources were cleaned. The three memberships left behind by the deliberately failing original test were rechecked with the fixture service token after project cleanup; all returned HTTP 410 (already removed). No project A identities or settings were changed. Containers remain running.
+Ten outer setup resources were cleaned. The three memberships left behind by the deliberately failing original test were rechecked with the fixture service token after project cleanup; all returned HTTP 410 (already removed). No project A identities or settings were changed. Containers were running at this proof stage; they were subsequently [stopped and retained](../../registration-guarantor/fixture-stopped-final.txt).

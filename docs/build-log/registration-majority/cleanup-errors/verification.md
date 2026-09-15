@@ -6,4 +6,4 @@ Command from repository root: `node docs/build-log/registration-majority/cleanup
 
 The deterministic harness transpiles and executes the actual test callback with a synthetic body failure and HTTP 403 cleanup failures. It asserts that the AggregateError retains both. Removing the actual body-error capture causes the original-error assertion to fail; restoring capture passes. Exact output: `mutation.txt`.
 
-This proves error preservation only. It does not claim normal live authorization or cleanup permission success. The separately observed final-head CI metadata-cleanup failure still requires its route/identity fix and re-verification.
+This harness proves error preservation only. The route/identity cleanup fix is implemented and its exact composite-caller live red/green proof is recorded in [administrative cleanup verification](../admin-cleanup/verification.md). Final-head CI is a separate gate tracked on [PR #607](https://github.com/drbang-iva/ODOS2020/pull/607).
