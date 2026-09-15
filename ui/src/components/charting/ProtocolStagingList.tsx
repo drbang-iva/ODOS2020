@@ -66,12 +66,10 @@ function protocolItemDetail(item: ProtocolItem): string {
     return `${item.payload.interval} ${String(item.payload.unit ?? "")}`.trim();
   }
   if (item.itemType === "order" && item.payload.performContext) {
-    if (item.title) return item.title;
-  return humanize(String(item.payload.performContext));
+    return humanize(String(item.payload.performContext));
   }
   if (item.itemType === "education" && item.payload.deliveryMode) {
-    if (item.title) return item.title;
-  return humanize(String(item.payload.deliveryMode));
+    return humanize(String(item.payload.deliveryMode));
   }
   return "";
 }

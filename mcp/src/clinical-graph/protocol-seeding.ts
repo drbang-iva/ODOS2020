@@ -16,7 +16,14 @@ export async function ensureBuiltInProtocols(
   };
   for (const builtIn of options.protocols ?? BUILTIN_PROTOCOLS) {
     const stored = await stores.definitions.get(builtIn.id);
-    if (stored && isDeepStrictEqual(stored, builtIn)) continue;
+    if (stored && isDeepStrictEqual(stored, builtIn)) {
+      try {
+        await stores.definitions.saveSnapshot(builtIn);
+      } catch (error) {
+        report(`Built-in ${builtIn.id}: snapshot repair refused: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      continue;
+    }
     if (stored && (stored.version >= builtIn.version || stored.draft || stored.status === "retired" ||
       stored.audit.publishedBy !== "Practitioner/odos-system")) {
       report(`Built-in ${builtIn.id}: ${stored.version === builtIn.version ? "same-version content conflict" : "stored head preserved"}.`);
@@ -25,11 +32,19 @@ export async function ensureBuiltInProtocols(
     try {
       // saveSnapshot checks the physical snapshot, rather than the legacy getSnapshot head fallback.
       if (stored) await stores.definitions.saveSnapshot(stored);
-      await stores.definitions.saveSnapshot(builtIn);
+      const candidateSnapshot = await stores.definitions.getSnapshot(builtIn.id, builtIn.version);
+      if (candidateSnapshot && !isDeepStrictEqual(candidateSnapshot, builtIn)) {
+        report(`Built-in ${builtIn.id}: same-version snapshot conflict; stored head preserved.`);
+        continue;
+      }
       const saved = stored
         ? await stores.definitions.advanceHead(stored, builtIn)
         : await stores.definitions.createHead(builtIn);
-      if (!saved || !isDeepStrictEqual(saved, builtIn)) report(`Built-in ${builtIn.id}: conditional head conflict; race refused.`);
+      if (!saved || !isDeepStrictEqual(saved, builtIn)) {
+        report(`Built-in ${builtIn.id}: conditional head conflict; race refused.`);
+      } else {
+        await stores.definitions.saveSnapshot(builtIn);
+      }
     } catch (error) {
       report(`Built-in ${builtIn.id}: seed refused: ${error instanceof Error ? error.message : String(error)}`);
     }

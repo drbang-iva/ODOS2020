@@ -4,7 +4,7 @@ import { PlanAuthoringFhir, endpointDeps } from "./helpers/plan-authoring-fhir.j
 import { ProtocolService } from "../clinical-graph/protocol-service.js";
 import { DRY_EYE_IPL_INIT_PROTOCOL } from "../clinical-graph/protocol-fixtures.js";
 import { FhirProcedureDefinitionStore, DRY_EYE_PROCEDURE_STABLE_KEYS } from "../clinical-graph/procedure-definition-store.js";
-import { handleProtocolApplyRequest, handleProtocolItemAddRequest, handleProtocolOffersRequest } from "../clinical-graph/protocol-endpoint.js";
+import { handleProtocolApplyRequest, handleProtocolItemAddRequest, handleProtocolOffersRequest, handleProtocolDraftRequest } from "../clinical-graph/protocol-endpoint.js";
 import { isPlanItemOffered } from "../clinical-graph/plan-item-offered.js";
 import type { ProtocolDefinition } from "../clinical-graph/protocol-types.js";
 
@@ -15,7 +15,6 @@ async function setup(active: boolean) {
   await store.save({ ...definition, active });
   const service = new ProtocolService(fhir, { commitFinding: async () => undefined, materializeAction: async () => undefined });
   const protocol = structuredClone(DRY_EYE_IPL_INIT_PROTOCOL);
-  protocol.id = "offered-test";
   protocol.items[0].procedureDefinitionKey = DRY_EYE_PROCEDURE_STABLE_KEYS.ipl;
   await service.definitions.save(protocol);
   await fhir.create({ resourceType: "Condition", id: "dx", subject: { reference: "Patient/p" }, verificationStatus: { coding: [{ code: "confirmed" }] }, code: { coding: [{ code: "H16.223" }] } });
@@ -70,4 +69,12 @@ test("an offered selected order retains the charge shared with an unoffered item
   const saved = result.body as { actions: unknown[]; charges: unknown[]; application: { dedupResolutions: unknown[] } };
   assert.equal(saved.actions.length, 1); assert.equal(saved.charges.length, 1);
   assert.deepEqual(saved.application.dedupResolutions, [{ itemKey: "series-ipl", reason: "not-offered" }]);
+});
+
+test("strict authoring round-trips a titled series item and its offered-service link", async () => {
+  const { protocol, deps } = await setup(true);
+  const draft = { title: protocol.title, trigger: protocol.trigger, ownership: protocol.ownership, categories: protocol.categories, items: protocol.items.map(item => ({ ...item, title: `Title for ${item.itemKey}` })) };
+  const result = await handleProtocolDraftRequest(deps, { authHeader: "test", params: { id: protocol.id }, body: draft });
+  assert.equal(result.status, 200);
+  assert.deepEqual((result.body as { protocol: ProtocolDefinition }).protocol.draft?.items, draft.items);
 });

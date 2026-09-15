@@ -131,7 +131,7 @@ export const SERVICE_IDENTITY_FHIR_WRITE_CALL_SITES = [
   { path: "mcp/src/clinic/guarantor-link-operation.ts", line: 201, callee: "this.deps.serviceFhir.executeTransactionAsActor", resourceType: "Person", reason: "Guarantor operation uses the explicit service client with staff attribution." },
   { path: "mcp/src/clinic/guarantor-link-operation.ts", line: 201, callee: "this.deps.serviceFhir.executeTransactionAsActor", resourceType: "RelatedPerson", reason: "Guarantor operation uses the explicit service client with staff attribution." },
   { path: "mcp/src/authz/liveAudit.ts", line: 468, callee: "client.create", resourceType: "AuditEvent", reason: "Dedicated audit projection client." },
-  { path: "mcp/src/clinical-graph/protocol-store.ts", line: 203, callee: "this.fhir.delete", resourceType: "Basic", reason: "ProtocolDefinitionStore is constructed with the process service client." },
+  { path: "mcp/src/clinical-graph/protocol-store.ts", line: 209, callee: "this.fhir.delete", resourceType: "Basic", reason: "ProtocolDefinitionStore is constructed with the process service client." },
   { path: "mcp/src/fax/inbound-fax.ts", line: 328, callee: "this.fhir.create", resourceType: "AuditEvent", reason: "Inbound fax triage service receives the explicit serviceFhir client." },
   { path: "mcp/src/fax/inbound-fax.ts", line: 426, callee: "this.fhir.create", resourceType: "AuditEvent", reason: "Inbound fax triage service receives the explicit serviceFhir client." },
   { path: "mcp/src/fax/inbound-fax.ts", line: 446, callee: "this.fhir.create", resourceType: "AuditEvent", reason: "Inbound fax triage service receives the explicit serviceFhir client." },

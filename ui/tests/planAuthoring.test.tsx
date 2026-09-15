@@ -7,10 +7,11 @@ import { FollowUpConfirmation } from "../src/components/charting/ProtocolApplica
 
 test("staging shows authored titles and hides unavailable items", () => {
   const tree = create(<ProtocolStagingList selections={{}} items={[
-    { itemKey: "photo", itemType: "order", title: "Optic nerve photos", defaultSelected: true, lateralityMode: "OU-always", payload: { orderableKey: "fundus-photography" }, offered: true },
+    { itemKey: "photo", itemType: "order", title: "Optic nerve photos", defaultSelected: true, lateralityMode: "OU-always", payload: { orderableKey: "fundus-photography", performContext: "in-office-today" }, offered: true },
     { itemKey: "series-ipl", itemType: "series-prescription", title: "IPL treatment", defaultSelected: true, lateralityMode: "OU-always", payload: {}, offered: false },
   ]} />);
   assert.match(JSON.stringify(tree.toJSON()), /Optic nerve photos/);
+  assert.match(JSON.stringify(tree.toJSON()), /In Office Today/);
   assert.doesNotMatch(JSON.stringify(tree.toJSON()), /IPL treatment|series-ipl/);
   assert.equal(tree.root.findAllByType("input").length, 1);
 });

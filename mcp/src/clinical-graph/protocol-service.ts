@@ -226,6 +226,7 @@ export class ProtocolService {
     if (!head) throw new Error("Protocol definition not found.");
     if (head.status === "retired") throw new Error("Retired protocols cannot be edited.");
     const normalized = normalizeDraft(draft);
+    await this.definitions.preservePublishedSnapshot(head);
     return this.definitions.saveHead({
       ...head,
       ...(head.version === 0 ? normalized : {}),
@@ -261,6 +262,7 @@ export class ProtocolService {
   async retire(id: string): Promise<ProtocolDefinition> {
     const head = await this.definitions.get(id);
     if (!head) throw new Error("Protocol definition not found.");
+    await this.definitions.preservePublishedSnapshot(head);
     return this.definitions.saveHead({ ...head, status: "retired" });
   }
 

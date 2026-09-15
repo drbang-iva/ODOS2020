@@ -1,3 +1,4 @@
+import type { ProtocolDefinition } from "../clinical-graph/protocol-types.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { PlanAuthoringFhir, endpointDeps } from "./helpers/plan-authoring-fhir.js";
@@ -23,9 +24,10 @@ test("POAG moderate left eye offers exactly its titled glaucoma plan", async () 
   const { deps } = setup();
   const row = buildDiagnosisCatalogSeeds().find(row => row.icd10Family === "H40.11-moderate")!;
   assert.ok(row);
+  assert.ok(row.icd10 && "pattern" in row.icd10);
   const result = await handleProtocolOffersRequest(deps, { authHeader: "test", body: { diagnoses: [{ reference: "Condition/dx", code: row.icd10?.pattern?.left, confirmed: true }] } });
   assert.equal(result.status, 200);
-  const protocols = (result.body as { protocols: typeof BUILTIN_PROTOCOLS }).protocols.filter(row => row.id.startsWith("glaucoma-"));
+  const protocols = (result.body as { protocols: ProtocolDefinition[] }).protocols.filter(row => row.id.startsWith("glaucoma-"));
   assert.deepEqual(protocols.map(row => row.id), ["glaucoma-poag"]);
   assert.ok(protocols[0].items.every(item => Boolean(item.title)));
   assert.equal(protocols[0].items.some(item => item.itemType === "education"), false);
@@ -36,7 +38,7 @@ test("retired stored glaucoma head never returns through fixture fallback", asyn
   await service.definitions.save({ ...structuredClone(BUILTIN_PROTOCOLS.find(row => row.id === body.protocolId)!), status: "retired" });
   const result = await handleProtocolOffersRequest(deps, { authHeader: "test", body: { diagnoses: [body.diagnosis] } });
   assert.equal(result.status, 200);
-  assert.equal((result.body as { protocols: typeof BUILTIN_PROTOCOLS }).protocols.some(row => row.id === body.protocolId), false);
+  assert.equal((result.body as { protocols: ProtocolDefinition[] }).protocols.some(row => row.id === body.protocolId), false);
 });
 test("mixed suspect and OHT whole applies share every test and charge", async () => {
   const { service, deps, fhir } = setup();
