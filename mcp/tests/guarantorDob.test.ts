@@ -26,3 +26,39 @@ test("D3 writer-derived DOB edit preserves both child insurance fingerprints and
  assert.equal(census.summary.projects.reduce((sum,r)=>sum+r.insuranceDamage.coverageCount,0),2);
  assert.equal(census.summary.projects.reduce((sum,r)=>sum+r.insuranceDamage.suspectedOverwrites,0),0);
 });
+
+
+test("Editor DOB rejects malformed impossible and future nonblank values before any write", async () => {
+ for (const birthDate of ["not-a-date", "2026-02-30", "9999-01-01"]) {
+  const f = await world();
+  await withEditor(f, async ({ writes }) => {
+   const loaded = await snapshot();
+   const result = await saveGuarantor(loaded, wire({ ...loaded.person, birthDate }));
+   assert.equal(result.status, "not-saved");
+   assert.match(result.message, /valid.*date.*future/i);
+   assert.deepEqual(writes, []);
+   assert.deepEqual(get(f, "Person/S"), loaded.person);
+  });
+ }
+});
+
+test("Editor DOB stays optional for clearing and legacy records and allows today", async () => {
+ for (const birthDate of [undefined, "", new Date().toISOString().slice(0, 10)]) {
+  const f = await world();
+  await withEditor(f, async () => {
+   const loaded = await snapshot();
+   const result = await saveGuarantor(loaded, wire({ ...loaded.person, birthDate }));
+   assert.equal(result.status, "saved");
+   assert.equal(get(f, "Person/S").birthDate, birthDate || undefined);
+  });
+ }
+ const f = await world();
+ const legacy = get(f, "Person/S"); delete legacy.birthDate; store(f, legacy);
+ await withEditor(f, async () => {
+  const loaded = await snapshot();
+  const result = await saveGuarantor(loaded, wire({ ...loaded.person, name: [{ family: "Edited legacy" }] }));
+  assert.equal(result.status, "saved");
+  assert.equal(get(f, "Person/S").birthDate, undefined);
+  assert.equal(get(f, "Person/S").name[0].family, "Edited legacy");
+ });
+});
