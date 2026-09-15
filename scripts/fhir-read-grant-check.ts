@@ -126,7 +126,7 @@ export const NON_FHIR_LITERAL_CALL_SITES = [
 ] as const satisfies readonly NonFhirLiteralCallSite[];
 
 export const SERVICE_IDENTITY_FHIR_WRITE_CALL_SITES = [
-  { path: "mcp/src/clinic/guarantor-search.ts", line: 48, callee: "deps.serviceFhir.executeTransactionAsActor", resourceType: "Person", reason: "Guarantor creation uses the explicit service client with staff attribution." },
+  { path: "mcp/src/clinic/guarantor-search.ts", line: 52, callee: "deps.serviceFhir.executeTransactionAsActor", resourceType: "Person", reason: "Guarantor creation uses the explicit service client with staff attribution." },
   { path: "mcp/src/clinic/guarantor-link-operation.ts", line: 201, callee: "this.deps.serviceFhir.executeTransactionAsActor", resourceType: "Task", reason: "Guarantor operation uses the explicit service client with staff attribution." },
   { path: "mcp/src/clinic/guarantor-link-operation.ts", line: 201, callee: "this.deps.serviceFhir.executeTransactionAsActor", resourceType: "Person", reason: "Guarantor operation uses the explicit service client with staff attribution." },
   { path: "mcp/src/clinic/guarantor-link-operation.ts", line: 201, callee: "this.deps.serviceFhir.executeTransactionAsActor", resourceType: "RelatedPerson", reason: "Guarantor operation uses the explicit service client with staff attribution." },
