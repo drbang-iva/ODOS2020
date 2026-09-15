@@ -3568,3 +3568,76 @@ test("shared ownership B lost response: persisted dependency still returns origi
   assert.equal(added.application.id, first.id);
   assert.equal((await service.applications.list()).filter((row) => row.protocolId === second.id && row.undoState === "active").length, 1);
 });
+
+function rollbackProjectionHarness() {
+  const projections = new Map<string, Observation | ServiceRequest>();
+  const fail = { followUpOnce: false };
+  let next = 0;
+  const service = new ProtocolService(new MemoryFhir(), {
+    async commitFinding(finding) {
+      const reference = `Observation/${finding.id}`;
+      projections.set(reference, { resourceType: "Observation", id: finding.id, status: "final", code: { text: finding.findingDefKey }, subject: { reference: `Patient/${finding.patientId}` } });
+      return reference;
+    },
+    async materializeAction(action) {
+      if (fail.followUpOnce && action.actionType === "follow-up") {
+        fail.followUpOnce = false;
+        throw new Error("late follow-up failure");
+      }
+      const reference = `ServiceRequest/${action.id}`;
+      projections.set(reference, { resourceType: "ServiceRequest", id: action.id, status: "active", intent: "plan", subject: { reference: `Patient/${action.patientId}` } });
+      return reference;
+    },
+    async removeMaterialized(reference) { projections.delete(reference); },
+  }, () => "2026-07-18T12:00:00.000Z", () => `rollback-${++next}`);
+  const open = async () => {
+    await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+    return service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, { encounterId: "enc-projection-rollback", patientId: "patient-1", diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true }, actor: "Practitioner/test" });
+  };
+  return { service, projections, fail, open };
+}
+
+test("shared rollback: deselected finding returns to proposed after failed commit and retry materializes it", async () => {
+  const { service, projections, fail, open } = rollbackProjectionHarness();
+  const opened = await open();
+  fail.followUpOnce = true;
+  await assert.rejects(service.commit(opened.application.id, [{ itemKey: "cd-ratio", selected: false }], ["Condition/c1"]), /late follow-up failure/);
+  const restored = (await service.findings.list()).filter((row) => row.sourceItemKey === "cd-ratio");
+  assert.ok(restored.length > 0);
+  assert.ok(restored.every((row) => row.state === "proposed"));
+  await service.commit(opened.application.id, [], ["Condition/c1"]);
+  for (const finding of (await service.findings.list()).filter((row) => row.sourceItemKey === "cd-ratio")) {
+    assert.equal(finding.state, "committed");
+    assert.ok(finding.observationReference);
+    assert.ok(projections.has(finding.observationReference));
+  }
+});
+
+for (const kind of ["action", "finding"] as const) {
+  test(`shared rollback: ${kind} projection survives successful deletion followed by failed Basic removal`, async () => {
+    const { service, projections, open } = rollbackProjectionHarness();
+    const opened = await open();
+    await service.commit(opened.application.id, [], ["Condition/c1"]);
+    const original = new Map(projections);
+    let failed = false;
+    if (kind === "action") {
+      const save = service.actions.save.bind(service.actions);
+      service.actions.save = async (row) => {
+        if (!failed && row.state === "removed") { failed = true; throw new Error("action Basic removal failed"); }
+        return save(row);
+      };
+    } else {
+      const save = service.findings.save.bind(service.findings);
+      service.findings.save = async (row) => {
+        if (!failed && row.state === "removed" && row.observationReference) { failed = true; throw new Error("finding Basic removal failed"); }
+        return save(row);
+      };
+    }
+    await assert.rejects(service.unapply(opened.application.id), /Basic removal failed/);
+    assert.equal(failed, true);
+    assert.equal((await service.applications.get(opened.application.id))?.undoState, "active");
+    assert.deepEqual(projections, original);
+    for (const action of await service.actions.list()) if (action.materializedFhirRef) assert.ok(projections.has(action.materializedFhirRef));
+    for (const finding of await service.findings.list()) if (finding.observationReference) assert.ok(projections.has(finding.observationReference));
+  });
+}
