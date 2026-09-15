@@ -20,6 +20,7 @@ test("age-of-majority singleton grants enforce provider reads and staff/admin ed
   assert.ok(projectId && me.profile?.id);
   const cleanup: string[] = [];
   const track = <T extends Resource>(resource: T): T => { assert.ok(resource.id); cleanup.push(`${resource.resourceType}/${resource.id}`); return resource; };
+  let bodyFailure: { error: unknown } | undefined;
   try {
     const policies = await searchAll<AccessPolicy>(callerFhir, "AccessPolicy", { _project: projectId });
     const patients = await searchAll<Patient>(callerFhir, "Patient", { _count: "1000" });
@@ -52,14 +53,22 @@ test("age-of-majority singleton grants enforce provider reads and staff/admin ed
         cleanup.splice(cleanup.indexOf(`Basic/${config.id}`), 1);
       });
     }
-  } finally {
-    const metadata = cleanup.filter((reference) => reference.startsWith("ClientApplication/") || reference.startsWith("ProjectMembership/"));
-    const clinical = cleanup.filter((reference) => !metadata.includes(reference));
-    const results = await Promise.allSettled([
-      cleanupReferences(baseUrl, callerAccessToken, metadata),
-      cleanupReferences(baseUrl, seederAccessToken, clinical),
-    ]);
-    const failures = results.filter((result): result is PromiseRejectedResult => result.status === "rejected");
-    if (failures.length) throw new AggregateError(failures.map((result) => result.reason), "Live authorization fixture cleanup failed.");
+  } catch (error) {
+    bodyFailure = { error };
   }
+  const metadata = cleanup.filter((reference) => reference.startsWith("ClientApplication/") || reference.startsWith("ProjectMembership/"));
+  const clinical = cleanup.filter((reference) => !metadata.includes(reference));
+  const results = await Promise.allSettled([
+    cleanupReferences(baseUrl, callerAccessToken, metadata),
+    cleanupReferences(baseUrl, seederAccessToken, clinical),
+  ]);
+  const failures = results.filter((result): result is PromiseRejectedResult => result.status === "rejected");
+  if (failures.length) {
+    const errors = [
+      ...(bodyFailure ? [bodyFailure.error] : []),
+      ...failures.map((result) => result.reason),
+    ];
+    throw new AggregateError(errors, `Live authorization fixture failed: ${errors.map((error) => error instanceof Error ? error.message : String(error)).join("; ")}`);
+  }
+  if (bodyFailure) throw bodyFailure.error;
 });
