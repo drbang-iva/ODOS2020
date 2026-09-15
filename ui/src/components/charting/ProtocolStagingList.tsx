@@ -13,7 +13,7 @@ export function ProtocolStagingList({
 }) {
   return (
     <div className="space-y-2" data-testid={preview ? "protocol-staging-preview" : "protocol-staging-list"}>
-      {items.map((item) => (
+      {items.filter(item => item.offered !== false).map((item) => (
         <label
           key={item.itemKey}
           className="flex items-start gap-3 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-3"
@@ -49,6 +49,7 @@ export function ProtocolStagingList({
 }
 
 export function protocolItemLabel(item: ProtocolItem): string {
+  if (item.title) return item.title;
   return humanize(String(
     item.payload.procedureConceptKey ??
     item.payload.orderableKey ??
@@ -65,10 +66,12 @@ function protocolItemDetail(item: ProtocolItem): string {
     return `${item.payload.interval} ${String(item.payload.unit ?? "")}`.trim();
   }
   if (item.itemType === "order" && item.payload.performContext) {
-    return humanize(String(item.payload.performContext));
+    if (item.title) return item.title;
+  return humanize(String(item.payload.performContext));
   }
   if (item.itemType === "education" && item.payload.deliveryMode) {
-    return humanize(String(item.payload.deliveryMode));
+    if (item.title) return item.title;
+  return humanize(String(item.payload.deliveryMode));
   }
   return "";
 }

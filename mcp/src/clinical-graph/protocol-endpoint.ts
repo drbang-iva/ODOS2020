@@ -1,3 +1,7 @@
+import { loadDefaultEducationCatalogReader, type EducationCatalogReader } from "../comms/education-catalog.js";
+import { ensureBuiltInProtocols } from "./protocol-seeding.js";
+import { isPlanItemOffered, unofferedSelectedItems } from "./plan-item-offered.js";
+import { FhirProcedureDefinitionStore, type ClinicalProcedureDefinition } from "./procedure-definition-store.js";
 import { normalizeApplicationScope } from "../../../src/protocol-application-scope.js";
 import { DIAGNOSIS_VISIT_STATUSES } from "./diagnosis-visit-status-store.js";
 import type { Basic, Bundle, CarePlan, Condition, Encounter, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
@@ -15,11 +19,8 @@ import {
   SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM,
 } from "../series-tracker/series-care-plan.js";
 import {
-  BUILTIN_CHARGE_RULES,
   BUILTIN_PROTOCOLS,
   DRY_EYE_AT_HOME_REGIMEN_INIT_PROTOCOL,
-  DRY_EYE_CHARGE_RULES,
-  DRY_EYE_EVALUATION_PROTOCOL,
 } from "./protocol-fixtures.js";
 import {
   AcceptedChargeUnapplyError,
@@ -86,6 +87,8 @@ export interface ProtocolEndpointDeps {
   serviceFhir?: MedplumClient;
   now?: () => string;
   catalogs?: () => ProtocolCatalogs;
+  educationCatalog?: EducationCatalogReader;
+  loadProcedureDefinitions?: () => Promise<ClinicalProcedureDefinition[]>;
 }
 
 const diagnosisVisitStatusSchema = z.enum(DIAGNOSIS_VISIT_STATUSES);
@@ -101,9 +104,11 @@ const lateralityModeSchema = z.union([
 ]);
 const protocolItemSchema = z.object({
   itemKey: z.string(),
+  title: z.string().optional(),
+  procedureDefinitionKey: z.string().optional(),
   itemType: z.enum([
     "finding-seed", "order", "medication", "counseling", "education",
-    "instruction", "follow-up", "charge-seed",
+    "instruction", "follow-up", "series-prescription", "charge-seed",
   ]),
   defaultSelected: z.boolean(),
   lateralityMode: lateralityModeSchema,
@@ -161,7 +166,7 @@ export async function handleProtocolLibraryRequest(
   return {
     status: 200,
     body: {
-      protocols: await liveService(staff, deps.now).definitions.list(),
+      protocols: await liveService(staff, deps.now, undefined, deps.educationCatalog).definitions.list(),
       catalogs: {
         findingKeys: [...catalogs.findingKeys].sort(),
         procedureKeys: [...catalogs.procedureKeys].sort(),
@@ -179,7 +184,7 @@ export async function handleProtocolCreateRequest(
   if (!staffHasBusinessAction(staff, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
   const parsed = protocolDraftSchema.partial().safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid protocol draft." } };
-  const protocol = await liveService(staff, deps.now).createDraft(
+  const protocol = await liveService(staff, deps.now, undefined, deps.educationCatalog).createDraft(
     parsed.data as Partial<ProtocolDefinitionDraft>,
     staff.staffReference,
   );
@@ -201,7 +206,7 @@ export async function handleProtocolDraftRequest(
   if (!params.success || !body.success) {
     return { status: 400, body: { error: body.success ? "Protocol id is required." : body.error.issues[0]?.message } };
   }
-  const protocol = await liveService(staff, deps.now).saveDraft(params.data.id, body.data);
+  const protocol = await liveService(staff, deps.now, undefined, deps.educationCatalog).saveDraft(params.data.id, body.data);
   return {
     status: 200,
     body: { protocol, validation: validateProtocolDefinition(protocol.draft!, protocolCatalogs(deps)) },
@@ -219,7 +224,7 @@ export async function handleProtocolPublishRequest(
   const body = z.object({}).strict().safeParse(input.body ?? {});
   if (!params.success || !body.success) return { status: 400, body: { error: "Valid protocol id and empty publish body are required." } };
   try {
-    const protocol = await liveService(staff, deps.now).publish(
+    const protocol = await liveService(staff, deps.now, undefined, deps.educationCatalog).publish(
       params.data.id,
       staff.staffReference,
       protocolCatalogs(deps),
@@ -246,7 +251,7 @@ export async function handleProtocolRetireRequest(
   const params = z.object({ id: z.string().min(1) }).strict().safeParse(input.params);
   const body = z.object({}).strict().safeParse(input.body ?? {});
   if (!params.success || !body.success) return { status: 400, body: { error: "Valid protocol id and empty retire body are required." } };
-  return { status: 200, body: { protocol: await liveService(staff, deps.now).retire(params.data.id) } };
+  return { status: 200, body: { protocol: await liveService(staff, deps.now, undefined, deps.educationCatalog).retire(params.data.id) } };
 }
 
 export async function handleProtocolForkRequest(
@@ -261,7 +266,7 @@ export async function handleProtocolForkRequest(
   if (!params.success || !body.success) return { status: 400, body: { error: "Valid protocol id and fork body are required." } };
   return {
     status: 201,
-    body: { protocol: await liveService(staff, deps.now).fork(params.data.id, staff.staffReference, body.data.title) },
+    body: { protocol: await liveService(staff, deps.now, undefined, deps.educationCatalog).fork(params.data.id, staff.staffReference, body.data.title) },
   };
 }
 
@@ -295,7 +300,7 @@ export async function handleProtocolCaptureRequest(
       condition.verificationStatus?.coding?.some((coding) => coding.code === "confirmed")
     )
     .flatMap((condition) => condition.code?.coding?.flatMap((coding) => coding.code ? [{ code: coding.code }] : []) ?? []);
-  const protocol = await liveService(staff, deps.now).captureDraft({
+  const protocol = await liveService(staff, deps.now, undefined, deps.educationCatalog).captureDraft({
     encounterId: params.data.encounterId,
     name: body.data.name,
     actor: staff.staffReference,
@@ -318,9 +323,10 @@ export async function handleProtocolOffersRequest(
   if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const parsed = z.object({ diagnoses: diagnosesSchema }).strict().safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: "Valid diagnoses are required." } };
-  const service = liveService(staff, deps.now);
+  const service = liveService(staff, deps.now, undefined, deps.educationCatalog);
   const stored = await service.offers(parsed.data.diagnoses);
-  const storedIds = new Set(stored.map((protocol) => protocol.id));
+  const storedIds = new Set((await service.definitions.list()).map((protocol) => protocol.id));
+  const offeredDefinitions = await loadOfferedDefinitions(deps, staff);
   const confirmedCodes = parsed.data.diagnoses
     .filter((diagnosis) => diagnosis.confirmed)
     .map((diagnosis) => diagnosis.code);
@@ -334,6 +340,7 @@ export async function handleProtocolOffersRequest(
     const builtIn = BUILTIN_PROTOCOLS.find((candidate) => candidate.id === protocol.id);
     return {
       ...protocol,
+      items: protocol.items.map(item => ({ ...item, offered: isPlanItemOffered(item, offeredDefinitions) })),
       acceptCharges: protocol.acceptCharges ?? builtIn?.acceptCharges ?? false,
       statusScope: protocol.trigger.kind === "diagnosis" ? protocol.trigger.statusScope ?? [] : [],
     };
@@ -350,7 +357,7 @@ export async function handleProtocolApplyRequest(
   if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = applySchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid protocol application." } };
-  const service = liveService(staff, deps.now);
+  const service = liveService(staff, deps.now, undefined, deps.educationCatalog);
   await ensureBuiltInProtocol(service, parsed.data.protocolId);
   const validation = await validateProtocolDiagnosis(staff, service, parsed.data);
   if ("response" in validation) return validation.response;
@@ -360,7 +367,8 @@ export async function handleProtocolApplyRequest(
     application.protocolId === parsed.data.protocolId &&
     application.confirmed && application.undoState === "active" && normalizeApplicationScope(application) === "whole"
   )) return { status: 409, body: { error: "Protocol is already applied to this encounter." } };
-  const selectedPinnedItems = protocol.items.flatMap((item) => {
+  const blockedItems = unofferedSelectedItems(protocol.items, parsed.data.selections ?? [], await loadOfferedDefinitions(deps, staff));
+  const selectedPinnedItems = protocol.items.filter(item => !blockedItems.has(item.itemKey)).flatMap((item) => {
     if (item.itemType !== "series-prescription" && item.itemType !== "charge-seed") return [];
     const selection = parsed.data.selections?.find((candidate) => candidate.itemKey === item.itemKey);
     if (!(selection?.selected ?? item.defaultSelected)) return [];
@@ -386,15 +394,17 @@ export async function handleProtocolApplyRequest(
     );
     return item ? { ...selection, payload: item.payload } : selection;
   }) ?? [];
+  const offeredSelections = canonicalSelections.filter(selection => !blockedItems.has(selection.itemKey));
+  offeredSelections.push(...[...blockedItems].map(itemKey => ({ itemKey, selected: false, skipReason: "not-offered" as const })));
   const opened = await service.open(parsed.data.protocolId, {
     encounterId: parsed.data.encounterId,
     patientId: parsed.data.patientId,
     diagnosis: parsed.data.diagnosis,
     actor: staff.staffReference,
   });
-  await liveService(staff, deps.now, seriesResolution.protocols).commit(
+  await liveService(staff, deps.now, seriesResolution.protocols, deps.educationCatalog).commit(
     opened.application.id,
-    canonicalSelections,
+    offeredSelections,
     [parsed.data.diagnosis.reference],
   );
   if (parsed.data.acceptCharges) {
@@ -423,7 +433,7 @@ export async function handleProtocolItemAddRequest(
   if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = itemAddSchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid protocol item add." } };
-  const service = liveService(staff, deps.now);
+  const service = liveService(staff, deps.now, undefined, deps.educationCatalog);
   await ensureBuiltInProtocol(service, parsed.data.protocolId);
   const validation = await validateProtocolDiagnosis(staff, service, parsed.data);
   if ("response" in validation) return validation.response;
@@ -432,9 +442,12 @@ export async function handleProtocolItemAddRequest(
   if (!isTappableProtocolItem(item)) {
     return { status: 400, body: { error: `Protocol item type ${item.itemType} is not tappable.` } };
   }
+  if (!isPlanItemOffered(item, await loadOfferedDefinitions(deps, staff))) {
+    return { status: 409, body: { error: "Protocol item is not offered by this practice." } };
+  }
   const seriesResolution = await resolveSeriesProtocols(deps, [item]);
   if ("response" in seriesResolution) return seriesResolution.response;
-  const itemService = liveService(staff, deps.now, seriesResolution.protocols);
+  const itemService = liveService(staff, deps.now, seriesResolution.protocols, deps.educationCatalog);
   let added;
   try {
     added = await itemService.addItem(parsed.data.protocolId, parsed.data.itemKey, {
@@ -541,21 +554,13 @@ async function resolveSeriesProtocols(
   return { protocols };
 }
 
+async function loadOfferedDefinitions(deps: ProtocolEndpointDeps, staff: Staff): Promise<Map<string, ClinicalProcedureDefinition>> {
+  const definitions = await (deps.loadProcedureDefinitions?.() ?? new FhirProcedureDefinitionStore(staff.fhir).list());
+  return new Map(definitions.map(definition => [definition.stableKey, definition]));
+}
+
 async function ensureBuiltInProtocol(service: ProtocolService, protocolId: string): Promise<void> {
-  const builtIn = BUILTIN_PROTOCOLS.find((protocol) => protocol.id === protocolId);
-  if (!builtIn) return;
-  if (!await service.definitions.get(builtIn.id)) await service.definitions.save(builtIn);
-  const referencedRuleIds = new Set(builtIn.items.flatMap((item) =>
-    item.itemType === "charge-seed" && Array.isArray(item.payload.chargeRuleRefs)
-      ? item.payload.chargeRuleRefs.map(String)
-      : []
-  ));
-  const rules = builtIn.id === DRY_EYE_EVALUATION_PROTOCOL.id
-    ? DRY_EYE_CHARGE_RULES
-    : BUILTIN_CHARGE_RULES.filter((rule) => referencedRuleIds.has(rule.id));
-  for (const rule of rules) {
-    if (!await service.chargeRules.get(rule.id)) await service.chargeRules.save(rule);
-  }
+  if (BUILTIN_PROTOCOLS.some(protocol => protocol.id === protocolId)) await ensureBuiltInProtocols(service);
 }
 
 export async function handleProtocolApplicationsRequest(
@@ -567,7 +572,7 @@ export async function handleProtocolApplicationsRequest(
   if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const parsed = z.object({ encounterId: z.string().min(1) }).strict().safeParse(input.query);
   if (!parsed.success) return { status: 400, body: { error: "encounterId is required." } };
-  const service = liveService(staff, deps.now);
+  const service = liveService(staff, deps.now, undefined, deps.educationCatalog);
   const applications = (await service.applications.list())
     .filter((application) => application.encounterId === parsed.data.encounterId)
     .map((application) => ({
@@ -592,7 +597,7 @@ export async function handleVisitChargeRequest(
   if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const parsed = z.object({ encounterId: z.string().min(1) }).strict().safeParse(input.params);
   if (!parsed.success) return { status: 400, body: { error: "encounterId is required." } };
-  const service = liveService(staff, deps.now);
+  const service = liveService(staff, deps.now, undefined, deps.educationCatalog);
   const [charges, diagnoses, options] = await Promise.all([
     service.charges.list(),
     visitChargeDiagnoses(staff.fhir, parsed.data.encounterId),
@@ -646,7 +651,7 @@ export async function handleVisitChargeMutationRequest(
   if (!params.success || !body.success) {
     return { status: 400, body: { error: "A valid encounter and visit procedure concept are required." } };
   }
-  const service = liveService(staff, deps.now);
+  const service = liveService(staff, deps.now, undefined, deps.educationCatalog);
   const resolution = resolveManualVisitProposal(await service.charges.list(), params.data.encounterId);
   if (resolution.conflict) return { status: 409, body: { error: resolution.conflict } };
   if (resolution.proposal?.state === "finalized" || resolution.proposal?.chargeItemRef) {
@@ -790,7 +795,7 @@ export async function handleProtocolFollowUpConfirmRequest(
   const params = z.object({ encounterId: z.string().min(1), actionId: z.string().min(1) }).strict().safeParse(input.params);
   const body = z.union([z.object({}).strict(), z.object({ interval: z.number().int().positive(), unit: z.enum(["days", "weeks", "months"]), reason: z.string().trim().min(1).optional() }).strict()]).safeParse(input.body);
   if (!params.success || !body.success) return { status: 400, body: { error: "Valid encounter, action, and follow-up are required." } };
-  const service = liveService(staff, deps.now);
+  const service = liveService(staff, deps.now, undefined, deps.educationCatalog);
   const action = await service.actions.get(params.data.actionId);
   if (!action || action.encounterId !== params.data.encounterId || action.actionType !== "follow-up" || ["removed", "cancelled"].includes(action.state)) {
     return { status: 404, body: { error: "Live follow-up not found for this encounter." } };
@@ -809,7 +814,7 @@ export async function handleProtocolUnapplyRequest(
   const parsed = z.object({ applicationId: z.string().min(1) }).safeParse(input.params);
   if (!parsed.success) return { status: 400, body: { error: "applicationId is required." } };
   try {
-    return { status: 200, body: await liveService(staff, deps.now).unapply(parsed.data.applicationId) };
+    return { status: 200, body: await liveService(staff, deps.now, undefined, deps.educationCatalog).unapply(parsed.data.applicationId) };
   } catch (error) {
     if (error instanceof AcceptedChargeUnapplyError) {
       return { status: 409, body: { error: error.message } };
@@ -827,7 +832,7 @@ export async function handleProtocolSignCleanupRequest(
   if (!staffHasBusinessAction(staff, "clinical.sign")) return { status: 403, body: { error: "clinical.sign role required" } };
   const parsed = z.object({ encounterId: z.string().min(1) }).safeParse(input.params);
   if (!parsed.success) return { status: 400, body: { error: "encounterId is required." } };
-  const service = liveService(staff, deps.now);
+  const service = liveService(staff, deps.now, undefined, deps.educationCatalog);
   const abandoned = await service.abandonOpenForSignedEncounter(parsed.data.encounterId);
   const charges = await materializeAcceptedChargeProposals({
     fhir: staff.fhir as unknown as ProcedureChargeFhir,
@@ -864,6 +869,7 @@ function liveService(
   staff: Staff,
   now?: () => string,
   seriesProtocols: ReadonlyMap<string, SeriesProtocolDefinition> = new Map(),
+  educationCatalog?: EducationCatalogReader,
 ): ProtocolService {
   return new ProtocolService(staff.fhir, {
     async commitFinding(finding) {
@@ -911,7 +917,7 @@ function liveService(
       }
       const resource = action.actionType === "order"
         ? serviceRequest(action)
-        : carePlan(action);
+        : carePlan(action, educationCatalog);
       const saved = await staff.fhir.create(resource, { "X-ODOS-Source": "protocol-module" });
       return saved.id ? `${saved.resourceType}/${saved.id}` : undefined;
     },
@@ -979,6 +985,7 @@ function serviceRequest(action: PlanActionInstance): ServiceRequest {
     subject: { reference: `Patient/${action.patientId}` },
     encounter: { reference: `Encounter/${action.encounterId}` },
     code: { text: String(action.payload.orderableKey ?? action.sourceItemKey ?? action.actionType) },
+    ...(typeof action.payload.focus === "string" ? { bodySite: [{ text: action.payload.focus }], orderDetail: [{ text: action.payload.focus }] } : {}),
     authoredOn: action.provenance.at,
   };
 }
@@ -1062,12 +1069,16 @@ export async function materializeProtocolFollowUp(
   }
   return saved.id ? `ServiceRequest/${saved.id}` : undefined;
 }
-function carePlan(action: PlanActionInstance): CarePlan {
+function carePlan(action: PlanActionInstance, catalog?: EducationCatalogReader): CarePlan {
+  const education = action.actionType === "education"
+    ? (catalog ?? loadDefaultEducationCatalogReader()).get(String(action.payload.assetRef ?? "")) : undefined;
   return {
     resourceType: "CarePlan", status: "active", intent: "plan",
     subject: { reference: `Patient/${action.patientId}` },
     encounter: { reference: `Encounter/${action.encounterId}` },
-    title: String(action.payload.topicKey ?? action.payload.assetRef ?? action.payload.reason ?? action.sourceItemKey ?? action.actionType),
+    title: education?.title ?? String(action.payload.topicKey ?? action.payload.assetRef ?? action.payload.reason ?? action.sourceItemKey ?? action.actionType),
+    ...(action.actionType === "counseling" && typeof action.payload.narrativeTemplate === "string" ? { description: action.payload.narrativeTemplate } : {}),
+    ...(action.actionType === "education" ? { note: [{ text: "Handout recorded; delivery is not yet tracked" }] } : {}),
     created: action.provenance.at,
   };
 }

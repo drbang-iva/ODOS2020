@@ -42,6 +42,7 @@ export interface CommitSelection {
   itemKey: string;
   selected: boolean;
   payload?: Record<string, unknown>;
+  skipReason?: "not-offered";
 }
 
 type ItemApplicationResult =
@@ -583,6 +584,7 @@ export class ProtocolService {
         const choice = choices.get(item.itemKey);
         const selected = choice?.selected ?? item.defaultSelected;
         if (!selected) {
+          if (choice?.skipReason) application.dedupResolutions.push({ itemKey: item.itemKey, reason: choice.skipReason });
           dispositions.push({ itemKey: item.itemKey, outcome: "opted-out" });
           for (const finding of proposed.filter((row) =>
             row.sourceItemKey === item.itemKey && row.state === "proposed"

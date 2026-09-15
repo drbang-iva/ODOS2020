@@ -179,8 +179,8 @@ import {
   handleVisitChargeMutationRequest,
   handleVisitChargeRequest,
 } from "./clinical-graph/protocol-endpoint.js";
-import { ProtocolDefinitionStore } from "./clinical-graph/protocol-store.js";
-import { GLAUCOMA_SUSPECT_PROTOCOL } from "./clinical-graph/protocol-fixtures.js";
+import { ProtocolDefinitionStore, ProtocolBasicStore, PROTOCOL_BASIC_CODES } from "./clinical-graph/protocol-store.js";
+import { ensureBuiltInProtocols } from "./clinical-graph/protocol-seeding.js";
 import { PROCEDURE_FEE_SEEDS } from "./clinical-graph/procedure-fee-schedule.js";
 import {
   handleProcedureFeeScheduleCreateRequest,
@@ -5719,7 +5719,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
   const westFaxConfig = westFaxConfigFromEnv(process.env);
   const westFaxAdapter = westFaxConfig ? createWestFaxAdapter(westFaxConfig) : null;
   await logProtocolSeedBootFailure({
-    seed: () => protocolDefinitionStore.ensureSeed(GLAUCOMA_SUSPECT_PROTOCOL).then(() => undefined),
+    seed: () => ensureBuiltInProtocols({ definitions: protocolDefinitionStore, chargeRules: new ProtocolBasicStore(fhir, PROTOCOL_BASIC_CODES.procedureChargeRule) }),
   });
   startWatcherWorker({
     authenticate: authenticateWithMedplum,
@@ -6004,6 +6004,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         return {
           authenticate: async () => staff,
           catalogs: () => catalogs,
+          loadProcedureDefinitions: () => procedureDefinitionStore.list(),
         };
       };
       const paymentCreditDeps = {

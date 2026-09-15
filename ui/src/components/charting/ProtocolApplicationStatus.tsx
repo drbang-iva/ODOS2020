@@ -109,8 +109,8 @@ export function FollowUpConfirmation({
   const [unit, setUnit] = useState(action.payload.unit ?? "months");
   const [busy, setBusy] = useState(false);
   const dirty =
-    Number(interval) !== action.payload.interval ||
-    unit !== action.payload.unit;
+    interval !== String(action.payload.interval ?? "") ||
+    unit !== (action.payload.unit ?? "months");
   const [error, setError] = useState<string>();
   async function save(change: { interval?: number; unit?: string }) {
     setBusy(true);
