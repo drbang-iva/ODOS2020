@@ -1,6 +1,6 @@
 {
   "base": "52c6ec4926e95e78344082add8522e74743ffb33",
-  "head": "7891ed1724ac0744468d187784519ec1e50143a3",
+  "head": "6753f895d282ee034d00de30e64d254ed30c76fd",
   "reports": [
     {
       "file": "mcp/src/__tests__/protocol-phase5.test.ts",

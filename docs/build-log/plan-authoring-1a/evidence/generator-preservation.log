@@ -1,4 +1,0 @@
-mcp/src/__tests__/protocol-phase5.test.ts: all non-import AST statements identical (144)
-mcp/tests/procedureChargeMaterialization.test.ts: all non-import AST statements identical (9)
-mcp/src/__tests__/gonioscopy-phase5.test.ts: all non-import AST statements identical (8)
-Legacy v1 object source is byte-identical after export-name change.
