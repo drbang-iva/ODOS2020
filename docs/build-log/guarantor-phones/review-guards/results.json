@@ -1,0 +1,114 @@
+[
+  {
+    "guard": "T12-final-refusal",
+    "file": "mcp/src/clinic/guarantor-link-operation.ts",
+    "original": "for (const child of verified) {\n      const released = withExtension(child, GUARANTOR_CLAIM_URL);",
+    "mutation": "for (const child of verified) {\n      const released = withExtension(withExtension(child, GUARANTOR_CLAIM_URL), \"https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number\", {url: \"https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number\", valueBoolean: true});",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T12",
+      "mcp/tests/guarantorPhoneRecovery.test.ts"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": []
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T12 exact pre-C2 projecting journal resumes with no-refusal child"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": []
+    }
+  },
+  {
+    "guard": "T5-second-corrected-child",
+    "file": "mcp/src/clinic/guarantor-link-operation.ts",
+    "original": "for (const child of verified) {\n      const released = withExtension(child, GUARANTOR_CLAIM_URL);",
+    "mutation": "for (const child of verified) {\n      const released = this.plan.kind === \"correct\" && child.id === \"r2\" ? withExtension(withExtension(child, GUARANTOR_CLAIM_URL), \"https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number\", {url: \"https://odos2020.com/fhir/StructureDefinition/odos-no-textable-number\", valueBoolean: true}) : withExtension(child, GUARANTOR_CLAIM_URL);",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T5 consolidate",
+      "mcp/tests/guarantorPhoneRecovery.test.ts"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": []
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T5 consolidate projects refusal=true and correction restores the required snapshot"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": []
+    }
+  },
+  {
+    "guard": "T3-selected-marker",
+    "file": "mcp/src/clinic/patient-telecom.ts",
+    "original": "if (point === answer) return { ...point, extension: [...(extensions ?? []), { url: ODOS_TEXTABLE_NUMBER_EXTENSION_URL, valueBoolean: true }] };",
+    "mutation": "if (point === answer) return { ...point, extension: extensions };",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=T3",
+      "tests/guarantorPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": []
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "T3 real editor selecting a number clears refusal on both children"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": []
+    }
+  },
+  {
+    "guard": "K7-rejected-bot-change",
+    "file": "mcp/src/clinic/patient-telecom.ts",
+    "original": "return { ...patient, extension: [...(otherExtensions ?? []), { url: ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, valueBoolean: true }] };",
+    "mutation": "return { ...patient, extension: [...(otherExtensions ?? []), { url: ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, valueBoolean: true }], telecom: patient.telecom?.map(point => ({...point, extension: point.extension?.filter(e => e.url !== ODOS_TEXTABLE_NUMBER_EXTENSION_URL)})) };",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=K7:",
+      "tests/patientPhoneForm.test.tsx"
+    ],
+    "green": {
+      "exit": 0,
+      "failedTests": []
+    },
+    "red": {
+      "exit": 1,
+      "failedTests": [
+        "K7: Neither writes one refusal and preserves every ContactPoint marker"
+      ]
+    },
+    "restored": {
+      "exit": 0,
+      "failedTests": []
+    }
+  }
+]

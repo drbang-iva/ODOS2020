@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: T12 exact pre-C2 projecting journal resumes with no-refusal child
+ok 1 - T12 exact pre-C2 projecting journal resumes with no-refusal child
+  ---
+  duration_ms: 10.983833
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 124.875666

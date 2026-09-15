@@ -13,8 +13,10 @@ for (const kind of ['attach', 'transfer', 'consolidate']) for (const toRefusal o
   const lastTelecom = get(f, 'RelatedPerson/r1').telecom;
   const correction: any = await run(f, 'correct', { operationId: randomUUID(), reason: 'Synthetic correction' }, result.body.task.id);
   assert.equal(correction.status, 200); assert.equal(correction.body.task.status, 'completed');
-  assert.equal(refused(get(f, 'RelatedPerson/r1')), kind === 'attach' ? toRefusal : !toRefusal);
-  assert.deepEqual(f.owners('r1'), kind === 'attach' ? [] : ['S']);
+  for (const id of ids) {
+    assert.equal(refused(get(f, `RelatedPerson/${id}`)), kind === 'attach' ? toRefusal : !toRefusal);
+    assert.deepEqual(f.owners(id), kind === 'attach' ? [] : ['S']);
+  }
   if (kind === 'attach') assert.deepEqual(get(f, 'RelatedPerson/r1').telecom, lastTelecom);
 });
 test('T6 lost projecting reply plus competing refusal pauses interfered without domain writes', async () => {
@@ -40,6 +42,7 @@ test('T12 exact pre-C2 projecting journal resumes with no-refusal child', async 
   const result: any = await run(f, 'complete', undefined, fixture.taskId);
   assert.equal(result.status, 200); assert.equal(result.body.task.status, 'completed');
   assert.deepEqual(f.owners('r1'), ['D']);
+  assert.equal(refused(get(f, 'RelatedPerson/r1')), false);
 });
 for (const loss of ['none', 'registration'] as const) test(`T13 existing-guarantor initial child refusal before attach with ${loss} reply`, async () => {
   const result = await registerExisting(loss);

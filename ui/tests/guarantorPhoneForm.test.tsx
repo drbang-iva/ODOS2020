@@ -4,7 +4,7 @@ import React from 'react';
 import { create, act } from 'react-test-renderer';
 import { ResponsiblePartiesControl } from '../src/components/patient/ResponsiblePartiesControl';
 import { loadGuarantor, saveGuarantor } from '../src/lib/guarantor-editor';
-import { applyTextableAnswer, phoneDraft, applyPhoneDraft, telecomSnapshot } from '../../mcp/src/clinic/patient-telecom';
+import { applyTextableAnswer, phoneDraft, applyPhoneDraft, telecomSnapshot, ODOS_TEXTABLE_NUMBER_EXTENSION_URL } from '../../mcp/src/clinic/patient-telecom';
 import { resolveSmsNumber } from '../../mcp/src/comms/suppression-gate';
 import { world, withEditor, get, store, refused, otherExtensions, wire } from '../../mcp/tests/helpers/guarantor-phone-fixture';
 
@@ -32,7 +32,11 @@ test('T3 real editor selecting a number clears refusal on both children', async 
     try {
       await act(async()=>tree.root.findAllByType('input').find((n:any)=>n.props.type==='radio'&&n.props.value==='phone2').props.onChange());
       await act(async()=>{await tree.root.findAllByType('button').find((n:any)=>n.children.includes('Save guarantor')).props.onClick();});
-      for(const ref of ['Person/S','RelatedPerson/r1','RelatedPerson/r2']) assert.equal(refused(get(f,ref)),false);
+      for (const ref of ['Person/S', 'RelatedPerson/r1', 'RelatedPerson/r2']) {
+        const saved = get(f, ref);
+        assert.equal(refused(saved), false);
+        assert.deepEqual(saved.telecom.filter((point: any) => point.extension?.some((e: any) => e.url === ODOS_TEXTABLE_NUMBER_EXTENSION_URL && e.valueBoolean === true)).map((point: any) => point.value), ['864-555-0101']);
+      }
     } finally {act(()=>tree.unmount());}
   });
 });

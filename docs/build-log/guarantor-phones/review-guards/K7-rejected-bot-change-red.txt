@@ -1,0 +1,148 @@
+TAP version 13
+# Subtest: K7: Neither writes one refusal and preserves every ContactPoint marker
+not ok 1 - K7: Neither writes one refusal and preserves every ContactPoint marker
+  ---
+  duration_ms: 5.246
+  type: 'test'
+  location: '<worktree>/ui/tests/patientPhoneForm.test.tsx:1:6946'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+
+      [
+        {
+          extension: [
+            {
+              url: 'urn:synthetic:contact-note',
+    ...
+            },
+    -       {
+    -         url: 'https://odos2020.com/fhir/StructureDefinition/odos-textable-number',
+    -         valueBoolean: true
+    -       }
+          ],
+          id: 'synthetic-12025550103',
+          period: {
+            end: '2027-01-01',
+            start: '2026-01-01'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      id: 'synthetic-12025550102'
+      system: 'phone'
+      value: '+12025550102'
+      use: 'home'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    1:
+      id: 'synthetic-email'
+      system: 'email'
+      use: 'home'
+      value: 'synthetic@example.test'
+      rank: 3
+      period:
+        start: '2026-01-01'
+      extension:
+        0: <Circular>
+    2:
+      id: 'synthetic-12025550103'
+      system: 'phone'
+      value: '+12025550103'
+      use: 'work'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0: <Circular>
+        1:
+          url: 'https://odos2020.com/fhir/StructureDefinition/odos-textable-number'
+          valueBoolean: true
+    3:
+      id: 'synthetic-12025550101'
+      system: 'phone'
+      value: '+12025550101'
+      use: 'mobile'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0: <Circular>
+  actual:
+    0:
+      id: 'synthetic-12025550102'
+      system: 'phone'
+      value: '+12025550102'
+      use: 'home'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    1:
+      id: 'synthetic-email'
+      system: 'email'
+      use: 'home'
+      value: 'synthetic@example.test'
+      rank: 3
+      period:
+        start: '2026-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    2:
+      id: 'synthetic-12025550103'
+      system: 'phone'
+      value: '+12025550103'
+      use: 'work'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+    3:
+      id: 'synthetic-12025550101'
+      system: 'phone'
+      value: '+12025550101'
+      use: 'mobile'
+      rank: 2
+      period:
+        start: '2026-01-01'
+        end: '2027-01-01'
+      extension:
+        0:
+          url: 'urn:synthetic:contact-note'
+          valueString: 'Synthetic retained metadata'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/ui/tests/patientPhoneForm.test.tsx:144:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 280.583292

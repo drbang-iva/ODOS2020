@@ -1,0 +1,38 @@
+TAP version 13
+# Subtest: T5 consolidate projects refusal=true and correction restores the required snapshot
+not ok 1 - T5 consolidate projects refusal=true and correction restores the required snapshot
+  ---
+  duration_ms: 19.368541
+  type: 'test'
+  location: '<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:1:346'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    true !== false
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/guarantorPhoneRecovery.test.ts:17:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: T5 consolidate projects refusal=false and correction restores the required snapshot
+ok 2 - T5 consolidate projects refusal=false and correction restores the required snapshot
+  ---
+  duration_ms: 8.663959
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 181.366791

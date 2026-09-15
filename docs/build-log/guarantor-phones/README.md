@@ -93,3 +93,11 @@ No medical code or external clinical/regulatory citation changed. The canonical 
 Implementation and author-side evidence are complete. Independent Opus evaluation is still required. CI/bot results and the final PR head belong in the delivery message; this authored file does not issue an evaluation verdict. No `Evaluated-by` marker or operator override label is posted by this session.
 
 Full suite TAP logs and the full domain trace are gzip-compressed without content changes. The live proof script emits `live-requests.json`; the bundle archives that exact JSON as `.json.gz`. Mutation stage outputs are plain text in `mutations/`. Typechecks exited 0 with no diagnostics.
+
+## Bot review adjudication
+
+CodeRabbit's request to remove ContactPoint markers on Neither was rejected: the approved patient R1 rule intentionally retains them for conversation lookup while the resource refusal suppresses delivery. Applying the proposed change makes frozen patient K7 fail; restoring it makes K7 green.
+
+Three coverage suggestions were accepted: T12 now checks the final refusal is absent, T5 checks both corrected consolidate children, and T3 checks the actual selected number is the sole marked number on the Person and both children. Phone 2 is the Home number in this fixture after the reader sorts Cell first, so the assertion uses number identity rather than an incorrect raw-array position. No production source changed in this review follow-up.
+
+`review-guards/results.json` and its stage outputs record four additional green/red/restored controls: forced refusal during final release (T12), corrupted second corrected child (T5), omitted selected marker (T3), and the rejected Neither change (patient K7). Focused follow-up runs passed 11/11 MCP recovery tests and 22/22 UI guarantor/patient-phone tests. The full-suite evidence above was captured before these assertion-only additions; final-head CI reruns the suites. Production source hashes and live-proof applicability are unchanged.
