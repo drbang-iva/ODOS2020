@@ -2,7 +2,8 @@
 
 Commands ran from `ui/`, using writer-built, JSON-round-tripped fixtures. These are author checks, not an independent evaluation.
 
-- Green/restored: `node --import tsx --test tests/ageOfMajority.test.tsx tests/practiceSettings.test.tsx` — 8 tests, 8 pass, 0 fail.
+- Green: `node --import tsx --test tests/ageOfMajority.test.tsx` — 6 tests, 6 pass, 0 fail.
+- Restored: `node --import tsx --test tests/ageOfMajority.test.tsx tests/practiceSettings.test.tsx` — 8 tests, 8 pass, 0 fail.
 - D6 red: replaced the shared-resolver call in `isMinorOn` with the previous `+ 18` calculation. `node --import tsx --test --test-name-pattern='D6' tests/ageOfMajority.test.tsx` — 1 test, 0 pass, 1 fail. Restored: 1 pass, 0 fail.
 - D7 red: changed `isMinorOn` to use 18 when its setting is absent. `node --import tsx --test --test-name-pattern='D7 UI missing' tests/ageOfMajority.test.tsx` — 1 test, 0 pass, 1 fail. Restored with all guards green.
 - D7 duplicate red: removed the multiple-singleton refusal from the UI loader. `node --import tsx --test --test-name-pattern='D7 UI duplicate' tests/ageOfMajority.test.tsx` — 1 test, 0 pass, 1 fail. Restored with all guards green.
