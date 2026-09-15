@@ -1,0 +1,153 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { chmodSync, statSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { spawn, spawnSync } from 'node:child_process';
+import { renderFrontdoor } from './frontdoor-install.mjs';
+
+test('render preserves bytes apart from root substitution', () => assert.equal(renderFrontdoor('root * {$ODOS_UI_DIST}\n', '/tmp/dist'), 'root * /tmp/dist\n'));
+test('render refuses remaining placeholder', () => assert.throws(() => renderFrontdoor('{$OTHER}', '/tmp/dist'), /placeholder/));
+test('root is safely quoted when it contains spaces', () => assert.equal(renderFrontdoor('root * {$ODOS_UI_DIST}', '/tmp/my dist'), 'root * "/tmp/my dist"'));
+test('root refuses Caddy placeholder injection', () => assert.throws(() => renderFrontdoor('{$ODOS_UI_DIST}', '/tmp/{env.SECRET}'), /path/));
+
+function fixture(fn) {
+ const dir = mkdtempSync(join(tmpdir(), 'frontdoor-test-'));
+ try {
+  const target = join(dir, 'Caddyfile'); const dist = join(dir, 'dist'); mkdirSync(dist); writeFileSync(target, 'old config\n');
+  const run = (args = [], env = {}) => spawnSync(process.execPath, [resolve('scripts/frontdoor-install.mjs'), '--ui-dist', dist, '--target', target, ...args], { encoding: 'utf8', env: { ...process.env, ...env } });
+  fn({ dir, target, run });
+ } finally { rmSync(dir, { recursive: true, force: true }); }
+}
+test('missing caddy fails and does not write', () => fixture(({dir,target,run}) => {
+ const result = run([], { PATH: dir }); assert.equal(result.status, 1); assert.match(result.stderr, /caddy.*required|caddy.*not found/i); assert.equal(readFileSync(target, 'utf8'), 'old config\n');
+}));
+test('real caddy validates dry run, unified diff printed, target unchanged', () => fixture(({dir,target,run}) => {
+ const result = run(); assert.equal(result.status, 0, result.stderr); assert.match(result.stdout, /caddy validate/); assert.match(result.stdout, /@@/); assert.equal(readFileSync(target, 'utf8'), 'old config\n'); assert.deepEqual(readdirSync(dir).sort(), ['Caddyfile','dist']);
+}));
+test('apply backs up exact original before writing', () => fixture(({dir,target,run}) => {
+ const result = run(['--apply']); assert.equal(result.status, 0, result.stderr); const backup = readdirSync(dir).find(f => f.startsWith('Caddyfile.bak-')); assert.ok(backup); assert.equal(readFileSync(join(dir,backup),'utf8'),'old config\n'); assert.match(readFileSync(target,'utf8'), /ODOS front door/);
+}));
+test('invalid arguments do not write', () => fixture(({target,run}) => {
+ const result = run(['--unknown']); assert.equal(result.status,1); assert.match(result.stderr,/argument/); assert.equal(readFileSync(target,'utf8'),'old config\n');
+}));
+test('pure renderer can be imported from stdin with CLI-style arguments', () => {
+ const result = spawnSync(process.execPath,['--input-type=module','-','--ui-dist','/tmp/dist'], { input: 'import { renderFrontdoor } from "./scripts/frontdoor-install.mjs"; console.log(renderFrontdoor("root * {$ODOS_UI_DIST}", process.argv[3]));', encoding:'utf8' });
+ assert.equal(result.status,0,result.stderr); assert.equal(result.stdout,'root * /tmp/dist\n');
+});
+test('a partial write failure never damages the existing target', () => fixture(({dir,target}) => {
+ const input = `import fs from 'node:fs'; import { syncBuiltinESMExports } from 'node:module';
+ const originalWrite = fs.writeFileSync;
+ fs.writeFileSync = function(path, data, options) {
+   if (String(path).startsWith(process.argv[2] + '/')) { originalWrite(path, 'partial', options); throw new Error('simulated disk-full write failure'); }
+   return originalWrite(path, data, options);
+ };
+ syncBuiltinESMExports();
+ const { main } = await import('./scripts/frontdoor-install.mjs');
+ process.exitCode = main(['--ui-dist', process.argv[2] + '/dist', '--target', process.argv[3], '--apply']);`;
+ const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
+ assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/simulated disk-full/); assert.equal(readFileSync(target,'utf8'),'old config\n'); assert.deepEqual(readdirSync(dir).sort(), ['Caddyfile', 'dist']);
+}));
+
+test('atomic replacement preserves existing permission bits despite umask', () => fixture(({dir,target}) => {
+ chmodSync(target,0o660);
+ const input = `process.umask(0o077); const { main } = await import('./scripts/frontdoor-install.mjs'); process.exitCode = main(['--ui-dist', process.argv[2] + '/dist', '--target', process.argv[3], '--apply']);`;
+ const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
+ assert.equal(result.status,0,result.stderr); assert.equal(statSync(target).mode & 0o777,0o660); assert.ok(readdirSync(dir).every(name => !name.startsWith('.odos-frontdoor-')));
+}));
+test('target changed during staging is preserved and replacement refused', () => fixture(({dir,target}) => {
+ const input = `import fs from 'node:fs'; import { syncBuiltinESMExports } from 'node:module';
+ const originalWrite = fs.writeFileSync;
+ fs.writeFileSync = function(path, data, options) {
+   const result = originalWrite(path,data,options);
+   if (String(path).startsWith(process.argv[2] + '/')) originalWrite(process.argv[3], 'newer config');
+   return result;
+ };
+ syncBuiltinESMExports(); const { main } = await import('./scripts/frontdoor-install.mjs');
+ process.exitCode = main(['--ui-dist',process.argv[2] + '/dist','--target',process.argv[3],'--apply']);`;
+ const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
+ assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/Target changed/); assert.equal(readFileSync(target,'utf8'),'newer config'); assert.deepEqual(readdirSync(dir).sort(),['Caddyfile','dist']);
+}));
+test('first install creates a readable config with no staging debris', () => fixture(({dir,target,run}) => {
+ rmSync(target); const result = run(['--apply']); assert.equal(result.status,0,result.stderr); assert.equal(statSync(target).mode & 0o777,0o644); assert.deepEqual(readdirSync(dir).sort(),['Caddyfile','dist']);
+}));
+test('directory sync failure before replacement leaves original intact', () => fixture(({dir,target}) => {
+ const input = `import fs from 'node:fs'; import { syncBuiltinESMExports } from 'node:module';
+ const originalSync = fs.fsyncSync; fs.fsyncSync = function(fd) { if (fs.fstatSync(fd).isDirectory()) throw new Error('simulated directory sync failure'); return originalSync(fd); };
+ syncBuiltinESMExports(); const { main } = await import('./scripts/frontdoor-install.mjs');
+ process.exitCode = main(['--ui-dist',process.argv[2] + '/dist','--target',process.argv[3],'--apply']);`;
+ const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
+ assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/directory sync failure/); assert.equal(readFileSync(target,'utf8'),'old config\n'); assert.ok(readdirSync(dir).every(name => !name.startsWith('.odos-frontdoor-')));
+}));
+test('target changed during backup is preserved and replacement refused', () => fixture(({dir,target}) => {
+ const input = `import fs from 'node:fs'; import { syncBuiltinESMExports } from 'node:module';
+ const originalCopy = fs.copyFileSync; fs.copyFileSync = function(from,to,flags) { const result = originalCopy(from,to,flags); fs.writeFileSync(process.argv[3], 'newer during backup'); return result; };
+ syncBuiltinESMExports(); const { main } = await import('./scripts/frontdoor-install.mjs');
+ process.exitCode = main(['--ui-dist',process.argv[2] + '/dist','--target',process.argv[3],'--apply']);`;
+ const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
+ assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/Target changed/); assert.equal(readFileSync(target,'utf8'),'newer during backup'); assert.ok(readdirSync(dir).every(name => !name.startsWith('.odos-frontdoor-')));
+}));
+test('post-replacement sync failure reports installed state and preserves backup', () => fixture(({dir,target}) => {
+ const input = `import fs from 'node:fs'; import { syncBuiltinESMExports } from 'node:module';
+ const originalSync = fs.fsyncSync; let directorySyncs = 0;
+ fs.fsyncSync = function(fd) { if (fs.fstatSync(fd).isDirectory() && ++directorySyncs === 2) throw new Error('simulated post-install sync failure'); return originalSync(fd); };
+ syncBuiltinESMExports(); const { main } = await import('./scripts/frontdoor-install.mjs');
+ process.exitCode = main(['--ui-dist',process.argv[2] + '/dist','--target',process.argv[3],'--apply']);`;
+ const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
+ assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/Installed but durability is unknown/); assert.match(readFileSync(target,'utf8'),/ODOS front door/);
+ const backup = readdirSync(dir).find(name => name.startsWith('Caddyfile.bak-')); assert.ok(backup); assert.equal(readFileSync(join(dir,backup),'utf8'),'old config\n');
+}));
+
+
+test('F12 real Caddy: wildcard Accept sends an API-style GET to HTML', async (t) => {
+ const { createServer } = await import('node:net');
+ const { setTimeout: delay } = await import('node:timers/promises');
+ const dir = mkdtempSync(join(tmpdir(), 'frontdoor-navigation-'));
+ const html = '<!doctype html><title>frontdoor F12 fixture</title>';
+ writeFileSync(join(dir, 'index.html'), html);
+ const template = readFileSync(resolve('deploy/frontdoor/Caddyfile'), 'utf8');
+ try {
+  for (const loosened of [false, true]) {
+   const reservation = createServer();
+   await new Promise((accept, reject) => { reservation.once('error', reject); reservation.listen(0, '127.0.0.1', accept); });
+   const port = reservation.address().port;
+   await new Promise((accept, reject) => reservation.close(error => error ? reject(error) : accept()));
+   const config = join(dir, 'Caddyfile');
+   const source = loosened ? template.replace('@navaccept header Accept *text/html*', '@navaccept header Accept *') : template;
+   writeFileSync(config, renderFrontdoor(source, dir).replace(':8090 {', `http://127.0.0.1:${port} {`));
+   const child = spawn('caddy', ['run', '--adapter', 'caddyfile', '--config', config], { stdio: ['ignore', 'pipe', 'pipe'] });
+   let logs = '';
+   child.stdout.on('data', chunk => { logs += chunk; });
+   child.stderr.on('data', chunk => { logs += chunk; });
+   let spawnError;
+   child.on('error', error => { spawnError = error; });
+   const closed = new Promise(accept => child.once('close', accept));
+   try {
+    let response;
+    for (let attempt = 0; attempt < 100; attempt++) {
+     if (spawnError) throw spawnError;
+     if (child.exitCode !== null) throw new Error(`Caddy exited: ${logs}`);
+     if (logs.includes('server running')) {
+      try {
+       response = await fetch(`http://127.0.0.1:${port}/clinic/x`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(1000) });
+       break;
+      } catch { /* Listener startup may follow the startup log. */ }
+     }
+     await delay(50);
+    }
+    assert.ok(response, `Caddy did not become ready: ${logs}`);
+    const contentType = response.headers.get('content-type') ?? '(absent)';
+    const body = await response.text();
+    t.diagnostic(`${loosened ? 'F12 variant' : 'Original'}: GET /clinic/x Accept: application/json -> ${response.status}; Content-Type: ${contentType}`);
+    if (loosened) { assert.match(contentType, /text\/html/); assert.equal(body, html); }
+    else assert.doesNotMatch(contentType, /text\/html/);
+   } finally {
+    if (child.exitCode === null && !spawnError) child.kill('SIGTERM');
+    const timer = setTimeout(() => child.kill('SIGKILL'), 5000);
+    await closed;
+    clearTimeout(timer);
+    t.diagnostic(`${loosened ? 'F12 variant' : 'Original'} Caddy process stopped`);
+   }
+  }
+ } finally { rmSync(dir, { recursive: true, force: true }); }
+});

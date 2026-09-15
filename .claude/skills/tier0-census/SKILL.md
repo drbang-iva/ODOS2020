@@ -135,6 +135,25 @@ not a promise about later heads; CI now reruns the discovery and reports drift o
 This is not a manifest you populate like Phase 1's; there's nothing to mark "reviewed" here, it
 either has a proxy entry or it doesn't.
 
+## Front-door route parity (blocking)
+
+Run `node .claude/skills/tier0-census/scripts/check-frontdoor-coverage.mjs`.
+This check reuses backend discovery and Vite proxy-key parsing, and compares both
+with `deploy/frontdoor/Caddyfile`. Missing and stale routes, wrong proxy targets,
+page/API split mismatches, communications page-path or GET mismatches, invalid
+exclusions, and parser/discovery diagnostics all exit **1**. CI runs it in preflight.
+The existing `check-proxy-coverage.mjs` remains reporting-only.
+
+Exclusions belong in `deploy/frontdoor/exclusions.json`, as objects with a `prefix`
+and a non-empty `reason`. An excluded prefix must still exist in backend or Vite
+and must not appear in the Caddyfile. `/comms` is tunnel-only. Add an exclusion only
+for an intentional exposure boundary, then run the checker and fixture tests:
+`node --test .claude/skills/tier0-census/scripts/frontdoor-self-test.mjs`.
+
+This is static parity evidence, not a deployment or browser proof. It inherits the
+backend discovery limits described above. Unsupported config syntax fails closed;
+extend the parser and its fixture tests when changing the supported config shape.
+
 ## What Phase 2 needs (not yet built — don't claim this skill does it)
 
 The full design (see the decision file) wants per-**control** entries — `{ route, precondition,

@@ -1,0 +1,160 @@
+# ODOS front door — production reverse proxy
+# Source of truth: deploy/frontdoor/Caddyfile + check-frontdoor-coverage.mjs parity check.
+
+{
+	admin off
+	auto_https off
+}
+
+:8090 {
+	root * {$ODOS_UI_DIST}
+	encode gzip
+
+	# Browser navigation detection, for the dual-purpose routes below.
+	@navdest header Sec-Fetch-Dest document
+	@navaccept header Accept *text/html*
+	# /communications: only these two GET page paths are UI routes (mirrors ui/vite.config.ts bypass).
+	@commsPageDest {
+		method GET
+		path /communications/education/review /communications/consent-evidence
+		header Sec-Fetch-Dest document
+	}
+	@commsPageAccept {
+		method GET
+		path /communications/education/review /communications/consent-evidence
+		header Accept *text/html*
+	}
+
+	# --- medplum-server ---
+	handle /fhir* {
+		reverse_proxy 127.0.0.1:8103
+	}
+	handle /auth* {
+		reverse_proxy 127.0.0.1:8103
+	}
+	handle /oauth2* {
+		reverse_proxy 127.0.0.1:8103
+	}
+
+	# --- DUAL-PURPOSE: both UI routes AND API paths ---
+	handle /audit* {
+		handle @navdest {
+			rewrite * /index.html
+			file_server
+		}
+		handle @navaccept {
+			rewrite * /index.html
+			file_server
+		}
+		handle {
+			reverse_proxy 127.0.0.1:3333
+		}
+	}
+	handle /desk* {
+		handle @navdest {
+			rewrite * /index.html
+			file_server
+		}
+		handle @navaccept {
+			rewrite * /index.html
+			file_server
+		}
+		handle {
+			reverse_proxy 127.0.0.1:3333
+		}
+	}
+	handle /clinic* {
+		handle @navdest {
+			rewrite * /index.html
+			file_server
+		}
+		handle @navaccept {
+			rewrite * /index.html
+			file_server
+		}
+		handle {
+			reverse_proxy 127.0.0.1:3333
+		}
+	}
+
+	# --- odos-mcp ---
+	handle /payments* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /commercial-engine* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /series-tracker* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /claims* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /eligibility* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /statements* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /reports* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /practice* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /scheduling* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /lab-orders* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /insurance* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /referrals* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /correspondence* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /fax* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /mcp* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /clinical-graph* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /weno* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /guarantors* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /communications* {
+		handle @commsPageDest {
+			rewrite * /index.html
+			file_server
+		}
+		handle @commsPageAccept {
+			rewrite * /index.html
+			file_server
+		}
+		handle {
+			reverse_proxy 127.0.0.1:3333
+		}
+	}
+	handle /watchers* {
+		reverse_proxy 127.0.0.1:3333
+	}
+	handle /inventory* {
+		reverse_proxy 127.0.0.1:3333
+	}
+
+	# --- SPA fallback: everything else ---
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+}

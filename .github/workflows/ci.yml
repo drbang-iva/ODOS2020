@@ -294,5 +294,9 @@ jobs:
         run: node .claude/skills/tier0-census/scripts/self-test.mjs
       - name: proxy-coverage census (reporting)
         run: node .claude/skills/tier0-census/scripts/check-proxy-coverage.mjs
+      - name: front-door parity self-tests
+        run: node --test .claude/skills/tier0-census/scripts/frontdoor-self-test.mjs
+      - name: front-door route parity (blocking)
+        run: node .claude/skills/tier0-census/scripts/check-frontdoor-coverage.mjs
       - name: run preflight
         run: npm run preflight
