@@ -34,7 +34,11 @@ import {
   ProtocolBasicStore,
   type ProtocolFhirClient,
 } from "../clinical-graph/protocol-store.js";
-import { committedFindingEvidence, ProtocolService } from "../clinical-graph/protocol-service.js";
+import {
+  committedFindingEvidence,
+  ProtocolService,
+  type ProtocolItemAddLock,
+} from "../clinical-graph/protocol-service.js";
 import type {
   ChargeProposal,
   PlanActionInstance,
@@ -56,6 +60,16 @@ class MemoryFhir implements ProtocolFhirClient {
   nextRows: Basic[] = [];
   searchParams: Array<Record<string, string> | undefined> = [];
   rejectNextChargeWrite = false;
+  chargeGate: {
+    entered?: () => void;
+    release?: Promise<void>;
+    remaining: number;
+  } = { remaining: 0 };
+  applicationConfirmGate: {
+    entered?: () => void;
+    release?: Promise<void>;
+    remaining: number;
+  } = { remaining: 0 };
 
   async search<T extends Basic>(_type: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>> {
     this.searchParams.push(params);
@@ -75,6 +89,13 @@ class MemoryFhir implements ProtocolFhirClient {
     return { resourceType: "Bundle", type: "searchset", entry: this.nextRows.map((resource) => ({ resource: resource as T })) };
   }
   async create<T extends Basic>(resource: T, headers?: Record<string, string>): Promise<T> {
+    if (this.chargeGate.remaining > 0 && resource.code?.coding?.some((coding) =>
+      coding.code === PROTOCOL_BASIC_CODES.chargeProposal
+    )) {
+      this.chargeGate.remaining -= 1;
+      this.chargeGate.entered?.();
+      await this.chargeGate.release;
+    }
     if (this.rejectNextChargeWrite && resource.code?.coding?.some((coding) =>
       coding.code === PROTOCOL_BASIC_CODES.chargeProposal
     )) {
@@ -88,14 +109,40 @@ class MemoryFhir implements ProtocolFhirClient {
         identifier.system === system && identifier.value === value));
       if (existing) return existing as T;
     }
-    const saved = { ...resource, id: `basic-${this.next++}` };
+    const saved = {
+      ...resource,
+      id: `basic-${this.next++}`,
+      meta: { ...resource.meta, versionId: "1" },
+    };
     this.rows.push(saved);
     this.headers.push(headers);
     return saved;
   }
   async update<T extends Basic>(_type: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {
-    const saved = { ...resource, id };
-    this.rows[this.rows.findIndex((row) => row.id === id)] = saved;
+    const applicationJson = resource.code?.coding?.some((coding) =>
+      coding.code === PROTOCOL_BASIC_CODES.protocolApplication
+    ) ? resource.extension?.[0]?.valueString : undefined;
+    if (this.applicationConfirmGate.remaining > 0 && applicationJson &&
+      (JSON.parse(applicationJson) as ProtocolApplication).confirmed) {
+      this.applicationConfirmGate.remaining -= 1;
+      this.applicationConfirmGate.entered?.();
+      await this.applicationConfirmGate.release;
+    }
+    const index = this.rows.findIndex((row) => row.id === id);
+    const current = this.rows[index];
+    const expected = headers?.["If-Match"];
+    if (expected && expected !== `W/"${current?.meta?.versionId}"`) {
+      throw Object.assign(new Error("FHIR 412 Precondition Failed"), { status: 412 });
+    }
+    const saved = {
+      ...resource,
+      id,
+      meta: {
+        ...resource.meta,
+        versionId: String(Number(current?.meta?.versionId ?? "0") + 1),
+      },
+    };
+    this.rows[index] = saved;
     this.headers.push(headers);
     return saved;
   }
@@ -104,10 +151,11 @@ class MemoryFhir implements ProtocolFhirClient {
   }
 }
 
-function harness() {
+function harness(itemAddLock?: ProtocolItemAddLock) {
   const fhir = new MemoryFhir();
   const projectedFindings: string[] = [];
   const materialized: string[] = [];
+  const liveMaterialized = new Set<string>();
   const projectionControl: { failOnceOnActionType?: PlanActionInstance["actionType"]; failed: boolean } = {
     failed: false,
   };
@@ -115,7 +163,8 @@ function harness() {
     actionType?: PlanActionInstance["actionType"];
     entered?: () => void;
     release?: Promise<void>;
-  } = {};
+    remaining: number;
+  } = { remaining: 0 };
   let currentTime = "2026-07-18T12:00:00.000Z";
   let id = 1;
   const service = new ProtocolService(fhir, {
@@ -124,7 +173,8 @@ function harness() {
       return `Observation/${finding.id}`;
     },
     async materializeAction(action) {
-      if (action.actionType === actionGate.actionType) {
+      if (action.actionType === actionGate.actionType && actionGate.remaining > 0) {
+        actionGate.remaining -= 1;
         actionGate.entered?.();
         await actionGate.release;
       }
@@ -133,14 +183,20 @@ function harness() {
         throw new Error(`Simulated ${action.actionType} projection failure.`);
       }
       materialized.push(action.id);
-      return action.actionType === "order" ? `ServiceRequest/${action.id}` : `CarePlan/${action.id}`;
+      const reference = action.actionType === "order" ? `ServiceRequest/${action.id}` : `CarePlan/${action.id}`;
+      liveMaterialized.add(reference);
+      return reference;
     },
-  }, () => currentTime, () => `id-${id++}`);
+    async removeMaterialized(reference) {
+      liveMaterialized.delete(reference);
+    },
+  }, () => currentTime, () => `id-${id++}`, itemAddLock);
   return {
     fhir,
     service,
     projectedFindings,
     materialized,
+    liveMaterialized,
     projectionControl,
     actionGate,
     setCurrentTime(value: string) { currentTime = value; },
@@ -756,6 +812,7 @@ test("a staggered second tap never resumes the first request's in-flight applica
   let actionEntered!: () => void;
   const entered = new Promise<void>((resolve) => { actionEntered = resolve; });
   actionGate.actionType = "order";
+  actionGate.remaining = 1;
   actionGate.entered = actionEntered;
   actionGate.release = new Promise<void>((resolve) => { releaseAction = resolve; });
 
@@ -779,6 +836,237 @@ test("a staggered second tap never resumes the first request's in-flight applica
   assert.equal(liveCharges, 1);
   assert.equal(new Set(results.map((result) => result.application.id)).size, 1);
   assert.deepEqual(results.map((result) => result.alreadyApplied).sort(), [false, true]);
+});
+
+test("H1 serializes a live action writer past the claim lease", async () => {
+  const { service, actionGate, liveMaterialized, setCurrentTime } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-locked-action-writer",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  let releaseAction!: () => void;
+  let actionEntered!: () => void;
+  const entered = new Promise<void>((resolve) => { actionEntered = resolve; });
+  actionGate.actionType = "order";
+  actionGate.remaining = 1;
+  actionGate.entered = actionEntered;
+  actionGate.release = new Promise<void>((resolve) => { releaseAction = resolve; });
+
+  const first = service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  await entered;
+  setCurrentTime("2026-07-18T12:00:06.000Z");
+  let secondSettled = false;
+  const second = service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input)
+    .finally(() => { secondSettled = true; });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(secondSettled, false);
+  releaseAction();
+  const results = await Promise.all([first, second]);
+  const repeated = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  const liveOrders = (await service.actions.list()).filter((row) =>
+    row.actionType === "order" && !["removed", "cancelled"].includes(row.state)
+  ).length;
+  const liveCharges = (await service.charges.list()).filter((row) => row.state !== "removed").length;
+
+  console.log("H1_LOCK_AFTER", JSON.stringify({
+    alreadyApplied: results.map((result) => result.alreadyApplied).sort(),
+    liveOrders,
+    liveMaterializedOrders: liveMaterialized.size,
+    liveCharges,
+    repeatAlreadyApplied: repeated.alreadyApplied,
+  }));
+  assert.deepEqual(results.map((result) => result.alreadyApplied).sort(), [false, true]);
+  assert.equal(new Set(results.map((result) => result.application.id)).size, 1);
+  assert.equal(liveOrders, 1);
+  assert.equal(liveMaterialized.size, 1);
+  assert.equal(liveCharges, 1);
+  assert.equal(repeated.alreadyApplied, true);
+});
+
+test("H2 serializes a live charge writer past the claim lease", async () => {
+  const { fhir, service, liveMaterialized, setCurrentTime } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-locked-charge-writer",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  let releaseCharge!: () => void;
+  let chargeEntered!: () => void;
+  const entered = new Promise<void>((resolve) => { chargeEntered = resolve; });
+  fhir.chargeGate.remaining = 1;
+  fhir.chargeGate.entered = chargeEntered;
+  fhir.chargeGate.release = new Promise<void>((resolve) => { releaseCharge = resolve; });
+
+  const first = service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  await entered;
+  setCurrentTime("2026-07-18T12:00:06.000Z");
+  let secondSettled = false;
+  const second = service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input)
+    .finally(() => { secondSettled = true; });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(secondSettled, false);
+  releaseCharge();
+  const results = await Promise.all([first, second]);
+  const repeated = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  const liveOrders = (await service.actions.list()).filter((row) =>
+    row.actionType === "order" && !["removed", "cancelled"].includes(row.state)
+  ).length;
+  const liveCharges = (await service.charges.list()).filter((row) => row.state !== "removed").length;
+
+  console.log("H2_LOCK_AFTER", JSON.stringify({
+    alreadyApplied: results.map((result) => result.alreadyApplied).sort(),
+    liveOrders,
+    liveMaterializedOrders: liveMaterialized.size,
+    liveCharges,
+    repeatAlreadyApplied: repeated.alreadyApplied,
+  }));
+  assert.deepEqual(results.map((result) => result.alreadyApplied).sort(), [false, true]);
+  assert.equal(new Set(results.map((result) => result.application.id)).size, 1);
+  assert.equal(liveOrders, 1);
+  assert.equal(liveMaterialized.size, 1);
+  assert.equal(liveCharges, 1);
+  assert.equal(repeated.alreadyApplied, true);
+});
+
+test("H1 cleans a late materialized order after an expired claim is taken over without the process lock", async () => {
+  const { service, actionGate, liveMaterialized, setCurrentTime } = harness({
+    async run(_key, operation) { return operation(); },
+  });
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-expired-action-writer",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  let releaseAction!: () => void;
+  let actionEntered!: () => void;
+  const entered = new Promise<void>((resolve) => { actionEntered = resolve; });
+  actionGate.actionType = "order";
+  actionGate.remaining = 1;
+  actionGate.entered = actionEntered;
+  actionGate.release = new Promise<void>((resolve) => { releaseAction = resolve; });
+
+  const first = service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  await entered;
+  setCurrentTime("2026-07-18T12:00:06.000Z");
+  const second = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  releaseAction();
+  const firstError = await first.then(() => undefined, (error: unknown) => error);
+  const repeated = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  const liveActions = (await service.actions.list()).filter((row) =>
+    row.actionType === "order" && !["removed", "cancelled"].includes(row.state)
+  );
+  const liveCharges = (await service.charges.list()).filter((row) => row.state !== "removed");
+
+  console.log("H1_AFTER", JSON.stringify({
+    firstError: firstError instanceof Error ? firstError.message : undefined,
+    secondAlreadyApplied: second.alreadyApplied,
+    liveOrders: liveActions.length,
+    liveMaterializedOrders: liveMaterialized.size,
+    liveCharges: liveCharges.length,
+    repeatAlreadyApplied: repeated.alreadyApplied,
+  }));
+  assert.match(String(firstError), /claim expired/i);
+  assert.equal(second.alreadyApplied, false);
+  assert.equal(liveActions.length, 1);
+  assert.equal(liveMaterialized.size, 1);
+  assert.equal(liveCharges.length, 1);
+  assert.equal(repeated.alreadyApplied, true);
+});
+
+test("H2 cleans a late staged charge after an expired claim is taken over without the process lock", async () => {
+  const { fhir, service, liveMaterialized, setCurrentTime } = harness({
+    async run(_key, operation) { return operation(); },
+  });
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-expired-charge-writer",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  let releaseCharge!: () => void;
+  let chargeEntered!: () => void;
+  const entered = new Promise<void>((resolve) => { chargeEntered = resolve; });
+  fhir.chargeGate.remaining = 1;
+  fhir.chargeGate.entered = chargeEntered;
+  fhir.chargeGate.release = new Promise<void>((resolve) => { releaseCharge = resolve; });
+
+  const first = service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  await entered;
+  setCurrentTime("2026-07-18T12:00:06.000Z");
+  const second = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  releaseCharge();
+  const firstError = await first.then(() => undefined, (error: unknown) => error);
+  const repeated = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  const liveActions = (await service.actions.list()).filter((row) =>
+    row.actionType === "order" && !["removed", "cancelled"].includes(row.state)
+  );
+  const liveCharges = (await service.charges.list()).filter((row) => row.state !== "removed");
+
+  console.log("H2_AFTER", JSON.stringify({
+    firstError: firstError instanceof Error ? firstError.message : undefined,
+    secondAlreadyApplied: second.alreadyApplied,
+    liveOrders: liveActions.length,
+    liveMaterializedOrders: liveMaterialized.size,
+    liveCharges: liveCharges.length,
+    repeatAlreadyApplied: repeated.alreadyApplied,
+  }));
+  assert.match(String(firstError), /claim expired/i);
+  assert.equal(second.alreadyApplied, false);
+  assert.equal(liveActions.length, 1);
+  assert.equal(liveMaterialized.size, 1);
+  assert.equal(liveCharges.length, 1);
+  assert.equal(repeated.alreadyApplied, true);
+});
+
+test("a stale confirmation cannot resurrect an application released by lease takeover", async () => {
+  const { fhir, service, liveMaterialized, setCurrentTime } = harness({
+    async run(_key, operation) { return operation(); },
+  });
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const input = {
+    encounterId: "enc-stale-item-confirm",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  };
+  let releaseConfirm!: () => void;
+  let confirmEntered!: () => void;
+  const entered = new Promise<void>((resolve) => { confirmEntered = resolve; });
+  fhir.applicationConfirmGate.remaining = 1;
+  fhir.applicationConfirmGate.entered = confirmEntered;
+  fhir.applicationConfirmGate.release = new Promise<void>((resolve) => { releaseConfirm = resolve; });
+
+  const first = service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  await entered;
+  setCurrentTime("2026-07-18T12:00:06.000Z");
+  const second = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  releaseConfirm();
+  const firstError = await first.then(() => undefined, (error: unknown) => error);
+  const repeated = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
+  const liveApplications = (await service.applications.list()).filter((row) =>
+    row.undoState === "active" && row.confirmed
+  );
+  const liveOrders = (await service.actions.list()).filter((row) =>
+    row.actionType === "order" && !["removed", "cancelled"].includes(row.state)
+  ).length;
+  const liveCharges = (await service.charges.list()).filter((row) => row.state !== "removed").length;
+
+  assert.match(String(firstError), /claim expired/i);
+  assert.equal(second.alreadyApplied, false);
+  assert.equal(liveApplications.length, 1);
+  assert.equal(liveOrders, 1);
+  assert.equal(liveMaterialized.size, 1);
+  assert.equal(liveCharges, 1);
+  assert.equal(repeated.alreadyApplied, true);
+  assert.equal(repeated.application.id, second.application.id);
 });
 
 test("an abandoned item claim is replaced after its lease expires", async () => {
@@ -2560,11 +2848,18 @@ class EndpointFhir {
         identifier.system === system && identifier.value === value));
       if (existing) return existing as T;
     }
-    const saved = { ...resource, id: resource.id ?? `resource-${this.next++}` };
+    const saved = resource.resourceType === "Basic"
+      ? { ...resource, id: resource.id ?? `resource-${this.next++}`, meta: { ...resource.meta, versionId: "1" } }
+      : { ...resource, id: resource.id ?? `resource-${this.next++}` };
     this.resources.push(saved); this.writes.push(saved);
     return saved;
   }
-  update = async <T extends EndpointResource>(resourceType: T["resourceType"], id: string, resource: T): Promise<T> => {
+  update = async <T extends EndpointResource>(
+    resourceType: T["resourceType"],
+    id: string,
+    resource: T,
+    headers?: Record<string, string>,
+  ): Promise<T> => {
     if (resourceType === "ServiceRequest" && this.failServiceRequestUpdateOnceIds.delete(id)) {
       if (this.completeServiceRequestOnFailedUpdateIds.delete(id)) {
         const index = this.resources.findIndex((candidate) => candidate.resourceType === resourceType && candidate.id === id);
@@ -2575,8 +2870,22 @@ class EndpointFhir {
     if (resourceType === "ServiceRequest" && this.failServiceRequestUpdateIds.has(id)) {
       throw new Error("Synthetic annual closure failure.");
     }
-    const saved = { ...resource, id };
     const index = this.resources.findIndex((candidate) => candidate.resourceType === resourceType && candidate.id === id);
+    const current = this.resources[index];
+    const expected = headers?.["If-Match"];
+    if (expected && expected !== `W/"${current?.meta?.versionId}"`) {
+      throw Object.assign(new Error("FHIR 412 Precondition Failed"), { status: 412 });
+    }
+    const saved = resourceType === "Basic"
+      ? {
+          ...resource,
+          id,
+          meta: {
+            ...resource.meta,
+            versionId: String(Number(current?.meta?.versionId ?? "0") + 1),
+          },
+        }
+      : { ...resource, id };
     if (index >= 0) this.resources[index] = saved;
     this.writes.push(saved);
     return saved;

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Basic, Bundle, Identifier } from "@medplum/fhirtypes";
+import { isFhirConflict } from "./fhir-conflict.js";
 import type { ProtocolDefinition } from "./protocol-types.js";
 
 export const PROTOCOL_WRITE_HEADERS = { "X-ODOS-Source": "protocol-module" } as const;
@@ -142,6 +143,30 @@ export class ProtocolBasicStore<T extends { id: string }> {
           "If-None-Exist": `identifier=${identifierSystem(this.code)}|${value.id}`,
         });
     return parseProtocolBasic<T>(persisted, this.code);
+  }
+
+  async saveWithIdentifiersIfCurrent(
+    value: T,
+    additionalIdentifiers: Identifier[],
+    isCurrent: (current: T) => boolean,
+  ): Promise<T | undefined> {
+    const existing = await this.rawById(value.id);
+    if (!existing?.id || !isCurrent(parseProtocolBasic<T>(existing, this.code))) return undefined;
+    if (!existing.meta?.versionId) {
+      throw new Error(`${this.code} Basic is missing meta.versionId; refusing a non-atomic update.`);
+    }
+    const resource = buildProtocolBasic(value, this.code, existing);
+    resource.identifier?.push(...additionalIdentifiers);
+    try {
+      const persisted = await this.fhir.update("Basic", existing.id, resource, {
+        ...PROTOCOL_WRITE_HEADERS,
+        "If-Match": `W/"${existing.meta.versionId}"`,
+      });
+      return parseProtocolBasic<T>(persisted, this.code);
+    } catch (error) {
+      if (isFhirConflict(error)) return undefined;
+      throw error;
+    }
   }
 
   async createConditional(value: T, identifier: Required<Pick<Identifier, "system" | "value">>): Promise<T> {

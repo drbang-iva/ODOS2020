@@ -630,6 +630,9 @@ class MemoryDryEyeFhir {
     const saved = {
       ...structuredClone(resource),
       id: resource.id ?? `${resource.resourceType.toLowerCase()}-${this.next++}`,
+      ...(resource.resourceType === "Basic"
+        ? { meta: { ...resource.meta, versionId: "1" } }
+        : {}),
     };
     this.resources.push(saved);
     return structuredClone(saved) as T;
@@ -639,12 +642,24 @@ class MemoryDryEyeFhir {
     resourceType: T["resourceType"],
     id: string,
     resource: T,
+    headers: Record<string, string> = {},
   ): Promise<T> => {
     const index = this.resources.findIndex((candidate) =>
       candidate.resourceType === resourceType && candidate.id === id
     );
     if (index < 0) throw new Error(`${resourceType}/${id} not found for update.`);
-    const saved = { ...structuredClone(resource), id };
+    const current = this.resources[index]!;
+    const expected = headers["If-Match"];
+    if (expected && expected !== `W/"${current.meta?.versionId}"`) {
+      throw Object.assign(new Error("FHIR 412 Precondition Failed"), { status: 412 });
+    }
+    const saved = {
+      ...structuredClone(resource),
+      id,
+      ...(resourceType === "Basic"
+        ? { meta: { ...resource.meta, versionId: String(Number(current.meta?.versionId ?? "0") + 1) } }
+        : {}),
+    };
     this.resources[index] = saved;
     return structuredClone(saved);
   };

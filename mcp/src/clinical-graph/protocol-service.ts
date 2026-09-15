@@ -43,6 +43,39 @@ type ItemApplicationResult =
   | { outcome: "created" | "existing-application" }
   | { outcome: "merge-deduped" };
 
+interface ItemAddWrites {
+  actionIds: Set<string>;
+  materializedRefs: Set<string>;
+  chargeIds: Set<string>;
+}
+
+export interface ProtocolItemAddLock {
+  run<T>(key: string, operation: () => Promise<T>): Promise<T>;
+}
+
+class InProcessProtocolItemAddLock implements ProtocolItemAddLock {
+  private readonly tails = new Map<string, Promise<void>>();
+
+  async run<T>(key: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.tails.get(key) ?? Promise.resolve();
+    let release!: () => void;
+    const current = new Promise<void>((resolve) => { release = resolve; });
+    const tail = previous.then(() => current);
+    this.tails.set(key, tail);
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      release();
+      if (this.tails.get(key) === tail) this.tails.delete(key);
+    }
+  }
+}
+
+// docker-compose runs one MCP server process with no replicas, so this lock fences live writers in that process.
+// The conditional FHIR claim and lease below remain the cross-process backstop and crash recovery mechanism.
+const IN_PROCESS_ITEM_ADD_LOCK = new InProcessProtocolItemAddLock();
+
 const TAPPABLE_PROTOCOL_ITEM_TYPES: ReadonlySet<ProtocolItemType> = new Set([
   "order",
   "medication",
@@ -122,6 +155,7 @@ export class ProtocolService {
     private readonly projection: ProtocolProjection,
     private readonly now: () => string = () => new Date().toISOString(),
     private readonly id: () => string = () => crypto.randomUUID(),
+    private readonly itemAddLock: ProtocolItemAddLock = IN_PROCESS_ITEM_ADD_LOCK,
   ) {
     this.definitions = new ProtocolDefinitionStore(fhir);
     this.applications = new ProtocolBasicStore(fhir, PROTOCOL_BASIC_CODES.protocolApplication);
@@ -413,6 +447,15 @@ export class ProtocolService {
     application: ProtocolApplication;
     alreadyApplied: boolean;
   }> {
+    const claimKey = protocolItemClaimIdentifier(input.encounterId, protocolId, itemKey).value;
+    return this.itemAddLock.run(claimKey, () => this.addItemWithoutProcessLock(protocolId, itemKey, input));
+  }
+
+  private async addItemWithoutProcessLock(
+    protocolId: string,
+    itemKey: string,
+    input: OpenProtocolInput,
+  ): Promise<{ application: ProtocolApplication; alreadyApplied: boolean }> {
     const protocol = await this.requireActiveDiagnosisProtocol(protocolId, input);
     const item = protocol.items.find((candidate) => candidate.itemKey === itemKey);
     if (!item) throw new Error("Protocol item not found.");
@@ -444,7 +487,7 @@ export class ProtocolService {
     const application = await this.applications.createConditional(proposed, claimIdentifier);
     if (application.id !== proposed.id) {
       const settled = await this.waitForClaimedApplication(application);
-      if (!settled) return this.addItem(protocolId, itemKey, input);
+      if (!settled) return this.addItemWithoutProcessLock(protocolId, itemKey, input);
       const settledState = await this.inspectLiveItemOwner(protocol, item, chargeSeed, input);
       if (settledState.outcome === "already-applied") {
         return { application: settledState.application, alreadyApplied: true };
@@ -452,9 +495,14 @@ export class ProtocolService {
       if (settledState.outcome === "missing-charge") throw missingRequiredCharge();
       throw new ProtocolItemAddConflictError("The completed protocol item claim has no live plan action.");
     }
+    const writes: ItemAddWrites = {
+      actionIds: new Set(),
+      materializedRefs: new Set(),
+      chargeIds: new Set(),
+    };
     try {
       const linkedDx = [input.diagnosis.reference];
-      const primaryResult = await this.applySelectedItem(application, item, item.payload, linkedDx, [], at);
+      const primaryResult = await this.applySelectedItem(application, item, item.payload, linkedDx, [], at, writes);
       if (primaryResult.outcome === "merge-deduped") {
         await this.releaseItemApplication(application);
         const ownerState = await this.inspectLiveItemOwner(protocol, item, chargeSeed, input);
@@ -466,19 +514,22 @@ export class ProtocolService {
       }
       await this.requireInFlightItemApplication(application.id);
       if (chargeSeed) {
-        await this.applySelectedItem(application, chargeSeed, chargeSeed.payload, linkedDx, [], at);
+        await this.applySelectedItem(application, chargeSeed, chargeSeed.payload, linkedDx, [], at, writes);
       }
       await this.requireInFlightItemApplication(application.id);
-      const confirmed = await this.applications.saveWithIdentifiers(
+      const confirmed = await this.applications.saveWithIdentifiersIfCurrent(
         { ...application, confirmed: true, dispositions },
         [claimIdentifier],
+        (current) => current.undoState === "active" && !current.confirmed &&
+          current.itemClaimLeaseExpiresAt === application.itemClaimLeaseExpiresAt,
       );
+      if (!confirmed) {
+        throw new ProtocolItemAddConflictError("Protocol item claim expired while the item was being added; retry.");
+      }
       return { application: confirmed, alreadyApplied: false };
     } catch (error) {
-      const current = await this.applications.get(application.id);
-      if (current?.undoState === "active" && !current.confirmed) {
-        await this.releaseItemApplication(current);
-      }
+      await this.releaseItemApplication(application);
+      await this.cleanupItemAddWrites(writes);
       throw error;
     }
   }
@@ -610,6 +661,7 @@ export class ProtocolService {
     payload: Record<string, unknown>,
     linkedDx: string[],
     at: string,
+    writes?: ItemAddWrites,
   ): Promise<ItemApplicationResult> {
     const actions = await this.actions.list();
     const existingForItem = actions.find((row) =>
@@ -645,8 +697,10 @@ export class ProtocolService {
         protocolVersion: application.protocolVersion,
       },
     };
+    writes?.actionIds.add(action.id);
     try {
       action.materializedFhirRef = await this.projection.materializeAction(action);
+      if (action.materializedFhirRef) writes?.materializedRefs.add(action.materializedFhirRef);
     } catch (error) {
       if (!(error instanceof ProtocolActionMaterializationRefusal)) throw error;
       action.materializationRefusal = { code: error.code, message: error.message };
@@ -661,6 +715,7 @@ export class ProtocolService {
     payload: Record<string, unknown>,
     linkedDx: string[],
     at: string,
+    writes?: ItemAddWrites,
   ): Promise<boolean> {
     const existing = (await this.charges.list()).find((row) =>
       row.protocolApplicationId === application.id &&
@@ -671,7 +726,7 @@ export class ProtocolService {
     const modifiedFields = changedFields(item.payload, payload);
     const ruleId = Array.isArray(payload.chargeRuleRefs) ? String(payload.chargeRuleRefs[0] ?? "") : "";
     const rule = ruleId ? await this.chargeRules.get(ruleId) : undefined;
-    await this.charges.save({
+    const charge: ChargeProposal = {
       id: this.id(),
       encounterId: application.encounterId,
       protocolApplicationId: application.id,
@@ -700,7 +755,9 @@ export class ProtocolService {
         protocolId: application.protocolId,
         protocolVersion: application.protocolVersion,
       },
-    });
+    };
+    writes?.chargeIds.add(charge.id);
+    await this.charges.save(charge);
     return true;
   }
 
@@ -711,6 +768,7 @@ export class ProtocolService {
     linkedDx: string[],
     proposed: ProtocolFindingInstance[],
     at: string,
+    writes?: ItemAddWrites,
   ): Promise<ItemApplicationResult> {
     const modified = JSON.stringify(payload) !== JSON.stringify(item.payload);
     if (item.itemType === "finding-seed") {
@@ -738,11 +796,11 @@ export class ProtocolService {
       return { outcome: "created" };
     }
     if (item.itemType === "charge-seed") {
-      return await this.stageCharge(application, item, payload, linkedDx, at)
+      return await this.stageCharge(application, item, payload, linkedDx, at, writes)
         ? { outcome: "created" }
         : { outcome: "existing-application" };
     }
-    return this.upsertAction(application, item, payload, linkedDx, at);
+    return this.upsertAction(application, item, payload, linkedDx, at, writes);
   }
 
   private async inspectLiveItemOwner(
@@ -820,8 +878,8 @@ export class ProtocolService {
       if (!application || application.undoState !== "active") return undefined;
       if (application.confirmed) return application;
       if (this.itemClaimLeaseExpired(application)) {
-        await this.releaseItemApplication(application);
-        return undefined;
+        if (await this.releaseItemApplication(application)) return undefined;
+        continue;
       }
       await new Promise((resolve) => setTimeout(resolve, ITEM_CLAIM_POLL_MS));
     }
@@ -842,7 +900,14 @@ export class ProtocolService {
     }
   }
 
-  private async releaseItemApplication(application: ProtocolApplication): Promise<void> {
+  private async releaseItemApplication(application: ProtocolApplication): Promise<boolean> {
+    const released = await this.applications.saveWithIdentifiersIfCurrent(
+      { ...application, undoState: "unapplied" },
+      [],
+      (current) => current.undoState === "active" && !current.confirmed &&
+        current.itemClaimLeaseExpiresAt === application.itemClaimLeaseExpiresAt,
+    );
+    if (!released) return false;
     for (const action of (await this.actions.list()).filter((candidate) =>
       candidate.protocolApplicationId === application.id &&
       !["removed", "cancelled"].includes(candidate.state)
@@ -853,7 +918,27 @@ export class ProtocolService {
     for (const charge of (await this.charges.list()).filter((candidate) =>
       candidate.protocolApplicationId === application.id && candidate.state === "staged"
     )) await this.charges.save({ ...charge, state: "removed" });
-    await this.applications.save({ ...application, undoState: "unapplied" });
+    return true;
+  }
+
+  private async cleanupItemAddWrites(writes: ItemAddWrites): Promise<void> {
+    const removedMaterialized = new Set<string>();
+    for (const actionId of writes.actionIds) {
+      const action = await this.actions.get(actionId);
+      if (!action || ["removed", "cancelled"].includes(action.state)) continue;
+      if (action.materializedFhirRef) {
+        await this.projection.removeMaterialized?.(action.materializedFhirRef);
+        removedMaterialized.add(action.materializedFhirRef);
+      }
+      await this.actions.save({ ...action, state: "removed" });
+    }
+    for (const reference of writes.materializedRefs) {
+      if (!removedMaterialized.has(reference)) await this.projection.removeMaterialized?.(reference);
+    }
+    for (const chargeId of writes.chargeIds) {
+      const charge = await this.charges.get(chargeId);
+      if (charge?.state === "staged") await this.charges.save({ ...charge, state: "removed" });
+    }
   }
 
   private async requireActiveDiagnosisProtocol(
