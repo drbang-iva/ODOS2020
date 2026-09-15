@@ -1,0 +1,80 @@
+{
+  "checks": [
+    {
+      "seed": {
+        "mode": "apply",
+        "action": "unchanged",
+        "projectId": "62023a15-f13a-4f4e-b8d8-3da238ded8eb"
+      }
+    },
+    {
+      "settingsUiSaved21": true
+    },
+    {
+      "engageGuardianAt21": true
+    },
+    {
+      "statementGuardianAt21": true,
+      "statement": {
+        "runReference": "Task/5b1be3d2-b645-4427-946e-1652c4722ad2",
+        "generatedAt": "2026-09-15T12:00:00.000Z",
+        "generatedCount": 1,
+        "invalidRejects": 0,
+        "skippedZeroBalanceCount": 0,
+        "statements": [
+          {
+            "generatedAt": "2026-09-15T12:00:00.000Z",
+            "patientReference": "Patient/16074a33-3af4-45a2-8f2c-e2894614de76",
+            "patientName": "Synthetic Majority Nineteen",
+            "paymentReconciliationReferences": [],
+            "invoices": [
+              {
+                "invoiceReference": "Invoice/c2375290-5593-4055-8027-d59c16f3a516",
+                "date": "2026-09-15T12:00:00.000Z",
+                "grossCents": 1000,
+                "netCents": 1000,
+                "paymentsAppliedCents": 0,
+                "balanceCents": 1000
+              }
+            ],
+            "totalGrossCents": 1000,
+            "totalNetCents": 1000,
+            "paymentsAppliedCents": 0,
+            "balanceCents": 1000,
+            "unappliedPaymentReconciliationReferences": [],
+            "unappliedCreditCents": 0,
+            "balanceDueCents": 1000,
+            "creditBalanceCents": 0,
+            "detail": {
+              "header": {
+                "practiceName": "Practice",
+                "recipientName": "Synthetic Majority Guardian",
+                "recipientAddress": {
+                  "lines": [
+                    "1 Synthetic Way"
+                  ],
+                  "cityStatePostal": "Synthetic Town, SC 29601"
+                }
+              },
+              "orders": [
+                {
+                  "invoiceReference": "Invoice/c2375290-5593-4055-8027-d59c16f3a516",
+                  "orderNumber": "c2375290-5593-4055-8027-d59c16f3a516",
+                  "mode": "invoice-only",
+                  "lines": [],
+                  "patientPayments": []
+                }
+              ]
+            },
+            "statementReference": "Task/ae88a75f-d81d-403e-a245-d7389d49e85c",
+            "runReference": "Task/5b1be3d2-b645-4427-946e-1652c4722ad2"
+          }
+        ],
+        "rejects": []
+      }
+    },
+    {
+      "missingSetting422": true
+    }
+  ]
+}

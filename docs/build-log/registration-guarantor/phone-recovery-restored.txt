@@ -1,0 +1,80 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/guarantorPhoneRecovery.test.ts
+
+TAP version 13
+# Subtest: T5 attach projects refusal=true and correction restores the required snapshot
+ok 1 - T5 attach projects refusal=true and correction restores the required snapshot
+  ---
+  duration_ms: 13.181875
+  type: 'test'
+  ...
+# Subtest: T5 attach projects refusal=false and correction restores the required snapshot
+ok 2 - T5 attach projects refusal=false and correction restores the required snapshot
+  ---
+  duration_ms: 5.664791
+  type: 'test'
+  ...
+# Subtest: T5 transfer projects refusal=true and correction restores the required snapshot
+ok 3 - T5 transfer projects refusal=true and correction restores the required snapshot
+  ---
+  duration_ms: 5.315583
+  type: 'test'
+  ...
+# Subtest: T5 transfer projects refusal=false and correction restores the required snapshot
+ok 4 - T5 transfer projects refusal=false and correction restores the required snapshot
+  ---
+  duration_ms: 6.097125
+  type: 'test'
+  ...
+# Subtest: T5 consolidate projects refusal=true and correction restores the required snapshot
+ok 5 - T5 consolidate projects refusal=true and correction restores the required snapshot
+  ---
+  duration_ms: 8.608375
+  type: 'test'
+  ...
+# Subtest: T5 consolidate projects refusal=false and correction restores the required snapshot
+ok 6 - T5 consolidate projects refusal=false and correction restores the required snapshot
+  ---
+  duration_ms: 8.325333
+  type: 'test'
+  ...
+# Subtest: T6 lost projecting reply plus competing refusal pauses interfered without domain writes
+ok 7 - T6 lost projecting reply plus competing refusal pauses interfered without domain writes
+  ---
+  duration_ms: 1.783375
+  type: 'test'
+  ...
+# Subtest: T12 exact pre-C2 projecting journal resumes with no-refusal child
+ok 8 - T12 exact pre-C2 projecting journal resumes with no-refusal child
+  ---
+  duration_ms: 2.020541
+  type: 'test'
+  ...
+# Subtest: T13 existing-guarantor initial child refusal before attach with none reply
+ok 9 - T13 existing-guarantor initial child refusal before attach with none reply
+  ---
+  duration_ms: 2.4715
+  type: 'test'
+  ...
+# Subtest: T13 existing-guarantor initial child refusal before attach with registration reply
+ok 10 - T13 existing-guarantor initial child refusal before attach with registration reply
+  ---
+  duration_ms: 3.502541
+  type: 'test'
+  ...
+# Subtest: T7 lost registration reply refuses to match a child whose refusal changed
+ok 11 - T7 lost registration reply refuses to match a child whose refusal changed
+  ---
+  duration_ms: 1.016625
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 205.646167

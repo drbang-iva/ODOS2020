@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../../src/clinic/age-of-majority-config.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { Bundle, Person, RelatedPerson, Resource, Task } from "@medplum/fhirtypes";
@@ -14,6 +15,7 @@ export const destinationDetails = { name: [{ given: ["Destination"], family: "Gu
 
 export function guarantorReaderFixture() {
   const records = new Map<string, Resource>();
+  put(JSON.parse(JSON.stringify({ ...buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }), id: "majority-config" })));
   const writes: { lane: "operation" | "reader"; method: string; resource: Resource; status: number }[] = [];
   const reads: { type: string; params: Record<string, string>; ids: string[] }[] = [];
   const audits: OdosAuditEventRecord[] = [];

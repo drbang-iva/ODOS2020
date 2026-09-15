@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../../src/clinic/age-of-majority-config.js";
 import { randomUUID } from "node:crypto";
 import type { Account, Bundle, Coverage, Patient, Person, RelatedPerson, Resource, Task } from "@medplum/fhirtypes";
 import { buildCoverageSaveBundle, emptyCoverageDraft } from "../../../ui/src/lib/patient-insurance.js";
@@ -38,7 +39,7 @@ async function registrationWriterResources(): Promise<{ patient: Patient; relate
   const fhir = {
     baseUrl: "http://registration-writer-fixture.test",
     async search<T extends Resource>(): Promise<Bundle<T>> { return { resourceType: "Bundle", type: "searchset", entry: [] }; },
-    async searchProject<T extends Resource>(): Promise<Bundle<T>> { return { resourceType: "Bundle", type: "searchset", entry: [] }; },
+    async searchProject<T extends Resource>(type: string): Promise<Bundle<T>> { return { resourceType: "Bundle", type: "searchset", entry: type === "Basic" ? [{ resource: jsonRoundTrip({ ...buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }), meta: { project: CENSUS_PROJECT_A } }) as T }] : [] }; },
     async searchProjectUrl<T extends Resource>(): Promise<Bundle<T>> { throw new Error("unexpected registration pagination"); },
     async create<T extends Resource>(resource: T): Promise<T> {
       return { ...resource, id: "registration-reservation", meta: { ...resource.meta, project: CENSUS_PROJECT_A, versionId: "1" } } as T;

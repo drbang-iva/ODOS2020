@@ -1,0 +1,614 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/claimHandlers.test.ts tests/reportingRoutes.test.ts tests/guarantorPhoneRecovery.test.ts
+
+TAP version 13
+# Subtest: front-desk and practice-admin hold claims.manage; non-billing roles do not
+ok 1 - front-desk and practice-admin hold claims.manage; non-billing roles do not
+  ---
+  duration_ms: 0.752459
+  type: 'test'
+  ...
+# Subtest: submit claim creates the Claim, calls Claim.MD, and audits claim.submit.completed
+ok 2 - submit claim creates the Claim, calls Claim.MD, and audits claim.submit.completed
+  ---
+  duration_ms: 1.258291
+  type: 'test'
+  ...
+# Subtest: ordinary claim submission cannot bypass the Stedi resubmission determination
+ok 3 - ordinary claim submission cannot bypass the Stedi resubmission determination
+  ---
+  duration_ms: 0.120625
+  type: 'test'
+  ...
+# Subtest: client-supplied ChargeItem is re-read and must belong to the Claim patient
+ok 4 - client-supplied ChargeItem is re-read and must belong to the Claim patient
+  ---
+  duration_ms: 0.333791
+  type: 'test'
+  ...
+# Subtest: submit reuses a stored ChargeItem without dropping its draft diagnosis pointers
+ok 5 - submit reuses a stored ChargeItem without dropping its draft diagnosis pointers
+  ---
+  duration_ms: 0.596833
+  type: 'test'
+  ...
+# Subtest: submit persists idless ChargeItems once while keeping the Claim.MD payload on the original input shape
+ok 6 - submit persists idless ChargeItems once while keeping the Claim.MD payload on the original input shape
+  ---
+  duration_ms: 0.329292
+  type: 'test'
+  ...
+# Subtest: stored ChargeItem bodysite overrides conflicting request-only laterality
+ok 7 - stored ChargeItem bodysite overrides conflicting request-only laterality
+  ---
+  duration_ms: 0.158959
+  type: 'test'
+  ...
+# Subtest: submit validates the full ChargeItem batch before persisting an idless item
+ok 8 - submit validates the full ChargeItem batch before persisting an idless item
+  ---
+  duration_ms: 0.21925
+  type: 'test'
+  ...
+# Subtest: submit rejects invalid diagnosis pointers before persisting an idless ChargeItem
+ok 9 - submit rejects invalid diagnosis pointers before persisting an idless ChargeItem
+  ---
+  duration_ms: 0.402417
+  type: 'test'
+  ...
+# Subtest: claim draft reads audit the authenticated staff member and Encounter
+ok 10 - claim draft reads audit the authenticated staff member and Encounter
+  ---
+  duration_ms: 6.09
+  type: 'test'
+  ...
+# Subtest: claim draft maps a missing Encounter read to a client error
+ok 11 - claim draft maps a missing Encounter read to a client error
+  ---
+  duration_ms: 0.5175
+  type: 'test'
+  ...
+# Subtest: Stedi selector submits through the parallel adapter and attributes the existing audit event
+ok 12 - Stedi selector submits through the parallel adapter and attributes the existing audit event
+  ---
+  duration_ms: 0.593125
+  type: 'test'
+  ...
+# Subtest: pre-adjudication correction previews and submits CFC 1 without a PCCN
+ok 13 - pre-adjudication correction previews and submits CFC 1 without a PCCN
+  ---
+  duration_ms: 1.122583
+  type: 'test'
+  ...
+# Subtest: retry after a lost resubmission-touch response records one touch and one Provenance
+ok 14 - retry after a lost resubmission-touch response records one touch and one Provenance
+  ---
+  duration_ms: 0.7685
+  type: 'test'
+  ...
+# Subtest: pre-adjudication void returns manual handling without building or submitting a claim
+ok 15 - pre-adjudication void returns manual handling without building or submitting a claim
+  ---
+  duration_ms: 0.202916
+  type: 'test'
+  ...
+# Subtest: adjudicated non-Medicare correction and void submit CFC 7/8 with the PCCN
+ok 16 - adjudicated non-Medicare correction and void submit CFC 7/8 with the PCCN
+  ---
+  duration_ms: 0.495834
+  type: 'test'
+  ...
+# Subtest: adjudicated Medicare or unknown classification returns manual handling without building a claim
+ok 17 - adjudicated Medicare or unknown classification returns manual handling without building a claim
+  ---
+  duration_ms: 0.277834
+  type: 'test'
+  ...
+# Subtest: missing original claim returns 404 without a rejected Task or submit-failed audit
+ok 18 - missing original claim returns 404 without a rejected Task or submit-failed audit
+  ---
+  duration_ms: 0.154583
+  type: 'test'
+  ...
+# Subtest: Stedi subscriber address validation returns 400 before transport without a rejected Task or clearinghouse-failure audit
+ok 19 - Stedi subscriber address validation returns 400 before transport without a rejected Task or clearinghouse-failure audit
+  ---
+  duration_ms: 0.146584
+  type: 'test'
+  ...
+# Subtest: Stedi transport errors return human-usable reasons while audits retain only safe trace fields
+ok 20 - Stedi transport errors return human-usable reasons while audits retain only safe trace fields
+  ---
+  duration_ms: 0.497
+  type: 'test'
+  ...
+# Subtest: Stedi payload also remains on the original idless charge input after provenance persistence
+ok 21 - Stedi payload also remains on the original idless charge input after provenance persistence
+  ---
+  duration_ms: 0.191208
+  type: 'test'
+  ...
+# Subtest: eligibility check creates request/response resources and audits eligibility.check.completed
+ok 22 - eligibility check creates request/response resources and audits eligibility.check.completed
+  ---
+  duration_ms: 0.456583
+  type: 'test'
+  ...
+# Subtest: Stedi eligibility uses the parallel 271 mapper with unchanged RBAC and audit event type
+ok 23 - Stedi eligibility uses the parallel 271 mapper with unchanged RBAC and audit event type
+  ---
+  duration_ms: 0.151167
+  type: 'test'
+  ...
+# Subtest: claim status check returns a ClaimResponse projection and audits claim.status.checked
+ok 24 - claim status check returns a ClaimResponse projection and audits claim.status.checked
+  ---
+  duration_ms: 0.199708
+  type: 'test'
+  ...
+# Subtest: Stedi claim status maps fixture 277 data and keeps the shared audit event
+ok 25 - Stedi claim status maps fixture 277 data and keeps the shared audit event
+  ---
+  duration_ms: 0.145958
+  type: 'test'
+  ...
+# Subtest: claim status error creates a claim-rejected Task with Claim focus and verbatim message
+ok 26 - claim status error creates a claim-rejected Task with Claim focus and verbatim message
+  ---
+  duration_ms: 0.394583
+  type: 'test'
+  ...
+# Subtest: ERA clean-paid claim preserves auto-post behavior and creates zero worklist Tasks
+ok 27 - ERA clean-paid claim preserves auto-post behavior and creates zero worklist Tasks
+  ---
+  duration_ms: 1.183625
+  type: 'test'
+  ...
+# Subtest: ERA line linkage falls back to whole-claim detail when the echoed ChargeItem is not owned by the Claim
+ok 28 - ERA line linkage falls back to whole-claim detail when the echoed ChargeItem is not owned by the Claim
+  ---
+  duration_ms: 0.365791
+  type: 'test'
+  ...
+# Subtest: an invalid line identity falls back and creates a dedicated linkage review Task
+ok 29 - an invalid line identity falls back and creates a dedicated linkage review Task
+  ---
+  duration_ms: 0.173958
+  type: 'test'
+  ...
+# Subtest: a mismatched ClaimResponse patient is corrected from the Claim and never receives a line link
+ok 30 - a mismatched ClaimResponse patient is corrected from the Claim and never receives a line link
+  ---
+  duration_ms: 0.356375
+  type: 'test'
+  ...
+# Subtest: a duplicate line echo falls back for that claim, flags review, and does not abort the ERA batch
+ok 31 - a duplicate line echo falls back for that claim, flags review, and does not abort the ERA batch
+  ---
+  duration_ms: 0.302334
+  type: 'test'
+  ...
+# Subtest: Stedi ERA fixture creates the same insurance PaymentReconciliation shape without enrollment side effects
+ok 32 - Stedi ERA fixture creates the same insurance PaymentReconciliation shape without enrollment side effects
+  ---
+  duration_ms: 2.604542
+  type: 'test'
+  ...
+# Subtest: Stedi ERA creates one balancing remittance batch and distinct audited provider-level adjustments
+ok 33 - Stedi ERA creates one balancing remittance batch and distinct audited provider-level adjustments
+  ---
+  duration_ms: 2.446
+  type: 'test'
+  ...
+# Subtest: Stedi ERA uses payer-stated patient responsibility for the Invoice and flags a line-total disagreement
+ok 34 - Stedi ERA uses payer-stated patient responsibility for the Invoice and flags a line-total disagreement
+  ---
+  duration_ms: 0.763542
+  type: 'test'
+  ...
+# Subtest: a malformed amount on the third Stedi claim is reviewed without aborting the batch
+ok 35 - a malformed amount on the third Stedi claim is reviewed without aborting the batch
+  ---
+  duration_ms: 1.173417
+  type: 'test'
+  ...
+# Subtest: repeating the same Stedi ERA import creates one PaymentReconciliation per claim
+ok 36 - repeating the same Stedi ERA import creates one PaymentReconciliation per claim
+  ---
+  duration_ms: 0.529292
+  type: 'test'
+  ...
+# Subtest: a claim-level-only Stedi responsibility remains visible and opens integrity review
+ok 37 - a claim-level-only Stedi responsibility remains visible and opens integrity review
+  ---
+  duration_ms: 0.261417
+  type: 'test'
+  ...
+# Subtest: an in-loop Stedi import failure is not audited as an ERA retrieval failure
+ok 38 - an in-loop Stedi import failure is not audited as an ERA retrieval failure
+  ---
+  duration_ms: 0.279208
+  type: 'test'
+  ...
+# Subtest: Stedi reversal nets against the prior claim-version allocation without fabricating a second reconciliation
+ok 39 - Stedi reversal nets against the prior claim-version allocation without fabricating a second reconciliation
+  ---
+  duration_ms: 0.576833
+  type: 'test'
+  ...
+# Subtest: Stedi reversal prefers the directly related prior claim when equal payments exist in one lineage
+ok 40 - Stedi reversal prefers the directly related prior claim when equal payments exist in one lineage
+  ---
+  duration_ms: 0.664333
+  type: 'test'
+  ...
+# Subtest: Stedi reversal follows Claim.related through an unpaid intermediate generation
+ok 41 - Stedi reversal follows Claim.related through an unpaid intermediate generation
+  ---
+  duration_ms: 0.498542
+  type: 'test'
+  ...
+# Subtest: Stedi allocation retries a version conflict without discarding the concurrent allocation
+ok 42 - Stedi allocation retries a version conflict without discarding the concurrent allocation
+  ---
+  duration_ms: 0.354917
+  type: 'test'
+  ...
+# Subtest: Stedi predetermination cannot post money and an accepted zero-paid line is not mislabeled as denied
+ok 43 - Stedi predetermination cannot post money and an accepted zero-paid line is not mislabeled as denied
+  ---
+  duration_ms: 0.305166
+  type: 'test'
+  ...
+# Subtest: Claim.MD ERA response, worklist evidence, and patient-responsibility Invoice remain byte-for-byte stable
+ok 44 - Claim.MD ERA response, worklist evidence, and patient-responsibility Invoice remain byte-for-byte stable
+  ---
+  duration_ms: 0.1275
+  type: 'test'
+  ...
+# Subtest: re-import updates the same ERA Basic record instead of creating a duplicate
+ok 45 - re-import updates the same ERA Basic record instead of creating a duplicate
+  ---
+  duration_ms: 0.269209
+  type: 'test'
+  ...
+# Subtest: an eralist row with no import record is returned in the New lane without inventing a claim count
+ok 46 - an eralist row with no import record is returned in the New lane without inventing a claim count
+  ---
+  duration_ms: 0.082084
+  type: 'test'
+  ...
+# Subtest: Stedi ERA routing projects inbound 835 polling rows into the shared remittance queue
+ok 47 - Stedi ERA routing projects inbound 835 polling rows into the shared remittance queue
+  ---
+  duration_ms: 0.153708
+  type: 'test'
+  ...
+# Subtest: a rejecting 277CA creates a visible worklist Task naming the rejection reason
+ok 48 - a rejecting 277CA creates a visible worklist Task naming the rejection reason
+  ---
+  duration_ms: 0.697708
+  type: 'test'
+  ...
+# Subtest: one 277CA referencing three claims produces accepted, rejected, and informational outcomes
+ok 49 - one 277CA referencing three claims produces accepted, rejected, and informational outcomes
+  ---
+  duration_ms: 0.267208
+  type: 'test'
+  ...
+# Subtest: reprocessing the same 277CA creates no duplicate Task or ClaimResponse
+ok 50 - reprocessing the same 277CA creates no duplicate Task or ClaimResponse
+  ---
+  duration_ms: 0.271583
+  type: 'test'
+  ...
+# Subtest: an unmappable 277CA category is surfaced for review and never accepted
+ok 51 - an unmappable 277CA category is surfaced for review and never accepted
+  ---
+  duration_ms: 0.143
+  type: 'test'
+  ...
+# Subtest: one malformed 277CA is flagged without preventing the rest of the batch
+ok 52 - one malformed 277CA is flagged without preventing the rest of the batch
+  ---
+  duration_ms: 0.191958
+  type: 'test'
+  ...
+# Subtest: a failure-path audit error is logged without aborting the 277CA batch
+ok 53 - a failure-path audit error is logged without aborting the 277CA batch
+  ---
+  duration_ms: 0.249917
+  type: 'test'
+  ...
+# Subtest: 277CA import returns a clear unsupported response for Claim.MD
+ok 54 - 277CA import returns a clear unsupported response for Claim.MD
+  ---
+  duration_ms: 0.05275
+  type: 'test'
+  ...
+# Subtest: an empty 277CA poll advances the cursor without scanning the local Claim population
+ok 55 - an empty 277CA poll advances the cursor without scanning the local Claim population
+  ---
+  duration_ms: 0.0455
+  type: 'test'
+  ...
+# Subtest: ERA matched zero-pay claim creates a denial Task with verbatim adjustment pairs and audit
+ok 56 - ERA matched zero-pay claim creates a denial Task with verbatim adjustment pairs and audit
+  ---
+  duration_ms: 0.531708
+  type: 'test'
+  ...
+# Subtest: ERA underpayment posts moved money, creates a shortfall Task, and honors the configured threshold
+ok 57 - ERA underpayment posts moved money, creates a shortfall Task, and honors the configured threshold
+  ---
+  duration_ms: 0.59925
+  type: 'test'
+  ...
+# Subtest: patient-responsibility Invoice is create-once; a differing remit preserves money and opens one exception
+ok 58 - patient-responsibility Invoice is create-once; a differing remit preserves money and opens one exception
+  ---
+  duration_ms: 0.409667
+  type: 'test'
+  ...
+# Subtest: insurance visit flows Claim to ERA to PR Invoice to the unchanged T0 statement at $171.89
+ok 59 - insurance visit flows Claim to ERA to PR Invoice to the unchanged T0 statement at $171.89
+  ---
+  duration_ms: 1.972375
+  type: 'test'
+  ...
+# Subtest: zero-PR and denied remits do not emit a patient-responsibility Invoice
+ok 60 - zero-PR and denied remits do not emit a patient-responsibility Invoice
+  ---
+  duration_ms: 0.336584
+  type: 'test'
+  ...
+# Subtest: ERA unmatched PCN persists a fully recoverable unmatched Task snapshot
+ok 61 - ERA unmatched PCN persists a fully recoverable unmatched Task snapshot
+  ---
+  duration_ms: 0.188083
+  type: 'test'
+  ...
+# Subtest: legacy disposition remains typed and is accepted only for an unmatched remit
+ok 62 - legacy disposition remains typed and is accepted only for an unmatched remit
+  ---
+  duration_ms: 0.448959
+  type: 'test'
+  ...
+# Subtest: ERA worklist resolve-as-rebilled records the Claim reference and rejects missing disposition
+ok 63 - ERA worklist resolve-as-rebilled records the Claim reference and rejects missing disposition
+  ---
+  duration_ms: 0.241333
+  type: 'test'
+  ...
+# Subtest: claim-rejected uses the shared claim and resolve lifecycle with the same conflict semantics
+ok 64 - claim-rejected uses the shared claim and resolve lifecycle with the same conflict semantics
+  ---
+  duration_ms: 0.369542
+  type: 'test'
+  ...
+# Subtest: claim-rejected polling deduplicates only while the same Claim has an open Task
+ok 65 - claim-rejected polling deduplicates only while the same Claim has an open Task
+  ---
+  duration_ms: 0.214375
+  type: 'test'
+  ...
+# Subtest: ERA unmatched resolution validates in-review lifecycle before any matched re-import side effect
+ok 66 - ERA unmatched resolution validates in-review lifecycle before any matched re-import side effect
+  ---
+  duration_ms: 0.101333
+  type: 'test'
+  ...
+# Subtest: claims.manage protects GET /claims/worklist with the existing claims 401/403 shapes
+ok 67 - claims.manage protects GET /claims/worklist with the existing claims 401/403 shapes
+  ---
+  duration_ms: 0.099834
+  type: 'test'
+  ...
+# Subtest: a per-person claims.manage revocation overrides the staff role on Claim.MD handlers
+ok 68 - a per-person claims.manage revocation overrides the staff role on Claim.MD handlers
+  ---
+  duration_ms: 0.050833
+  type: 'test'
+  ...
+# Subtest: claims worklist maps an unavailable staff-role service to a clean 503
+ok 69 - claims worklist maps an unavailable staff-role service to a clean 503
+  ---
+  duration_ms: 0.06975
+  type: 'test'
+  ...
+# Subtest: claims.manage protects GET /claims/era with the existing claims 401/403 shapes
+ok 70 - claims.manage protects GET /claims/era with the existing claims 401/403 shapes
+  ---
+  duration_ms: 0.069709
+  type: 'test'
+  ...
+# Subtest: remittance list exposes unallocated remainder and age using remittance date before creation date
+ok 71 - remittance list exposes unallocated remainder and age using remittance date before creation date
+  ---
+  duration_ms: 0.170709
+  type: 'test'
+  ...
+# Subtest: manual EOB routes preserve claims.manage 401/403 parity before FHIR access
+ok 72 - manual EOB routes preserve claims.manage 401/403 parity before FHIR access
+  ---
+  duration_ms: 0.207875
+  type: 'test'
+  ...
+# Subtest: manual EOB posts ClaimResponse and insurance payment while retaining a resumable partial header
+ok 73 - manual EOB posts ClaimResponse and insurance payment while retaining a resumable partial header
+  ---
+  duration_ms: 0.598083
+  type: 'test'
+  ...
+# Subtest: manual EOB audit migration uses drop-and-re-add and registers its claims event
+ok 74 - manual EOB audit migration uses drop-and-re-add and registers its claims event
+  ---
+  duration_ms: 0.411958
+  type: 'test'
+  ...
+# Subtest: line-linkage audit migration uses drop-and-re-add and registers its claims event
+ok 75 - line-linkage audit migration uses drop-and-re-add and registers its claims event
+  ---
+  duration_ms: 0.671625
+  type: 'test'
+  ...
+# Subtest: claims.manage denial happens before adapter calls or audit writes
+ok 76 - claims.manage denial happens before adapter calls or audit writes
+  ---
+  duration_ms: 0.124625
+  type: 'test'
+  ...
+# Subtest: Claim.MD adapter failures audit a sanitized reason without response-body PHI
+ok 77 - Claim.MD adapter failures audit a sanitized reason without response-body PHI
+  ---
+  duration_ms: 0.265667
+  type: 'test'
+  ...
+# Subtest: Claim FHIR create failure returns the failure response without fabricating a focus
+ok 78 - Claim FHIR create failure returns the failure response without fabricating a focus
+  ---
+  duration_ms: 0.145542
+  type: 'test'
+  ...
+# Subtest: claim-write failure and retry reuse the same conditionally-created ChargeItem
+ok 79 - claim-write failure and retry reuse the same conditionally-created ChargeItem
+  ---
+  duration_ms: 0.34125
+  type: 'test'
+  ...
+# Subtest: T5 attach projects refusal=true and correction restores the required snapshot
+ok 80 - T5 attach projects refusal=true and correction restores the required snapshot
+  ---
+  duration_ms: 13.425042
+  type: 'test'
+  ...
+# Subtest: T5 attach projects refusal=false and correction restores the required snapshot
+ok 81 - T5 attach projects refusal=false and correction restores the required snapshot
+  ---
+  duration_ms: 4.982792
+  type: 'test'
+  ...
+# Subtest: T5 transfer projects refusal=true and correction restores the required snapshot
+ok 82 - T5 transfer projects refusal=true and correction restores the required snapshot
+  ---
+  duration_ms: 4.996666
+  type: 'test'
+  ...
+# Subtest: T5 transfer projects refusal=false and correction restores the required snapshot
+ok 83 - T5 transfer projects refusal=false and correction restores the required snapshot
+  ---
+  duration_ms: 6.61675
+  type: 'test'
+  ...
+# Subtest: T5 consolidate projects refusal=true and correction restores the required snapshot
+ok 84 - T5 consolidate projects refusal=true and correction restores the required snapshot
+  ---
+  duration_ms: 8.892458
+  type: 'test'
+  ...
+# Subtest: T5 consolidate projects refusal=false and correction restores the required snapshot
+ok 85 - T5 consolidate projects refusal=false and correction restores the required snapshot
+  ---
+  duration_ms: 8.251709
+  type: 'test'
+  ...
+# Subtest: T6 lost projecting reply plus competing refusal pauses interfered without domain writes
+ok 86 - T6 lost projecting reply plus competing refusal pauses interfered without domain writes
+  ---
+  duration_ms: 2.071375
+  type: 'test'
+  ...
+# Subtest: T12 exact pre-C2 projecting journal resumes with no-refusal child
+ok 87 - T12 exact pre-C2 projecting journal resumes with no-refusal child
+  ---
+  duration_ms: 2.70475
+  type: 'test'
+  ...
+# Subtest: T13 existing-guarantor initial child refusal before attach with none reply
+not ok 88 - T13 existing-guarantor initial child refusal before attach with none reply
+  ---
+  duration_ms: 0.82275
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/guarantorPhoneRecovery.test.ts:1:2981'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading '0')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    registerExisting (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/helpers/guarantor-phone-fixture.ts:154:28)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/guarantorPhoneRecovery.test.ts:48:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: T13 existing-guarantor initial child refusal before attach with registration reply
+not ok 89 - T13 existing-guarantor initial child refusal before attach with registration reply
+  ---
+  duration_ms: 0.574125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/guarantorPhoneRecovery.test.ts:1:2981'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading '0')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    registerExisting (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/helpers/guarantor-phone-fixture.ts:154:28)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/guarantorPhoneRecovery.test.ts:48:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: T7 lost registration reply refuses to match a child whose refusal changed
+not ok 90 - T7 lost registration reply refuses to match a child whose refusal changed
+  ---
+  duration_ms: 0.331208
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/guarantorPhoneRecovery.test.ts:1:3354'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading '0')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    registerExisting (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/helpers/guarantor-phone-fixture.ts:154:28)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/registration-guarantor/mcp/tests/guarantorPhoneRecovery.test.ts:54:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: AR dashboard and all four table-export HTTP routes reach their authenticated handlers
+ok 91 - AR dashboard and all four table-export HTTP routes reach their authenticated handlers
+  ---
+  duration_ms: 27.550958
+  type: 'test'
+  ...
+# Subtest: AR dashboard and every export route preserve their underlying 401 and 403 gates
+ok 92 - AR dashboard and every export route preserve their underlying 401 and 403 gates
+  ---
+  duration_ms: 11.3965
+  type: 'test'
+  ...
+# Subtest: statement list, generate-one, and batch routes use the same authenticated reporting boundary
+ok 93 - statement list, generate-one, and batch routes use the same authenticated reporting boundary
+  ---
+  duration_ms: 12.519
+  type: 'test'
+  ...
+# Subtest: plan-profile route grants practice-admin and returns legible 403s to desk and clinician roles
+ok 94 - plan-profile route grants practice-admin and returns legible 403s to desk and clinician roles
+  ---
+  duration_ms: 2.993
+  type: 'test'
+  ...
+# Subtest: margin-ledger route shares margin.read and returns the requested monthly period
+ok 95 - margin-ledger route shares margin.read and returns the requested monthly period
+  ---
+  duration_ms: 2.750125
+  type: 'test'
+  ...
+1..95
+# tests 95
+# suites 0
+# pass 92
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 844.834541

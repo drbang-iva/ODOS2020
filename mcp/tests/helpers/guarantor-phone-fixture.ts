@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../../src/clinic/age-of-majority-config.js";
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import * as engine from '../../src/clinic/guarantor-link-operation.js';
@@ -27,7 +28,7 @@ async function writerResources(family = 'Guardian', emptyAddress = false) {
   const serviceFhir: any = {
     baseUrl: 'http://scratch.invalid',
     search: async () => ({ resourceType: 'Bundle', type: 'searchset', entry: [] }),
-    searchProject: async () => ({ resourceType: 'Bundle', type: 'searchset', entry: [] }),
+    searchProject: async (type: string) => ({ resourceType: "Bundle", type: "searchset", entry: type === "Basic" ? [{ resource: JSON.parse(JSON.stringify({ ...buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }), meta: { project: PROJECT } })) }] : [] }),
     searchProjectUrl: async () => { throw new Error('unexpected pagination'); },
     create: async (r: any) => wire({ ...r, id: 'reservation', meta: { ...r.meta, versionId: '1', project: PROJECT } }),
     executeTransactionAsActor: async (bundle: any) => { transaction = wire(bundle); throw captured; },
@@ -49,6 +50,7 @@ const writerDestination = await writerResources('Destination');
 async function world(sourceRefusal = false, destinationRefusal = true, emptyAddress = false) {
   const f = fixture(2);
   f.data.clear();
+  f.seed(wire({ ...buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }), id: "majority-config", meta: { project: PROJECT } }));
   const seed = (r: any) => f.seed(wire(r));
   const src = emptyAddress ? writerBare : writer;
   seed(setRefusal({ ...src.Person, id: 'S', meta: { project: PROJECT, versionId: '1', author: { reference: SERVICE } }, link: ['r1', 'r2'].map(id => ({ target: { reference: `RelatedPerson/${id}` }, assurance: 'level2' })) }, sourceRefusal));
