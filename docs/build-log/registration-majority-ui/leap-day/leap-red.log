@@ -2,12 +2,12 @@ TAP version 13
 # Age-of-majority guard clock: 2028-02-29T12:00:00.000Z
 # (node:70489) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
 # (Use `node --trace-warnings ...` to show where the warning was created)
-# /Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-ui-leap/ui/src/lib/patient-registration.ts:104
+# <workspace>/ui/src/lib/patient-registration.ts:104
 #   if (Object.keys(errors).length) throw new Error(Object.values(errors).join(" "));
 #                                         ^
 # Error: Date of birth must be a valid YYYY-MM-DD date.
-#     at buildPatientResource (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-ui-leap/ui/src/lib/patient-registration.ts:104:41)
-#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-ui-leap/ui/tests/ageOfMajority.test.tsx:17:57)
+#     at buildPatientResource (<workspace>/ui/src/lib/patient-registration.ts:104:41)
+#     at <anonymous> (<workspace>/ui/tests/ageOfMajority.test.tsx:17:57)
 #     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
 #     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
 #     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
@@ -17,7 +17,7 @@ not ok 1 - tests/ageOfMajority.test.tsx
   ---
   duration_ms: 147.929791
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/majority-ui-leap/ui/tests/ageOfMajority.test.tsx:1:1'
+  location: '<workspace>/ui/tests/ageOfMajority.test.tsx:1:1'
   failureType: 'testCodeFailure'
   exitCode: 1
   signal: ~

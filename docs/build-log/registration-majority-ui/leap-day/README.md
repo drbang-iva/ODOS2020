@@ -2,7 +2,7 @@
 
 Base source: `1af5a4d2b10879459fa14dbfee8b50bc131af8b4`. Test-only correction: the synthetic 19-year-old now uses January 1 of the year 19 years before today. That is a valid birth date throughout the year and preserves both D6 thresholds (adult at configured 18; minor at configured 21). Production code is unchanged.
 
-Commands ran from `ui/`. The committed preload mocks Date for both fixture construction and EngageSheet's current-date calculation. The exact mocked timestamp is printed in each log.
+Commands ran from `ui/`. The committed preload mocks Date for both fixture construction and EngageSheet's current-date calculation. The exact mocked timestamp is printed in each log. Local checkout and home paths in output are normalized to `<workspace>` and `<home>` for publication.
 
 ```sh
 ODOS_MAJORITY_TEST_DATE=2028-02-29T12:00:00.000Z node --import ../docs/build-log/registration-majority-ui/leap-day/mock-clock.mjs --import tsx --test tests/ageOfMajority.test.tsx
