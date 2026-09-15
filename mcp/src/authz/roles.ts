@@ -670,6 +670,10 @@ const STAFF_DEMOGRAPHIC_WRITE_RESOURCE_RULES: OdosResourceRule[] =
     resourceType,
     interactions: CREATE_UPDATE_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+    ...(resourceType === "RelatedPerson" ? { writeConstraint: [{
+      description: "Guarantor link claims are managed by service operations; staff may edit a responsible party without changing claims.",
+      expression: "(%before.exists() implies ((%before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim').exists() or %after.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim').exists()) implies (%before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim') = %after.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim')))) and (%before.empty() implies %after.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim').empty())",
+    }] } : {}),
   }));
 
 const STAFF_ENCOUNTER_WRITE_RESOURCE_RULE: OdosResourceRule = {

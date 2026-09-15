@@ -14,7 +14,10 @@ import type {
   Practitioner,
   Provenance,
   Resource,
+  RelatedPerson,
+  Person,
 } from "@medplum/fhirtypes";
+import { saveGuarantor } from "../../ui/src/lib/guarantor-editor.js";
 import { ODOS_PRACTICE_ROLE_SYSTEM, type PracticeRoleId } from "../src/authz/roles.js";
 import { buildAllergyIntolerance } from "../src/fhir/allergyIntolerance.js";
 import { buildCareTeam } from "../src/fhir/careTeam.js";
@@ -139,6 +142,50 @@ test("synced practice policies enforce all repaired clinical writes on running M
       assert.equal(response.status, 200, `${roleId} update ${resource.resourceType}: ${response.summary}`);
       return response.body as T;
     };
+
+    const claim = { url: "https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim", valueReference: { reference: `Task/${runId}` } };
+    const childFixture = (): RelatedPerson => ({ resourceType: "RelatedPerson", patient: { reference: patientReference }, name: [{ family: "Synthetic" }] });
+    await t.test("K1 staff cannot strip, add, or change an existing child claim", async () => {
+      const child = track(await seederFhir.create<RelatedPerson>({ ...childFixture(), extension: [claim] }));
+      await denied("staff", "PUT", `RelatedPerson/${child.id}`, { ...child, extension: [] });
+      await denied("staff", "PUT", `RelatedPerson/${child.id}`, { ...child, extension: [{ ...claim, valueReference: { reference: `Task/${randomUUID()}` } }] });
+      await denied("staff", "PUT", `RelatedPerson/${child.id}`, { ...child, extension: [claim, { ...claim, valueReference: { reference: `Task/${randomUUID()}` } }] });
+      const unclaimed = track(await seederFhir.create<RelatedPerson>(childFixture()));
+      await denied("staff", "PUT", `RelatedPerson/${unclaimed.id}`, { ...unclaimed, extension: [claim] });
+    });
+    await t.test("K2 staff cannot create a claimed child", async () => {
+      await denied("staff", "POST", "RelatedPerson", { ...childFixture(), extension: [claim] });
+    });
+    await t.test("K3 staff can create and edit an unclaimed child", async () => {
+      const child = await created("staff", childFixture());
+      await updated("staff", { ...child, name: [{ family: "Edited Synthetic" }] });
+    });
+    await t.test("K4 staff can edit name and phone while preserving an inert claim", async () => {
+      const child = track(await seederFhir.create<RelatedPerson>({ ...childFixture(), extension: [claim] }));
+      const person = track(await seederFhir.create<Person>({ resourceType: "Person", name: child.name, link: [{ target: { reference: `RelatedPerson/${child.id}` } }] }));
+      const realFetch = globalThis.fetch;
+      let result;
+      try {
+        globalThis.fetch = (input, init) => {
+          const target = String(input);
+          if (target === `/guarantors/link-operations/${runId}`) return realFetch(`${baseUrl}/fhir/R4/Task/${runId}`, { headers: { Authorization: `Bearer ${seederAccessToken}` } });
+          if (!target.startsWith("/fhir/R4/")) return realFetch(input, init);
+          const headers = new Headers(init?.headers);
+          headers.set("Authorization", `Bearer ${tokens.get("staff")!}`);
+          return realFetch(`${baseUrl}${target}`, { ...init, headers });
+        };
+        result = await saveGuarantor({ person, children: [{ resource: child, patientName: "Synthetic" }] }, {
+          name: [{ family: "Edited Synthetic" }], telecom: [{ system: "phone", value: "864-555-0101" }],
+        });
+      } finally {
+        globalThis.fetch = realFetch;
+      }
+      assert.equal(result.status, "saved", JSON.stringify(result));
+      const persisted = await seederFhir.read<RelatedPerson>("RelatedPerson", child.id!);
+      assert.deepEqual(persisted.name, [{ family: "Edited Synthetic" }]);
+      assert.deepEqual(persisted.telecom, [{ system: "phone", value: "864-555-0101" }]);
+      assert.deepEqual(persisted.extension, [claim]);
+    });
 
     const providerVoidDraft = await created<Observation>(
       "staff",

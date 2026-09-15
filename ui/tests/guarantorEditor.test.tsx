@@ -257,3 +257,26 @@ test("F1e superseded save reloads automatically and one Repair converges", async
     };
   });
 });
+
+
+test("K4: real editor name and phone save preserves an inert child claim", async () => {
+  const claim = { url: "https://odos2020.com/fhir/StructureDefinition/guarantor-link-claim", valueReference: { reference: "Task/inert-claim" } };
+  await withEditor(1, async (renderer, data) => {
+    assert.match(text(renderer), /Save guarantor/);
+    const name = renderer.root.findAllByType("input").find(input => input.props.value === "New")!;
+    const phone = renderer.root.findAllByType("input").find(input => input.props.value === "864-555-0101")!;
+    assert.ok(name);
+    assert.ok(phone);
+    await act(async () => { name.props.onChange({ target: { value: "Edited" } }); });
+    await act(async () => { phone.props.onChange({ target: { value: "864-555-0199" } }); });
+    await act(async () => { await renderer.root.findAllByType("button").find(button => button.children.join("") === "Save guarantor")!.props.onClick(); });
+    const child = data.records.get("RelatedPerson/party-a") as RelatedPerson;
+    assert.deepEqual(data.writes, ["PUT Person/guarantor-a", "PUT RelatedPerson/party-a"]);
+    assert.equal(child.name?.[0].given?.[0], "Edited");
+    assert.equal(child.telecom?.[0].value, "864-555-0199");
+    assert.deepEqual(child.extension?.filter(extension => extension.url === claim.url), [claim]);
+    assert.match(text(renderer), /verified/i);
+  }, data => {
+    (data.records.get("RelatedPerson/party-a") as RelatedPerson).extension!.push(claim);
+  });
+});

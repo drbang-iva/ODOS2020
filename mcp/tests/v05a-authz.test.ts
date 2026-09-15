@@ -567,3 +567,20 @@ function resultState(
       return "terminated";
   }
 }
+
+test("compiled Staff policy fences RelatedPerson claims without changing other demographic grants", () => {
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("staff"));
+  const writes = policy.resource!.filter(rule => rule.interaction?.includes("update"));
+  const child = writes.filter(rule => rule.resourceType === "RelatedPerson");
+  assert.equal(child.length, 1);
+  assert.deepEqual(child[0].interaction, ["create", "update"]);
+  assert.equal(child[0].criteria, "RelatedPerson?_compartment=%patient_compartment");
+  assert.equal(child[0].writeConstraint?.length, 1);
+  assert.equal(child[0].writeConstraint?.[0].language, "text/fhirpath");
+  assert.match(child[0].writeConstraint?.[0].expression ?? "", /guarantor-link-claim/);
+  for (const resourceType of ["Patient", "Coverage", "Account"]) {
+    assert.deepEqual(writes.find(rule => rule.resourceType === resourceType), {
+      resourceType, interaction: ["create", "update"], criteria: `${resourceType}?_compartment=%patient_compartment`,
+    });
+  }
+});

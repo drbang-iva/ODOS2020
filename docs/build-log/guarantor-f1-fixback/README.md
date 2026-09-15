@@ -53,6 +53,13 @@ Serialized requests, If-Match versions, statuses, fresh reads and screenshots ar
 
 Install locked root, MCP and UI dependencies. Copy `live/reproduction/*` into ignored `.odos/guarantor-f1/`, removing `.txt`. Provision an isolated synthetic Medplum at the loopback target above. Provide mode-0600 runtime.json containing baseUrl, email and password for that disposable administrator. Never substitute a practice endpoint.
 
+Before provisioning or logging in, run `node --import tsx .odos/guarantor-f1/setup-guard.mjs` from the repository root. The guard supplies its own non-loopback fixture, then the documented loopback fixture. It restores the original `runtime.json` bytes in `finally`, or removes the fixture if no file existed. Both controls replace fetch; neither sends a real request. Expected output:
+
+```text
+Invalid endpoint refused before login; network requests: 0
+Loopback endpoint passed URL guard and reached network stub; real network requests: 0
+```
+
 Run setup.ts with `./mcp/node_modules/.bin/tsx`, then serve.mjs with Node. Run `node .odos/guarantor-f1/live-proof.mjs F1e`. For F1a, temporarily replace only `halted = await checkGeneration(current.person);` with `halted = undefined;`, run `F1a-unfenced`, restore the line, then run `F1a-fenced`. The harness asserts the different outcomes; a green unfenced run means the unsafe outcome was reproduced, not that the writer is correct.
 
 The mutation runner snapshot at `guards/mutations.py.txt` writes only the two production files temporarily and restores them in a finally block. Run from the task root after copying it to an ignored working file. Never run mutations concurrently with the full regression suite or a different live experiment.
