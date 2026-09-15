@@ -1,0 +1,16 @@
+  ...
+# Subtest: aesthetics license and procedure scope is a Provider membership parameter
+ok 272 - aesthetics license and procedure scope is a Provider membership parameter
+  ---
+  duration_ms: 0.137958
+  type: 'test'
+  ...
+1..272
+# tests 272
+# suites 0
+# pass 272
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3319.076417

@@ -1,0 +1,16 @@
+  ...
+# Subtest: INS2 U5 primary extension alone excludes reuse and prevents guardian writes
+ok 44 - INS2 U5 primary extension alone excludes reuse and prevents guardian writes
+  ---
+  duration_ms: 1.030166
+  type: 'test'
+  ...
+1..44
+# tests 44
+# suites 0
+# pass 44
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 436.477584
