@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../../mcp/src/clinic/age-of-majority-config";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
@@ -29,7 +30,7 @@ async function fillDemographics(renderer: ReactTestRenderer) {
   }
 }
 async function mounted(fetcher: typeof fetch, run: (renderer: ReactTestRenderer) => Promise<void>) {
-  const previous = globalThis.fetch; globalThis.fetch = fetcher; let renderer!: ReactTestRenderer;
+  const previous = globalThis.fetch; globalThis.fetch = async (input, init) => String(input).includes("Basic?") ? reply({resourceType: "Bundle", entry: [{resource: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18})))}]}) : fetcher(input, init); let renderer!: ReactTestRenderer;
   try { await act(async () => { renderer = create(<NewPatient />); }); await run(renderer); }
   finally { if (renderer) act(() => renderer.unmount()); globalThis.fetch = previous; }
 }
@@ -138,7 +139,7 @@ test("paper confirmation requires a valid date before registration", async () =>
 test("both registration client entry points omit an empty optional preference payload", async () => {
   const draft = { ...emptyPatientDemographics(), firstName: "Synthetic", lastName: "Registration", gender: "female" as const, birthDate: "1980-01-02", phones: [{ value: "555-555-0199", use: "mobile" as const, sourceIndex: null }, { value: "", use: "mobile" as const, sourceIndex: null }] as [import("../src/lib/patient-registration").PatientDraftPhone, import("../src/lib/patient-registration").PatientDraftPhone] };
   for (const request of [registerPatient, createPatient]) {
-    await request(draft, { communicationPreferences: { cells: [] } }, async (_input, init) => {
+    await request(draft, { ageOfMajorityConfig: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18}))), communicationPreferences: { cells: [] } }, async (_input, init) => {
       assert.equal(Object.hasOwn(JSON.parse(String(init?.body)), "communicationPreferences"), false); return reply(created, 201);
     });
   }
