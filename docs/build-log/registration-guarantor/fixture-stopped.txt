@@ -1,0 +1,8 @@
+unknown shorthand flag: 'p' in -p
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+registration-majority-live-medplum-1 running
+registration-majority-live-postgres-1 running
+registration-majority-live-redis-1 running
