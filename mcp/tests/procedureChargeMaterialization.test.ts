@@ -78,7 +78,7 @@ class MemoryFhir {
       ));
       if (existing) return structuredClone(existing) as T;
     }
-    const saved = { ...structuredClone(resource), id: resource.id ?? `resource-${this.next++}` } as T;
+    const saved = { ...structuredClone(resource), id: resource.id ?? `resource-${this.next++}`, meta: { ...resource.meta, versionId: "1" } } as T;
     this.resources.push(saved);
     return structuredClone(saved);
   }
@@ -97,9 +97,13 @@ class MemoryFhir {
     headers?: Record<string, string>,
   ): Promise<T> {
     this.updateHeaders.push({ resourceType, headers });
-    const saved = { ...structuredClone(resource), id } as T;
     const index = this.resources.findIndex((row) => row.resourceType === resourceType && row.id === id);
     if (index < 0) throw new Error(`${resourceType}/${id} not found for update`);
+    const existing = this.resources[index]!;
+    if (headers?.["If-Match"] && headers["If-Match"] !== `W/"${existing.meta?.versionId}"`) {
+      throw Object.assign(new Error("412 Precondition Failed"), { status: 412 });
+    }
+    const saved = { ...structuredClone(resource), id, meta: { ...resource.meta, versionId: String(Number(existing.meta?.versionId ?? 0) + 1) } } as T;
     this.resources[index] = saved;
     return structuredClone(saved);
   }
@@ -517,4 +521,14 @@ test("a retry after ChargeItem creation but before proposal finalization reuses 
   assert.equal(fhir.resources.filter((row) => row.resourceType === "ChargeItem").length, 1);
   assert.equal(proposal.state, "finalized");
   assert.match(proposal.chargeItemRef ?? "", /^ChargeItem\//);
+});
+
+test("materialization FHIR fake increments versions and refuses stale conditional writes", async () => {
+  const fhir = new MemoryFhir();
+  const created = await fhir.create({ resourceType: "Basic", code: { text: "Synthetic version probe" } } as Resource);
+  assert.equal(created.meta?.versionId, "1");
+  const saved = await fhir.update("Basic", created.id!, created, { "If-Match": 'W/"1"' });
+  assert.equal(saved.meta?.versionId, "2");
+  await assert.rejects(fhir.update("Basic", created.id!, created, { "If-Match": 'W/"1"' }), /412/);
+  assert.equal(fhir.resources[0]?.meta?.versionId, "2");
 });

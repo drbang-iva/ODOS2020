@@ -13,6 +13,7 @@ import {
 import {
   handleProtocolApplicationsRequest,
   handleProtocolApplyRequest,
+  handleProtocolFollowUpConfirmRequest,
   handleProtocolCaptureRequest,
   handleProtocolCreateRequest,
   handleProtocolDraftRequest,
@@ -780,7 +781,13 @@ test("item add suppresses a sibling charge when another protocol already owns th
   const first = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
   const second = await service.addItem(secondProtocol.id, "order-gonioscopy", input);
 
-  assert.equal((await service.applications.list()).length, 1);
+  assert.equal((await service.applications.list()).length, 2);
+  const dependency = (await service.applications.list()).find((row) => row.protocolId === secondProtocol.id)!;
+  assert.equal(dependency.confirmed, true);
+  assert.equal(dependency.undoState, "active");
+  assert.equal(dependency.scope, "item");
+  assert.deepEqual(dependency.dispositions.map((row) => row.outcome), ["applied-default", "applied-default"]);
+  assert.deepEqual(dependency.dedupResolutions.map((row) => row.reason).sort(), ["action-exists", "charge-exists"]);
   assert.equal(second.alreadyApplied, true);
   assert.equal(second.application.id, first.application.id);
   assert.equal((await service.actions.list()).length, 1);
@@ -804,7 +811,7 @@ test("item add rejects finding seeds without creating an application", async () 
   assert.equal((await service.findings.list()).length, 0);
 });
 
-test("whole-protocol open remains blocked after an item-level add", async () => {
+test("whole-protocol open permits apply after an item-level add", async () => {
   const { service } = harness();
   await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
   const input = {
@@ -815,13 +822,10 @@ test("whole-protocol open remains blocked after an item-level add", async () => 
   };
   await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-gonioscopy", input);
 
-  await assert.rejects(
-    service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, input),
-    /Protocol is already applied to this encounter/,
-  );
+  await assert.doesNotReject(service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, input));
 });
 
-test("cross-protocol dedupe returns the live owner and permits replacement after owner unapply", async () => {
+test("cross-protocol dedupe returns the live owner and preserves shared records after owner unapply", async () => {
   const { service } = harness();
   const copiedProtocol: ProtocolDefinition = {
     ...structuredClone(GLAUCOMA_SUSPECT_PROTOCOL),
@@ -840,7 +844,9 @@ test("cross-protocol dedupe returns the live owner and permits replacement after
   const deduped = await service.addItem(copiedProtocol.id, "order-gonioscopy", input);
   assert.equal(deduped.alreadyApplied, true);
   assert.equal(deduped.application.id, owner.application.id);
-  assert.equal((await service.applications.list()).length, 1);
+  assert.equal((await service.applications.list()).length, 2);
+  const priorOrder = (await service.actions.list()).find((row) => row.sourceItemKey === "order-gonioscopy")!;
+  const priorCharge = (await service.charges.list()).find((row) => row.procedureConceptKey === "gonioscopy")!;
   await service.unapply(owner.application.id);
   const retried = await service.addItem(copiedProtocol.id, "order-gonioscopy", input);
   const liveOrders = (await service.actions.list()).filter((row) =>
@@ -848,11 +854,12 @@ test("cross-protocol dedupe returns the live owner and permits replacement after
   ).length;
   const liveCharges = (await service.charges.list()).filter((row) => row.state !== "removed").length;
 
-  console.log("S1_AFTER", JSON.stringify({ liveOrders, liveCharges, alreadyApplied: retried.alreadyApplied }));
+  assert.equal((await service.actions.get(priorOrder.id))?.state, "selected");
+  assert.equal((await service.charges.get(priorCharge.id))?.state, "staged");
   assert.deepEqual({ liveOrders, liveCharges, alreadyApplied: retried.alreadyApplied }, {
     liveOrders: 1,
     liveCharges: 1,
-    alreadyApplied: false,
+    alreadyApplied: true,
   });
 });
 
@@ -1324,7 +1331,7 @@ test("unapply succeeds with finalized charges and preserves their billed state",
   assert.equal((await service.charges.get(finalizedCharge.id))?.chargeItemRef, "ChargeItem/billed-charge");
 });
 
-test("commit retry after a late partial failure skips all completed writes, then confirms once", async () => {
+test("commit rollback after a late failure restores proposed findings and retry confirms once", async () => {
   const { service, projectedFindings, materialized, projectionControl } = harness();
   await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
   const opened = await service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, {
@@ -1334,10 +1341,10 @@ test("commit retry after a late partial failure skips all completed writes, then
     actor: "Practitioner/test",
   });
   let confirmedSaves = 0;
-  const saveApplication = service.applications.save.bind(service.applications);
-  service.applications.save = async (application) => {
+  const saveApplication = service.applications.saveWithIdentifiersIfCurrent.bind(service.applications);
+  service.applications.saveWithIdentifiersIfCurrent = async (application, identifiers, current) => {
     if (application.confirmed) confirmedSaves += 1;
-    return saveApplication(application);
+    return saveApplication(application, identifiers, current);
   };
   projectionControl.failOnceOnActionType = "follow-up";
 
@@ -1347,23 +1354,24 @@ test("commit retry after a late partial failure skips all completed writes, then
   );
   assert.equal((await service.applications.get(opened.application.id))?.confirmed, false);
   assert.equal(projectedFindings.length, 10);
-  assert.equal((await service.charges.list()).length, 5);
+  assert.equal((await service.charges.list()).filter((row) => row.state !== "removed").length, 0);
   assert.equal(materialized.length, 7);
+  assert.equal((await service.findings.list()).filter((row) => row.state === "proposed").length, 14);
 
   await service.commit(opened.application.id, [], ["Condition/c-retry"]);
 
-  assert.equal(projectedFindings.length, 10);
+  assert.equal(projectedFindings.length, 20);
   assert.equal((await service.findings.list()).filter((row) => row.state === "committed").length, 14);
-  assert.equal((await service.charges.list()).length, 5);
-  assert.equal(new Set((await service.charges.list()).map((row) =>
+  assert.equal((await service.charges.list()).filter((row) => row.state !== "removed").length, 5);
+  assert.equal(new Set((await service.charges.list()).filter((row) => row.state !== "removed").map((row) =>
     `${row.protocolApplicationId}:${row.planActionRef}`
   )).size, 5);
-  const actions = await service.actions.list();
+  const actions = (await service.actions.list()).filter((row) => row.state !== "removed");
   assert.equal(actions.length, 8);
   assert.equal(new Set(actions.map((row) =>
     `${row.protocolApplicationId}:${row.sourceItemKey}`
   )).size, 8);
-  assert.equal(materialized.length, 8);
+  assert.equal(materialized.length, 15);
   assert.equal((await service.applications.get(opened.application.id))?.confirmed, true);
   assert.equal(confirmedSaves, 1);
 });
@@ -1382,7 +1390,7 @@ test("deselected finding seeds are removed and never projected", async () => {
   assert.equal(projectedFindings.some((id) => gonio.some((row) => row.id === id)), false);
 });
 
-test("retry does not duplicate an already-saved action without a mergeKey", async () => {
+test("retry restores one live action without a mergeKey", async () => {
   const { service, projectionControl } = harness();
   await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
   const opened = await service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, {
@@ -1392,7 +1400,7 @@ test("retry does not duplicate an already-saved action without a mergeKey", asyn
   projectionControl.failOnceOnActionType = "follow-up";
   await assert.rejects(service.commit(opened.application.id, [], ["Condition/c1"]));
   await service.commit(opened.application.id, [], ["Condition/c1"]);
-  const counseling = (await service.actions.list()).filter((row) => row.sourceItemKey === "counsel-suspect");
+  const counseling = (await service.actions.list()).filter((row) => row.sourceItemKey === "counsel-suspect" && row.state !== "removed");
   assert.equal(counseling.length, 1);
   assert.equal(counseling[0]?.mergeKey, undefined);
 });
@@ -2700,7 +2708,7 @@ test("applications read enforces chart.read, returns the hydration shape, and du
   });
   assert.equal(read.status, 200);
   assert.deepEqual((read.body as { applications: unknown[] }).applications, [{
-    id: "app-1", protocolId: GLAUCOMA_SUSPECT_PROTOCOL.id, version: 1, confirmed: true, undoState: "active",
+    id: "app-1", protocolId: GLAUCOMA_SUSPECT_PROTOCOL.id, version: 1, scope: "whole", itemKeys: [], confirmed: true, undoState: "active",
   }]);
   const forbidden = await handleProtocolApplicationsRequest(endpointDeps(fhir, "admin"), {
     authHeader: "Bearer test", query: { encounterId: "enc-1" },
@@ -3146,4 +3154,681 @@ test("signing abandons an unconfirmed application and deletes all proposed findi
     row.encounterId === "enc-sign" && row.state === "removed"
   ).length, 14);
   assert.equal((await service.applications.get(opened.application.id))?.undoState, "unapplied");
+});
+
+async function sharedOwnershipFixture(retina = false) {
+  const h = harness();
+  const second: ProtocolDefinition = {
+    ...structuredClone(GLAUCOMA_SUSPECT_PROTOCOL), id: retina ? "shared-retina" : "shared-second",
+    items: structuredClone(GLAUCOMA_SUSPECT_PROTOCOL.items.filter((item) => item.itemType !== "finding-seed")),
+  };
+  if (retina) {
+    second.items = second.items.filter((item) => ["order-fundus-photography", "charge-fundus-photography"].includes(item.itemKey));
+    second.items.find((item) => item.itemType === "order")!.mergeKey = "order:fundus-photography:retina";
+  }
+  await h.service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  await h.service.definitions.save(second);
+  const input = { encounterId: "enc-shared", patientId: "patient-1", diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true }, actor: "Practitioner/test" };
+  const first = await h.service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, input);
+  await h.service.commit(first.application.id, [], [input.diagnosis.reference]);
+  const applySecond = async () => {
+    const opened = await h.service.open(second.id, { ...input, diagnosis: { ...input.diagnosis, reference: "Condition/c2" } });
+    await h.service.commit(opened.application.id, [], ["Condition/c2"]);
+    return (await h.service.applications.get(opened.application.id))!;
+  };
+  return { ...h, input, first: first.application, second, applySecond };
+}
+
+for (const retina of [false, true]) {
+  test(`shared ownership ${retina ? "D" : "A"}: encounter charge dedupe and action dependencies`, async () => {
+    const { service, applySecond, first } = await sharedOwnershipFixture(retina);
+    const before = (await service.charges.list()).find((row) => row.procedureConceptKey === "gonioscopy")!;
+    const dependent = await applySecond();
+    const concept = retina ? "fundus-photography" : "gonioscopy";
+    assert.equal((await service.charges.list()).filter((row) => row.procedureConceptKey === concept && row.state !== "removed").length, 1);
+    const actions = (await service.actions.list()).filter((row) => row.payload.orderableKey === concept && row.state !== "removed");
+    assert.equal(actions.length, retina ? 2 : 1);
+    assert.equal(dependent.dedupResolutions.filter((row) => row.reason === "charge-exists" && row.itemKey === `charge-${concept}`).length, 1);
+    if (!retina) {
+      assert.deepEqual(actions[0].linkedDx, ["Condition/c1", "Condition/c2"]);
+      assert.deepEqual((await service.charges.get(before.id))?.dxPointers, ["Condition/c1"]);
+      assert.equal(actions[0].protocolApplicationId, first.id);
+      assert.ok(dependent.dedupResolutions.some((row) => row.reason === "action-exists" && row.existingActionId === actions[0].id));
+    }
+  });
+  test(`shared ownership ${retina ? "E" : "A2"}: owner undo transfers identical records`, async () => {
+    const { service, applySecond, first } = await sharedOwnershipFixture(retina);
+    const dependent = await applySecond();
+    const concept = retina ? "fundus-photography" : "gonioscopy";
+    const charge = (await service.charges.list()).find((row) => row.procedureConceptKey === concept)!;
+    const order = (await service.actions.list()).find((row) => row.payload.orderableKey === concept)!;
+    await service.unapply(first.id);
+    assert.deepEqual(await service.charges.get(charge.id), { ...charge, protocolApplicationId: dependent.id });
+    if (!retina) assert.deepEqual(await service.actions.get(order.id), { ...order, protocolApplicationId: dependent.id });
+    const transferred = (await service.applications.get(dependent.id))!;
+    assert.equal(transferred.dispositions.find((row) => row.itemKey === `charge-${concept}`)?.outcome, "applied-default");
+    assert.ok(!transferred.dedupResolutions.some((row) => row.existingChargeId === charge.id));
+  });
+  test(`shared ownership ${retina ? "F" : "A3"}: dependent undo preserves source`, async () => {
+    const { service, applySecond, first } = await sharedOwnershipFixture(retina);
+    const dependent = await applySecond();
+    const charges = (await service.charges.list()).filter((row) => row.protocolApplicationId === first.id);
+    await service.unapply(dependent.id);
+    for (const charge of charges) assert.deepEqual(await service.charges.get(charge.id), charge);
+  });
+}
+
+test("shared ownership H I: any live charge dedupes regardless of owner or state", async () => {
+  for (const state of ["finalized", "accepted", "overridden"] as const) {
+    const { service, first, input } = await sharedOwnershipFixture();
+    const charge = (await service.charges.list()).find((row) => row.procedureConceptKey === "gonioscopy")!;
+    await service.charges.save({ ...charge, state, protocolApplicationId: state === "accepted" ? null : first.id });
+    await service.unapply(first.id);
+    const opened = await service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, input);
+    await service.commit(opened.application.id, [], [input.diagnosis.reference]);
+    assert.equal((await service.charges.list()).filter((row) => row.procedureConceptKey === "gonioscopy" && row.state !== "removed").length, 1);
+    assert.ok((await service.applications.get(opened.application.id))?.dedupResolutions.some((row) => row.existingChargeId === charge.id));
+  }
+});
+
+test("shared ownership J: removed dependency charge allows fresh charge on re-tap", async () => {
+  const { service, applySecond, first, second, input } = await sharedOwnershipFixture();
+  await applySecond();
+  const charge = (await service.charges.list()).find((row) => row.procedureConceptKey === "gonioscopy")!;
+  await service.charges.save({ ...charge, state: "removed" });
+  const result = await service.addItem(second.id, "order-gonioscopy", input);
+  assert.equal(result.alreadyApplied, false);
+  assert.equal((await service.charges.list()).filter((row) => row.procedureConceptKey === "gonioscopy" && row.state !== "removed").length, 1);
+});
+
+test("shared ownership C route: item then whole lists scopes and preserves tapped order on whole undo", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(confirmedCondition());
+  const tap = await handleProtocolItemAddRequest(endpointDeps(fhir), { authHeader: "Bearer test", body: { ...applyBody("H40.021"), itemKey: "order-gonioscopy" } });
+  assert.equal(tap.status, 200);
+  const applied = await handleProtocolApplyRequest(endpointDeps(fhir), { authHeader: "Bearer test", body: applyBody("H40.021") });
+  assert.equal(applied.status, 200);
+  const listed = await handleProtocolApplicationsRequest(endpointDeps(fhir), { authHeader: "Bearer test", query: { encounterId: "enc-1" } });
+  const rows = (listed.body as { applications: Array<{ id: string; scope: string }> }).applications;
+  assert.deepEqual(rows.map((row) => row.scope).sort(), ["item", "whole"]);
+  const service = endpointProtocolService(fhir);
+  const original = (await service.actions.list()).find((row) => row.sourceItemKey === "order-gonioscopy")!;
+  await service.unapply(rows.find((row) => row.scope === "whole")!.id);
+  assert.deepEqual(await service.actions.get(original.id), original);
+  assert.equal((await service.charges.list()).filter((row) => row.state !== "removed").length, 1);
+});
+
+test("shared ownership K: paused commit serializes source undo and transfers one live order and charge", async () => {
+  const { service, first, applySecond, fhir } = await sharedOwnershipFixture();
+  let entered!: () => void;
+  const waiting = new Promise<void>((resolve) => { entered = resolve; });
+  let release!: () => void;
+  fhir.applicationConfirmGate = { remaining: 1, entered, release: new Promise<void>((resolve) => { release = resolve; }) };
+  const applying = applySecond();
+  await waiting;
+  let undone = false;
+  const undo = service.unapply(first.id).then((value) => { undone = true; return value; });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(undone, false);
+  release();
+  const second = await applying;
+  await undo;
+  const charge = (await service.charges.list()).filter((row) => row.procedureConceptKey === "gonioscopy" && row.state !== "removed");
+  const action = (await service.actions.list()).filter((row) => row.sourceItemKey === "order-gonioscopy" && row.state !== "removed");
+  assert.equal(charge.length, 1);
+  assert.equal(action.length, 1);
+  assert.equal(charge[0].protocolApplicationId, second.id);
+  assert.equal(action[0].protocolApplicationId, second.id);
+});
+
+test("shared ownership L: sooner follow-up records both recommendations and confirmation clears flag", async () => {
+  const { service, first, second, input } = await sharedOwnershipFixture();
+  const follow = second.items.find((item) => item.itemType === "follow-up")!;
+  assert.ok(follow);
+  follow.payload.interval = 3;
+  second.id = "shared-sooner";
+  await service.definitions.save(second);
+  const opened = await service.open(second.id, input);
+  await service.commit(opened.application.id, [], ["Condition/c2"]);
+  const action = (await service.actions.list()).find((row) => row.actionType === "follow-up")!;
+  assert.equal(action.protocolApplicationId, first.id);
+  assert.equal(action.payload.interval, 3);
+  assert.equal(action.payload.needsConfirmation, true);
+  assert.deepEqual((action.payload.alternatives as Array<{ interval: number }>).map((row) => row.interval), [6, 3]);
+  const confirmed = await service.confirmFollowUp(input.encounterId, action.id, input.actor);
+  assert.equal(confirmed.payload.needsConfirmation, false);
+});
+
+test("shared ownership K failure: commit rolls back newly created and shared facts after write failure", async () => {
+  const { service, first, second, input } = await sharedOwnershipFixture();
+  const originalActions = await service.actions.list();
+  const originalCharges = await service.charges.list();
+  const opened = await service.open(second.id, input);
+  const save = service.applications.saveWithIdentifiersIfCurrent.bind(service.applications);
+  service.applications.saveWithIdentifiersIfCurrent = async (value, ids, current) => {
+    if (value.id === opened.application.id && value.confirmed) return undefined;
+    return save(value, ids, current);
+  };
+  await assert.rejects(service.commit(opened.application.id, [], ["Condition/c2"]), /changed/);
+  assert.deepEqual((await service.actions.list()).filter((row) => row.protocolApplicationId === first.id), originalActions);
+  assert.deepEqual((await service.charges.list()).filter((row) => row.state !== "removed"), originalCharges);
+});
+
+test("shared ownership K failure: undo rolls back after a transfer write fails", async () => {
+  const { service, first, applySecond } = await sharedOwnershipFixture();
+  const second = await applySecond();
+  const originalActions = await service.actions.list();
+  const originalCharges = await service.charges.list();
+  const originalOwner = await service.applications.get(first.id);
+  const save = service.charges.save.bind(service.charges);
+  let failed = false;
+  service.charges.save = async (value) => {
+    if (!failed && value.protocolApplicationId === second.id) { failed = true; throw new Error("transfer write failed"); }
+    return save(value);
+  };
+  await assert.rejects(service.unapply(first.id), /transfer write failed/);
+  assert.deepEqual(await service.applications.get(first.id), originalOwner);
+  assert.deepEqual(await service.applications.get(second.id), second);
+  assert.deepEqual(await service.actions.list(), originalActions);
+  assert.deepEqual(await service.charges.list(), originalCharges);
+});
+
+test("shared ownership L route: clash rematerializes one request; confirm and edit clear flag", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(confirmedCondition());
+  await handleProtocolApplyRequest(endpointDeps(fhir), { authHeader: "Bearer test", body: applyBody("H40.021") });
+  const service = endpointProtocolService(fhir);
+  const second = { ...structuredClone(GLAUCOMA_SUSPECT_PROTOCOL), id: "sooner-followup-route" };
+  second.items = second.items.filter((item) => item.itemType === "follow-up");
+  second.items[0].payload.interval = 3;
+  await service.definitions.save(second);
+  const result = await handleProtocolApplyRequest(endpointDeps(fhir), { authHeader: "Bearer test", body: { ...applyBody("H40.021"), protocolId: second.id } });
+  assert.equal(result.status, 200);
+  const actions = (await service.actions.list()).filter((row) => row.actionType === "follow-up");
+  assert.equal(actions.length, 1);
+  const action = actions[0];
+  assert.equal(action.payload.needsConfirmation, true);
+  const requests = fhir.resources.filter((row): row is ServiceRequest => row.resourceType === "ServiceRequest" && row.code?.coding?.some((coding) => coding.code === "follow-up") === true);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].occurrenceDateTime, "2026-10-18");
+  const params = { encounterId: "enc-1", actionId: action.id };
+  const confirmed = await handleProtocolFollowUpConfirmRequest(endpointDeps(fhir), { authHeader: "Bearer test", params, body: {} });
+  assert.equal(confirmed.status, 200);
+  assert.equal((await service.actions.get(action.id))?.payload.needsConfirmation, false);
+  const edited = await handleProtocolFollowUpConfirmRequest(endpointDeps(fhir), { authHeader: "Bearer test", params, body: { interval: 2, unit: "weeks" } });
+  assert.equal(edited.status, 200);
+  assert.equal((await service.actions.get(action.id))?.payload.needsConfirmation, false);
+  assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", requests[0].id!)).occurrenceDateTime, "2026-08-01");
+  assert.equal((await handleProtocolFollowUpConfirmRequest(endpointDeps(fhir), { authHeader: "Bearer test", params: { ...params, encounterId: "foreign" }, body: {} })).status, 404);
+  assert.equal((await service.actions.get(action.id))?.payload.reason, action.payload.reason);
+  assert.equal((await handleProtocolFollowUpConfirmRequest({ ...endpointDeps(fhir), authenticate: async () => null }, { authHeader: undefined, params, body: {} })).status, 401);
+});
+
+test("shared ownership L equal: same interval adds no confirmation flag", async () => {
+  const { service, applySecond } = await sharedOwnershipFixture();
+  await applySecond();
+  const action = (await service.actions.list()).find((row) => row.actionType === "follow-up")!;
+  assert.equal(action.payload.needsConfirmation, undefined);
+  assert.equal(action.payload.alternatives, undefined);
+});
+
+test("shared ownership G: surviving focused charge is reused by a fresh original order", async () => {
+  const { service, first, applySecond, input } = await sharedOwnershipFixture(true);
+  const second = await applySecond();
+  const original = (await service.charges.list()).find((row) => row.procedureConceptKey === "fundus-photography")!;
+  assert.equal((await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-fundus-photography", input)).alreadyApplied, true);
+  await service.unapply(first.id);
+  const retap = await service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-fundus-photography", input);
+  assert.equal(retap.alreadyApplied, false);
+  assert.equal((await service.charges.get(original.id))?.protocolApplicationId, second.id);
+  assert.equal((await service.charges.list()).filter((row) => row.procedureConceptKey === "fundus-photography" && row.state !== "removed").length, 1);
+  assert.equal(retap.application.dispositions.find((row) => row.itemKey === "charge-fundus-photography")?.outcome, "opted-out");
+  assert.ok(retap.application.dedupResolutions.some((row) => row.existingChargeId === original.id));
+});
+
+test("shared ownership K: commit before sign completes; sign before commit refuses without facts", async () => {
+  for (const signFirst of [false, true]) {
+    const { service, fhir } = harness();
+    await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+    const opened = await service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, { encounterId: "enc-sign-race", patientId: "patient-1", diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true }, actor: "Practitioner/test" });
+    if (signFirst) {
+      await service.abandonOpenForSignedEncounter("enc-sign-race");
+      await assert.rejects(service.commit(opened.application.id, [], ["Condition/c1"]), /no longer active/);
+      assert.equal((await service.actions.list()).length, 0);
+    } else {
+      let entered!: () => void;
+      const waiting = new Promise<void>((resolve) => { entered = resolve; });
+      let release!: () => void;
+      fhir.chargeGate = { remaining: 1, entered, release: new Promise<void>((resolve) => { release = resolve; }) };
+      const committing = service.commit(opened.application.id, [], ["Condition/c1"]);
+      await waiting;
+      let cleaned = false;
+      const cleanup = service.abandonOpenForSignedEncounter("enc-sign-race").then((count) => { cleaned = true; return count; });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      assert.equal(cleaned, false);
+      release();
+      await committing;
+      assert.equal(await cleanup, 0);
+      assert.equal((await service.applications.get(opened.application.id))?.confirmed, true);
+    }
+  }
+});
+
+test("shared ownership K: simultaneous source and dependent undo leave no live shared records", async () => {
+  const { service, first, applySecond } = await sharedOwnershipFixture();
+  const second = await applySecond();
+  await Promise.all([service.unapply(first.id), service.unapply(second.id)]);
+  assert.equal((await service.actions.list()).filter((row) => row.state !== "removed").length, 0);
+  assert.equal((await service.charges.list()).filter((row) => row.state !== "removed").length, 0);
+  assert.equal((await service.applications.list()).filter((row) => row.undoState === "active").length, 0);
+});
+
+test("shared ownership K: distinct item taps serialize an encounter charge concept", async () => {
+  const { service, fhir } = harness();
+  const second = { ...structuredClone(GLAUCOMA_SUSPECT_PROTOCOL), id: "distinct-photo" };
+  const photo = second.items.find((row) => row.itemKey === "order-fundus-photography")!;
+  photo.itemKey = "retina-photo";
+  photo.mergeKey = "order:fundus-photography:retina";
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  await service.definitions.save(second);
+  const input = { encounterId: "enc-concurrent-distinct", patientId: "patient-1", diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true }, actor: "Practitioner/test" };
+  let entered!: () => void;
+  const waiting = new Promise<void>((resolve) => { entered = resolve; });
+  let release!: () => void;
+  fhir.chargeGate = { remaining: 1, entered, release: new Promise<void>((resolve) => { release = resolve; }) };
+  const first = service.addItem(GLAUCOMA_SUSPECT_PROTOCOL.id, "order-fundus-photography", input);
+  await waiting;
+  let settled = false;
+  const other = service.addItem(second.id, "retina-photo", input).then((value) => { settled = true; return value; });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(settled, false);
+  release();
+  await Promise.all([first, other]);
+  assert.equal((await service.actions.list()).length, 2);
+  assert.equal((await service.charges.list()).length, 1);
+});
+
+test("shared ownership J action: dead referenced action cannot be satisfied by another same-key action", async () => {
+  const { service, second, input } = await sharedOwnershipFixture();
+  const followKey = second.items.find((row) => row.itemType === "follow-up")!.itemKey;
+  await service.addItem(second.id, followKey, input);
+  const old = (await service.actions.list()).find((row) => row.actionType === "follow-up")!;
+  await service.actions.save({ ...old, state: "removed" });
+  const third = { ...structuredClone(second), id: "replacement-followup-owner" };
+  await service.definitions.save(third);
+  await service.addItem(third.id, followKey, input);
+  const result = await service.addItem(second.id, followKey, input);
+  const dependency = (await service.applications.list()).find((row) => row.protocolId === second.id && row.undoState === "active")!;
+  assert.equal(result.alreadyApplied, false);
+  assert.ok(!dependency.dedupResolutions.some((row) => row.existingActionId === old.id));
+  assert.ok(dependency.dedupResolutions.some((row) => row.reason === "action-exists"));
+});
+
+test("shared ownership J action: modified live dependency survives its inactive owner", async () => {
+  const { service, first, second, input } = await sharedOwnershipFixture();
+  const followKey = second.items.find((row) => row.itemType === "follow-up")!.itemKey;
+  await service.addItem(second.id, followKey, input);
+  const action = (await service.actions.list()).find((row) => row.actionType === "follow-up")!;
+  await service.actions.save({ ...action, state: "modified", modifiedFields: ["reason"] });
+  await service.unapply(first.id);
+  const result = await service.addItem(second.id, followKey, input);
+  assert.equal(result.alreadyApplied, true);
+  assert.equal((await service.applications.list()).filter((row) => row.protocolId === second.id && row.undoState === "active").length, 1);
+});
+
+test("shared ownership L sign: unresolved recommendation remains advisory during sign cleanup", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(confirmedCondition(), { resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
+  await handleProtocolApplyRequest(endpointDeps(fhir), { authHeader: "Bearer test", body: applyBody("H40.021") });
+  const service = endpointProtocolService(fhir);
+  const action = (await service.actions.list()).find((row) => row.actionType === "follow-up")!;
+  await service.actions.save({ ...action, payload: { ...action.payload, needsConfirmation: true } });
+  const result = await handleProtocolSignCleanupRequest({ ...endpointDeps(fhir), feeScheduleFhir: fhir as never }, { authHeader: "Bearer test", params: { encounterId: "enc-1" } });
+  assert.equal(result.status, 200);
+  assert.equal((await service.actions.get(action.id))?.payload.needsConfirmation, true);
+});
+
+test("shared ownership B: repeated cross-plan tap records only one dependent and returns original owner", async () => {
+  const { service, first, second, input } = await sharedOwnershipFixture();
+  const tapped = await service.addItem(second.id, "order-gonioscopy", input);
+  const repeated = await service.addItem(second.id, "order-gonioscopy", input);
+  assert.equal(tapped.alreadyApplied, true);
+  assert.equal(repeated.alreadyApplied, true);
+  assert.equal(tapped.application.id, first.id);
+  assert.equal(repeated.application.id, first.id);
+  assert.equal((await service.applications.list()).filter((row) => row.protocolId === second.id && row.undoState === "active").length, 1);
+});
+
+test("shared ownership K failure: rejected later dependent preflight restores earlier dependencies", async () => {
+  const { service, first, second, input } = await sharedOwnershipFixture();
+  const third = { ...structuredClone(second), id: "different-dependency" };
+  third.items = third.items.filter((row) => ["order-fundus-photography", "charge-fundus-photography"].includes(row.itemKey));
+  await service.definitions.save(third);
+  await service.addItem(second.id, "order-gonioscopy", input);
+  await service.addItem(third.id, "order-fundus-photography", input);
+  const originalApplications = await service.applications.list();
+  const originalActions = await service.actions.list();
+  const originalCharges = await service.charges.list();
+  const later = originalApplications.find((row) => row.protocolId === third.id)!;
+  const save = service.applications.saveWithIdentifiersIfCurrent.bind(service.applications);
+  service.applications.saveWithIdentifiersIfCurrent = async (value, ids, current) => value.id === later.id ? undefined : save(value, ids, current);
+  await assert.rejects(service.unapply(first.id), /changed/);
+  assert.deepEqual(await service.applications.list(), originalApplications);
+  assert.deepEqual(await service.actions.list(), originalActions);
+  assert.deepEqual(await service.charges.list(), originalCharges);
+});
+
+test("shared ownership K failure: sign cleanup restores proposed findings after write failure", async () => {
+  const { service } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const opened = await service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, { encounterId: "enc-cleanup-failure", patientId: "patient-1", diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true }, actor: "Practitioner/test" });
+  const original = await service.findings.list();
+  const save = service.findings.save.bind(service.findings);
+  let count = 0;
+  service.findings.save = async (value) => { if (++count === 2) throw new Error("finding removal failed"); return save(value); };
+  await assert.rejects(service.abandonOpenForSignedEncounter("enc-cleanup-failure"), /finding removal failed/);
+  assert.deepEqual(await service.applications.get(opened.application.id), opened.application);
+  assert.deepEqual(await service.findings.list(), original);
+});
+
+test("shared ownership B optout: cross-plan dependency preserves deliberate charge opt-out through undo", async () => {
+  const { service } = harness();
+  const second = { ...structuredClone(GLAUCOMA_SUSPECT_PROTOCOL), id: "optout-dependent" };
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  await service.definitions.save(second);
+  const input = { encounterId: "enc-optout-dependency", patientId: "patient-1", diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true }, actor: "Practitioner/test" };
+  const owner = await service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, input);
+  await service.commit(owner.application.id, [{ itemKey: "charge-gonioscopy", selected: false }], ["Condition/c1"]);
+  const tapped = await service.addItem(second.id, "order-gonioscopy", input);
+  assert.equal(tapped.alreadyApplied, true);
+  assert.equal((await service.charges.list()).filter((row) => row.procedureConceptKey === "gonioscopy").length, 0);
+  const dependent = (await service.applications.list()).find((row) => row.protocolId === second.id)!;
+  assert.equal(dependent.dispositions.find((row) => row.itemKey === "charge-gonioscopy")?.outcome, "opted-out");
+  await service.unapply(owner.application.id);
+  assert.equal((await service.addItem(second.id, "order-gonioscopy", input)).alreadyApplied, true);
+  assert.equal((await service.charges.list()).filter((row) => row.procedureConceptKey === "gonioscopy").length, 0);
+});
+
+test("shared ownership B lost response: persisted dependency still returns original owner already applied", async () => {
+  const { service, fhir, first, second, input } = await sharedOwnershipFixture();
+  const update = fhir.update.bind(fhir);
+  let lost = false;
+  fhir.update = async (...args) => {
+    const saved = await update(...args);
+    const payload = args[2].code?.coding?.some((row) => row.code === PROTOCOL_BASIC_CODES.protocolApplication) ? args[2].extension?.[0]?.valueString : undefined;
+    if (!lost && payload && JSON.parse(payload).protocolId === second.id && JSON.parse(payload).confirmed) {
+      lost = true;
+      throw new Error("persisted confirmation response lost");
+    }
+    return saved;
+  };
+  const added = await service.addItem(second.id, "order-gonioscopy", input);
+  assert.equal(lost, true);
+  assert.equal(added.alreadyApplied, true);
+  assert.equal(added.application.id, first.id);
+  assert.equal((await service.applications.list()).filter((row) => row.protocolId === second.id && row.undoState === "active").length, 1);
+});
+
+function rollbackProjectionHarness() {
+  const projections = new Map<string, Observation | ServiceRequest>();
+  const fail = { followUpOnce: false };
+  let next = 0;
+  const service = new ProtocolService(new MemoryFhir(), {
+    async commitFinding(finding) {
+      const reference = `Observation/${finding.id}`;
+      projections.set(reference, { resourceType: "Observation", id: finding.id, status: "final", code: { text: finding.findingDefKey }, subject: { reference: `Patient/${finding.patientId}` } });
+      return reference;
+    },
+    async materializeAction(action) {
+      if (fail.followUpOnce && action.actionType === "follow-up") {
+        fail.followUpOnce = false;
+        throw new Error("late follow-up failure");
+      }
+      const reference = `ServiceRequest/${action.id}`;
+      projections.set(reference, { resourceType: "ServiceRequest", id: action.id, status: "active", intent: "plan", subject: { reference: `Patient/${action.patientId}` } });
+      return reference;
+    },
+    async removeMaterialized(reference) { projections.delete(reference); },
+  }, () => "2026-07-18T12:00:00.000Z", () => `rollback-${++next}`);
+  const open = async () => {
+    await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+    return service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, { encounterId: "enc-projection-rollback", patientId: "patient-1", diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true }, actor: "Practitioner/test" });
+  };
+  return { service, projections, fail, open };
+}
+
+test("shared rollback: deselected finding returns to proposed after failed commit and retry materializes it", async () => {
+  const { service, projections, fail, open } = rollbackProjectionHarness();
+  const opened = await open();
+  fail.followUpOnce = true;
+  await assert.rejects(service.commit(opened.application.id, [{ itemKey: "cd-ratio", selected: false }], ["Condition/c1"]), /late follow-up failure/);
+  const restored = (await service.findings.list()).filter((row) => row.sourceItemKey === "cd-ratio");
+  assert.ok(restored.length > 0);
+  assert.ok(restored.every((row) => row.state === "proposed"));
+  await service.commit(opened.application.id, [], ["Condition/c1"]);
+  for (const finding of (await service.findings.list()).filter((row) => row.sourceItemKey === "cd-ratio")) {
+    assert.equal(finding.state, "committed");
+    assert.ok(finding.observationReference);
+    assert.ok(projections.has(finding.observationReference));
+  }
+});
+
+for (const kind of ["action", "finding"] as const) {
+  test(`shared rollback: ${kind} projection survives successful deletion followed by failed Basic removal`, async () => {
+    const { service, projections, open } = rollbackProjectionHarness();
+    const opened = await open();
+    await service.commit(opened.application.id, [], ["Condition/c1"]);
+    const original = new Map(projections);
+    let failed = false;
+    if (kind === "action") {
+      const save = service.actions.save.bind(service.actions);
+      service.actions.save = async (row) => {
+        if (!failed && row.state === "removed") { failed = true; throw new Error("action Basic removal failed"); }
+        return save(row);
+      };
+    } else {
+      const save = service.findings.save.bind(service.findings);
+      service.findings.save = async (row) => {
+        if (!failed && row.state === "removed" && row.observationReference) { failed = true; throw new Error("finding Basic removal failed"); }
+        return save(row);
+      };
+    }
+    await assert.rejects(service.unapply(opened.application.id), /Basic removal failed/);
+    assert.equal(failed, true);
+    assert.equal((await service.applications.get(opened.application.id))?.undoState, "active");
+    assert.deepEqual(projections, original);
+    for (const action of await service.actions.list()) if (action.materializedFhirRef) assert.ok(projections.has(action.materializedFhirRef));
+    for (const finding of await service.findings.list()) if (finding.observationReference) assert.ok(projections.has(finding.observationReference));
+  });
+}
+
+for (const kind of ["action", "finding"] as const) {
+  test(`shared rollback endpoint: ${kind} revocation rollback preserves original FHIR IDs and statuses`, async () => {
+    const fhir = new EndpointFhir();
+    fhir.resources.push(confirmedCondition());
+    const applied = await handleProtocolApplyRequest(endpointDeps(fhir), { authHeader: "Bearer test", body: applyBody("H40.021") });
+    assert.equal(applied.status, 200);
+    const service = endpointProtocolService(fhir);
+    const application = (await service.applications.list())[0];
+    const originalProjections = structuredClone(fhir.resources.filter((row) => ["ServiceRequest", "Observation", "CarePlan"].includes(row.resourceType)));
+    assert.ok(originalProjections.some((row) => row.resourceType === (kind === "action" ? "ServiceRequest" : "Observation")));
+    const originalActions = await service.actions.list();
+    const originalFindings = await service.findings.list();
+    const update = fhir.update;
+    let failed = false;
+    fhir.update = async (...args) => {
+      const resource = args[2];
+      if (!failed && resource.resourceType === "Basic") {
+        const basic = resource as Basic;
+        const expectedCode = kind === "action" ? PROTOCOL_BASIC_CODES.planActionInstance : PROTOCOL_BASIC_CODES.findingInstance;
+        const payload = basic.code?.coding?.some((row) => row.code === expectedCode) ? basic.extension?.[0]?.valueString : undefined;
+        const row = payload ? JSON.parse(payload) : undefined;
+        if (row?.state === "removed" && (kind === "action" ? row.materializedFhirRef : row.observationReference)) {
+          failed = true;
+          throw new Error("Basic write after revocation failed");
+        }
+      }
+      return update(...args);
+    };
+    await assert.rejects(handleProtocolUnapplyRequest(endpointDeps(fhir), { authHeader: "Bearer test", params: { applicationId: application.id } }), /Basic write after revocation failed/);
+    assert.equal(failed, true);
+    assert.deepEqual(fhir.resources.filter((row) => ["ServiceRequest", "Observation", "CarePlan"].includes(row.resourceType)), originalProjections);
+    assert.deepEqual(await service.actions.list(), originalActions);
+    assert.deepEqual(await service.findings.list(), originalFindings);
+    assert.equal((await service.applications.get(application.id))?.undoState, "active");
+  });
+}
+
+async function followUpFixbackFixture() {
+  const fhir = new EndpointFhir();
+  let id = 0;
+  const service = new ProtocolService(fhir, {
+    async commitFinding() { return undefined; },
+    async materializeAction(action) { return materializeProtocolFollowUp(fhir, action); },
+  }, () => "2026-07-18T12:00:00.000Z", () => `follow-fix-${++id}`);
+  const input = { encounterId: "enc-1", patientId: "patient-1", diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true }, actor: "Practitioner/test" };
+  const apply = async (protocolId: string, interval: number, reason: string, item = false) => {
+    const definition = structuredClone(GLAUCOMA_SUSPECT_PROTOCOL);
+    definition.id = protocolId;
+    definition.items = definition.items.filter((row) => row.itemType === "follow-up");
+    definition.items[0].payload = { ...definition.items[0].payload, interval, reason };
+    await service.definitions.save(definition);
+    if (item) {
+      await service.addItem(protocolId, definition.items[0].itemKey, input);
+      return (await service.applications.list()).find((row) => row.protocolId === protocolId)!;
+    }
+    const opened = await service.open(protocolId, input);
+    await service.commit(opened.application.id, [], [input.diagnosis.reference]);
+    return (await service.applications.get(opened.application.id))!;
+  };
+  const action = async () => (await service.actions.list()).find((row) => row.actionType === "follow-up" && row.state !== "removed")!;
+  return { fhir, service, input, apply, action };
+}
+
+for (const ownership of ["edit", "state", "provenance"] as const) {
+  test(`follow-up fixback clinician ${ownership}: plan recommendation preserves doctor's choice`, async () => {
+    const h = await followUpFixbackFixture();
+    await h.apply("suspect", 6, "Suspect monitoring");
+    let doctor = await h.service.confirmFollowUp(h.input.encounterId, (await h.action()).id, h.input.actor, { interval: 12, unit: "months", reason: "Doctor review" });
+    if (ownership === "state") doctor = await h.service.actions.save({ ...doctor, provenance: { ...doctor.provenance, source: "protocol-default" } });
+    if (ownership === "provenance") doctor = await h.service.actions.save({ ...doctor, state: "selected", modifiedFields: [] });
+    const poag = await h.apply("poag", 3, "POAG monitoring");
+    const current = await h.action();
+    assert.deepEqual({ ...current, payload: doctor.payload, linkedDx: doctor.linkedDx }, doctor);
+    assert.equal(current.payload.interval, 12);
+    assert.equal(current.payload.unit, doctor.payload.unit);
+    assert.equal(current.payload.reason, doctor.payload.reason);
+    assert.equal(current.payload.needsConfirmation, true);
+    assert.deepEqual(current.payload.alternatives, [
+      { source: "clinician", interval: 12, unit: "months", reason: "Doctor review", actor: h.input.actor },
+      { applicationId: poag.id, protocolId: "poag", interval: 3, unit: "months", reason: "POAG monitoring" },
+    ]);
+  });
+}
+
+for (const owner of [false, true]) {
+  for (const item of [false, true]) {
+    test(`follow-up fixback undo ${owner ? "owner" : "dependent"} ${item ? "item" : "whole"}: removes recommendation and rematerializes`, async () => {
+      const h = await followUpFixbackFixture();
+      const suspect = await h.apply("suspect", 6, "Suspect monitoring", item && owner);
+      const poag = await h.apply("poag", 3, "POAG monitoring", item && !owner);
+      const before = await h.action();
+      assert.deepEqual((before.payload.alternatives as Array<{ applicationId: string }>).map((row) => row.applicationId), [suspect.id, poag.id]);
+      await h.service.unapply(owner ? suspect.id : poag.id);
+      const current = await h.action();
+      assert.equal(current.id, before.id);
+      assert.equal(current.protocolApplicationId, owner ? poag.id : suspect.id);
+      assert.equal(current.payload.interval, owner ? 3 : 6);
+      assert.equal(current.payload.reason, owner ? "POAG monitoring" : "Suspect monitoring");
+      assert.equal(current.payload.needsConfirmation, false);
+      assert.equal(current.payload.alternatives, undefined);
+      const request = h.fhir.resources.find((row) => `${row.resourceType}/${row.id}` === current.materializedFhirRef) as ServiceRequest;
+      assert.equal(request.occurrenceDateTime, owner ? "2026-10-18" : "2027-01-18");
+      assert.equal(current.materializedFhirRef, before.materializedFhirRef);
+    });
+  }
+}
+
+test("follow-up fixback undo soonest of three retains two recommendations", async () => {
+  const h = await followUpFixbackFixture();
+  const suspect = await h.apply("suspect", 6, "Suspect monitoring");
+  const poag = await h.apply("poag", 3, "POAG monitoring");
+  const third = await h.apply("third", 1, "Earlier review");
+  await h.service.unapply(third.id);
+  const current = await h.action();
+  assert.equal(current.payload.interval, 3);
+  assert.equal(current.payload.reason, "POAG monitoring");
+  assert.equal(current.payload.needsConfirmation, true);
+  assert.deepEqual((current.payload.alternatives as Array<{ applicationId: string }>).map((row) => row.applicationId), [suspect.id, poag.id]);
+});
+
+test("follow-up fixback undo last recommendation clears doctor flag", async () => {
+  const h = await followUpFixbackFixture();
+  await h.apply("suspect", 6, "Suspect monitoring");
+  const doctor = await h.service.confirmFollowUp(h.input.encounterId, (await h.action()).id, h.input.actor, { interval: 12, unit: "months" });
+  const poag = await h.apply("poag", 3, "POAG monitoring");
+  await h.service.unapply(poag.id);
+  const current = await h.action();
+  assert.equal(current.payload.alternatives, undefined);
+  assert.deepEqual(current, doctor);
+});
+
+test("follow-up fixback failed undo restores action and ServiceRequest after follow-up write", async () => {
+  const h = await followUpFixbackFixture();
+  const suspect = await h.apply("suspect", 6, "Suspect monitoring");
+  const poag = await h.apply("poag", 3, "POAG monitoring");
+  const original = await h.action();
+  const requests = structuredClone(h.fhir.resources.filter((row) => row.resourceType === "ServiceRequest"));
+  const save = h.service.actions.save.bind(h.service.actions);
+  let failed = false;
+  h.service.actions.save = async (row) => {
+    const result = await save(row);
+    if (!failed && row.payload.needsConfirmation === false) {
+      failed = true;
+      assert.equal(row.payload.interval, 6);
+      assert.equal((h.fhir.resources.find((entry) => `${entry.resourceType}/${entry.id}` === row.materializedFhirRef) as ServiceRequest).occurrenceDateTime, "2027-01-18");
+      throw new Error("after follow-up write");
+    }
+    return result;
+  };
+  await assert.rejects(h.service.unapply(poag.id), /after follow-up write/);
+  assert.equal(failed, true);
+  assert.deepEqual(await h.action(), original);
+  assert.deepEqual(h.fhir.resources.filter((row) => row.resourceType === "ServiceRequest"), requests);
+  assert.equal((await h.service.applications.get(suspect.id))?.undoState, "active");
+  assert.equal((await h.service.applications.get(poag.id))?.undoState, "active");
+});
+
+test("shared guard chronological dependents: earliest then next own unchanged gonioscopy records", async () => {
+  const h = await sharedOwnershipFixture();
+  h.setCurrentTime("2026-07-18T13:00:00.000Z");
+  const earlier = await h.applySecond();
+  h.setCurrentTime("2026-07-18T14:00:00.000Z");
+  const third = { ...structuredClone(h.second), id: "third-dependent" };
+  await h.service.definitions.save(third);
+  const opened = await h.service.open(third.id, h.input);
+  await h.service.commit(opened.application.id, [], [h.input.diagnosis.reference]);
+  const order = (await h.service.actions.list()).find((row) => row.payload.orderableKey === "gonioscopy")!;
+  const charge = (await h.service.charges.list()).find((row) => row.procedureConceptKey === "gonioscopy")!;
+  for (const [undo, next] of [[h.first.id, earlier.id], [earlier.id, opened.application.id]]) {
+    await h.service.unapply(undo);
+    assert.deepEqual(await h.service.actions.get(order.id), { ...order, linkedDx: ["Condition/c1", "Condition/c2"], protocolApplicationId: next });
+    assert.deepEqual(await h.service.charges.get(charge.id), { ...charge, protocolApplicationId: next });
+  }
+});
+
+test("shared guard concurrent whole commits: only one confirms with one live order", async () => {
+  const h = harness();
+  const definition = structuredClone(GLAUCOMA_SUSPECT_PROTOCOL);
+  definition.items = definition.items.filter((row) => row.itemKey === "order-gonioscopy" || row.itemKey === "charge-gonioscopy");
+  await h.service.definitions.save(definition);
+  const input = { encounterId: "enc-concurrent-whole", patientId: "patient-1", diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true }, actor: "Practitioner/test" };
+  const first = await h.service.open(definition.id, input);
+  const second = await h.service.open(definition.id, input);
+  assert.notEqual(first.application.id, second.application.id);
+  const results = await Promise.allSettled([first, second].map((row) => h.service.commit(row.application.id, [], [input.diagnosis.reference])));
+  assert.equal(results.filter((row) => row.status === "fulfilled").length, 1);
+  assert.equal(results.filter((row) => row.status === "rejected").length, 1);
+  assert.equal((await h.service.applications.list()).filter((row) => row.confirmed && row.undoState === "active").length, 1);
+  assert.equal((await h.service.actions.list()).filter((row) => row.state !== "removed").length, 1);
 });

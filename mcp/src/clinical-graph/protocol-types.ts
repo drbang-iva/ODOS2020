@@ -85,6 +85,7 @@ export interface PlanActionInstance {
 }
 
 export interface ProtocolApplication {
+  scope?: "whole" | "item";
   id: string;
   encounterId: string;
   patientId: string;

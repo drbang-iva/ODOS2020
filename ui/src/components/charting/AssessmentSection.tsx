@@ -1,3 +1,5 @@
+import { normalizeApplicationScope } from "../../../../src/protocol-application-scope";
+import { ProtocolApplicationStatus, FollowUpConfirmation, type ApplicationSummary, type FollowUpAction } from "./ProtocolApplicationStatus";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Condition, Encounter, Observation } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
@@ -133,12 +135,9 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [diagnosisDemotionImpact, setDiagnosisDemotionImpact] = useState<DiagnosisDemotionImpact>();
-  const [protocolApplications, setProtocolApplications] = useState<Array<{
-    id: string;
-    protocolId: string;
-    confirmed: boolean;
-    undoState: string;
-  }>>([]);
+  const [protocolApplications, setProtocolApplications] = useState<ApplicationSummary[]>([]);
+  const [followUpActions, setFollowUpActions] = useState<FollowUpAction[]>([]);
+  const [protocolRevision, setProtocolRevision] = useState(0);
   const [protocolOffers, setProtocolOffers] = useState<ProtocolOffer[]>([]);
   const [selectedProtocolId, setSelectedProtocolId] = useState<string>();
   const [protocolSheetOpen, setProtocolSheetOpen] = useState(false);
@@ -375,7 +374,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   const acceptCharges = protocolOffer?.acceptCharges === true;
   const protocolApplication = protocolOffer
     ? protocolApplications.find((application) =>
-        application.protocolId === protocolOffer.id &&
+        application.protocolId === protocolOffer.id && normalizeApplicationScope(application) === "whole" &&
         application.confirmed &&
         application.undoState === "active"
       )
@@ -393,17 +392,19 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       headers: authHeaders(), signal: controller.signal,
     }).then(async (response) => {
       const body = await response.json() as {
-        applications?: Array<{ id: string; protocolId: string; confirmed: boolean; undoState: string }>;
+        applications?: ApplicationSummary[];
+        actions?: FollowUpAction[];
         error?: string;
       };
       if (!response.ok) throw new Error(body.error ?? `Protocol applications load failed: ${response.status}`);
       if (controller.signal.aborted) return;
       setProtocolApplications(body.applications ?? []);
+      setFollowUpActions(body.actions ?? []);
     }).catch((reason) => {
       if ((reason as Error).name !== "AbortError") setError(String((reason as Error).message ?? reason));
     });
     return () => controller.abort();
-  }, [encounterId]);
+  }, [encounterId, protocolRevision]);
 
   useEffect(() => {
     if (!protocolDiagnoses.length) {
@@ -503,24 +504,26 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
         setProtocolApplications((current) => [...current, {
           id: body.application!.id!,
           protocolId: protocolOffer.id,
+          scope: "whole",
           confirmed: true,
           undoState: "active",
         }]);
       }
+      setProtocolRevision(v => v + 1);
       setProtocolSheetOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally { setBusy(null); }
   }
 
-  async function unapplyProtocol() {
-    if (!protocolApplication?.id) return;
+  async function unapplyProtocol(applicationId: string) {
     setBusy("protocol-unapply"); setError(null);
     try {
-      await unapplyEncounterProtocol(protocolApplication.id);
+      await unapplyEncounterProtocol(applicationId);
       setProtocolApplications((current) => current.map((application) =>
-        application.id === protocolApplication.id ? { ...application, undoState: "unapplied" } : application
+        application.id === applicationId ? { ...application, undoState: "unapplied" } : application
       ));
+      setProtocolRevision(v => v + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally { setBusy(null); }
@@ -642,6 +645,43 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
           </div>
         )}
 
+        {followUpActions.map((action) => (
+          <FollowUpConfirmation
+            key={`${action.id}:${protocolRevision}`}
+            action={action}
+            readOnly={!canShowEditing}
+            protocolTitles={Object.fromEntries(protocolOffers.map((p) => [p.id, p.title]))}
+            onSave={async (change) => {
+              const response = await fetch(
+                `${clinicalGraphApiBase()}/clinical-graph/protocols/encounters/${encodeURIComponent(encounterId)}/actions/${encodeURIComponent(action.id)}/confirm-follow-up`,
+                {
+                  method: "POST",
+                  headers: { ...authHeaders(), "Content-Type": "application/json" },
+                  body: JSON.stringify(change),
+                },
+              );
+              if (!response.ok) throw new Error("Follow-up could not be saved. Try again.");
+              setProtocolRevision((v) => v + 1);
+            }}
+          />
+        ))}
+
+        {canShowEditing && [...new Set(protocolApplications
+          .filter((application) => !protocolOffers.some((offer) => offer.id === application.protocolId))
+          .filter((application) => application.confirmed && application.undoState === "active")
+          .map((application) => application.protocolId))].map((protocolId) => (
+          <div key={protocolId} className="mt-3 rounded border border-[color:var(--odos-line)] p-3">
+            <div className="text-sm font-semibold">{protocolId.replace(/[-_]/g, " ")}</div>
+            <ProtocolApplicationStatus
+              applications={protocolApplications.filter((application) => application.protocolId === protocolId)}
+              items={[]}
+              showProtocolIds
+              busy={busy !== null}
+              onUndo={unapplyProtocol}
+            />
+          </div>
+        ))}
+
         {canShowEditing && protocolOffers.length > 0 && protocolOffer && (
           <div className="mt-4 rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-hi)] p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -654,18 +694,20 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
               </div>
               <button
                 ref={protocolTriggerRef}
-                disabled={protocolActionDisabled(busy !== null, protocolApplication?.id, Boolean(protocolDiagnosis))}
-                onClick={protocolApplied ? unapplyProtocol : () => setProtocolSheetOpen(true)}
+                disabled={protocolApplied || protocolActionDisabled(busy !== null, undefined, Boolean(protocolDiagnosis))}
+                onClick={() => setProtocolSheetOpen(true)}
                 className={BUTTON_CLASS}
               >
-                {protocolApplied ? "Un-apply" : "Apply selected"}
+                Apply selected
               </button>
             </div>
+            <ProtocolApplicationStatus applications={protocolApplications.filter(a => a.protocolId === protocolOffer.id)} items={protocolOffer.items} busy={busy !== null} onUndo={unapplyProtocol} />
             <div className="mt-3 grid gap-2">
               {protocolOffers.map((offer, index) => {
                 const applied = protocolApplications.some((application) =>
-                  application.protocolId === offer.id && application.confirmed && application.undoState === "active"
+                  application.protocolId === offer.id && application.confirmed && application.undoState === "active" && normalizeApplicationScope(application) === "whole"
                 );
+                const itemCount = protocolApplications.filter(a => a.protocolId === offer.id && a.confirmed && a.undoState === 'active' && normalizeApplicationScope(a) === 'item').length;
                 return (
                   <label key={offer.id} className="flex items-center gap-3 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-3">
                     <input
@@ -682,6 +724,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                       </span>
                     </span>
                     {applied && <span className="text-xs font-semibold text-[color:var(--odos-emerald)]">Applied</span>}
+                    {itemCount > 0 && <span>{itemCount} {itemCount === 1 ? 'item added' : 'items added'}</span>}
                   </label>
                 );
               })}

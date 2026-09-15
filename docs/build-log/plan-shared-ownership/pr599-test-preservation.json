@@ -1,0 +1,10 @@
+{
+  "pr599Tests": 24,
+  "unchanged": 21,
+  "changed": [
+    "item add suppresses a sibling charge when another protocol already owns the merge-key action",
+    "whole-protocol open remains blocked after an item-level add",
+    "cross-protocol dedupe returns the live owner and permits replacement after owner unapply"
+  ],
+  "unexpected": []
+}

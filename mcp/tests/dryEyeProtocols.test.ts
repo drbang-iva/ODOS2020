@@ -273,16 +273,21 @@ class MemoryProtocolFhir implements ProtocolFhirClient {
       ));
       if (existing) return existing as T;
     }
-    const saved = { ...resource, id: `basic-${this.next++}` };
+    const saved = { ...structuredClone(resource), id: `basic-${this.next++}`, meta: { ...resource.meta, versionId: "1" } };
     this.rows.push(saved);
     return saved;
   }
 
-  async update<T extends Basic>(_resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
-    const saved = { ...resource, id };
+  async update<T extends Basic>(_resourceType: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {
     const index = this.rows.findIndex((row) => row.id === id);
+    const existing = this.rows[index];
+    if (!existing) throw new Error(`Basic/${id} not found`);
+    if (headers?.["If-Match"] && headers["If-Match"] !== `W/"${existing.meta?.versionId}"`) {
+      throw Object.assign(new Error("412 Precondition Failed"), { status: 412 });
+    }
+    const saved = { ...structuredClone(resource), id, meta: { ...resource.meta, versionId: String(Number(existing.meta?.versionId ?? 0) + 1) } };
     this.rows[index] = saved;
-    return saved;
+    return structuredClone(saved);
   }
 }
 
@@ -340,3 +345,13 @@ function sequentialId(): () => string {
   let next = 1;
   return () => `id-${next++}`;
 }
+
+test("protocol FHIR fake increments versions and refuses stale conditional writes", async () => {
+  const fhir = new MemoryProtocolFhir();
+  const created = await fhir.create({ resourceType: "Basic", code: { text: "Synthetic version probe" } } as Basic);
+  assert.equal(created.meta?.versionId, "1");
+  const saved = await fhir.update("Basic", created.id!, created, { "If-Match": 'W/"1"' });
+  assert.equal(saved.meta?.versionId, "2");
+  await assert.rejects(fhir.update("Basic", created.id!, created, { "If-Match": 'W/"1"' }), /412/);
+  assert.equal(fhir.rows[0]?.meta?.versionId, "2");
+});
