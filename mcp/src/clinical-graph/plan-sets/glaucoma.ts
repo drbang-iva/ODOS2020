@@ -12,8 +12,8 @@ const testDefinitions: Record<string, PlanSetSpec['tests'][number]> = {
   octa:{title:'OCT angiography, optic nerve vessel density',orderable:'oct-angiography',performContext:'schedule'},
   asoct:{title:'Anterior segment OCT',orderable:'anterior-segment-oct',performContext:'schedule'},
 };
-function spec(key:string,title:string,families:string[],tests:string[],interval:number,unit:'weeks'|'months'='months',note=title):PlanSetSpec {
-  return {key,version:key==='glaucoma-suspect-initial'?2:1,title,families,tests:tests.map(k=>({...testDefinitions[k]})),counseling:[{title:`Counseling — ${title}`,topicKey:key,narrativeTemplate:`Discussed ${title}: ${note}. Questions answered.`}],handouts:[{title:`${title} handout`}],followUp:{title:`Follow-up — ${title}`,interval,unit,reason:title,followUpKind:'medical'},source:{eyefinity:true,note:'Operator-approved glaucoma plan-set content; unorderable tests and unavailable handouts are reported as hidden.'}};
+function spec(key:string,title:string,families:string[],tests:string[],interval:number,unit:'weeks'|'months'='months',note?:string):PlanSetSpec {
+  return {key,version:key==='glaucoma-suspect-initial'?2:1,title,families,tests:tests.map(k=>({...testDefinitions[k]})),counseling:[{title:`Counseling — ${title}`,topicKey:key,narrativeTemplate:`Discussed ${title.toLowerCase()}${note ? `: ${note}` : ""}. Questions answered.`}],handouts:[{title:`${title} handout`}],followUp:{title:`Follow-up — ${title}`,interval,unit,reason:`${title} monitoring`,followUpKind:'medical'},source:{eyefinity:true,note:'Operator-approved glaucoma plan-set content; unorderable tests and unavailable handouts are reported as hidden.'}};
 }
 const five=['photos','gonio','field','pachy','oct'];
 export const GLAUCOMA_PLAN_SET_SPECS: PlanSetSpec[] = [

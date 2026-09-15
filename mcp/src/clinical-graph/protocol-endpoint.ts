@@ -20,6 +20,7 @@ import {
 } from "../series-tracker/series-care-plan.js";
 import {
   BUILTIN_PROTOCOLS,
+  BUILTIN_CHARGE_RULES,
   DRY_EYE_AT_HOME_REGIMEN_INIT_PROTOCOL,
 } from "./protocol-fixtures.js";
 import {
@@ -339,9 +340,10 @@ export async function handleProtocolOffersRequest(
   );
   const protocols = rankProtocolOffers([...stored, ...builtIns], parsed.data.diagnoses).map((protocol) => {
     const builtIn = BUILTIN_PROTOCOLS.find((candidate) => candidate.id === protocol.id);
+    const blockedItems = unofferedSelectedItems(protocol.items, [], offeredDefinitions);
     return {
       ...protocol,
-      items: protocol.items.map(item => ({ ...item, offered: isPlanItemOffered(item, offeredDefinitions) })),
+      items: protocol.items.map(item => ({ ...item, offered: isPlanItemOffered(item, offeredDefinitions) && !blockedItems.has(item.itemKey) })),
       acceptCharges: protocol.acceptCharges ?? builtIn?.acceptCharges ?? false,
       statusScope: protocol.trigger.kind === "diagnosis" ? protocol.trigger.statusScope ?? [] : [],
     };
@@ -568,7 +570,12 @@ async function loadOfferedDefinitions(deps: ProtocolEndpointDeps, staff: Staff):
 }
 
 async function ensureBuiltInProtocol(service: ProtocolService, protocolId: string): Promise<void> {
-  if (BUILTIN_PROTOCOLS.some(protocol => protocol.id === protocolId)) await ensureBuiltInProtocols(service);
+  const protocol = BUILTIN_PROTOCOLS.find(candidate => candidate.id === protocolId);
+  if (!protocol) return;
+  const ruleIds = new Set(protocol.items.filter(item => item.itemType === "charge-seed").flatMap(item =>
+    Array.isArray(item.payload.chargeRuleRefs) ? item.payload.chargeRuleRefs : []
+  ));
+  await ensureBuiltInProtocols(service, { protocols: [protocol], rules: BUILTIN_CHARGE_RULES.filter(rule => ruleIds.has(rule.id)) });
 }
 
 export async function handleProtocolApplicationsRequest(

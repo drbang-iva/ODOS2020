@@ -140,3 +140,43 @@ for (const missingVersion of [false, true]) test(`carried rollback ${missingVers
     assert.equal((await h.service.applications.get(app.id))?.undoState, "active");
   }
 });
+
+for (const conflictCount of [1, 2]) test(`fixback rollback completes past ${conflictCount} projection restore conflicts`, async () => {
+  const h = await fixture();
+  assert.equal((await h.apply("glaucoma-suspect-initial")).status, 200);
+  const app = (await h.service.applications.list())[0];
+  const originals = await h.service.actions.list();
+  const orders = originals.filter(a => a.actionType === "order");
+  assert.equal(orders.length, 5);
+  const newer: Resource[] = [];
+  h.fhir.beforeUpdate = async resource => {
+    if (payload(resource)?.state === "removed" && payload(resource)?.procedureConceptKey) {
+      h.fhir.beforeUpdate = undefined;
+      for (const order of orders.slice(0, conflictCount)) {
+        const [kind, id] = order.materializedFhirRef!.split("/");
+        const projection = await h.fhir.read(kind as "ServiceRequest", id);
+        newer.push(await h.fhir.update(kind as "ServiceRequest", id, { ...projection, language: "fr" }));
+      }
+      throw new Error("Synthetic first charge write failure");
+    }
+  };
+  await assert.rejects(h.undo(app.id), error => {
+    const message = String(error);
+    assert.match(message, /Synthetic first charge write failure/);
+    for (const row of newer) assert.ok(message.includes(`ServiceRequest/${row.id}`));
+    return true;
+  });
+  assert.equal(newer.length, conflictCount);
+  assert.equal((await h.service.applications.get(app.id))?.undoState, "active");
+  assert.deepEqual(await h.service.actions.list(), originals);
+  for (const order of orders) {
+    const id = order.materializedFhirRef!.split("/")[1];
+    const row = await h.fhir.read<ServiceRequest>("ServiceRequest", id);
+    const conflict = newer.find(r => r.id === id);
+    if (conflict) assert.deepEqual(row, conflict);
+    else assert.equal(row.status, "active");
+  }
+  const charges = await h.service.charges.list();
+  assert.equal(charges.length, 5);
+  assert.ok(charges.every(c => c.state === "staged" && c.protocolApplicationId === app.id));
+});

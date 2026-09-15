@@ -106,3 +106,16 @@ test('first and repeated photo focus must be distinct', () => {
   const t={title:'Optic nerve photos',orderable:'fundus-photography',focus:'optic nerve',performContext:'in-office-today' as const};
   assert.throws(()=>buildPlanSetProtocols([{...GLAUCOMA_PLAN_SET_SPECS[0],tests:[t,{...t}]}],keys),/Duplicate test focus/);
 });
+
+test('fixback exact glaucoma counseling and monitoring reasons', () => {
+  const expected = [
+    ['Discussed glaucoma suspect. Questions answered.', 'Glaucoma suspect monitoring'],
+    ['Discussed ocular hypertension. Questions answered.', 'Ocular hypertension monitoring'],
+    ['Discussed anatomical narrow angle: angle-closure warning signs · medications that dilate (antihistamines, decongestants, anticholinergics). Questions answered.', 'Anatomical narrow angle monitoring'],
+    ['Discussed primary angle closure without damage. Questions answered.', 'Primary angle closure without damage monitoring'],
+    ['Discussed steroid responder. Questions answered.', 'Steroid responder monitoring'],
+    ['Discussed primary open-angle glaucoma: adherence and drop technique. Questions answered.', 'Primary open-angle glaucoma monitoring'],
+    ['Discussed low-tension glaucoma. Questions answered.', 'Low-tension glaucoma monitoring'],
+  ];
+  assert.deepEqual(build().protocols.map(p => [p.items.find(i => i.itemType === 'counseling')!.payload.narrativeTemplate, p.items.find(i => i.itemType === 'follow-up')!.payload.reason]), expected);
+});

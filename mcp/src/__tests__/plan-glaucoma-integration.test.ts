@@ -69,3 +69,31 @@ test("v1 photo remains already added after v2 seed without a second order or cha
   assert.equal((await service.actions.list()).filter(row => row.actionType === "order").length, 1);
   assert.equal((await service.charges.list()).length, 1);
 });
+
+for (const mode of ["tap", "whole"] as const) test(`fixback warm ${mode} seeds only its built-in and rules`, async () => {
+  const { fhir, service, deps } = setup();
+  const body = await bodyFor(fhir, "glaucoma-suspect-initial", "suspect");
+  await ensureBuiltInProtocols(service);
+  const searches: Array<Record<string, string> | undefined> = [];
+  fhir.afterSearch = async params => { searches.push(params); };
+  const result = mode === "tap"
+    ? await handleProtocolItemAddRequest(deps, { authHeader: "test", body: { ...body, itemKey: "order-fundus-photography" } })
+    : await handleProtocolApplyRequest(deps, { authHeader: "test", body });
+  assert.equal(result.status, 200);
+  // Seeding precedes the first application/encounter work: one head, one snapshot, five rules.
+  const seedEnd = searches.findIndex(p => p?.code?.endsWith("odos-protocol-application"));
+  const ruleSearches = searches.filter(p => p?.code?.endsWith("odos-procedure-charge-rule"));
+  const definitionSearches = searches.filter(p => /odos-protocol-definition/.test(p?.code ?? ""));
+  console.log(JSON.stringify({ mode, total: searches.length, seedEnd, ruleSearches: ruleSearches.length, definitionSearches: definitionSearches.length }));
+  assert.equal(definitionSearches.length, mode === "tap" ? 4 : 5);
+  assert.ok(searches.length <= (mode === "tap" ? 24 : 52));
+  assert.deepEqual(searches.slice(0, 7).map(p => p?.code?.split("|").at(-1)), ["odos-protocol-definition", "odos-protocol-definition-snapshot", ...Array(5).fill("odos-procedure-charge-rule")]);
+  assert.ok(ruleSearches.length <= (mode === "tap" ? 6 : 10));
+});
+test("fixback first apply seeds only requested head and its five rules", async () => {
+  const { fhir, service, deps } = setup();
+  const body = await bodyFor(fhir, "glaucoma-suspect-initial", "suspect");
+  assert.equal((await handleProtocolApplyRequest(deps, { authHeader: "test", body })).status, 200);
+  assert.deepEqual((await service.definitions.list()).map(p => p.id), [body.protocolId]);
+  assert.equal((await service.chargeRules.list()).length, 5);
+});

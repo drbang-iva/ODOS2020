@@ -790,6 +790,7 @@ export class ProtocolService {
       }
       return { removed, preserved };
     } catch (error) {
+      const projectionFailures: string[] = [];
       for (const action of actionOriginals.values()) {
         const current = await this.actions.get(action.id);
         const projectionRemoved = Boolean(action.materializedFhirRef && removedProjections.has(action.materializedFhirRef));
@@ -797,10 +798,20 @@ export class ProtocolService {
         const restored = { ...action };
         if (projectionRemoved) {
           const restore = removedProjections.get(action.materializedFhirRef!);
-          if (restore) await restore();
-          else restored.materializedFhirRef = await this.projection.materializeAction(action);
+          try {
+            if (restore) await restore();
+            else restored.materializedFhirRef = await this.projection.materializeAction(action);
+          } catch (restoreError) {
+            projectionFailures.push(`${action.materializedFhirRef}: ${String(restoreError)}`);
+          }
         }
-        if (changedFollowUpProjections.has(action.id)) restored.materializedFhirRef = await this.projection.materializeAction(action);
+        if (changedFollowUpProjections.has(action.id)) {
+          try {
+            restored.materializedFhirRef = await this.projection.materializeAction(action);
+          } catch (restoreError) {
+            projectionFailures.push(`${action.materializedFhirRef}: ${String(restoreError)}`);
+          }
+        }
         await this.actions.saveWithIdentifiersIfCurrent(restored, [], (row) => JSON.stringify(row) === JSON.stringify(current));
       }
       for (const finding of originalFindings) {
@@ -810,8 +821,12 @@ export class ProtocolService {
         const restored = { ...finding };
         if (projectionRemoved) {
           const restore = removedProjections.get(finding.observationReference!);
-          if (restore) await restore();
-          else restored.observationReference = await this.projection.commitFinding(finding);
+          try {
+            if (restore) await restore();
+            else restored.observationReference = await this.projection.commitFinding(finding);
+          } catch (restoreError) {
+            projectionFailures.push(`${finding.observationReference}: ${String(restoreError)}`);
+          }
         }
         await this.findings.saveWithIdentifiersIfCurrent(restored, [], (row) => JSON.stringify(row) === JSON.stringify(current));
       }
@@ -821,6 +836,7 @@ export class ProtocolService {
       }
       for (const candidate of saved.reverse()) await this.saveApplication(candidate, originals.get(candidate.id)!);
       await this.saveApplication({ ...application, undoState: "unapplied" }, application);
+      if (projectionFailures.length) throw new Error(`Unapply failed: ${String(error)}; projection rollback refused: ${projectionFailures.join("; ")}`, { cause: error });
       throw error;
     }
   }

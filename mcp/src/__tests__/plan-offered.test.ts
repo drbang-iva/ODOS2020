@@ -46,11 +46,12 @@ test("offers annotate every item and reload current offered definitions", async 
   let result = await handleProtocolOffersRequest(deps, request);
   let protocol = (result.body as { protocols: Array<ProtocolDefinition & { items: Array<{ offered: boolean }> }> }).protocols.find(p => p.id === body.protocolId)!;
   assert.equal(protocol.items[0].offered, false);
-  assert.equal(protocol.items[1].offered, true);
+  assert.equal(protocol.items[1].offered, false);
   await new FhirProcedureDefinitionStore(fhir).save({ ...definition, active: true });
   result = await handleProtocolOffersRequest(deps, request);
   protocol = (result.body as { protocols: Array<ProtocolDefinition & { items: Array<{ offered: boolean }> }> }).protocols.find(p => p.id === body.protocolId)!;
   assert.equal(protocol.items[0].offered, true);
+  assert.equal(protocol.items[1].offered, true);
 });
 test("offered series without active configuration keeps 400", async () => {
   const { fhir, deps, body } = await setup(true);
