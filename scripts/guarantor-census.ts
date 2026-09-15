@@ -230,8 +230,8 @@ const isTrustedTask = (task: Task, project: string, serviceReference: string) =>
 function changedInsuranceFingerprintFields(prior: RelatedPerson, current: RelatedPerson): InsuranceFingerprintField[] {
   const fields: InsuranceFingerprintField[] = [];
   if (JSON.stringify(prior.relationship ?? null) !== JSON.stringify(current.relationship ?? null)) fields.push("relationship");
-  if (current.birthDate !== undefined && current.birthDate !== prior.birthDate) fields.push("birthDate");
-  if (current.gender !== undefined && current.gender !== prior.gender) fields.push("gender");
+  if (current.birthDate !== prior.birthDate) fields.push("birthDate");
+  if (current.gender !== prior.gender) fields.push("gender");
   if (current.active === false && prior.active !== false) fields.push("active");
   return fields;
 }

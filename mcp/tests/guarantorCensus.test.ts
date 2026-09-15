@@ -32,19 +32,25 @@ async function fixture() {
 
 const jsonRoundTrip = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
-async function insuranceHistoryScenario(currentChanges: Partial<RelatedPerson>) {
+async function insuranceHistoryScenario(
+  currentChanges: Partial<RelatedPerson>,
+  previousChanges: Partial<RelatedPerson> = {},
+) {
   const built = await buildWriterDerivedCensusFixture();
   const current = jsonRoundTrip(built.rows.owned);
   const previous = jsonRoundTrip(current);
   Object.assign(current, currentChanges);
+  Object.assign(previous, previousChanges);
   previous.meta = { ...previous.meta, versionId: "1", author: { reference: CENSUS_SERVICE } };
   current.meta = { ...current.meta, versionId: "2", author: { reference: "Practitioner/synthetic-editor" } };
+  const currentVersion = jsonRoundTrip(current);
+  const previousVersion = jsonRoundTrip(previous);
   const patient = built.resources.find((resource): resource is Patient => resource.resourceType === "Patient" && resource.id === "patient-owned")!;
   const coverage = jsonRoundTrip(built.resources.find((resource): resource is Coverage => resource.resourceType === "Coverage" && resource.id === "coverage-guardian")!);
-  coverage.subscriber = { reference: `RelatedPerson/${current.id}` };
+  coverage.subscriber = { reference: `RelatedPerson/${currentVersion.id}` };
   const transport = new CensusFixtureFhir({
-    resources: [current, patient, coverage],
-    histories: [[`RelatedPerson/${current.id}`, [current, previous]]],
+    resources: [currentVersion, patient, coverage],
+    histories: [[`RelatedPerson/${currentVersion.id}`, [currentVersion, previousVersion]]],
   });
   return collectGuarantorCensus(createReadOnlyGuarantorCensusFhir(transport), {
     today: CENSUS_TODAY,
@@ -231,6 +237,8 @@ test("duplicate links from one Person count as one owner", async () => {
 test("G10 staff address-only history is informational while birthDate and active fingerprints are suspected", async () => {
   const addressOnly = await insuranceHistoryScenario({ address: [{ line: ["4 Synthetic Editor Way"], city: "Greenville" }] });
   const birthDateAdded = await insuranceHistoryScenario({ birthDate: "1978-03-04" });
+  const birthDateRemoved = await insuranceHistoryScenario({}, { birthDate: "1978-03-04" });
+  const genderRemoved = await insuranceHistoryScenario({}, { gender: "female" });
   const deactivated = await insuranceHistoryScenario({ active: false });
   const outcome = (result: typeof addressOnly) => {
     const project = result.summary.projects[0]!;
@@ -258,6 +266,22 @@ test("G10 staff address-only history is informational while birthDate and active
     wouldCreate: 0,
     skippedSuspected: 1,
     changedFingerprintFields: ["birthDate"],
+    nameOrAddressChangedByNonService: undefined,
+  });
+  assert.deepEqual(outcome(birthDateRemoved), {
+    suspected: 1,
+    informational: 0,
+    wouldCreate: 0,
+    skippedSuspected: 1,
+    changedFingerprintFields: ["birthDate"],
+    nameOrAddressChangedByNonService: undefined,
+  });
+  assert.deepEqual(outcome(genderRemoved), {
+    suspected: 1,
+    informational: 0,
+    wouldCreate: 0,
+    skippedSuspected: 1,
+    changedFingerprintFields: ["gender"],
     nameOrAddressChangedByNonService: undefined,
   });
   assert.deepEqual(outcome(deactivated), {
