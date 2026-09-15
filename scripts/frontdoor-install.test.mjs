@@ -68,3 +68,14 @@ test('target changed during staging is preserved and replacement refused', () =>
  const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
  assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/Target changed/); assert.equal(readFileSync(target,'utf8'),'newer config'); assert.deepEqual(readdirSync(dir).sort(),['Caddyfile','dist']);
 }));
+test('first install creates a readable config with no staging debris', () => fixture(({dir,target,run}) => {
+ rmSync(target); const result = run(['--apply']); assert.equal(result.status,0,result.stderr); assert.equal(statSync(target).mode & 0o777,0o644); assert.deepEqual(readdirSync(dir).sort(),['Caddyfile','dist']);
+}));
+test('directory sync failure before replacement leaves original intact', () => fixture(({dir,target}) => {
+ const input = `import fs from 'node:fs'; import { syncBuiltinESMExports } from 'node:module';
+ const originalSync = fs.fsyncSync; fs.fsyncSync = function(fd) { if (fs.fstatSync(fd).isDirectory()) throw new Error('simulated directory sync failure'); return originalSync(fd); };
+ syncBuiltinESMExports(); const { main } = await import('./scripts/frontdoor-install.mjs');
+ process.exitCode = main(['--ui-dist',process.argv[2] + '/dist','--target',process.argv[3],'--apply']);`;
+ const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
+ assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/directory sync failure/); assert.equal(readFileSync(target,'utf8'),'old config\n'); assert.ok(readdirSync(dir).every(name => !name.startsWith('.odos-frontdoor-')));
+}));

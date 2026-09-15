@@ -13,6 +13,11 @@ export function renderFrontdoor(template, uiDist) {
   return rendered;
 }
 
+function syncPath(path) {
+  const fd = openSync(path, 'r');
+  try { fsyncSync(fd); } finally { closeSync(fd); }
+}
+
 export function main(args = process.argv.slice(2)) {
   let temp;
   let staging;
@@ -50,10 +55,9 @@ export function main(args = process.argv.slice(2)) {
     if (diff.status !== 0) {
       staging = mkdtempSync(join(dirname(target), '.odos-frontdoor-'));
       stagedFile = join(staging, 'Caddyfile');
-      writeFileSync(stagedFile, rendered, { flag: 'wx', mode: original === null ? 0o600 : statSync(target).mode & 0o777 });
-      if (original !== null) chmodSync(stagedFile, statSync(target).mode & 0o777);
-      const stagedFd = openSync(stagedFile, 'r');
-      try { fsyncSync(stagedFd); } finally { closeSync(stagedFd); }
+      writeFileSync(stagedFile, rendered, { flag: 'wx', mode: original === null ? 0o644 : statSync(target).mode & 0o777 });
+      chmodSync(stagedFile, original === null ? 0o644 : statSync(target).mode & 0o777);
+      syncPath(stagedFile);
     }
     const current = existsSync(target) ? readFileSync(target) : null;
     if (original === null ? current !== null : current === null || !current.equals(original)) throw new Error('Target changed during validation or staging; rerun before applying');
@@ -61,10 +65,13 @@ export function main(args = process.argv.slice(2)) {
     if (original !== null) {
       const backup = `${target}.bak-${new Date().toISOString().replaceAll(':', '-')}`;
       copyFileSync(target, backup, constants.COPYFILE_EXCL);
+      syncPath(backup);
+      syncPath(dirname(target));
       console.log(`Backup: ${backup}`);
     }
     if (original === null) linkSync(stagedFile, target);
     else renameSync(stagedFile, target);
+    syncPath(dirname(target));
     console.log('Applied. No service restarted; restart remains an operator step.');
     return 0;
   } catch (err) { console.error(`Front-door install: ${err.message}`); return 1; }

@@ -22,7 +22,9 @@ caddyfile` in a temporary directory, and prints a unified diff without writing t
 target. Review the diff, then repeat the command with `--apply`. Before replacing
 an existing target, the installer makes `<target>.bak-<UTC timestamp>` containing
 the original bytes. The rendered bytes are written and synced in a temporary file
-beside the target, then installed atomically. A new target has no prior file to back up. An unchanged target
+beside the target, then installed atomically. Backup contents and target-directory
+entries are synced before reporting success. Existing permission bits are preserved;
+a new config is mode `0644`. A new target has no prior file to back up. An unchanged target
 is left alone. Temporary validation files are removed on both success and failure.
 
 After a successful apply, the operator restarts the configured front-door service
