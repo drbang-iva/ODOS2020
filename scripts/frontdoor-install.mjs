@@ -18,6 +18,11 @@ function syncPath(path) {
   try { fsyncSync(fd); } finally { closeSync(fd); }
 }
 
+function assertTargetUnchanged(target, original) {
+  const current = existsSync(target) ? readFileSync(target) : null;
+  if (original === null ? current !== null : current === null || !current.equals(original)) throw new Error('Target changed during install; rerun before applying');
+}
+
 export function main(args = process.argv.slice(2)) {
   let temp;
   let staging;
@@ -59,8 +64,7 @@ export function main(args = process.argv.slice(2)) {
       chmodSync(stagedFile, original === null ? 0o644 : statSync(target).mode & 0o777);
       syncPath(stagedFile);
     }
-    const current = existsSync(target) ? readFileSync(target) : null;
-    if (original === null ? current !== null : current === null || !current.equals(original)) throw new Error('Target changed during validation or staging; rerun before applying');
+    assertTargetUnchanged(target, original);
     if (diff.status === 0) { console.log('Target already matches; no write required.'); return 0; }
     if (original !== null) {
       const backup = `${target}.bak-${new Date().toISOString().replaceAll(':', '-')}`;
@@ -69,6 +73,7 @@ export function main(args = process.argv.slice(2)) {
       syncPath(dirname(target));
       console.log(`Backup: ${backup}`);
     }
+    assertTargetUnchanged(target, original);
     if (original === null) linkSync(stagedFile, target);
     else renameSync(stagedFile, target);
     syncPath(dirname(target));

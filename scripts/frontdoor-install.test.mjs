@@ -79,3 +79,11 @@ test('directory sync failure before replacement leaves original intact', () => f
  const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
  assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/directory sync failure/); assert.equal(readFileSync(target,'utf8'),'old config\n'); assert.ok(readdirSync(dir).every(name => !name.startsWith('.odos-frontdoor-')));
 }));
+test('target changed during backup is preserved and replacement refused', () => fixture(({dir,target}) => {
+ const input = `import fs from 'node:fs'; import { syncBuiltinESMExports } from 'node:module';
+ const originalCopy = fs.copyFileSync; fs.copyFileSync = function(from,to,flags) { const result = originalCopy(from,to,flags); fs.writeFileSync(process.argv[3], 'newer during backup'); return result; };
+ syncBuiltinESMExports(); const { main } = await import('./scripts/frontdoor-install.mjs');
+ process.exitCode = main(['--ui-dist',process.argv[2] + '/dist','--target',process.argv[3],'--apply']);`;
+ const result = spawnSync(process.execPath,['--input-type=module','-',dir,target],{input,encoding:'utf8'});
+ assert.equal(result.status,1,result.stderr); assert.match(result.stderr,/Target changed/); assert.equal(readFileSync(target,'utf8'),'newer during backup'); assert.ok(readdirSync(dir).every(name => !name.startsWith('.odos-frontdoor-')));
+}));

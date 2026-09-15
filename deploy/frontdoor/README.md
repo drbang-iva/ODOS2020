@@ -27,6 +27,10 @@ entries are synced before reporting success. Existing permission bits are preser
 a new config is mode `0644`. A new target has no prior file to back up. An unchanged target
 is left alone. Temporary validation files are removed on both success and failure.
 
+Coordinate with other config writers and run one installer at a time. The installer
+checks for observed target changes after staging and immediately before replacement;
+these checks are not a lock against arbitrary concurrent writers.
+
 After a successful apply, the operator restarts the configured front-door service
 using that host's service manager. The installer never starts or restarts services.
 To test the installer locally with a real Caddy binary (no server starts), run:
