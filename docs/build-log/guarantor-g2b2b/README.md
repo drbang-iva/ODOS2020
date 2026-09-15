@@ -2,7 +2,7 @@
 
 This build implements Revision 4 B0-B4: attach an unowned responsible party to an existing guarantor from registration or the chart, and undo that attach as a correction that leaves the responsible party unowned. It does not change transfer, consolidate, correct-of-transfer, insurance, statements, communications, transaction-bundle policy, or the G-2b-R owned-field classifier and terminal rules.
 
-This is author-side evidence at code head `d94383967c5551612c6da7a59f67401cfc51be9a`; the later evidence commit changes only this build log. **NOT EVALUATED.** Claude must evaluate the final PR head independently.
+This is author-side evidence through fixback code head `ffbd5ad60d8ae8ecef7f87973c070aa98447a3e0`; the later evidence commit changes only this build log. **NOT EVALUATED.** Claude must evaluate the final PR head independently.
 
 ## Premise and anchors
 
@@ -17,6 +17,23 @@ Baseline dependency installs: MCP added 262 packages and audited 263 (7 moderate
 ## Review fixback proof
 
 CodeRabbit's five findings were reproduced before their repairs. The lost committed-registration reply test returned 500 instead of 201; the older-failed-attach test rendered the stale failure sentence; the array-valued status test failed to reject the response; the edited relationship test restored `parent` instead of `legal-guardian`; and duplicate selection of one existing Person returned 201 instead of 400. After the fixes, the focused MCP registration file is 11/11 and the two focused UI files are 7/7. Committed-state recovery now reconstructs unambiguous RelatedPerson response entries; an ambiguous match preserves the registered Patient and 201 without guessing or starting an attach. Duplicate existing Person selection is refused before the MRN reservation or any write.
+
+## Independent-evaluation fixback
+
+Claude evaluated PR #597 at `183533336e72c1884617d3755301d7f649f0378f` as NEEDS-WORK because the registration recovery comparison retained undefined-valued request keys that a real JSON response omits. The permanent registration fake now JSON-round-trips accepted resources. The required no-phone lost-reply case reproduced RED at 11/12: `F1: a lost registration reply still links an existing guarantor without telecom` failed because no attach input or guarantorLinks row existed.
+
+Code commit `ffbd5ad60d8ae8ecef7f87973c070aa98447a3e0` normalizes both RelatedPerson comparison shapes, emits exactly one result row for every existing party, distinguishes a returned no-Task refusal from an unknown thrown outcome, and accepts/renders an unconfirmed row without a RelatedPerson id. The PR-owned ambiguous-recovery test's former no-row oracle was superseded by F2 and updated to the required unconfirmed row; no test that existed before this PR changed.
+
+| Guard | Initial green | Deliberate break and observed red | Restored |
+| --- | --- | --- | --- |
+| F1 | 1/1 | Reverted JSON normalization; `F1: a lost registration reply still links an existing guarantor without telecom` failed because `attachedInput` was undefined. | 1/1 |
+| F2 | 1/1 | Skipped the row when recovery had no RelatedPerson id; `F2: ambiguous committed-state recovery emits one unconfirmed row without guessing an attach target` received `undefined` instead of the required row. | 1/1 |
+| F3 | 1/1 | Mapped a returned no-Task refusal to unconfirmed; `F3: an attach refusal without a Task is reported as failed with its refusal message` received `unconfirmed` instead of `failed`. | 1/1 |
+| F4 | 1/1 | Required `relatedPersonId` in the UI response guard; `F4: the created screen renders an unconfirmed guarantor row without a RelatedPerson id` was rejected as an invalid registration response. | 1/1 |
+
+Fixback verification at the code commit: MCP registration 13/13; UI registration 3/3; all MCP guarantor files 116/116; all UI guarantor files 77/77; L1-L29 file 38/38; R1-R8 backend 12/12; R9 UI 2/2. Full MCP: 4,872 tests, 4,804 pass, the same seven local-environment failures, 61 skipped. Full UI: 1,543/1,543. Preflight: 48 resource types, 904 operations, 38 service-write exclusions, zero ungranted sites, zero warnings, zero blockers. MCP and UI builds passed; UI transformed 325 modules and retained the existing chunk-size warning.
+
+The final real-server rerun at `ffbd5ad60d8ae8ecef7f87973c070aa98447a3e0` added `F1-live` to the original schedules: 10 scenarios, 63 assertions, 249 service transactions, 21 authenticated route requests, and 39 audit writes. The no-phone Person traversed the real registration route, the transaction response was lost only after the committed write, recovery returned 201 with a linked guarantorLinks row, and fresh Patient, RelatedPerson, Person, and owner reads agreed. The Person remained without telecom.
 
 ## Mandate 17
 
