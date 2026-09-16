@@ -36,11 +36,12 @@ test("age-of-majority singleton grants enforce all-role reads and Admin-only wri
         assert.equal(matches.length, 1);
         const { token } = await createRoleClient({ baseUrl, roleId, policyReference: `AccessPolicy/${matches[0]!.id}`, patientReference: `Patient/${patient.id}`, practitionerReference: `${me.profile!.resourceType}/${me.profile!.id}`, projectId, runId: randomUUID(), adminToken: callerAccessToken, track });
         const create = await fhirRequest<Basic>(baseUrl, token, "POST", "Basic", JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))));
+        if (roleId !== "admin" && create.status === 201) track(create.body!);
         await roleTest.test("create", () => {
           assert.equal(create.status, roleId === "admin" ? 201 : 403, create.summary);
         });
         const config = track(roleId !== "admin"
-          ? await seederFhir.create(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))
+          ? await seederFhir.create(JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))))
           : create.body!);
         const code = `${ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM}|${ODOS_AGE_OF_MAJORITY_CONFIG_CODE}`;
         const search = await fhirRequest<Bundle<Basic>>(baseUrl, token, "GET", `Basic?${new URLSearchParams({ code })}`);

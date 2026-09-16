@@ -1,6 +1,12 @@
 # R1 age-of-majority grant unit guard
 
-Source: isolated mutation worktree at `05bb880b`. The mutation restored `AGE_OF_MAJORITY_CONFIG_WRITE_RULE` to `SCHEDULING_RESOURCE_RULES` while leaving the Admin-specific rule; `rg` verified occurrences at the declaration, shared scheduling list, and Admin list. Both direct and composite policies were built with the real writers.
+Source: isolated mutation worktree at `05bb880b`. The mutation restored this line immediately after `AGE_OF_MAJORITY_CONFIG_READ_RULE` inside `SCHEDULING_RESOURCE_RULES`, leaving the Admin-specific rule:
+
+```ts
+AGE_OF_MAJORITY_CONFIG_WRITE_RULE,
+```
+
+`rg` verified occurrences at the declaration, shared scheduling list, and Admin list. Both direct and composite policies were built with the real writers.
 
 `node --import tsx --test --test-name-pattern='age-of-majority (create|update) (is|requires) Admin' tests/ageOfMajorityConfig.test.ts` from `mcp/`:
 
