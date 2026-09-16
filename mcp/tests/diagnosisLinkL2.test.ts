@@ -2732,10 +2732,49 @@ test("mixed panel context uses newest projected context and refuses ambiguous eq
   const get = () => handleDiagnosisCandidatesRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider" as const, fhir }) }, { authHeader: "Bearer doctor", params: { encounterId: "e1" } });
   const result = await get(); assert.equal(result.status, 200, JSON.stringify(result.body));
   const row = (result.body as any).findings.find((r: any) => r.findingDefinitionKey === definition.stableKey);
-  assert.equal(row.candidates[0].diagnosisKey, "presbyopia"); assert.equal(row.candidates[0].supportingFacts, undefined); assert.equal(row.linkable, false);
+  assert.equal(row.candidates[0].diagnosisKey, "presbyopia"); assert.equal(row.candidates[0].supportingFacts, undefined); assert.equal(row.linkable, false); assert.equal(row.candidates[0].linkable, false);
   assert.equal(row.contributors.some((c: any) => c.reference === "Observation/new-panel"), true);
   assert.equal(row.contributors.some((c: any) => c.reference === "Observation/old-panel"), false);
   fhir.resources.push(panel("conflicting-panel", "2026-01-02T00:00:00Z", 0));
   const refused = await get(); assert.equal(refused.status, 502); assert.equal((refused.body as any).result, "unavailable");
   const pick = await supportedPick(fhir); assert.equal(pick.status, 502); assert.equal(fhir.transactions.length, 0);
+});
+
+test("applied Condition remains reported when the visit-status side effect fails", async () => {
+  const fhir = diagnosisPickFhir();
+  const result = await handleDiagnosisPickRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider", fhir }), diagnosisVisitStatusStore: { upsert: async () => { throw new Error("Synthetic status-store outage"); } } } as any, {
+    authHeader: "Bearer doctor", params: { encounterId: "e1" }, body: { diagnosisKey: "presbyopia", action: "confirm", status: "new" },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body)); assert.equal((result.body as any).conditionStep, "applied");
+  assert.ok((result.body as any).condition.id); assert.match((result.body as any).error, /visit status/i);
+});
+
+test("transaction conflict is a failed pick step with its HTTP cause", async () => {
+  const fhir = diagnosisPickFhir(); fhir.resources.push(canonicalFact());
+  fhir.executeTransaction = async () => { throw Object.assign(new Error("synthetic conflict"), { status: 409 }); };
+  const result = await supportedPick(fhir); assert.equal(result.status, 409); assert.equal(result.body.result, "pick");
+  assert.equal((result.body as any).conditionStep, "failed"); assert.equal((result.body as any).link, "pending");
+});
+
+test("candidates consume page-two encounter observations and patient diagnosis history", async () => {
+  const fhir = diagnosisPickFhir(); const search = fhir.search.bind(fhir);
+  const history: Condition = { resourceType: "Condition", id: "history", subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/prior" },
+    code: { coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: sourcedDiagnosisCode("poag_severe", "right") }] },
+    verificationStatus: { coding: [{ code: "confirmed" }] }, clinicalStatus: { coding: [{ code: "active" }] } };
+  fhir.search = async (type: any, params: any) => type === "Observation" || type === "Condition" && params.subject
+    ? { resourceType: "Bundle", type: "searchset", entry: [], link: [{ relation: "next", url: `${type}?cursor=second` }] } : search(type, params);
+  (fhir as any).searchUrl = async (_url: string, type: string) => ({ resourceType: "Bundle", type: "searchset", entry: (type === "Condition" ? [history] : fhir.resources.filter(r => r.resourceType === "Observation")).map(resource => ({ resource })) });
+  const result = await handleDiagnosisCandidatesRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider", fhir }) }, { authHeader: "Bearer doctor", params: { encounterId: "e1" } });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const row = (result.body as any).findings.find((r: any) => r.observationReference === "Observation/finding-od");
+  assert.deepEqual(row.candidates.filter((c: any) => c.familyGroup).map((c: any) => c.familyGroup), ["primary-open-angle-glaucoma", "low-tension-glaucoma"]);
+  assert.equal(row.candidates.every((c: any) => c.supportingFacts === undefined), true);
+});
+
+test("candidate history pagination errors are unavailable rather than empty candidates", async () => {
+  const fhir = diagnosisPickFhir(); const search = fhir.search.bind(fhir);
+  fhir.search = async (type: any, params: any) => type === "Condition" && params.subject
+    ? { resourceType: "Bundle", type: "searchset", entry: [], link: [{ relation: "next", url: "https://foreign.invalid/fhir/R4/Condition?cursor=second" }] } : search(type, params);
+  const result = await handleDiagnosisCandidatesRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider", fhir }) }, { authHeader: "Bearer doctor", params: { encounterId: "e1" } });
+  assert.equal(result.status, 502); assert.equal((result.body as any).result, "unavailable"); assert.equal((result.body as any).kind, "upstream");
 });

@@ -69,7 +69,7 @@ export interface DiagnosisCandidateFamilyRow {
 }
 
 export interface SupportingFindingFact { rowKey: string; key: CurrentFindingKey; baseline: Extract<FindingBaseline, {kind: "canonical"}> }
-export type DiagnosisCandidateRow = (DiagnosisCandidateLeafRow | DiagnosisCandidateFamilyRow) & { supportingFacts?: SupportingFindingFact[] };
+export type DiagnosisCandidateRow = (DiagnosisCandidateLeafRow | DiagnosisCandidateFamilyRow) & { supportingFacts?: SupportingFindingFact[]; linkable?: false };
 
 export const VISUAL_FIELD_GLAUCOMA_SUPPRESSION_MESSAGE =
   "H53.4x not proposed — the glaucoma stage already carries the field defect.";
@@ -202,7 +202,8 @@ export async function handleDiagnosisCandidatesRequest(
               return family ? [family] : [];
             })
           : [];
-        const candidates: DiagnosisCandidateRow[] = [...baseCandidates, ...revealedGlaucomaFamilies];
+        const candidates: DiagnosisCandidateRow[] = ([...baseCandidates, ...revealedGlaucomaFamilies] as DiagnosisCandidateRow[])
+          .map(candidate => !finding.observationReference && !candidate.supportingFacts?.length ? { ...candidate, linkable: false } : candidate);
         const suppress = definition?.stableKey === "entrance:visual-field-defect" &&
           stagedGlaucomaPresent && candidates.length > 0;
         return {

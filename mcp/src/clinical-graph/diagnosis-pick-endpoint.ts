@@ -263,6 +263,8 @@ async function performDiagnosisPickRequest(
   let linkedEncounter: Encounter | undefined;
   let provenance: Provenance | undefined;
   let encounterSnapshot = encounter;
+  const failedStep = (status: number, error: string) => ({ status, body: { result: "pick", ...(parsed.data.commandId ? { commandId: parsed.data.commandId } : {}),
+    conditionStep: "failed", link: supports && parsed.data.action !== "discard" ? "pending" : "not-applicable", error } });
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const encounterChange = parsed.data.action === "confirm"
@@ -346,19 +348,16 @@ async function performDiagnosisPickRequest(
       if (existing?.id) {
         const currentCondition = await staff.fhir.read<Condition>("Condition", existing.id);
         if (currentCondition.meta?.versionId !== existing.meta?.versionId) {
-          return { status: 409, body: { error: "This diagnosis was modified concurrently — reload and retry." } };
+          return failedStep(409, "This diagnosis was modified concurrently — reload and retry.");
         }
       }
       if (encounterChange?.changed && attempt === 0) {
         encounterSnapshot = await staff.fhir.read<Encounter>("Encounter", encounterId);
         continue;
       }
-      return {
-        status: 409,
-        body: { error: encounterChange?.changed
-          ? "The encounter diagnoses changed concurrently — reload and retry."
-          : "This diagnosis was modified concurrently — reload and retry." },
-      };
+      return failedStep(409, encounterChange?.changed
+        ? "The encounter diagnoses changed concurrently — reload and retry."
+        : "This diagnosis was modified concurrently — reload and retry.");
     }
   }
   if (!condition || !provenance) throw new Error("Diagnosis pick transaction exhausted its retry budget.");
@@ -382,15 +381,16 @@ async function performDiagnosisPickRequest(
     }
   }
 
-  const diagnosisVisitStatus = parsed.data.status
-    ? await deps.diagnosisVisitStatusStore.upsert({
-        conditionReference,
-        encounterId,
-        status: parsed.data.status,
-        setBy: staff.staffReference,
-        at: recordedAt,
-      })
-    : undefined;
+  let diagnosisVisitStatus: Awaited<ReturnType<DiagnosisVisitStatusStore["upsert"]>> | undefined;
+  let visitStatusError: string | undefined;
+  if (parsed.data.status) {
+    try {
+      diagnosisVisitStatus = await deps.diagnosisVisitStatusStore.upsert({ conditionReference, encounterId,
+        status: parsed.data.status, setBy: staff.staffReference, at: recordedAt });
+    } catch {
+      visitStatusError = "Diagnosis applied, but its visit status could not be saved.";
+    }
+  }
 
   if (parsed.data.action !== "discard" && findingDefinitionStableKey) {
     try {
@@ -418,6 +418,7 @@ async function performDiagnosisPickRequest(
       action: parsed.data.action,
       ...demotionImpact,
       ...(diagnosisVisitStatus ? { diagnosisVisitStatus } : {}),
+      ...(visitStatusError ? { error: visitStatusError } : {}),
     },
   };
 }
