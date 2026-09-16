@@ -49,8 +49,8 @@
   },
   "r10DiagnosisWorkspace": {
     "exit": 0,
-    "tests": 19,
-    "pass": 19,
+    "tests": 20,
+    "pass": 20,
     "fail": 0,
     "skipped": 0,
     "todo": 0

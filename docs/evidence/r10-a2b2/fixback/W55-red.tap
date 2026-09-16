@@ -2,9 +2,9 @@ TAP version 13
 # Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-conflict
 not ok 1 - W55 kept eye choice uses current live rows and handles builder errors: eye-conflict
   ---
-  duration_ms: 41.058542
+  duration_ms: 39.652708
   type: 'test'
-  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:12078'
+  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:12189'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,16 +17,16 @@ not ok 1 - W55 kept eye choice uses current live rows and handles builder errors
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:84:11)
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:85:11)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
 # Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-invalid
 not ok 2 - W55 kept eye choice uses current live rows and handles builder errors: eye-invalid
   ---
-  duration_ms: 14.285916
+  duration_ms: 15.7365
   type: 'test'
-  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:12078'
+  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:12189'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -39,22 +39,28 @@ not ok 2 - W55 kept eye choice uses current live rows and handles builder errors
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:84:11)
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:85:11)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-different
 ok 3 - W55 kept eye choice uses current live rows and handles builder errors: eye-different
   ---
-  duration_ms: 16.963083
+  duration_ms: 16.783958
   type: 'test'
   ...
-1..3
-# tests 3
+# Subtest: W55 kept shrink choice retires the current presence with its fresh baseline
+ok 4 - W55 kept shrink choice retires the current presence with its fresh baseline
+  ---
+  duration_ms: 18.456833
+  type: 'test'
+  ...
+1..4
+# tests 4
 # suites 0
-# pass 1
+# pass 2
 # fail 2
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 275.906542
+# duration_ms 306.666292

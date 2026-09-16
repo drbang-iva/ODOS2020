@@ -2,9 +2,9 @@ TAP version 13
 # Subtest: W59 pre-rebuild workspace disables diagnosis additions scope and rank
 not ok 1 - W59 pre-rebuild workspace disables diagnosis additions scope and rank
   ---
-  duration_ms: 27.607541
+  duration_ms: 28.829333
   type: 'test'
-  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:14249'
+  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:14360'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - W59 pre-rebuild workspace disables diagnosis additions scope and rank
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:102:137)
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:103:137)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -29,4 +29,4 @@ not ok 1 - W59 pre-rebuild workspace disables diagnosis additions scope and rank
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 222.58325
+# duration_ms 244.238708

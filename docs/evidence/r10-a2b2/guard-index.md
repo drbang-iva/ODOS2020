@@ -29,7 +29,7 @@ Exact evaluator mutations and executable runner: [fixback/README.md](fixback/REA
 
 | Guard | Red | Restored green |
 |---|---|---|
-| W55 | 1 pass / 2 fail | 3 pass / 0 fail |
+| W55 | 2 pass / 2 fail | 4 pass / 0 fail |
 | W56 | 0 pass / 1 fail | 1 pass / 0 fail |
 | W57 | 0 pass / 1 fail | 1 pass / 0 fail |
 | W58 | 0 pass / 1 fail | 1 pass / 0 fail |

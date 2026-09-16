@@ -2,9 +2,9 @@ TAP version 13
 # Subtest: W63 applied pick dispatches findings changed without a subsequent link
 not ok 1 - W63 applied pick dispatches findings changed without a subsequent link
   ---
-  duration_ms: 37.41225
+  duration_ms: 36.672833
   type: 'test'
-  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:16022'
+  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:16133'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - W63 applied pick dispatches findings changed without a subsequent lin
   actual: 0
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:117:316)
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:118:316)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -29,4 +29,4 @@ not ok 1 - W63 applied pick dispatches findings changed without a subsequent lin
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 239.952958
+# duration_ms 238.013375

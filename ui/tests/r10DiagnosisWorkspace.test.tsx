@@ -30,6 +30,7 @@ async function mount(mode='normal', configure?: (payload:any,row:any)=>void) {
    if(mode.startsWith('eye-')&&mutations===1){
     row.baseline.versionId='2';row.qualifiers={grade:'2'} as any;
     const destination:any=payload.searchIndex[1];destination.baseline={...destination.baseline,versionId:'2'};
+    if(mode==='eye-shrink'){row.presence='absent';destination.presence='absent';destination.qualifiers={grade:'2'};}
     if(mode==='eye-different'){destination.kind='fact';destination.status='live';destination.presence='absent';}
     return mode==='eye-invalid'?Response.json({result:'invalid',reason:'invalid',error:'Synthetic invalid'},{status:400}):Response.json({result:'invalid',reason:'destination-differs',error:'Synthetic destination differs'},{status:409});
    }
@@ -115,4 +116,18 @@ test('W60 linking a finding homed to B preserves B and adds A',async()=>{
 test('W63 applied pick dispatches findings changed without a subsequent link',async()=>{
  const m=await mount('prebuild');let events=0;m.events.addEventListener('odos:encounter-findings-changed',()=>events++);
  try{await act(async()=>{m.renderer.root.findAllByType('button').find((n:any)=>text(n).includes('Common synthetic')).props.onClick();await flush();await flush();});assert.equal(m.calls.filter(c=>c.url.includes('diagnosis-picks')).length,1);assert.equal(m.calls.filter(c=>c.body.operation==='link').length,0);assert.equal(events,1);}finally{m.close();}
+});
+
+test('W55 kept shrink choice retires the current presence with its fresh baseline',async()=>{
+ const m=await mount('eye-shrink',(payload,row)=>{
+  const left={...row,rowKey:'row-os',eye:'OS',laterality:'OS',key:{...row.key,eye:'OS'},baseline:{kind:'canonical',reference:'Observation/left',versionId:'1'}};
+  payload.searchIndex=[row,left];payload.findings=[row,left];
+ });
+ try{
+  await act(async()=>{m.renderer.root.findByProps({'aria-label':'Laterality Synthetic finding'}).props.onChange({target:{value:'OD'}});await flush();await flush();});
+  await m.click('Apply kept choice');assert.equal(m.calls.length,2);
+  const next=m.calls[1].body;assert.notEqual(next.commandId,m.calls[0].body.commandId);assert.deepEqual(next.eyes,{from:['OD','OS'],to:['OD']});
+  assert.equal(next.targets.length,1);assert.equal(next.targets[0].key.eye,'OS');assert.equal(next.targets[0].baseline.versionId,'2');
+  assert.deepEqual(next.targets[0].state,{status:'retired',presence:'absent',qualifiers:{grade:'2'},homes:['Condition/a']});
+ }finally{m.close();}
 });

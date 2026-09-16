@@ -2,9 +2,9 @@ TAP version 13
 # Subtest: W56 unconfirmed outcome with confirmed clinical write on 502 refreshes and dispatches
 not ok 1 - W56 unconfirmed outcome with confirmed clinical write on 502 refreshes and dispatches
   ---
-  duration_ms: 34.976916
+  duration_ms: 33.058041
   type: 'test'
-  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:13552'
+  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:13663'
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
@@ -17,7 +17,7 @@ not ok 1 - W56 unconfirmed outcome with confirmed clinical write on 502 refreshe
   actual: false
   operator: '=='
   stack: |-
-    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:94:60)
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:95:60)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -29,4 +29,4 @@ not ok 1 - W56 unconfirmed outcome with confirmed clinical write on 502 refreshe
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 229.180125
+# duration_ms 239.459916
