@@ -2721,6 +2721,24 @@ test("option candidates recursively collect trigger supports and union duplicate
   assert.equal(legacyRow.linkable, false);
 });
 
+test("§3.7 option-trigger supports exclude unrelated present options without diagnosis deduplication", async () => {
+  const fhir = diagnosisPickFhir(); const store = new FhirFindingDefinitionStore(fhir);
+  const definition = (await store.list()).find(d => d.stableKey === keyFor().stableKey)!;
+  await store.save({ ...definition, diagnosisCandidates: [
+    { id: "nuclear-only", diagnosisKey: "presbyopia", trigger: { kind: "option", field: keyFor().fieldCode, anyOf: ["nuclear-sclerosis"] }, active: true, origin: "practice" },
+  ] });
+  const cortical = canonicalFact("cortical"); const key = keyFor("OD", "cortical-cataract");
+  cortical.identifier = [currentFindingIdentifier(key)]; cortical.code.coding![0].code = `${key.stableKey}::${key.fieldCode}::${key.optionCode}`;
+  cortical.component = [comp("R10_CURRENT_META", JSON.stringify(key))];
+  fhir.resources.push(canonicalFact(), cortical);
+  const result = await handleDiagnosisCandidatesRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider" as const, fhir }) }, { authHeader: "Bearer doctor", params: { encounterId: "e1" } });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const row = (result.body as any).findings.find((r: any) => r.findingDefinitionKey === definition.stableKey);
+  assert.equal(row.candidates.length, 1);
+  assert.equal(row.candidates[0].diagnosisKey, "presbyopia");
+  assert.deepEqual(row.candidates[0].supportingFacts.map((f: any) => f.key.optionCode), ["nuclear-sclerosis"]);
+});
+
 test("mixed panel context uses newest projected context and refuses ambiguous equal-time contexts", async () => {
   const fhir = diagnosisPickFhir(); const store = new FhirFindingDefinitionStore(fhir);
   const definition = (await store.list()).find(d => d.stableKey === keyFor().stableKey)!;
