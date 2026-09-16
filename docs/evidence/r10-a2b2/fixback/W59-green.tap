@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W59 pre-rebuild workspace disables diagnosis additions scope and rank
 ok 1 - W59 pre-rebuild workspace disables diagnosis additions scope and rank
   ---
-  duration_ms: 29.518958
+  duration_ms: 29.101084
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W59 pre-rebuild workspace disables diagnosis additions scope and rank
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 231.034583
+# duration_ms 238.618083

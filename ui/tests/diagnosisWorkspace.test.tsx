@@ -1300,7 +1300,7 @@ test("unassigned tray renders quiet equal-weight suggestions in endpoint order a
       suggestionsByFinding={{ "unassigned:OD": {
         findingInstanceId: "unassigned:OD",
         contributors: payload.unassigned[0]!.contributors,
-        candidates: suggestions,
+        candidates: suggestions.map(suggestion => ({ ...suggestion, supportingFacts: [{ rowKey: payload.unassigned[0]!.rowKey, key: payload.unassigned[0]!.key!, baseline: payload.unassigned[0]!.baseline! as any }] })),
       } }}
       onSuggest={(suggestion) => { selected.push(suggestion.diagnosisKey ?? suggestion.familyGroup); }}
       onMutate={() => undefined}
@@ -1416,7 +1416,7 @@ test("same-encounter finding refresh reloads diagnosis candidates for newly char
         findingInstanceId: "unassigned:OD",
         observationReference: "Observation/unassigned",
       contributors: payload.unassigned[0]!.contributors,
-        candidates: [{ diagnosisKey: "macular_drusen", display: "Macular drusen", priority: true, source: "mapping" }],
+        candidates: [{ diagnosisKey: "macular_drusen", display: "Macular drusen", priority: true, source: "mapping", supportingFacts: [{ rowKey: payload.unassigned[0]!.rowKey, key: payload.unassigned[0]!.key!, baseline: payload.unassigned[0]!.baseline! as any }] }],
       }] });
     }
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });

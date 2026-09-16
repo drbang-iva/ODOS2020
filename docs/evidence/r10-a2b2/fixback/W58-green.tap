@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W58 search on carried live absent fact asserts present
 ok 1 - W58 search on carried live absent fact asserts present
   ---
-  duration_ms: 6.982583
+  duration_ms: 6.7935
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W58 search on carried live absent fact asserts present
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 193.614959
+# duration_ms 185.297083
