@@ -1,0 +1,11 @@
+W7 / section7 fixture cleanup: execute the actual TypeScript finally block, transpiled from each source version.
+before rejected=none: FAIL; attempted=seeder,caller; collected=0
+before rejected=caller: FAIL; attempted=seeder,caller; collected=1
+before rejected=seeder: FAIL; attempted=seeder; collected=1
+before rejected=caller,seeder: FAIL; attempted=seeder; collected=1
+before: 0/4 checks
+after rejected=none: PASS; attempted=caller,seeder; collected=0
+after rejected=caller: PASS; attempted=caller,seeder; collected=1
+after rejected=seeder: PASS; attempted=caller,seeder; collected=1
+after rejected=caller,seeder: PASS; attempted=caller,seeder; collected=2
+after: 4/4 checks

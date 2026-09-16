@@ -19,6 +19,13 @@ docs/evidence/r10-a2b1/bot-fixback/traversal-red.tap
 docs/evidence/r10-a2b1/build.txt
 docs/evidence/r10-a2b1/ci-fixback/README.md
 docs/evidence/r10-a2b1/ci-fixback/build.txt
+docs/evidence/r10-a2b1/ci-fixback/check-cleanup.mjs
+docs/evidence/r10-a2b1/ci-fixback/ci-6ddfb82a-counts.txt
+docs/evidence/r10-a2b1/ci-fixback/cleanup-both-full-counts.txt
+docs/evidence/r10-a2b1/ci-fixback/cleanup-both-green.txt
+docs/evidence/r10-a2b1/ci-fixback/cleanup-both-guard.txt
+docs/evidence/r10-a2b1/ci-fixback/cleanup-both-live-green.tap
+docs/evidence/r10-a2b1/ci-fixback/cleanup-both-red.txt
 docs/evidence/r10-a2b1/ci-fixback/cleanup-ci-red.txt
 docs/evidence/r10-a2b1/ci-fixback/cleanup-diagnosis-green.tap
 docs/evidence/r10-a2b1/ci-fixback/cleanup-live-green.tap

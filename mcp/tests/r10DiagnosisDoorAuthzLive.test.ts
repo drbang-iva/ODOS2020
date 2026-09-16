@@ -126,5 +126,15 @@ test('R10 diagnosis door enforces canonical policies through real handlers for s
       const persisted=await searchAll<Observation>(real,'Observation',{encounter:`Encounter/${retryEncounter.id}`});assert.equal(persisted.length,1);
       t.diagnostic(JSON.stringify({role,project:projectId,resourceType:'Observation',operation:'lost response then identical Retry',before:'absent',after:'one persisted owner and one clinical write',policyReference,policyVersion:policy.meta?.versionId,lane:'test:live-authz',blocking:true}));
     });
-  } finally {await cleanupReferences(baseUrl,seederAccessToken,cleanup.filter(r=>!r.startsWith("ProjectMembership/"))); await cleanupReferences(baseUrl,callerAccessToken,cleanup.filter(r=>r.startsWith("ProjectMembership/")));}
+  } finally {
+    const failures: unknown[] = [];
+    for (const [token, references] of [
+      [callerAccessToken, cleanup.filter(r => r.startsWith("ProjectMembership/"))],
+      [seederAccessToken, cleanup.filter(r => !r.startsWith("ProjectMembership/"))],
+    ] as const) {
+      try { await cleanupReferences(baseUrl, token, references); }
+      catch (error) { failures.push(error); }
+    }
+    if (failures.length) throw new AggregateError(failures, "Synthetic live-proof cleanup failed.");
+  }
 });
