@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { fixture as guarantorFixture, run as runGuarantor } from "./guarantorScreensFixture.js";
+import { verifyGuarantor } from "../../ui/src/lib/guarantor-editor.js";
+import { fhir as editorFhir } from "../../ui/src/lib/fhir.js";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import type { AccessPolicy, Bundle, Communication, Condition, Encounter, Patient, ProjectMembership, Provenance, RelatedPerson, Resource } from "@medplum/fhirtypes";
+import type { AccessPolicy, Bundle, Communication, Condition, Encounter, Patient, Person, ProjectMembership, Provenance, RelatedPerson, Resource } from "@medplum/fhirtypes";
 import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import {
   buildMedplumAccessPolicy,
@@ -1878,6 +1882,94 @@ for (const channel of ["sms", "email"] as const) {
   });
 }
 
+async function attachedEducationGuardian() {
+  const f = guarantorFixture(1);
+  f.seed<Patient>({ resourceType: "Patient", id: "synthetic-1", name: [{ family: "Synthetic patient" }] });
+  f.compete("Person/S", person => ({ ...person, active: false, link: [] }));
+  f.compete("Person/D", person => ({ ...person, link: [], name: [{ given: ["Synthetic"], family: "Guarantor" }] }));
+  f.compete("RelatedPerson/r1", child => ({ ...child, patient: { reference: PATIENT_REFERENCE } }));
+  for (const [reference, resource] of f.data) f.data.set(reference, JSON.parse(JSON.stringify(resource)));
+  const result = await runGuarantor(f, "create", {
+    operationId: randomUUID(), kind: "attach", destinationPersonId: "D", relatedPersonIds: ["r1"],
+    expected: { "Person/D": f.get<Person>("Person/D").meta!.versionId!, "RelatedPerson/r1": f.get<RelatedPerson>("RelatedPerson/r1").meta!.versionId! },
+    reason: "Synthetic education recipient guard fixture",
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.equal((result.body as { task: { status: string } }).task.status, "completed");
+  return JSON.parse(JSON.stringify({
+    person: f.get<Person>("Person/D"), related: f.get<RelatedPerson>("RelatedPerson/r1"),
+  })) as { person: Person; related: RelatedPerson };
+}
+
+for (const channel of ["sms", "email", "print"] as const) {
+  test(`E1: ${channel} preserves a real attached guarantor child and names its guarantor`, async () => {
+    const { person, related } = await attachedEducationGuardian();
+    const relatedPeople = [related];
+    const before = JSON.parse(JSON.stringify(related));
+    const fixture = await startServer({ relatedPeople, guarantors: [person],
+      channelRoutes: { "clinical-sms": "twilio", email: "twilio" },
+      senderNumbers: { "clinical-sms": "+18485550100" },
+    });
+    const originalRead = editorFhir.read;
+    editorFhir.read = async <T extends Resource>(type: T["resourceType"]) => JSON.parse(JSON.stringify(type === "Person" ? person : relatedPeople[0])) as T;
+    const verify = () => verifyGuarantor({ person, children: [{ resource: related, patientName: "Synthetic patient" }] });
+    try {
+      assert.equal((await verify()).children[0]?.classification, "verified");
+      const body = {
+        patientReference: PATIENT_REFERENCE, educationId: channel === "print" ? "dry-eye-home-care" : "dry-eye-basics",
+        version: channel === "print" ? 1 : 2, channel, lane: "clinical", alsoUpdateChart: true,
+        recipientOverride: { reference: "RelatedPerson/r1", phone: "+18645550177", email: "changed@example.test" },
+        idempotencyKey: `education-owned-${channel}`,
+      };
+      for (let attempt = 0; attempt < (channel === "print" ? 1 : 2); attempt++) {
+        const response = await request(fixture.base, "/communications/education/dispatch", "POST", body, "staff");
+        assert.equal(response.status, 200);
+        const result = await response.json() as Record<string, unknown>;
+        assert.equal(result.outcome, channel === "print" ? "print" : "sent");
+        assert.deepEqual(relatedPeople[0], before, "the persisted child is unchanged");
+        assert.equal((await verify()).children[0]?.classification, "verified");
+        assert.match(String(result.chartUpdateNotice), /Synthetic Guarantor.*Person\/D/);
+        assert.match(String(result.chartUpdateNotice), /Update.*guarantor record/i);
+      }
+      assert.equal(fixture.recipientUpdates.length, 0);
+      assert.equal(fixture.smsRequests.length + fixture.emailRequests.length, channel === "print" ? 0 : 1);
+      if (channel === "sms") assert.equal(fixture.smsRequests[0]?.toNumber, "+18645550177");
+      if (channel === "email") assert.equal(fixture.emailRequests[0]?.toAddress, "changed@example.test");
+      assert.ok(fixture.provenances.length > 0);
+      assert.doesNotMatch(JSON.stringify(fixture.provenances), /Recipient override also updated chart/);
+    } finally { editorFhir.read = originalRead; await fixture.close(); }
+  });
+}
+
+for (const recipientType of ["RelatedPerson", "Patient"] as const) {
+  for (const channel of ["sms", "email"] as const) {
+    test(`E2: ${channel} still updates an unlinked ${recipientType} recipient`, async () => {
+      const { related } = await attachedEducationGuardian();
+      const relatedPeople = [related];
+      const fixture = await startServer({ relatedPeople,
+        channelRoutes: { "clinical-sms": "twilio", email: "twilio" }, senderNumbers: { "clinical-sms": "+18485550100" },
+      });
+      try {
+        const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+          patientReference: PATIENT_REFERENCE, educationId: "dry-eye-basics", version: 2,
+          channel, lane: "clinical", alsoUpdateChart: true,
+          recipientOverride: { reference: recipientType === "RelatedPerson" ? "RelatedPerson/r1" : PATIENT_REFERENCE,
+            phone: "+18645550177", email: "changed@example.test" }, idempotencyKey: `education-unlinked-${recipientType}-${channel}`,
+        }, "staff");
+        assert.equal(response.status, 200);
+        const result = await response.json() as Record<string, unknown>;
+        assert.equal(result.outcome, "sent");
+        assert.equal(result.chartUpdateNotice, undefined);
+        assert.equal(fixture.recipientUpdates.length, 1);
+        const persisted = recipientType === "RelatedPerson" ? relatedPeople[0]! : fixture.patients[0]!;
+        assert.equal(persisted.telecom?.find(entry => entry.system === (channel === "sms" ? "phone" : "email") && entry.use !== "old")?.value,
+          channel === "sms" ? "+18645550177" : "changed@example.test");
+        assert.match(JSON.stringify(fixture.provenances), /Recipient override also updated chart/);
+      } finally { await fixture.close(); }
+    });
+  }
+}
+
 test("print chart update refuses before provenance or output", async () => {
   const fixture = await startServer();
   const before = structuredClone(fixture.patients);
@@ -1935,6 +2027,7 @@ for (const channel of ["sms", "email"] as const) {
 
 async function startServer(options: {
   relatedPeople?: RelatedPerson[];
+  guarantors?: Person[];
   optOutTransactionError?: Error;
   optOutTransactionResponse?: Bundle;
   recipientUpdateError?: Error;
@@ -2220,6 +2313,11 @@ async function startServer(options: {
           return structuredClone(found) as T;
         },
         async search(_resourceType: string, params: Record<string, string> = {}) {
+          if (_resourceType === "Person") {
+            return { resourceType: "Bundle", type: "searchset", entry: (options.guarantors ?? [])
+              .filter(person => person.link?.some(link => link.target.reference === params.link))
+              .map(resource => ({ resource: JSON.parse(JSON.stringify(resource)) })) };
+          }
           if (params.category) {
             return {
               resourceType: "Bundle",
@@ -2372,6 +2470,10 @@ async function startServer(options: {
           if (persisted.resourceType === "Patient") {
             const patientIndex = patients.findIndex((patient) => patient.id === persisted.id);
             if (patientIndex >= 0) patients[patientIndex] = structuredClone(persisted);
+          }
+          if (persisted.resourceType === "RelatedPerson") {
+            const relatedIndex = options.relatedPeople?.findIndex(person => person.id === id) ?? -1;
+            if (relatedIndex >= 0) options.relatedPeople![relatedIndex] = JSON.parse(JSON.stringify(persisted));
           }
           if (persisted.resourceType === "Communication" && index >= 0) {
             persistedCommunications[index] = structuredClone(persisted as Communication);

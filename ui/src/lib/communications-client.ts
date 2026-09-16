@@ -88,8 +88,8 @@ export interface EducationDispatchInput {
 }
 
 export type EducationDispatchResult =
-  | { outcome: "sent"; providerMessageId: string; chartUpdate?: "conflict"; preferenceUpdate?: "failed" }
-  | { outcome: "print"; url: string }
+  | { outcome: "sent"; providerMessageId: string; chartUpdate?: "conflict"; chartUpdateNotice?: string; preferenceUpdate?: "failed" }
+  | { outcome: "print"; url: string; chartUpdateNotice?: string }
   | { outcome: "refused"; reason: string }
   | { outcome: "suppressed"; reason: "patient-opt-out" | "preference-withheld" | "frequency-cap" }
   | { outcome: "rescheduled"; reason: "quiet-hours"; rescheduledAt: string };
@@ -295,6 +295,7 @@ function isEducationContentItem(value: unknown): value is EducationContentItem {
 
 function isEducationDispatchResult(value: unknown): value is EducationDispatchResult {
   if (!isRecord(value) || typeof value.outcome !== "string") return false;
+  if (value.chartUpdateNotice !== undefined && typeof value.chartUpdateNotice !== "string") return false;
   if (value.outcome === "sent") {
     return typeof value.providerMessageId === "string"
       && (value.chartUpdate === undefined || value.chartUpdate === "conflict")

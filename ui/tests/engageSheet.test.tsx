@@ -804,9 +804,44 @@ test("education dispatch client rejects malformed chart update metadata", async 
     patientReference: "Patient/patient-1", educationId: "dry-eye-basics", version: 2,
     channel: "email", lane: "clinical", alsoUpdateChart: true, idempotencyKey: "metadata-validation",
   };
+  for (const outcome of ["sent", "print"] as const) {
+    for (const chartUpdateNotice of [true, null, {}]) {
+      await assert.rejects(dispatchEducation(input, async () => Response.json({
+        outcome, providerMessageId: "synthetic-receipt", url: "https://education.invalid/print", chartUpdateNotice,
+      })), /unexpected response/);
+    }
+  }
   for (const chartUpdate of ["unexpected", true, null]) {
     await assert.rejects(dispatchEducation(input, async () => new Response(JSON.stringify({
       outcome: "sent", providerMessageId: "synthetic-receipt", chartUpdate,
     }))), /unexpected response/);
   }
 });
+
+for (const channel of ["sms", "email", "print"] as const) {
+  test(`E1 notice: ${channel} names the guarantor after successful education dispatch`, async () => {
+    const originalFetch = globalThis.fetch;
+    const notice = "The chart contact was not updated. Update the guarantor record: Synthetic Guarantor (Person/guarantor-1).";
+    globalThis.fetch = async (input) => {
+      const url = String(input);
+      if (url.includes("Basic?")) return Response.json({ resourceType: "Bundle", entry: [{ resource: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))) }] });
+      if (url.includes("/education/dispatch")) return Response.json(channel === "print"
+        ? { outcome: "print", url: "https://education.invalid/print", chartUpdateNotice: notice }
+        : { outcome: "sent", providerMessageId: "synthetic-receipt", chartUpdateNotice: notice });
+      if (url.includes("/communications/education")) return Response.json(educationList(ITEMS));
+      if (url.includes("RelatedPerson")) return Response.json({ resourceType: "Bundle", entry: [] });
+      return unsuppressedSmsFetch(input);
+    };
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => { renderer = create(<EngageSheet open patient={{ ...PATIENT, birthDate: "1980-01-01" }} onClose={() => undefined} />); });
+      const action = channel === "print" ? "Print Home care guide" : `${channel === "sms" ? "Text" : "Email"} Understanding dry eye`;
+      act(() => renderer.root.findByProps({ "aria-label": action }).props.onClick());
+      await act(async () => { renderer.root.findByProps({ "aria-label": "Confirm education send" }).props.onClick(); });
+      assert.match(renderedText(renderer), /Update the guarantor record: Synthetic Guarantor \(Person\/guarantor-1\)/);
+      assert.doesNotMatch(renderedText(renderer), /update it from Edit demographics/);
+      assert.equal(renderer.root.findAllByProps({ "aria-label": "Confirm education send" }).length, 0);
+      if (channel === "print") assert.equal(renderer.root.findByProps({ href: "https://education.invalid/print" }).type, "a");
+    } finally { if (renderer) act(() => renderer.unmount()); globalThis.fetch = originalFetch; }
+  });
+}

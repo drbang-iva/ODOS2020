@@ -256,8 +256,11 @@ export function EngageSheet({
       const refusal = results.find((result): result is Extract<EducationDispatchResult, { outcome: "refused" }> => result.outcome === "refused");
       const suppression = results.find((result): result is Extract<EducationDispatchResult, { outcome: "suppressed" }> => result.outcome === "suppressed");
       const rescheduled = results.find((result): result is Extract<EducationDispatchResult, { outcome: "rescheduled" }> => result.outcome === "rescheduled");
+      const chartNotices = [...new Set(results.flatMap(result =>
+        (result.outcome === "sent" || result.outcome === "print") && result.chartUpdateNotice ? [result.chartUpdateNotice] : []))].join(" ");
       if (printResult) {
         setPrintUrl(printResult.url);
+        if (chartNotices) setStatus(chartNotices);
       } else if (refusal) {
         setError(refusal.reason);
       } else if (suppression?.reason === "patient-opt-out") {
@@ -275,7 +278,7 @@ export function EngageSheet({
           ? "Education sent, but their education email setting couldn't be switched on. Update it in Edit demographics."
           : pending.educationEmailWithheld ? "Education sent. Their education email setting is now on."
             : results.length > 1 ? `Education sent to ${results.length} recipients.` : "Education sent.";
-        setStatus(`${sentMessage}${chartConflict ? " The chart's contact wasn't updated because the record changed — update it from Edit demographics." : ""}`);
+        setStatus(`${sentMessage}${chartNotices ? ` ${chartNotices}` : ""}${chartConflict ? " The chart's contact wasn't updated because the record changed — update it from Edit demographics." : ""}`);
         if (pending.educationEmailWithheld && !preferenceFailed) setPreferenceRevision(current => current + 1);
       }
       setPending(undefined);
