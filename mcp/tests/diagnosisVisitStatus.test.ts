@@ -164,7 +164,7 @@ test("confirm freezes the original setter and timestamp when a different clinici
     params: { encounterId: "encounter-1" },
     body: { diagnosisKey: "myopia", laterality: "OD", action: "confirm", status: "worsening" },
   });
-  assert.equal(confirmed.status, 201, JSON.stringify(confirmed.body));
+  assert.equal(confirmed.status, 200, JSON.stringify(confirmed.body));
   const condition = (confirmed.body as { condition: Condition }).condition;
   const conditionReference = `Condition/${condition.id}`;
   assert.equal(store.rows.get(conditionReference)?.status, "worsening");
@@ -239,7 +239,7 @@ test("missing rows read as unset, signed encounters reject updates, and a later 
   const later = await pick("encounter-2", {
     diagnosisKey: "myopia", laterality: "OD", action: "confirm",
   }, "2026-07-21T15:10:00.000Z");
-  assert.equal(later.status, 201, JSON.stringify(later.body));
+  assert.equal(later.status, 200, JSON.stringify(later.body));
   const laterCondition = (later.body as { condition: Condition }).condition;
   assert.notEqual(laterCondition.id, firstCondition.id);
   assert.equal(store.rows.has(`Condition/${laterCondition.id}`), false);

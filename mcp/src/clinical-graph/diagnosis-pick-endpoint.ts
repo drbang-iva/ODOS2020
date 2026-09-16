@@ -1,5 +1,9 @@
+import { diagnosisDefinitionViews } from "./diagnosis-candidates-endpoint.js";
+import { currentFindingKeySchema, currentFindingIdentifier } from "./current-finding-identity.js";
+import { customFieldEntries } from "./custom-fields.js";
+import { loadDiagnosisFindingContext, findingTargetReadOnlyReason } from "./diagnosis-findings-endpoint.js";
 import { randomUUID } from "node:crypto";
-import type { Basic, Bundle, ChargeItem, CodeableConcept, Condition, Encounter, Money, Observation, Provenance } from "@medplum/fhirtypes";
+import type { Basic, Bundle, ChargeItem, CodeableConcept, Condition, Encounter, Money, Observation, Provenance, Resource } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import {
@@ -12,7 +16,7 @@ import {
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { isRelativeFhirReference } from "../fhir/reference.js";
-import { searchAll, type FhirSearchClient } from "../fhir-search.js";
+import { collectAllFhirSearchPages, searchAll, type FhirSearchClient } from "../fhir-search.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { FhirDiagnosisPickTallyStore } from "./diagnosis-pick-tally-store.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
@@ -51,7 +55,7 @@ interface DiagnosisDemotionImpact {
 }
 
 export interface DiagnosisPickFhirClient extends FhirSearchClient {
-  read<T extends PickResource>(resourceType: T["resourceType"], id: string): Promise<T>;
+  read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
   create<T extends PickResource>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
   update<T extends PickResource>(resourceType: T["resourceType"], id: string, resource: T, extraHeaders?: Record<string, string>): Promise<T>;
   executeTransaction(
@@ -61,7 +65,13 @@ export interface DiagnosisPickFhirClient extends FhirSearchClient {
   ): Promise<Bundle>;
 }
 
+const supportSchema = z.object({
+  key: currentFindingKeySchema,
+  baseline: z.object({ kind: z.literal("canonical"), reference: z.string().regex(/^Observation\/[A-Za-z0-9.-]+$/), versionId: z.string().min(1) }).strict(),
+}).strict();
 const pickSchema = z.object({
+  commandId: z.string().uuid().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i).optional(),
+  supportingFacts: z.array(supportSchema).min(1).optional(),
   findingInstanceId: z.string().trim().min(1).optional(),
   diagnosisKey: z.string().trim().min(1),
   action: z.enum(["possible", "confirm", "discard"]),
@@ -71,7 +81,7 @@ const pickSchema = z.object({
   stageDeferred: z.boolean().optional(),
 }).strict();
 
-export async function handleDiagnosisPickRequest(
+async function performDiagnosisPickRequest(
   deps: {
     authenticate(authHeader: string | undefined): Promise<{
       staffReference: string;
@@ -111,21 +121,54 @@ export async function handleDiagnosisPickRequest(
 
   let observation: Observation | undefined;
   let findingDefinitionStableKey: string | undefined;
-  if (parsed.data.findingInstanceId) {
-    try {
-      observation = await staff.fhir.read<Observation>("Observation", stripReference(parsed.data.findingInstanceId, "Observation"));
-    } catch {
-      return { status: 404, body: { error: `Finding ${parsed.data.findingInstanceId} does not exist.` } };
-    }
-    if (observation.encounter?.reference !== encounterReference) {
-      return { status: 409, body: { error: "The finding does not belong to this encounter." } };
-    }
+  let supportLaterality: "right" | "left" | "bilateral" | undefined;
+  const supports = parsed.data.supportingFacts;
+  if (supports || parsed.data.findingInstanceId) {
     const definitions = await new FhirFindingDefinitionStore(staff.fhir).list();
-    findingDefinitionStableKey = findingDefinitionForObservation(observation, definitions)?.stableKey;
-    if (!findingDefinitionStableKey) return { status: 422, body: { error: "The finding does not resolve to an active finding definition." } };
+    const context = await loadDiagnosisFindingContext(staff.fhir, encounterId, definitions);
+    if (context.incomplete) return { status: context.kind === "refused" ? 403 : context.kind === "missing" ? 404 : 502,
+      body: { result: "unavailable", kind: context.kind, error: context.reason } };
+    const definitionViews = diagnosisDefinitionViews(context.projection, definitions);
+    if (supports) {
+      if (!parsed.data.commandId) return { status: 400, body: { result: "invalid", reason: "command-id-required", error: "Supported picks require a UUIDv4 commandId." } };
+      if (context.projection.preRebuild) return { status: 409, body: { result: "invalid", reason: "pre-rebuild-test-encounter", error: "Test data from before the rebuild is read-only." } };
+      const seen = new Set<string>();
+      for (const [targetIndex, support] of supports.entries()) {
+        const identity = currentFindingIdentifier(support.key).value!;
+        const fact = context.projection.currentFacts.find(f => currentFindingIdentifier(f.key).value === identity);
+        const reason = findingTargetReadOnlyReason(context, support.key);
+        if (seen.has(identity) || !fact || fact.status !== "live" || fact.presence !== "present" || fact.baseline?.kind !== "canonical" ||
+          fact.baseline.reference !== support.baseline.reference || fact.baseline.versionId !== support.baseline.versionId || reason ||
+          support.key.stableKey !== supports[0].key.stableKey) {
+          return { status: reason === "signed-or-cancelled" ? 422 : 400, body: { result: "invalid", reason: reason ?? "invalid-support", targetIndex, error: "Each support must be a unique, current, editable present fact in this view." } };
+        }
+        seen.add(identity);
+      }
+      const eyes = new Set(supports.map(s => s.key.eye));
+      supportLaterality = eyes.size === 2 ? "bilateral" : eyes.has("OD") ? "right" : "left";
+      if (parsed.data.laterality && normalizeLaterality(parsed.data.laterality) !== supportLaterality) return { status: 400, body: { result: "invalid", reason: "support-laterality", error: "Laterality must equal the supporting eyes." } };
+      findingDefinitionStableKey = supports[0].key.stableKey;
+      const views = definitionViews.filter(v => findingDefinitionForObservation(v, definitions)?.stableKey === findingDefinitionStableKey &&
+        eyes.has(observationLaterality(v) as "OD" | "OS"));
+      if (views.length !== eyes.size || parsed.data.findingInstanceId && !views.some(v => (v.id ?? v.projectionKey) === stripReference(parsed.data.findingInstanceId!, "Observation"))) {
+        return { status: 400, body: { result: "invalid", reason: "support-view", error: "Supports must belong to the selected finding view." } };
+      }
+      observation = views[0];
+    } else {
+      const findingId = stripReference(parsed.data.findingInstanceId!, "Observation");
+      observation = definitionViews.find(v => (v.id ?? v.projectionKey) === findingId);
+      const raw = context.state.observations.find(o => o.id === findingId);
+      const rawDefinition = raw && findingDefinitionForObservation(raw, definitions);
+      if (rawDefinition && customFieldEntries(rawDefinition, true).some(f => f.valueType === "multi-select") && context.projection.preRebuild) {
+        return { status: 409, body: { result: "invalid", reason: "pre-rebuild-test-encounter", error: "Test data from before the rebuild is read-only." } };
+      }
+      if (!observation) return { status: 404, body: { error: `Finding ${findingId} does not exist in the current projection.` } };
+      findingDefinitionStableKey = findingDefinitionForObservation(observation, definitions)?.stableKey;
+      if (!findingDefinitionStableKey) return { status: 422, body: { error: "The finding does not resolve to an active finding definition." } };
+    }
   }
 
-  const laterality = normalizeLaterality(observationLaterality(observation) ?? parsed.data.laterality);
+  const laterality = supportLaterality ?? normalizeLaterality(observationLaterality(observation) ?? parsed.data.laterality);
   const visualFieldDescriptor = visualFieldDescriptorResolutionFromObservation(
     findingDefinitionStableKey,
     observation,
@@ -194,7 +237,7 @@ export async function handleDiagnosisPickRequest(
     ? "refuted"
     : parsed.data.action === "possible" ? "provisional" : "confirmed";
   const recordedAt = deps.now?.() ?? new Date().toISOString();
-  const evidenceReference = observation?.id ? `Observation/${observation.id}` : undefined;
+  const evidenceReference = !supports && observation?.id ? `Observation/${observation.id}` : undefined;
   const conditionDraft = existing
     ? updatedCondition(
         existing,
@@ -294,7 +337,12 @@ export async function handleDiagnosisPickRequest(
       provenance = persisted.provenance;
       break;
     } catch (error) {
-      if (!isConflict(error)) throw error;
+      if (!isConflict(error)) {
+        const cause = (error as { status?: number })?.status;
+        const failed = cause !== undefined && cause >= 400 && cause < 500;
+        return { status: failed ? cause : 502, body: { result: "pick", ...(parsed.data.commandId ? { commandId: parsed.data.commandId } : {}),
+          conditionStep: failed ? "failed" : "unconfirmed", link: supports && parsed.data.action !== "discard" ? "pending" : "not-applicable", error: errorMessage(error) } };
+      }
       if (existing?.id) {
         const currentCondition = await staff.fhir.read<Condition>("Condition", existing.id);
         if (currentCondition.meta?.versionId !== existing.meta?.versionId) {
@@ -358,8 +406,12 @@ export async function handleDiagnosisPickRequest(
   }
 
   return {
-    status: existing ? 200 : 201,
+    status: 200,
     body: {
+      result: "pick",
+      ...(parsed.data.commandId ? { commandId: parsed.data.commandId } : {}),
+      conditionStep: "applied",
+      link: supports && parsed.data.action !== "discard" ? "pending" : "not-applicable",
       condition,
       ...(linkedEncounter ? { encounter: linkedEncounter } : {}),
       provenanceReference: provenance.id ? `Provenance/${provenance.id}` : undefined,
@@ -368,6 +420,24 @@ export async function handleDiagnosisPickRequest(
       ...(diagnosisVisitStatus ? { diagnosisVisitStatus } : {}),
     },
   };
+}
+
+export type DiagnosisPickResponse = ({ result: "pick"; commandId?: string; conditionStep: "applied" | "unconfirmed" | "failed"; link: "pending" | "not-applicable" } & Partial<DiagnosisDemotionImpact> & { condition?: Condition; encounter?: Encounter; provenanceReference?: string; error?: string; action?: string; diagnosisVisitStatus?: unknown }) |
+  { result: "unavailable"; kind: "refused" | "missing" | "upstream" | "foreign-or-unscoped"; error: string } |
+  { result: "invalid"; error: string; reason: string; targetIndex?: number } |
+  { result: "unauthenticated" | "forbidden"; error: string };
+export async function handleDiagnosisPickRequest(...args: Parameters<typeof performDiagnosisPickRequest>): Promise<{ status: number; body: DiagnosisPickResponse }> {
+  try {
+    const response = await performDiagnosisPickRequest(...args);
+    const body = response.body as Record<string, unknown>;
+    if (body.result) return response as { status: number; body: DiagnosisPickResponse };
+    const result = response.status === 401 ? "unauthenticated" : response.status === 403 ? "forbidden" : "invalid";
+    return { status: response.status, body: { ...body, result, ...(result === "invalid" ? { reason: "invalid-pick" } : {}) } as DiagnosisPickResponse };
+  } catch (error) {
+    const status = (error as { status?: number })?.status;
+    const kind = status === 401 || status === 403 ? "refused" : status === 404 || status === 410 ? "missing" : "upstream";
+    return { status: kind === "refused" ? 403 : kind === "missing" ? 404 : 502, body: { result: "unavailable", kind, error: "Diagnosis pick context could not be loaded." } };
+  }
 }
 
 async function diagnosisDemotionImpact(
@@ -487,7 +557,7 @@ async function findEncounterDiagnosis(
   stagedMemberIdentifierValues: readonly string[],
 ): Promise<{ existing?: Condition; conflictingStagedMember?: Condition }> {
   const bundle = await fhir.search<Condition>("Condition", { encounter: encounterReference, _count: "200" });
-  const conditions = (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+  const conditions = await collectAllFhirSearchPages<Condition>(fhir, "Condition", bundle, fhir.baseUrl);
   const exact = conditions.find((condition) =>
     condition.identifier?.some((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM &&
       (identifier.value === compositeIdentifierValue || identifier.value === legacyIdentifierValue))

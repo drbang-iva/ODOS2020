@@ -1,0 +1,758 @@
+TAP version 13
+# Subtest: A: a charge retaining another confirmed diagnosis is unaffected and remains in the claim draft
+ok 1 - A: a charge retaining another confirmed diagnosis is unaffected and remains in the claim draft
+  ---
+  duration_ms: 9.45475
+  type: 'test'
+  ...
+# Subtest: B: possible reports a sole-pointer charge as stranded without changing it or hiding the successful pick
+ok 2 - B: possible reports a sole-pointer charge as stranded without changing it or hiding the successful pick
+  ---
+  duration_ms: 2.359417
+  type: 'test'
+  ...
+# Subtest: C: demoting a diagnosis with no linked charge returns the complete empty impact shape
+ok 3 - C: demoting a diagnosis with no linked charge returns the complete empty impact shape
+  ---
+  duration_ms: 1.755875
+  type: 'test'
+  ...
+# Subtest: a sole-pointer charge on a later search page is still reported as stranded
+ok 4 - a sole-pointer charge on a later search page is still reported as stranded
+  ---
+  duration_ms: 1.584291
+  type: 'test'
+  ...
+# Subtest: a confirmed diagnosis on a later search page keeps a multi-pointer charge unaffected
+ok 5 - a confirmed diagnosis on a later search page keeps a multi-pointer charge unaffected
+  ---
+  duration_ms: 1.7065
+  type: 'test'
+  ...
+# Subtest: D: discard reports a sole-pointer charge as stranded under the same contract
+ok 6 - D: discard reports a sole-pointer charge as stranded under the same contract
+  ---
+  duration_ms: 2.059416
+  type: 'test'
+  ...
+# Subtest: E: re-confirming a demoted diagnosis returns the unchanged charge to the claim draft
+ok 7 - E: re-confirming a demoted diagnosis returns the unchanged charge to the claim draft
+  ---
+  duration_ms: 3.022625
+  type: 'test'
+  ...
+# Subtest: a failed post-transaction charge read preserves pick success and marks impact unavailable
+ok 8 - a failed post-transaction charge read preserves pick success and marks impact unavailable
+  ---
+  duration_ms: 1.78625
+  type: 'test'
+  ...
+# Subtest: every active multi-row diagnosis family declares its clinical resolution mode
+ok 9 - every active multi-row diagnosis family declares its clinical resolution mode
+  ---
+  duration_ms: 4.276292
+  type: 'test'
+  ...
+# Subtest: family-resolution guard fails when an active multi-row family has no declaration
+ok 10 - family-resolution guard fails when an active multi-row family has no declaration
+  ---
+  duration_ms: 0.54525
+  type: 'test'
+  ...
+# Subtest: family-resolution guard fails when a staged member is not an active catalog row
+ok 11 - family-resolution guard fails when a staged member is not an active catalog row
+  ---
+  duration_ms: 0.596083
+  type: 'test'
+  ...
+# Subtest: family-resolution guard fails when a staged member belongs to another clinical family
+ok 12 - family-resolution guard fails when a staged member belongs to another clinical family
+  ---
+  duration_ms: 0.661875
+  type: 'test'
+  ...
+# Subtest: family-resolution guard rejects unspecified stage labels
+ok 13 - family-resolution guard rejects unspecified stage labels
+  ---
+  duration_ms: 0.536625
+  type: 'test'
+  ...
+# Subtest: family-resolution guard rejects an undeclared active member inside a staged family
+ok 14 - family-resolution guard rejects an undeclared active member inside a staged family
+  ---
+  duration_ms: 0.429
+  type: 'test'
+  ...
+# Subtest: family-resolution guard rejects candidate family groups the specificity panel cannot stage
+ok 15 - family-resolution guard rejects candidate family groups the specificity panel cannot stage
+  ---
+  duration_ms: 0.486625
+  type: 'test'
+  ...
+# Subtest: diagnosis catalog seeds are ledger-backed durable families and survive a store restart
+ok 16 - diagnosis catalog seeds are ledger-backed durable families and survive a store restart
+  ---
+  duration_ms: 3.206708
+  type: 'test'
+  ...
+# Subtest: dry eye syndrome and Type 2 non-retinopathy concepts are distinct verified catalog rows
+ok 17 - dry eye syndrome and Type 2 non-retinopathy concepts are distinct verified catalog rows
+  ---
+  duration_ms: 0.871875
+  type: 'test'
+  ...
+# Subtest: ocular-health dry eye amendment dates only the four newly verified rows
+ok 18 - ocular-health dry eye amendment dates only the four newly verified rows
+  ---
+  duration_ms: 0.633667
+  type: 'test'
+  ...
+# Subtest: Type 2 diabetes ledger is dual-source and carries no payer coverage claims
+ok 19 - Type 2 diabetes ledger is dual-source and carries no payer coverage claims
+  ---
+  duration_ms: 0.252708
+  type: 'test'
+  ...
+# Subtest: Wave A diagnosis families resolve every verified laterality code
+ok 20 - Wave A diagnosis families resolve every verified laterality code
+  ---
+  duration_ms: 0.60475
+  type: 'test'
+  ...
+# Subtest: Macula edema catalog additions are backed by the two ruled FY2026 primary sources
+ok 21 - Macula edema catalog additions are backed by the two ruled FY2026 primary sources
+  ---
+  duration_ms: 0.567709
+  type: 'test'
+  ...
+# Subtest: Wave B diagnosis families resolve every verified laterality code
+ok 22 - Wave B diagnosis families resolve every verified laterality code
+  ---
+  duration_ms: 0.498416
+  type: 'test'
+  ...
+# Subtest: every declared Type 1 retinopathy family resolves only to codes in its ledger
+ok 23 - every declared Type 1 retinopathy family resolves only to codes in its ledger
+  ---
+  duration_ms: 0.540292
+  type: 'test'
+  ...
+# Subtest: Type 1 resolved DME preserves the literal X family from the ocular ledger
+ok 24 - Type 1 resolved DME preserves the literal X family from the ocular ledger
+  ---
+  duration_ms: 1.00175
+  type: 'test'
+  ...
+# Subtest: Type 1 retinopathy ledger carries diagnosis provenance without coverage claims
+ok 25 - Type 1 retinopathy ledger carries diagnosis provenance without coverage claims
+  ---
+  duration_ms: 0.385459
+  type: 'test'
+  ...
+# Subtest: Type 1 retinopathy catalog excludes deferred and stage-unspecified diagnoses
+ok 26 - Type 1 retinopathy catalog excludes deferred and stage-unspecified diagnoses
+  ---
+  duration_ms: 0.661625
+  type: 'test'
+  ...
+# Subtest: Wave B catalog excludes stage-unspecified glaucoma and AMD codes
+ok 27 - Wave B catalog excludes stage-unspecified glaucoma and AMD codes
+  ---
+  duration_ms: 0.441333
+  type: 'test'
+  ...
+# Subtest: eyelid families expose only verified both-lids per-eye slots and declare bilateral expansion
+ok 28 - eyelid families expose only verified both-lids per-eye slots and declare bilateral expansion
+  ---
+  duration_ms: 0.628042
+  type: 'test'
+  ...
+# Subtest: persisted eyelid definitions cannot override the verified seed code projection
+ok 29 - persisted eyelid definitions cannot override the verified seed code projection
+  ---
+  duration_ms: 1.370583
+  type: 'test'
+  ...
+# Subtest: glaucoma laterality-only families seed all verified ledger codes
+ok 30 - glaucoma laterality-only families seed all verified ledger codes
+  ---
+  duration_ms: 0.404583
+  type: 'test'
+  ...
+# Subtest: visual-field Phase 0 ledger and catalog seeds preserve verified code shapes
+ok 31 - visual-field Phase 0 ledger and catalog seeds preserve verified code shapes
+  ---
+  duration_ms: 0.596541
+  type: 'test'
+  ...
+# Subtest: lens Phase 0 ledger and catalog seeds preserve verified codes and laterality asymmetry
+ok 32 - lens Phase 0 ledger and catalog seeds preserve verified codes and laterality asymmetry
+  ---
+  duration_ms: 0.636125
+  type: 'test'
+  ...
+# Subtest: diabetic retinopathy Phase 0 ledger is dual-source and keeps coverage descriptor-only
+ok 33 - diabetic retinopathy Phase 0 ledger is dual-source and keeps coverage descriptor-only
+  ---
+  duration_ms: 0.258125
+  type: 'test'
+  ...
+# Subtest: mapping evaluator fails closed for malformed and unknown fields
+ok 34 - mapping evaluator fails closed for malformed and unknown fields
+  ---
+  duration_ms: 1.429917
+  type: 'test'
+  ...
+# Subtest: candidate ordering accepts an empty L1 tally and optional L2 counts
+ok 35 - candidate ordering accepts an empty L1 tally and optional L2 counts
+  ---
+  duration_ms: 0.094542
+  type: 'test'
+  ...
+# Subtest: real HTTP routes complete Tear Film mapping, candidates read, deactivation, RBAC fence, versioning, and audit headers
+ok 36 - real HTTP routes complete Tear Film mapping, candidates read, deactivation, RBAC fence, versioning, and audit headers
+  ---
+  duration_ms: 164.401083
+  type: 'test'
+  ...
+# Subtest: staff diagnosis pick refuses all actions with zero writes
+    # Subtest: possible
+    ok 1 - possible
+      ---
+      duration_ms: 1.393959
+      type: 'test'
+      ...
+    # Subtest: confirm
+    ok 2 - confirm
+      ---
+      duration_ms: 0.167875
+      type: 'test'
+      ...
+    # Subtest: discard
+    ok 3 - discard
+      ---
+      duration_ms: 0.080708
+      type: 'test'
+      ...
+    1..3
+ok 37 - staff diagnosis pick refuses all actions with zero writes
+  ---
+  duration_ms: 1.983084
+  type: 'test'
+  ...
+# Subtest: condition code resolution returns zero, one, or two codes only when the catalog declaration permits it
+ok 38 - condition code resolution returns zero, one, or two codes only when the catalog declaration permits it
+  ---
+  duration_ms: 0.430292
+  type: 'test'
+  ...
+# Subtest: staged POAG picks persist the chosen member code and keep different per-eye stages separate
+ok 39 - staged POAG picks persist the chosen member code and keep different per-eye stages separate
+  ---
+  duration_ms: 3.155209
+  type: 'test'
+  ...
+# Subtest: Stage later persists a staged family Condition with no ICD-10-CM coding
+ok 40 - Stage later persists a staged family Condition with no ICD-10-CM coding
+  ---
+  duration_ms: 0.966792
+  type: 'test'
+  ...
+# Subtest: Stage later cannot duplicate an existing same-eye staged member Condition
+ok 41 - Stage later cannot duplicate an existing same-eye staged member Condition
+  ---
+  duration_ms: 1.326917
+  type: 'test'
+  ...
+# Subtest: a member pick completes the same-eye pending family Condition instead of creating a duplicate
+ok 42 - a member pick completes the same-eye pending family Condition instead of creating a duplicate
+  ---
+  duration_ms: 2.154958
+  type: 'test'
+  ...
+# Subtest: discarding an absent staged member cannot refute a same-eye pending family Condition
+ok 43 - discarding an absent staged member cannot refute a same-eye pending family Condition
+  ---
+  duration_ms: 1.655291
+  type: 'test'
+  ...
+# Subtest: all three eyelid families write both-lids OD and OS codes and resolve OU without the false 422
+ok 44 - all three eyelid families write both-lids OD and OS codes and resolve OU without the false 422
+  ---
+  duration_ms: 4.855958
+  type: 'test'
+  ...
+# Subtest: allOf mapping triggers require every nested option trigger
+ok 45 - allOf mapping triggers require every nested option trigger
+  ---
+  duration_ms: 1.227041
+  type: 'test'
+  ...
+# Subtest: EOM binocular plus incomitant proposes diplopia and paralytic strabismus without auto-confirming
+ok 46 - EOM binocular plus incomitant proposes diplopia and paralytic strabismus without auto-confirming
+  ---
+  duration_ms: 25.761542
+  type: 'test'
+  ...
+# Subtest: real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated tally ordering, and refuted audit state
+ok 47 - real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated tally ordering, and refuted audit state
+  ---
+  duration_ms: 98.006125
+  type: 'test'
+  ...
+# Subtest: OH-3 multi-select findings propose verified per-eye diagnoses and explicit picks create the right Conditions
+ok 48 - OH-3 multi-select findings propose verified per-eye diagnoses and explicit picks create the right Conditions
+  ---
+  duration_ms: 54.291
+  type: 'test'
+  ...
+# Subtest: I1 complete ocular qualifiers resolve each selected finding to one diagnosis
+ok 49 - I1 complete ocular qualifiers resolve each selected finding to one diagnosis
+  ---
+  duration_ms: 333.308167
+  type: 'test'
+  ...
+# Subtest: I2 absent or partial ocular qualifiers retain the specified safe fallbacks
+ok 50 - I2 absent or partial ocular qualifiers retain the specified safe fallbacks
+  ---
+  duration_ms: 29.987833
+  type: 'test'
+  ...
+# Subtest: I3 qualifier triggers are scoped to the option that recorded the shared key
+ok 51 - I3 qualifier triggers are scoped to the option that recorded the shared key
+  ---
+  duration_ms: 0.216833
+  type: 'test'
+  ...
+# Subtest: I4 ocular records without findingDetails retain specific candidate lists
+ok 52 - I4 ocular records without findingDetails retain specific candidate lists
+  ---
+  duration_ms: 40.614875
+  type: 'test'
+  ...
+# Subtest: anterior-chamber ruled findings propose only their seeded diagnoses
+ok 53 - anterior-chamber ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 51.358042
+  type: 'test'
+  ...
+# Subtest: iris ruled findings propose only their seeded diagnoses
+ok 54 - iris ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 37.378958
+  type: 'test'
+  ...
+# Subtest: vitreous ruled findings propose only their seeded diagnoses
+ok 55 - vitreous ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 25.941709
+  type: 'test'
+  ...
+# Subtest: vessels ruled findings propose only their seeded diagnoses
+ok 56 - vessels ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 57.922083
+  type: 'test'
+  ...
+# Subtest: palpebral conjunctiva GPC proposes its seeded diagnosis
+ok 57 - palpebral conjunctiva GPC proposes its seeded diagnosis
+  ---
+  duration_ms: 14.532167
+  type: 'test'
+  ...
+# Subtest: vessels A/V ratio codes follow the field::option delimiter convention
+ok 58 - vessels A/V ratio codes follow the field::option delimiter convention
+  ---
+  duration_ms: 5.470708
+  type: 'test'
+  ...
+# Subtest: active ocular-health diagnosis mappings name active options on their declared fields
+ok 59 - active ocular-health diagnosis mappings name active options on their declared fields
+  ---
+  duration_ms: 5.869792
+  type: 'test'
+  ...
+# Subtest: diagnosis reachability reports mapping, rule, and visual-field descriptor channels against separate baselines
+ok 60 - diagnosis reachability reports mapping, rule, and visual-field descriptor channels against separate baselines
+  ---
+  duration_ms: 56.596375
+  type: 'test'
+  ...
+# Subtest: ocular-health ledger diagnoses never become more globally unreachable
+ok 61 - ocular-health ledger diagnoses never become more globally unreachable
+  ---
+  duration_ms: 7.486208
+  type: 'test'
+  ...
+# Subtest: unspecified ocular diagnosis keys never surface with qualifiers unset or set
+ok 62 - unspecified ocular diagnosis keys never surface with qualifiers unset or set
+  ---
+  duration_ms: 144.297542
+  type: 'test'
+  ...
+# Subtest: I5 qualifier components cannot diagnose or suppress without an active parent option
+ok 63 - I5 qualifier components cannot diagnose or suppress without an active parent option
+  ---
+  duration_ms: 29.629625
+  type: 'test'
+  ...
+# Subtest: I6 allOf-wrapped option fallbacks are suppressed like bare option fallbacks
+ok 64 - I6 allOf-wrapped option fallbacks are suppressed like bare option fallbacks
+  ---
+  duration_ms: 17.793625
+  type: 'test'
+  ...
+# Subtest: direct laterality-required picks ask once, then write no fabricated evidence, and evaluators contain no pick call site
+ok 65 - direct laterality-required picks ask once, then write no fabricated evidence, and evaluators contain no pick call site
+  ---
+  duration_ms: 2.047875
+  type: 'test'
+  ...
+# Subtest: visual-field descriptors derive every approved code while preserving the descriptor through reload
+ok 66 - visual-field descriptors derive every approved code while preserving the descriptor through reload
+  ---
+  duration_ms: 191.847958
+  type: 'test'
+  ...
+# Subtest: staged glaucoma visibly suppresses only the visual-field proposal and override never changes glaucoma stage
+ok 67 - staged glaucoma visibly suppresses only the visual-field proposal and override never changes glaucoma stage
+  ---
+  duration_ms: 29.410208
+  type: 'test'
+  ...
+# Subtest: prior-encounter confirmed glaucoma reveals both staged glaucoma families without widening encounter suppression scope
+ok 68 - prior-encounter confirmed glaucoma reveals both staged glaucoma families without widening encounter suppression scope
+  ---
+  duration_ms: 23.959084
+  type: 'test'
+  ...
+# Subtest: posterior plain drusen returns an ordered leaf and staged family while occasional drusen stays descriptive
+ok 69 - posterior plain drusen returns an ordered leaf and staged family while occasional drusen stays descriptive
+  ---
+  duration_ms: 23.717208
+  type: 'test'
+  ...
+# Subtest: homonymous field-side picks never derive field side from eye laterality
+ok 70 - homonymous field-side picks never derive field side from eye laterality
+  ---
+  duration_ms: 1.914375
+  type: 'test'
+  ...
+# Subtest: a concurrent Condition update returns 409 without silently retrying the clinician decision
+ok 71 - a concurrent Condition update returns 409 without silently retrying the clinician decision
+  ---
+  duration_ms: 13.586458
+  type: 'test'
+  ...
+# Subtest: a failed diagnosis pick transaction leaves the Condition and Encounter unchanged
+ok 72 - a failed diagnosis pick transaction leaves the Condition and Encounter unchanged
+  ---
+  duration_ms: 1.219
+  type: 'test'
+  ...
+# Subtest: possible, confirm, and discard use atomic transactions with per-resource version preconditions
+ok 73 - possible, confirm, and discard use atomic transactions with per-resource version preconditions
+  ---
+  duration_ms: 1.397083
+  type: 'test'
+  ...
+# Subtest: direct confirm and discard each send one atomic Condition-and-Encounter transaction with version guards
+ok 74 - direct confirm and discard each send one atomic Condition-and-Encounter transaction with version guards
+  ---
+  duration_ms: 1.046125
+  type: 'test'
+  ...
+# Subtest: laterality-keyed picks keep both eyes distinct, escalate one eye, and discard only its Condition
+ok 75 - laterality-keyed picks keep both eyes distinct, escalate one eye, and discard only its Condition
+  ---
+  duration_ms: 29.641334
+  type: 'test'
+  ...
+# Subtest: conditional create makes identical same-eye Possible double-submit idempotent
+ok 76 - conditional create makes identical same-eye Possible double-submit idempotent
+  ---
+  duration_ms: 12.944041
+  type: 'test'
+  ...
+# Subtest: confirmed catalog picks join Encounter.diagnosis once and preserve rank gaps
+ok 77 - confirmed catalog picks join Encounter.diagnosis once and preserve rank gaps
+  ---
+  duration_ms: 1.404
+  type: 'test'
+  ...
+# Subtest: three confirmed diagnoses can discard the middle row and submit the remaining exact reorder
+ok 78 - three confirmed diagnoses can discard the middle row and submit the remaining exact reorder
+  ---
+  duration_ms: 2.273
+  type: 'test'
+  ...
+# Subtest: discard unlink is idempotent and confirm after discard relinks through the existing path
+ok 79 - discard unlink is idempotent and confirm after discard relinks through the existing path
+  ---
+  duration_ms: 1.786958
+  type: 'test'
+  ...
+# Subtest: discard returns reload-and-retry after the Encounter unlink exhausts conflict retries
+ok 80 - discard returns reload-and-retry after the Encounter unlink exhausts conflict retries
+  ---
+  duration_ms: 2.707292
+  type: 'test'
+  ...
+# Subtest: a signed Encounter refuses discard before changing the Condition or Encounter
+ok 81 - a signed Encounter refuses discard before changing the Condition or Encounter
+  ---
+  duration_ms: 0.896875
+  type: 'test'
+  ...
+# Subtest: diagnosis pick Provenance targets the patient
+ok 82 - diagnosis pick Provenance targets the patient
+  ---
+  duration_ms: 0.488542
+  type: 'test'
+  ...
+# Subtest: a failed tally side effect never fails a successful explicit diagnosis pick
+ok 83 - a failed tally side effect never fails a successful explicit diagnosis pick
+  ---
+  duration_ms: 6.150333
+  type: 'test'
+  ...
+# Subtest: dedup keeps rule evidence and the higher-priority mapping when no rule exists
+ok 84 - dedup keeps rule evidence and the higher-priority mapping when no rule exists
+  ---
+  duration_ms: 0.052625
+  type: 'test'
+  ...
+# Subtest: W10 supported pick is a Condition-only step and retains its full response
+ok 85 - W10 supported pick is a Condition-only step and retains its full response
+  ---
+  duration_ms: 8.070459
+  type: 'test'
+  ...
+# Subtest: W35 empty stale foreign supports refuse before Condition writes
+    # Subtest: empty
+    ok 1 - empty
+      ---
+      duration_ms: 0.316
+      type: 'test'
+      ...
+    # Subtest: stale
+    ok 2 - stale
+      ---
+      duration_ms: 6.717583
+      type: 'test'
+      ...
+    # Subtest: foreign
+    ok 3 - foreign
+      ---
+      duration_ms: 6.810792
+      type: 'test'
+      ...
+    1..3
+ok 86 - W35 empty stale foreign supports refuse before Condition writes
+  ---
+  duration_ms: 14.092167
+  type: 'test'
+  ...
+# Subtest: W30 candidates use current projection and omit superseded snapshot suggestions
+ok 87 - W30 candidates use current projection and omit superseded snapshot suggestions
+  ---
+  duration_ms: 7.919583
+  type: 'test'
+  ...
+# Subtest: mixed option definition preserves numeric panel context in current candidates
+ok 88 - mixed option definition preserves numeric panel context in current candidates
+  ---
+  duration_ms: 14.428542
+  type: 'test'
+  ...
+# Subtest: supported pick validates every support and explicit eye union before all writes
+    # Subtest: duplicate
+    ok 1 - duplicate
+      ---
+      duration_ms: 6.692042
+      type: 'test'
+      ...
+    # Subtest: missing-command
+    ok 2 - missing-command
+      ---
+      duration_ms: 7.239042
+      type: 'test'
+      ...
+    # Subtest: wrong-command
+    ok 3 - wrong-command
+      ---
+      duration_ms: 0.139208
+      type: 'test'
+      ...
+    # Subtest: eye
+    ok 4 - eye
+      ---
+      duration_ms: 6.730417
+      type: 'test'
+      ...
+    # Subtest: retired
+    ok 5 - retired
+      ---
+      duration_ms: 7.036917
+      type: 'test'
+      ...
+    # Subtest: absent
+    ok 6 - absent
+      ---
+      duration_ms: 6.932417
+      type: 'test'
+      ...
+    # Subtest: signed
+    ok 7 - signed
+      ---
+      duration_ms: 7.259917
+      type: 'test'
+      ...
+    # Subtest: cancelled
+    ok 8 - cancelled
+      ---
+      duration_ms: 6.859416
+      type: 'test'
+      ...
+    # Subtest: conflict
+    ok 9 - conflict
+      ---
+      duration_ms: 7.371125
+      type: 'test'
+      ...
+    # Subtest: legacy
+    ok 10 - legacy
+      ---
+      duration_ms: 8.427958
+      type: 'test'
+      ...
+    # Subtest: foreign-home
+    ok 11 - foreign-home
+      ---
+      duration_ms: 7.441375
+      type: 'test'
+      ...
+    # Subtest: wrong-view
+    ok 12 - wrong-view
+      ---
+      duration_ms: 6.956209
+      type: 'test'
+      ...
+    1..12
+ok 89 - supported pick validates every support and explicit eye union before all writes
+  ---
+  duration_ms: 79.802333
+  type: 'test'
+  ...
+# Subtest: supported bilateral pick unions eyes, then discard remains a Condition step without a link
+ok 90 - supported bilateral pick unions eyes, then discard remains a Condition step without a link
+  ---
+  duration_ms: 14.845834
+  type: 'test'
+  ...
+# Subtest: projected no-id pick without supports performs only the Condition step
+ok 91 - projected no-id pick without supports performs only the Condition step
+  ---
+  duration_ms: 17.218709
+  type: 'test'
+  ...
+# Subtest: pick reports failed and unconfirmed Condition steps without pretending load failure
+    # Subtest: 403
+    ok 1 - 403
+      ---
+      duration_ms: 7.872666
+      type: 'test'
+      ...
+    # Subtest: undefined
+    ok 2 - undefined
+      ---
+      duration_ms: 7.902
+      type: 'test'
+      ...
+    1..2
+ok 92 - pick reports failed and unconfirmed Condition steps without pretending load failure
+  ---
+  duration_ms: 15.9715
+  type: 'test'
+  ...
+# Subtest: W29 Cup/Disc measurement pick retains Observation evidence and Provenance entity
+ok 93 - W29 Cup/Disc measurement pick retains Observation evidence and Provenance entity
+  ---
+  duration_ms: 7.599125
+  type: 'test'
+  ...
+# Subtest: pick finds an existing diagnosis on page two instead of creating another
+ok 94 - pick finds an existing diagnosis on page two instead of creating another
+  ---
+  duration_ms: 1.375584
+  type: 'test'
+  ...
+# Subtest: option candidates recursively collect trigger supports and union duplicate diagnosis supports
+ok 95 - option candidates recursively collect trigger supports and union duplicate diagnosis supports
+  ---
+  duration_ms: 24.2225
+  type: 'test'
+  ...
+# Subtest: mixed panel context uses newest projected context and refuses ambiguous equal-time contexts
+ok 96 - mixed panel context uses newest projected context and refuses ambiguous equal-time contexts
+  ---
+  duration_ms: 27.462792
+  type: 'test'
+  ...
+# Subtest: L3 ships empty-tolerant with no seeded clinical key findings or windows
+ok 97 - L3 ships empty-tolerant with no seeded clinical key findings or windows
+  ---
+  duration_ms: 3.416166
+  type: 'test'
+  ...
+# Subtest: the existing confirmation completeness gate surfaces a staged diagnosis with no selected member
+ok 98 - the existing confirmation completeness gate surfaces a staged diagnosis with no selected member
+  ---
+  duration_ms: 13.201208
+  type: 'test'
+  ...
+# Subtest: persisted diagnosis rows enforce the same key-finding bounds as mutations
+ok 99 - persisted diagnosis rows enforce the same key-finding bounds as mutations
+  ---
+  duration_ms: 0.642875
+  type: 'test'
+  ...
+# Subtest: real HTTP L3 routes persist ordered key findings and report only unsatisfied findings for active confirmed diagnoses
+ok 100 - real HTTP L3 routes persist ordered key findings and report only unsatisfied findings for active confirmed diagnoses
+  ---
+  duration_ms: 112.575208
+  type: 'test'
+  ...
+# Subtest: confirm freezes the original setter and timestamp when a different clinician changes status
+ok 101 - confirm freezes the original setter and timestamp when a different clinician changes status
+  ---
+  duration_ms: 3.284959
+  type: 'test'
+  ...
+# Subtest: missing rows read as unset, signed encounters reject updates, and a later encounter gets a new Condition without copied status
+ok 102 - missing rows read as unset, signed encounters reject updates, and a later encounter gets a new Condition without copied status
+  ---
+  duration_ms: 4.021459
+  type: 'test'
+  ...
+# Subtest: all ten visit statuses agree across clients and pass the update endpoint
+ok 103 - all ten visit statuses agree across clients and pass the update endpoint
+  ---
+  duration_ms: 6.177708
+  type: 'test'
+  ...
+# Subtest: status vocabulary is application-validated and the SQL column remains extensible
+ok 104 - status vocabulary is application-validated and the SQL column remains extensible
+  ---
+  duration_ms: 0.250583
+  type: 'test'
+  ...
+1..104
+# tests 124
+# suites 0
+# pass 124
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2285.753583

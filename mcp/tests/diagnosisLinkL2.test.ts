@@ -1,3 +1,6 @@
+import { FINDING_PANEL_SYSTEM, SUPPORTS_DIAGNOSIS_URL, currentFindingIdentifier } from "../src/clinical-graph/current-finding-identity.js";
+import { canonicalFact, keyFor } from "./fixtures/r10/writer-harness.js";
+import { comp, snapshot } from "./fixtures/r10/factories.js";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
@@ -258,8 +261,8 @@ test("staged POAG picks persist the chosen member code and keep different per-ey
     body: { diagnosisKey: "poag_moderate", action: "confirm", laterality: "OS", source: "catalog-search" },
   });
 
-  assert.equal(mildOd.status, 201, JSON.stringify(mildOd.body));
-  assert.equal(moderateOs.status, 201, JSON.stringify(moderateOs.body));
+  assert.equal(mildOd.status, 200, JSON.stringify(mildOd.body));
+  assert.equal(moderateOs.status, 200, JSON.stringify(moderateOs.body));
   assert.equal((mildOd.body as { condition: Condition }).condition.code?.coding?.[0]?.code, sourcedDiagnosisCode("poag_mild", "right"));
   assert.equal((moderateOs.body as { condition: Condition }).condition.code?.coding?.[0]?.code, sourcedDiagnosisCode("poag_moderate", "left"));
   const conditions = fhir.resources.filter((resource): resource is Condition => resource.resourceType === "Condition");
@@ -286,7 +289,7 @@ test("Stage later persists a staged family Condition with no ICD-10-CM coding", 
     },
   });
 
-  assert.equal(result.status, 201, JSON.stringify(result.body));
+  assert.equal(result.status, 200, JSON.stringify(result.body));
   const condition = (result.body as { condition: Condition }).condition;
   assert.deepEqual(condition.identifier?.map((identifier) => identifier.value), ["e1::primary-open-angle-glaucoma::right"]);
   assert.equal(condition.code?.text, "Primary open-angle glaucoma");
@@ -313,9 +316,10 @@ test("Stage later cannot duplicate an existing same-eye staged member Condition"
     },
   });
 
-  assert.equal(confirmed.status, 201, JSON.stringify(confirmed.body));
+  assert.equal(confirmed.status, 200, JSON.stringify(confirmed.body));
   assert.equal(deferred.status, 409, JSON.stringify(deferred.body));
   assert.deepEqual(deferred.body, {
+    result: "invalid", reason: "invalid-pick",
     error: "A staged diagnosis already exists for primary-open-angle-glaucoma right. Re-stage the existing diagnosis instead.",
   });
   const conditions = fhir.resources.filter((resource): resource is Condition => resource.resourceType === "Condition");
@@ -344,7 +348,7 @@ test("a member pick completes the same-eye pending family Condition instead of c
     body: { diagnosisKey: "poag_mild", action: "confirm", laterality: "OD", source: "catalog-search" },
   });
 
-  assert.equal(deferred.status, 201, JSON.stringify(deferred.body));
+  assert.equal(deferred.status, 200, JSON.stringify(deferred.body));
   assert.equal(completed.status, 200, JSON.stringify(completed.body));
   const deferredCondition = (deferred.body as { condition: Condition }).condition;
   const completedCondition = (completed.body as { condition: Condition }).condition;
@@ -374,7 +378,7 @@ test("discarding an absent staged member cannot refute a same-eye pending family
     body: { diagnosisKey: "poag_mild", action: "discard", laterality: "OD", source: "catalog-search" },
   });
 
-  assert.equal(deferred.status, 201, JSON.stringify(deferred.body));
+  assert.equal(deferred.status, 200, JSON.stringify(deferred.body));
   assert.equal(discarded.status, 404, JSON.stringify(discarded.body));
   const condition = fhir.resources.find((resource): resource is Condition => resource.resourceType === "Condition")!;
   assert.equal(condition.verificationStatus?.coding?.[0]?.code, "confirmed");
@@ -398,7 +402,7 @@ test("all three eyelid families write both-lids OD and OS codes and resolve OU w
         params: { encounterId: "e1" },
         body: { diagnosisKey, action: "confirm", laterality },
       });
-      assert.equal(result.status, 201, `${diagnosisKey} ${laterality}: ${JSON.stringify(result.body)}`);
+      assert.equal(result.status, 200, `${diagnosisKey} ${laterality}: ${JSON.stringify(result.body)}`);
       const condition = (result.body as { condition: Condition }).condition;
       assert.deepEqual(condition.code, {
         coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: expected, display: condition.code?.text }],
@@ -414,7 +418,7 @@ test("all three eyelid families write both-lids OD and OS codes and resolve OU w
       params: { encounterId: "e1" },
       body: { diagnosisKey, action: "confirm", laterality: "OU" },
     });
-    assert.equal(bilateral.status, 201, `${diagnosisKey} OU: ${JSON.stringify(bilateral.body)}`);
+    assert.equal(bilateral.status, 200, `${diagnosisKey} OU: ${JSON.stringify(bilateral.body)}`);
     const condition = (bilateral.body as { condition: Condition }).condition;
     assert.deepEqual(condition.code, {
       coding: [{
@@ -452,6 +456,7 @@ test("allOf mapping triggers require every nested option trigger", () => {
 
 test("EOM binocular plus incomitant proposes diplopia and paralytic strabismus without auto-confirming", async () => {
   const fhir = new MemoryFhir();
+    fhir.resources.push(testEncounter("eom", "p1"));
   const definitions = await new FhirFindingDefinitionStore(fhir).list();
   const authenticate = async () => ({ staffReference: "Practitioner/doc", actorRole: "provider" as PracticeRoleId, fhir });
   const base = { patientReference: "Patient/p1", encounterReference: "Encounter/eom", state: "abnormal" as const, eyes: { OD: { primary: "-1" as const } }, nystagmus: { present: false } };
@@ -470,6 +475,7 @@ test("EOM binocular plus incomitant proposes diplopia and paralytic strabismus w
 });
 
 class MemoryFhir {
+  readonly baseUrl = "http://localhost:8103/";
   readonly resources: Resource[] = [];
   readonly writes: Array<{ operation: "create" | "update"; resourceType: string; id: string; headers?: Record<string, string> }> = [];
   readonly searches: Array<{ resourceType: string; params: Record<string, string> }> = [];
@@ -647,7 +653,7 @@ test("real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated
     diagnosisKey: "glaucoma_suspect_open_angle_low",
     action: "confirm",
     source: "rule",
-  }, "Bearer doctor-1", 201);
+  }, "Bearer doctor-1", 200);
   const condition = fhir.resources.find((row): row is Condition => row.resourceType === "Condition")!;
   assert.equal(condition.verificationStatus?.coding?.[0]?.code, "confirmed");
   assert.equal(condition.code?.coding?.[0]?.code, sourcedDiagnosisCode("glaucoma_suspect_open_angle_low", "right"));
@@ -662,7 +668,7 @@ test("real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated
       diagnosisKey: "ocular_hypertension",
       action: index === 0 ? "possible" : "confirm",
       source: "mapping",
-    }, "Bearer doctor-1", index === 0 ? 201 : 200);
+    }, "Bearer doctor-1", 200);
   }
   const reorderedDoctor1 = await candidates(base, "Bearer doctor-1");
   assert.equal(reorderedDoctor1.findings.find((row) => row.observationReference === observationReference)?.candidates[0]?.diagnosisKey, "ocular_hypertension");
@@ -747,8 +753,8 @@ test("OH-3 multi-select findings propose verified per-eye diagnoses and explicit
       source: "mapping",
     },
   });
-  assert.equal(confirmedCornea.status, 201, JSON.stringify(confirmedCornea.body));
-  assert.equal((confirmedCornea.body as { condition: Condition }).condition.code?.coding?.[0]?.code, "H18.611");
+  assert.equal(confirmedCornea.status, 409, JSON.stringify(confirmedCornea.body));
+  assert.equal((confirmedCornea.body as any).reason, "pre-rebuild-test-encounter");
 
   const lids = fieldFor("ocular-health:anterior:lids-lashes");
   const lidsCapture = await handleCustomSectionCaptureRequest({
@@ -797,13 +803,13 @@ test("OH-3 multi-select findings propose verified per-eye diagnoses and explicit
         source: "mapping",
       },
     });
-    assert.equal(result.status, 201, JSON.stringify(result.body));
+    assert.equal(result.status, 409, JSON.stringify(result.body));
   }
   const blepharitisCodes = fhir.resources.filter((resource): resource is Condition => resource.resourceType === "Condition" &&
     resource.code?.text === "Ulcerative blepharitis")
     .map((condition) => condition.code?.coding?.[0]?.code)
     .sort();
-  assert.deepEqual(blepharitisCodes, ["H01.01A", "H01.01B"]);
+  assert.deepEqual(blepharitisCodes, []);
 });
 
 test("I1 complete ocular qualifiers resolve each selected finding to one diagnosis", async () => {
@@ -1336,6 +1342,7 @@ test("I5 qualifier components cannot diagnose or suppress without an active pare
 
   for (const parent of ["absent", "false"] as const) {
     const fhir = new MemoryFhir();
+    fhir.resources.push(testEncounter("e-qualified", "p-qualified"));
     const definitions = await new FhirFindingDefinitionStore(fhir).list();
     const definition = definitions.find((candidate) => candidate.stableKey === "ocular-health:anterior:conjunctiva");
     assert.ok(definition);
@@ -1387,6 +1394,7 @@ test("I5 qualifier components cannot diagnose or suppress without an active pare
 
 test("I6 allOf-wrapped option fallbacks are suppressed like bare option fallbacks", async () => {
   const fhir = new MemoryFhir();
+    fhir.resources.push(testEncounter("e-qualified", "p-qualified"));
   const store = new FhirFindingDefinitionStore(fhir);
   const definition = (await store.list()).find((candidate) => candidate.stableKey === "ocular-health:anterior:conjunctiva");
   assert.ok(definition);
@@ -1471,7 +1479,7 @@ test("direct laterality-required picks ask once, then write no fabricated eviden
     params: { encounterId: "e1" },
     body: { diagnosisKey: "myopia", action: "confirm", laterality: "OD" },
   });
-  assert.equal(explicit.status, 201);
+  assert.equal(explicit.status, 200);
   const directCondition = (explicit.body as { condition: Condition }).condition;
   assert.equal(directCondition.code?.coding?.[0]?.code, sourcedDiagnosisCode("myopia", "right"));
   assert.equal(directCondition.evidence, undefined);
@@ -1571,7 +1579,7 @@ test("visual-field descriptors derive every approved code while preserving the d
       params: { encounterId: "vf" },
       body: { findingInstanceId: observationReference, diagnosisKey, action: "confirm", source: "mapping" },
     });
-    assert.equal(pick.status, 201, JSON.stringify(pick.body));
+    assert.equal(pick.status, 200, JSON.stringify(pick.body));
     assert.equal((pick.body as { condition: Condition }).condition.code?.coding?.[0]?.code, code);
     assert.equal(storedDescriptor?.display, display);
   }
@@ -1696,7 +1704,7 @@ test("staged glaucoma visibly suppresses only the visual-field proposal and over
       source: "mapping",
     },
   });
-  assert.equal(override.status, 201, JSON.stringify(override.body));
+  assert.equal(override.status, 200, JSON.stringify(override.body));
   assert.equal((override.body as { condition: Condition }).condition.code?.coding?.[0]?.code, "H53.451");
   assert.deepEqual(fhir.resources.find((resource) => resource.id === "staged-glaucoma"), stagedBefore);
 });
@@ -1855,9 +1863,9 @@ test("posterior plain drusen returns an ordered leaf and staged family while occ
       source: "mapping",
     },
   });
-  assert.equal(picked.status, 201, JSON.stringify(picked.body));
-  assert.equal((picked.body as { condition: Condition }).condition.code?.coding?.[0]?.code,
-    sourcedDiagnosisCode("dry_amd_early", "right"));
+  assert.equal(picked.status, 409, JSON.stringify(picked.body));
+  assert.equal((picked.body as any).reason, "pre-rebuild-test-encounter");
+  assert.equal(fhir.resources.some(r => r.resourceType === "Condition"), false);
 });
 
 test("homonymous field-side picks never derive field side from eye laterality", async () => {
@@ -1874,7 +1882,7 @@ test("homonymous field-side picks never derive field side from eye laterality", 
   const od = await pick("OD");
   const os = await pick("OS");
   const ou = await pick("OU");
-  assert.equal(od.status, 201);
+  assert.equal(od.status, 200);
   assert.equal(os.status, 200);
   assert.equal(ou.status, 200);
   assert.equal((od.body as { condition: Condition }).condition.code?.coding?.[0]?.code, "H53.469");
@@ -1926,7 +1934,7 @@ test("a concurrent Condition update returns 409 without silently retrying the cl
     },
   });
 
-  assert.equal((await pick("possible")).status, 201);
+  assert.equal((await pick("possible")).status, 200);
   fhir.conflictOnConditionUpdate = true;
   const result = await pick("confirm");
   assert.equal(result.status, 409);
@@ -1959,7 +1967,7 @@ test("a failed diagnosis pick transaction leaves the Condition and Encounter unc
   });
 
   const confirmed = await pick("confirm");
-  assert.equal(confirmed.status, 201, JSON.stringify(confirmed.body));
+  assert.equal(confirmed.status, 200, JSON.stringify(confirmed.body));
   const condition = (confirmed.body as { condition: Condition }).condition;
   const conditionReference = `Condition/${condition.id}`;
   fhir.failEncounterWrite = true;
@@ -1987,7 +1995,7 @@ test("possible, confirm, and discard use atomic transactions with per-resource v
     body: { diagnosisKey: "presbyopia", action, source: "catalog-search" },
   });
 
-  assert.equal((await pick("possible")).status, 201);
+  assert.equal((await pick("possible")).status, 200);
   assert.equal((await pick("confirm")).status, 200);
   assert.equal((await pick("discard")).status, 200);
 
@@ -2036,7 +2044,7 @@ test("direct confirm and discard each send one atomic Condition-and-Encounter tr
 
   const confirmed = await pick("confirm");
 
-  assert.equal(confirmed.status, 201, JSON.stringify(confirmed.body));
+  assert.equal(confirmed.status, 200, JSON.stringify(confirmed.body));
   assert.equal(fhir.transactions.length, 1);
   const confirmBundle = fhir.transactions[0]!.bundle;
   assert.equal(confirmBundle.type, "transaction");
@@ -2074,7 +2082,7 @@ test("laterality-keyed picks keep both eyes distinct, escalate one eye, and disc
     diagnosisKey: "glaucoma_suspect_open_angle_low",
     action: "possible",
   });
-  assert.equal(possibleOd.status, 201);
+  assert.equal(possibleOd.status, 200);
   assert.equal((possibleOd.body as { condition: Condition }).condition.verificationStatus?.coding?.[0]?.code, "provisional");
 
   const confirmOd = await pick({
@@ -2090,7 +2098,7 @@ test("laterality-keyed picks keep both eyes distinct, escalate one eye, and disc
     diagnosisKey: "glaucoma_suspect_open_angle_low",
     action: "confirm",
   });
-  assert.equal(confirmOs.status, 201);
+  assert.equal(confirmOs.status, 200);
   const conditions = fhir.resources.filter((resource): resource is Condition => resource.resourceType === "Condition");
   assert.equal(conditions.length, 2);
   assert.deepEqual(new Set(conditions.map((condition) => condition.code?.coding?.[0]?.code)), new Set([
@@ -2156,7 +2164,7 @@ test("confirmed catalog picks join Encounter.diagnosis once and preserve rank ga
   });
 
   const first = await request();
-  assert.equal(first.status, 201);
+  assert.equal(first.status, 200);
   assert.deepEqual(
     (first.body as { encounter: Encounter }).encounter.diagnosis?.map((diagnosis) => ({
       reference: diagnosis.condition.reference,
@@ -2189,9 +2197,9 @@ test("three confirmed diagnoses can discard the middle row and submit the remain
   const first = await pick("presbyopia", "confirm");
   const discarded = await pick("diplopia", "confirm");
   const third = await pick("anisometropia", "confirm");
-  assert.equal(first.status, 201, JSON.stringify(first.body));
-  assert.equal(discarded.status, 201, JSON.stringify(discarded.body));
-  assert.equal(third.status, 201, JSON.stringify(third.body));
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  assert.equal(discarded.status, 200, JSON.stringify(discarded.body));
+  assert.equal(third.status, 200, JSON.stringify(third.body));
 
   const firstReference = `Condition/${(first.body as { condition: Condition }).condition.id}`;
   const discardedReference = `Condition/${(discarded.body as { condition: Condition }).condition.id}`;
@@ -2369,7 +2377,7 @@ test("diagnosis pick Provenance targets the patient", async () => {
     body: { diagnosisKey: "presbyopia", action: "confirm", source: "catalog-search" },
   });
 
-  assert.equal(result.status, 201, JSON.stringify(result.body));
+  assert.equal(result.status, 200, JSON.stringify(result.body));
   const provenance = fhir.resources.find((resource): resource is Provenance =>
     resource.resourceType === "Provenance"
   );
@@ -2413,7 +2421,7 @@ test("a failed tally side effect never fails a successful explicit diagnosis pic
       params: { encounterId: "e1" },
       body: { findingInstanceId: "finding-1", diagnosisKey: "glaucoma_suspect_open_angle_low", action: "confirm" },
     });
-    assert.equal(result.status, 201);
+    assert.equal(result.status, 200);
     assert.equal(fhir.resources.some((resource) => resource.resourceType === "Condition"), true);
     assert.equal(errors.some((message) => message.includes("simulated tally outage")), true);
   } finally {
@@ -2460,6 +2468,7 @@ async function ocularCandidateKeys(
   }>>,
 ): Promise<string[][]> {
   const fhir = new MemoryFhir();
+  fhir.resources.push(testEncounter("e-qualified", "p-qualified"));
   const definitions = await new FhirFindingDefinitionStore(fhir).list();
   const definition = definitions.find((candidate) => candidate.stableKey === stableKey);
   assert.ok(definition);
@@ -2547,3 +2556,186 @@ async function post(base: string, path: string, body: unknown, authorization: st
   assert.equal(response.status, expected, JSON.stringify(result));
   return result;
 }
+
+test("W10 supported pick is a Condition-only step and retains its full response", async () => {
+  const fhir = diagnosisPickFhir();
+  const observation = canonicalFact();
+  fhir.resources.push(observation);
+  const result = await handleDiagnosisPickRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider", fhir }) } as any, {
+    authHeader: "Bearer doctor", params: { encounterId: "e1" },
+    body: { diagnosisKey: "presbyopia", action: "confirm", commandId: "11111111-1111-4111-8111-111111111111", supportingFacts: [{ key: keyFor(), baseline: { kind: "canonical", reference: `Observation/${observation.id}`, versionId: observation.meta!.versionId } }] },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const body = result.body as any;
+  assert.equal(body.result, "pick"); assert.equal(body.conditionStep, "applied"); assert.equal(body.link, "pending");
+  assert.equal(body.condition.evidence, undefined);
+  assert.ok(body.encounter); assert.ok(body.provenanceReference); assert.equal(body.strandedChargesComputed, true);
+  assert.equal(fhir.writes.some(w => w.resourceType === "Observation"), false);
+  const provenance = fhir.resources.find(r => r.resourceType === "Provenance") as Provenance;
+  assert.equal(provenance.entity?.some(e => e.what.reference?.startsWith("Observation/")), false);
+});
+
+test("W35 empty stale foreign supports refuse before Condition writes", async (t) => {
+  for (const kind of ["empty", "stale", "foreign"] as const) await t.test(kind, async () => {
+    const fhir = diagnosisPickFhir(); const observation = canonicalFact(); fhir.resources.push(observation);
+    const result = await handleDiagnosisPickRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider", fhir }) } as any, {
+      authHeader: "Bearer doctor", params: { encounterId: "e1" }, body: { diagnosisKey: "presbyopia", action: "confirm", commandId: "11111111-1111-4111-8111-111111111111", supportingFacts: kind === "empty" ? [] : [{ key: { ...keyFor(), ...(kind === "foreign" ? { patientId: "other" } : {}) }, baseline: { kind: "canonical", reference: `Observation/${observation.id}`, versionId: kind === "stale" ? "old" : observation.meta!.versionId } }] },
+    });
+    assert.equal(result.status, 400); assert.equal((result.body as any).result, "invalid"); assert.equal(fhir.writes.length, 0); assert.equal(fhir.transactions.length, 0);
+  });
+});
+
+test("W30 candidates use current projection and omit superseded snapshot suggestions", async () => {
+  const fhir = diagnosisPickFhir();
+  const old = snapshot("old", ["nuclear-sclerosis"]); old.effectiveDateTime = "2026-01-01T00:00:00Z";
+  const latest = snapshot("latest", []); latest.effectiveDateTime = "2026-01-02T00:00:00Z";
+  fhir.resources.push(old, latest);
+  const result = await handleDiagnosisCandidatesRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider", fhir }) }, { authHeader: "Bearer doctor", params: { encounterId: "e1" } });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const rows = (result.body as any).findings.filter((r: any) => r.findingDefinitionKey === keyFor().stableKey);
+  assert.deepEqual(rows.flatMap((r: any) => r.candidates), []);
+});
+
+function testEncounter(id: string, patientId: string): Encounter { return { resourceType: "Encounter", id, status: "in-progress", class: { code: "AMB" }, subject: { reference: `Patient/${patientId}` } }; }
+
+test("mixed option definition preserves numeric panel context in current candidates", async () => {
+  const fhir = diagnosisPickFhir(); const store = new FhirFindingDefinitionStore(fhir);
+  const definition = (await store.list()).find(d => d.stableKey === keyFor().stableKey)!;
+  await store.save({ ...definition, valueSchema: { ...definition.valueSchema, fields: { ...(definition.valueSchema.fields as object), numericContext: { localCode: "CUSTOM_CONTEXT", display: "Context", valueType: "number", origin: "practice", active: true, order: 2 } } }, diagnosisCandidates: [
+    { id: "mixed-context", diagnosisKey: "presbyopia", trigger: { kind: "allOf", triggers: [ { kind: "option", field: keyFor().fieldCode, anyOf: [keyFor().optionCode] }, { kind: "numeric", field: "CUSTOM_CONTEXT", op: ">", value: 1 } ] }, active: true, origin: "practice" },
+  ] });
+  const panel = snapshot("panel", []); panel.identifier = [{ system: FINDING_PANEL_SYSTEM, value: "synthetic-panel" }]; panel.component = [comp("OD_CUSTOM_CONTEXT", 3)];
+  fhir.resources.push(canonicalFact(), panel);
+  const result = await handleDiagnosisCandidatesRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider", fhir }) }, { authHeader: "Bearer doctor", params: { encounterId: "e1" } });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const row = (result.body as any).findings.find((r: any) => r.findingDefinitionKey === definition.stableKey);
+  assert.equal(row.candidates[0]?.diagnosisKey, "presbyopia");
+  assert.equal(row.candidates[0]?.supportingFacts.length, 1);
+});
+
+function supportedPick(fhir: MemoryFhir, body: Record<string, unknown> = {}) {
+  const fact = fhir.resources.find(r => r.resourceType === "Observation" && r.id === "canonical")!;
+  return handleDiagnosisPickRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider", fhir }) } as any, {
+    authHeader: "Bearer doctor", params: { encounterId: "e1" }, body: { diagnosisKey: "presbyopia", action: "confirm", commandId: "11111111-1111-4111-8111-111111111111",
+      supportingFacts: [{ key: keyFor(), baseline: { kind: "canonical", reference: `Observation/${fact.id}`, versionId: fact.meta!.versionId } }], ...body },
+  });
+}
+
+test("supported pick validates every support and explicit eye union before all writes", async (t) => {
+  for (const kind of ["duplicate", "missing-command", "wrong-command", "eye", "retired", "absent", "signed", "cancelled", "conflict", "legacy", "foreign-home", "wrong-view"] as const) await t.test(kind, async () => {
+    const fhir = diagnosisPickFhir(); const fact = canonicalFact();
+    if (kind === "retired") fact.status = "entered-in-error";
+    if (kind === "absent") fact.valueBoolean = false;
+    if (kind === "signed") fact.status = "final";
+    if (kind === "cancelled") fact.status = "cancelled";
+    if (kind === "foreign-home") fact.extension!.push({ url: SUPPORTS_DIAGNOSIS_URL, valueReference: { reference: "Condition/foreign" } });
+    fhir.resources.push(fact);
+    if (kind === "conflict") fhir.resources.push(canonicalFact("duplicate-owner"));
+    if (kind === "legacy") fhir.resources.push(snapshot());
+    const support = { key: keyFor(), baseline: { kind: "canonical", reference: "Observation/canonical", versionId: fact.meta!.versionId } };
+    const body = kind === "duplicate" ? { supportingFacts: [support, support] } : kind === "missing-command" ? { commandId: undefined } : kind === "wrong-command" ? { commandId: "11111111-1111-1111-8111-111111111111" } : kind === "eye" ? { laterality: "OS" } : kind === "wrong-view" ? { findingInstanceId: "definition:foreign:OD" } : {};
+    const result = await supportedPick(fhir, body);
+    assert.equal(result.status, kind === "legacy" ? 409 : kind === "signed" || kind === "cancelled" ? 422 : 400, JSON.stringify(result.body));
+    assert.equal(result.body.result, "invalid"); assert.equal(fhir.writes.length, 0); assert.equal(fhir.transactions.length, 0);
+  });
+});
+
+test("supported bilateral pick unions eyes, then discard remains a Condition step without a link", async () => {
+  const fhir = diagnosisPickFhir(); fhir.resources.push(canonicalFact(), canonicalFact("canonical-os", "OS"));
+  const supportingFacts = ["OD", "OS"].map(eye => ({ key: keyFor(eye as "OD" | "OS"), baseline: { kind: "canonical", reference: eye === "OD" ? "Observation/canonical" : "Observation/canonical-os", versionId: "v1" } }));
+  const applied = await supportedPick(fhir, { diagnosisKey: "cataract_nuclear_sclerosis", supportingFacts, laterality: "OU" });
+  assert.equal(applied.status, 200, JSON.stringify(applied.body));
+  assert.equal((applied.body as any).condition.code.coding[0].code, sourcedDiagnosisCode("cataract_nuclear_sclerosis", "bilateral"));
+  assert.equal((applied.body as any).condition.evidence, undefined);
+  const discarded = await supportedPick(fhir, { diagnosisKey: "cataract_nuclear_sclerosis", supportingFacts, action: "discard" });
+  assert.equal(discarded.status, 200, JSON.stringify(discarded.body));
+  assert.equal((discarded.body as any).conditionStep, "applied"); assert.equal((discarded.body as any).link, "not-applicable");
+});
+
+test("projected no-id pick without supports performs only the Condition step", async () => {
+  const fhir = diagnosisPickFhir(); fhir.resources.push(canonicalFact());
+  const result = await handleDiagnosisCandidatesRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider", fhir }) }, { authHeader: "Bearer doctor", params: { encounterId: "e1" } });
+  const row = (result.body as any).findings.find((r: any) => r.findingDefinitionKey === keyFor().stableKey);
+  assert.equal(row.observationReference, undefined); assert.equal(row.contributors[0].reference, "Observation/canonical");
+  const picked = await supportedPick(fhir, { supportingFacts: undefined, commandId: undefined, findingInstanceId: row.findingInstanceId });
+  assert.equal(picked.status, 200, JSON.stringify(picked.body)); assert.equal((picked.body as any).link, "not-applicable");
+  assert.equal((picked.body as any).condition.evidence, undefined);
+});
+
+test("pick reports failed and unconfirmed Condition steps without pretending load failure", async (t) => {
+  for (const cause of [403, undefined]) await t.test(String(cause), async () => {
+    const fhir = diagnosisPickFhir(); fhir.resources.push(canonicalFact());
+    fhir.executeTransaction = async () => { throw Object.assign(new Error("synthetic transaction failure"), { status: cause }); };
+    const result = await supportedPick(fhir);
+    assert.equal(result.status, cause ?? 502); assert.equal(result.body.result, "pick");
+    assert.equal((result.body as any).conditionStep, cause ? "failed" : "unconfirmed"); assert.equal((result.body as any).link, "pending");
+  });
+});
+
+test("W29 Cup/Disc measurement pick retains Observation evidence and Provenance entity", async () => {
+  const fhir = diagnosisPickFhir();
+  const result = await handleDiagnosisPickRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider", fhir }) } as any, {
+    authHeader: "Bearer doctor", params: { encounterId: "e1" }, body: { diagnosisKey: "glaucoma_suspect_open_angle_low", action: "confirm", findingInstanceId: "finding-od" },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body)); assert.equal((result.body as any).link, "not-applicable");
+  assert.equal((result.body as any).condition.evidence[0].detail[0].reference, "Observation/finding-od");
+  assert.equal((fhir.resources.find(r => r.resourceType === "Provenance") as Provenance).entity?.[0].what.reference, "Observation/finding-od");
+});
+
+test("pick finds an existing diagnosis on page two instead of creating another", async () => {
+  const fhir = diagnosisPickFhir();
+  const first = await handleDiagnosisPickRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider", fhir }) } as any, { authHeader: "Bearer doctor", params: { encounterId: "e1" }, body: { diagnosisKey: "presbyopia", action: "possible" } });
+  const condition = (first.body as any).condition;
+  const search = fhir.search.bind(fhir);
+  fhir.search = async (type: any, params: any) => type === "Condition" ? { resourceType: "Bundle", type: "searchset", entry: [], link: [{ relation: "next", url: "Condition?cursor=2" }] } : search(type, params);
+  (fhir as any).searchUrl = async () => ({ resourceType: "Bundle", type: "searchset", entry: [{ resource: condition }] });
+  const picked = await handleDiagnosisPickRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider", fhir }) } as any, { authHeader: "Bearer doctor", params: { encounterId: "e1" }, body: { diagnosisKey: "presbyopia", action: "confirm" } });
+  assert.equal(picked.status, 200, JSON.stringify(picked.body)); assert.equal((picked.body as any).condition.id, condition.id);
+  assert.equal(fhir.resources.filter(r => r.resourceType === "Condition").length, 1);
+});
+
+test("option candidates recursively collect trigger supports and union duplicate diagnosis supports", async () => {
+  const fhir = diagnosisPickFhir(); const store = new FhirFindingDefinitionStore(fhir);
+  const definition = (await store.list()).find(d => d.stableKey === keyFor().stableKey)!;
+  await store.save({ ...definition, diagnosisCandidates: [
+    { id: "nuclear", diagnosisKey: "presbyopia", trigger: { kind: "allOf", triggers: [{ kind: "option", field: keyFor().fieldCode, anyOf: ["nuclear-sclerosis"] }, { kind: "qualifier", field: keyFor().fieldCode, option: "nuclear-sclerosis", qualifiers: { grade: "2+" } }] }, active: true, origin: "practice" },
+    { id: "cortical", diagnosisKey: "presbyopia", trigger: { kind: "option", field: keyFor().fieldCode, anyOf: ["cortical-cataract"] }, active: true, origin: "practice" },
+    { id: "always", diagnosisKey: "ocular_hypertension", trigger: { kind: "always" }, active: true, origin: "practice" },
+    { id: "abnormal", diagnosisKey: "glaucoma_suspect_open_angle_low", trigger: { kind: "abnormal" }, active: true, origin: "practice" },
+  ] });
+  const nuclear = canonicalFact(); nuclear.component!.push({ code: { coding: [{ code: `${keyFor().fieldCode}::nuclear-sclerosis::grade` }] }, valueCodeableConcept: { coding: [{ code: "2+" }] } });
+  const cortical = canonicalFact("cortical"); const key = keyFor("OD", "cortical-cataract");
+  cortical.identifier = [currentFindingIdentifier(key)]; cortical.code.coding![0].code = `${key.stableKey}::${key.fieldCode}::${key.optionCode}`;
+  cortical.component = [comp("R10_CURRENT_META", JSON.stringify(key))];
+  fhir.resources.push(nuclear, cortical);
+  const get = () => handleDiagnosisCandidatesRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider" as const, fhir }) }, { authHeader: "Bearer doctor", params: { encounterId: "e1" } });
+  const result = await get(); assert.equal(result.status, 200, JSON.stringify(result.body));
+  const row = (result.body as any).findings.find((r: any) => r.findingDefinitionKey === definition.stableKey);
+  assert.equal(row.candidates.length, 3);
+  for (const candidate of row.candidates) assert.deepEqual(candidate.supportingFacts.map((f: any) => f.key.optionCode).sort(), ["cortical-cataract", "nuclear-sclerosis"]);
+  assert.equal(new Set(row.candidates[0].supportingFacts.map((f: any) => f.rowKey)).size, 2);
+  fhir.resources.push(snapshot("legacy-other", [], "OS"));
+  const preRebuild = await get();
+  const legacyRow = (preRebuild.body as any).findings.find((r: any) => r.findingDefinitionKey === definition.stableKey);
+  assert.equal(legacyRow.candidates.every((c: any) => c.supportingFacts === undefined), true);
+  assert.equal(legacyRow.linkable, false);
+});
+
+test("mixed panel context uses newest projected context and refuses ambiguous equal-time contexts", async () => {
+  const fhir = diagnosisPickFhir(); const store = new FhirFindingDefinitionStore(fhir);
+  const definition = (await store.list()).find(d => d.stableKey === keyFor().stableKey)!;
+  await store.save({ ...definition, valueSchema: { ...definition.valueSchema, fields: { ...(definition.valueSchema.fields as object), numericContext: { localCode: "CUSTOM_CONTEXT", display: "Context", valueType: "number", origin: "practice", active: true, order: 2 } } }, diagnosisCandidates: [
+    { id: "numeric-context", diagnosisKey: "presbyopia", trigger: { kind: "numeric", field: "CUSTOM_CONTEXT", op: ">", value: 1 }, active: true, origin: "practice" },
+  ] });
+  const panel = (id: string, time: string, value: number) => ({ ...snapshot(id, []), effectiveDateTime: time, identifier: [{ system: FINDING_PANEL_SYSTEM, value: id }], component: [comp("OD_CUSTOM_CONTEXT", value)] });
+  fhir.resources.push(canonicalFact(), panel("old-panel", "2026-01-01T00:00:00Z", 0), panel("new-panel", "2026-01-02T00:00:00Z", 3));
+  const get = () => handleDiagnosisCandidatesRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider" as const, fhir }) }, { authHeader: "Bearer doctor", params: { encounterId: "e1" } });
+  const result = await get(); assert.equal(result.status, 200, JSON.stringify(result.body));
+  const row = (result.body as any).findings.find((r: any) => r.findingDefinitionKey === definition.stableKey);
+  assert.equal(row.candidates[0].diagnosisKey, "presbyopia"); assert.equal(row.candidates[0].supportingFacts, undefined); assert.equal(row.linkable, false);
+  assert.equal(row.contributors.some((c: any) => c.reference === "Observation/new-panel"), true);
+  assert.equal(row.contributors.some((c: any) => c.reference === "Observation/old-panel"), false);
+  fhir.resources.push(panel("conflicting-panel", "2026-01-02T00:00:00Z", 0));
+  const refused = await get(); assert.equal(refused.status, 502); assert.equal((refused.body as any).result, "unavailable");
+  const pick = await supportedPick(fhir); assert.equal(pick.status, 502); assert.equal(fhir.transactions.length, 0);
+});
