@@ -1,0 +1,13 @@
+{
+  "base": "40c19a9e442015e1d32396958b661394318713d2",
+  "scratch": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards",
+  "allMutatedFilesRestoredAndMatchedTask": {
+    "mcp/src/clinical-graph/ocular-health-definition.ts": "2bbe7ee1662961b691c334bda10a5f01d0ecbd956740598c56377b8aa9d6a06f",
+    "mcp/src/clinical-graph/current-finding-identity.ts": "6f301984a39ddbb4646f3de03175699526a2686eebe9b34730ac7cfe34dea318",
+    "mcp/src/clinical-graph/current-finding-reader.ts": "68032a7abdd8f7f5ca7cd95f7729d6a4f05edb07074fdc5448300bf0e569ee65",
+    "mcp/tests/fixtures/r10/compat-rows.ts": "f787700d88c5103f39dae855f7c5b23677c162b59462923a0c2294b36764699f",
+    "mcp/src/clinical-graph/finding-section-helpers.ts": "e44c4f0aa4efbd47458e771a3d85b253c525d3a40bedafdf58dc44245cf8856b"
+  },
+  "removed": true,
+  "taskWorktreeRetained": true
+}

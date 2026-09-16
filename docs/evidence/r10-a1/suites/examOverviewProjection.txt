@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: the 14 ocular structures expose the approved affirmative worksheet labels in anatomical order
+ok 1 - the 14 ocular structures expose the approved affirmative worksheet labels in anatomical order
+  ---
+  duration_ms: 10.576417
+  type: 'test'
+  ...
+# Subtest: all three persisted deferred encodings normalize without rewriting source Observations
+ok 2 - all three persisted deferred encodings normalize without rewriting source Observations
+  ---
+  duration_ms: 5.6905
+  type: 'test'
+  ...
+# Subtest: deferred with and without a reason remain independently testable
+ok 3 - deferred with and without a reason remain independently testable
+  ---
+  duration_ms: 0.075583
+  type: 'test'
+  ...
+# Subtest: examined, not-examined, deferred, and not-indicated are separate section states
+ok 4 - examined, not-examined, deferred, and not-indicated are separate section states
+  ---
+  duration_ms: 0.084
+  type: 'test'
+  ...
+# Subtest: one resolved applicable row cannot make a multi-row section examined
+ok 5 - one resolved applicable row cannot make a multi-row section examined
+  ---
+  duration_ms: 0.279084
+  type: 'test'
+  ...
+# Subtest: ocular findings project affirmative normal text and every selected qualifier without truncation
+ok 6 - ocular findings project affirmative normal text and every selected qualifier without truncation
+  ---
+  duration_ms: 3.75725
+  type: 'test'
+  ...
+# Subtest: historical Lens brunescent selections project through Overview with the same merge semantics as sheet history
+ok 7 - historical Lens brunescent selections project through Overview with the same merge semantics as sheet history
+  ---
+  duration_ms: 3.246292
+  type: 'test'
+  ...
+# Subtest: translated enum qualifiers render their display and preserve unknown codes
+ok 8 - translated enum qualifiers render their display and preserve unknown codes
+  ---
+  duration_ms: 1.902459
+  type: 'test'
+  ...
+# Subtest: corneal iron line exposes the three ruled subtype choices
+ok 9 - corneal iron line exposes the three ruled subtype choices
+  ---
+  duration_ms: 3.256916
+  type: 'test'
+  ...
+# Subtest: newly charted Fleischer's iron-line subtype projects its display instead of its code
+ok 10 - newly charted Fleischer's iron-line subtype projects its display instead of its code
+  ---
+  duration_ms: 2.916625
+  type: 'test'
+  ...
+# Subtest: historical combined iron-line selections project without asserting a subtype
+ok 11 - historical combined iron-line selections project without asserting a subtype
+  ---
+  duration_ms: 2.707209
+  type: 'test'
+  ...
+# Subtest: historical ambiguous macular-hole selections project as an ungraded macular hole without mutating the source
+ok 12 - historical ambiguous macular-hole selections project as an ungraded macular hole without mutating the source
+  ---
+  duration_ms: 2.001583
+  type: 'test'
+  ...
+# Subtest: finding projection follows definition order instead of lexical section keys
+ok 13 - finding projection follows definition order instead of lexical section keys
+  ---
+  duration_ms: 0.096291
+  type: 'test'
+  ...
+# Subtest: change from prior is derived from snapshots and no delta is persisted
+ok 14 - change from prior is derived from snapshots and no delta is persisted
+  ---
+  duration_ms: 0.119833
+  type: 'test'
+  ...
+# Subtest: prior comparison ignores future and encounter-less Observations
+ok 15 - prior comparison ignores future and encounter-less Observations
+  ---
+  duration_ms: 0.116333
+  type: 'test'
+  ...
+# Subtest: Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete
+ok 16 - Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete
+  ---
+  duration_ms: 0.250459
+  type: 'test'
+  ...
+# Subtest: carried-unreasserted does not resolve today's section while carried-reasserted does
+ok 17 - carried-unreasserted does not resolve today's section while carried-reasserted does
+  ---
+  duration_ms: 0.242125
+  type: 'test'
+  ...
+# Subtest: section abnormal counts exclude independently classified borderline findings
+ok 18 - section abnormal counts exclude independently classified borderline findings
+  ---
+  duration_ms: 0.07375
+  type: 'test'
+  ...
+# Subtest: standard Equivocal interpretation projects as borderline
+ok 19 - standard Equivocal interpretation projects as borderline
+  ---
+  duration_ms: 0.040416
+  type: 'test'
+  ...
+# Subtest: an unpopulated visit category degrades safely without false completeness
+ok 20 - an unpopulated visit category degrades safely without false completeness
+  ---
+  duration_ms: 0.045875
+  type: 'test'
+  ...
+# Subtest: the applicability registry supports visit-specific not-indicated sections without an office-visit entry
+ok 21 - the applicability registry supports visit-specific not-indicated sections without an office-visit entry
+  ---
+  duration_ms: 0.0585
+  type: 'test'
+  ...
+# Subtest: guard 2: a voided (entered-in-error) CVF row leaves the Overview; when every row is voided the section has no findings
+ok 22 - guard 2: a voided (entered-in-error) CVF row leaves the Overview; when every row is voided the section has no findings
+  ---
+  duration_ms: 0.2915
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 150.264541

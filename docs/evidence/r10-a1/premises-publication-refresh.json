@@ -1,0 +1,84 @@
+{
+  "originMain": "5f0a67922eb2bcf52a2ab60f99a9dbb810fad384",
+  "files": [
+    {
+      "file": "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts",
+      "baseBlob": "f22406b50e08f163b9d6e564ac38369296f532b1",
+      "currentMainBlob": "f22406b50e08f163b9d6e564ac38369296f532b1",
+      "match": true
+    },
+    {
+      "file": "mcp/src/clinical-graph/ocular-health-definition.ts",
+      "baseBlob": "adfd82beffe3f47a774aca204f7e21a39e9a81b6",
+      "currentMainBlob": "adfd82beffe3f47a774aca204f7e21a39e9a81b6",
+      "match": true
+    },
+    {
+      "file": "mcp/src/clinical-graph/observation-liveness.ts",
+      "baseBlob": "e65b13c5bf0d65da262a9901161c5fee7d418b65",
+      "currentMainBlob": "e65b13c5bf0d65da262a9901161c5fee7d418b65",
+      "match": true
+    },
+    {
+      "file": "mcp/src/clinical-graph/diagnosis-candidates-endpoint.ts",
+      "baseBlob": "750924a06d295effd91cc5433ec0b6833a48e7e3",
+      "currentMainBlob": "750924a06d295effd91cc5433ec0b6833a48e7e3",
+      "match": true
+    },
+    {
+      "file": "mcp/src/clinical-graph/exam-overview-projection.ts",
+      "baseBlob": "872390be359033ff6bd6e132f7bc63ff00e5e262",
+      "currentMainBlob": "872390be359033ff6bd6e132f7bc63ff00e5e262",
+      "match": true
+    },
+    {
+      "file": "mcp/src/clinical-graph/finding-observation-match.ts",
+      "baseBlob": "e59168ad6467508c484735e724c39f72eb17d9eb",
+      "currentMainBlob": "e59168ad6467508c484735e724c39f72eb17d9eb",
+      "match": true
+    },
+    {
+      "file": "mcp/src/clinical-graph/diagnosis-pick-endpoint.ts",
+      "baseBlob": "57066a57e015ca380251035e4552edbe203be86b",
+      "currentMainBlob": "57066a57e015ca380251035e4552edbe203be86b",
+      "match": true
+    },
+    {
+      "file": "mcp/src/clinical-graph/diagnosis-completeness-endpoint.ts",
+      "baseBlob": "68f6bdef1b06fb8cc7506dc31251d595e14215c2",
+      "currentMainBlob": "68f6bdef1b06fb8cc7506dc31251d595e14215c2",
+      "match": true
+    },
+    {
+      "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "baseBlob": "df4d4febef586602cd27b343e4455571fa0cd621",
+      "currentMainBlob": "df4d4febef586602cd27b343e4455571fa0cd621",
+      "match": true
+    },
+    {
+      "file": "mcp/src/clinical-graph/finding-read-compatibility.ts",
+      "baseBlob": "8f560d7bfeb9bd15841056234426d3ea7d12bcd6",
+      "currentMainBlob": "8f560d7bfeb9bd15841056234426d3ea7d12bcd6",
+      "match": true
+    },
+    {
+      "file": "mcp/src/clinical-graph/finding-definition-store.ts",
+      "baseBlob": "3628cc6d64d96b6181020975612477d989424c6c",
+      "currentMainBlob": "3628cc6d64d96b6181020975612477d989424c6c",
+      "match": true
+    },
+    {
+      "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+      "baseBlob": "6d5a825c2967cce4d08944b978df7acbf504f589",
+      "currentMainBlob": "6d5a825c2967cce4d08944b978df7acbf504f589",
+      "match": true
+    },
+    {
+      "file": "mcp/src/fhir-client.ts",
+      "baseBlob": "5e76de3116ac01319f2705aeb2e8d9003aedba01",
+      "currentMainBlob": "5e76de3116ac01319f2705aeb2e8d9003aedba01",
+      "match": true
+    }
+  ],
+  "allPremisesUnchanged": true
+}

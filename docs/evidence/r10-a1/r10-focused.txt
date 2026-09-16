@@ -1,0 +1,1630 @@
+TAP version 13
+# Subtest: identity is SHA256 of the ordered v1 tuple, independent of object order and seed id
+ok 1 - identity is SHA256 of the ordered v1 tuple, independent of object order and seed id
+  ---
+  duration_ms: 1.758417
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects hash mismatch
+ok 2 - canonical envelope rejects hash mismatch
+  ---
+  duration_ms: 0.258625
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects patient mismatch
+ok 3 - canonical envelope rejects patient mismatch
+  ---
+  duration_ms: 0.086917
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects encounter mismatch
+ok 4 - canonical envelope rejects encounter mismatch
+  ---
+  duration_ms: 0.162583
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects code mismatch
+ok 5 - canonical envelope rejects code mismatch
+  ---
+  duration_ms: 0.073458
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects eye mismatch
+ok 6 - canonical envelope rejects eye mismatch
+  ---
+  duration_ms: 0.053375
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects schema mismatch
+ok 7 - canonical envelope rejects schema mismatch
+  ---
+  duration_ms: 0.287125
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects duplicate-envelope mismatch
+ok 8 - canonical envelope rejects duplicate-envelope mismatch
+  ---
+  duration_ms: 0.052875
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects duplicate-identifier mismatch
+ok 9 - canonical envelope rejects duplicate-identifier mismatch
+  ---
+  duration_ms: 0.243416
+  type: 'test'
+  ...
+# Subtest: exact catalog resolution retains the whole nested option
+ok 10 - exact catalog resolution retains the whole nested option
+  ---
+  duration_ms: 0.332209
+  type: 'test'
+  ...
+# Subtest: retired atomic aliases use current retirement semantics and never reverse false subtypes
+ok 11 - retired atomic aliases use current retirement semantics and never reverse false subtypes
+  ---
+  duration_ms: 0.276833
+  type: 'test'
+  ...
+# Subtest: role markers dominate definition matching, conflicting markers are invalid
+ok 12 - role markers dominate definition matching, conflicting markers are invalid
+  ---
+  duration_ms: 0.366875
+  type: 'test'
+  ...
+# Subtest: one typed qualifier reader preserves numeric, enum, extent, legacy GRADE and retired grade removal
+ok 13 - one typed qualifier reader preserves numeric, enum, extent, legacy GRADE and retired grade removal
+  ---
+  duration_ms: 2.783209
+  type: 'test'
+  ...
+# Subtest: malformed stored negative still throws; eye sets never coerce UNKNOWN
+ok 14 - malformed stored negative still throws; eye sets never coerce UNKNOWN
+  ---
+  duration_ms: 0.29
+  type: 'test'
+  ...
+# Subtest: compiled ocular structure field identities and atomic samples are pinned
+ok 15 - compiled ocular structure field identities and atomic samples are pinned
+  ---
+  duration_ms: 1.916209
+  type: 'test'
+  ...
+# Subtest: canonical fact dominates legacy, including its retired clear marker
+ok 16 - canonical fact dominates legacy, including its retired clear marker
+  ---
+  duration_ms: 3.085708
+  type: 'test'
+  ...
+# Subtest: duplicate canonical owners conflict even when assertions agree
+ok 17 - duplicate canonical owners conflict even when assertions agree
+  ---
+  duration_ms: 0.44375
+  type: 'test'
+  ...
+# Subtest: retired legacy atomic cannot suppress a live section positive; cancelled is retained but never live
+ok 18 - retired legacy atomic cannot suppress a live section positive; cancelled is retained but never live
+  ---
+  duration_ms: 1.989083
+  type: 'test'
+  ...
+# Subtest: legacy OU expands to two facts, sharing its real source
+ok 19 - legacy OU expands to two facts, sharing its real source
+  ---
+  duration_ms: 0.330208
+  type: 'test'
+  ...
+# Subtest: OD absent versus OU present conflicts only OD; agreeing overlap coalesces
+ok 20 - OD absent versus OU present conflicts only OD; agreeing overlap coalesces
+  ---
+  duration_ms: 0.653083
+  type: 'test'
+  ...
+# Subtest: latest snapshot omission stays unanswered; older snapshot never revives it
+ok 21 - latest snapshot omission stays unanswered; older snapshot never revives it
+  ---
+  duration_ms: 0.417375
+  type: 'test'
+  ...
+# Subtest: equal-time different snapshots conflict independent of input order
+ok 22 - equal-time different snapshots conflict independent of input order
+  ---
+  duration_ms: 0.87675
+  type: 'test'
+  ...
+# Subtest: atomic plus section agree only with equal typed qualifier maps
+ok 23 - atomic plus section agree only with equal typed qualifier maps
+  ---
+  duration_ms: 1.890542
+  type: 'test'
+  ...
+# Subtest: homes union: extension-only
+ok 24 - homes union: extension-only
+  ---
+  duration_ms: 0.774084
+  type: 'test'
+  ...
+# Subtest: homes union: evidence-only
+ok 25 - homes union: evidence-only
+  ---
+  duration_ms: 0.41175
+  type: 'test'
+  ...
+# Subtest: homes union: both
+ok 26 - homes union: both
+  ---
+  duration_ms: 0.299791
+  type: 'test'
+  ...
+# Subtest: homes union: disagreeing
+ok 27 - homes union: disagreeing
+  ---
+  duration_ms: 0.171417
+  type: 'test'
+  ...
+# Subtest: coalesced and conflicting sources union homes, canonical homes use only the canonical contributor
+ok 28 - coalesced and conflicting sources union homes, canonical homes use only the canonical contributor
+  ---
+  duration_ms: 0.737458
+  type: 'test'
+  ...
+# Subtest: negative act remains raw and never wins latest snapshot
+ok 29 - negative act remains raw and never wins latest snapshot
+  ---
+  duration_ms: 0.674333
+  type: 'test'
+  ...
+# Subtest: UNKNOWN, invalid, missing definition and unknown options remain unresolved with real references
+ok 30 - UNKNOWN, invalid, missing definition and unknown options remain unresolved with real references
+  ---
+  duration_ms: 0.240167
+  type: 'test'
+  ...
+# Subtest: raw sources are immutable, a single untranslated view retains bytes and its actual id
+ok 31 - raw sources are immutable, a single untranslated view retains bytes and its actual id
+  ---
+  duration_ms: 0.357084
+  type: 'test'
+  ...
+# Subtest: retired option translation retains typed replacement semantics without an aggregate id
+ok 32 - retired option translation retains typed replacement semantics without an aggregate id
+  ---
+  duration_ms: 0.212375
+  type: 'test'
+  ...
+# Subtest: mixed carried/current contributors retain attribution and newest clinical date
+ok 33 - mixed carried/current contributors retain attribution and newest clinical date
+  ---
+  duration_ms: 0.365167
+  type: 'test'
+  ...
+# Subtest: loader traverses pages, retains retired and refuses failed, foreign or unscoped pages
+ok 34 - loader traverses pages, retains retired and refuses failed, foreign or unscoped pages
+  ---
+  duration_ms: 0.592167
+  type: 'test'
+  ...
+# Subtest: nested child selections are options, never mistaken for a parent's missing qualifier
+ok 35 - nested child selections are options, never mistaken for a parent's missing qualifier
+  ---
+  duration_ms: 0.282458
+  type: 'test'
+  ...
+# Subtest: active option plus its retired subtype still requires a translated view
+ok 36 - active option plus its retired subtype still requires a translated view
+  ---
+  duration_ms: 0.3295
+  type: 'test'
+  ...
+# Subtest: inferred homes intersect eye sets and never replace explicit homes on a coalesced fact
+ok 37 - inferred homes intersect eye sets and never replace explicit homes on a coalesced fact
+  ---
+  duration_ms: 0.98075
+  type: 'test'
+  ...
+# Subtest: panel context and negative acts cannot replace a laterally scoped positive snapshot
+ok 38 - panel context and negative acts cannot replace a laterally scoped positive snapshot
+  ---
+  duration_ms: 0.464917
+  type: 'test'
+  ...
+# Subtest: typed qualifiers resolve the addressed field when a definition has multiple option fields
+ok 39 - typed qualifiers resolve the addressed field when a definition has multiple option fields
+  ---
+  duration_ms: 0.371417
+  type: 'test'
+  ...
+# Subtest: six original suites remain byte-identical to their captured baseline
+ok 40 - six original suites remain byte-identical to their captured baseline
+  ---
+  duration_ms: 1.286458
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 1: customSectionEndpoint.test.ts
+ok 41 - history bytes unchanged 1: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.915625
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 2: customSectionEndpoint.test.ts
+ok 42 - history bytes unchanged 2: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.1325
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 3: customSectionEndpoint.test.ts
+ok 43 - history bytes unchanged 3: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.269208
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 4: customSectionEndpoint.test.ts
+ok 44 - history bytes unchanged 4: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.37725
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 5: customSectionEndpoint.test.ts
+ok 45 - history bytes unchanged 5: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.452125
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 6: customSectionEndpoint.test.ts
+ok 46 - history bytes unchanged 6: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.196208
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 7: customSectionEndpoint.test.ts
+ok 47 - history bytes unchanged 7: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.60275
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 8: customSectionEndpoint.test.ts
+ok 48 - history bytes unchanged 8: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.360333
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 9: customSectionEndpoint.test.ts
+ok 49 - history bytes unchanged 9: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.63
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 10: customSectionEndpoint.test.ts
+ok 50 - history bytes unchanged 10: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.264
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 11: customSectionEndpoint.test.ts
+ok 51 - history bytes unchanged 11: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.154
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 12: customSectionEndpoint.test.ts
+ok 52 - history bytes unchanged 12: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.123041
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 13: customSectionEndpoint.test.ts
+ok 53 - history bytes unchanged 13: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.165375
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 14: customSectionEndpoint.test.ts
+ok 54 - history bytes unchanged 14: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.107375
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 15: customSectionEndpoint.test.ts
+ok 55 - history bytes unchanged 15: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.103541
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 16: customSectionEndpoint.test.ts
+ok 56 - history bytes unchanged 16: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.061542
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 17: customSectionEndpoint.test.ts
+ok 57 - history bytes unchanged 17: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.087625
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 18: customSectionEndpoint.test.ts
+ok 58 - history bytes unchanged 18: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.114917
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 19: customSectionEndpoint.test.ts
+ok 59 - history bytes unchanged 19: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.079917
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 20: customSectionEndpoint.test.ts
+ok 60 - history bytes unchanged 20: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.059458
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 21: customSectionEndpoint.test.ts
+ok 61 - history bytes unchanged 21: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.050541
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 22: customSectionEndpoint.test.ts
+ok 62 - history bytes unchanged 22: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.073
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 23: customSectionEndpoint.test.ts
+ok 63 - history bytes unchanged 23: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.070083
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 24: customSectionEndpoint.test.ts
+ok 64 - history bytes unchanged 24: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.049625
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 25: customSectionEndpoint.test.ts
+ok 65 - history bytes unchanged 25: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.060083
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 26: customSectionEndpoint.test.ts
+ok 66 - history bytes unchanged 26: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.052042
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 27: customSectionEndpoint.test.ts
+ok 67 - history bytes unchanged 27: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.049
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 28: customSectionEndpoint.test.ts
+ok 68 - history bytes unchanged 28: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.070417
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 29: customSectionEndpoint.test.ts
+ok 69 - history bytes unchanged 29: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.047541
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 30: customSectionEndpoint.test.ts
+ok 70 - history bytes unchanged 30: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.112292
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 31: customSectionEndpoint.test.ts
+ok 71 - history bytes unchanged 31: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.107416
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 32: customSectionEndpoint.test.ts
+ok 72 - history bytes unchanged 32: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.112208
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 33: customSectionEndpoint.test.ts
+ok 73 - history bytes unchanged 33: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.093375
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 34: customSectionEndpoint.test.ts
+ok 74 - history bytes unchanged 34: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.171
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 35: customSectionEndpoint.test.ts
+ok 75 - history bytes unchanged 35: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.082541
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 36: customSectionEndpoint.test.ts
+ok 76 - history bytes unchanged 36: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.088792
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 37: customSectionEndpoint.test.ts
+ok 77 - history bytes unchanged 37: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.078208
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 38: customSectionEndpoint.test.ts
+ok 78 - history bytes unchanged 38: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.066542
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 39: customSectionEndpoint.test.ts
+ok 79 - history bytes unchanged 39: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.18775
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 40: customSectionEndpoint.test.ts
+ok 80 - history bytes unchanged 40: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.061584
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 41: customSectionEndpoint.test.ts
+ok 81 - history bytes unchanged 41: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.167083
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 42: customSectionEndpoint.test.ts
+ok 82 - history bytes unchanged 42: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.137334
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 43: customSectionEndpoint.test.ts
+ok 83 - history bytes unchanged 43: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.112291
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 44: customSectionEndpoint.test.ts
+ok 84 - history bytes unchanged 44: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.0965
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 45: customSectionEndpoint.test.ts
+ok 85 - history bytes unchanged 45: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.054541
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 46: customSectionEndpoint.test.ts
+ok 86 - history bytes unchanged 46: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.082292
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 47: customSectionEndpoint.test.ts
+ok 87 - history bytes unchanged 47: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.091292
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 48: customSectionEndpoint.test.ts
+ok 88 - history bytes unchanged 48: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.05125
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 49: customSectionEndpoint.test.ts
+ok 89 - history bytes unchanged 49: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.102083
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 50: customSectionEndpoint.test.ts
+ok 90 - history bytes unchanged 50: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.077375
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 51: customSectionEndpoint.test.ts
+ok 91 - history bytes unchanged 51: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.705792
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 52: diagnosisLinkL2.test.ts
+ok 92 - history bytes unchanged 52: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.069583
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 53: diagnosisLinkL2.test.ts
+ok 93 - history bytes unchanged 53: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.051792
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 54: diagnosisLinkL2.test.ts
+ok 94 - history bytes unchanged 54: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.050459
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 55: diagnosisLinkL2.test.ts
+ok 95 - history bytes unchanged 55: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.053416
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 56: diagnosisLinkL2.test.ts
+ok 96 - history bytes unchanged 56: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.052708
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 57: diagnosisLinkL2.test.ts
+ok 97 - history bytes unchanged 57: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.051792
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 58: diagnosisLinkL2.test.ts
+ok 98 - history bytes unchanged 58: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.046875
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 59: diagnosisLinkL2.test.ts
+ok 99 - history bytes unchanged 59: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.054959
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 60: diagnosisLinkL2.test.ts
+ok 100 - history bytes unchanged 60: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.052333
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 61: diagnosisLinkL2.test.ts
+ok 101 - history bytes unchanged 61: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.0535
+  type: 'test'
+  ...
+# Subtest: legacy fixture 1: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 102 - legacy fixture 1: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 7.288792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 2: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 103 - legacy fixture 2: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.360625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 3: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 104 - legacy fixture 3: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 3.761584
+  type: 'test'
+  ...
+# Subtest: legacy fixture 4: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 105 - legacy fixture 4: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 1.3145
+  type: 'test'
+  ...
+# Subtest: legacy fixture 5: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 106 - legacy fixture 5: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.793375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 6: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 107 - legacy fixture 6: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.413958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 7: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 108 - legacy fixture 7: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.702458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 8: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 109 - legacy fixture 8: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.806792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 9: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 110 - legacy fixture 9: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.668125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 10: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 111 - legacy fixture 10: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.336125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 11: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 112 - legacy fixture 11: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.222958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 12: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 113 - legacy fixture 12: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.466542
+  type: 'test'
+  ...
+# Subtest: legacy fixture 13: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 114 - legacy fixture 13: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.138834
+  type: 'test'
+  ...
+# Subtest: legacy fixture 14: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 115 - legacy fixture 14: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.119042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 15: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 116 - legacy fixture 15: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.1245
+  type: 'test'
+  ...
+# Subtest: legacy fixture 16: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 117 - legacy fixture 16: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.065541
+  type: 'test'
+  ...
+# Subtest: legacy fixture 17: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 118 - legacy fixture 17: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.037667
+  type: 'test'
+  ...
+# Subtest: legacy fixture 18: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 119 - legacy fixture 18: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.031208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 19: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 120 - legacy fixture 19: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.066833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 20: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 121 - legacy fixture 20: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.17825
+  type: 'test'
+  ...
+# Subtest: legacy fixture 21: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 122 - legacy fixture 21: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.0855
+  type: 'test'
+  ...
+# Subtest: legacy fixture 23: diagnosisFindings.test.ts atomicFindingRows
+ok 123 - legacy fixture 23: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.7215
+  type: 'test'
+  ...
+# Subtest: legacy fixture 24: diagnosisFindings.test.ts sectionFindingRows
+ok 124 - legacy fixture 24: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.0445
+  type: 'test'
+  ...
+# Subtest: legacy fixture 25: diagnosisFindings.test.ts atomicFindingRows
+ok 125 - legacy fixture 25: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.397375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 26: diagnosisFindings.test.ts sectionFindingRows
+ok 126 - legacy fixture 26: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.03075
+  type: 'test'
+  ...
+# Subtest: legacy fixture 27: diagnosisFindings.test.ts atomicFindingRows
+ok 127 - legacy fixture 27: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.17
+  type: 'test'
+  ...
+# Subtest: legacy fixture 28: diagnosisFindings.test.ts sectionFindingRows
+ok 128 - legacy fixture 28: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.029458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 29: diagnosisFindings.test.ts atomicFindingRows
+ok 129 - legacy fixture 29: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.225625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 30: diagnosisFindings.test.ts sectionFindingRows
+ok 130 - legacy fixture 30: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.035875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 31: diagnosisFindings.test.ts atomicFindingRows
+ok 131 - legacy fixture 31: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.175
+  type: 'test'
+  ...
+# Subtest: legacy fixture 32: diagnosisFindings.test.ts sectionFindingRows
+ok 132 - legacy fixture 32: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.049291
+  type: 'test'
+  ...
+# Subtest: legacy fixture 34: diagnosisFindings.test.ts atomicFindingRows
+ok 133 - legacy fixture 34: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.11825
+  type: 'test'
+  ...
+# Subtest: legacy fixture 35: diagnosisFindings.test.ts sectionFindingRows
+ok 134 - legacy fixture 35: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.047833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 38: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 135 - legacy fixture 38: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.099708
+  type: 'test'
+  ...
+# Subtest: legacy fixture 39: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 136 - legacy fixture 39: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.163667
+  type: 'test'
+  ...
+# Subtest: legacy fixture 40: diagnosisFindings.test.ts atomicFindingRows
+ok 137 - legacy fixture 40: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.344542
+  type: 'test'
+  ...
+# Subtest: legacy fixture 41: diagnosisFindings.test.ts sectionFindingRows
+ok 138 - legacy fixture 41: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.028042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 42: diagnosisFindings.test.ts atomicFindingRows
+ok 139 - legacy fixture 42: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.106584
+  type: 'test'
+  ...
+# Subtest: legacy fixture 43: diagnosisFindings.test.ts sectionFindingRows
+ok 140 - legacy fixture 43: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.032
+  type: 'test'
+  ...
+# Subtest: legacy fixture 44: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 141 - legacy fixture 44: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.090042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 45: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 142 - legacy fixture 45: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.095333
+  type: 'test'
+  ...
+# Subtest: legacy fixture 46: diagnosisFindings.test.ts atomicFindingRows
+ok 143 - legacy fixture 46: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.129375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 47: diagnosisFindings.test.ts sectionFindingRows
+ok 144 - legacy fixture 47: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.031959
+  type: 'test'
+  ...
+# Subtest: legacy fixture 48: diagnosisFindings.test.ts atomicFindingRows
+ok 145 - legacy fixture 48: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.0945
+  type: 'test'
+  ...
+# Subtest: legacy fixture 49: diagnosisFindings.test.ts sectionFindingRows
+ok 146 - legacy fixture 49: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.02875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 50: diagnosisFindings.test.ts atomicFindingRows
+ok 147 - legacy fixture 50: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.08325
+  type: 'test'
+  ...
+# Subtest: legacy fixture 51: diagnosisFindings.test.ts sectionFindingRows
+ok 148 - legacy fixture 51: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.027542
+  type: 'test'
+  ...
+# Subtest: legacy fixture 52: diagnosisFindings.test.ts atomicFindingRows
+ok 149 - legacy fixture 52: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.081417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 53: diagnosisFindings.test.ts sectionFindingRows
+ok 150 - legacy fixture 53: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.030458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 54: diagnosisFindings.test.ts atomicFindingRows
+ok 151 - legacy fixture 54: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.102375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 55: diagnosisFindings.test.ts sectionFindingRows
+ok 152 - legacy fixture 55: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.025291
+  type: 'test'
+  ...
+# Subtest: legacy fixture 56: diagnosisFindings.test.ts atomicFindingRows
+ok 153 - legacy fixture 56: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.074084
+  type: 'test'
+  ...
+# Subtest: legacy fixture 57: diagnosisFindings.test.ts sectionFindingRows
+ok 154 - legacy fixture 57: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.026792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 62: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 155 - legacy fixture 62: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.078125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 63: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 156 - legacy fixture 63: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.081042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 64: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 157 - legacy fixture 64: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.076166
+  type: 'test'
+  ...
+# Subtest: legacy fixture 65: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 158 - legacy fixture 65: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.077958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 66: customSectionEndpoint.test.ts buildExamOverviewProjection
+ok 159 - legacy fixture 66: customSectionEndpoint.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 2.030583
+  type: 'test'
+  ...
+# Subtest: legacy fixture 67: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 160 - legacy fixture 67: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.124625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 68: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 161 - legacy fixture 68: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.102459
+  type: 'test'
+  ...
+# Subtest: legacy fixture 70: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 162 - legacy fixture 70: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 2.497709
+  type: 'test'
+  ...
+# Subtest: legacy fixture 71: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 163 - legacy fixture 71: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.170833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 72: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 164 - legacy fixture 72: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.944417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 73: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 165 - legacy fixture 73: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.990708
+  type: 'test'
+  ...
+# Subtest: legacy fixture 74: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 166 - legacy fixture 74: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.124292
+  type: 'test'
+  ...
+# Subtest: legacy fixture 76: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 167 - legacy fixture 76: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.856917
+  type: 'test'
+  ...
+# Subtest: legacy fixture 77: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 168 - legacy fixture 77: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.002375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 86: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 169 - legacy fixture 86: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.290917
+  type: 'test'
+  ...
+# Subtest: legacy fixture 87: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 170 - legacy fixture 87: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.372042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 88: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 171 - legacy fixture 88: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.135917
+  type: 'test'
+  ...
+# Subtest: legacy fixture 89: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 172 - legacy fixture 89: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.128916
+  type: 'test'
+  ...
+# Subtest: legacy fixture 90: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 173 - legacy fixture 90: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.945542
+  type: 'test'
+  ...
+# Subtest: legacy fixture 91: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 174 - legacy fixture 91: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.999
+  type: 'test'
+  ...
+# Subtest: legacy fixture 92: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 175 - legacy fixture 92: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.82275
+  type: 'test'
+  ...
+# Subtest: legacy fixture 93: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 176 - legacy fixture 93: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.801375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 94: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 177 - legacy fixture 94: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.19475
+  type: 'test'
+  ...
+# Subtest: legacy fixture 95: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 178 - legacy fixture 95: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.921041
+  type: 'test'
+  ...
+# Subtest: legacy fixture 96: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 179 - legacy fixture 96: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.863125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 97: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 180 - legacy fixture 97: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.864333
+  type: 'test'
+  ...
+# Subtest: legacy fixture 98: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 181 - legacy fixture 98: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.845
+  type: 'test'
+  ...
+# Subtest: legacy fixture 99: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 182 - legacy fixture 99: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.783333
+  type: 'test'
+  ...
+# Subtest: legacy fixture 103: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 183 - legacy fixture 103: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.995959
+  type: 'test'
+  ...
+# Subtest: legacy fixture 104: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 184 - legacy fixture 104: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.65375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 105: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 185 - legacy fixture 105: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.031875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 106: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 186 - legacy fixture 106: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.829458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 107: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 187 - legacy fixture 107: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.787041
+  type: 'test'
+  ...
+# Subtest: legacy fixture 108: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 188 - legacy fixture 108: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.645209
+  type: 'test'
+  ...
+# Subtest: legacy fixture 109: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 189 - legacy fixture 109: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.657875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 117: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 190 - legacy fixture 117: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.895333
+  type: 'test'
+  ...
+# Subtest: legacy fixture 124: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 191 - legacy fixture 124: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.874
+  type: 'test'
+  ...
+# Subtest: legacy fixture 125: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 192 - legacy fixture 125: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.964584
+  type: 'test'
+  ...
+# Subtest: legacy fixture 126: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 193 - legacy fixture 126: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.010333
+  type: 'test'
+  ...
+# Subtest: legacy fixture 131: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 194 - legacy fixture 131: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.822875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 134: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 195 - legacy fixture 134: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.779
+  type: 'test'
+  ...
+# Subtest: legacy fixture 136: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 196 - legacy fixture 136: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.940375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 144: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 197 - legacy fixture 144: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.809292
+  type: 'test'
+  ...
+# Subtest: legacy fixture 146: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 198 - legacy fixture 146: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.812583
+  type: 'test'
+  ...
+# Subtest: legacy fixture 147: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 199 - legacy fixture 147: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.633958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 150: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 200 - legacy fixture 150: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.36075
+  type: 'test'
+  ...
+# Subtest: legacy fixture 151: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 201 - legacy fixture 151: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.04125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 152: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 202 - legacy fixture 152: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.9825
+  type: 'test'
+  ...
+# Subtest: legacy fixture 153: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 203 - legacy fixture 153: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.856333
+  type: 'test'
+  ...
+# Subtest: legacy fixture 154: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 204 - legacy fixture 154: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.83675
+  type: 'test'
+  ...
+# Subtest: legacy fixture 155: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 205 - legacy fixture 155: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.839959
+  type: 'test'
+  ...
+# Subtest: legacy fixture 156: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 206 - legacy fixture 156: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.820166
+  type: 'test'
+  ...
+# Subtest: legacy fixture 157: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 207 - legacy fixture 157: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.055458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 158: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 208 - legacy fixture 158: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.016209
+  type: 'test'
+  ...
+# Subtest: legacy fixture 159: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 209 - legacy fixture 159: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.824958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 160: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 210 - legacy fixture 160: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.708042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 161: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 211 - legacy fixture 161: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.734625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 162: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 212 - legacy fixture 162: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.738208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 163: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 213 - legacy fixture 163: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.7255
+  type: 'test'
+  ...
+# Subtest: legacy fixture 164: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 214 - legacy fixture 164: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.137
+  type: 'test'
+  ...
+# Subtest: legacy fixture 165: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 215 - legacy fixture 165: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.874417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 166: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 216 - legacy fixture 166: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.7705
+  type: 'test'
+  ...
+# Subtest: legacy fixture 167: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 217 - legacy fixture 167: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.781875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 168: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 218 - legacy fixture 168: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.796125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 169: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 219 - legacy fixture 169: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.742334
+  type: 'test'
+  ...
+# Subtest: legacy fixture 170: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 220 - legacy fixture 170: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.697667
+  type: 'test'
+  ...
+# Subtest: legacy fixture 171: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 221 - legacy fixture 171: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.995584
+  type: 'test'
+  ...
+# Subtest: legacy fixture 172: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 222 - legacy fixture 172: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.101583
+  type: 'test'
+  ...
+# Subtest: legacy fixture 173: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 223 - legacy fixture 173: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.729791
+  type: 'test'
+  ...
+# Subtest: legacy fixture 174: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 224 - legacy fixture 174: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.704875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 175: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 225 - legacy fixture 175: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.687583
+  type: 'test'
+  ...
+# Subtest: legacy fixture 176: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 226 - legacy fixture 176: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.678625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 177: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 227 - legacy fixture 177: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.680083
+  type: 'test'
+  ...
+# Subtest: legacy fixture 178: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 228 - legacy fixture 178: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.67625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 179: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 229 - legacy fixture 179: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.11875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 180: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 230 - legacy fixture 180: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.732333
+  type: 'test'
+  ...
+# Subtest: legacy fixture 181: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 231 - legacy fixture 181: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.692458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 182: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 232 - legacy fixture 182: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.789708
+  type: 'test'
+  ...
+# Subtest: legacy fixture 183: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 233 - legacy fixture 183: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.693833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 184: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 234 - legacy fixture 184: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.669125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 185: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 235 - legacy fixture 185: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.694958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 186: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 236 - legacy fixture 186: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.697375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 187: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 237 - legacy fixture 187: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.91125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 188: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 238 - legacy fixture 188: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.769583
+  type: 'test'
+  ...
+# Subtest: legacy fixture 189: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 239 - legacy fixture 189: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.782334
+  type: 'test'
+  ...
+# Subtest: legacy fixture 190: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 240 - legacy fixture 190: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.760583
+  type: 'test'
+  ...
+# Subtest: legacy fixture 191: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 241 - legacy fixture 191: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.725666
+  type: 'test'
+  ...
+# Subtest: legacy fixture 192: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 242 - legacy fixture 192: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.725
+  type: 'test'
+  ...
+# Subtest: legacy fixture 193: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 243 - legacy fixture 193: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.837417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 194: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 244 - legacy fixture 194: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.980542
+  type: 'test'
+  ...
+# Subtest: legacy fixture 195: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 245 - legacy fixture 195: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.70625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 196: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 246 - legacy fixture 196: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.783792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 197: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 247 - legacy fixture 197: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.669917
+  type: 'test'
+  ...
+# Subtest: legacy fixture 198: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 248 - legacy fixture 198: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.636541
+  type: 'test'
+  ...
+# Subtest: legacy fixture 199: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 249 - legacy fixture 199: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.713125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 201: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 250 - legacy fixture 201: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.808084
+  type: 'test'
+  ...
+# Subtest: legacy fixture 203: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 251 - legacy fixture 203: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.632625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 205: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 252 - legacy fixture 205: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.921
+  type: 'test'
+  ...
+# Subtest: legacy fixture 207: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 253 - legacy fixture 207: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.693833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 209: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 254 - legacy fixture 209: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.69225
+  type: 'test'
+  ...
+# Subtest: legacy fixture 211: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 255 - legacy fixture 211: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.602834
+  type: 'test'
+  ...
+# Subtest: legacy fixture 213: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 256 - legacy fixture 213: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.576625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 215: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 257 - legacy fixture 215: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.604083
+  type: 'test'
+  ...
+# Subtest: legacy fixture 217: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 258 - legacy fixture 217: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.586583
+  type: 'test'
+  ...
+# Subtest: legacy fixture 219: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 259 - legacy fixture 219: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.659167
+  type: 'test'
+  ...
+# Subtest: legacy fixture 220: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 260 - legacy fixture 220: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.623125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 221: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 261 - legacy fixture 221: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.850833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 222: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 262 - legacy fixture 222: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.647667
+  type: 'test'
+  ...
+# Subtest: legacy fixture 223: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 263 - legacy fixture 223: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.622458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 224: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 264 - legacy fixture 224: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.583958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 225: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 265 - legacy fixture 225: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.599166
+  type: 'test'
+  ...
+# Subtest: legacy fixture 226: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 266 - legacy fixture 226: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.68
+  type: 'test'
+  ...
+# Subtest: legacy fixture 227: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 267 - legacy fixture 227: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.55075
+  type: 'test'
+  ...
+# Subtest: legacy fixture 228: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 268 - legacy fixture 228: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.673291
+  type: 'test'
+  ...
+# Subtest: legacy fixture 229: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 269 - legacy fixture 229: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.9085
+  type: 'test'
+  ...
+# Subtest: E1–E17 reproduce the original writer/read behaviors and assert the A1 projections
+ok 270 - E1–E17 reproduce the original writer/read behaviors and assert the A1 projections
+  ---
+  duration_ms: 216.297542
+  type: 'test'
+  ...
+1..270
+# tests 270
+# suites 0
+# pass 270
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 620.547958

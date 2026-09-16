@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: raw sources are immutable, a single untranslated view retains bytes and its actual id
+ok 1 - raw sources are immutable, a single untranslated view retains bytes and its actual id
+  ---
+  duration_ms: 3.466708
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 144.948666

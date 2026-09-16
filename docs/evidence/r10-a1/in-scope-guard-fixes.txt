@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: fixture files contain only allowlisted synthetic identity values
+ok 1 - fixture files contain only allowlisted synthetic identity values
+  ---
+  duration_ms: 55.229
+  type: 'test'
+  ...
+# Subtest: contract is frozen from Medplum 5.1.8's published definition bundles
+ok 2 - contract is frozen from Medplum 5.1.8's published definition bundles
+  ---
+  duration_ms: 0.616708
+  type: 'test'
+  ...
+# Subtest: historical ChargeItem status search is rejected while known-valid searches pass
+ok 3 - historical ChargeItem status search is rejected while known-valid searches pass
+  ---
+  duration_ms: 0.272917
+  type: 'test'
+  ...
+# Subtest: all direct fhir.search call sites are statically resolved or explicitly dynamic
+ok 4 - all direct fhir.search call sites are statically resolved or explicitly dynamic
+  ---
+  duration_ms: 424.802375
+  type: 'test'
+  ...
+# Subtest: static audit finds zero invalid search parameters
+ok 5 - static audit finds zero invalid search parameters
+  ---
+  duration_ms: 265.720375
+  type: 'test'
+  ...
+# Subtest: static audit rejects a mistyped dynamic override key
+ok 6 - static audit rejects a mistyped dynamic override key
+  ---
+  duration_ms: 256.408334
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1377.360458

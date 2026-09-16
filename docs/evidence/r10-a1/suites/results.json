@@ -1,0 +1,132 @@
+[
+  {
+    "suite": "diagnosisFindings",
+    "command": "node --import tsx --test tests/diagnosisFindings.test.ts",
+    "cwd": "mcp",
+    "exit": 0,
+    "tests": 42,
+    "pass": 42,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "customSectionEndpoint",
+    "command": "node --import tsx --test tests/customSectionEndpoint.test.ts",
+    "cwd": "mcp",
+    "exit": 0,
+    "tests": 55,
+    "pass": 55,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "examOverviewProjection",
+    "command": "node --import tsx --test tests/examOverviewProjection.test.ts",
+    "cwd": "mcp",
+    "exit": 0,
+    "tests": 22,
+    "pass": 22,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "findingDefinitionStore",
+    "command": "node --import tsx --test tests/findingDefinitionStore.test.ts",
+    "cwd": "mcp",
+    "exit": 0,
+    "tests": 13,
+    "pass": 13,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "diagnosisLinkL1",
+    "command": "node --import tsx --test tests/diagnosisLinkL1.test.ts",
+    "cwd": "mcp",
+    "exit": 0,
+    "tests": 28,
+    "pass": 28,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "diagnosisLinkL2",
+    "command": "node --import tsx --test tests/diagnosisLinkL2.test.ts",
+    "cwd": "mcp",
+    "exit": 0,
+    "tests": 47,
+    "pass": 47,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "diagnosisLinkL3",
+    "command": "node --import tsx --test tests/diagnosisLinkL3.test.ts",
+    "cwd": "mcp",
+    "exit": 0,
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "cupDiscEndpoint",
+    "command": "node --import tsx --test tests/cupDiscEndpoint.test.ts",
+    "cwd": "mcp",
+    "exit": 0,
+    "tests": 8,
+    "pass": 8,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "glaucoma-suspect-clinical-graph",
+    "command": "node --import tsx --test tests/glaucoma-suspect-clinical-graph.test.ts",
+    "cwd": "mcp",
+    "exit": 0,
+    "tests": 49,
+    "pass": 49,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "currentFindingIdentity",
+    "command": "node --import tsx --test tests/currentFindingIdentity.test.ts",
+    "cwd": "mcp",
+    "exit": 0,
+    "tests": 15,
+    "pass": 15,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "currentFindingReader",
+    "command": "node --import tsx --test tests/currentFindingReader.test.ts",
+    "cwd": "mcp",
+    "exit": 0,
+    "tests": 24,
+    "pass": 24,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "findingSectionHelpers",
+    "command": "node --import tsx --test tests/findingSectionHelpers.test.ts",
+    "cwd": "mcp",
+    "exit": 0,
+    "tests": 62,
+    "pass": 62,
+    "fail": 0,
+    "skipped": 0
+  },
+  {
+    "suite": "r10-parity",
+    "command": "node --import tsx --test tests/r10-parity.test.ts",
+    "cwd": "mcp",
+    "exit": 0,
+    "tests": 169,
+    "pass": 169,
+    "fail": 0,
+    "skipped": 0
+  }
+]

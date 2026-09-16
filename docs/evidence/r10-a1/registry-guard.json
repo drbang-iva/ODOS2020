@@ -1,0 +1,22 @@
+{
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "tests/preflight/preflight-lint.test.ts"
+  ],
+  "deletedEntry": {
+    "url": "https://odos2020.com/fhir/StructureDefinition/supports-diagnosis",
+    "namespace": "clinical-graph",
+    "status": "active",
+    "sliceConsumer": "r10-a1"
+  },
+  "redExit": 1,
+  "greenExit": 0,
+  "redPass": 17,
+  "redFail": 1,
+  "greenPass": 18,
+  "greenFail": 0,
+  "restoredSha256": "e53f8bd02a8ea92ce5ededc09da6c376c14586133ac5de40e7f85e5a85dc18b2"
+}

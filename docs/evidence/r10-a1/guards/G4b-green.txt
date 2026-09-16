@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: retired legacy atomic cannot suppress a live section positive; cancelled is retained but never live
+ok 1 - retired legacy atomic cannot suppress a live section positive; cancelled is retained but never live
+  ---
+  duration_ms: 6.263125
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 142.915959

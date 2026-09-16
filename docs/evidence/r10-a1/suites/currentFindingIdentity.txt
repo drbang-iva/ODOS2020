@@ -1,0 +1,100 @@
+TAP version 13
+# Subtest: identity is SHA256 of the ordered v1 tuple, independent of object order and seed id
+ok 1 - identity is SHA256 of the ordered v1 tuple, independent of object order and seed id
+  ---
+  duration_ms: 1.45225
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects hash mismatch
+ok 2 - canonical envelope rejects hash mismatch
+  ---
+  duration_ms: 0.225875
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects patient mismatch
+ok 3 - canonical envelope rejects patient mismatch
+  ---
+  duration_ms: 0.081958
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects encounter mismatch
+ok 4 - canonical envelope rejects encounter mismatch
+  ---
+  duration_ms: 0.163792
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects code mismatch
+ok 5 - canonical envelope rejects code mismatch
+  ---
+  duration_ms: 0.074208
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects eye mismatch
+ok 6 - canonical envelope rejects eye mismatch
+  ---
+  duration_ms: 0.0555
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects schema mismatch
+ok 7 - canonical envelope rejects schema mismatch
+  ---
+  duration_ms: 0.277041
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects duplicate-envelope mismatch
+ok 8 - canonical envelope rejects duplicate-envelope mismatch
+  ---
+  duration_ms: 0.042208
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects duplicate-identifier mismatch
+ok 9 - canonical envelope rejects duplicate-identifier mismatch
+  ---
+  duration_ms: 0.320916
+  type: 'test'
+  ...
+# Subtest: exact catalog resolution retains the whole nested option
+ok 10 - exact catalog resolution retains the whole nested option
+  ---
+  duration_ms: 0.293958
+  type: 'test'
+  ...
+# Subtest: retired atomic aliases use current retirement semantics and never reverse false subtypes
+ok 11 - retired atomic aliases use current retirement semantics and never reverse false subtypes
+  ---
+  duration_ms: 0.252167
+  type: 'test'
+  ...
+# Subtest: role markers dominate definition matching, conflicting markers are invalid
+ok 12 - role markers dominate definition matching, conflicting markers are invalid
+  ---
+  duration_ms: 0.334959
+  type: 'test'
+  ...
+# Subtest: one typed qualifier reader preserves numeric, enum, extent, legacy GRADE and retired grade removal
+ok 13 - one typed qualifier reader preserves numeric, enum, extent, legacy GRADE and retired grade removal
+  ---
+  duration_ms: 2.29025
+  type: 'test'
+  ...
+# Subtest: malformed stored negative still throws; eye sets never coerce UNKNOWN
+ok 14 - malformed stored negative still throws; eye sets never coerce UNKNOWN
+  ---
+  duration_ms: 0.287125
+  type: 'test'
+  ...
+# Subtest: compiled ocular structure field identities and atomic samples are pinned
+ok 15 - compiled ocular structure field identities and atomic samples are pinned
+  ---
+  duration_ms: 0.794042
+  type: 'test'
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 150.502625

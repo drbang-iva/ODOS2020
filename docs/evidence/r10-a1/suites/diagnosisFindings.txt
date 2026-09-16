@@ -1,0 +1,333 @@
+TAP version 13
+# Subtest: GET encounter findings returns 401 when unauthenticated
+ok 1 - GET encounter findings returns 401 when unauthenticated
+  ---
+  duration_ms: 21.742
+  type: 'test'
+  ...
+# Subtest: PUT encounter findings returns 401 when unauthenticated
+ok 2 - PUT encounter findings returns 401 when unauthenticated
+  ---
+  duration_ms: 12.222667
+  type: 'test'
+  ...
+# odos-mcp: diagnosis findings dependency failed: Error: Synthetic reassertion failure
+#     at MemoryFhir.create (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/tests/diagnosisFindings.test.ts:1372:13)
+#     at persistFindingReassertionProvenance (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:1031:14)
+#     at handleDiagnosisFindingsMutationRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:388:13)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/tests/diagnosisFindings.test.ts:451:18)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition next link is invalid.
+#     at validateLocalFhirSearchNextPath (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/fhir-search.ts:198:11)
+#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/fhir-search.ts:182:18)
+#     at allEncounterResources (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:820:10)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async Promise.all (index 2)
+#     at async handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:202:68)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/tests/diagnosisFindings.test.ts:557:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition next link is invalid.
+#     at validateLocalFhirSearchNextPath (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/fhir-search.ts:198:11)
+#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/fhir-search.ts:182:18)
+#     at allEncounterResources (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:820:10)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async Promise.all (index 2)
+#     at async handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:202:68)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/tests/diagnosisFindings.test.ts:557:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition pagination is unavailable or cyclic.
+#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/fhir-search.ts:184:13)
+#     at allEncounterResources (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:820:10)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async Promise.all (index 2)
+#     at async handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:202:68)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/tests/diagnosisFindings.test.ts:557:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition pagination is unavailable or cyclic.
+#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/fhir-search.ts:184:13)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+# odos-mcp: diagnosis findings dependency failed: Error: Synthetic FHIR 503
+#     at MemoryFhir.searchUrl (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/tests/diagnosisFindings.test.ts:1333:27)
+#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/fhir-search.ts:187:27)
+#     at allEncounterResources (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:820:10)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async Promise.all (index 2)
+#     at async handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:202:68)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/tests/diagnosisFindings.test.ts:557:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+#   status: 503
+# }
+# odos-mcp: diagnosis findings dependency failed: Error: Synthetic FHIR 500
+#     at MemoryFhir.read (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/tests/diagnosisFindings.test.ts:1292:27)
+#     at handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:196:38)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/tests/diagnosisFindings.test.ts:573:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+#   status: 500
+# }
+# Subtest: PUT encounter findings returns 403 for read-only Admin
+ok 3 - PUT encounter findings returns 403 for read-only Admin
+  ---
+  duration_ms: 2.245792
+  type: 'test'
+  ...
+# Subtest: GET expands offered rows and normalizes only the latest section snapshot
+ok 4 - GET expands offered rows and normalizes only the latest section snapshot
+  ---
+  duration_ms: 6.580541
+  type: 'test'
+  ...
+# Subtest: GET finds the selected encounter Condition on a later safe Bundle page
+ok 5 - GET finds the selected encounter Condition on a later safe Bundle page
+  ---
+  duration_ms: 0.982375
+  type: 'test'
+  ...
+# Subtest: GET projects carried present findings and merges prior absence into the exact offered eye only
+ok 6 - GET projects carried present findings and merges prior absence into the exact offered eye only
+  ---
+  duration_ms: 1.184334
+  type: 'test'
+  ...
+# Subtest: GET keeps a selected carry prior absence offered when the matching current atomic finding belongs only to another diagnosis
+ok 7 - GET keeps a selected carry prior absence offered when the matching current atomic finding belongs only to another diagnosis
+  ---
+  duration_ms: 0.713625
+  type: 'test'
+  ...
+# Subtest: reasserting a prior absent offer creates a fresh current row without a carried tag
+ok 8 - reasserting a prior absent offer creates a fresh current row without a carried tag
+  ---
+  duration_ms: 2.21
+  type: 'test'
+  ...
+# Subtest: a carried finding remains unreasserted until the discriminated Provenance activity exists
+ok 9 - a carried finding remains unreasserted until the discriminated Provenance activity exists
+  ---
+  duration_ms: 0.844375
+  type: 'test'
+  ...
+# Subtest: a reassertion marker older than the current carry does not reassert the carried finding
+ok 10 - a reassertion marker older than the current carry does not reassert the carried finding
+  ---
+  duration_ms: 0.295667
+  type: 'test'
+  ...
+# Subtest: a failed reassertion marker write remains retryable without losing the carry signal
+ok 11 - a failed reassertion marker write remains retryable without losing the carry signal
+  ---
+  duration_ms: 4.391416
+  type: 'test'
+  ...
+# Subtest: asserting absence round-trips and repeated assertions update one logical Observation
+ok 12 - asserting absence round-trips and repeated assertions update one logical Observation
+  ---
+  duration_ms: 0.8285
+  type: 'test'
+  ...
+# Subtest: assertion finds an existing same-eye Observation on page two and never creates a duplicate
+ok 13 - assertion finds an existing same-eye Observation on page two and never creates a duplicate
+  ---
+  duration_ms: 0.303042
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a cross-origin next page
+ok 14 - findings pagination fails closed for a cross-origin next page
+  ---
+  duration_ms: 0.429833
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a off-root next page
+ok 15 - findings pagination fails closed for a off-root next page
+  ---
+  duration_ms: 0.186333
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a unavailable next page
+ok 16 - findings pagination fails closed for a unavailable next page
+  ---
+  duration_ms: 0.348875
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a cycle next page
+ok 17 - findings pagination fails closed for a cycle next page
+  ---
+  duration_ms: 0.322292
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a upstream next page
+ok 18 - findings pagination fails closed for a upstream next page
+  ---
+  duration_ms: 0.227833
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 401 dependency response without a generic route 500
+ok 19 - findings maps a FHIR 401 dependency response without a generic route 500
+  ---
+  duration_ms: 0.168958
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 403 dependency response without a generic route 500
+ok 20 - findings maps a FHIR 403 dependency response without a generic route 500
+  ---
+  duration_ms: 0.045542
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 500 dependency response without a generic route 500
+ok 21 - findings maps a FHIR 500 dependency response without a generic route 500
+  ---
+  duration_ms: 0.096291
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 401 dependency response
+ok 22 - GET findings route preserves the named FHIR 401 dependency response
+  ---
+  duration_ms: 3.818291
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 403 dependency response
+ok 23 - GET findings route preserves the named FHIR 403 dependency response
+  ---
+  duration_ms: 2.119584
+  type: 'test'
+  ...
+# odos-mcp: diagnosis findings dependency failed: Error: Synthetic FHIR 500
+#     at MemoryFhir.read (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/tests/diagnosisFindings.test.ts:1292:27)
+#     at handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:196:38)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/tests/diagnosisFindings.test.ts:896:20) {
+#   status: 500
+# }
+# Subtest: GET findings route preserves the named FHIR 500 dependency response
+ok 24 - GET findings route preserves the named FHIR 500 dependency response
+  ---
+  duration_ms: 1.609709
+  type: 'test'
+  ...
+# Subtest: findings maps Encounter FHIR 404 to a non-leaking 404
+ok 25 - findings maps Encounter FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.134333
+  type: 'test'
+  ...
+# Subtest: findings maps Encounter FHIR 410 to a non-leaking 404
+ok 26 - findings maps Encounter FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.054792
+  type: 'test'
+  ...
+# Subtest: findings maps Condition FHIR 404 to a non-leaking 404
+ok 27 - findings maps Condition FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.101542
+  type: 'test'
+  ...
+# Subtest: findings maps Condition FHIR 410 to a non-leaking 404
+ok 28 - findings maps Condition FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.075041
+  type: 'test'
+  ...
+# Subtest: findings maps Observation FHIR 404 to a non-leaking 404
+ok 29 - findings maps Observation FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.079375
+  type: 'test'
+  ...
+# Subtest: findings maps Observation FHIR 410 to a non-leaking 404
+ok 30 - findings maps Observation FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.120666
+  type: 'test'
+  ...
+# Subtest: findings gives Condition bodySite laterality precedence over a stale catalog identifier
+ok 31 - findings gives Condition bodySite laterality precedence over a stale catalog identifier
+  ---
+  duration_ms: 0.268875
+  type: 'test'
+  ...
+# odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition pagination is unavailable or cyclic.
+#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/mcp/src/fhir-search.ts:184:13)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+# Subtest: GET findings route returns missing lineage as visible state and a cyclic next link as 502
+ok 32 - GET findings route returns missing lineage as visible state and a cyclic next link as 502
+  ---
+  duration_ms: 6.935833
+  type: 'test'
+  ...
+# Subtest: 404 Condition/prior-unique lineage stays a 200 visible integrity state
+ok 33 - 404 Condition/prior-unique lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.427
+  type: 'test'
+  ...
+# Subtest: 404 Encounter/prior-e1 lineage stays a 200 visible integrity state
+ok 34 - 404 Encounter/prior-e1 lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.169625
+  type: 'test'
+  ...
+# Subtest: 404 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+ok 35 - 404 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.261625
+  type: 'test'
+  ...
+# Subtest: 410 Condition/prior-unique lineage stays a 200 visible integrity state
+ok 36 - 410 Condition/prior-unique lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.136916
+  type: 'test'
+  ...
+# Subtest: 410 Encounter/prior-e1 lineage stays a 200 visible integrity state
+ok 37 - 410 Encounter/prior-e1 lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.11525
+  type: 'test'
+  ...
+# Subtest: 410 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+ok 38 - 410 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.112959
+  type: 'test'
+  ...
+# Subtest: asserting the same finding for another eye preserves the existing eye assertion
+ok 39 - asserting the same finding for another eye preserves the existing eye assertion
+  ---
+  duration_ms: 0.579792
+  type: 'test'
+  ...
+# Subtest: grade and laterality mutations enforce the configured scale and restore inherited laterality
+ok 40 - grade and laterality mutations enforce the configured scale and restore inherited laterality
+  ---
+  duration_ms: 1.043708
+  type: 'test'
+  ...
+# Subtest: clear enters the atomic Observation in error and rejects cross-encounter patient and Condition boundaries
+ok 41 - clear enters the atomic Observation in error and rejects cross-encounter patient and Condition boundaries
+  ---
+  duration_ms: 0.373167
+  type: 'test'
+  ...
+# Subtest: assign rehomes Condition evidence idempotently and standalone removes the only binding home
+ok 42 - assign rehomes Condition evidence idempotently and standalone removes the only binding home
+  ---
+  duration_ms: 0.4205
+  type: 'test'
+  ...
+1..42
+# tests 42
+# suites 0
+# pass 42
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 297.266709

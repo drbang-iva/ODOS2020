@@ -1,0 +1,69 @@
+TAP version 13
+# Subtest: exact catalog resolution retains the whole nested option
+not ok 1 - exact catalog resolution retains the whole nested option
+  ---
+  duration_ms: 1.97575
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/currentFindingIdentity.test.ts:1:2707'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected "actual" to be reference-equal to "expected":
+    + actual - expected
+
+      {
+    +   atomicFindingId: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::demodex',
+    -   atomicFindingId: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::demodex::collarettes',
+        diagnosisKeys: [],
+    +   display: 'Demodex',
+    -   display: 'Collarettes',
+        fieldCode: 'CUSTOM_ABNORMAL_FINDINGS_02',
+        findingDefinitionId: 'definition-1',
+        findingDefinitionKey: 'ocular-health:anterior:lids-lashes',
+        gradeScale: [],
+    +   optionCode: 'demodex',
+    -   optionCode: 'demodex::collarettes',
+        origin: 'shipped',
+        sectionKey: 'ocular-health:anterior:lids-lashes'
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    atomicFindingId: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::demodex::collarettes'
+    findingDefinitionId: 'definition-1'
+    findingDefinitionKey: 'ocular-health:anterior:lids-lashes'
+    fieldCode: 'CUSTOM_ABNORMAL_FINDINGS_02'
+    optionCode: 'demodex::collarettes'
+    display: 'Collarettes'
+    sectionKey: 'ocular-health:anterior:lids-lashes'
+    gradeScale:
+    diagnosisKeys:
+    origin: 'shipped'
+  actual:
+    atomicFindingId: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::demodex'
+    findingDefinitionId: 'definition-1'
+    findingDefinitionKey: 'ocular-health:anterior:lids-lashes'
+    fieldCode: 'CUSTOM_ABNORMAL_FINDINGS_02'
+    optionCode: 'demodex'
+    display: 'Demodex'
+    sectionKey: 'ocular-health:anterior:lids-lashes'
+    gradeScale:
+    diagnosisKeys:
+    origin: 'shipped'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/currentFindingIdentity.test.ts:39:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 141.353667

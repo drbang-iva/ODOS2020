@@ -1,0 +1,88 @@
+TAP version 13
+# Subtest: finding definitions persist as one coded Basic carrying the interface JSON verbatim
+ok 1 - finding definitions persist as one coded Basic carrying the interface JSON verbatim
+  ---
+  duration_ms: 12.481291
+  type: 'test'
+  ...
+# Subtest: E2 seeds ten entrance definitions with canonical Pachymetry and declarative documentation elements
+ok 2 - E2 seeds ten entrance definitions with canonical Pachymetry and declarative documentation elements
+  ---
+  duration_ms: 6.608583
+  type: 'test'
+  ...
+# Subtest: DE-1 seeds seven new definitions and references the one existing TBUT stable key as the eighth workup section
+ok 3 - DE-1 seeds seven new definitions and references the one existing TBUT stable key as the eighth workup section
+  ---
+  duration_ms: 6.172209
+  type: 'test'
+  ...
+# Subtest: stored rows override compiled seeds by stableKey and survive a store restart
+ok 4 - stored rows override compiled seeds by stableKey and survive a store restart
+  ---
+  duration_ms: 6.60425
+  type: 'test'
+  ...
+# Subtest: a persisted practice option drives capture validation through the runtime dependency
+ok 5 - a persisted practice option drives capture validation through the runtime dependency
+  ---
+  duration_ms: 7.6955
+  type: 'test'
+  ...
+# Subtest: saving again updates the same Basic and deactivation materializes active false
+ok 6 - saving again updates the same Basic and deactivation materializes active false
+  ---
+  duration_ms: 6.24775
+  type: 'test'
+  ...
+# Subtest: save re-searches before create and updates a competing row that appeared
+ok 7 - save re-searches before create and updates a competing row that appeared
+  ---
+  duration_ms: 6.08575
+  type: 'test'
+  ...
+# Subtest: bad rows are skipped and duplicates resolve by lastUpdated then id
+ok 8 - bad rows are skipped and duplicates resolve by lastUpdated then id
+  ---
+  duration_ms: 10.785
+  type: 'test'
+  ...
+# Subtest: a handler still receives working definitions when one stored row is garbage
+ok 9 - a handler still receives working definitions when one stored row is garbage
+  ---
+  duration_ms: 6.46775
+  type: 'test'
+  ...
+# Subtest: every definition-backed clinical-graph HTTP closure receives the persistent dependency
+ok 10 - every definition-backed clinical-graph HTTP closure receives the persistent dependency
+  ---
+  duration_ms: 3.1205
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 1: dilation permits deferral
+ok 11 - DEFER-1 guard 1: dilation permits deferral
+  ---
+  duration_ms: 5.894375
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 2: the complete seed has exactly one deferrable definition
+ok 12 - DEFER-1 guard 2: the complete seed has exactly one deferrable definition
+  ---
+  duration_ms: 5.788917
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 3: stateDefinition factory output does not grant deferral
+ok 13 - DEFER-1 guard 3: stateDefinition factory output does not grant deferral
+  ---
+  duration_ms: 5.606125
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 200.139083

@@ -1,0 +1,212 @@
+{
+  "method": "TypeScript AST top-level declarations, excluding imports and export modifier only",
+  "base": "40c19a9e442015e1d32396958b661394318713d2",
+  "identical": 34,
+  "moved": 11,
+  "declarations": [
+    {
+      "name": "Eye",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "0fef0d329ca8a059cb4ba28cf95def818b7fc5580740f0b3757ac1f533668363",
+      "afterSha256": "0fef0d329ca8a059cb4ba28cf95def818b7fc5580740f0b3757ac1f533668363"
+    },
+    {
+      "name": "CustomSectionFhirClient",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "e12ab55a240e3bc69aaa02a6b6ccb8a31124854da3ded6acc6697f34a5e5454d",
+      "afterSha256": "e12ab55a240e3bc69aaa02a6b6ccb8a31124854da3ded6acc6697f34a5e5454d"
+    },
+    {
+      "name": "CustomSectionEndpointDeps",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "253aac25e49cb56d1b2ad1ea495704b1c0735135e4a01cde89af0a4412ddd3ac",
+      "afterSha256": "253aac25e49cb56d1b2ad1ea495704b1c0735135e4a01cde89af0a4412ddd3ac"
+    },
+    {
+      "name": "WRITE_HEADERS",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "343b52f37d87dc7c42e4a32eda9a080cca313cf6f3a156acdcacf431001aad59",
+      "afterSha256": "343b52f37d87dc7c42e4a32eda9a080cca313cf6f3a156acdcacf431001aad59"
+    },
+    {
+      "name": "EYES",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "aea8b788aa4a5e2b87f126562f440d178ae20552de8fc2d270232802a60c94e8",
+      "afterSha256": "aea8b788aa4a5e2b87f126562f440d178ae20552de8fc2d270232802a60c94e8"
+    },
+    {
+      "name": "clockHourExtentSchema",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "1992d3ecf8e0dca0808579fae425681d56b0b82798646024dcaebd076cdd5e35",
+      "afterSha256": "1992d3ecf8e0dca0808579fae425681d56b0b82798646024dcaebd076cdd5e35"
+    },
+    {
+      "name": "findingQualifierValueSchema",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "0feb67c50a957ed579e8b47bb4321a97f428f7e7b2b122ebcd8ee7859b584dcb",
+      "afterSha256": "0feb67c50a957ed579e8b47bb4321a97f428f7e7b2b122ebcd8ee7859b584dcb"
+    },
+    {
+      "name": "findingDetailsSchema",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "402456a59b0e3da45078c8ccf5d330579e1111b249a42be40a470e033deabc6b",
+      "afterSha256": "402456a59b0e3da45078c8ccf5d330579e1111b249a42be40a470e033deabc6b"
+    },
+    {
+      "name": "negativeActSchema",
+      "location": "mcp/src/clinical-graph/finding-section-helpers.ts",
+      "beforeSha256": "3c793baf85d23085e178b0bcafc6c8486060b51abdbc27e67eaa4d790d2b5fd6",
+      "afterSha256": "3c793baf85d23085e178b0bcafc6c8486060b51abdbc27e67eaa4d790d2b5fd6"
+    },
+    {
+      "name": "NegativeAct",
+      "location": "mcp/src/clinical-graph/finding-section-helpers.ts",
+      "beforeSha256": "7958e85e15e7d8630f3377442736b8416eadf5f9c872b91984bae19b1d6d2177",
+      "afterSha256": "7958e85e15e7d8630f3377442736b8416eadf5f9c872b91984bae19b1d6d2177"
+    },
+    {
+      "name": "NEGATIVE_ACT_IDENTIFIER_SYSTEM",
+      "location": "mcp/src/clinical-graph/finding-section-helpers.ts",
+      "beforeSha256": "431afc1dec34af4af7853920d200832822b8b048966488a98bec177b07c64f6c",
+      "afterSha256": "431afc1dec34af4af7853920d200832822b8b048966488a98bec177b07c64f6c"
+    },
+    {
+      "name": "eyePayloadSchema",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "bf66ba115fa1ff8dfe53d39519912abd5caf7ca8d088f628e8be8a469cd47928",
+      "afterSha256": "bf66ba115fa1ff8dfe53d39519912abd5caf7ca8d088f628e8be8a469cd47928"
+    },
+    {
+      "name": "captureSchema",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "7e958bd7b3dbbe98dd392f9eb6379f5ff694d9f1b01bb80219a55f073999c69d",
+      "afterSha256": "7e958bd7b3dbbe98dd392f9eb6379f5ff694d9f1b01bb80219a55f073999c69d"
+    },
+    {
+      "name": "historyQuerySchema",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "ae1e20e13e9c1365c0e784711240b4c30bf62d5328cf7f4a0d566b5231a4117e",
+      "afterSha256": "ae1e20e13e9c1365c0e784711240b4c30bf62d5328cf7f4a0d566b5231a4117e"
+    },
+    {
+      "name": "handleCustomSectionCaptureRequest",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "271ede20d9df7a40bc046fa1e32835b6fd95c3f54b72467a806ad0204567f9d7",
+      "afterSha256": "271ede20d9df7a40bc046fa1e32835b6fd95c3f54b72467a806ad0204567f9d7"
+    },
+    {
+      "name": "handleCustomSectionHistoryRequest",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "e8f4b5582a419fe7dc66cdbfafa39f954deeae11abc2526ea2c7edfe675a6600",
+      "afterSha256": "e8f4b5582a419fe7dc66cdbfafa39f954deeae11abc2526ea2c7edfe675a6600"
+    },
+    {
+      "name": "validateFindingDetails",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "f399ca8a17d2a820bc686b95b06186c55cc18af688fbc392b623ead5ca62cdfa",
+      "afterSha256": "f399ca8a17d2a820bc686b95b06186c55cc18af688fbc392b623ead5ca62cdfa"
+    },
+    {
+      "name": "validateFindingQualifierValue",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "449cc40d062bb861bc642cc5e9cb4711aecbd3a02c700acaca9c6a12e66832d9",
+      "afterSha256": "449cc40d062bb861bc642cc5e9cb4711aecbd3a02c700acaca9c6a12e66832d9"
+    },
+    {
+      "name": "appendFindingDetailComponentsToObservation",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "26ba68136d97df396fc420b3b2667aa140bc4325b1f608cfd380d0f29c56ec29",
+      "afterSha256": "26ba68136d97df396fc420b3b2667aa140bc4325b1f608cfd380d0f29c56ec29"
+    },
+    {
+      "name": "findingQualifierObservationValue",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "d54d0f41cd0ad27668bb78e8ffa2e09513eb01aa9cc4a714169eeee9857b148e",
+      "afterSha256": "d54d0f41cd0ad27668bb78e8ffa2e09513eb01aa9cc4a714169eeee9857b148e"
+    },
+    {
+      "name": "observationFindingDetails",
+      "location": "mcp/src/clinical-graph/finding-section-helpers.ts",
+      "beforeSha256": "b2cca875f5f71fabc5e97e5586d91c18037fc6bbccdf0014cdf45e9318db3e4e",
+      "afterSha256": "b2cca875f5f71fabc5e97e5586d91c18037fc6bbccdf0014cdf45e9318db3e4e"
+    },
+    {
+      "name": "observationFindingQualifierValue",
+      "location": "mcp/src/clinical-graph/finding-section-helpers.ts",
+      "beforeSha256": "0f99eaf7388d11962105be3202ab1911846592d7e66295cd4fef74e582d31c01",
+      "afterSha256": "0f99eaf7388d11962105be3202ab1911846592d7e66295cd4fef74e582d31c01"
+    },
+    {
+      "name": "findingDetailComponentCode",
+      "location": "mcp/src/clinical-graph/finding-section-helpers.ts",
+      "beforeSha256": "c700143263cae75b6e2bcb57f6084e5d3dbb866d1aea1edeb7f60932897787f3",
+      "afterSha256": "c700143263cae75b6e2bcb57f6084e5d3dbb866d1aea1edeb7f60932897787f3"
+    },
+    {
+      "name": "findComponent",
+      "location": "mcp/src/clinical-graph/finding-section-helpers.ts",
+      "beforeSha256": "a6894f016752580dad69146ccdd2fa8217cf293f280615a2463070c6befb8585",
+      "afterSha256": "a6894f016752580dad69146ccdd2fa8217cf293f280615a2463070c6befb8585"
+    },
+    {
+      "name": "hasFindingDetails",
+      "location": "mcp/src/clinical-graph/finding-section-helpers.ts",
+      "beforeSha256": "5d037f72527a1eeb115b52840e0b0126b5ae2ec23a7bb71ce4f3ce3dd030b616",
+      "afterSha256": "5d037f72527a1eeb115b52840e0b0126b5ae2ec23a7bb71ce4f3ce3dd030b616"
+    },
+    {
+      "name": "isClockHourExtent",
+      "location": "mcp/src/clinical-graph/finding-section-helpers.ts",
+      "beforeSha256": "6516178108fee9404a95029149f6ecc366e11a540daff10484c14e5c87941ed6",
+      "afterSha256": "6516178108fee9404a95029149f6ecc366e11a540daff10484c14e5c87941ed6"
+    },
+    {
+      "name": "resolveCustomDefinition",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "8887441405a962651ebad752dbb56f1258b2430df084213250570107428b35aa",
+      "afterSha256": "8887441405a962651ebad752dbb56f1258b2430df084213250570107428b35aa"
+    },
+    {
+      "name": "persistCapture",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "ef6fc2df17f51e1a4bef280937ca37e877153688e8998fa364d9286bec4d2a93",
+      "afterSha256": "ef6fc2df17f51e1a4bef280937ca37e877153688e8998fa364d9286bec4d2a93"
+    },
+    {
+      "name": "observationEye",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "2ab8b0fdac251ab67dff7e9482d0470158c56b46a8570562fd462916821c4950",
+      "afterSha256": "2ab8b0fdac251ab67dff7e9482d0470158c56b46a8570562fd462916821c4950"
+    },
+    {
+      "name": "componentString",
+      "location": "mcp/src/clinical-graph/finding-section-helpers.ts",
+      "beforeSha256": "ba0111f152ab4e5829b29585fd5ec1f7442f8d909efeeceba097e5b30e0f1620",
+      "afterSha256": "ba0111f152ab4e5829b29585fd5ec1f7442f8d909efeeceba097e5b30e0f1620"
+    },
+    {
+      "name": "readStableKey",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "0edd1f2d6d9acaa739cd02d9c0650e6f08224544edfe290d3937d82544df4c38",
+      "afterSha256": "0edd1f2d6d9acaa739cd02d9c0650e6f08224544edfe290d3937d82544df4c38"
+    },
+    {
+      "name": "staffMay",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "5614ae5e6c04f2ffcd03854ada37a5d1c0cbaa9dcaaed4fc661f3cb469c394ca",
+      "afterSha256": "5614ae5e6c04f2ffcd03854ada37a5d1c0cbaa9dcaaed4fc661f3cb469c394ca"
+    },
+    {
+      "name": "observationNegativeAct",
+      "location": "mcp/src/clinical-graph/finding-section-helpers.ts",
+      "beforeSha256": "0c8b05e19984b66cde8cea9e6e6298b79ed6739284404e92b3a2a9be7a2cc894",
+      "afterSha256": "0c8b05e19984b66cde8cea9e6e6298b79ed6739284404e92b3a2a9be7a2cc894"
+    },
+    {
+      "name": "negativeIdentifier",
+      "location": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "beforeSha256": "803d434708579a8dd45bb4bccec81dc407bb02bf1b577a8c3b27b37b0f84d767",
+      "afterSha256": "803d434708579a8dd45bb4bccec81dc407bb02bf1b577a8c3b27b37b0f84d767"
+    }
+  ]
+}

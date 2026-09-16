@@ -1,0 +1,161 @@
+[
+  {
+    "stableKey": "ocular-health:anterior:periocular-adnexa",
+    "fields": [
+      "CUSTOM_ABNORMAL_FINDINGS_01"
+    ],
+    "atomicIds": [
+      "ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::brow-ptosis",
+      "ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::dermatitis",
+      "ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::dermatochalasis"
+    ]
+  },
+  {
+    "stableKey": "ocular-health:anterior:lids-lashes",
+    "fields": [
+      "CUSTOM_ABNORMAL_FINDINGS_02"
+    ],
+    "atomicIds": [
+      "ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::anterior-blepharitis",
+      "ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::chalazion",
+      "ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::demodex::collarettes"
+    ]
+  },
+  {
+    "stableKey": "ocular-health:anterior:palpebral-conjunctiva",
+    "fields": [
+      "CUSTOM_ABNORMAL_FINDINGS_03"
+    ],
+    "atomicIds": [
+      "ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::concretions",
+      "ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::follicles",
+      "ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::giant-papillae-gpc"
+    ]
+  },
+  {
+    "stableKey": "ocular-health:anterior:conjunctiva",
+    "fields": [
+      "CUSTOM_ABNORMAL_FINDINGS_04"
+    ],
+    "atomicIds": [
+      "ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::chemosis",
+      "ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::concretion",
+      "ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::conjunctivochalasis"
+    ]
+  },
+  {
+    "stableKey": "ocular-health:anterior:tear-film",
+    "fields": [
+      "CUSTOM_ABNORMAL_FINDINGS_05",
+      "CUSTOM_GRADE_TBUT",
+      "CUSTOM_GRADE_TBUT_METHOD"
+    ],
+    "atomicIds": [
+      "ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::debris-in-tear-film",
+      "ocular-health:anterior:tear-film::CUSTOM_GRADE_TBUT_METHOD::fluorescein",
+      "ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::foam"
+    ]
+  },
+  {
+    "stableKey": "ocular-health:anterior:cornea",
+    "fields": [
+      "CUSTOM_ABNORMAL_FINDINGS_06",
+      "CUSTOM_GRADE_VITAL_DYE"
+    ],
+    "atomicIds": [
+      "ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::abrasion",
+      "ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::arcus",
+      "ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::band-keratopathy"
+    ]
+  },
+  {
+    "stableKey": "ocular-health:anterior:anterior-chamber",
+    "fields": [
+      "CUSTOM_ABNORMAL_FINDINGS_07",
+      "CUSTOM_GRADE_VAN_HERICK"
+    ],
+    "atomicIds": [
+      "ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::cells",
+      "ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::flare",
+      "ocular-health:anterior:anterior-chamber::CUSTOM_GRADE_VAN_HERICK::grade-0-closed"
+    ]
+  },
+  {
+    "stableKey": "ocular-health:anterior:iris",
+    "fields": [
+      "CUSTOM_ABNORMAL_FINDINGS_08"
+    ],
+    "atomicIds": [
+      "ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::atrophy",
+      "ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::coloboma",
+      "ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::heterochromia"
+    ]
+  },
+  {
+    "stableKey": "ocular-health:anterior:lens",
+    "fields": [
+      "CUSTOM_ABNORMAL_FINDINGS_09"
+    ],
+    "atomicIds": [
+      "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-polar",
+      "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-subcapsular",
+      "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::aphakia"
+    ]
+  },
+  {
+    "stableKey": "ocular-health:posterior:vitreous",
+    "fields": [
+      "CUSTOM_ABNORMAL_FINDINGS_01"
+    ],
+    "atomicIds": [
+      "ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::anterior-hyaloid",
+      "ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::asteroid-hyalosis",
+      "ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::floaters"
+    ]
+  },
+  {
+    "stableKey": "ocular-health:posterior:fundus",
+    "fields": [
+      "CUSTOM_ABNORMAL_FINDINGS_02"
+    ],
+    "atomicIds": [
+      "ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::chorioretinal-scar",
+      "ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::choroidal-lesion",
+      "ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::choroidal-nevus"
+    ]
+  },
+  {
+    "stableKey": "ocular-health:posterior:macula",
+    "fields": [
+      "CUSTOM_ABNORMAL_FINDINGS_03"
+    ],
+    "atomicIds": [
+      "ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::cnvm",
+      "ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::cystoid-macular-edema-cme",
+      "ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::diabetic-macular-edema"
+    ]
+  },
+  {
+    "stableKey": "ocular-health:posterior:vessels",
+    "fields": [
+      "CUSTOM_ABNORMAL_FINDINGS_04",
+      "CUSTOM_GRADE_A_V_RATIO"
+    ],
+    "atomicIds": [
+      "ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-2",
+      "ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-3",
+      "ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-4"
+    ]
+  },
+  {
+    "stableKey": "ocular-health:posterior:periphery",
+    "fields": [
+      "CUSTOM_ABNORMAL_FINDINGS_05"
+    ],
+    "atomicIds": [
+      "ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::chorioretinal-scar",
+      "ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::cobblestone-paving-stone-degeneration",
+      "ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::cystoid-degeneration"
+    ]
+  }
+]

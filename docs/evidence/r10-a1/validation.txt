@@ -1,0 +1,18 @@
+PASS: 12 premises / 13 original source blobs verified at 40c19a9e442015e1d32396958b661394318713d2.
+PASS: live final results: 11 PASS / 2 EXPECTED_UNDER_RULING / 2 INFORMATIONAL; stop=false.
+PASS: original 156 HTTP trace events retained; only staff-link amendment events 157-163 appended.
+PASS: all nine required existing suites: 268 pass / 0 fail / 0 skip; zero pre-existing assertion edits.
+PASS: all four new suites: 270 pass / 0 fail / 0 skip, including 61 history-byte replays and six original suite hashes.
+PASS: 34 original declarations identical after extraction, including 11 moved declarations.
+PASS: G1-G10 (12 mutations) each RED exit 1 / GREEN exit 0; restored hashes match final task files.
+PASS: UI full suite: 1560 pass / 0 fail / 0 skip; both builds exit 0.
+PASS: MCP full suite: 5280 pass / 0 fail / 51 skip; only test-result delta is the registry guard fail-to-pass.
+PASS: npm run preflight: zero hard blocks / zero warnings; existing guard unchanged.
+PASS: every changed/new path is within the kickoff scope plus the approved single registry entry.
+PASS: registry deletion guard RED 17 pass / 1 fail; restored GREEN 18 pass / 0 fail.
+PASS: node --check mcp/scripts/r10-preflight.mjs and git diff --check exit 0.
+PASS: all untracked deliverables checked with git diff --no-index --check /dev/null <file>; no whitespace errors.
+PASS: known private credential values and private-key blocks absent; see private-value-scan.json.
+PASS: detached mutation scratch removed after byte restoration; task worktree retained.
+PASS: all four task containers retained and Exited (0); zero running task containers.
+STATUS: author checks complete; NOT EVALUATED; no merge or deployment.

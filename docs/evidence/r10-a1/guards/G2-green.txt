@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: exact catalog resolution retains the whole nested option
+ok 1 - exact catalog resolution retains the whole nested option
+  ---
+  duration_ms: 0.601875
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 144.649458

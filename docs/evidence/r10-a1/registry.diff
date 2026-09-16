@@ -1,0 +1,17 @@
+diff --git a/data/canonical-extensions/registry.json b/data/canonical-extensions/registry.json
+index 9f39be38..917e9ff9 100644
+--- a/data/canonical-extensions/registry.json
++++ b/data/canonical-extensions/registry.json
+@@ -1027,6 +1027,12 @@
+       "namespace": "guarantor",
+       "status": "active",
+       "sliceConsumer": "guarantor-g2b1"
++    },
++    {
++      "url": "https://odos2020.com/fhir/StructureDefinition/supports-diagnosis",
++      "namespace": "clinical-graph",
++      "status": "active",
++      "sliceConsumer": "r10-a1"
+     }
+   ]
+ }

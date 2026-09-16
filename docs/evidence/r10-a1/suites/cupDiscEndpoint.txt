@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: cup/disc read ignores newer entered-in-error and cancelled values per eye
+ok 1 - cup/disc read ignores newer entered-in-error and cancelled values per eye
+  ---
+  duration_ms: 1.219166
+  type: 'test'
+  ...
+# Subtest: cup/disc capture rejects patient and encounter mismatch before creating resources
+ok 2 - cup/disc capture rejects patient and encounter mismatch before creating resources
+  ---
+  duration_ms: 1.657625
+  type: 'test'
+  ...
+# Subtest: cup/disc definition endpoint serves practice-editable field options from the finding definition
+ok 3 - cup/disc definition endpoint serves practice-editable field options from the finding definition
+  ---
+  duration_ms: 0.265834
+  type: 'test'
+  ...
+# Subtest: cup/disc endpoint persists neutral Observation and returns normal without an ICD code
+ok 4 - cup/disc endpoint persists neutral Observation and returns normal without an ICD code
+  ---
+  duration_ms: 1.35025
+  type: 'test'
+  ...
+# Subtest: cup/disc endpoint returns high-risk H40.02x suggestion metadata without creating a Condition
+ok 5 - cup/disc endpoint returns high-risk H40.02x suggestion metadata without creating a Condition
+  ---
+  duration_ms: 3.212875
+  type: 'test'
+  ...
+# Subtest: cup/disc endpoint relies on the evaluator for cross-eye asymmetry
+ok 6 - cup/disc endpoint relies on the evaluator for cross-eye asymmetry
+  ---
+  duration_ms: 5.774625
+  type: 'test'
+  ...
+# Subtest: cup/disc capture validates against a practice-edited runtime definition
+ok 7 - cup/disc capture validates against a practice-edited runtime definition
+  ---
+  duration_ms: 0.457791
+  type: 'test'
+  ...
+# Subtest: cup/disc endpoint rejects unauthenticated and non-chart-write saves
+ok 8 - cup/disc endpoint rejects unauthenticated and non-chart-write saves
+  ---
+  duration_ms: 0.072542
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 111.737791

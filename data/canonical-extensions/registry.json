@@ -1027,6 +1027,12 @@
       "namespace": "guarantor",
       "status": "active",
       "sliceConsumer": "guarantor-g2b1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/supports-diagnosis",
+      "namespace": "clinical-graph",
+      "status": "active",
+      "sliceConsumer": "r10-a1"
     }
   ]
 }

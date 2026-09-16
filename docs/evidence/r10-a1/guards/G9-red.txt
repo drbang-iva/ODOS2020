@@ -1,0 +1,592 @@
+TAP version 13
+# Subtest: history bytes unchanged 1: customSectionEndpoint.test.ts
+ok 1 - history bytes unchanged 1: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.287292
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 2: customSectionEndpoint.test.ts
+ok 2 - history bytes unchanged 2: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.11475
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 3: customSectionEndpoint.test.ts
+ok 3 - history bytes unchanged 3: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.201625
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 4: customSectionEndpoint.test.ts
+ok 4 - history bytes unchanged 4: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.179209
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 5: customSectionEndpoint.test.ts
+ok 5 - history bytes unchanged 5: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.360417
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 6: customSectionEndpoint.test.ts
+ok 6 - history bytes unchanged 6: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.162666
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 7: customSectionEndpoint.test.ts
+not ok 7 - history bytes unchanged 7: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.534541
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:1:862'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a","finding-b"]}],"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a"]}],"state":"abnormal"}]}}'
+    - '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a","finding-b"]}],"findingDetails":{"finding-a":{"grade":"trace","stability":"stable","size":2.5,"span":{"from":2,"to":5,"clockwise":true}},"finding-b":{"grade":"high"}},"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a"]}],"findingDetails":{"finding-a":{"grade":"marked","stability":"progressive","size":4,"span":{"from":10,"to":1,"clockwise":false}}},"state":"abnormal"}]}}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a","finding-b"]}],"findingDetails":{"finding-a":{"grade":"trace","stability":"stable","size":2.5,"span":{"from":2,"to":5,"clockwise":true}},"finding-b":{"grade":"high"}},"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a"]}],"findingDetails":{"finding-a":{"grade":"marked","stability":"progressive","size":4,"span":{"from":10,"to":1,"clockwise":false}}},"state":"abnormal"}]}}'
+  actual: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a","finding-b"]}],"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a"]}],"state":"abnormal"}]}}'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:20:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 8: customSectionEndpoint.test.ts
+not ok 8 - history bytes unchanged 8: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.460916
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:1:862'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a","finding-b"]}],"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a"]}],"state":"abnormal"}]}}'
+    - '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a","finding-b"]}],"findingDetails":{"finding-a":{"grade":"trace","stability":"stable","size":2.5},"finding-b":{"grade":"high"}},"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a"]}],"findingDetails":{"finding-a":{"grade":"marked","stability":"progressive","size":4,"span":{"from":10,"to":1,"clockwise":false}}},"state":"abnormal"}]}}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a","finding-b"]}],"findingDetails":{"finding-a":{"grade":"trace","stability":"stable","size":2.5},"finding-b":{"grade":"high"}},"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a"]}],"findingDetails":{"finding-a":{"grade":"marked","stability":"progressive","size":4,"span":{"from":10,"to":1,"clockwise":false}}},"state":"abnormal"}]}}'
+  actual: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a","finding-b"]}],"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a"]}],"state":"abnormal"}]}}'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:20:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 9: customSectionEndpoint.test.ts
+ok 9 - history bytes unchanged 9: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.512125
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 10: customSectionEndpoint.test.ts
+not ok 10 - history bytes unchanged 10: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.375083
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:1:862'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-cornea-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_06","label":"Abnormal findings","value":["superficial-punctate-keratitis-spk"]}],"state":"abnormal"}]}}'
+    - '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-cornea-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_06","label":"Abnormal findings","value":["superficial-punctate-keratitis-spk"]}],"findingDetails":{"superficial-punctate-keratitis-spk":{"grade":"Grade 1"}},"state":"abnormal"}]}}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-cornea-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_06","label":"Abnormal findings","value":["superficial-punctate-keratitis-spk"]}],"findingDetails":{"superficial-punctate-keratitis-spk":{"grade":"Grade 1"}},"state":"abnormal"}]}}'
+  actual: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-cornea-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_06","label":"Abnormal findings","value":["superficial-punctate-keratitis-spk"]}],"state":"abnormal"}]}}'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:20:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 11: customSectionEndpoint.test.ts
+ok 11 - history bytes unchanged 11: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.157041
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 12: customSectionEndpoint.test.ts
+not ok 12 - history bytes unchanged 12: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.150166
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:1:862'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-cornea-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_06","label":"Abnormal findings","value":["neovascularization"]}],"state":"abnormal"}]}}'
+    - '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-cornea-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_06","label":"Abnormal findings","value":["neovascularization"]}],"findingDetails":{"neovascularization":{"grade":"Grade 0"}},"state":"abnormal"}]}}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-cornea-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_06","label":"Abnormal findings","value":["neovascularization"]}],"findingDetails":{"neovascularization":{"grade":"Grade 0"}},"state":"abnormal"}]}}'
+  actual: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-cornea-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_06","label":"Abnormal findings","value":["neovascularization"]}],"state":"abnormal"}]}}'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:20:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 13: customSectionEndpoint.test.ts
+not ok 13 - history bytes unchanged 13: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.163083
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:1:862'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-lens-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-anterior-lens-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"state":"abnormal"}]}}'
+    - '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-lens-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"findingDetails":{"nuclear-sclerosis":{"grade":"2+"}},"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-anterior-lens-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"findingDetails":{"nuclear-sclerosis":{"colour":"3+ (dark yellow/amber)"}},"state":"abnormal"}]}}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-lens-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"findingDetails":{"nuclear-sclerosis":{"grade":"2+"}},"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-anterior-lens-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"findingDetails":{"nuclear-sclerosis":{"colour":"3+ (dark yellow/amber)"}},"state":"abnormal"}]}}'
+  actual: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-lens-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-anterior-lens-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"state":"abnormal"}]}}'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:20:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 14: customSectionEndpoint.test.ts
+not ok 14 - history bytes unchanged 14: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.13225
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:1:862'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-lens-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"state":"abnormal"}]}}'
+    - '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-lens-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"findingDetails":{"nuclear-sclerosis":{"colour":"4+ (dark brown/black; brunescent)"}},"state":"abnormal"}]}}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-lens-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"findingDetails":{"nuclear-sclerosis":{"colour":"4+ (dark brown/black; brunescent)"}},"state":"abnormal"}]}}'
+  actual: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-lens-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"state":"abnormal"}]}}'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:20:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 15: customSectionEndpoint.test.ts
+not ok 15 - history bytes unchanged 15: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.180292
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:1:862'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-lens-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"state":"abnormal"}]}}'
+    - '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-lens-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"findingDetails":{"nuclear-sclerosis":{"colour":"4+ (dark brown/black; brunescent)","grade":"3+"}},"state":"abnormal"}]}}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-lens-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"findingDetails":{"nuclear-sclerosis":{"colour":"4+ (dark brown/black; brunescent)","grade":"3+"}},"state":"abnormal"}]}}'
+  actual: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-lens-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_09","label":"Abnormal findings","value":["nuclear-sclerosis"]}],"state":"abnormal"}]}}'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:20:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 16: customSectionEndpoint.test.ts
+ok 16 - history bytes unchanged 16: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.058375
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 17: customSectionEndpoint.test.ts
+ok 17 - history bytes unchanged 17: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.075792
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 18: customSectionEndpoint.test.ts
+not ok 18 - history bytes unchanged 18: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.204791
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:1:862'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-anterior-chamber-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_07","label":"Abnormal findings","value":["cells","flare"]}],"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-anterior-anterior-chamber-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_07","label":"Abnormal findings","value":["cells","flare"]}],"state":"abnormal"}]}}'
+    - '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-anterior-chamber-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_07","label":"Abnormal findings","value":["cells","flare"]}],"findingDetails":{"cells":{"grade":"2+ (16–25)"}},"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-anterior-anterior-chamber-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_07","label":"Abnormal findings","value":["cells","flare"]}],"findingDetails":{"flare":{"grade":"1+ (faint)"}},"state":"abnormal"}]}}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-anterior-chamber-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_07","label":"Abnormal findings","value":["cells","flare"]}],"findingDetails":{"cells":{"grade":"2+ (16–25)"}},"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-anterior-anterior-chamber-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_07","label":"Abnormal findings","value":["cells","flare"]}],"findingDetails":{"flare":{"grade":"1+ (faint)"}},"state":"abnormal"}]}}'
+  actual: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-anterior-anterior-chamber-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_07","label":"Abnormal findings","value":["cells","flare"]}],"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-anterior-anterior-chamber-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_07","label":"Abnormal findings","value":["cells","flare"]}],"state":"abnormal"}]}}'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:20:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 19: customSectionEndpoint.test.ts
+ok 19 - history bytes unchanged 19: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.071625
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 20: customSectionEndpoint.test.ts
+ok 20 - history bytes unchanged 20: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.054208
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 21: customSectionEndpoint.test.ts
+ok 21 - history bytes unchanged 21: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.061708
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 22: customSectionEndpoint.test.ts
+not ok 22 - history bytes unchanged 22: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.321
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:1:862'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-hole"]}],"state":"abnormal"}]}}'
+    - '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-hole"]}],"findingDetails":{"retinal-hole":{"subtype":"operculated"}},"state":"abnormal"}]}}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-hole"]}],"findingDetails":{"retinal-hole":{"subtype":"operculated"}},"state":"abnormal"}]}}'
+  actual: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-hole"]}],"state":"abnormal"}]}}'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:20:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 23: customSectionEndpoint.test.ts
+not ok 23 - history bytes unchanged 23: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.181291
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:1:862'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-tear"]}],"state":"abnormal"}]}}'
+    - '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-tear"]}],"findingDetails":{"retinal-tear":{"subtype":"horseshoe"}},"state":"abnormal"}]}}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-tear"]}],"findingDetails":{"retinal-tear":{"subtype":"horseshoe"}},"state":"abnormal"}]}}'
+  actual: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-tear"]}],"state":"abnormal"}]}}'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:20:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 24: customSectionEndpoint.test.ts
+ok 24 - history bytes unchanged 24: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.095458
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 25: customSectionEndpoint.test.ts
+ok 25 - history bytes unchanged 25: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.067
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 26: customSectionEndpoint.test.ts
+ok 26 - history bytes unchanged 26: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.059417
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 27: customSectionEndpoint.test.ts
+ok 27 - history bytes unchanged 27: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.057041
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 28: customSectionEndpoint.test.ts
+not ok 28 - history bytes unchanged 28: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.116958
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:1:862'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-hole"]}],"state":"abnormal"}]}}'
+    - '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-hole"]}],"findingDetails":{"retinal-hole":{"subtype":"non-operculated"}},"state":"abnormal"}]}}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-hole"]}],"findingDetails":{"retinal-hole":{"subtype":"non-operculated"}},"state":"abnormal"}]}}'
+  actual: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-hole"]}],"state":"abnormal"}]}}'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:20:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 29: customSectionEndpoint.test.ts
+not ok 29 - history bytes unchanged 29: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.098042
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:1:862'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-tear"]}],"state":"abnormal"}]}}'
+    - '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-tear"]}],"findingDetails":{"retinal-tear":{"subtype":"other"}},"state":"abnormal"}]}}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-tear"]}],"findingDetails":{"retinal-tear":{"subtype":"other"}},"state":"abnormal"}]}}'
+  actual: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-posterior-periphery-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_05","label":"Abnormal findings","value":["retinal-tear"]}],"state":"abnormal"}]}}'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:20:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 30: customSectionEndpoint.test.ts
+ok 30 - history bytes unchanged 30: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.0815
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 31: customSectionEndpoint.test.ts
+ok 31 - history bytes unchanged 31: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.133875
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 32: customSectionEndpoint.test.ts
+ok 32 - history bytes unchanged 32: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.085458
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 33: customSectionEndpoint.test.ts
+ok 33 - history bytes unchanged 33: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.186666
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 34: customSectionEndpoint.test.ts
+ok 34 - history bytes unchanged 34: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.087209
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 35: customSectionEndpoint.test.ts
+ok 35 - history bytes unchanged 35: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.155375
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 36: customSectionEndpoint.test.ts
+ok 36 - history bytes unchanged 36: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.097542
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 37: customSectionEndpoint.test.ts
+ok 37 - history bytes unchanged 37: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.072958
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 38: customSectionEndpoint.test.ts
+ok 38 - history bytes unchanged 38: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.066959
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 39: customSectionEndpoint.test.ts
+ok 39 - history bytes unchanged 39: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.173208
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 40: customSectionEndpoint.test.ts
+ok 40 - history bytes unchanged 40: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.064334
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 41: customSectionEndpoint.test.ts
+ok 41 - history bytes unchanged 41: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.138792
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 42: customSectionEndpoint.test.ts
+ok 42 - history bytes unchanged 42: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.078334
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 43: customSectionEndpoint.test.ts
+ok 43 - history bytes unchanged 43: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.105917
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 44: customSectionEndpoint.test.ts
+ok 44 - history bytes unchanged 44: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.091208
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 45: customSectionEndpoint.test.ts
+ok 45 - history bytes unchanged 45: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.054125
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 46: customSectionEndpoint.test.ts
+ok 46 - history bytes unchanged 46: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.082916
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 47: customSectionEndpoint.test.ts
+ok 47 - history bytes unchanged 47: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.103
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 48: customSectionEndpoint.test.ts
+ok 48 - history bytes unchanged 48: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.052959
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 49: customSectionEndpoint.test.ts
+ok 49 - history bytes unchanged 49: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.097209
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 50: customSectionEndpoint.test.ts
+ok 50 - history bytes unchanged 50: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.072667
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 51: customSectionEndpoint.test.ts
+ok 51 - history bytes unchanged 51: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.653125
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 52: diagnosisLinkL2.test.ts
+ok 52 - history bytes unchanged 52: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.064709
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 53: diagnosisLinkL2.test.ts
+ok 53 - history bytes unchanged 53: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.057292
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 54: diagnosisLinkL2.test.ts
+ok 54 - history bytes unchanged 54: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.046666
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 55: diagnosisLinkL2.test.ts
+ok 55 - history bytes unchanged 55: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.051
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 56: diagnosisLinkL2.test.ts
+ok 56 - history bytes unchanged 56: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.047625
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 57: diagnosisLinkL2.test.ts
+ok 57 - history bytes unchanged 57: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.04725
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 58: diagnosisLinkL2.test.ts
+ok 58 - history bytes unchanged 58: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.050625
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 59: diagnosisLinkL2.test.ts
+ok 59 - history bytes unchanged 59: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.048584
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 60: diagnosisLinkL2.test.ts
+ok 60 - history bytes unchanged 60: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.043334
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 61: diagnosisLinkL2.test.ts
+ok 61 - history bytes unchanged 61: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.044292
+  type: 'test'
+  ...
+1..61
+# tests 61
+# suites 0
+# pass 49
+# fail 12
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 234.765
