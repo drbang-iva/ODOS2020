@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W57 thrown PUT fetch offers Retry with the identical body
 ok 1 - W57 thrown PUT fetch offers Retry with the identical body
   ---
-  duration_ms: 43.888042
+  duration_ms: 40.459666
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W57 thrown PUT fetch offers Retry with the identical body
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 242.116
+# duration_ms 230.847709

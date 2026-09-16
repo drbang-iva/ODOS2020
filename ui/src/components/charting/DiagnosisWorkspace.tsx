@@ -343,7 +343,7 @@ export function DiagnosisWorkspace({
       const first = previous.targets.find(target => target.kind === "fact");
       const next = buildFindingCommand(rows, patientReference, previous.operation, {
         selectedConditionReference: previous.context?.selectedConditionReference,
-        ...(first?.kind === "fact" ? { presence: first.state.presence, grade: typeof first.state.qualifiers.grade === "string" ? first.state.qualifiers.grade : null } : {}),
+        ...(previous.operation !== "eye-change" && first?.kind === "fact" ? { presence: first.state.presence, grade: typeof first.state.qualifiers.grade === "string" ? first.state.qualifiers.grade : null } : {}),
         toEyes: previous.eyes?.to, searchIndex: findings.searchIndex, liveConditionReferences: findings.visitDiagnoses.map(diagnosis => diagnosis.conditionReference),
       });
       await updateFinding(next);

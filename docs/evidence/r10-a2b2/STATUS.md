@@ -6,7 +6,7 @@ Apply kept choice now rebuilds an eye change from current live finding rows, kee
 
 Changed files: ui/src/components/charting/DiagnosisWorkspace.tsx; ui/src/components/charting/DiagnosisFindingsTable.tsx; ui/tests/r10DiagnosisWorkspace.test.tsx; ui/tests/r10DiagnosisTable.test.tsx; ui/tests/diagnosisWorkspace.test.tsx (fixture-only); evidence under docs/evidence/r10-a2b2/. No forbidden source or MCP edits. No existing assertion changed; mapping is in existing-assertions.md.
 
-[Fixback sealed evidence](fixback/README.md) contains W55–W64 red/green counts, the exact mutation runner, per-suite results, expected-red A3 output, and an updated conflict screenshot pair. Focused workspace 19/19, table 22/22; full UI: **1,680 total, 1,676 pass, 0 fail, 0 skip, 4 A3 TODO** (fixback/full-ui-counts.txt). UI build and preflight pass; A3 exit 1 expected. MCP and live suites were not rerun because no MCP file changed.
+[Fixback sealed evidence](fixback/README.md) contains W55–W64 red/green counts, the exact mutation runner, per-suite results, expected-red A3 output, and an updated conflict screenshot pair. Focused workspace 20/20, table 22/22; full UI: **1,681 total, 1,677 pass, 0 fail, 0 skip, 4 A3 TODO** (fixback/full-ui-counts.txt). UI build and preflight pass; A3 exit 1 expected. MCP and live suites were not rerun because no MCP file changed.
 
 The two inherited MCP review threads remain OPEN as explicitly ruled A3 release blockers. CodeQL rate-limit alerts were independently classified as pre-existing; no action or dismissal in this slice. Final-head bot states and SHA are recorded in the PR body/handoff to avoid staling review with a reporting-only commit. No Docker started in the fixback; the prior odos-r10-a2b2-postgres-1 remains stopped, not removed.
 

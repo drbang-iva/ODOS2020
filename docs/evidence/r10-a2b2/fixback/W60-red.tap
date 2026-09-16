@@ -2,9 +2,9 @@ TAP version 13
 # Subtest: W60 linking a finding homed to B preserves B and adds A
 not ok 1 - W60 linking a finding homed to B preserves B and adds A
   ---
-  duration_ms: 41.720583
+  duration_ms: 40.671375
   type: 'test'
-  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:15526'
+  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:15637'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -24,7 +24,7 @@ not ok 1 - W60 linking a finding homed to B preserves B and adds A
     0: 'Condition/a'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:113:152)
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:114:152)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -36,4 +36,4 @@ not ok 1 - W60 linking a finding homed to B preserves B and adds A
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 236.073708
+# duration_ms 239.328833
