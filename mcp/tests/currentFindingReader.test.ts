@@ -83,8 +83,7 @@ test("coalesced and conflicting sources union homes, canonical homes use only th
 });
 test("negative act remains raw and never wins latest snapshot", () => {
   const n = negative(); const p = project([snapshot(),n]);
-  assert.equal(p.currentFacts.length, 1);
-  assert.equal(p.currentFacts[0].presence, "present");
+  assert.equal(p.currentFacts.length, 0);
   assert.equal(p.panels[0].negativeActs[0].captureInput, "frozen-input");
   assert.deepEqual(p.panels[0].negativeActs[0].scope, JSON.parse(n.component![0].valueString!));
   assert.equal(p.panels[0].negativeActs[0].source.reference, "Observation/negative");
@@ -169,7 +168,7 @@ test("panel context and negative acts cannot replace a laterally scoped positive
   const context={...snapshot("context",[]),effectiveDateTime:"2026-09-15T14:00:00.000Z",identifier:[{system:"urn:odos:finding-panel:v1",value:"panel"}],
     component:[comp("EXAM_STATE","deferred"),comp("OTHER","No view"),comp("REMARKS","Synthetic remark")]};
   const p=project([context,snapshot(),negative()]);
-  assert.equal(p.currentFacts[0].presence,"present");assert.equal(p.panels[0].deferred,true);
+  assert.equal(p.currentFacts.length,0);assert.equal(p.panels[0].deferred,true);
   assert.equal(p.panels[0].other,"No view");assert.equal(p.panels[0].remarks,"Synthetic remark");
 });
 test("typed qualifiers resolve the addressed field when a definition has multiple option fields", () => {
@@ -179,4 +178,106 @@ test("typed qualifiers resolve the addressed field when a definition has multipl
   const s={...snapshot("multi",[]),component:[comp("OD_CUSTOM_SECOND::nuclear-sclerosis",true),comp("OD_CUSTOM_SECOND::nuclear-sclerosis::grade","3+")]};
   const p=project([s],{definitions:[d],catalog:c});
   assert.deepEqual(p.currentFacts[0].qualifiers,{grade:"3+"});
+});
+
+test("canonical homes ignore Condition evidence, while legacy homeSources identify each asserting resource", () => {
+  const o={...atomic(),extension:[...atomic().extension!,{url:SUPPORTS_DIAGNOSIS_URL,valueReference:{reference:"Condition/ext"}}]};
+  const conditions:Condition[]=[{resourceType:"Condition",id:"ev",meta:{versionId:"c2"},subject:o.subject!,encounter:o.encounter,
+    evidence:[{detail:[{reference:"Observation/atomic"}]}]}];
+  const legacy=project([o],{conditions}).currentFacts[0];
+  assert.deepEqual(legacy.homeSources,[
+    {condition:"Condition/ev",sources:[{kind:"condition-evidence",contributor:{reference:"Condition/ev",versionId:"c2"}}]},
+    {condition:"Condition/ext",sources:[{kind:"finding-extension",contributor:{reference:"Observation/atomic",versionId:"v1"}}]},
+  ]);
+  const canonicalFact=project([{...canonical(),extension:atomic().extension}],{conditions:[{...conditions[0],evidence:[{detail:[{reference:"Observation/canonical"}]}]}]}).currentFacts[0];
+  assert.deepEqual(canonicalFact.homes,[]);
+  assert.deepEqual(canonicalFact.homeSources,[]);
+});
+test("later scoped negative suppresses only older snapshot positives; equal-time scope conflicts", () => {
+  const old=snapshot(); const n=negative();
+  assert.equal(project([old,n]).currentFacts.length,0);
+  assert.equal(project([old,{...n,effectiveDateTime:old.effectiveDateTime,component:[comp("NEGATIVE_ACT",JSON.stringify({...JSON.parse(n.component![0].valueString!),assertedAt:old.effectiveDateTime})),...n.component!.slice(1)]}]).conflicts.length,1);
+  const excluded={...n,component:[comp("NEGATIVE_ACT",JSON.stringify({...JSON.parse(n.component![0].valueString!),optionCodes:["cortical-cataract"],exclusions:["nuclear-sclerosis"]})),...n.component!.slice(1)]};
+  assert.equal(project([old,excluded]).currentFacts[0].presence,"present");
+  assert.equal(project([old,n,atomic()]).currentFacts[0].contributors[0].reference,"Observation/atomic");
+  assert.equal(project([old,n,canonical()]).currentFacts[0].contributors[0].reference,"Observation/canonical");
+});
+test("baselines select exact-eye unique live atomic, otherwise materialize or canonical", () => {
+  const unique=project([atomic()]).currentFacts[0];
+  assert.deepEqual(unique.baseline,{kind:"legacy",sourceReference:"Observation/atomic",versionId:"v1",key:unique.key,mode:"adopt"});
+  const fromSnapshot=project([snapshot()]).currentFacts[0];
+  assert.deepEqual(fromSnapshot.baseline,{kind:"legacy",sourceReference:"Observation/snapshot",versionId:"v1",key:fromSnapshot.key,mode:"materialize"});
+  assert.equal(project([atomic("both","OU")]).currentFacts.every(f=>f.baseline?.kind==="legacy" && f.baseline.mode==="materialize"),true);
+  assert.equal(project([atomic("one"),atomic("two")]).currentFacts[0].baseline,undefined);
+  assert.deepEqual(project([canonical()]).currentFacts[0].baseline,{kind:"canonical",reference:"Observation/canonical",versionId:"v1"});
+  assert.equal(project([{...atomic(),meta:undefined}]).currentFacts[0].baseline,undefined);
+});
+test("UNKNOWN legacy retirement requires a live version; retired UNKNOWN is visible but not actionable", () => {
+  const live=project([atomic("unknown","UNKNOWN")]).unresolved[0];
+  assert.equal(live.status,"live");
+  assert.deepEqual(live.baseline,{kind:"legacy-retire",sourceReference:"Observation/unknown",versionId:"v1"});
+  const retired=project([{...atomic("unknown","UNKNOWN"),status:"entered-in-error"}]).unresolved[0];
+  assert.equal(retired.status,"retired");
+  assert.equal(retired.baseline,undefined);
+});
+test("loader returns sanitized typed incomplete categories", async () => {
+  const input={patientReference:"Patient/p1",encounterReference:"Encounter/e1",definitions,catalog};
+  const bundle=(rows:unknown[])=>({resourceType:"Bundle",type:"searchset",entry:rows.map(resource=>({resource}))});
+  const search=async(type:string)=>type==="Observation"?bundle([atomic()]):bundle([]);
+  assert.deepEqual(await loadEncounterFindingState({baseUrl:"http://localhost:8103",search:async()=>{throw new Error("secret token abc")}} as any,input),
+    {incomplete:true,kind:"upstream",reason:"Encounter search failed."});
+  for (const [bad,kind] of [[{...atomic(),subject:{reference:"Patient/else"}},"foreign-or-unscoped"],[{...atomic(),encounter:undefined},"foreign-or-unscoped"]] as const) {
+    const result=await loadEncounterFindingState({baseUrl:"http://localhost:8103",search:async(type:string)=>type==="Observation"?bundle([bad]):bundle([])} as any,input);
+    assert.equal(result.incomplete,true);if(result.incomplete)assert.equal(result.kind,kind);
+  }
+  const missing=await loadEncounterFindingState({baseUrl:"http://localhost:8103",search:async(type:string)=>type==="Observation"?bundle([{...atomic(),id:undefined}]):bundle([])} as any,input);
+  assert.equal(missing.incomplete,true);if(missing.incomplete)assert.equal(missing.kind,"missing");
+  const refused=await loadEncounterFindingState({baseUrl:"http://localhost:8103",search:async()=>({...bundle([]),link:[{relation:"next"}]})} as any,input);
+  assert.equal(refused.incomplete,true);if(refused.incomplete)assert.equal(refused.kind,"refused");
+  assert.equal((await loadEncounterFindingState({baseUrl:"http://localhost:8103",search} as any,input)).incomplete,false);
+});
+test("audit lookup is opt-in and only current marked fact without matching audit is pending", async () => {
+  const marked={...canonical(),component:[...canonical().component!,comp("R10_OPERATION",JSON.stringify({commandId:"command-1",target:"finding:key",digest:"digest-1",
+    audit:{kind:"mutation",actor:"Practitioner/test",recorded:"2026-09-15T13:00:00.000Z",activity:"CREATE",targetReferences:["self"]}}))]};
+  const input={patientReference:"Patient/p1",encounterReference:"Encounter/e1",definitions,catalog};
+  let audits=0;const bundle=(rows:unknown[])=>({resourceType:"Bundle",type:"searchset",entry:rows.map(resource=>({resource}))});
+  const fhir={baseUrl:"http://localhost:8103/",search:async(type:string)=>{if(type==="Provenance")audits++;return bundle(type==="Observation"?[marked]:[])} };
+  const ordinary=await loadEncounterFindingState(fhir as any,input);
+  assert.equal(audits,0);assert.equal(projectCurrentFindings(ordinary).currentFacts[0].auditPending,undefined);
+  const audited=await loadEncounterFindingState(fhir as any,{...input,includeAuditState:true});
+  assert.equal(audits,1);assert.equal(projectCurrentFindings(audited).currentFacts[0].auditPending,true);
+  const bad={...marked,component:[...canonical().component!,comp("R10_OPERATION","bad-json")]};
+  const failed=await loadEncounterFindingState({...fhir,search:async(type:string)=>bundle(type==="Observation"?[bad]:[])} as any,{...input,includeAuditState:true});
+  assert.equal(failed.incomplete,true);if(failed.incomplete)assert.equal(failed.kind,"refused");
+});
+
+test("W16 full, partial, excluded and equal-time negatives use Observation time and preserve unaffected options", () => {
+  const positive = snapshot("two", ["nuclear-sclerosis", "cortical-cataract"]);
+  const scope = JSON.parse(negative().component![0].valueString!);
+  const act = (optionCodes: string[], exclusions: string[] = [], time = "2026-09-15T13:00:00.000Z"): Observation => ({
+    ...negative(), effectiveDateTime: time,
+    component: [comp("NEGATIVE_ACT", JSON.stringify({ ...scope, optionCodes, exclusions, assertedAt: "2026-09-14T12:00:00.000Z" }))],
+  });
+  assert.equal(project([positive, act(["nuclear-sclerosis", "cortical-cataract"])]).currentFacts.length, 0);
+  const partial = project([positive, act(["nuclear-sclerosis"])]);
+  assert.deepEqual(partial.currentFacts.map(f => f.key.optionCode), ["cortical-cataract"]);
+  const excluded = project([positive, act(["nuclear-sclerosis"], ["cortical-cataract"])]);
+  assert.deepEqual(excluded.currentFacts.map(f => f.key.optionCode), ["cortical-cataract"]);
+  const equal = project([positive, act(["nuclear-sclerosis"], [], positive.effectiveDateTime)]);
+  assert.deepEqual(equal.conflicts.map(f => f.key.optionCode), ["nuclear-sclerosis"]);
+  assert.deepEqual(equal.currentFacts.map(f => f.key.optionCode), ["cortical-cataract"]);
+  const retired = { ...act(["nuclear-sclerosis", "cortical-cataract"]), status: "entered-in-error" as const };
+  assert.equal(project([positive, retired]).currentFacts.length, 2);
+  const fallback = { ...act(["nuclear-sclerosis"]), effectiveDateTime: undefined, issued: "2026-09-15T13:00:00.000Z" };
+  assert.deepEqual(project([positive, fallback]).currentFacts.map(f => f.key.optionCode), ["cortical-cataract"]);
+});
+
+test("typed incomplete maps transport refusal and missing status without upstream details", async () => {
+  const input = { patientReference: "Patient/p1", encounterReference: "Encounter/e1", definitions, catalog };
+  for (const [status, kind] of [[403, "refused"], [404, "missing"]]) {
+    const result = await loadEncounterFindingState({ baseUrl: "http://localhost:8103/", search: async () => { throw Object.assign(new Error("private response"), { status }); } }, input);
+    assert.equal(result.incomplete, true);
+    if (result.incomplete) assert.equal(result.kind, kind);
+    assert.ok(!JSON.stringify(result).includes("private response"));
+  }
 });

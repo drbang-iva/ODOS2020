@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import type { Identifier, Observation } from "@medplum/fhirtypes";
+import type { Bundle, Identifier, Observation, Provenance, Resource } from "@medplum/fhirtypes";
 import { z } from "zod";
+import { collectAllFhirSearchPages, type FhirSearchClient } from "../fhir-search.js";
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { customFieldEntries, type FindingQualifierValue } from "./custom-fields.js";
 import type { AtomicFindingCatalogRow, FindingLaterality } from "./diagnosis-findings-endpoint.js";
@@ -13,9 +14,51 @@ import type { ClinicalFindingDefinition } from "./glaucoma-suspect.js";
 export const CURRENT_FINDING_SYSTEM = "urn:odos:current-finding:v1";
 export const FINDING_PANEL_SYSTEM = "urn:odos:finding-panel:v1";
 export const SUPPORTS_DIAGNOSIS_URL = "https://odos2020.com/fhir/StructureDefinition/supports-diagnosis";
-const keySchema = z.object({ v: z.literal(1), patientId: z.string().min(1), encounterId: z.string().min(1), stableKey: z.string().min(1),
+export const FINDING_OPERATION_AUDIT_SYSTEM = "urn:odos:finding-operation:v1";
+const operationSchema = z.object({ commandId: z.string().min(1), target: z.string().min(1), digest: z.string().min(1),
+  audit: z.object({ kind: z.literal("mutation"), actor: z.string().min(1), recorded: z.string().min(1),
+    activity: z.enum(["CREATE", "UPDATE"]), targetReferences: z.array(z.string().min(1)).min(1) }).strict() }).strict();
+export type FindingOperation = z.infer<typeof operationSchema>;
+
+export function parseFindingOperation(observation: Observation): FindingOperation | undefined {
+  const components = observation.component?.filter(c => c.code.coding?.some(v => v.code === "R10_OPERATION")) ?? [];
+  if (!components.length) return undefined;
+  if (components.length !== 1 || !components[0].valueString) throw new Error("Invalid finding operation marker.");
+  try {
+    const parsed = operationSchema.safeParse(JSON.parse(components[0].valueString));
+    if (parsed.success) return parsed.data;
+  } catch { /* fail closed below */ }
+  throw new Error("Invalid finding operation marker.");
+}
+
+export function findingAuditKey(commandId: string, target: string, kind: "mutation" | "reassertion", digest: string): string {
+  return createHash("sha256").update(`${commandId}|${target}|${kind}|${digest}`).digest("hex");
+}
+
+export async function findPendingAudits(fhir: FhirSearchClient, observations: readonly Observation[]): Promise<Set<string>> {
+  const markers = observations.flatMap(observation => {
+    const operation = parseFindingOperation(observation);
+    if (!operation) return [];
+    if (!observation.id) throw new Error("Finding operation has no Observation id.");
+    return [{ reference: `Observation/${observation.id}`, key: findingAuditKey(operation.commandId,operation.target,operation.audit.kind,operation.digest) }];
+  });
+  if (!markers.length) return new Set();
+  const keys = [...new Set(markers.map(m => m.key))];
+  const validate = <T extends Resource>(bundle: Bundle<T>): Bundle<T> => {
+    if (bundle.resourceType !== "Bundle" || bundle.type !== "searchset" || bundle.link?.some(l => l.relation === "next" && !l.url) ||
+      bundle.entry?.some(e => !e.resource || e.resource.resourceType !== "Provenance" || !e.resource.id)) throw new Error("Malformed finding audit search page.");
+    return bundle;
+  };
+  const client: FhirSearchClient = { baseUrl: fhir.baseUrl, search: fhir.search.bind(fhir),
+    ...(fhir.searchUrl ? { searchUrl: async <T extends Resource>(url: string, type: T["resourceType"]) => validate(await fhir.searchUrl!<T>(url,type)) } : {}) };
+  const page = validate(await fhir.search<Provenance>("Provenance",{ _tag: keys.map(k => `${FINDING_OPERATION_AUDIT_SYSTEM}|${k}`).join(","), _count:"200" }));
+  const audits = await collectAllFhirSearchPages<Provenance>(client,"Provenance",page,client.baseUrl);
+  const present = new Set(audits.flatMap(a => a.meta?.tag?.flatMap(t => t.system === FINDING_OPERATION_AUDIT_SYSTEM && t.code && keys.includes(t.code) ? [t.code] : []) ?? []));
+  return new Set(markers.filter(m => !present.has(m.key)).map(m => m.reference));
+}
+export const currentFindingKeySchema = z.object({ v: z.literal(1), patientId: z.string().min(1), encounterId: z.string().min(1), stableKey: z.string().min(1),
   fieldCode: z.string().min(1), optionCode: z.string().min(1), eye: z.enum(["OD", "OS"]) }).strict();
-export type CurrentFindingKey = z.infer<typeof keySchema>;
+export type CurrentFindingKey = z.infer<typeof currentFindingKeySchema>;
 export type FindingEye = CurrentFindingKey["eye"];
 
 export function currentFindingIdentifier(key: CurrentFindingKey): Identifier {
@@ -31,7 +74,7 @@ export function parseCurrentFindingEnvelope(observation: Observation):
   if (identifiers.length !== 1 || components.length !== 1) return invalid("Expected one canonical identifier and one identity envelope.");
   let parsed: unknown;
   try { parsed = JSON.parse(components[0].valueString ?? ""); } catch { return invalid("Malformed identity JSON."); }
-  const result = keySchema.safeParse(parsed);
+  const result = currentFindingKeySchema.safeParse(parsed);
   if (!result.success) return invalid("Invalid identity tuple.");
   const key = result.data;
   if (identifiers[0].value !== currentFindingIdentifier(key).value) return invalid("Identity hash mismatch.");

@@ -143,7 +143,7 @@ const checks = [
   ['E5',()=>assert.equal(denied.status,400)],
   ['E6',()=>assert.deepEqual(project(ou.rows).currentFacts.map(r=>[r.eye,r.status]),[['OD','retired'],['OS','retired']])],
   ['E7',()=>assert.deepEqual(project(dupe.rows).conflicts.map(r=>r.eye),['OD'])],
-  ['E8',()=>{const p=project(neg.rows);assert.equal(p.currentFacts[0].presence,'present');assert.equal(p.panels[0].negativeActs.length,1)}],
+  ['E8',()=>{const p=project(neg.rows);assert.equal(p.currentFacts.length,0);assert.equal(p.panels[0].negativeActs.length,1)}],
   ['E9',()=>assert.deepEqual(project([retired]).currentFacts[0].qualifiers,tr.findingDetails[lensOption])],
   ['E10',()=>assert.equal(project([csStored]).currentFacts[0].qualifiers.grade,undefined)],
   ['E11',()=>assert.deepEqual(project(stale.rows).currentFacts.map(r=>r.key.optionCode),['cortical-cataract'])],
