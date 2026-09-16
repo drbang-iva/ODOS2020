@@ -1,0 +1,181 @@
+TAP version 13
+# Subtest: contract is frozen from Medplum 5.1.8's published definition bundles
+ok 1 - contract is frozen from Medplum 5.1.8's published definition bundles
+  ---
+  duration_ms: 0.637708
+  type: 'test'
+  ...
+# Subtest: historical ChargeItem status search is rejected while known-valid searches pass
+ok 2 - historical ChargeItem status search is rejected while known-valid searches pass
+  ---
+  duration_ms: 0.306333
+  type: 'test'
+  ...
+# Subtest: all direct fhir.search call sites are statically resolved or explicitly dynamic
+not ok 3 - all direct fhir.search call sites are statically resolved or explicitly dynamic
+  ---
+  duration_ms: 401.9695
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:1:6531'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        'claim-read-model-projector.search-resource',
+        'clinic-summary.search-resource',
+        'day-ledger.search-resource',
+        'desk-summary.search-resource',
+    -   'diagnosis-findings.encounter-resources',
+        'eye-growth.axial-length-observations',
+        'eye-growth.corneal-radius-observations',
+        'eye-growth.refraction-observations',
+        'imaging-endpoint.search-media',
+        'inbound-fax.find-referral',
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'claim-read-model-projector.search-resource'
+    1: 'clinic-summary.search-resource'
+    2: 'day-ledger.search-resource'
+    3: 'desk-summary.search-resource'
+    4: 'diagnosis-findings.encounter-resources'
+    5: 'eye-growth.axial-length-observations'
+    6: 'eye-growth.corneal-radius-observations'
+    7: 'eye-growth.refraction-observations'
+    8: 'imaging-endpoint.search-media'
+    9: 'inbound-fax.find-referral'
+    10: 'inbound-fax.search-resource'
+    11: 'iop-history.existing-target-goals'
+    12: 'iop-history.hysteresis-observations'
+    13: 'iop-history.iop-observations'
+    14: 'iop-history.target-goals'
+    15: 'margin-ledger.search-resource'
+    16: 'office-channel.search-resource'
+    17: 'patient-overview.search-resource'
+    18: 'protocol-endpoint.search-resources'
+    19: 'protocol-store.search-basic'
+    20: 'referral-service.encounter-resources'
+    21: 'reminder-engine.search-anchor'
+    22: 'reporting.search-resource'
+    23: 'scheduling-service.search-resource'
+    24: 'series-tracker.search-complete'
+    25: 'tools.fhir-search'
+    26: 'tools.get-charge-items'
+    27: 'tools.get-observation-history'
+    28: 'tools.get-observations'
+    29: 'tools.get-progression-summary'
+    30: 'tools.list-patients'
+    31: 'watcher-pagination.search-resource'
+    32: 'weno-mapping.search-basic'
+  actual:
+    0: 'claim-read-model-projector.search-resource'
+    1: 'clinic-summary.search-resource'
+    2: 'day-ledger.search-resource'
+    3: 'desk-summary.search-resource'
+    4: 'eye-growth.axial-length-observations'
+    5: 'eye-growth.corneal-radius-observations'
+    6: 'eye-growth.refraction-observations'
+    7: 'imaging-endpoint.search-media'
+    8: 'inbound-fax.find-referral'
+    9: 'inbound-fax.search-resource'
+    10: 'iop-history.existing-target-goals'
+    11: 'iop-history.hysteresis-observations'
+    12: 'iop-history.iop-observations'
+    13: 'iop-history.target-goals'
+    14: 'margin-ledger.search-resource'
+    15: 'office-channel.search-resource'
+    16: 'patient-overview.search-resource'
+    17: 'protocol-endpoint.search-resources'
+    18: 'protocol-store.search-basic'
+    19: 'referral-service.encounter-resources'
+    20: 'reminder-engine.search-anchor'
+    21: 'reporting.search-resource'
+    22: 'scheduling-service.search-resource'
+    23: 'series-tracker.search-complete'
+    24: 'tools.fhir-search'
+    25: 'tools.get-charge-items'
+    26: 'tools.get-observation-history'
+    27: 'tools.get-observations'
+    28: 'tools.get-progression-summary'
+    29: 'tools.list-patients'
+    30: 'watcher-pagination.search-resource'
+    31: 'weno-mapping.search-basic'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:181:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: static audit finds zero invalid search parameters
+not ok 4 - static audit finds zero invalid search parameters
+  ---
+  duration_ms: 279.047209
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:1:7586'
+  failureType: 'testCodeFailure'
+  error: 'Contract override diagnosis-findings.encounter-resources has no matching call site'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    collectSearchSpecs (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:241:11)
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:185:22)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: static audit rejects a mistyped dynamic override key
+not ok 5 - static audit rejects a mistyped dynamic override key
+  ---
+  duration_ms: 281.119167
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:1:7900'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Contract override referral-service\.encounter-resource has no matching call site/. Input:
+    
+    'Error: Contract override diagnosis-findings.encounter-resources has no matching call site'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+  error: 'Contract override diagnosis-findings.encounter-resources has no matching call site'
+  stack: |-
+    collectSearchSpecs (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:241:11)
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:203:11)
+    getActual (node:assert:609:5)
+    Function.throws (node:assert:757:24)
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:202:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  operator: 'throws'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:202:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 2
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1439.051084
