@@ -1,0 +1,454 @@
+Command: node --import tsx --test --test-name-pattern=E1: mcp/tests/commsApi.test.ts
+TAP version 13
+# Subtest: E1: sms preserves a real attached guarantor child and names its guarantor
+not ok 1 - E1: sms preserves a real attached guarantor child and names its guarantor
+  ---
+  duration_ms: 40.161
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/commsApi.test.ts:1:66010'
+  failureType: 'testCodeFailure'
+  error: |-
+    the persisted child is unchanged
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        active: true,
+        address: [
+          {
+            city: 'Synthetic Town'
+    ...
+          project: 'g2b1-synthetic',
+    +     versionId: '1'
+    -     versionId: '5'
+        },
+        name: [
+          {
+            family: 'Guarantor',
+            given: [
+    ...
+            system: 'phone',
+    +       use: 'old',
+            value: '864-555-0199'
+          },
+    +     {
+    +       system: 'phone',
+    +       use: 'mobile',
+    +       value: '+18645550177'
+    +     }
+        ]
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    resourceType: 'RelatedPerson'
+    id: 'r1'
+    patient:
+      reference: 'Patient/synthetic-1'
+    active: true
+    name:
+      0:
+        given:
+          0: 'Synthetic'
+        family: 'Guarantor'
+    relationship:
+      0:
+        text: 'Guardian'
+    period:
+      start: '2026-01-01'
+      end: '2027-01-01'
+    telecom:
+      0:
+        system: 'phone'
+        value: '864-555-0199'
+        extension:
+          0:
+            url: 'urn:synthetic:phone-flag'
+            valueBoolean: true
+    extension:
+      0:
+        url: 'urn:synthetic:consent-authority'
+        valueString: 'r1-consent-authority'
+      1:
+        url: 'urn:synthetic:primary'
+        valueString: 'r1-primary'
+      2:
+        url: 'urn:synthetic:court-order'
+        valueString: 'r1-court-order'
+      3:
+        url: 'urn:synthetic:no-textable'
+        valueString: 'r1-no-textable'
+      4:
+        url: 'urn:synthetic:unrelated'
+        valueString: 'r1-unrelated'
+    meta:
+      versionId: '5'
+      project: 'g2b1-synthetic'
+      author:
+        reference: 'ClientApplication/g2b1-service'
+    address:
+      0:
+        city: 'Synthetic Town'
+  actual:
+    resourceType: 'RelatedPerson'
+    id: 'r1'
+    patient:
+      reference: 'Patient/synthetic-1'
+    active: true
+    name:
+      0:
+        given:
+          0: 'Synthetic'
+        family: 'Guarantor'
+    relationship:
+      0:
+        text: 'Guardian'
+    period:
+      start: '2026-01-01'
+      end: '2027-01-01'
+    telecom:
+      0:
+        system: 'phone'
+        value: '864-555-0199'
+        extension:
+          0:
+            url: 'urn:synthetic:phone-flag'
+            valueBoolean: true
+        use: 'old'
+      1:
+        system: 'phone'
+        value: '+18645550177'
+        use: 'mobile'
+    extension:
+      0:
+        url: 'urn:synthetic:consent-authority'
+        valueString: 'r1-consent-authority'
+      1:
+        url: 'urn:synthetic:primary'
+        valueString: 'r1-primary'
+      2:
+        url: 'urn:synthetic:court-order'
+        valueString: 'r1-court-order'
+      3:
+        url: 'urn:synthetic:no-textable'
+        valueString: 'r1-no-textable'
+      4:
+        url: 'urn:synthetic:unrelated'
+        valueString: 'r1-unrelated'
+    meta:
+      versionId: '1'
+      project: 'g2b1-synthetic'
+      author:
+        reference: 'ClientApplication/g2b1-service'
+    address:
+      0:
+        city: 'Synthetic Town'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/commsApi.test.ts:1931:16)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: E1: email preserves a real attached guarantor child and names its guarantor
+not ok 2 - E1: email preserves a real attached guarantor child and names its guarantor
+  ---
+  duration_ms: 9.194125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/commsApi.test.ts:1:66010'
+  failureType: 'testCodeFailure'
+  error: |-
+    the persisted child is unchanged
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        active: true,
+        address: [
+          {
+            city: 'Synthetic Town'
+    ...
+          project: 'g2b1-synthetic',
+    +     versionId: '1'
+    -     versionId: '5'
+        },
+        name: [
+          {
+            family: 'Guarantor',
+            given: [
+    ...
+          },
+    +     {
+    +       system: 'email',
+    +       value: 'changed@example.test'
+    +     }
+        ]
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    resourceType: 'RelatedPerson'
+    id: 'r1'
+    patient:
+      reference: 'Patient/synthetic-1'
+    active: true
+    name:
+      0:
+        given:
+          0: 'Synthetic'
+        family: 'Guarantor'
+    relationship:
+      0:
+        text: 'Guardian'
+    period:
+      start: '2026-01-01'
+      end: '2027-01-01'
+    telecom:
+      0:
+        system: 'phone'
+        value: '864-555-0199'
+        extension:
+          0:
+            url: 'urn:synthetic:phone-flag'
+            valueBoolean: true
+    extension:
+      0:
+        url: 'urn:synthetic:consent-authority'
+        valueString: 'r1-consent-authority'
+      1:
+        url: 'urn:synthetic:primary'
+        valueString: 'r1-primary'
+      2:
+        url: 'urn:synthetic:court-order'
+        valueString: 'r1-court-order'
+      3:
+        url: 'urn:synthetic:no-textable'
+        valueString: 'r1-no-textable'
+      4:
+        url: 'urn:synthetic:unrelated'
+        valueString: 'r1-unrelated'
+    meta:
+      versionId: '5'
+      project: 'g2b1-synthetic'
+      author:
+        reference: 'ClientApplication/g2b1-service'
+    address:
+      0:
+        city: 'Synthetic Town'
+  actual:
+    resourceType: 'RelatedPerson'
+    id: 'r1'
+    patient:
+      reference: 'Patient/synthetic-1'
+    active: true
+    name:
+      0:
+        given:
+          0: 'Synthetic'
+        family: 'Guarantor'
+    relationship:
+      0:
+        text: 'Guardian'
+    period:
+      start: '2026-01-01'
+      end: '2027-01-01'
+    telecom:
+      0:
+        system: 'phone'
+        value: '864-555-0199'
+        extension:
+          0:
+            url: 'urn:synthetic:phone-flag'
+            valueBoolean: true
+      1:
+        system: 'email'
+        value: 'changed@example.test'
+    extension:
+      0:
+        url: 'urn:synthetic:consent-authority'
+        valueString: 'r1-consent-authority'
+      1:
+        url: 'urn:synthetic:primary'
+        valueString: 'r1-primary'
+      2:
+        url: 'urn:synthetic:court-order'
+        valueString: 'r1-court-order'
+      3:
+        url: 'urn:synthetic:no-textable'
+        valueString: 'r1-no-textable'
+      4:
+        url: 'urn:synthetic:unrelated'
+        valueString: 'r1-unrelated'
+    meta:
+      versionId: '1'
+      project: 'g2b1-synthetic'
+      author:
+        reference: 'ClientApplication/g2b1-service'
+    address:
+      0:
+        city: 'Synthetic Town'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/commsApi.test.ts:1931:16)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1: print preserves a real attached guarantor child and names its guarantor
+not ok 3 - E1: print preserves a real attached guarantor child and names its guarantor
+  ---
+  duration_ms: 5.10975
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/commsApi.test.ts:1:66010'
+  failureType: 'testCodeFailure'
+  error: |-
+    the persisted child is unchanged
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        active: true,
+        address: [
+          {
+            city: 'Synthetic Town'
+    ...
+          project: 'g2b1-synthetic',
+    +     versionId: '1'
+    -     versionId: '5'
+        },
+        name: [
+          {
+            family: 'Guarantor',
+            given: [
+    ...
+          },
+    +     {
+    +       system: 'email',
+    +       value: 'changed@example.test'
+    +     }
+        ]
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    resourceType: 'RelatedPerson'
+    id: 'r1'
+    patient:
+      reference: 'Patient/synthetic-1'
+    active: true
+    name:
+      0:
+        given:
+          0: 'Synthetic'
+        family: 'Guarantor'
+    relationship:
+      0:
+        text: 'Guardian'
+    period:
+      start: '2026-01-01'
+      end: '2027-01-01'
+    telecom:
+      0:
+        system: 'phone'
+        value: '864-555-0199'
+        extension:
+          0:
+            url: 'urn:synthetic:phone-flag'
+            valueBoolean: true
+    extension:
+      0:
+        url: 'urn:synthetic:consent-authority'
+        valueString: 'r1-consent-authority'
+      1:
+        url: 'urn:synthetic:primary'
+        valueString: 'r1-primary'
+      2:
+        url: 'urn:synthetic:court-order'
+        valueString: 'r1-court-order'
+      3:
+        url: 'urn:synthetic:no-textable'
+        valueString: 'r1-no-textable'
+      4:
+        url: 'urn:synthetic:unrelated'
+        valueString: 'r1-unrelated'
+    meta:
+      versionId: '5'
+      project: 'g2b1-synthetic'
+      author:
+        reference: 'ClientApplication/g2b1-service'
+    address:
+      0:
+        city: 'Synthetic Town'
+  actual:
+    resourceType: 'RelatedPerson'
+    id: 'r1'
+    patient:
+      reference: 'Patient/synthetic-1'
+    active: true
+    name:
+      0:
+        given:
+          0: 'Synthetic'
+        family: 'Guarantor'
+    relationship:
+      0:
+        text: 'Guardian'
+    period:
+      start: '2026-01-01'
+      end: '2027-01-01'
+    telecom:
+      0:
+        system: 'phone'
+        value: '864-555-0199'
+        extension:
+          0:
+            url: 'urn:synthetic:phone-flag'
+            valueBoolean: true
+      1:
+        system: 'email'
+        value: 'changed@example.test'
+    extension:
+      0:
+        url: 'urn:synthetic:consent-authority'
+        valueString: 'r1-consent-authority'
+      1:
+        url: 'urn:synthetic:primary'
+        valueString: 'r1-primary'
+      2:
+        url: 'urn:synthetic:court-order'
+        valueString: 'r1-court-order'
+      3:
+        url: 'urn:synthetic:no-textable'
+        valueString: 'r1-no-textable'
+      4:
+        url: 'urn:synthetic:unrelated'
+        valueString: 'r1-unrelated'
+    meta:
+      versionId: '1'
+      project: 'g2b1-synthetic'
+      author:
+        reference: 'ClientApplication/g2b1-service'
+    address:
+      0:
+        city: 'Synthetic Town'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/commsApi.test.ts:1931:16)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 0
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 343.010875
+
+Exit: 1

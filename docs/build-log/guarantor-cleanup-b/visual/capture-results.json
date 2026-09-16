@@ -1,0 +1,74 @@
+[
+  {
+    "scenario": "sms",
+    "state": "before",
+    "url": "http://127.0.0.1:15140/tests/fixtures/guarantor-notice.html",
+    "visibleStatus": "Education sent.",
+    "dispatch": {
+      "patientReference": "Patient/synthetic-child",
+      "educationId": "synthetic-home-care",
+      "version": 1,
+      "channel": "sms",
+      "lane": "clinical",
+      "recipientOverride": {
+        "reference": "RelatedPerson/synthetic-guarantor",
+        "phone": "+15555550199"
+      },
+      "alsoUpdateChart": true,
+      "idempotencyKey": "synthetic-notice-capture"
+    },
+    "screenshot": "docs/build-log/guarantor-cleanup-b/visual/sms-before.png"
+  },
+  {
+    "scenario": "sms",
+    "state": "after",
+    "url": "http://127.0.0.1:15141/tests/fixtures/guarantor-notice.html",
+    "visibleStatus": "Education sent. The chart contact was not updated. Update the guarantor record: Synthetic Guarantor (Person/D).",
+    "dispatch": {
+      "patientReference": "Patient/synthetic-child",
+      "educationId": "synthetic-home-care",
+      "version": 1,
+      "channel": "sms",
+      "lane": "clinical",
+      "recipientOverride": {
+        "reference": "RelatedPerson/synthetic-guarantor",
+        "phone": "+15555550199"
+      },
+      "alsoUpdateChart": true,
+      "idempotencyKey": "synthetic-notice-capture"
+    },
+    "screenshot": "docs/build-log/guarantor-cleanup-b/visual/sms-after.png"
+  },
+  {
+    "scenario": "print",
+    "state": "before",
+    "url": "http://127.0.0.1:15140/tests/fixtures/guarantor-notice.html",
+    "visibleStatus": "",
+    "dispatch": {
+      "patientReference": "Patient/synthetic-child",
+      "educationId": "synthetic-home-care",
+      "version": 1,
+      "channel": "print",
+      "lane": "clinical",
+      "alsoUpdateChart": false,
+      "idempotencyKey": "synthetic-notice-capture"
+    },
+    "screenshot": "docs/build-log/guarantor-cleanup-b/visual/print-before.png"
+  },
+  {
+    "scenario": "print",
+    "state": "after",
+    "url": "http://127.0.0.1:15141/tests/fixtures/guarantor-notice.html",
+    "visibleStatus": "The chart contact was not updated. Update the guarantor record: Synthetic Guarantor (Person/D).",
+    "dispatch": {
+      "patientReference": "Patient/synthetic-child",
+      "educationId": "synthetic-home-care",
+      "version": 1,
+      "channel": "print",
+      "lane": "clinical",
+      "alsoUpdateChart": false,
+      "idempotencyKey": "synthetic-notice-capture"
+    },
+    "screenshot": "docs/build-log/guarantor-cleanup-b/visual/print-after.png"
+  }
+]

@@ -20,7 +20,8 @@ import {
   getRoleDeclaration,
   type PracticeRoleId,
 } from "../src/authz/roles.js";
-import { buildPatientResource, patientDemographicsFromPatient } from "../../ui/src/lib/patient-registration.js";
+import { buildPatientResource, patientDemographicsFromPatient, registerPatient } from "../../ui/src/lib/patient-registration.js";
+import { emptyRelatedResponsibleParty } from "../../ui/src/lib/patient-identity.js";
 import { NUMBERS, TELECOM_NOW, telecomFixture } from "../../ui/tests/fixtures/patient-telecom.js";
 import { ODOS_NO_TEXTABLE_NUMBER_EXTENSION_URL, ODOS_TEXTABLE_NUMBER_EXTENSION_URL } from "../src/comms/suppression-gate.js";
 
@@ -958,3 +959,38 @@ test("D7 registration: absent or invalid majority setting refuses before any wri
  const response = await postRegistration("staff", fhir, undefined, body);
  assert.equal(response.status, 400); assert.equal(fhir.searchCalls, 0);
  });
+
+async function writtenRegistrationBody() {
+  let captured: unknown;
+  const party = {
+    ...emptyRelatedResponsibleParty("guardian", "2026-08-25"),
+    firstName: "Responsible",
+    lastName: "Person",
+    birthDate: "1980-01-02",
+    address: "1 Synthetic Way",
+    city: "Greenville",
+    state: "SC",
+    postalCode: "29601",
+  };
+  await registerPatient(
+    JSON.parse(JSON.stringify(REGISTRATION_BODY.demographics)),
+    { responsibleParties: [party], today: "2026-08-25", ageOfMajorityConfig: buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }) },
+    async (_url, init) => {
+      captured = JSON.parse(String(init?.body));
+      return new Response(JSON.stringify({ kind: "created", patient: { resourceType: "Patient", id: "fixture" } }), { status: 201 });
+    },
+  );
+  assert.ok(captured);
+  return JSON.parse(JSON.stringify(captured));
+}
+
+for (const birthDate of ["not-a-date", "2026-02-30", "9999-12-31"]) {
+  test(`V1 new guarantor DOB ${birthDate} refuses registration transaction`, async () => {
+    const body = await writtenRegistrationBody();
+    body.responsibleParties[0].birthDate = birthDate;
+    const fhir = new RegistrationFhir("staff");
+    const response = await postRegistration("staff", fhir, undefined, body);
+    assert.equal(response.status, 400);
+    assert.equal(fhir.transaction, undefined);
+  });
+}

@@ -1,0 +1,109 @@
+Command: node --import tsx --test --test-name-pattern=E2: mcp/tests/commsApi.test.ts
+TAP version 13
+# Subtest: E2: sms still updates an unlinked RelatedPerson recipient
+not ok 1 - E2: sms still updates an unlinked RelatedPerson recipient
+  ---
+  duration_ms: 39.286
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/commsApi.test.ts:1:68273'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'Chart update skipped for every recipient.'
+    - undefined
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual: 'Chart update skipped for every recipient.'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/commsApi.test.ts:1968:16)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: E2: email still updates an unlinked RelatedPerson recipient
+not ok 2 - E2: email still updates an unlinked RelatedPerson recipient
+  ---
+  duration_ms: 8.397792
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/commsApi.test.ts:1:68273'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'Chart update skipped for every recipient.'
+    - undefined
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual: 'Chart update skipped for every recipient.'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/commsApi.test.ts:1968:16)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E2: sms still updates an unlinked Patient recipient
+not ok 3 - E2: sms still updates an unlinked Patient recipient
+  ---
+  duration_ms: 4.800875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/commsApi.test.ts:1:68273'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'Chart update skipped for every recipient.'
+    - undefined
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual: 'Chart update skipped for every recipient.'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/commsApi.test.ts:1968:16)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E2: email still updates an unlinked Patient recipient
+not ok 4 - E2: email still updates an unlinked Patient recipient
+  ---
+  duration_ms: 4.734209
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/commsApi.test.ts:1:68273'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'Chart update skipped for every recipient.'
+    - undefined
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual: 'Chart update skipped for every recipient.'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/commsApi.test.ts:1968:16)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 346.911917
+
+Exit: 1

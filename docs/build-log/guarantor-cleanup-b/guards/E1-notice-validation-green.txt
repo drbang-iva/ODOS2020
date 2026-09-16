@@ -1,0 +1,19 @@
+Command (from ui/): node --import tsx --test --test-name-pattern=education dispatch client rejects malformed tests/engageSheet.test.tsx
+TAP version 13
+# Subtest: education dispatch client rejects malformed chart update metadata
+ok 1 - education dispatch client rejects malformed chart update metadata
+  ---
+  duration_ms: 9.420291
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 174.095458
+
+Exit: 0

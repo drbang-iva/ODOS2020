@@ -1,0 +1,73 @@
+CL-B author-side regression output. Production head: de3079f4e89ce01b00bcb1c2f4e35392f0190467.
+Full UI was run on identical UI sources before integration of B2/B3; final-head CI re-runs the full UI lane.
+
+Full MCP (standalone lane; credentialed live authz is separate)
+Command: ODOS_POSTGRES_URL=<task-only Postgres on 127.0.0.1:25433> ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test
+1..4561
+# tests 5141
+# suites 0
+# pass 5089
+# fail 0
+# cancelled 0
+# skipped 52
+# todo 0
+# duration_ms 77446.916667
+⚠️  LIVE STACK NOT CONFIGURED — 44 tests skipped, including live authorization enforcement (ageOfMajorityAuthzLive, audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, protocolItemClaimLive, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.
+Exit: 0
+
+Full UI (run from ui/)
+Command: npm test
+1..1608
+# tests 1621
+# suites 0
+# pass 1621
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 189019.097875
+Exit: 0
+
+Focused MCP
+Command: npm --prefix mcp test -- tests/commsApi.test.ts tests/patientRegistrationAuthz.test.ts tests/ageOfMajorityConfig.test.ts tests/schedulingRbacGrants.test.ts
+1..165
+# tests 165
+# suites 0
+# pass 165
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1441.809125
+Exit: 0
+
+Comms and education
+Command: npm --prefix mcp test -- tests/comms*.test.ts tests/education*.test.ts
+1..433
+# tests 433
+# suites 0
+# pass 430
+# fail 0
+# cancelled 0
+# skipped 3
+# todo 0
+# duration_ms 7156.840875
+Exit: 0
+
+Focused UI (run from ui/)
+Command: node --import tsx --test --test-concurrency=1 tests/engageSheet.test.tsx tests/guarantorEditor.test.tsx tests/patientRegistration*.test.tsx tests/ageOfMajority.test.tsx
+1..62
+# tests 62
+# suites 0
+# pass 62
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1066.445166
+Exit: 0
+
+Preflight
+Command: npm run preflight
+ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md
+Exit: 0

@@ -5,7 +5,7 @@ import { writeCommsPreferences, parsePreferenceWriteInput, parseConsentEvidenceI
   attachCommsConsentEvidence, readCommsPreferences, reportCommsEvidenceGaps, evidenceGapCsv } from "./comms-preferences.js";
 import { effectiveCommsPreferences } from "./suppression-gate.js";
 import { isFhirConflict } from "../clinical-graph/fhir-conflict.js";
-import type { Communication, Condition, Encounter, Patient, Provenance, RelatedPerson } from "@medplum/fhirtypes";
+import type { Communication, Condition, Encounter, Patient, Person, Provenance, RelatedPerson } from "@medplum/fhirtypes";
 import { randomUUID } from "node:crypto";
 import type { Application, Request, Response } from "express";
 import { buildOdosAuditEventRow } from "../authz/odosAudit.js";
@@ -18,7 +18,7 @@ import {
 } from "../authz/roles.js";
 import type { FhirAuditRecorder, MedplumClient } from "../fhir-client.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
-import { searchBounded } from "../fhir-search.js";
+import { searchAll, searchBounded } from "../fhir-search.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 import {
   COMMS_CHANNEL_ROLES,
@@ -1148,17 +1148,18 @@ export async function readEducationDispatchEvidence(fhir: MedplumClient, body: E
   return outcome ? { outcome, providerInvoked: outcome.outcome === "rescheduled" ? false : "unknown", frozen } : undefined;
 }
 
-type EducationDispatchResult = EducationEnrollmentSendOutcome & { chartUpdate?: "conflict"; preferenceUpdate?: "failed" };
+type EducationDispatchResult = EducationEnrollmentSendOutcome & { chartUpdate?: "conflict"; chartUpdateNotice?: string; preferenceUpdate?: "failed" };
 
 async function dispatchEducation(
   deps: CommsApiRouteDeps, staff: CommsStaff, patient: Patient, body: EducationDispatchBody,
   options: { reconcileOnly?: boolean; senderReference?: string } = {},
 ): Promise<EducationDispatchResult> {
   let chartConflict = false;
+  let chartUpdateNotice: string | undefined;
   let preferenceFailed = false;
   const result = await dispatchEducationInternal({ kind: "staff", staff }, deps, patient, body, options,
-    () => { chartConflict = true; }, () => { preferenceFailed = true; });
-  return result.outcome === "sent" ? { ...result, ...(chartConflict ? { chartUpdate: "conflict" as const } : {}), ...(preferenceFailed ? { preferenceUpdate: "failed" as const } : {}) } : result;
+    (notice) => { if (notice) chartUpdateNotice = notice; else chartConflict = true; }, () => { preferenceFailed = true; });
+  return result.outcome === "sent" || result.outcome === "print" ? { ...result, ...(chartUpdateNotice ? { chartUpdateNotice } : {}), ...(chartConflict ? { chartUpdate: "conflict" as const } : {}), ...(preferenceFailed ? { preferenceUpdate: "failed" as const } : {}) } : result;
 }
 
 export async function dispatchEducationAs(
@@ -1177,7 +1178,7 @@ async function dispatchEducationInternal(
   patient: Patient | undefined,
   body: EducationDispatchBody,
   options: { reconcileOnly?: boolean; senderReference?: string; prepared?: PreparedEducationSequenceDispatch },
-  onRecipientConflict?: () => void,
+  onRecipientConflict?: (notice?: string) => void,
   onPreferenceFailure?: () => void,
 ): Promise<EducationEnrollmentSendOutcome> {
   if (actor.kind === "system" && "quietHoursExemption" in actor) {
@@ -1221,7 +1222,11 @@ async function dispatchEducationInternal(
     const url = item.urls.print;
     if (!url) throw new CommsApiCapabilityError("Education print artifact is not published.");
     if (body.alsoUpdateChart) {
-      await updateEducationRecipient(staff.fhir, recipient, body, staff);
+      const notice = await updateEducationRecipient(staff.fhir, recipient, body, staff);
+      if (notice) {
+        onRecipientConflict?.(notice);
+        body = { ...body, alsoUpdateChart: false };
+      }
     }
     await persistEducationSendProvenance(staff.fhir, {
       body,
@@ -1286,8 +1291,8 @@ async function dispatchEducationInternal(
     if (reservation.state === "sent") {
       if (body.alsoUpdateChart) {
         const updated = await updateSentEducationRecipient(staff.fhir, recipient, body, staff);
-        if (!updated) {
-          onRecipientConflict?.();
+        if (!updated.updated) {
+          onRecipientConflict?.(updated.notice);
           body = { ...body, alsoUpdateChart: false };
         }
       }
@@ -1331,8 +1336,8 @@ async function dispatchEducationInternal(
       }, { now: () => deps.now?.() ?? new Date().toISOString() }));
       if (body.alsoUpdateChart) {
         const updated = await updateSentEducationRecipient(staff.fhir, recipient, body, staff);
-        if (!updated) {
-          onRecipientConflict?.();
+        if (!updated.updated) {
+          onRecipientConflict?.(updated.notice);
           body = { ...body, alsoUpdateChart: false };
         }
       }
@@ -1421,8 +1426,8 @@ async function dispatchEducationInternal(
   if (reservation.state === "sent") {
     if (body.alsoUpdateChart) {
       const updated = await updateSentEducationRecipient(staff.fhir, recipient, body, staff);
-      if (!updated) {
-        onRecipientConflict?.();
+      if (!updated.updated) {
+        onRecipientConflict?.(updated.notice);
         body = { ...body, alsoUpdateChart: false };
       }
     }
@@ -1464,8 +1469,8 @@ async function dispatchEducationInternal(
     }, { now: () => deps.now?.() ?? new Date().toISOString() }));
     if (body.alsoUpdateChart) {
       const updated = await updateSentEducationRecipient(staff.fhir, recipient, body, staff);
-      if (!updated) {
-        onRecipientConflict?.();
+      if (!updated.updated) {
+        onRecipientConflict?.(updated.notice);
         body = { ...body, alsoUpdateChart: false };
       }
     }
@@ -2425,13 +2430,13 @@ async function persistAfterSend(write: () => Promise<unknown>): Promise<void> {
 
 async function updateSentEducationRecipient(
   ...args: Parameters<typeof updateEducationRecipient>
-): Promise<boolean> {
+): Promise<{ updated: boolean; notice?: string }> {
   try {
-    await updateEducationRecipient(...args);
-    return true;
+    const notice = await updateEducationRecipient(...args);
+    return notice ? { updated: false, notice } : { updated: true };
   } catch (error) {
     if (!isFhirConflict(error)) throw error;
-    return false;
+    return { updated: false };
   }
 }
 
@@ -2440,7 +2445,18 @@ async function updateEducationRecipient(
   recipient: { reference: string; resource: Patient | RelatedPerson },
   body: EducationDispatchBody,
   staff: EducationDispatchIdentity,
-): Promise<void> {
+): Promise<string | void> {
+  if (recipient.resource.resourceType === "RelatedPerson") {
+    const owners = await searchAll<Person>(fhir, "Person", { link: recipient.reference });
+    if (owners.length) {
+      const guarantors = owners.map(person => {
+        const name = person.name?.find(entry => entry.use === "official") ?? person.name?.[0];
+        const display = name?.text || [...name?.given ?? [], name?.family].filter(Boolean).join(" ");
+        return display ? `${display} (Person/${person.id})` : `Person/${person.id}`;
+      });
+      return `The chart contact was not updated. Update the guarantor record: ${guarantors.join(", ")}.`;
+    }
+  }
   const system = body.channel === "sms" ? "phone" : body.channel === "email" ? "email" : undefined;
   const value = system === "phone" ? body.recipientOverride?.phone : body.recipientOverride?.email;
   if (!system || !value) {

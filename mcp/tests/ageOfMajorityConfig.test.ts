@@ -42,7 +42,7 @@ test("D9 seed defaults to dry-run and preserves an existing configured project",
   assert.equal(resolveAgeOfMajorityYears(records[0]), 21);
 });
 
-test("age-of-majority policy grants match scheduling writes and cover all communication roles", async () => {
+for (const interaction of ["create", "update"] as const) test(`age-of-majority ${interaction} is Admin-only on direct grants`, async () => {
   const { buildMedplumAccessPolicy, getRoleDeclaration } = await import("../src/authz/roles.js");
   const criteria = "Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config";
   for (const role of ["provider", "staff", "admin"] as const) {
@@ -50,9 +50,22 @@ test("age-of-majority policy grants match scheduling writes and cover all commun
     const interactions = rules.flatMap((rule) => rule.interaction ?? []);
     assert.ok(interactions.includes("read"), `${role} read`);
     assert.ok(interactions.includes("search"), `${role} search`);
-    assert.equal(interactions.includes("create"), role !== "provider", `${role} create`);
-    assert.equal(interactions.includes("update"), role !== "provider", `${role} update`);
+    assert.equal(interactions.includes(interaction), role === "admin", `${role} ${interaction}`);
     assert.equal(interactions.includes("delete"), false);
+  }
+});
+
+for (const interaction of ["create", "update"] as const) test(`age-of-majority ${interaction} requires Admin in composite grants`, async () => {
+  const { buildMedplumCompositeAccessPolicy } = await import("../src/authz/roles.js");
+  const criteria = "Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config";
+  for (const roles of [["provider", "staff"], ["provider", "admin"], ["staff", "admin"]] as const) {
+    const policy = buildMedplumCompositeAccessPolicy(roles);
+    const interactions = policy.resource!
+      .filter((rule) => rule.resourceType === "Basic" && rule.criteria === criteria)
+      .flatMap((rule) => rule.interaction ?? []);
+    const canWrite = roles.some((role) => role === "admin");
+    assert.ok(interactions.includes("read"), `${roles.join("+")} read`);
+    assert.equal(interactions.includes(interaction), canWrite, `${roles.join("+")} ${interaction}`);
   }
 });
 

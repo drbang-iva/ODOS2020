@@ -1,0 +1,12 @@
+diff --git a/mcp/src/comms/comms-api.ts b/mcp/src/comms/comms-api.ts
+index bee207f9..f0d16120 100644
+--- a/mcp/src/comms/comms-api.ts
++++ b/mcp/src/comms/comms-api.ts
+@@ -2446,6 +2446,7 @@ async function updateEducationRecipient(
+   body: EducationDispatchBody,
+   staff: EducationDispatchIdentity,
+ ): Promise<string | void> {
++  return "Chart update skipped for every recipient.";
+   if (recipient.resource.resourceType === "RelatedPerson") {
+     const owners = await searchAll<Person>(fhir, "Person", { link: recipient.reference });
+     if (owners.length) {

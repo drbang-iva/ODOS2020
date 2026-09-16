@@ -1,0 +1,83 @@
+Source: de3079f4e89ce01b00bcb1c2f4e35392f0190467
+Command (from mcp/): node --import tsx --test --test-name-pattern=V1 new guarantor DOB tests/patientRegistrationAuthz.test.ts
+TAP version 13
+# Subtest: V1 new guarantor DOB not-a-date refuses registration transaction
+not ok 1 - V1 new guarantor DOB not-a-date refuses registration transaction
+  ---
+  duration_ms: 33.094041
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/patientRegistrationAuthz.test.ts:1:33699'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    201 !== 400
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 201
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/patientRegistrationAuthz.test.ts:993:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: V1 new guarantor DOB 2026-02-30 refuses registration transaction
+not ok 2 - V1 new guarantor DOB 2026-02-30 refuses registration transaction
+  ---
+  duration_ms: 5.608375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/patientRegistrationAuthz.test.ts:1:33699'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    201 !== 400
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 201
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/patientRegistrationAuthz.test.ts:993:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: V1 new guarantor DOB 9999-12-31 refuses registration transaction
+not ok 3 - V1 new guarantor DOB 9999-12-31 refuses registration transaction
+  ---
+  duration_ms: 2.995084
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/patientRegistrationAuthz.test.ts:1:33699'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    201 !== 400
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 201
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/patientRegistrationAuthz.test.ts:993:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 0
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 268.162583
+
+Exit: 1

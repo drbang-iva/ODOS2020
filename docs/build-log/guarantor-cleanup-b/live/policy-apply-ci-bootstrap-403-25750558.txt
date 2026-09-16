@@ -1,0 +1,9 @@
+
+> odos2020@0.0.1 sync-practice-role-policy-rules
+> tsx --env-file-if-exists=.env scripts/sync-practice-role-policy-rules.ts --project 4172fde6-0537-468d-8fcd-24a8bab84f00 --apply --bootstrap-service-identity
+
+.env not found. Continuing without it.
+.env not found. Continuing without it.
+Target: Project/4172fde6-0537-468d-8fcd-24a8bab84f00 (source: --project)
+BREAK-GLASS: BOOTSTRAP SERVICE IDENTITY ACTIVE. Target is restricted to AccessPolicy and ProjectMembership resources in --project 4172fde6-0537-468d-8fcd-24a8bab84f00.
+AccessPolicy/6649c201-0958-4835-aa43-3c4e36a0af2b update failed after 0 policy updates. Re-run the sync; already-updated policies will report MATCH. Cause: FHIR PATCH /fhir/R4/AccessPolicy/:id [AccessPolicy] 403 Forbidden: Forbidden
