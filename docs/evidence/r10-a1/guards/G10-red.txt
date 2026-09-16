@@ -1,0 +1,16 @@
+not ok 1 - canonical envelope rejects hash mismatch
+  ---
+  duration_ms: 2.313291
+  type: 'test'
+  location: '<repo-root>/.worktrees/r10-a1-guards/mcp/tests/currentFindingIdentity.test.ts:1:2046'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    'valid' !== 'invalid'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'invalid'
+  actual: 'valid'
+  operator: 'strictEqual'

@@ -1,0 +1,11 @@
+not ok 1 - loader traverses pages, retains retired and refuses failed, foreign or unscoped pages
+  ---
+  duration_ms: 2.498792
+  type: 'test'
+  location: '<repo-root>/.worktrees/r10-a1-guards/mcp/tests/currentFindingReader.test.ts:1:8161'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected exception.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'throws'

@@ -1,0 +1,14 @@
+PASS: F1 invokes the real private completeness predicate on all ten captured and projected argument sets.
+PASS: F1 inversion: 10 failing assertions; restored 10 passed, zero failures.
+PASS: F2a unconditional retry: both roles issue 2 writes != 0; restored both issue zero retry writes.
+PASS: F2b intervening-edit overwrite: both roles issue 2 writes != 0; restored both issue zero conflict-retry writes and preserve versions.
+PASS: P7 rerun for provider and staff; P1-P6 retained. Final 11 PASS / 2 EXPECTED_UNDER_RULING / 2 INFORMATIONAL; stop=false.
+PASS: 210 HTTP events retained with complete bodies/statuses/IDs/versions.
+PASS: capture instrumentation preserves both named exports and records actual calls.
+PASS: full MCP 5281 pass / 0 fail / 51 skip; UI 1560 pass / 0 fail / 0 skip; both builds exit 0.
+PASS: preflight zero warnings / zero hard blocks; syntax check and git diff --check exit 0.
+PASS: no production library, existing assertion, UI, policy, registry or application writer changes in fixback.
+PASS: evidence reduced to 24 required structured/excerpt files; absolute workstation paths and local account identifier sanitized.
+PASS: credentials and private-key blocks absent from retained evidence.
+PASS: fixback scratch removed; all four task containers stopped and retained.
+STATUS: NOT EVALUATED; eight bot findings addressed, dispositions in bundle; no merge or author evaluation marker.

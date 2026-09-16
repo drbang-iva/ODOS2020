@@ -1,0 +1,16 @@
+not ok 1 - retired legacy atomic cannot suppress a live section positive; cancelled is retained but never live
+  ---
+  duration_ms: 4.094
+  type: 'test'
+  location: '<repo-root>/.worktrees/r10-a1-guards/mcp/tests/currentFindingReader.test.ts:1:1790'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    'retired' !== 'live'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'live'
+  actual: 'retired'
+  operator: 'strictEqual'
