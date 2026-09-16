@@ -1,0 +1,18 @@
+{
+  "sourceHead": "a7791a6034e4ed6c8a105cf645e47a0754df70b9",
+  "rows": [
+    {
+      "id": "e57d7ba4-28fc-4d7b-aec3-01e6004b0fcb",
+      "eventTime": "2026-09-16T10:02:19.467Z",
+      "eventType": "noop",
+      "actorId": "643b87cf-3feb-4971-856f-97fc2caf54b0",
+      "actorRole": "staff",
+      "patientId": "10e6b559-213a-4c83-90cd-28969aaefef0",
+      "actionOutcome": "granted",
+      "actionReason": "Synthetic Cleanup A fixture audit connectivity proof",
+      "breakGlass": false,
+      "ibActorClassification": "health-care-provider",
+      "createdAt": "2026-09-16T10:02:19.467Z"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "sourceHead": "a7791a6034e4ed6c8a105cf645e47a0754df70b9",
+  "results": [
+    {
+      "principal": "staff",
+      "staffReference": "Practitioner/643b87cf-3feb-4971-856f-97fc2caf54b0",
+      "roles": [
+        "staff"
+      ],
+      "project": {
+        "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+        "display": "Cleanup A build synthetic A"
+      },
+      "guarantorLinkAuthorized": true
+    },
+    {
+      "principal": "composite",
+      "staffReference": "Practitioner/e908c332-e9a0-42f8-a326-68c787737037",
+      "roles": [
+        "provider",
+        "staff",
+        "admin"
+      ],
+      "project": {
+        "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+        "display": "Cleanup A build synthetic A"
+      },
+      "guarantorLinkAuthorized": true
+    }
+  ]
+}
