@@ -1,0 +1,29 @@
+Mode: dry-run
+provider: MATCH AccessPolicy/0bfb6702-c6d4-4af0-a550-c8b003f62d17 "ODOS Provider"
+staff: DRIFT AccessPolicy/6649c201-0958-4835-aa43-3c4e36a0af2b "ODOS Staff"
+  unexpected {"criteria":"Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config","interaction":["create","update"],"resourceType":"Basic"}
+admin: MATCH AccessPolicy/12d280eb-bb96-4954-a86a-2b128c145474 "ODOS Admin / Manager"
+provider+staff+admin: MATCH AccessPolicy/ab2b16d0-ac3a-4d54-b2ba-e5304d4a6a38 "ODOS Composite Provider + Staff + Admin / Manager"
+provider+staff: DRIFT AccessPolicy/bf891cae-bf09-47ca-8190-2272a7af4897 "ODOS Composite Provider + Staff"
+  unexpected {"criteria":"Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config","interaction":["create"],"resourceType":"Basic"}
+  unexpected {"criteria":"Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config","interaction":["update"],"resourceType":"Basic"}
+Composite policies required: 0
+Composite policies created: 0
+Policies updated: 0
+Memberships requiring compilation: 0
+Memberships updated: 0
+Dry run only. Re-run with --apply after reviewing every rule difference.
+Mode: apply
+provider: MATCH AccessPolicy/0bfb6702-c6d4-4af0-a550-c8b003f62d17 "ODOS Provider"
+staff: DRIFT AccessPolicy/6649c201-0958-4835-aa43-3c4e36a0af2b "ODOS Staff"
+  unexpected {"criteria":"Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config","interaction":["create","update"],"resourceType":"Basic"}
+admin: MATCH AccessPolicy/12d280eb-bb96-4954-a86a-2b128c145474 "ODOS Admin / Manager"
+provider+staff+admin: MATCH AccessPolicy/ab2b16d0-ac3a-4d54-b2ba-e5304d4a6a38 "ODOS Composite Provider + Staff + Admin / Manager"
+provider+staff: DRIFT AccessPolicy/bf891cae-bf09-47ca-8190-2272a7af4897 "ODOS Composite Provider + Staff"
+  unexpected {"criteria":"Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config","interaction":["create"],"resourceType":"Basic"}
+  unexpected {"criteria":"Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config","interaction":["update"],"resourceType":"Basic"}
+Composite policies required: 0
+Composite policies created: 0
+Policies updated: 2
+Memberships requiring compilation: 0
+Memberships updated: 0
