@@ -1,8 +1,8 @@
 {
   "kind": "Author Chromium proof on the unchanged App -> RouteSwitch -> PatientRoute -> EncounterCharting route",
-  "route": "/clinic?patientId=055485a5-7edb-4e73-95d9-5107bf095c0c&encounterId=d874672c-1d23-49d7-8804-86f602149210",
+  "route": "/clinic?patientId=055485a5-7edb-4e73-95d9-5107bf095c0c&encounterId=51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
   "beforeHead": "40c19a9e442015e1d32396958b661394318713d2",
-  "afterHead": "3e79c526e1523b5403e4a4b38b722283e8526b66",
+  "afterHead": "c2317a71f6aa13c4850471f4a351c3698d6441e8",
   "limits": [
     "Selected real read handlers registered by proof harness; both UI revisions use proposed read handlers.",
     "Unrelated backend routes are not registered; their failed requests are recorded. No browser responses are mocked."
@@ -103,12 +103,12 @@
     },
     {
       "state": "before",
-      "path": "/@vite/client",
+      "path": "/@react-refresh",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/@react-refresh",
+      "path": "/@vite/client",
       "status": 200
     },
     {
@@ -168,22 +168,22 @@
     },
     {
       "state": "before",
-      "path": "/fhir/R4/Practitioner/5d5bd40c-fbf7-472f-89b1-aea9e0509a77",
-      "status": 200
-    },
-    {
-      "state": "before",
       "path": "/clinic/summary",
       "status": 404
     },
     {
       "state": "before",
-      "path": "/fhir/R4/Basic",
+      "path": "/fhir/R4/Practitioner/5d5bd40c-fbf7-472f-89b1-aea9e0509a77",
       "status": 200
     },
     {
       "state": "before",
       "path": "/odos-icon.svg",
+      "status": 200
+    },
+    {
+      "state": "before",
+      "path": "/fhir/R4/Basic",
       "status": 200
     },
     {
@@ -223,12 +223,12 @@
     },
     {
       "state": "before",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/procedure-charges",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/procedure-charges",
       "status": 404
     },
     {
@@ -238,7 +238,7 @@
     },
     {
       "state": "before",
-      "path": "/clinical-graph/diagnosis-quick-list",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-candidates",
       "status": 200
     },
     {
@@ -253,7 +253,7 @@
     },
     {
       "state": "before",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/visit-charge",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/visit-charge",
       "status": 404
     },
     {
@@ -273,12 +273,12 @@
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-candidates",
+      "path": "/clinical-graph/diagnosis-quick-list",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-statuses",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-statuses",
       "status": 200
     },
     {
@@ -298,17 +298,12 @@
     },
     {
       "state": "before",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/findings",
-      "status": 200
-    },
-    {
-      "state": "before",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/procedure-charges",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/procedure-charges",
       "status": 404
     },
     {
@@ -318,7 +313,7 @@
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-newness",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/findings",
       "status": 200
     },
     {
@@ -333,7 +328,7 @@
     },
     {
       "state": "before",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/visit-charge",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/visit-charge",
       "status": 404
     },
     {
@@ -353,6 +348,11 @@
     },
     {
       "state": "before",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-newness",
+      "status": 200
+    },
+    {
+      "state": "before",
       "path": "/clinical-graph/finding-definitions",
       "status": 200
     },
@@ -363,18 +363,18 @@
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/previous-exams",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
-      "status": 200
-    },
-    {
-      "state": "before",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/procedure-charges",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/procedure-charges",
       "status": 404
+    },
+    {
+      "state": "before",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-candidates",
+      "status": 200
     },
     {
       "state": "before",
@@ -383,47 +383,47 @@
     },
     {
       "state": "before",
-      "path": "/fhir/R4/Observation/80fd8030-0089-4c98-9889-a71f3002c912",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/previous-exams",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-candidates",
+      "path": "/fhir/R4/Observation/10808c97-6b3c-4b99-97ce-5ff837b1a068",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-statuses",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
-      "status": 200
-    },
-    {
-      "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/exam-overview",
-      "status": 200
-    },
-    {
-      "state": "before",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/procedure-charges",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/procedure-charges",
       "status": 404
     },
     {
       "state": "before",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-statuses",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/findings",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/exam-overview",
+      "status": 200
+    },
+    {
+      "state": "before",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
+      "status": 200
+    },
+    {
+      "state": "before",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/findings",
       "status": 200
     },
     {
@@ -433,47 +433,42 @@
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-newness",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-newness",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/void/ledger",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/void/ledger",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/findings",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/findings",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/previous-exams",
+      "path": "/fhir/R4/Observation/10808c97-6b3c-4b99-97ce-5ff837b1a068",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/exam-overview",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/exam-overview",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/fhir/R4/Observation/80fd8030-0089-4c98-9889-a71f3002c912",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/previous-exams",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/findings",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/findings",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/procedure-charges",
-      "status": 404
-    },
-    {
-      "state": "before",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
@@ -483,32 +478,37 @@
     },
     {
       "state": "before",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/procedure-charges",
+      "status": 404
+    },
+    {
+      "state": "before",
       "path": "/clinical-graph/diagnosis-quick-list",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-statuses",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-statuses",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-candidates",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-candidates",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-newness",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-newness",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/findings",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/findings",
       "status": 200
     },
     {
       "state": "before",
-      "path": "/fhir/R4/Observation/80fd8030-0089-4c98-9889-a71f3002c912",
+      "path": "/fhir/R4/Observation/10808c97-6b3c-4b99-97ce-5ff837b1a068",
       "status": 200
     },
     {
@@ -523,22 +523,17 @@
     },
     {
       "state": "after",
-      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/react_jsx-dev-runtime.js",
-      "status": 200
-    },
-    {
-      "state": "after",
       "path": "/@vite/client",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/react.js",
+      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/react_jsx-dev-runtime.js",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/react-dom_client.js",
+      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/react.js",
       "status": 200
     },
     {
@@ -553,17 +548,22 @@
     },
     {
       "state": "after",
+      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/react-dom_client.js",
+      "status": 200
+    },
+    {
+      "state": "after",
       "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/chunk-4L6ABZZY.js",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/zustand.js",
+      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/clsx.js",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/clsx.js",
+      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/zustand.js",
       "status": 200
     },
     {
@@ -598,27 +598,27 @@
     },
     {
       "state": "after",
+      "path": "/fhir/R4/Practitioner/5d5bd40c-fbf7-472f-89b1-aea9e0509a77",
+      "status": 200
+    },
+    {
+      "state": "after",
+      "path": "/fhir/R4/Basic",
+      "status": 200
+    },
+    {
+      "state": "after",
+      "path": "/fhir/R4/Practitioner/5d5bd40c-fbf7-472f-89b1-aea9e0509a77",
+      "status": 200
+    },
+    {
+      "state": "after",
+      "path": "/fhir/R4/Basic",
+      "status": 200
+    },
+    {
+      "state": "after",
       "path": "/odos-icon.svg",
-      "status": 200
-    },
-    {
-      "state": "after",
-      "path": "/fhir/R4/Practitioner/5d5bd40c-fbf7-472f-89b1-aea9e0509a77",
-      "status": 200
-    },
-    {
-      "state": "after",
-      "path": "/fhir/R4/Basic",
-      "status": 200
-    },
-    {
-      "state": "after",
-      "path": "/fhir/R4/Practitioner/5d5bd40c-fbf7-472f-89b1-aea9e0509a77",
-      "status": 200
-    },
-    {
-      "state": "after",
-      "path": "/fhir/R4/Basic",
       "status": 200
     },
     {
@@ -638,12 +638,12 @@
     },
     {
       "state": "after",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/procedure-charges",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/procedure-charges",
       "status": 404
     },
     {
@@ -653,7 +653,7 @@
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-candidates",
+      "path": "/clinical-graph/diagnosis-quick-list",
       "status": 200
     },
     {
@@ -663,17 +663,12 @@
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-statuses",
-      "status": 200
-    },
-    {
-      "state": "after",
       "path": "/clinical-graph/longitudinal-imaging",
       "status": 404
     },
     {
       "state": "after",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/visit-charge",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/visit-charge",
       "status": 404
     },
     {
@@ -693,7 +688,12 @@
     },
     {
       "state": "after",
-      "path": "/clinical-graph/diagnosis-quick-list",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-candidates",
+      "status": 200
+    },
+    {
+      "state": "after",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-statuses",
       "status": 200
     },
     {
@@ -708,27 +708,27 @@
     },
     {
       "state": "after",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
-      "status": 200
-    },
-    {
-      "state": "after",
       "path": "/clinical-graph/finding-section-groups",
       "status": 404
     },
     {
       "state": "after",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/procedure-charges",
-      "status": 404
-    },
-    {
-      "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/findings",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
       "state": "after",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/procedure-charges",
+      "status": 404
+    },
+    {
+      "state": "after",
       "path": "/fhir/R4/Condition",
+      "status": 200
+    },
+    {
+      "state": "after",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/findings",
       "status": 200
     },
     {
@@ -738,22 +738,12 @@
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-newness",
-      "status": 200
-    },
-    {
-      "state": "after",
       "path": "/clinical-graph/longitudinal-imaging",
       "status": 404
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/previous-exams",
-      "status": 200
-    },
-    {
-      "state": "after",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/visit-charge",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/visit-charge",
       "status": 404
     },
     {
@@ -773,8 +763,8 @@
     },
     {
       "state": "after",
-      "path": "/clinical-graph/eye-growth/visibility",
-      "status": 404
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-newness",
+      "status": 200
     },
     {
       "state": "after",
@@ -783,28 +773,18 @@
     },
     {
       "state": "after",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/procedure-charges",
+      "path": "/clinical-graph/eye-growth/visibility",
       "status": 404
     },
     {
       "state": "after",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-statuses",
-      "status": 200
-    },
-    {
-      "state": "after",
-      "path": "/fhir/R4/Observation/80fd8030-0089-4c98-9889-a71f3002c912",
-      "status": 200
-    },
-    {
-      "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-candidates",
-      "status": 200
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/procedure-charges",
+      "status": 404
     },
     {
       "state": "after",
@@ -813,22 +793,47 @@
     },
     {
       "state": "after",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/procedure-charges",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/previous-exams",
+      "status": 200
+    },
+    {
+      "state": "after",
+      "path": "/fhir/R4/Observation/10808c97-6b3c-4b99-97ce-5ff837b1a068",
+      "status": 200
+    },
+    {
+      "state": "after",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-candidates",
+      "status": 200
+    },
+    {
+      "state": "after",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
+      "status": 200
+    },
+    {
+      "state": "after",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/procedure-charges",
       "status": 404
     },
     {
       "state": "after",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-statuses",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
+      "status": 200
+    },
+    {
+      "state": "after",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/exam-overview",
       "status": 200
     },
     {
@@ -838,57 +843,52 @@
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/exam-overview",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/findings",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/findings",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-newness",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-newness",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/void/ledger",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/previous-exams",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/findings",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/void/ledger",
+      "path": "/fhir/R4/Observation/10808c97-6b3c-4b99-97ce-5ff837b1a068",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/findings",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/exam-overview",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/fhir/R4/Observation/80fd8030-0089-4c98-9889-a71f3002c912",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/previous-exams",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/exam-overview",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/findings",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/findings",
-      "status": 200
-    },
-    {
-      "state": "after",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/procedure-charges",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/procedure-charges",
       "status": 404
     },
     {
       "state": "after",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
@@ -903,27 +903,27 @@
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-candidates",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-candidates",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-statuses",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-statuses",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-newness",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-newness",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/findings",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/findings",
       "status": 200
     },
     {
       "state": "after",
-      "path": "/fhir/R4/Observation/80fd8030-0089-4c98-9889-a71f3002c912",
+      "path": "/fhir/R4/Observation/10808c97-6b3c-4b99-97ce-5ff837b1a068",
       "status": 200
     },
     {
@@ -943,22 +943,17 @@
     },
     {
       "state": "provider",
-      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/react.js",
-      "status": 200
-    },
-    {
-      "state": "provider",
       "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/react-dom_client.js",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/react_jsx-dev-runtime.js",
+      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/react.js",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/chunk-5WRI5ZAA.js",
+      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/react_jsx-dev-runtime.js",
       "status": 200
     },
     {
@@ -969,6 +964,11 @@
     {
       "state": "provider",
       "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/chunk-4L6ABZZY.js",
+      "status": 200
+    },
+    {
+      "state": "provider",
+      "path": "/@fs<source-root>/.odos/staff-dx-gate/vite-cache-28984/deps/chunk-5WRI5ZAA.js",
       "status": 200
     },
     {
@@ -1053,12 +1053,12 @@
     },
     {
       "state": "provider",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/procedure-charges",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/procedure-charges",
       "status": 404
     },
     {
@@ -1068,7 +1068,7 @@
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-candidates",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-candidates",
       "status": 200
     },
     {
@@ -1083,7 +1083,7 @@
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/visit-charge",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/visit-charge",
       "status": 404
     },
     {
@@ -1103,12 +1103,12 @@
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/diagnosis-quick-list",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-statuses",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-statuses",
+      "path": "/clinical-graph/diagnosis-quick-list",
       "status": 200
     },
     {
@@ -1128,22 +1128,22 @@
     },
     {
       "state": "provider",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/procedure-charges",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/procedure-charges",
       "status": 404
     },
     {
       "state": "provider",
-      "path": "/fhir/R4/Condition",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/findings",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/findings",
+      "path": "/fhir/R4/Condition",
       "status": 200
     },
     {
@@ -1158,7 +1158,7 @@
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/visit-charge",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/visit-charge",
       "status": 404
     },
     {
@@ -1178,12 +1178,7 @@
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-newness",
-      "status": 200
-    },
-    {
-      "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/previous-exams",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-newness",
       "status": 200
     },
     {
@@ -1198,22 +1193,27 @@
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/procedure-charges",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
+      "status": 200
+    },
+    {
+      "state": "provider",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/procedure-charges",
       "status": 404
     },
     {
       "state": "provider",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-candidates",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-candidates",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-statuses",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/fhir/R4/Observation/80fd8030-0089-4c98-9889-a71f3002c912",
+      "path": "/fhir/R4/Observation/10808c97-6b3c-4b99-97ce-5ff837b1a068",
       "status": 200
     },
     {
@@ -1223,42 +1223,32 @@
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-statuses",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/previous-exams",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/protocols/encounters/d874672c-1d23-49d7-8804-86f602149210/procedure-charges",
+      "path": "/clinical-graph/protocols/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/procedure-charges",
       "status": 404
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/exam-overview",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/exam-overview",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/fhir/R4/Encounter/d874672c-1d23-49d7-8804-86f602149210",
-      "status": 200
-    },
-    {
-      "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/findings",
-      "status": 200
-    },
-    {
-      "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/diagnosis-newness",
+      "path": "/fhir/R4/Encounter/51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
       "status": 200
     },
     {
@@ -1268,37 +1258,47 @@
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/void/ledger",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/findings",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/findings",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/diagnosis-newness",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/fhir/R4/Observation/80fd8030-0089-4c98-9889-a71f3002c912",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/void/ledger",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/exam-overview",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/findings",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/previous-exams",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/exam-overview",
       "status": 200
     },
     {
       "state": "provider",
-      "path": "/clinical-graph/encounters/d874672c-1d23-49d7-8804-86f602149210/findings",
+      "path": "/fhir/R4/Observation/10808c97-6b3c-4b99-97ce-5ff837b1a068",
+      "status": 200
+    },
+    {
+      "state": "provider",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/previous-exams",
+      "status": 200
+    },
+    {
+      "state": "provider",
+      "path": "/clinical-graph/encounters/51eaaacd-32dd-40d4-9eca-a080dcf9de4b/findings",
       "status": 200
     }
   ],
   "process": {
-    "pid": 28221,
+    "pid": 31140,
     "backendPort": 28983,
     "uiPorts": [
       28986,

@@ -1,5 +1,5 @@
 diff --git a/mcp/src/authz/roles.ts b/mcp/src/authz/roles.ts
-index 28e86c8c..5146f909 100644
+index 6e0c5664..0b21e367 100644
 --- a/mcp/src/authz/roles.ts
 +++ b/mcp/src/authz/roles.ts
 @@ -30,6 +30,7 @@ export const BUSINESS_ACTIONS = [
@@ -18,7 +18,7 @@ index 28e86c8c..5146f909 100644
    "clinical.sign",
    "aesthetics.procedure.write",
    "break-glass.invoke",
-@@ -953,6 +955,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
+@@ -966,6 +968,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
      businessActions: [
        "chart.read",
        "chart.write",

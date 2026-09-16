@@ -416,5 +416,27 @@
       "# skipped 0",
       "# duration_ms 609.831625"
     ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/mcp-rebased.tap.gz",
+    "sha256": "831abc2735a8c895bd2a8a3ed1a1ab395fbe1da00d1708eef91f97fbc4a439db",
+    "counts": [
+      "# tests 5127",
+      "# pass 5075",
+      "# fail 0",
+      "# skipped 52",
+      "# duration_ms 79415.656292"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/ui-rebased.tap.gz",
+    "sha256": "8f30d4c9cbc6af157301dc74036a2e87721b931e709b8ca7e0da7341f04db483",
+    "counts": [
+      "# tests 1613",
+      "# pass 1613",
+      "# fail 0",
+      "# skipped 0",
+      "# duration_ms 187112.561875"
+    ]
   }
 ]

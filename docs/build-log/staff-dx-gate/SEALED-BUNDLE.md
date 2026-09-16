@@ -9,10 +9,10 @@
 Staff diagnosis picks and diagnosis-door finding assertions now refuse before any clinical write. Finding grade/laterality and quick-list pin maintenance keep their existing permissions. No finding-owned link storage was implemented.
 
 - Branch: `drbang-iva/staff-dx-gate`
-- Base/main checked: `40c19a9e442015e1d32396958b661394318713d2`
-- UI commit: `b1203077` (cherry-picked from the task's isolated UI subtask).
-- Integrated implementation commit: `3e79c526e1523b5403e4a4b38b722283e8526b66`.
-- **Rebased: no.** PR #607 remained open when main was refreshed. The final pre-PR check is in `pre-pr-state.json`.
+- Original base: `40c19a9e442015e1d32396958b661394318713d2`; rebased main: `5f0a67922eb2bcf52a2ab60f99a9dbb810fad384`.
+- UI commit: `d6dc02d2` (cherry-picked from the task's isolated UI subtask).
+- Integrated implementation commit: `d7564d14c126f596b338c23cd124fc29a2a03cda`.
+- **Rebased: yes.** PR #607 merged during final packaging. The rebase had no conflicts; the full role-table file was rerun afterward, before opening this PR. Full backend/UI suites and live/browser proof were also rerun. The final pre-PR check is in `pre-pr-state.json`.
 - `roles.ts` has exactly three action-list additions: business action registry, credential-bound list, and Provider's actions. No resource rule changed; #607's Basic rules/resource-list insertion are untouched. `roles-only.diff` records this.
 
 ## Gated call sites
@@ -37,24 +37,24 @@ Commands ran in this task worktree. Larger raw outputs are gzip-compressed **wit
 
 | Check | Real result | Output |
 |---|---|---|
-| `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test` with `ODOS_POSTGRES_URL` supplied privately from this task's disposable stack | **5108 tests; 5057 pass; 0 fail; 51 skipped** | `mcp-full-final.tap.gz` |
-| `npm --prefix ui test` | **1606 tests; 1606 pass; 0 fail; 0 skipped** | `ui-full-final.tap.gz` |
-| `npm --prefix ui run build` | Exit 0; 328 modules transformed; built in 2.25s | `ui-build.txt` |
-| `./mcp/node_modules/.bin/tsc --project mcp/tsconfig.json --noEmit` | Exit 0 | `mcp-typecheck.txt` |
-| Full role-table file: `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test -- tests/v05a-authz.test.ts` | **22 tests; 20 pass; 0 fail; 2 live skips** | `role-table-final.tap` |
+| `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test` with `ODOS_POSTGRES_URL` supplied privately from this task's disposable stack | **5127 tests; 5075 pass; 0 fail; 52 skipped** | `mcp-rebased.tap.gz` |
+| `npm --prefix ui test` | **1613 tests; 1613 pass; 0 fail; 0 skipped** | `ui-rebased.tap.gz` |
+| `npm --prefix ui run build` | Exit 0; 331 modules transformed; built in 2.24s | `ui-build-rebased.txt` |
+| `./mcp/node_modules/.bin/tsc --project mcp/tsconfig.json --noEmit` | Exit 0 | `mcp-typecheck-rebased.txt` |
+| Full role-table file: `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test -- tests/v05a-authz.test.ts` | **22 tests; 20 pass; 0 fail; 2 live skips** | `role-table-rebased.tap` |
 | Restored backend mutation targets | **244 tests; 242 pass; 0 fail; 2 live skips** | `mutations-restored-green.tap.gz` |
 | UI focused regression / restored guards | **459/459** / **47/47** | `../staff-dx-gate-ui/README.md` |
 | Source/caller inventory corrections | Backend **27/27**; UI routing + browser walkthrough **23/23** | `source-inventory-green.tap`, `ui-routing-walkthrough-green.tap` |
 | Proxy census | 25 backend route families; 28 proxy entries; no missing family (advisory) | `proxy-coverage.txt` |
 | `git diff --check` | Exit 0 | Author command result |
 
-The full MCP suite's 51 skips include 43 credentialed live checks. `ODOS_ALLOW_UNGATED_MCP=1` is explicitly acknowledged; the unit suite is **not** a live authorization verdict. Separate live evidence follows.
+The full MCP suite's 52 skips include 44 credentialed live checks. `ODOS_ALLOW_UNGATED_MCP=1` is explicitly acknowledged; the unit suite is **not** a live authorization verdict. Separate live evidence follows.
 
 The first full run had six missing-default-PostgreSQL failures. Running against isolated PostgreSQL then exposed the new route's stale source-line inventory and route count; both were corrected. The first full UI run exposed the new caller count and two provider browser fixtures missing capability. The final full runs above are green. Intermediate outputs are retained.
 
 ## Mandate 17
 
-All backend mutations ran in a separate scratch worktree at the integrated implementation. Every replacement was checked to have landed; originals were restored in `finally`, and the full scratch diff was identical afterward. Exact commands/counters: `mutations.json`; executable procedure: `mutations.mjs`.
+All backend mutations ran in a separate scratch worktree at the pre-rebase integrated implementation (`3e79c526`). The full policy-derived role table was rerun after the rebase. Every replacement was checked to have landed; originals were restored in `finally`, and the full scratch diff was identical afterward. Exact commands/counters: `mutations.json`; executable procedure: `mutations.mjs`.
 
 | Deliberate defect | RED result |
 |---|---|

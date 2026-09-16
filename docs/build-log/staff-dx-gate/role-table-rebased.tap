@@ -1,0 +1,147 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/v05a-authz.test.ts
+
+TAP version 13
+# Subtest: the practice role registry defines only Provider, Staff, and Admin
+ok 1 - the practice role registry defines only Provider, Staff, and Admin
+  ---
+  duration_ms: 0.698084
+  type: 'test'
+  ...
+# Subtest: full role table keeps diagnosis action equivalent to Condition create and update grants
+ok 2 - full role table keeps diagnosis action equivalent to Condition create and update grants
+  ---
+  duration_ms: 0.239542
+  type: 'test'
+  ...
+# Subtest: diagnosis permission cannot be granted independently of a credentialed role and can be revoked
+ok 3 - diagnosis permission cannot be granted independently of a credentialed role and can be revoked
+  ---
+  duration_ms: 0.231542
+  type: 'test'
+  ...
+# Subtest: AccessPolicy generator emits Medplum interactions, criteria, and writeConstraint without business-action leakage
+ok 4 - AccessPolicy generator emits Medplum interactions, criteria, and writeConstraint without business-action leakage
+  ---
+  duration_ms: 0.457209
+  type: 'test'
+  ...
+# Subtest: protocol authoring is credential-bound to Provider with code-fenced Basic grants
+ok 5 - protocol authoring is credential-bound to Provider with code-fenced Basic grants
+  ---
+  duration_ms: 0.32425
+  type: 'test'
+  ...
+# Subtest: front-desk can create the dispensary order + financial resources at practice scope
+ok 6 - front-desk can create the dispensary order + financial resources at practice scope
+  ---
+  duration_ms: 0.097625
+  type: 'test'
+  ...
+# Subtest: front-desk cannot update or delete PaymentReconciliation outside the guarded Phase 6a handlers
+ok 7 - front-desk cannot update or delete PaymentReconciliation outside the guarded Phase 6a handlers
+  ---
+  duration_ms: 0.110792
+  type: 'test'
+  ...
+# Subtest: every role can read payments while only custody roles can create them
+ok 8 - every role can read payments while only custody roles can create them
+  ---
+  duration_ms: 0.113375
+  type: 'test'
+  ...
+# Subtest: compiled front-desk and practice-admin AccessPolicies grant payer Organization directory operations
+ok 9 - compiled front-desk and practice-admin AccessPolicies grant payer Organization directory operations
+  ---
+  duration_ms: 0.243125
+  type: 'test'
+  ...
+# Subtest: every role's AccessPolicy carries a machine-readable practice-role identifier (resolver anchor)
+ok 10 - every role's AccessPolicy carries a machine-readable practice-role identifier (resolver anchor)
+  ---
+  duration_ms: 0.4235
+  type: 'test'
+  ...
+# Subtest: ProjectMembership access builder emits parameterized provider, patient, and state-license values
+ok 11 - ProjectMembership access builder emits parameterized provider, patient, and state-license values
+  ---
+  duration_ms: 0.126667
+  type: 'test'
+  ...
+# Subtest: aesthetics-provider state scoping rejects out-of-state or out-of-scope procedures
+ok 12 - aesthetics-provider state scoping rejects out-of-state or out-of-scope procedures
+  ---
+  duration_ms: 0.132917
+  type: 'test'
+  ...
+# Subtest: Binary parser plugin requires securityContext and rejects outside patient compartment
+ok 13 - Binary parser plugin requires securityContext and rejects outside patient compartment
+  ---
+  duration_ms: 0.163375
+  type: 'test'
+  ...
+# Subtest: Binary parser plugin accepts valid raw upload header and blocks securityContext rewrite
+ok 14 - Binary parser plugin accepts valid raw upload header and blocks securityContext rewrite
+  ---
+  duration_ms: 0.082
+  type: 'test'
+  ...
+# Subtest: MCP FHIR client refuses direct Binary create without parser guard header
+ok 15 - MCP FHIR client refuses direct Binary create without parser guard header
+  ---
+  duration_ms: 0.188708
+  type: 'test'
+  ...
+# Subtest: ProjectMembership lifecycle transitions emit audit rows and placeholder AuditEvent
+ok 16 - ProjectMembership lifecycle transitions emit audit rows and placeholder AuditEvent
+  ---
+  duration_ms: 0.441792
+  type: 'test'
+  ...
+# Subtest: ProjectMembership role review preserves state and emits a review audit row
+ok 17 - ProjectMembership role review preserves state and emits a review audit row
+  ---
+  duration_ms: 0.880167
+  type: 'test'
+  ...
+# Subtest: break-glass requires human reason, creates time-limited access, and flags admin review
+ok 18 - break-glass requires human reason, creates time-limited access, and flags admin review
+  ---
+  duration_ms: 0.191542
+  type: 'test'
+  ...
+# Subtest: break-glass rejects agent self-attestation and blank reason
+ok 19 - break-glass rejects agent self-attestation and blank reason
+  ---
+  duration_ms: 0.054083
+  type: 'test'
+  ...
+# Subtest: audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available
+ok 20 - audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum AccessPolicy round-trip.
+  ---
+  duration_ms: 0.322875
+  type: 'test'
+  ...
+# Subtest: v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)
+ok 21 - v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat) # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the v0.5a enforcement fixture. This is the human-provisioned step per Mandate 8 — the agent does not create credentials, only uses what the human dropped into env vars.
+  ---
+  duration_ms: 0.175125
+  type: 'test'
+  ...
+# Subtest: compiled Staff policy fences RelatedPerson claims without changing other demographic grants
+ok 22 - compiled Staff policy fences RelatedPerson claims without changing other demographic grants
+  ---
+  duration_ms: 0.101917
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 0
+# duration_ms 286.314083
+⚠️  LIVE STACK NOT CONFIGURED — 2 tests skipped, including live authorization enforcement (v05a-authz). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.

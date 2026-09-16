@@ -1,8 +1,8 @@
 {
   "kind": "Author live handler proof with verified caller identities and real Medplum AccessPolicy enforcement",
-  "sourceHead": "3e79c526e1523b5403e4a4b38b722283e8526b66",
+  "sourceHead": "c2317a71f6aa13c4850471f4a351c3698d6441e8",
   "sourceHashes": {
-    "mcp/src/authz/roles.ts": "f04d60af00fc752d70d92472f19d07a56d35ef508fc1bd03217856c26649075c",
+    "mcp/src/authz/roles.ts": "9db544219659ace1a139929ea19c6563140cbf8799003754cb07a843a0bfbd1a",
     "mcp/src/clinical-graph/diagnosis-pick-endpoint.ts": "a5f80b58fdb8e992afb8379b1e0e2303a314bc1c172f459fe083fd31d4a4c25e",
     "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts": "7ee17a603cadfcba0d439bf255c93047ba66c636e6f2c40c8f30b6ca8b688495",
     "mcp/src/clinical-graph/diagnosis-order-endpoint.ts": "51e2c636bbb78da2b473cbe1da69955c52150be73ab874268ca13808b73085af"
@@ -148,8 +148,8 @@
   ],
   "synthetic": {
     "patientId": "055485a5-7edb-4e73-95d9-5107bf095c0c",
-    "encounterId": "d874672c-1d23-49d7-8804-86f602149210",
-    "conditionId": "be3630c1-177f-4b4f-aedd-0187d4e86d03",
+    "encounterId": "51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
+    "conditionId": "a3fc9d97-7a90-4d98-896b-4e373d95fa45",
     "diagnosisKey": "cataract_anterior_subcapsular",
     "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-subcapsular"
   }
