@@ -47,10 +47,77 @@ function isTrustedEvaluator(model) {
   return TRUSTED_MODEL_PATTERN.test(model.trim());
 }
 
+function evaluatorTool(signature) {
+  const codex = /\b(?:Codex|GPT|Astra|Sol)\b/i.test(signature);
+  const claude = /\b(?:Claude|Opus|Fable)\b/i.test(signature);
+  if (codex === claude) return undefined;
+  return codex ? "codex" : "claude";
+}
+
+function evaluateToolIndependence({ evaluator, prBody, prAuthorType }) {
+  const coders = new Set();
+  if (prAuthorType === "Bot") {
+    coders.add("bot");
+  } else {
+    let fence;
+    for (const line of (prBody || "").split(/\r?\n/)) {
+      const fenceMatch = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+      if (fence) {
+        if (fenceMatch && fenceMatch[1][0] === fence[0]
+          && fenceMatch[1].length >= fence.length && !fenceMatch[2].trim()) {
+          fence = undefined;
+        }
+        continue;
+      }
+      if (fenceMatch && (fenceMatch[1][0] === "~" || !fenceMatch[2].includes("`"))) {
+        fence = fenceMatch[1];
+        continue;
+      }
+      const declaration = /^Coded-by:\s*(.+?)\s*$/i.exec(line);
+      if (!declaration) continue;
+      const coder = /^(Codex|Claude)\b/i.exec(declaration[1]);
+      if (!coder) {
+        return failure(
+          "unrecognized-coded-by",
+          `CODED-BY UNRECOGNIZED — '${declaration[1]}' must begin with Codex or Claude. Replace the PR body's Coded-by placeholder with the tool that coded the PR.`,
+        );
+      }
+      coders.add(coder[1].toLowerCase());
+    }
+    if (coders.size === 0) {
+      return failure(
+        "missing-coded-by",
+        "CODED-BY MISSING — the PR body must declare 'Coded-by: Codex' or 'Coded-by: Claude' outside fenced code blocks.",
+      );
+    }
+  }
+
+  const tool = evaluatorTool(evaluator);
+  if (!tool) {
+    return failure(
+      "ambiguous-evaluator-tool",
+      `EVALUATOR TOOL AMBIGUOUS — signature '${evaluator}' must identify exactly one tool: Codex (Codex/GPT/Astra/Sol) or Claude (Claude/Opus/Fable).`,
+    );
+  }
+  if (coders.has(tool)) {
+    const name = tool === "codex" ? "Codex" : "Claude";
+    const other = tool === "codex" ? "Claude" : "Codex";
+    return failure(
+      "same-tool-evaluator",
+      `Evaluator signature '${evaluator}' is the ${name} tool; this PR declares 'Coded-by: ${name}'. The tool that coded a PR cannot evaluate it — `
+        + (coders.size > 1
+          ? "both Codex and Claude are declared coders, so only an operator OVERRIDE can pass."
+          : `get a ${other} evaluation or an operator OVERRIDE.`),
+    );
+  }
+}
+
 function evaluateEvaluationGate({
   labels = [],
   comments = [],
   currentHeadSha = "",
+  prBody = "",
+  prAuthorType = "",
 } = {}) {
   const hasOverrideLabel = labels.some(
     (label) => (label.name || "").toLowerCase() === "evaluated",
@@ -86,7 +153,7 @@ function evaluateEvaluationGate({
       [
         "NOT EVALUATED — this PR has no independent model review marker yet.",
         `Expected the newest marker to use:\n${EXPECTED_FORM}`,
-        "Author != evaluator remains a procedural expectation; review bots are only a first pass.",
+        "Every human-authored PR must declare Coded-by in its body; the gate rejects a PASS from the same tool. Review bots are only a first pass.",
         OVERRIDE_NOTE,
       ].join("\n"),
     );
@@ -232,6 +299,8 @@ function evaluateEvaluationGate({
   }
 
   if (verdict === "PASS") {
+    const independenceFailure = evaluateToolIndependence({ evaluator, prBody, prAuthorType });
+    if (independenceFailure) return independenceFailure;
     return {
       passed: true,
       reason: "passing-verdict",
@@ -269,6 +338,7 @@ function evaluateEvaluationGate({
 }
 
 module.exports = {
+  evaluatorTool,
   evaluateEvaluationGate,
   isTrustedEvaluator,
 };

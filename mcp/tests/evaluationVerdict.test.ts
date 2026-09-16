@@ -30,16 +30,30 @@ type EvaluationInput = {
   labels?: Array<{ name: string }>;
   comments?: EvaluationComment[];
   currentHeadSha?: string;
+  prBody?: string;
+  prAuthorType?: string;
+};
+
+type CoderCase = {
+  id?: string;
+  evaluator: string;
+  prBody: string;
+  reason: string;
+  prAuthorType?: string;
+  verdict?: string;
+  head?: string;
+  labels?: Array<{ name: string }>;
 };
 
 const CURRENT_HEAD = "a".repeat(40);
 const PREVIOUS_HEAD = "b".repeat(40);
 const TRUSTED_LOGIN = "odos-evaluator[bot]";
 const require = createRequire(import.meta.url);
-const { evaluateEvaluationGate } = require(
+const { evaluateEvaluationGate, evaluatorTool } = require(
   "../../.github/scripts/evaluation-verdict.cjs",
 ) as {
   evaluateEvaluationGate(input?: EvaluationInput): EvaluationDecision;
+  evaluatorTool(signature: string): "codex" | "claude" | undefined;
 };
 
 function comment(
@@ -65,6 +79,8 @@ function overrideMarker(headSha = CURRENT_HEAD): string {
 function evaluate(input: EvaluationInput = {}): EvaluationDecision {
   return evaluateEvaluationGate({
     currentHeadSha: CURRENT_HEAD,
+    prBody: "Coded-by: Codex",
+    prAuthorType: "User",
     ...input,
   });
 }
@@ -126,9 +142,15 @@ type PublisherFault =
 function publisherHarness({
   fault,
   prNumber = 518,
+  prBody = "Coded-by: Codex",
+  prAuthorType = "User",
+  comments = [],
 }: {
   fault?: PublisherFault;
   prNumber?: number | null;
+  prBody?: string;
+  prAuthorType?: string;
+  comments?: EvaluationComment[];
 } = {}) {
   const faultError = new Error(`${fault ?? "publisher"} fault`);
   const checkUpdates: Array<Record<string, unknown>> = [];
@@ -140,7 +162,7 @@ function publisherHarness({
       pulls: {
         get: async () => {
           if (fault === "pulls.get") throw faultError;
-          return { data: { head: { sha: CURRENT_HEAD } } };
+          return { data: { head: { sha: CURRENT_HEAD }, body: prBody, user: { type: prAuthorType } } };
         },
       },
       checks: {
@@ -161,7 +183,7 @@ function publisherHarness({
     },
     paginate: async () => {
       if (fault === "paginate") throw faultError;
-      return [];
+      return comments;
     },
   };
   const context = {
@@ -335,6 +357,7 @@ test("trailing or contradictory verdict content fails", () => {
 
 test("Codex is a trusted evaluator and can issue the final verdict", () => {
   const decision = evaluate({
+    prBody: "Coded-by: Claude",
     comments: [comment(marker("Codex", "PASS"))],
   });
 
@@ -344,6 +367,7 @@ test("Codex is a trusted evaluator and can issue the final verdict", () => {
 
 test("Astra is a trusted evaluator and can issue the final verdict", () => {
   const decision = evaluate({
+    prBody: "Coded-by: Claude",
     comments: [comment(marker("Astra", "PASS"))],
   });
 
@@ -356,7 +380,7 @@ test("Astra is a trusted evaluator and can issue the final verdict", () => {
 
 test("Codex's versioned and GPT-qualified forms are trusted too", () => {
   for (const evaluator of ["Codex 5.6", "GPT-5.6 Codex", "Codex (GPT-5.6)"]) {
-    const decision = evaluate({ comments: [comment(marker(evaluator, "PASS"))] });
+    const decision = evaluate({ prBody: "Coded-by: Claude", comments: [comment(marker(evaluator, "PASS"))] });
     assert.equal(decision.passed, true, `${evaluator} should be trusted`);
     assert.equal(decision.evaluator, evaluator);
   }
@@ -364,7 +388,7 @@ test("Codex's versioned and GPT-qualified forms are trusted too", () => {
 
 test("Codex's actual gpt-5.6-sol signature passes without an override", () => {
   for (const evaluator of ["Codex (gpt-5.6-sol)", "CODEX (GPT-5.6-SOL)"]) {
-    const decision = evaluate({ comments: [comment(marker(evaluator, "PASS"))] });
+    const decision = evaluate({ prBody: "Coded-by: Claude", comments: [comment(marker(evaluator, "PASS"))] });
     assert.equal(decision.passed, true, evaluator);
     assert.equal(decision.reason, "passing-verdict");
     assert.equal(decision.evaluator, evaluator);
@@ -398,11 +422,15 @@ test("the sol exception does not admit Random Model 1 or arbitrary model suffixe
   }
 });
 
-test("the posting script and real gate agree on trusted signatures in a dry run", (t) => {
+test("S17 the posting script and real gate agree on signatures and coder checks in a dry run", (t) => {
   const fixtureDirectory = mkdtempSync(join(tmpdir(), "odos-eval-signatures-"));
   t.after(() => rmSync(fixtureDirectory, { recursive: true, force: true }));
   writeFileSync(join(fixtureDirectory, "gh"), `#!/usr/bin/env bash
 set -euo pipefail
+if [[ "$1 $2" == "api repos/example/odos/pulls/506" ]]; then
+  printf '%s\\n' "$FIXTURE_PR_JSON"
+  exit 0
+fi
 if [[ "$1 $2" == "pr view" ]]; then
   printf '%s\\n' '${CURRENT_HEAD}'
   exit 0
@@ -411,7 +439,7 @@ if [[ "$1 $2" == "api --paginate" ]]; then
   case "$3" in
     */comments) exit 0 ;;
     */reviews)
-      printf '%s\\t%s\\t%s\\t%s\\n' COMMENTED '${CURRENT_HEAD}' '2026-07-16T12:00:00Z' 'greptile-apps[bot]'
+      printf '%s\\t%s\\t%s\\t%s\\n' COMMENTED '${CURRENT_HEAD}' '2026-07-16T12:00:00Z' 'coderabbitai[bot]'
       exit 0
       ;;
   esac
@@ -421,49 +449,53 @@ exit 99
 `, { mode: 0o700 });
 
   const trustedSignatures = [
-    "Astra",
-    "Fable",
-    "Fable 5",
-    "Fable 5.1",
-    "Opus",
-    "Opus 5",
-    "Claude Opus 5",
-    "Claude Opus 5 (Claude)",
-    "Codex",
-    "Codex 5.6",
-    "GPT-5.6 Codex",
-    "Codex (GPT-5.6)",
-    "Codex (gpt-5.6-sol)",
-    "CODEX (GPT-5.6-SOL)",
+    "Astra", "Fable", "Fable 5", "Fable 5.1", "Opus", "Opus 5",
+    "Claude Opus 5", "Claude Opus 5 (Claude)", "Codex", "Codex 5.6",
+    "GPT-5.6 Codex", "Codex (GPT-5.6)", "Codex (gpt-5.6-sol)", "CODEX (GPT-5.6-SOL)",
   ];
-  for (const evaluator of [...trustedSignatures, ...untrustedSignatures]) {
-    const expectedPass = trustedSignatures.includes(evaluator);
+  const cases: CoderCase[] = [
+    ...trustedSignatures.map((evaluator) => ({
+      evaluator,
+      prBody: /Fable|Opus/.test(evaluator) ? "Coded-by: Codex" : "Coded-by: Claude",
+      reason: "passing-verdict",
+    })),
+    ...untrustedSignatures.map((evaluator) => ({
+      evaluator, prBody: "Coded-by: Codex", reason: "untrusted-model",
+    })),
+    { evaluator: "Codex", prBody: "Coded-by: Codex", reason: "same-tool-evaluator" },
+    { evaluator: "Opus 5", prBody: "Coded-by: Claude", reason: "same-tool-evaluator" },
+    { evaluator: "Opus 5", prBody: "", reason: "missing-coded-by" },
+    { evaluator: "Opus 5", prBody: "Coded-by: <Codex | Claude> — <model, effort>", reason: "unrecognized-coded-by" },
+    { evaluator: "Opus (GPT-6)", prBody: "Coded-by: Codex", reason: "ambiguous-evaluator-tool" },
+    { evaluator: "Codex", prBody: "", prAuthorType: "Bot", reason: "passing-verdict" },
+    { evaluator: "Codex", prBody: "", verdict: "FAIL", reason: "failing-verdict" },
+  ];
+  for (const { evaluator, prBody, prAuthorType = "User", verdict = "PASS", reason } of cases) {
     const result = spawnSync("bash", [
       fileURLToPath(new URL("scripts/eval-post-verdict.sh", repoRoot)),
-      "506", "PASS", evaluator, "--dry-run",
+      "506", verdict, evaluator, "--dry-run",
     ], {
       cwd: fileURLToPath(repoRoot),
       env: {
         PATH: `${fixtureDirectory}:${dirname(process.execPath)}:/usr/bin:/bin`,
         GH_REPO: "example/odos",
+        FIXTURE_PR_JSON: JSON.stringify({ head: { sha: CURRENT_HEAD }, body: prBody, user: { type: prAuthorType } }),
       },
       encoding: "utf8",
       timeout: 10_000,
     });
-    assert.equal(result.status, expectedPass ? 0 : 1, `${evaluator}: ${result.stderr}`);
-    if (expectedPass) {
+    const decision = evaluate({ prBody, prAuthorType, comments: [comment(marker(evaluator, verdict))] });
+    const accepted = reason === "passing-verdict" || verdict === "FAIL";
+    assert.equal(decision.reason, reason, evaluator);
+    assert.equal(result.status, accepted ? 0 : 1, `${evaluator} (${reason}): ${result.stderr}`);
+    if (accepted) {
       assert.match(result.stdout, /Dry run only; no comment will be posted\./);
       const postedMarker = result.stdout.match(/^Evaluated-by:.*\nHead-SHA:.*$/m)?.[0];
       assert.ok(postedMarker, `${evaluator}: dry run must emit a real marker`);
-      const decision = evaluate({ comments: [comment(postedMarker)] });
-      assert.equal(decision.passed, true, evaluator);
-      assert.equal(decision.reason, "passing-verdict", evaluator);
-      assert.equal(decision.evaluator, evaluator);
+      assert.equal(evaluate({ prBody, prAuthorType, comments: [comment(postedMarker)] }).reason, reason);
     } else {
-      assert.match(result.stderr, /would be rejected by evaluation-verdict\.cjs/);
-      const decision = evaluate({ comments: [comment(marker(evaluator, "PASS"))] });
-      assert.equal(decision.passed, false, evaluator);
-      assert.equal(decision.reason, "untrusted-model", evaluator);
+      assert.ok(result.stderr.includes(decision.message), `${reason}: script must report the gate's message`);
+      assert.doesNotMatch(result.stdout, /Dry run only|^Evaluated-by:/m);
     }
   }
 });
@@ -792,7 +824,7 @@ test("evaluation-gate keeps every trigger and filters current or previous marker
 
   assert.match(
     triggers,
-    /pull_request_target:\n\s+types: \[opened, synchronize, reopened, labeled, unlabeled\]\n\s+branches: \[main\]/,
+    /pull_request_target:\n\s+types: \[opened, synchronize, reopened, edited, labeled, unlabeled\]\n\s+branches: \[main\]/,
   );
   assert.match(
     triggers,
@@ -935,4 +967,115 @@ test("CI blocks on the complete live authorization lane after policy sync", () =
     liveTest,
     /if \(process\.env\.ODOS_PRELIMINARY_OBSERVATION_AUTHZ_ONLY === "1"\) \{\n\s+return;\n\s+\}/,
   );
+});
+
+
+const coderCases: CoderCase[] = [
+  { id: "S1", evaluator: "Codex (GPT-6)", prBody: "Coded-by: Codex", reason: "same-tool-evaluator" },
+  { id: "S2", evaluator: "Astra", prBody: "Coded-by: Codex", reason: "same-tool-evaluator" },
+  { id: "S3", evaluator: "Codex (gpt-5.6-sol)", prBody: "Coded-by: Codex", reason: "same-tool-evaluator" },
+  { id: "S4", evaluator: "Opus 5", prBody: "Coded-by: Codex, GPT-6 Astra", reason: "passing-verdict" },
+  { id: "S5", evaluator: "Opus 5", prBody: "Coded-by: Claude — Opus 5", reason: "same-tool-evaluator" },
+  { id: "S6", evaluator: "Codex", prBody: "Coded-by: Claude", reason: "passing-verdict" },
+  ...["Codex", "Opus 5"].map((evaluator) => ({ id: "S7", evaluator, prBody: "Coded-by: Codex\nCoded-by: Claude", reason: "same-tool-evaluator" })),
+  { id: "S8", evaluator: "Opus 5", prBody: "", reason: "missing-coded-by" },
+  { id: "S9", evaluator: "Opus 5", prBody: "```text\nCoded-by: Codex\n```", reason: "missing-coded-by" },
+  { id: "S10", evaluator: "Opus 5", prBody: "Coded-by: <Codex | Claude> — <model, effort>", reason: "unrecognized-coded-by" },
+  { id: "S11", evaluator: "Opus (GPT-6)", prBody: "Coded-by: Codex", reason: "ambiguous-evaluator-tool" },
+  { id: "S12", evaluator: "Codex", prBody: "", prAuthorType: "Bot", reason: "passing-verdict" },
+  { id: "S13", evaluator: "Codex", prBody: "Coded-by: Codex", verdict: "OVERRIDE", labels: [{ name: "evaluated" }], reason: "label-override" },
+  { id: "S14", evaluator: "Codex", prBody: "", verdict: "OVERRIDE", labels: [{ name: "evaluated" }], reason: "label-override" },
+  { id: "S15", evaluator: "Codex", prBody: "Coded-by: Codex", verdict: "NEEDS-WORK", reason: "failing-verdict" },
+  { id: "S16", evaluator: "Opus 5", prBody: "Coded-by: Codex", head: PREVIOUS_HEAD, reason: "stale-head-sha" },
+  { id: "S16 stale same-tool companion", evaluator: "Codex", prBody: "Coded-by: Codex", head: PREVIOUS_HEAD, reason: "stale-head-sha" },
+];
+for (const { id, evaluator, prBody, reason, prAuthorType = "User", verdict = "PASS", head = CURRENT_HEAD, labels = [] } of coderCases) {
+  test(`${id} ${evaluator} returns ${reason}`, () => {
+    const body = verdict === "OVERRIDE" ? overrideMarker(head) : marker(evaluator, verdict, head);
+    const decision = evaluate({ prBody, prAuthorType, labels, comments: [comment(body)] });
+    assert.equal(decision.reason, reason);
+    assert.equal(decision.passed, reason === "passing-verdict" || reason === "label-override");
+    if (reason === "same-tool-evaluator") {
+      assert.ok(decision.message.includes(evaluator));
+      assert.match(decision.message, /Coded-by: (Codex|Claude)/);
+      assert.match(decision.message, /cannot evaluate.*operator OVERRIDE/);
+      if (id === "S7") assert.match(decision.message, /both Codex and Claude/);
+      else assert.match(decision.message, /get a (Claude|Codex) evaluation/);
+    }
+  });
+}
+
+test("S3 token-only companion classifies every whole-word alias without widening model trust", () => {
+  for (const token of ["Codex", "GPT", "Astra", "Sol"]) {
+    assert.equal(evaluatorTool(token), "codex", token);
+    assert.equal(evaluatorTool(token.toLowerCase()), "codex", token);
+  }
+  for (const token of ["Claude", "Opus", "Fable"]) {
+    assert.equal(evaluatorTool(token), "claude", token);
+  }
+  for (const token of ["Unknown", "Solstice", "Astral", "Opuses", "Codex (Claude)", "Opus (GPT-6)"]) {
+    assert.equal(evaluatorTool(token), undefined, token);
+  }
+  assert.equal(evaluate({ comments: [comment(marker("Sol", "PASS"))] }).reason, "untrusted-model");
+});
+
+test("coder declarations ignore fenced examples and use only each declaration's first word", () => {
+  for (const prBody of [
+    "~~~text\nCoded-by: Claude\n~~~\nCoDeD-bY: cOdEx — helper Opus 5",
+    "````text\nCoded-by: Claude\n```\nCoded-by: Claude\n````\nCoded-by: Codex",
+    "   ~~~text\nCoded-by: Claude\n```\nCoded-by: Claude\n   ~~~~\nCoded-by: Codex",
+    "Coded-by: Codex\nCoded-by: Codex, GPT-6 Astra",
+    "Coded-by: Codex\r\n```text\r\nCoded-by: Claude\r\n```",
+  ]) {
+    assert.equal(evaluate({ prBody, comments: [comment(marker("Opus 5", "PASS"))] }).reason, "passing-verdict", prBody);
+  }
+  for (const prBody of ["~~~\nCoded-by: Codex\n~~~", "```\nCoded-by: Codex", "Some Coded-by: Codex"]) {
+    assert.equal(evaluate({ prBody, comments: [comment(marker("Opus 5", "PASS"))] }).reason, "missing-coded-by", prBody);
+  }
+  for (const prBody of ["Coded-by: Codexish", "Coded-by: ClaudeCode", "Coded-by: Human\nCoded-by: Codex"]) {
+    assert.equal(evaluate({ prBody, comments: [comment(marker("Opus 5", "PASS"))] }).reason, "unrecognized-coded-by", prBody);
+  }
+});
+
+test("the actual PR template fails closed until its coder placeholder is edited", () => {
+  const decision = evaluate({
+    prBody: workflowSource(".github/pull_request_template.md"),
+    comments: [comment(marker("Opus 5", "PASS"))],
+  });
+  assert.equal(decision.reason, "unrecognized-coded-by");
+});
+
+test("existing failure reasons win even when the coder declaration is missing", () => {
+  for (const [body, reason] of [
+    [marker("Codex", "FAIL"), "failing-verdict"],
+    [marker("Codex", "BLOCKED"), "failing-verdict"],
+    [marker("Sonnet", "PASS"), "untrusted-model"],
+    [marker("Opus 5", "PASS", PREVIOUS_HEAD), "stale-head-sha"],
+    ["Evaluated-by: Opus 5 — PASS", "missing-head-sha"],
+    ["Evaluated-by: Opus 5", "missing-verdict"],
+  ]) {
+    assert.equal(evaluate({ prBody: "", comments: [comment(body)] }).reason, reason);
+  }
+});
+
+test("the workflow uses the fetched PR body and author type with the real parser", async () => {
+  for (const [prBody, prAuthorType, evaluator, conclusion, message] of [
+    ["Coded-by: Claude", "User", "Codex", "success", "gate passes"],
+    ["Coded-by: Codex", "User", "Codex", "failure", "cannot evaluate"],
+    ["", "User", "Codex", "failure", "CODED-BY MISSING"],
+    ["", "Bot", "Codex", "success", "gate passes"],
+  ]) {
+    const harness = publisherHarness({ prBody, prAuthorType, comments: [comment(marker(evaluator, "PASS"))] });
+    await runEvaluationWorkflowScript(harness.github, harness.context, harness.core);
+    assert.equal(harness.checkUpdates[0].conclusion, conclusion);
+    const output = harness.checkUpdates[0].output as { summary: string };
+    assert.ok(output.summary.includes(message), output.summary);
+  }
+});
+
+test("evaluation workflow checks out only the default branch without persisted credentials", () => {
+  const workflow = workflowSource(".github/workflows/evaluation-gate.yml");
+  assert.match(workflow, /ref: \$\{\{ github\.event\.repository\.default_branch \}\}/);
+  assert.match(workflow, /persist-credentials: false/);
+  assert.doesNotMatch(workflow, /ref:.*(?:head|pull_request)/);
 });

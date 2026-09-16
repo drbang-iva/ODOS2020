@@ -21,9 +21,23 @@ ODOS is built by a practicing optometrist and refined at his own practice. The r
 Every PR into `main` needs an independent Fable, Opus, or Codex evaluation. The review
 bots (CodeRabbit + PR-Agent) are a first-pass review, not the final evaluator.
 Greptile is not triggering. Do not wait for it or note its absence. A well-formed final marker from
-Fable, Opus, or Codex passes from any GitHub account. Author != evaluator remains a
-procedural expectation stated in coding kickoffs, not a mechanically enforced
-login rule.
+Fable, Opus, or Codex may pass from any GitHub account, but the gate rejects a PASS
+signed by the same tool that coded the PR, even from a separate session.
+
+Every human-authored PR body must contain `Coded-by: Codex` or `Coded-by: Claude`
+outside fenced code blocks. Add model and effort after the tool name, for example
+`Coded-by: Codex — GPT-6 Astra (high)`. Only the first word identifies the coder;
+multiple declarations form the union of their tools. A missing or unrecognized
+declaration fails closed. Bot-authored PRs need no declaration.
+
+The evaluator's whole-word tokens identify its tool: Codex/GPT/Astra/Sol means
+Codex; Claude/Opus/Fable means Claude. A signature naming both tools or neither is
+ambiguous. These checks apply only to an otherwise trusted, current-head PASS;
+existing failures retain their reasons and the operator OVERRIDE path is unchanged
+and needs no Coded-by declaration. Editing the PR body re-runs the gate.
+
+The PR body and marker can come from one shared GitHub login. This guard catches
+honest mistakes, not forgery: someone can deliberately falsify `Coded-by:`.
 
 The marker must include exactly one verdict line and the full current PR head
 SHA:
@@ -33,7 +47,7 @@ Evaluated-by: Opus 5 — PASS
 Head-SHA: 0123456789abcdef0123456789abcdef01234567
 ```
 
-The parser and `eval-post-verdict.sh` use the same model-name validator in
+The parser and `eval-post-verdict.sh` use the same gate logic, including coder checks, in
 `.github/scripts/evaluation-verdict.cjs`; the posting script requires Node.js.
 Accepted signatures include `Fable 5.1`, `Opus 5`, `Claude Opus 5 (Claude)`,
 `Codex`, `Codex 5.6`, `GPT-5.6 Codex`, `Codex (GPT-5.6)`, and

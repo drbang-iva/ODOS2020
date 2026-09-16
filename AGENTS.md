@@ -83,8 +83,11 @@ Evaluated-by: <Fable|Opus|Codex> <version> — PASS
 Head-SHA: <40-character current head>
 ```
 
-**Author ≠ evaluator is absolute.** The session that wrote the code never posts its own marker, and
-new commits stale a prior marker automatically. Who is trusted is decided in
+**Author ≠ evaluator is absolute.** Every human-authored PR body carries `Coded-by: Codex`
+or `Coded-by: Claude` outside fenced code blocks. The gate rejects a PASS signed by the same
+tool that coded the PR, including a separately invoked session. Bot-authored PRs and operator
+OVERRIDEs need no Coded-by declaration. New commits stale a prior marker automatically.
+Who is trusted is decided in
 `performance-od/decisions/` (current: `2026-09-02-eval-gate-trusts-codex.md`) and enforced by
 `.github/scripts/evaluation-verdict.cjs` — not restated here, because a second copy of a rule is
 how the last drift started.
@@ -395,9 +398,11 @@ audits); mechanical build from a settled spec/TDD grunt/tests/docs → Sonnet (m
 default home base); independent verification/evaluation → Codex (high). Advice/Q&A
 is Sonnet. Default down, escalate up; flag mid-session drift plainly.
 
-**Author ≠ evaluator, always** — the model/tool that wrote code never grades its own
-code. Fable codes → Codex evaluates. Codex codes → Fable/Opus evaluates. Scope: this
-gate fires on a shippable coding slice (PR-worthy diff), not brainstorming or
+**Author ≠ evaluator, always** — every human-authored PR body carries `Coded-by: Codex`
+or `Coded-by: Claude` outside fenced code blocks, and the gate rejects a same-tool PASS.
+A separate session of the coding tool cannot evaluate it. Claude codes → Codex evaluates;
+Codex codes → Fable/Opus evaluates. Bot-authored PRs and operator OVERRIDEs need no Coded-by.
+Scope: this gate fires on a shippable coding slice (PR-worthy diff), not brainstorming or
 micro-decisions.
 
 **When blocked by the evaluation gate, offer to obtain an independent evaluation of
