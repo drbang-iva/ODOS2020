@@ -958,3 +958,14 @@ test("D7 registration: absent or invalid majority setting refuses before any wri
  const response = await postRegistration("staff", fhir, undefined, body);
  assert.equal(response.status, 400); assert.equal(fhir.searchCalls, 0);
  });
+
+test("V1 new guarantor DOB must be a real, nonfuture date before registration transaction", async () => {
+  for (const birthDate of ["not-a-date", "2026-02-30", "9999-12-31"]) {
+    const body = JSON.parse(JSON.stringify(REGISTRATION_BODY));
+    body.responsibleParties[0].birthDate = birthDate;
+    const fhir = new RegistrationFhir("staff");
+    const response = await postRegistration("staff", fhir, undefined, body);
+    assert.equal(response.status, 400, birthDate);
+    assert.equal(fhir.transaction, undefined, birthDate);
+  }
+});

@@ -804,7 +804,6 @@ const AGE_OF_MAJORITY_CONFIG_WRITE_RULE: OdosResourceRule = {
 
 const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
   AGE_OF_MAJORITY_CONFIG_READ_RULE,
-  AGE_OF_MAJORITY_CONFIG_WRITE_RULE,
   { resourceType: "Appointment", interactions: CREATE_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
   // Phase 4a: the practice scheduling-config singleton (hours/templates/blocked time/offices).
   // Criteria-fenced so the desk touches exactly one coded Basic — never Basic at large.
@@ -1131,6 +1130,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       ...PAYER_DIRECTORY_RESOURCE_RULES,
       BILLING_IDENTITY_CONFIG_READ_RULE,
       BILLING_IDENTITY_CONFIG_WRITE_RULE,
+      AGE_OF_MAJORITY_CONFIG_WRITE_RULE,
       DIAGNOSIS_PICK_TALLY_READ_RULE,
       ...FINDING_CONFIGURATION_BASIC_READ_RESOURCE_RULES,
       ...FINDING_CONFIGURATION_BASIC_WRITE_RESOURCE_RULES,

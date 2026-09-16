@@ -8,7 +8,7 @@ import { searchAll } from "../src/fhir-search.js";
 import { ODOS_PRACTICE_ROLE_SYSTEM } from "../src/authz/roles.js";
 import { buildAgeOfMajorityConfigResource, resolveAgeOfMajorityYears, ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM, ODOS_AGE_OF_MAJORITY_CONFIG_CODE } from "../src/clinic/age-of-majority-config.js";
 
-test("age-of-majority singleton grants enforce provider reads and staff/admin edits on live Medplum", async (t) => {
+test("age-of-majority singleton grants enforce all-role reads and Admin-only writes on live Medplum", async (t) => {
   const credentials = requireMedplumAdmin(t, "ageOfMajorityAuthzLive");
   if (!credentials) return;
   const baseUrl = process.env.MEDPLUM_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8103";
@@ -28,16 +28,18 @@ test("age-of-majority singleton grants enforce provider reads and staff/admin ed
     assert.ok(patient?.id);
     
     for (const roleId of ["provider", "staff", "admin"] as const) {
-      await t.test(roleId, async () => {
+      await t.test(roleId, async (roleTest) => {
         const matches = policies.filter((policy) => {
           const tags = policy.meta?.tag?.filter((tag) => tag.system === ODOS_PRACTICE_ROLE_SYSTEM) ?? [];
           return tags.length === 1 && tags[0]?.code === roleId;
         });
         assert.equal(matches.length, 1);
         const { token } = await createRoleClient({ baseUrl, roleId, policyReference: `AccessPolicy/${matches[0]!.id}`, patientReference: `Patient/${patient.id}`, practitionerReference: `${me.profile!.resourceType}/${me.profile!.id}`, projectId, runId: randomUUID(), adminToken: callerAccessToken, track });
-        const create = await fhirRequest<Basic>(baseUrl, token, "POST", "Basic", buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }));
-        assert.equal(create.status, roleId === "provider" ? 403 : 201, create.summary);
-        const config = track(roleId === "provider"
+        const create = await fhirRequest<Basic>(baseUrl, token, "POST", "Basic", JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))));
+        await roleTest.test("create", () => {
+          assert.equal(create.status, roleId === "admin" ? 201 : 403, create.summary);
+        });
+        const config = track(roleId !== "admin"
           ? await seederFhir.create(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))
           : create.body!);
         const code = `${ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM}|${ODOS_AGE_OF_MAJORITY_CONFIG_CODE}`;
@@ -47,8 +49,10 @@ test("age-of-majority singleton grants enforce provider reads and staff/admin ed
         const read = await fhirRequest<Basic>(baseUrl, token, "GET", `Basic/${config.id}`);
         assert.equal(read.status, 200, read.summary);
         assert.ok([18, 21].includes(resolveAgeOfMajorityYears(read.body)));
-        const write = await fhirRequest<Basic>(baseUrl, token, "PUT", `Basic/${config.id}`, buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 21 }, read.body));
-        assert.equal(write.status, roleId === "provider" ? 403 : 200, write.summary);
+        const write = await fhirRequest<Basic>(baseUrl, token, "PUT", `Basic/${config.id}`, JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 21 }, read.body))));
+        await roleTest.test("update", () => {
+          assert.equal(write.status, roleId === "admin" ? 200 : 403, write.summary);
+        });
         await cleanupReferences(baseUrl, seederAccessToken, [`Basic/${config.id}`]);
         cleanup.splice(cleanup.indexOf(`Basic/${config.id}`), 1);
       });
