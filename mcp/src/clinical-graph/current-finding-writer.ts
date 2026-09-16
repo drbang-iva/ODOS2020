@@ -39,6 +39,8 @@ export interface FindingCommandResult { commandId: string; complete: boolean; ex
 type Complete = Extract<EncounterFindingState, { incomplete: false }>;
 type TargetState = Extract<FindingCommandTarget, {kind:"fact"}>["state"];
 class FindingAuditMismatch extends Error {}
+const REASSERT_COMMAND_SYSTEM = "urn:odos:finding-command:v1";
+const reassertCommandWitness = (commandId:string,target:string):string => createHash("sha256").update(`${commandId}|${target}`).digest("hex");
 const WRITE_HEADERS = { "X-ODOS-Source": "diagnosis-findings" };
 const refPattern = /^Observation\/([A-Za-z0-9.-]+)$/;
 const homePattern = /^Condition\/[A-Za-z0-9.-]+$/;
@@ -82,7 +84,12 @@ export async function classifyReplay(state: Complete & { fhir?: FindingCommandDe
     if(!state.fhir)throw new Error("Reassertion replay requires an audit lookup client.");
     const reference=baseline.kind==="canonical"?baseline.reference:baseline.sourceReference;
     const digest=sha({reference,versionId:baseline.versionId});
-    try { if(!await auditExists({fhir:state.fhir},findingAuditKey(command.commandId,id,"reassertion",digest),reference))return "not-replay"; }
+    const key=findingAuditKey(command.commandId,id,"reassertion",digest);
+    try {
+      const witnesses=await findAuditsByTag({fhir:state.fhir},REASSERT_COMMAND_SYSTEM,reassertCommandWitness(command.commandId,id));
+      if(witnesses.length)return witnesses.some(audit=>matchesFindingAudit(audit,key,reference))?"exact-replay":"reused-with-different-content";
+      if(!await auditExists({fhir:state.fhir},key,reference))return "not-replay";
+    }
     catch { throw new FindingReplayLookupError(); }
     const observation=state.observations.find(o=>`Observation/${o.id}`===reference);
     const fact=projectCurrentFindings(state).currentFacts.find(f=>f.projectionKey===id);
@@ -337,7 +344,8 @@ async function executeReassert(deps:FindingCommandDeps,command:FindingCommand,ta
     activityDisplay:"Diagnosis finding reassertion",agents:[{whoReference:deps.staffReference,typeCode:"author"}]}) as Provenance;
   audit.activity={coding:[{system:ODOS_PROVENANCE_ACTIVITY_CODE_SYSTEM,code:DIAGNOSIS_FINDING_REASSERTION_CODE,display:"Diagnosis finding reasserted"}],
     text:"Diagnosis finding reassertion"};
-  audit.meta={...audit.meta,tag:[...(audit.meta?.tag??[]),{system:FINDING_OPERATION_AUDIT_SYSTEM,code:key}]};
+  audit.meta={...audit.meta,tag:[...(audit.meta?.tag??[]),{system:FINDING_OPERATION_AUDIT_SYSTEM,code:key},
+    {system:REASSERT_COMMAND_SYSTEM,code:reassertCommandWitness(command.commandId,id)}]};
   try { const saved=await deps.fhir.createWithOutcome<Provenance>(audit,auditHeaders(key));
     if (!matchesFindingAudit(saved.resource,key,reference)) throw new FindingAuditMismatch("Reassertion audit target does not match.");
     return {clinicalWrite:"none",status:saved.created?"applied":"already-applied",target:id,reference,versionId:baseline.versionId}; }
@@ -387,6 +395,9 @@ async function createAudit(deps:FindingCommandDeps,operation:FindingOperation,se
   if (!matchesFindingAudit(saved.resource,key,self)) throw new FindingAuditMismatch("Mutation audit target does not match.");
 }
 async function auditExists(deps:Pick<FindingCommandDeps,"fhir">,key:string,reference:string):Promise<boolean> {
+  return (await findAuditsByTag(deps,FINDING_OPERATION_AUDIT_SYSTEM,key)).some(p=>matchesFindingAudit(p,key,reference));
+}
+async function findAuditsByTag(deps:Pick<FindingCommandDeps,"fhir">,system:string,key:string):Promise<Provenance[]> {
   const checked=<T extends Resource>(page:Bundle<T>):Bundle<T>=>{
     if(page.resourceType!=="Bundle" || page.type!=="searchset" || page.link?.some(l=>l.relation==="next" && !l.url) ||
       page.entry?.some(e=>e.resource?.resourceType!=="Provenance" || !e.resource.id))throw new Error("Invalid audit lookup.");
@@ -394,9 +405,9 @@ async function auditExists(deps:Pick<FindingCommandDeps,"fhir">,key:string,refer
   };
   const client={baseUrl:deps.fhir.baseUrl,search:deps.fhir.search.bind(deps.fhir),
     ...(deps.fhir.searchUrl?{searchUrl:async <T extends Resource>(url:string,type:T["resourceType"])=>checked(await deps.fhir.searchUrl!<T>(url,type))}:{})};
-  const first=checked(await deps.fhir.search<Provenance>("Provenance",{_tag:`${FINDING_OPERATION_AUDIT_SYSTEM}|${key}`,_count:"200"}));
+  const first=checked(await deps.fhir.search<Provenance>("Provenance",{_tag:`${system}|${key}`,_count:"200"}));
   const pages=await collectAllFhirSearchPages(client,"Provenance",first,deps.fhir.baseUrl);
-  return pages.some(p=>matchesFindingAudit(p,key,reference));
+  return pages.filter(p=>p.meta?.tag?.some(tag=>tag.system===system && tag.code===key));
 }
 function auditHeaders(key:string):Record<string,string> { return {...WRITE_HEADERS,"If-None-Exist":`_tag=${FINDING_OPERATION_AUDIT_SYSTEM}|${key}`}; }
 
