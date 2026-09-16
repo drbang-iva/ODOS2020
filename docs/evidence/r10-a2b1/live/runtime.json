@@ -1,0 +1,25 @@
+{
+  "projectName": "odos-r10-a2b1",
+  "health": {
+    "ok": true,
+    "version": "5.1.30-9b1bd92",
+    "platform": "linux",
+    "runtime": "v24.18.1",
+    "postgres": true,
+    "redis": true,
+    "redisInstances": {
+      "default": true
+    }
+  },
+  "image": "medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de",
+  "ports": {
+    "medplum": 29123,
+    "testPostgres": 29124,
+    "medplumPostgres": 29125
+  },
+  "network": "10.249.96.0/24",
+  "canonicalPolicies": "compiled from getRoleDeclaration/buildMedplumAccessPolicy, persisted, sync-practice-role-policy-rules --apply, and compared field-for-field by live suite",
+  "testData": "local synthetic only",
+  "lane": "test:live-authz",
+  "blocking": true
+}
