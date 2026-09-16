@@ -1,0 +1,11 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+test("T4 scenario",()=>assert.equal(1,1));
+test("T5 scenario",()=>assert.equal(1,1));
+test("T6 scenario",()=>assert.equal(1,1));
+test("T15 scenario",()=>assert.equal(1,1));
+test("T16 scenario",()=>assert.equal(1,1));
+test("T17 scenario",()=>assert.equal(1,1));
+test("T18 scenario",()=>assert.equal(1,1));
+test("T21 scenario",()=>assert.equal(1,1));
+test("T22 scenario",()=>assert.equal(1,1));

@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: W40 complete green fixture satisfies the fixed A3 scenario set
+ok 1 - W40 complete green fixture satisfies the fixed A3 scenario set
+  ---
+  duration_ms: 152.911292
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects delete-test and names T1
+ok 2 - W40 strict rejects delete-test and names T1
+  ---
+  duration_ms: 150.128167
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects delete-test-and-manifest and names T1
+ok 3 - W40 strict rejects delete-test-and-manifest and names T1
+  ---
+  duration_ms: 150.464625
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects skip and names T1
+ok 4 - W40 strict rejects skip and names T1
+  ---
+  duration_ms: 150.560667
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects todo and names T1
+ok 5 - W40 strict rejects todo and names T1
+  ---
+  duration_ms: 150.347625
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects failure and names T1
+ok 6 - W40 strict rejects failure and names T1
+  ---
+  duration_ms: 151.552709
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects wrong-suite and names T1
+ok 7 - W40 strict rejects wrong-suite and names T1
+  ---
+  duration_ms: 152.528291
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects duplicate and names T1
+ok 8 - W40 strict rejects duplicate and names T1
+  ---
+  duration_ms: 150.806708
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects child-failure and names T1
+ok 9 - W40 strict rejects child-failure and names T1
+  ---
+  duration_ms: 154.07975
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects truncated
+ok 10 - W40 strict TAP parser rejects truncated
+  ---
+  duration_ms: 1.210209
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects malformed
+ok 11 - W40 strict TAP parser rejects malformed
+  ---
+  duration_ms: 0.086541
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects wrongPlan
+ok 12 - W40 strict TAP parser rejects wrongPlan
+  ---
+  duration_ms: 0.059208
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects duplicateNumber
+ok 13 - W40 strict TAP parser rejects duplicateNumber
+  ---
+  duration_ms: 0.05125
+  type: 'test'
+  ...
+# Subtest: W40 TAP completion requires every final summary and duration
+ok 14 - W40 TAP completion requires every final summary and duration
+  ---
+  duration_ms: 0.035042
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1447.355417

@@ -1,0 +1,18 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+test("T1 scenario",()=>assert.equal(1,1));
+test("T2 scenario",()=>assert.equal(1,1));
+test("T3 scenario",()=>assert.equal(1,1));
+test("T7 scenario",()=>assert.equal(1,1));
+test("T8 scenario",()=>assert.equal(1,1));
+test("T9 scenario",()=>assert.equal(1,1));
+test("T10 scenario",()=>assert.equal(1,1));
+test("T11 scenario",()=>assert.equal(1,1));
+test("T12 scenario",()=>assert.equal(1,1));
+test("T13 scenario",()=>assert.equal(1,1));
+test("T14 scenario",()=>assert.equal(1,1));
+test("T17 scenario",()=>assert.equal(1,1));
+test("T19 scenario",()=>assert.equal(1,1));
+test("T20 scenario",()=>assert.equal(1,1));
+test("T21 scenario",()=>assert.equal(1,1));
+test("T22 scenario",()=>assert.equal(1,1));

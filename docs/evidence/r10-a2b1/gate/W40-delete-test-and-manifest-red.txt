@@ -1,0 +1,3 @@
+R10 A3 release BLOCKED
+T1: mcp manifest expected exactly once, found 0
+Exit: 1
