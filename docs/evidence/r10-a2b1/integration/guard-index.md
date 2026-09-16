@@ -34,3 +34,5 @@ All listed red commands exited 1 and their restored commands exited 0. W40 conta
 | writer/W45-red.txt | tests=1; pass=0; fail=1; skipped=0; todo=0 | writer/W45-green.txt | tests=1; pass=1; fail=0; skipped=0; todo=0 |
 
 Additional fixback guards: W7 composite selection is1 failed→1 passed (ci-fixback/composite-policy-{red,green}.tap); W40 traversal is1 failed→restored checker/findings60 passed (bot-fixback/traversal-red.tap and checker-findings-green.tap). Capture-hook mutation is1 failed→170 passed (rev33/).
+
+W7 cleanup-flow guard: ci-fixback/cleanup-both-red.txt (0/4 checks,exit1) → cleanup-both-green.txt (4/4,exit0). It executes the actual before/after finally blocks with failure injection; restored full live lane69/69 is cleanup-both-live-green.tap.

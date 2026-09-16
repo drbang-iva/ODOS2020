@@ -1,0 +1,462 @@
+
+> odos-mcp@0.1.0 test:live-authz
+> node scripts/run-tests.mjs tests/ageOfMajorityAuthzLive.test.ts tests/clinicalWriteAuthzLive.test.ts tests/encounterUndoLedgerAuthzLive.test.ts tests/r10DiagnosisDoorAuthzLive.test.ts tests/v05a-authz.test.ts
+
+TAP version 13
+# Subtest: age-of-majority singleton grants enforce all-role reads and Admin-only writes on live Medplum
+    # Subtest: provider
+        # Subtest: create
+        ok 1 - create
+          ---
+          duration_ms: 0.197708
+          type: 'test'
+          ...
+        # Subtest: update
+        ok 2 - update
+          ---
+          duration_ms: 0.085
+          type: 'test'
+          ...
+        1..2
+    ok 1 - provider
+      ---
+      duration_ms: 67.553417
+      type: 'test'
+      ...
+    # Subtest: staff
+        # Subtest: create
+        ok 1 - create
+          ---
+          duration_ms: 0.085667
+          type: 'test'
+          ...
+        # Subtest: update
+        ok 2 - update
+          ---
+          duration_ms: 0.087333
+          type: 'test'
+          ...
+        1..2
+    ok 2 - staff
+      ---
+      duration_ms: 66.122709
+      type: 'test'
+      ...
+    # Subtest: admin
+        # Subtest: create
+        ok 1 - create
+          ---
+          duration_ms: 0.186125
+          type: 'test'
+          ...
+        # Subtest: update
+        ok 2 - update
+          ---
+          duration_ms: 0.1405
+          type: 'test'
+          ...
+        1..2
+    ok 3 - admin
+      ---
+      duration_ms: 49.587
+      type: 'test'
+      ...
+    1..3
+ok 1 - age-of-majority singleton grants enforce all-role reads and Admin-only writes on live Medplum
+  ---
+  duration_ms: 335.494584
+  type: 'test'
+  ...
+# Subtest: synced practice policies enforce all repaired clinical writes on running Medplum
+    # Subtest: K1 staff cannot strip, add, or change an existing child claim
+    ok 1 - K1 staff cannot strip, add, or change an existing child claim
+      ---
+      duration_ms: 24.197083
+      type: 'test'
+      ...
+    # Subtest: K2 staff cannot create a claimed child
+    ok 2 - K2 staff cannot create a claimed child
+      ---
+      duration_ms: 2.960625
+      type: 'test'
+      ...
+    # Subtest: K3 staff can create and edit an unclaimed child
+    ok 3 - K3 staff can create and edit an unclaimed child
+      ---
+      duration_ms: 10.665542
+      type: 'test'
+      ...
+    # Subtest: K4 staff can edit name and phone while preserving an inert claim
+    ok 4 - K4 staff can edit name and phone while preserving an inert claim
+      ---
+      duration_ms: 77.031208
+      type: 'test'
+      ...
+    # Subtest: Provider voids a preliminary Observation seeded by Staff
+    ok 5 - Provider voids a preliminary Observation seeded by Staff
+      ---
+      duration_ms: 5.510125
+      type: 'test'
+      ...
+    # Subtest: Staff voids a preliminary Observation seeded by Provider
+    ok 6 - Staff voids a preliminary Observation seeded by Provider
+      ---
+      duration_ms: 5.397916
+      type: 'test'
+      ...
+    # Subtest: Staff cannot finalize a preliminary Observation seeded by Provider
+    ok 7 - Staff cannot finalize a preliminary Observation seeded by Provider
+      ---
+      duration_ms: 3.111375
+      type: 'test'
+      ...
+    # Subtest: Chart sidebar > Allergies — Mark no known allergies
+    ok 8 - Chart sidebar > Allergies — Mark no known allergies
+      ---
+      duration_ms: 11.577417
+      type: 'test'
+      ...
+    # Subtest: Chart sidebar > Allergies — Add allergy
+    ok 9 - Chart sidebar > Allergies — Add allergy
+      ---
+      duration_ms: 8.656375
+      type: 'test'
+      ...
+    # Subtest: Chart sidebar > Care Team — Add team member
+    ok 10 - Chart sidebar > Care Team — Add team member
+      ---
+      duration_ms: 9.091125
+      type: 'test'
+      ...
+    # Subtest: Diagnosis workspace/assessment — diagnosis laterality BodyStructure
+    ok 11 - Diagnosis workspace/assessment — diagnosis laterality BodyStructure
+      ---
+      duration_ms: 7.515875
+      type: 'test'
+      ...
+    # Subtest: IOP Timeline target editor — Save a new target
+    ok 12 - IOP Timeline target editor — Save a new target
+      ---
+      duration_ms: 8.702666
+      type: 'test'
+      ...
+    # Subtest: IOP Timeline target editor — Save an existing target
+    ok 13 - IOP Timeline target editor — Save an existing target
+      ---
+      duration_ms: 6.83725
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Add prescription
+    ok 14 - Prescriptions — Add prescription
+      ---
+      duration_ms: 9.172
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Staff edits repeats before transmission
+    ok 15 - Prescriptions — Staff edits repeats before transmission
+      ---
+      duration_ms: 7.13
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Send to pharmacy (reserve WENO message id)
+    ok 16 - Prescriptions — Send to pharmacy (reserve WENO message id)
+      ---
+      duration_ms: 9.155
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Send to pharmacy (record indeterminate outcome)
+    ok 17 - Prescriptions — Send to pharmacy (record indeterminate outcome)
+      ---
+      duration_ms: 8.506375
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Pharmacy verified not received — clear reservation
+    ok 18 - Prescriptions — Pharmacy verified not received — clear reservation
+      ---
+      duration_ms: 6.95175
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Send to pharmacy (record successful transmission)
+    ok 19 - Prescriptions — Send to pharmacy (record successful transmission)
+      ---
+      duration_ms: 7.673583
+      type: 'test'
+      ...
+    # Subtest: Prescriptions — Send to pharmacy (record WENO error)
+    ok 20 - Prescriptions — Send to pharmacy (record WENO error)
+      ---
+      duration_ms: 6.473708
+      type: 'test'
+      ...
+    # Subtest: Staff transmitted prescription mutation is denied while Provider control succeeds
+    ok 21 - Staff transmitted prescription mutation is denied while Provider control succeeds
+      ---
+      duration_ms: 6.751333
+      type: 'test'
+      ...
+    # Subtest: Staff prescription requester mutation is denied before transmission
+    ok 22 - Staff prescription requester mutation is denied before transmission
+      ---
+      duration_ms: 2.925542
+      type: 'test'
+      ...
+    # Subtest: Dry Eye > Adverse Event — Capture and persist Provenance
+    ok 23 - Dry Eye > Adverse Event — Capture and persist Provenance
+      ---
+      duration_ms: 21.475584
+      type: 'test'
+      ...
+    # Subtest: Ortho-K > Adverse Event — Capture and persist Provenance
+    ok 24 - Ortho-K > Adverse Event — Capture and persist Provenance
+      ---
+      duration_ms: 16.977
+      type: 'test'
+      ...
+    # Subtest: practice-role clients cannot forge AuditEvent
+    ok 25 - practice-role clients cannot forge AuditEvent
+      ---
+      duration_ms: 7.395
+      type: 'test'
+      ...
+    1..25
+ok 2 - synced practice policies enforce all repaired clinical writes on running Medplum
+  ---
+  duration_ms: 519.507292
+  type: 'test'
+  ...
+# Subtest: a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+    # Subtest: provider clears one VA value and the ledger slot persists and reads back
+        # Subtest: provider undoes the clear and reads the restored VA value under the same policy
+        ok 1 - provider undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 36.662083
+          type: 'test'
+          ...
+        # Subtest: provider cannot undo on a signed encounter and the refusal preserves the value and slot
+        ok 2 - provider cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 66.24625
+          type: 'test'
+          ...
+        1..2
+    ok 1 - provider clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 208.365375
+      type: 'test'
+      ...
+    # provider: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
+    # provider: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged
+    # Subtest: staff clears one VA value and the ledger slot persists and reads back
+        # Subtest: staff undoes the clear and reads the restored VA value under the same policy
+        ok 1 - staff undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 31.536042
+          type: 'test'
+          ...
+        # Subtest: staff cannot undo on a signed encounter and the refusal preserves the value and slot
+        ok 2 - staff cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 85.217625
+          type: 'test'
+          ...
+        1..2
+    ok 2 - staff clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 189.906333
+      type: 'test'
+      ...
+    # staff: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
+    # staff: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged
+    1..2
+ok 3 - a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+  ---
+  duration_ms: 509.069666
+  type: 'test'
+  ...
+# Subtest: W7 live policy selection excludes composite role policies
+ok 4 - W7 live policy selection excludes composite role policies
+  ---
+  duration_ms: 2.189833
+  type: 'test'
+  ...
+# Subtest: R10 diagnosis door enforces canonical policies through real handlers for staff and provider
+    # Subtest: staff: assert clear revive move link and zero-write refusals
+    ok 1 - staff: assert clear revive move link and zero-write refusals
+      ---
+      duration_ms: 482.14025
+      type: 'test'
+      ...
+    # Subtest: provider: assert clear revive move link and zero-write refusals
+    ok 2 - provider: assert clear revive move link and zero-write refusals
+      ---
+      duration_ms: 407.293167
+      type: 'test'
+      ...
+    1..2
+ok 5 - R10 diagnosis door enforces canonical policies through real handlers for staff and provider
+  ---
+  duration_ms: 1164.70275
+  type: 'test'
+  ...
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/8a5cfebb-f620-412d-b940-a729a7ae8ce0","operation":"assert","before":"absent","after":"preliminary","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/8a5cfebb-f620-412d-b940-a729a7ae8ce0","operation":"clear","before":"preliminary","after":"entered-in-error","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/8a5cfebb-f620-412d-b940-a729a7ae8ce0","operation":"revive","before":"entered-in-error","after":"preliminary","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/8a5cfebb-f620-412d-b940-a729a7ae8ce0","operation":"move","before":"Condition/47e2871e-4393-4b8c-b584-e295bf65be3d","after":"Condition/e4a17176-96be-4d20-ba96-3513716832d7","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/8a5cfebb-f620-412d-b940-a729a7ae8ce0","operation":"link","before":"Condition/e4a17176-96be-4d20-ba96-3513716832d7","after":"Condition/e4a17176-96be-4d20-ba96-3513716832d7,Condition/47e2871e-4393-4b8c-b584-e295bf65be3d","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Condition","operation":"update/pick","before":"unchanged","after":"403 unchanged","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/8a5cfebb-f620-412d-b940-a729a7ae8ce0","operation":"signed-or-cancelled refusal","before":"final","after":"final","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/8a5cfebb-f620-412d-b940-a729a7ae8ce0","operation":"signed-or-cancelled refusal","before":"cancelled","after":"cancelled","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Encounter","reference":"Encounter/16516a5b-ef1d-4bca-b59a-05cb7141650f","operation":"pre-rebuild refusal","before":"legacy read-only","after":"409 unchanged","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","operation":"two-tab eye-change","before":"OS differs","after":"409 zero writes","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","operation":"lost response then identical Retry","before":"absent","after":"one persisted owner and one clinical write","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/fb57c0cb-f356-43ac-b03c-47f36ad477ba","operation":"assert","before":"absent","after":"preliminary","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/fb57c0cb-f356-43ac-b03c-47f36ad477ba","operation":"clear","before":"preliminary","after":"entered-in-error","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/fb57c0cb-f356-43ac-b03c-47f36ad477ba","operation":"revive","before":"entered-in-error","after":"preliminary","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/fb57c0cb-f356-43ac-b03c-47f36ad477ba","operation":"move","before":"Condition/8f11773f-ec88-4a26-b09b-e55891d21638","after":"Condition/93d3b2f2-70fc-44d5-ab8e-252321e056ab","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/fb57c0cb-f356-43ac-b03c-47f36ad477ba","operation":"link","before":"Condition/93d3b2f2-70fc-44d5-ab8e-252321e056ab","after":"Condition/93d3b2f2-70fc-44d5-ab8e-252321e056ab,Condition/8f11773f-ec88-4a26-b09b-e55891d21638","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/fb57c0cb-f356-43ac-b03c-47f36ad477ba","operation":"signed-or-cancelled refusal","before":"final","after":"final","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/fb57c0cb-f356-43ac-b03c-47f36ad477ba","operation":"signed-or-cancelled refusal","before":"cancelled","after":"cancelled","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Encounter","reference":"Encounter/2ff24aac-214d-462c-aeb5-f36c6056ec6c","operation":"pre-rebuild refusal","before":"legacy read-only","after":"409 unchanged","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","operation":"two-tab eye-change","before":"OS differs","after":"409 zero writes","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","operation":"lost response then identical Retry","before":"absent","after":"one persisted owner and one clinical write","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# Subtest: the practice role registry defines only Provider, Staff, and Admin
+ok 6 - the practice role registry defines only Provider, Staff, and Admin
+  ---
+  duration_ms: 0.562791
+  type: 'test'
+  ...
+# Subtest: full role table keeps diagnosis action equivalent to Condition create and update grants
+ok 7 - full role table keeps diagnosis action equivalent to Condition create and update grants
+  ---
+  duration_ms: 0.264417
+  type: 'test'
+  ...
+# Subtest: diagnosis permission cannot be granted independently of a credentialed role and can be revoked
+ok 8 - diagnosis permission cannot be granted independently of a credentialed role and can be revoked
+  ---
+  duration_ms: 0.247209
+  type: 'test'
+  ...
+# Subtest: AccessPolicy generator emits Medplum interactions, criteria, and writeConstraint without business-action leakage
+ok 9 - AccessPolicy generator emits Medplum interactions, criteria, and writeConstraint without business-action leakage
+  ---
+  duration_ms: 0.429
+  type: 'test'
+  ...
+# Subtest: protocol authoring is credential-bound to Provider with code-fenced Basic grants
+ok 10 - protocol authoring is credential-bound to Provider with code-fenced Basic grants
+  ---
+  duration_ms: 0.346875
+  type: 'test'
+  ...
+# Subtest: front-desk can create the dispensary order + financial resources at practice scope
+ok 11 - front-desk can create the dispensary order + financial resources at practice scope
+  ---
+  duration_ms: 0.089
+  type: 'test'
+  ...
+# Subtest: front-desk cannot update or delete PaymentReconciliation outside the guarded Phase 6a handlers
+ok 12 - front-desk cannot update or delete PaymentReconciliation outside the guarded Phase 6a handlers
+  ---
+  duration_ms: 0.108042
+  type: 'test'
+  ...
+# Subtest: every role can read payments while only custody roles can create them
+ok 13 - every role can read payments while only custody roles can create them
+  ---
+  duration_ms: 0.101584
+  type: 'test'
+  ...
+# Subtest: compiled front-desk and practice-admin AccessPolicies grant payer Organization directory operations
+ok 14 - compiled front-desk and practice-admin AccessPolicies grant payer Organization directory operations
+  ---
+  duration_ms: 0.257583
+  type: 'test'
+  ...
+# Subtest: every role's AccessPolicy carries a machine-readable practice-role identifier (resolver anchor)
+ok 15 - every role's AccessPolicy carries a machine-readable practice-role identifier (resolver anchor)
+  ---
+  duration_ms: 0.387208
+  type: 'test'
+  ...
+# Subtest: ProjectMembership access builder emits parameterized provider, patient, and state-license values
+ok 16 - ProjectMembership access builder emits parameterized provider, patient, and state-license values
+  ---
+  duration_ms: 0.168125
+  type: 'test'
+  ...
+# Subtest: aesthetics-provider state scoping rejects out-of-state or out-of-scope procedures
+ok 17 - aesthetics-provider state scoping rejects out-of-state or out-of-scope procedures
+  ---
+  duration_ms: 0.127834
+  type: 'test'
+  ...
+# Subtest: Binary parser plugin requires securityContext and rejects outside patient compartment
+ok 18 - Binary parser plugin requires securityContext and rejects outside patient compartment
+  ---
+  duration_ms: 0.150209
+  type: 'test'
+  ...
+# Subtest: Binary parser plugin accepts valid raw upload header and blocks securityContext rewrite
+ok 19 - Binary parser plugin accepts valid raw upload header and blocks securityContext rewrite
+  ---
+  duration_ms: 0.074917
+  type: 'test'
+  ...
+# Subtest: MCP FHIR client refuses direct Binary create without parser guard header
+ok 20 - MCP FHIR client refuses direct Binary create without parser guard header
+  ---
+  duration_ms: 0.177458
+  type: 'test'
+  ...
+# Subtest: ProjectMembership lifecycle transitions emit audit rows and placeholder AuditEvent
+ok 21 - ProjectMembership lifecycle transitions emit audit rows and placeholder AuditEvent
+  ---
+  duration_ms: 0.443667
+  type: 'test'
+  ...
+# Subtest: ProjectMembership role review preserves state and emits a review audit row
+ok 22 - ProjectMembership role review preserves state and emits a review audit row
+  ---
+  duration_ms: 0.841125
+  type: 'test'
+  ...
+# Subtest: break-glass requires human reason, creates time-limited access, and flags admin review
+ok 23 - break-glass requires human reason, creates time-limited access, and flags admin review
+  ---
+  duration_ms: 0.192083
+  type: 'test'
+  ...
+# Subtest: break-glass rejects agent self-attestation and blank reason
+ok 24 - break-glass rejects agent self-attestation and blank reason
+  ---
+  duration_ms: 0.056959
+  type: 'test'
+  ...
+# Subtest: audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available
+ok 25 - audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available
+  ---
+  duration_ms: 97.59975
+  type: 'test'
+  ...
+# Subtest: v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)
+ok 26 - v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)
+  ---
+  duration_ms: 56945.16325
+  type: 'test'
+  ...
+# Subtest: compiled Staff policy fences RelatedPerson claims without changing other demographic grants
+ok 27 - compiled Staff policy fences RelatedPerson claims without changing other demographic grants
+  ---
+  duration_ms: 0.200541
+  type: 'test'
+  ...
+1..27
+# tests 69
+# suites 0
+# pass 69
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 60599.967

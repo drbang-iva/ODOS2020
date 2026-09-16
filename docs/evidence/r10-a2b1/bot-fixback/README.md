@@ -41,3 +41,5 @@ sanitize_evidence.py replaces workstation home/worktree prefixes with <repo>/<ho
 Final focused parity:170/170 from the required mcp working directory (parity.tap). An initial invocation from repository root produced169/170 because the wrapper subprocess resolves tests/fixtures relative to cwd (parity-wrong-cwd.tap); no code or assertion changed to correct the invocation. Preflight:0 warnings/0 hard blocks. MCP build:exit0.
 
 Final review atabffc6f9 added one evidence-only thread4029196322: Linux home prefixes were not normalized. Extended both regexes to Users|home, retaining repository-before-home ordering. Four-case check:before2/4,after4/4 (linux-sanitizer.txt); macOS and CI behavior retained. No application code or clinical assertion changed. Total dispositions:14 threads,12 addressed,2 explicitly deferred.
+
+Review at6ddfb82a added thread4029420785 for cleanup short-circuiting. Both cleanup passes now run, membership first, and failures are aggregated. W7/§7 actual-block guard0/4→4/4, live69/69, fullMCP5,740 total/5,716 pass/0 fail/8 named skips/16 todos. Details and runner in ../ci-fixback/. Total:15 threads,13 addressed,2 explicitly deferred.

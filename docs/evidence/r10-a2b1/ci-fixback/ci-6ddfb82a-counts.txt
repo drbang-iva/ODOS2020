@@ -1,0 +1,33 @@
+CI run35133838890; head6ddfb82a8c4f093357b1fdb23cad0ea16e04f7ee; conclusion success.
+https://github.com/drbang-iva/ODOS2020/actions/runs/35133838890
+
+run mcp tests: # tests 5669
+run mcp tests: # pass 5601
+run mcp tests: # fail 0
+run mcp tests: # skipped 52
+run mcp tests: # todo 16
+run credentialed live integration lane: # tests 12
+run credentialed live integration lane: # pass 12
+run credentialed live integration lane: # fail 0
+run credentialed live integration lane: # skipped 0
+run credentialed live integration lane: # todo 0
+run credentialed live integration lane: # tests 218
+run credentialed live integration lane: # pass 218
+run credentialed live integration lane: # fail 0
+run credentialed live integration lane: # skipped 0
+run credentialed live integration lane: # todo 0
+run credentialed live authorization lane: # tests 69
+run credentialed live authorization lane: # pass 69
+run credentialed live authorization lane: # fail 0
+run credentialed live authorization lane: # skipped 0
+run credentialed live authorization lane: # todo 0
+front-door parity self-tests: # tests 67
+front-door parity self-tests: # pass 67
+front-door parity self-tests: # fail 0
+front-door parity self-tests: # skipped 0
+front-door parity self-tests: # todo 0
+run ui tests: # tests 1629
+run ui tests: # pass 1629
+run ui tests: # fail 0
+run ui tests: # skipped 0
+run ui tests: # todo 0
