@@ -231,9 +231,9 @@ test("loader returns sanitized typed incomplete categories", async () => {
     assert.equal(result.incomplete,true);if(result.incomplete)assert.equal(result.kind,kind);
   }
   const missing=await loadEncounterFindingState({baseUrl:"http://localhost:8103",search:async(type:string)=>type==="Observation"?bundle([{...atomic(),id:undefined}]):bundle([])} as any,input);
-  assert.equal(missing.incomplete,true);if(missing.incomplete)assert.equal(missing.kind,"missing");
+  assert.equal(missing.incomplete,true);if(missing.incomplete)assert.equal(missing.kind,"upstream");
   const refused=await loadEncounterFindingState({baseUrl:"http://localhost:8103",search:async()=>({...bundle([]),link:[{relation:"next"}]})} as any,input);
-  assert.equal(refused.incomplete,true);if(refused.incomplete)assert.equal(refused.kind,"refused");
+  assert.equal(refused.incomplete,true);if(refused.incomplete)assert.equal(refused.kind,"upstream");
   assert.equal((await loadEncounterFindingState({baseUrl:"http://localhost:8103",search} as any,input)).incomplete,false);
 });
 test("audit lookup is opt-in and only current marked fact without matching audit is pending", async () => {
@@ -248,7 +248,7 @@ test("audit lookup is opt-in and only current marked fact without matching audit
   assert.equal(audits,1);assert.equal(projectCurrentFindings(audited).currentFacts[0].auditPending,true);
   const bad={...marked,component:[...canonical().component!,comp("R10_OPERATION","bad-json")]};
   const failed=await loadEncounterFindingState({...fhir,search:async(type:string)=>bundle(type==="Observation"?[bad]:[])} as any,{...input,includeAuditState:true});
-  assert.equal(failed.incomplete,true);if(failed.incomplete)assert.equal(failed.kind,"refused");
+  assert.equal(failed.incomplete,true);if(failed.incomplete)assert.equal(failed.kind,"upstream");
 });
 
 test("W16 full, partial, excluded and equal-time negatives use Observation time and preserve unaffected options", () => {
@@ -274,7 +274,7 @@ test("W16 full, partial, excluded and equal-time negatives use Observation time 
 
 test("typed incomplete maps transport refusal and missing status without upstream details", async () => {
   const input = { patientReference: "Patient/p1", encounterReference: "Encounter/e1", definitions, catalog };
-  for (const [status, kind] of [[403, "refused"], [404, "missing"]]) {
+  for (const [status, kind] of [[403, "refused"], [404, "missing"], [410, "missing"]]) {
     const result = await loadEncounterFindingState({ baseUrl: "http://localhost:8103/", search: async () => { throw Object.assign(new Error("private response"), { status }); } }, input);
     assert.equal(result.incomplete, true);
     if (result.incomplete) assert.equal(result.kind, kind);
@@ -301,5 +301,15 @@ test("review regression: resource search details cannot masquerade as audit look
     if(type==="Provenance")throw new Error("transport disconnected");
     return {...empty,entry:type==="Observation"?[{resource:marked}]:[]};
   }} as any,input);
-  assert.deepEqual(failed,{incomplete:true,kind:"refused",reason:"Finding audit state could not be verified."});
+  assert.deepEqual(failed,{incomplete:true,kind:"upstream",reason:"Finding audit state could not be verified."});
+});
+
+test("preRebuild includes retired legacy, snapshots, unresolved and invalid findings", () => {
+  for (const observation of [atomic(), { ...atomic(), status: "entered-in-error" as const }, snapshot(),
+    atomic("unknown", "UNKNOWN"), { ...canonical(), identifier: [] }]) {
+    assert.equal(project([canonical(), observation]).preRebuild, true);
+  }
+  assert.equal(project([]).preRebuild, false);
+  assert.equal(project([canonical()]).preRebuild, false);
+  assert.equal(project([negative()]).preRebuild, false);
 });

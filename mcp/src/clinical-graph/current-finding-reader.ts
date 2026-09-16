@@ -68,6 +68,7 @@ export interface FindingPanel {
 }
 export type FindingDefinitionView = Observation & { projectionKey: string; contributors: FindingContributor[] };
 export interface CurrentFindingProjection {
+  preRebuild: boolean;
   currentFacts: CurrentFindingFact[];
   panels: FindingPanel[];
   definitionViews: FindingDefinitionView[];
@@ -90,14 +91,14 @@ interface Assertion {
 }
 interface Snapshot { observation: Observation; definition: ClinicalFindingDefinition; eye: FindingEye; kind: FindingClassification["kind"] }
 class FindingLoadError extends Error {
-  constructor(readonly kind: "refused" | "missing" | "foreign-or-unscoped", message: string) { super(message); }
+  constructor(readonly kind: "upstream" | "refused" | "missing" | "foreign-or-unscoped", message: string) { super(message); }
 }
 
 export async function loadEncounterFindingState(fhir: FhirSearchClient, input: EncounterFindingInput): Promise<EncounterFindingState> {
   try {
     const checked = <T extends Resource>(bundle: Bundle<T>): Bundle<T> => {
-      if (bundle.resourceType !== "Bundle" || bundle.link?.some(l => l.relation === "next" && !l.url)) throw new FindingLoadError("refused", "Malformed encounter search page.");
-      if (bundle.entry?.some(e => !e.resource || !e.resource.id)) throw new FindingLoadError("missing", "Encounter search returned a resource without an id.");
+      if (bundle.resourceType !== "Bundle" || bundle.link?.some(l => l.relation === "next" && !l.url)) throw new FindingLoadError("upstream", "Malformed encounter search page.");
+      if (bundle.entry?.some(e => !e.resource || !e.resource.id)) throw new FindingLoadError("upstream", "Encounter search returned a resource without an id.");
       return bundle;
     };
     const client: FhirSearchClient = { baseUrl: fhir.baseUrl, search: fhir.search.bind(fhir),
@@ -119,21 +120,21 @@ export async function loadEncounterFindingState(fhir: FhirSearchClient, input: E
     let pendingAudits: Set<string> | undefined;
     if (input.includeAuditState) {
       try { pendingAudits = await findPendingAudits(fhir, observations); }
-      catch { throw new FindingLoadError("refused", "Finding audit state could not be verified."); }
+      catch { throw new FindingLoadError("upstream", "Finding audit state could not be verified."); }
     }
     return { ...input, incomplete: false, observations, conditions, ...(pendingAudits ? { pendingAudits } : {}) };
   } catch (error) {
     if (error instanceof FindingLoadError) return { incomplete: true, kind: error.kind, reason: error.message };
     const httpStatus = (error as { status?: number })?.status;
     if (httpStatus === 401 || httpStatus === 403) return { incomplete: true, kind: "refused", reason: "Encounter search was refused." };
-    if (httpStatus === 404) return { incomplete: true, kind: "missing", reason: "Encounter search resource is missing." };
+    if (httpStatus === 404 || httpStatus === 410) return { incomplete: true, kind: "missing", reason: "Encounter search resource is missing." };
     return { incomplete: true, kind: "upstream", reason: "Encounter search failed." };
   }
 }
 
 export function projectCurrentFindings(state: EncounterFindingState): CurrentFindingProjection {
   if (state.incomplete) throw new Error(`Cannot project incomplete finding state: ${state.reason}`);
-  const result: CurrentFindingProjection = { currentFacts: [], panels: [], definitionViews: [], conflicts: [], unresolved: [] };
+  const result: CurrentFindingProjection = { preRebuild: false, currentFacts: [], panels: [], definitionViews: [], conflicts: [], unresolved: [] };
   const aliases = buildFindingReadAliases(state.definitions, state.catalog);
   const assertions = new Map<string, Assertion[]>();
   const snapshots = new Map<string, Snapshot[]>();
@@ -159,6 +160,7 @@ export function projectCurrentFindings(state: EncounterFindingState): CurrentFin
   };
   for (const observation of state.observations) {
     const classified = classifyFindingObservation(observation, state.definitions, state.catalog, aliases);
+    if (["legacy-atomic", "legacy-section-snapshot", "unresolved-legacy", "invalid"].includes(classified.kind)) result.preRebuild = true;
     if (classified.kind === "unrelated") { passthrough.push(observation); continue; }
     if (!observation.id) { unresolved(observation, "Stored finding has no resource id."); continue; }
     if (classified.kind === "invalid" || classified.kind === "unresolved-legacy") { unresolved(observation, classified.reason!); continue; }
