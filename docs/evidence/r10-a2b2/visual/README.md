@@ -6,7 +6,7 @@ These are real React components served through Vite with synthetic in-browser tr
 
 The capture asserts one OU row, disabled conflict controls, all controls disabled for pre-rebuild data, each unavailable/recovery message, visible Repair, and zero uncaught browser page errors. All twelve images were visually inspected. During inspection, notices initially displaced the diagnosis grid; the parent agent corrected their placement and the final images were recaptured. The final partial capture includes the parent's visible button styling.
 
-`capture.log` lists all twelve completed captures. `capture-observations.json` records visible text. `block.md` was generated with the vendored before-and-after formatter; its local references must be replaced with verified commit-pinned URLs after the parent commits and pushes the evidence.
+`capture.txt` lists all twelve completed captures. `capture-observations.json` records visible text. `block.md` was generated with the vendored before-and-after formatter; its local references must be replaced with verified commit-pinned URLs after the parent commits and pushes the evidence.
 
 Reproduce from repository root:
 

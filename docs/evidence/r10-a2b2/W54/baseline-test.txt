@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: W54 legacy DiagnosisPicker preserves a failed pick error without a success event or reload
+ok 1 - W54 legacy DiagnosisPicker preserves a failed pick error without a success event or reload
+  ---
+  duration_ms: 17.501916
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 235.386792
