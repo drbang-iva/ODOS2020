@@ -456,7 +456,7 @@ test("allOf mapping triggers require every nested option trigger", () => {
 
 test("EOM binocular plus incomitant proposes diplopia and paralytic strabismus without auto-confirming", async () => {
   const fhir = new MemoryFhir();
-    fhir.resources.push(testEncounter("eom", "p1"));
+  fhir.resources.push(testEncounter("eom", "p1"));
   const definitions = await new FhirFindingDefinitionStore(fhir).list();
   const authenticate = async () => ({ staffReference: "Practitioner/doc", actorRole: "provider" as PracticeRoleId, fhir });
   const base = { patientReference: "Patient/p1", encounterReference: "Encounter/eom", state: "abnormal" as const, eyes: { OD: { primary: "-1" as const } }, nystagmus: { present: false } };
@@ -1342,7 +1342,7 @@ test("I5 qualifier components cannot diagnose or suppress without an active pare
 
   for (const parent of ["absent", "false"] as const) {
     const fhir = new MemoryFhir();
-    fhir.resources.push(testEncounter("e-qualified", "p-qualified"));
+  fhir.resources.push(testEncounter("e-qualified", "p-qualified"));
     const definitions = await new FhirFindingDefinitionStore(fhir).list();
     const definition = definitions.find((candidate) => candidate.stableKey === "ocular-health:anterior:conjunctiva");
     assert.ok(definition);
@@ -1394,7 +1394,7 @@ test("I5 qualifier components cannot diagnose or suppress without an active pare
 
 test("I6 allOf-wrapped option fallbacks are suppressed like bare option fallbacks", async () => {
   const fhir = new MemoryFhir();
-    fhir.resources.push(testEncounter("e-qualified", "p-qualified"));
+  fhir.resources.push(testEncounter("e-qualified", "p-qualified"));
   const store = new FhirFindingDefinitionStore(fhir);
   const definition = (await store.list()).find((candidate) => candidate.stableKey === "ocular-health:anterior:conjunctiva");
   assert.ok(definition);

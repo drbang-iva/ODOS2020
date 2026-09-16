@@ -316,3 +316,10 @@ After:
 - L2 MemoryFhir now supplies baseUrl; scoped candidate fixtures seed their Encounter explicitly (V8/W-d).
 - L3 catalog resources now have ids, matching real persisted Basic resources; strict store page validation rejects missing ids (V8 / §3.9).
 - L2 appended tests cover W10/W29/W30/W35, trigger support union, mixed option/numeric context, whole-support prevalidation, bilateral support union, conditionStep failures, no-real-id picks, and page-two diagnosis lookup.
+
+## Additional expected response fields and HTTP helper assertions — W-b / W-e
+
+- `mcp/tests/diagnosisLinkL2.test.ts:318` (baseline) → `:322` (current): the staged-conflict deep-equality body previously contained only `error`; it now also contains `result: "invalid", reason: "invalid-pick"` to assert the response discriminator.
+- `mcp/tests/diagnosisLinkL2.test.ts:650` (baseline) → `:656` (current): the HTTP `post` helper's asserted expected status changes from 201 to 200 for the applied Cup/Disc pick.
+- `mcp/tests/diagnosisLinkL2.test.ts:665` (baseline) → `:671` (current): the HTTP `post` helper's asserted expected status changes from `index === 0 ? 201 : 200` to 200 for possible/confirm applied picks.
+- The appended mixed-panel-context test's per-candidate `linkable: false` expectation was added after checkpoint153bb322; `linkability-red.tap` demonstrates the old omission, and `linkability-green.tap` demonstrates the individual candidate signal (W-d).
