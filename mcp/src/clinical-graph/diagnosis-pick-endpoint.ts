@@ -423,7 +423,11 @@ async function performDiagnosisPickRequest(
   };
 }
 
-export type DiagnosisPickResponse = ({ result: "pick"; commandId?: string; conditionStep: "applied" | "unconfirmed" | "failed"; link: "pending" | "not-applicable" } & Partial<DiagnosisDemotionImpact> & { condition?: Condition; encounter?: Encounter; provenanceReference?: string; error?: string; action?: string; diagnosisVisitStatus?: unknown }) |
+export type DiagnosisPickResponse = ({ result: "pick"; commandId?: string; link: "pending" | "not-applicable" } & (
+  ({ conditionStep: "applied"; condition: Condition; encounter?: Encounter; provenanceReference?: string; error?: string; action: string;
+    diagnosisVisitStatus?: Awaited<ReturnType<DiagnosisVisitStatusStore["upsert"]>> } & DiagnosisDemotionImpact) |
+  { conditionStep: "unconfirmed" | "failed"; error: string }
+)) |
   { result: "unavailable"; kind: "refused" | "missing" | "upstream" | "foreign-or-unscoped"; error: string } |
   { result: "invalid"; error: string; reason: string; targetIndex?: number } |
   { result: "unauthenticated" | "forbidden"; error: string };
