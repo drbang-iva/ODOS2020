@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { fixture as guarantorFixture, run as runGuarantor } from "./guarantorScreensFixture.js";
 import { verifyGuarantor } from "../../ui/src/lib/guarantor-editor.js";
 import { fhir as editorFhir } from "../../ui/src/lib/fhir.js";
+import { telecomSnapshot } from "../src/clinic/patient-telecom.js";
 import { buildPatientResource, patientDemographicsFromPatient } from "../../ui/src/lib/patient-registration.js";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
@@ -1950,10 +1951,11 @@ for (const recipientType of ["RelatedPerson", "Patient"] as const) {
       const fixture = await startServer({ relatedPeople,
         channelRoutes: { "clinical-sms": "twilio", email: "twilio" }, senderNumbers: { "clinical-sms": "+18485550100" },
       });
-      fixture.patients[0] = JSON.parse(JSON.stringify(buildPatientResource(
-        patientDemographicsFromPatient(fixture.patients[0]!, "2026-08-02T15:00:00.000Z"), fixture.patients[0],
-      )));
       try {
+        fixture.patients[0] = JSON.parse(JSON.stringify(buildPatientResource({
+          ...patientDemographicsFromPatient(fixture.patients[0]!, "2026-08-02T15:00:00.000Z"),
+          firstName: "Synthetic", lastName: "Patient", birthDate: "1980-01-01",
+        }, fixture.patients[0], telecomSnapshot(fixture.patients[0]!, "2026-08-02T15:00:00.000Z"))));
         const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
           patientReference: PATIENT_REFERENCE, educationId: "dry-eye-basics", version: 2,
           channel, lane: "clinical", alsoUpdateChart: true,
