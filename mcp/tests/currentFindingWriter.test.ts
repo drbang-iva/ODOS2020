@@ -335,3 +335,26 @@ test("a conditional-create loser includes the winner in its fresh projection", a
   assert.ok(loser.fresh && !("incomplete" in loser.fresh));
   if (loser.fresh && !("incomplete" in loser.fresh)) assert.equal(loser.fresh.currentFacts[0]?.contributors[0]?.reference, `Observation/${observations(m)[0].id}`);
 });
+
+test("review regression: wrong-target audit stays pending and cannot permit marker supersession", async () => {
+  const m=memoryFhir();const first=command([factTarget()]);await run(m,first);
+  const before=observations(m)[0];const existing=audits(m)[0];
+  m.save({...existing,target:[{reference:"Observation/someone-else"}]});
+  const next=command([factTarget(keyFor(),factBaseline(observations(m)),endState({presence:"absent"}))]);
+  const blocked=await run(m,next);
+  assert.equal(blocked.outcomes[0].status,"not-attempted");
+  assert.equal(blocked.outcomes[0].reason,"prior-audit-unrepaired");
+  assert.deepEqual(observations(m)[0],before);
+  const replay=await run(m,first);
+  assert.equal(replay.complete,false);assert.equal(replay.outcomes[0].auditPending,true);
+  assert.equal(observationWrites(m).length,1);assert.equal(audits(m).length,1);
+  assert.ok(m.writes.filter(w=>w.resource.resourceType==="Provenance").every(w=>/^_tag=[^&]+$/.test(w.headers["If-None-Exist"])));
+});
+
+test("review regression: a reassertion tag cannot confirm an audit targeting another Observation", async () => {
+  const m=memoryFhir([canonicalFact()]);const c=command([{kind:"reassert",key:keyFor(),baseline:factBaseline(observations(m))}]);
+  await run(m,c);m.save({...audits(m)[0],target:[{reference:"Observation/someone-else"}]});
+  const replay=await run(m,c);
+  assert.equal(replay.complete,false);assert.equal(replay.outcomes[0].status,"refused");
+  assert.equal(observationWrites(m).length,0);assert.equal(audits(m).length,1);
+});

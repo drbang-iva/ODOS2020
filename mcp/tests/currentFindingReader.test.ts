@@ -281,3 +281,25 @@ test("typed incomplete maps transport refusal and missing status without upstrea
     assert.ok(!JSON.stringify(result).includes("private response"));
   }
 });
+
+test("review regression: resource search details cannot masquerade as audit lookup failures", async () => {
+  const input={patientReference:"Patient/p1",encounterReference:"Encounter/e1",definitions,catalog,includeAuditState:true};
+  const empty={resourceType:"Bundle",type:"searchset",entry:[]};
+  for(const type of ["Observation","Condition"]) for(const [status,kind] of [[404,"missing"],[503,"upstream"]] as const) {
+    const fhir={baseUrl:"http://localhost:8103/",search:async(resourceType:string)=>{
+      if(resourceType===type)throw Object.assign(new Error("private audit subsystem detail"),{status});
+      return empty;
+    }};
+    const result=await loadEncounterFindingState(fhir as any,input);
+    assert.equal(result.incomplete,true);
+    if(result.incomplete)assert.equal(result.kind,kind);
+    assert.ok(!JSON.stringify(result).includes("private audit subsystem detail"));
+  }
+  const marked={...canonical(),component:[...canonical().component!,comp("R10_OPERATION",JSON.stringify({commandId:"command-1",target:"finding:key",digest:"digest-1",
+    audit:{kind:"mutation",actor:"Practitioner/test",recorded:"2026-09-15T13:00:00.000Z",activity:"CREATE",targetReferences:["self"]}}))]};
+  const failed=await loadEncounterFindingState({baseUrl:"http://localhost:8103/",search:async(type:string)=>{
+    if(type==="Provenance")throw new Error("transport disconnected");
+    return {...empty,entry:type==="Observation"?[{resource:marked}]:[]};
+  }} as any,input);
+  assert.deepEqual(failed,{incomplete:true,kind:"refused",reason:"Finding audit state could not be verified."});
+});

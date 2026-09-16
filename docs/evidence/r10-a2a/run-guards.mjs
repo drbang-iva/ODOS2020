@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
@@ -8,10 +9,11 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const output = resolve(root, 'docs/evidence/r10-a2a/guards');
 const privateDir = resolve(root, '.odos/r10-a2a');
 mkdirSync(output, { recursive: true });
+mkdirSync(privateDir, { recursive: true });
 const reader = 'mcp/src/clinical-graph/current-finding-reader.ts';
 const writer = 'mcp/src/clinical-graph/current-finding-writer.ts';
 const identity = 'mcp/src/clinical-graph/current-finding-identity.ts';
-const clean = text => text.replaceAll(root, '<repo-root>').split('\n').map(line=>line.trimEnd()).join('\n').trimEnd() + '\n';
+const clean = text => text.replaceAll(root, '<repo-root>').replaceAll(homedir(), '<local-home>').split('\n').map(line=>line.trimEnd()).join('\n').trimEnd() + '\n';
 const replace = (text, before, after) => {
   assert.equal(text.split(before).length - 1, 1, `Mutation anchor must be unique: ${before}`);
   return text.replace(before, after);
@@ -80,7 +82,7 @@ for (const name of process.argv.slice(2)) {
     const diff = spawnSync('diff', ['-U0', backup, path], { encoding: 'utf8' });
     writeFileSync(resolve(output, `${name}-mutant.diff`), clean(diff.stdout));
     red = run('red');
-    assert.notEqual(red.exit, 0, `${name} mutation survived`);
+    assert.ok(Number.isInteger(red.exit) && red.exit !== 0, `${name} mutation check did not complete with a failing exit`);
   } finally { writeFileSync(path, original); }
   green = run('green'); assert.equal(green.exit, 0, `${name} restored check failed`);
   const result = { guard: name, changedFile: guard.file, red, green };

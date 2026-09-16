@@ -9,7 +9,7 @@ import type { AtomicFindingCatalogRow } from "./diagnosis-findings-endpoint.js";
 import { DIAGNOSIS_FINDING_REASSERTION_CODE, ODOS_PROVENANCE_ACTIVITY_CODE_SYSTEM } from "./diagnosis-carry-provenance.js";
 import type { ClinicalFindingDefinition } from "./glaucoma-suspect.js";
 import { buildFindingReadAliases } from "./finding-read-aliases.js";
-import { classifyFindingObservation, currentFindingIdentifier, currentFindingKeySchema, findPendingAudits, findingAuditKey, findingQualifiers,
+import { classifyFindingObservation, currentFindingIdentifier, currentFindingKeySchema, findPendingAudits, findingAuditKey, findingQualifiers, matchesFindingAudit,
   FINDING_OPERATION_AUDIT_SYSTEM, observationLaterality, parseCurrentFindingEnvelope, parseFindingOperation, SUPPORTS_DIAGNOSIS_URL,
   type CurrentFindingKey, type FindingOperation } from "./current-finding-identity.js";
 import { loadEncounterFindingState, projectCurrentFindings, type EncounterFindingState, type FindingBaseline, type CurrentFindingProjection } from "./current-finding-reader.js";
@@ -37,6 +37,7 @@ export interface FindingCommandResult { commandId: string; complete: boolean; ou
 
 type Complete = Extract<EncounterFindingState, { incomplete: false }>;
 type TargetState = Extract<FindingCommandTarget, {kind:"fact"}>["state"];
+class FindingAuditMismatch extends Error {}
 const WRITE_HEADERS = { "X-ODOS-Source": "diagnosis-findings" };
 const refPattern = /^Observation\/([A-Za-z0-9.-]+)$/;
 const homePattern = /^Condition\/[A-Za-z0-9.-]+$/;
@@ -256,7 +257,7 @@ async function executeReassert(deps:FindingCommandDeps,command:FindingCommand,ta
   const reference=baseline.kind==="canonical"?baseline.reference:baseline.sourceReference;
   const digest=sha({reference,versionId:baseline.versionId});
   const key=findingAuditKey(command.commandId,id,"reassertion",digest);
-  try { if (await auditExists(deps,key)) return {status:"already-applied",target:id,reference,versionId:baseline.versionId}; }
+  try { if (await auditExists(deps,key,reference)) return {status:"already-applied",target:id,reference,versionId:baseline.versionId}; }
   catch { return {status:"not-attempted",target:id,reason:"Audit state could not be verified."}; }
   const projection=projectCurrentFindings(state),fact=projection.currentFacts.find(f=>f.projectionKey===id);
   if (!fact || !matchesBaseline(baseline,target.key,state.observations.find(o=>`Observation/${o.id}`===reference && baseline.kind==="canonical"),fact,state))
@@ -277,10 +278,11 @@ async function executeReassert(deps:FindingCommandDeps,command:FindingCommand,ta
     text:"Diagnosis finding reassertion"};
   audit.meta={...audit.meta,tag:[...(audit.meta?.tag??[]),{system:FINDING_OPERATION_AUDIT_SYSTEM,code:key}]};
   try { const saved=await deps.fhir.createWithOutcome<Provenance>(audit,auditHeaders(key));
+    if (!matchesFindingAudit(saved.resource,key,reference)) throw new FindingAuditMismatch("Reassertion audit target does not match.");
     return {status:saved.created?"applied":"already-applied",target:id,reference,versionId:baseline.versionId}; }
   catch(error) {
     if(definitivelyRefused(error))return {status:"refused",target:id,reference,versionId:baseline.versionId,reason:"Reassertion audit was refused."};
-    try { if(await auditExists(deps,key)) return {status:"already-applied",target:id,reference,versionId:baseline.versionId}; }
+    try { if(await auditExists(deps,key,reference)) return {status:"already-applied",target:id,reference,versionId:baseline.versionId}; }
     catch { return {status:"unconfirmed",target:id,reference,versionId:baseline.versionId,reason:"Reassertion audit response and lookup were lost."}; }
     return {status:"unconfirmed",target:id,reference,versionId:baseline.versionId,reason:"Reassertion audit was not confirmed."}; }
 }
@@ -320,9 +322,10 @@ async function createAudit(deps:FindingCommandDeps,operation:FindingOperation,se
   const provenance=buildProvenance({targetReferences:targets,recorded:audit.recorded,activityCode:audit.activity,
     activityDisplay:audit.activity==="CREATE"?"Create":"Update",agents:[{whoReference:audit.actor,typeCode:"author"}]}) as Provenance;
   provenance.meta={...provenance.meta,tag:[...(provenance.meta?.tag??[]),{system:FINDING_OPERATION_AUDIT_SYSTEM,code:key}]};
-  await deps.fhir.createWithOutcome<Provenance>(provenance,auditHeaders(key));
+  const saved=await deps.fhir.createWithOutcome<Provenance>(provenance,auditHeaders(key));
+  if (!matchesFindingAudit(saved.resource,key,self)) throw new FindingAuditMismatch("Mutation audit target does not match.");
 }
-async function auditExists(deps:FindingCommandDeps,key:string):Promise<boolean> {
+async function auditExists(deps:FindingCommandDeps,key:string,reference:string):Promise<boolean> {
   const checked=<T extends Resource>(page:Bundle<T>):Bundle<T>=>{
     if(page.resourceType!=="Bundle" || page.type!=="searchset" || page.link?.some(l=>l.relation==="next" && !l.url) ||
       page.entry?.some(e=>e.resource?.resourceType!=="Provenance" || !e.resource.id))throw new Error("Invalid audit lookup.");
@@ -332,7 +335,7 @@ async function auditExists(deps:FindingCommandDeps,key:string):Promise<boolean> 
     ...(deps.fhir.searchUrl?{searchUrl:async <T extends Resource>(url:string,type:T["resourceType"])=>checked(await deps.fhir.searchUrl!<T>(url,type))}:{})};
   const first=checked(await deps.fhir.search<Provenance>("Provenance",{_tag:`${FINDING_OPERATION_AUDIT_SYSTEM}|${key}`,_count:"200"}));
   const pages=await collectAllFhirSearchPages(client,"Provenance",first,deps.fhir.baseUrl);
-  return pages.some(p=>p.meta?.tag?.some(t=>t.system===FINDING_OPERATION_AUDIT_SYSTEM && t.code===key));
+  return pages.some(p=>matchesFindingAudit(p,key,reference));
 }
 function auditHeaders(key:string):Record<string,string> { return {...WRITE_HEADERS,"If-None-Exist":`_tag=${FINDING_OPERATION_AUDIT_SYSTEM}|${key}`}; }
 
@@ -404,6 +407,7 @@ function canonical(value:unknown):unknown {
 function sha(value:unknown):string {return createHash("sha256").update(JSON.stringify(canonical(value))).digest("hex");}
 function etag(version:string):string {return `W/"${version}"`;}
 function definitivelyRefused(error:unknown):boolean {
+  if (error instanceof FindingAuditMismatch) return true;
   const status=(error as {status?:number})?.status;
   return status!==undefined && status>=400 && status<500 && status!==408;
 }

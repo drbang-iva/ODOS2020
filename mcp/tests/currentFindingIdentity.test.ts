@@ -99,7 +99,7 @@ test("pending audit lookup uses one comma-OR tag search, all pages, and fails cl
   const expectedB=findingAuditKey("two","finding:two","mutation","digest-two");
   const bundle=(rows:unknown[],next?:string)=>({resourceType:"Bundle",type:"searchset",entry:rows.map(resource=>({resource})),...(next?{link:[{relation:"next",url:next}]}:{})});
   const client={baseUrl:"http://localhost:8103/",search:async(_type:string,params:Record<string,string>)=>{seen.push(params);return bundle([],"/fhir/R4/Provenance?_page=2")},
-    searchUrl:async()=>bundle([{resourceType:"Provenance",id:"audit-one",meta:{tag:[{system:"urn:odos:finding-operation:v1",code:expectedA}]}}])};
+    searchUrl:async()=>bundle([{resourceType:"Provenance",id:"audit-one",target:[{reference:"Observation/one"}],meta:{tag:[{system:"urn:odos:finding-operation:v1",code:expectedA}]}}])};
   assert.deepEqual([...await findPendingAudits(client as any,[a,b])],["Observation/two"]);
   assert.equal(seen.length,1);
   assert.equal(seen[0]._tag?.split(",").length,2);
@@ -108,4 +108,15 @@ test("pending audit lookup uses one comma-OR tag search, all pages, and fails cl
   assert.equal(seen.length,1);
   await assert.rejects(()=>findPendingAudits({...client,searchUrl:async()=>bundle([{resourceType:"Observation",id:"wrong"}])} as any,[a]),/audit|Provenance|resource/i);
   await assert.rejects(()=>findPendingAudits({...client,searchUrl:async()=>{throw new Error("failed")}} as any,[a]),/failed/);
+});
+
+test("review regression: an audit for a copied marker covers only its actual Observation target", async () => {
+  const operation={commandId:"copied-command",target:"finding:copied",digest:"copied-digest",
+    audit:{kind:"mutation",actor:"Practitioner/test",recorded:"2026-09-15T13:00:00.000Z",activity:"CREATE",targetReferences:["self"]}};
+  const first={...atomic("first"),component:[comp("R10_OPERATION",JSON.stringify(operation))]};
+  const second={...first,id:"second"};
+  const key=findingAuditKey(operation.commandId,operation.target,"mutation",operation.digest);
+  const client={baseUrl:"http://localhost:8103/",search:async()=>({resourceType:"Bundle",type:"searchset",entry:[{resource:{
+    resourceType:"Provenance",id:"audit-first",target:[{reference:"Observation/first"}],meta:{tag:[{system:"urn:odos:finding-operation:v1",code:key}]}}}]})};
+  assert.deepEqual([...await findPendingAudits(client as any,[first,second])],["Observation/second"]);
 });

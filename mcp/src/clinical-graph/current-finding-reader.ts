@@ -116,12 +116,14 @@ export async function loadEncounterFindingState(fhir: FhirSearchClient, input: E
         throw new FindingLoadError("foreign-or-unscoped", `${type} search returned a resource outside the requested patient/encounter scope.`);
       }
     }
-    const pendingAudits = input.includeAuditState ? await findPendingAudits(fhir, observations) : undefined;
+    let pendingAudits: Set<string> | undefined;
+    if (input.includeAuditState) {
+      try { pendingAudits = await findPendingAudits(fhir, observations); }
+      catch { throw new FindingLoadError("refused", "Finding audit state could not be verified."); }
+    }
     return { ...input, incomplete: false, observations, conditions, ...(pendingAudits ? { pendingAudits } : {}) };
   } catch (error) {
     if (error instanceof FindingLoadError) return { incomplete: true, kind: error.kind, reason: error.message };
-    if (input.includeAuditState && error instanceof Error && /finding operation|audit/i.test(error.message))
-      return { incomplete: true, kind: "refused", reason: "Finding audit state could not be verified." };
     const httpStatus = (error as { status?: number })?.status;
     if (httpStatus === 401 || httpStatus === 403) return { incomplete: true, kind: "refused", reason: "Encounter search was refused." };
     if (httpStatus === 404) return { incomplete: true, kind: "missing", reason: "Encounter search resource is missing." };

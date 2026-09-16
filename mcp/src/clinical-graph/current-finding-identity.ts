@@ -53,8 +53,11 @@ export async function findPendingAudits(fhir: FhirSearchClient, observations: re
     ...(fhir.searchUrl ? { searchUrl: async <T extends Resource>(url: string, type: T["resourceType"]) => validate(await fhir.searchUrl!<T>(url,type)) } : {}) };
   const page = validate(await fhir.search<Provenance>("Provenance",{ _tag: keys.map(k => `${FINDING_OPERATION_AUDIT_SYSTEM}|${k}`).join(","), _count:"200" }));
   const audits = await collectAllFhirSearchPages<Provenance>(client,"Provenance",page,client.baseUrl);
-  const present = new Set(audits.flatMap(a => a.meta?.tag?.flatMap(t => t.system === FINDING_OPERATION_AUDIT_SYSTEM && t.code && keys.includes(t.code) ? [t.code] : []) ?? []));
-  return new Set(markers.filter(m => !present.has(m.key)).map(m => m.reference));
+  return new Set(markers.filter(m => !audits.some(a => matchesFindingAudit(a,m.key,m.reference))).map(m => m.reference));
+}
+export function matchesFindingAudit(audit: Provenance, key: string, reference: string): boolean {
+  return !!audit.meta?.tag?.some(t => t.system === FINDING_OPERATION_AUDIT_SYSTEM && t.code === key) &&
+    !!audit.target?.some(t => t.reference === reference);
 }
 export const currentFindingKeySchema = z.object({ v: z.literal(1), patientId: z.string().min(1), encounterId: z.string().min(1), stableKey: z.string().min(1),
   fieldCode: z.string().min(1), optionCode: z.string().min(1), eye: z.enum(["OD", "OS"]) }).strict();
