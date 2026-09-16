@@ -1,0 +1,39 @@
+TAP version 13
+# Subtest: W61 tray move replaces a non-visit home with selected X
+not ok 1 - W61 tray move replaces a non-visit home with selected X
+  ---
+  duration_ms: 6.38775
+  type: 'test'
+  location: '<repo>/ui/tests/r10DiagnosisTable.test.tsx:1:13193'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   'Condition/outside',
+        'Condition/x'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'Condition/x'
+  actual:
+    0: 'Condition/outside'
+    1: 'Condition/x'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisTable.test.tsx:116:187)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 189.105584

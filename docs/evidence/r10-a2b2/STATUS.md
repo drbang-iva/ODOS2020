@@ -1,4 +1,20 @@
-# R10 A2b.2 author sealed bundle
+# R10 A2b.2 — independent evaluation fixback
+
+**NOT EVALUATED · HELD OPEN · NEVER MERGE.** Codex GPT-6, high effort. The prior head 9f58d5fc received Opus NEEDS-WORK. This fixback addresses F1–F10; the new head requires independent re-evaluation.
+
+Apply kept choice now rebuilds an eye change from current live finding rows, keeps the requested eyes, uses fresh baselines and shows builder errors. Conflict rows say Conflicting records in place of Offered/Choose presence. Eight previously unguarded rules now have mutation-sensitive tests; no other production behavior changed.
+
+Changed files: ui/src/components/charting/DiagnosisWorkspace.tsx; ui/src/components/charting/DiagnosisFindingsTable.tsx; ui/tests/r10DiagnosisWorkspace.test.tsx; ui/tests/r10DiagnosisTable.test.tsx; evidence under docs/evidence/r10-a2b2/. No forbidden source or MCP edits. No existing assertion changed; mapping is in existing-assertions.md.
+
+[Fixback sealed evidence](fixback/README.md) contains W55–W64 red/green counts, the exact mutation runner, per-suite results, expected-red A3 output, and an updated conflict screenshot pair. Focused workspace 19/19, table 21/21; full UI: **1,679 total, 1,675 pass, 0 fail, 0 skip, 4 A3 TODO** (fixback/full-ui-counts.txt). UI build and preflight pass; A3 exit 1 expected. MCP and live suites were not rerun because no MCP file changed.
+
+The two inherited MCP review threads remain OPEN as explicitly ruled A3 release blockers. CodeQL rate-limit alerts were independently classified as pre-existing; no action or dismissal in this slice. Final-head bot states and SHA are recorded in the PR body/handoff to avoid staling review with a reporting-only commit. No Docker started in the fixback; the prior odos-r10-a2b2-postgres-1 remains stopped, not removed.
+
+---
+
+## Original build evidence (historical; counts below belong to 9f58d5fc)
+
+### Original author bundle
 
 **NOT EVALUATED · HELD OPEN · never merge independently of the R10 joint release.** Coder: Codex, GPT-6, high effort. Independent evaluation belongs to Claude Opus; this bundle is author evidence only.
 

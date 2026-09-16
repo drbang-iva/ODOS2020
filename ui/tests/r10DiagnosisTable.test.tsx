@@ -106,3 +106,21 @@ test("shared outcomes distinguish complete, audit debt, unavailable, preconditio
   const precondition=await handleFindingOutcome({status:428,body:{result:"precondition",error:"baseline",targetIndex:0}},options);assert.equal(precondition.reloadChoice,true);
   const refused=await handleFindingOutcome({status:422,body:{result:"command",commandId:"id",complete:false,executionOrder:[0],outcomes:[{target:"OD",status:"refused",clinicalWrite:"none"}]}},options);assert.equal(refused.reloadChoice,true);assert.equal(loads,4);
 });
+
+test("W58 search on carried live absent fact asserts present",async()=>{
+ const rows=[row("OD",{carried:true,presence:"absent"})];const {view,commands}=table(payload({findings:rows,searchIndex:rows}));
+ try{await act(async()=>{view.root.findByProps({placeholder:"Search findings"}).props.onChange({target:{value:"Opacity"}});});await act(async()=>{view.root.findByProps({className:"odos-diagnosis-finding-search-results"}).findByType("button").props.onClick();});assert.equal(commands.length,1);assert.equal(commands[0].operation,"assert");assert.equal(commands[0].targets[0].kind==="fact"&&commands[0].targets[0].state.presence,"present");}finally{view.unmount();}
+});
+test("W61 tray move replaces a non-visit home with selected X",async()=>{
+ const commands:DiagnosisFindingMutation[]=[];const view=create(<UnassignedFindingsTray rows={[row("OD",{homes:["Condition/outside"]})]} visitDiagnoses={[{conditionReference:"Condition/x",diagnosisKey:"x",display:"X",laterality:"OD"}]} patientReference="Patient/p" disabled={false} onMutate={c=>{commands.push(c);}}/>);
+ try{await act(async()=>{view.root.findByProps({"aria-label":"Assign Opacity to X"}).props.onClick();});assert.equal(commands.length,1);assert.equal(commands[0].operation,"move");assert.deepEqual(commands[0].targets[0].kind==="fact"&&commands[0].targets[0].state.homes,["Condition/x"]);}finally{view.unmount();}
+});
+for(const kind of ["signed","conflict"] as const)test(`W62 tray disables Assign and standalone for ${kind} row`,()=>{
+ const commands:DiagnosisFindingMutation[]=[];const r=row("OD",{editable:false,readOnlyReason:kind==="signed"?"signed-or-cancelled":"conflict",...(kind==="conflict"?{kind:"conflict",status:"conflict"}:{} )});
+ const view=create(<UnassignedFindingsTray rows={[r]} visitDiagnoses={[{conditionReference:"Condition/x",diagnosisKey:"x",display:"X",laterality:"OD"}]} patientReference="Patient/p" disabled={false} onMutate={c=>{commands.push(c);}}/>);
+ try{for(const label of ["Assign Opacity to X","Record Opacity standalone"]){const button=view.root.findByProps({"aria-label":label});assert.equal(button.props.disabled,true);act(()=>button.props.onClick());}assert.deepEqual(commands,[]);}finally{view.unmount();}
+});
+test("W64 conflict row replaces offered and choose-presence labels",()=>{
+ const {view}=table(payload({findings:[row("OD",{kind:"conflict",status:"conflict",presence:undefined,editable:false,readOnlyReason:"conflict"})]}));
+ try{const rendered=JSON.stringify(view.toJSON());assert.match(rendered,/Conflicting records/);assert.doesNotMatch(rendered,/Offered|Choose presence/);}finally{view.unmount();}
+});

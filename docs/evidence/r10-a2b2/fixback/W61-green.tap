@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: W61 tray move replaces a non-visit home with selected X
+ok 1 - W61 tray move replaces a non-visit home with selected X
+  ---
+  duration_ms: 6.334917
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 203.090917

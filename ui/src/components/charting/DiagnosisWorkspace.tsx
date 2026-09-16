@@ -330,18 +330,26 @@ export function DiagnosisWorkspace({
   async function applyPendingChoice() {
     if (!pendingCommand || !findings) return;
     if (pendingCommand.identical) { await updateFinding(pendingCommand.body); return; }
-    const previous = pendingCommand.body;
-    const rows = findings.searchIndex.filter(row => row.key && previous.targets.some(target => JSON.stringify(target.key) === JSON.stringify(row.key)));
-    if (rows.length !== previous.targets.length || rows.some(row => !row.editable)) {
-      setFindingMessage("The selected finding is no longer editable. Choose from the current values."); return;
+    try {
+      const previous = pendingCommand.body;
+      const targetRows = findings.searchIndex.filter(row => row.key && previous.targets.some(target => JSON.stringify(target.key) === JSON.stringify(row.key)));
+      const atomicFindingId = targetRows[0]?.atomicFindingId;
+      const rows = previous.operation === "eye-change"
+        ? findings.searchIndex.filter(row => row.atomicFindingId === atomicFindingId && row.kind === "fact" && row.status === "live")
+        : targetRows;
+      if (!rows.length || (previous.operation !== "eye-change" && rows.length !== previous.targets.length) || rows.some(row => !row.editable)) {
+        setFindingMessage("The selected finding is no longer editable. Choose from the current values."); return;
+      }
+      const first = previous.targets.find(target => target.kind === "fact");
+      const next = buildFindingCommand(rows, patientReference, previous.operation, {
+        selectedConditionReference: previous.context?.selectedConditionReference,
+        ...(first?.kind === "fact" ? { presence: first.state.presence, grade: typeof first.state.qualifiers.grade === "string" ? first.state.qualifiers.grade : null } : {}),
+        toEyes: previous.eyes?.to, searchIndex: findings.searchIndex, liveConditionReferences: findings.visitDiagnoses.map(diagnosis => diagnosis.conditionReference),
+      });
+      await updateFinding(next);
+    } catch (caught) {
+      setFindingMessage(caught instanceof Error ? caught.message : String(caught));
     }
-    const first = previous.targets.find(target => target.kind === "fact");
-    const next = buildFindingCommand(rows, patientReference, previous.operation, {
-      selectedConditionReference: previous.context?.selectedConditionReference,
-      ...(first?.kind === "fact" ? { presence: first.state.presence, grade: typeof first.state.qualifiers.grade === "string" ? first.state.qualifiers.grade : null } : {}),
-      toEyes: previous.eyes?.to, searchIndex: findings.searchIndex, liveConditionReferences: findings.visitDiagnoses.map(diagnosis => diagnosis.conditionReference),
-    });
-    await updateFinding(next);
   }
 
   async function repairAudits() {
