@@ -159,6 +159,19 @@ try{
   beforeTransaction=async tx=>{if(tx.runner==='discard'&&tx.target===`Person/${f.destination.personId}`){beforeTransaction=undefined;attached=await attach(f);check('attach200',attached.status,200);}};
   const discarded=await discard(f.destination);beforeTransaction=undefined;check('discard loses409',discarded.status,409);const final=await snapshot(f);check('active owned',[final.destination.active,final.owners],[true,[f.destination.personId]]);return {attached,discarded,final};
  });
+ await run('post-attach-discard-refused',async()=>{
+  const f=await family('Discard after attaching write');let attempted;
+  afterTransaction=async tx=>{
+   if(tx.phase==='attaching'&&tx.target===`Person/${f.destination.personId}`){
+    afterTransaction=undefined;const linked=await read('Person',f.destination.personId);
+    attempted=await discard({...f.destination,versionId:linked.meta.versionId});check('post-attach discard409',attempted.status,409);
+   }
+  };
+  let attached;try{attached=await attach(f);}finally{afterTransaction=undefined;}
+  check('post-attach discard was attempted',Boolean(attempted),true);check('attach completes',attached.status,200);
+  const final=await snapshot(f);check('destination remains active',final.destination.active,true);check('child remains owned',final.owners,[f.destination.personId]);
+  return {attempted,attached,final};
+ });
  await run('O11-attach-undone-before-link',async()=>{
   const f=await family('Undo before link');
   beforeTransaction=async tx=>{if(tx.phase==='attaching'&&tx.target===`Person/${f.destination.personId}`)throw new Error('Synthetic failure before linking');};

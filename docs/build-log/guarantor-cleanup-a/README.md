@@ -51,7 +51,7 @@ O15 covers attach/transfer/consolidate × completed, corrected after completion,
 
 `live/rev3-query.json` records four real seeded Persons: omitted link, empty link, RelatedPerson link, and Patient link. Query: `Person?_id=<four seeded IDs>&link:missing=true&_count=100`. Medplum returned exactly the first two IDs. The scale proof additionally uses the production list handler, its normal practice-scoped pagination, and unchanged 1,000-row bound. See `rev3/live-guards/O13-*-resources/` for the exact query sequence and output. Medplum runtime is loopback `127.0.0.1:28860`, image/version already pinned by `live/live-runtime.json`.
 
-The real HTTP operation proof in `rev3/live/operation-proof.json` and `operation-http.json` passed **8 scenarios, 98 assertions, 0 failures**. It covers the three X1 race kinds, stored pause/status/pending audit, X2 opposite order, existing Undo, retained Move/Undo, O10, attach-undone-before-link listing/discard, and O14's persisted primary audit. HTTP requests and resource snapshots are retained. Existing Undo can update fence metadata while preserving the discarded destination's inactive/unlinked state.
+The real HTTP operation proof in `rev3/live/operation-proof.json` and `operation-http.json` passed **9 scenarios, 105 assertions, 0 failures**. It covers the three X1 race kinds, stored pause/status/pending audit, X2 opposite order, existing Undo, retained Move/Undo, O10, attach-undone-before-link listing/discard, and O14's persisted primary audit. HTTP requests and resource snapshots are retained. Existing Undo can update fence metadata while preserving the discarded destination's inactive/unlinked state.
 
 ## Regression and provenance
 
@@ -62,6 +62,14 @@ The real HTTP operation proof in `rev3/live/operation-proof.json` and `operation
 - `npm --prefix mcp run build`: exit 0. `npm run preflight`: **0 warnings, 0 hard blocks**. Front-door coverage: **25 backend route families, 28 proxy entries, every family covered**. Exact output is in `rev3/`.
 
 `source-sha256.json` and `rev3/provenance.json` bind the tested source and tests. Live proofs also store before/after source hashes. Revision 2 evidence remains available and sanitized; the revision 3 results above supersede its counts and disposition. Final-head CI, CodeRabbit commit statuses, PR-Agent checks, and the settled review-thread count are recorded in the PR delivery state after the final push, rather than claiming a pending bot wave is clean.
+
+## Final bot-wave adjudication
+
+The review at `62e8d72a` raised three additional findings. The sanitizer now handles macOS, Linux and Windows paths with fixed literal patterns; five representative cases pass (`rev3/sanitizer-check.txt`).
+
+The proposed later activity checks were not added: the real discard attempted immediately after the attaching write returns 409, the destination stays active/linked, and the Task completes. This is recorded as `post-attach-discard-refused` in the nine-scenario live proof. Raw staff inactivation is already refused by the separate O10 policy check. A privileged external writer directly changing an already-linked Person to inactive would violate G1 at that write; later reads cannot retroactively enforce G1 for such an out-of-contract write.
+
+**Remaining scale limitation, explicitly carried to Opus:** inactive zero-link Persons still consume the 1,000-row zero-link candidate bound. The bot's proposed `Person?active=true` and the contract-preserving candidate `active:not=false` were both executed on loopback and returned **400, Unknown search parameter: active**. Exact requests and responses are in `live/rev3-active-query.json` and `rev3/query-capability.txt`. Neither unsupported query was put into production. `active=true` would also change the contract's treatment of an absent active field. Further exclusion of inactive candidates needs a separately designed search/index contract; the approved zero-link filter, caps and fail-closed behavior remain unchanged.
 
 ## Limits and handoff
 

@@ -4,6 +4,13 @@ import re
 
 root = Path(__file__).resolve().parent
 changed = []
+
+def sanitize(text):
+    cleaned = re.sub(r'/(?:[U]sers|home)/[^/\s]+/GitHub/ODOS2020(?:/\.worktrees/[^/\s\)\"\x27]+)?', '<repo>', text)
+    cleaned = re.sub(r'[A-Za-z]:\\+[U]sers\\+[^\\\s]+\\+GitHub\\+ODOS2020(?:\\+\.worktrees\\+[^\\\s\)\"\x27]+)?', '<repo>', cleaned)
+    cleaned = re.sub(r'/(?:[U]sers|home)/[^/\s\)\"\x27:]+', '<home>', cleaned)
+    return re.sub(r'[A-Za-z]:\\+[U]sers\\+[^\\\s\)\"\x27:]+', '<home>', cleaned)
+
 for path in root.rglob('*'):
     if not path.is_file() or path.suffix in {'.png', '.jpg', '.webm'}:
         continue
@@ -13,8 +20,7 @@ for path in root.rglob('*'):
         text = data.decode('utf-8')
     except UnicodeDecodeError:
         continue
-    cleaned = re.sub('/' + r'Users/[^/\s]+/GitHub/ODOS2020(?:/\.worktrees/[^/\s\)\"\x27]+)?', '<repo>', text)
-    cleaned = re.sub('/' + r'Users/[^/\s\)\"\x27:]+', '<home>', cleaned)
+    cleaned = sanitize(text)
     if cleaned != text:
         encoded = cleaned.encode('utf-8')
         path.write_bytes(gzip.compress(encoded, mtime=0) if compressed else encoded)
