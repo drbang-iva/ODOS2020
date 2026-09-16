@@ -50,8 +50,8 @@ export async function executeFindingCommand(deps: FindingCommandDeps, command: F
     Number(a.target.kind==="legacy-retire")-Number(b.target.kind==="legacy-retire") || a.index-b.index);
   const executionOrder = ordered.map(({index})=>index);
   let state = await load(deps,command);
-  if (state.incomplete === true) { const reason=state.reason;
-    return { commandId:command.commandId, complete:false, executionOrder, outcomes:command.targets.map(t=>({clinicalWrite:"none",cause:"load",status:"not-attempted",target:targetId(t),fresh:state,reason})) }; }
+  if (state.incomplete === true) { const reason=state.reason, incompleteState=state;
+    return { commandId:command.commandId, complete:false, executionOrder, outcomes:command.targets.map(t=>({clinicalWrite:"none",cause:"load",status:"not-attempted",target:targetId(t),fresh:incompleteState,reason})) }; }
   let stop = false;
   for (const {target,index} of ordered) {
     if (stop) { outcomes[index]={clinicalWrite:"none",cause:"halted-by-earlier-target",status:"not-attempted",target:targetId(target),reason:"Earlier target did not complete."}; continue; }
