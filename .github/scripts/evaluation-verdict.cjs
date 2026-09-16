@@ -79,12 +79,12 @@ function evaluateToolIndependence({ evaluator, prBody, prAuthorType }) {
         }
         continue;
       }
-      if (fenceMatch && (fenceMatch[1][0] === "~" || !fenceMatch[2].includes("`"))) {
-        fence = fenceMatch[1];
-        continue;
-      }
       if (htmlComment) {
         if (line.includes("-->")) htmlComment = false;
+        continue;
+      }
+      if (fenceMatch && (fenceMatch[1][0] === "~" || !fenceMatch[2].includes("`"))) {
+        fence = fenceMatch[1];
         continue;
       }
       let visibleLine = "";

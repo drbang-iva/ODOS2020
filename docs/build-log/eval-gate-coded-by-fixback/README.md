@@ -16,7 +16,7 @@ npm --prefix mcp run build
 
 Baseline: 82 passing / 0 failing. The six first-written guards on unchanged main:
 83 passing / 5 failing (G1, G2, G5, G6, G7); G9 already passed.
-Final: 101 passing / 0 failing / 0 skipped. MCP TypeScript compilation exits 0.
+Final: 102 passing / 0 failing / 0 skipped. MCP TypeScript compilation exits 0.
 `node --check .github/scripts/evaluation-verdict.cjs` and `git diff --check` exit 0.
 
 All original 82 tests remain, with one required contract correction: the former
@@ -26,7 +26,7 @@ That exact input now asserts rejection; its other fence and declaration cases re
 ## Break and restore
 
 All mutations ran in a separate disposable worktree; `proof.json` records exact
-failing test names and counts. Every restore passed 101/101 and matched the source
+failing test names and counts. Every restore passed 102/102 and matched the source
 parser bytes. The seven mutations were:
 
 1. Replace the coder-value token union with `coders.add(coder[1].toLowerCase())`.
@@ -73,3 +73,13 @@ by removing a completed span; the subsequent unclosed-comment step still hides i
 The final fixture privacy check passes: the initial full CI run exposed the real
 GitHub comment ID as a non-synthetic ten-digit value (5,488 pass / 1 fail / 51 skip).
 Only that incidental link ID was normalized; no privacy guard or allowlist changed.
+
+## Active-comment fence regression
+
+CodeRabbit identified that new fence openers inside an already-active HTML comment
+must be skipped under F2 step 2. The active-fence handling remains first and unchanged;
+active-comment handling now precedes detection of a new fence opener. The G11
+companion `<!--` / fence opener / `-->` / visible declaration was red before this
+repair (101 pass / 1 fail) and green afterward (102 gate tests pass). G10 still
+proves that a comment opener inside an active fence opens no HTML comment state.
+The gate suite plus fixture privacy guard passes 103/103 with no skips.

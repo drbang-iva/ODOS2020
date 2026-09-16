@@ -1112,6 +1112,7 @@ for (const { id, prBody, evaluator = "Opus 5", reason = "passing-verdict" } of [
   { id: "G8 closing-line companion", prBody: "<!--\nnote -->\nCoded-by: Codex" },
   { id: "G10", prBody: "```text\n<!--\n```\nCoded-by: Codex" },
   { id: "G11", prBody: "<!--\nCoded-by: Claude\n-->\nCoded-by: Codex" },
+  { id: "G11 fence inside active comment", prBody: "<!--\n```\n-->\nCoded-by: Codex" },
   { id: "G15", prBody: "Coded-by: Codex", evaluator: "Sonnet 5", reason: "untrusted-model" },
 ]) {
   test(`${id} coded-by fixback`, () => {
