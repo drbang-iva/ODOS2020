@@ -55,6 +55,7 @@ import {
   UnassignedFindingsTray,
 } from "./DiagnosisFindingsTable";
 import {
+  canMutateDiagnosisFinding,
   loadDiagnosisFindings,
   mutateDiagnosisFinding,
   type DiagnosisFindingMutation,
@@ -100,6 +101,7 @@ export interface DiagnosisQuickListRow {
 
 interface QuickListPayload {
   canWrite: boolean;
+  canWriteDiagnosis?: boolean;
   pinnedDiagnosisKeys: string[];
   diagnoses: DiagnosisQuickListRow[];
   catalog: DiagnosisQuickListRow[];
@@ -131,6 +133,8 @@ export function DiagnosisWorkspace({
   const [catalog, setCatalog] = useState<DiagnosisQuickListRow[]>([]);
   const [pinnedDiagnosisKeys, setPinnedDiagnosisKeys] = useState<string[]>([]);
   const [canWrite, setCanWrite] = useState(false);
+  const [diagnosisCapability, setDiagnosisCapability] = useState<{ encounterId: string; allowed: boolean }>();
+  const canWriteDiagnosis = diagnosisCapability?.encounterId === encounterId && diagnosisCapability.allowed;
   const [loadedFindings, setLoadedFindings] = useState<{
     key: string;
     payload: DiagnosisFindingsPayload;
@@ -157,6 +161,7 @@ export function DiagnosisWorkspace({
     setLoadedFindings((current) => current?.key === requestFindingsKey ? undefined : current);
     setCandidateFindings([]);
     setLoading(true);
+    setDiagnosisCapability(undefined);
     setError(undefined);
     try {
       const [nextEncounter, searchedConditions, quickResponse, nextFindings, nextCandidateFindings, procedureResult, nextNewness, nextVisitStatuses] = await Promise.all([
@@ -214,6 +219,7 @@ export function DiagnosisWorkspace({
       setCatalog(quickBody.catalog ?? []);
       setPinnedDiagnosisKeys(quickBody.pinnedDiagnosisKeys ?? []);
       setCanWrite(quickBody.canWrite === true);
+      setDiagnosisCapability({ encounterId, allowed: quickBody.canWriteDiagnosis === true });
       setAttachedProcedures(procedureResult.response?.attachedProcedures ?? []);
       setProcedureAttachmentError(procedureResult.error ? "Attached procedures could not be loaded." : undefined);
       setLoadedFindings({ key: requestFindingsKey, payload: nextFindings });
@@ -288,7 +294,8 @@ export function DiagnosisWorkspace({
     return () => { current = false; };
   }, [activeStageFamily?.stableKey, patientReference, stageHistoryKey]);
 
-  async function run(label: string, action: () => Promise<void>): Promise<boolean> {
+  async function run(label: string, action: () => Promise<void>, allowed = canWriteDiagnosis): Promise<boolean> {
+    if (!allowed) return false;
     setBusy(label);
     setError(undefined);
     try {
@@ -306,7 +313,7 @@ export function DiagnosisWorkspace({
   async function updateFinding(mutation: DiagnosisFindingMutation) {
     const changed = await run(`finding:${mutation.action}`, async () => {
       await mutateDiagnosisFinding(encounterReference, mutation);
-    });
+    }, findings !== undefined && canMutateDiagnosisFinding(findings, mutation));
     if (changed && typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("odos:encounter-findings-changed", {
         detail: { encounterReference },
@@ -315,6 +322,7 @@ export function DiagnosisWorkspace({
   }
 
   async function addDiagnosis(row: DiagnosisQuickListRow, laterality?: EyeChoice) {
+    if (!canWriteDiagnosis) return;
     const selectedMember = row.members?.find((member) => member.stableKey === row.selectedMemberKey);
     const resolvedRow = selectedMember ? memberDiagnosisRow(selectedMember) : row;
     if ((row.members || row.lateralityRequired) && !laterality) {
@@ -367,7 +375,9 @@ export function DiagnosisWorkspace({
       setQuickList(body.diagnoses ?? []);
       setCatalog(body.catalog ?? []);
       setPinnedDiagnosisKeys(body.pinnedDiagnosisKeys ?? []);
-    });
+      setCanWrite(body.canWrite === true);
+      setDiagnosisCapability({ encounterId, allowed: body.canWriteDiagnosis === true });
+    }, canWrite);
   }
 
   function searchDiagnoses(query: string): Promise<OdosSearchPickerOption<DiagnosisQuickListRow>[]> {
@@ -400,6 +410,7 @@ export function DiagnosisWorkspace({
   }
 
   async function saveDiagnosisOrder(conditionReferences: string[]) {
+    if (!canWriteDiagnosis) return;
     setBusy("reorder");
     setReorderError(undefined);
     try {
@@ -449,7 +460,7 @@ export function DiagnosisWorkspace({
             <button
               type="button"
               className="odos-diagnosis-primary-action"
-              disabled={!reorderAvailable || !canWrite || busy !== undefined}
+              disabled={!reorderAvailable || !canWriteDiagnosis || busy !== undefined}
               onClick={() => {
                 setReorderError(undefined);
                 setReorderOpen(true);
@@ -464,7 +475,7 @@ export function DiagnosisWorkspace({
           <DiagnosisRankActions
             possible={selectedCondition.verificationStatus?.coding?.some((coding) => coding.code === "provisional") === true}
             principal={diagnosisRank(encounter, selectedCondition) === 1}
-            busy={diagnosisRankActionsDisabled(canWrite, busy)}
+            busy={diagnosisRankActionsDisabled(canWriteDiagnosis, busy)}
             onMakePrincipal={() => void run("rank", async () => {
               await updateDiagnosisOrder(encounterId, principalDiagnosisOrder(encounter, selectedCondition));
             })}
@@ -474,6 +485,7 @@ export function DiagnosisWorkspace({
         <RailHeading>Previous exams</RailHeading>
         <PreviousExams
           encounterReference={encounterReference}
+          canWriteDiagnosis={canWriteDiagnosis}
           onSelectDiagnosis={onSelectDiagnosis}
         />
 
@@ -484,7 +496,7 @@ export function DiagnosisWorkspace({
             const pinIndex = pinnedDiagnosisKeys.indexOf(row.stableKey);
             return (
               <div key={row.stableKey} className="odos-diagnosis-common-row">
-                <button type="button" disabled={!canWrite || busy !== undefined} onClick={() => void addDiagnosis(row)}>
+                <button type="button" disabled={!canWriteDiagnosis || busy !== undefined} onClick={() => void addDiagnosis(row)}>
                   <span>{row.display}</span>
                   {row.axisLabel
                     ? <small className="odos-diagnosis-axis-chip">{row.axisLabel}</small>
@@ -521,10 +533,10 @@ export function DiagnosisWorkspace({
           searchDelayMs={0}
           onClear={() => setSearchSelection(undefined)}
           onSelect={setSearchSelection}
-          disabled={!canWrite || busy !== undefined}
+          disabled={!canWriteDiagnosis || busy !== undefined}
         />
         {searchSelection && (
-          <button className="odos-diagnosis-primary-action" type="button" disabled={busy !== undefined} onClick={() => void addDiagnosis(searchSelection.item)}>
+          <button className="odos-diagnosis-primary-action" type="button" disabled={!canWriteDiagnosis || busy !== undefined} onClick={() => void addDiagnosis(searchSelection.item)}>
             Add to this visit
           </button>
         )}
@@ -544,7 +556,7 @@ export function DiagnosisWorkspace({
                     stageDeferred: false,
                   })}
                   ariaLabel={`${pendingDiagnosis.axisLabel} for ${pendingDiagnosis.display}`}
-                  disabled={busy !== undefined}
+                  disabled={!canWriteDiagnosis || busy !== undefined}
                   exclusive
                 />
                 {priorStage && (
@@ -561,14 +573,14 @@ export function DiagnosisWorkspace({
                 selected={[]}
                 onChange={(selected) => selected[0] && void addDiagnosis(pendingDiagnosis, selected[0])}
                 ariaLabel={`Scope for ${pendingDiagnosis.display}`}
-                disabled={busy !== undefined || Boolean(pendingDiagnosis.members && !pendingDiagnosis.selectedMemberKey && !pendingDiagnosis.stageDeferred)}
+                disabled={!canWriteDiagnosis || busy !== undefined || Boolean(pendingDiagnosis.members && !pendingDiagnosis.selectedMemberKey && !pendingDiagnosis.stageDeferred)}
                 exclusive
               />
               {pendingDiagnosis.members && pendingDiagnosis.stageSelectionSource !== "search" && (
                 <button
                   type="button"
                   aria-pressed={pendingDiagnosis.stageDeferred === true}
-                  disabled={busy !== undefined}
+                  disabled={!canWriteDiagnosis || busy !== undefined}
                   onClick={() => setPendingDiagnosis({
                     ...pendingDiagnosis,
                     selectedMemberKey: undefined,
@@ -586,7 +598,7 @@ export function DiagnosisWorkspace({
             rows={findings.unassigned}
             visitDiagnoses={findings.visitDiagnoses}
             patientReference={patientReference}
-            disabled={!findings.canWrite || busy !== undefined}
+            disabled={!findings.canWrite || findings.canWriteDiagnosis !== true || !canWriteDiagnosis || busy !== undefined}
             suggestionsByObservation={suggestionsByObservation}
             onSuggest={chooseSuggestion}
             onMutate={(mutation) => void updateFinding(mutation)}
@@ -651,7 +663,7 @@ export function DiagnosisWorkspace({
                         });
                       })}
                       ariaLabel={`${selectedStageFamily.axisLabel} for ${selectedStageFamily.display}`}
-                      disabled={!canWrite || busy !== undefined}
+                      disabled={!canWriteDiagnosis || busy !== undefined}
                       exclusive
                     />
                     {priorStage && (
@@ -667,7 +679,7 @@ export function DiagnosisWorkspace({
                       key={eye}
                       type="button"
                       aria-pressed={selectedCondition.bodySite?.[0]?.text === eye}
-                      disabled={!canWrite || busy !== undefined}
+                      disabled={!canWriteDiagnosis || busy !== undefined}
                       onClick={() => void run("laterality", async () => {
                         const diagnosis = catalog.find((row) => row.stableKey === conditionCatalogStableKey(selectedCondition));
                         if (conditionRequiresDeclaredBilateralResolution(selectedCondition) && !diagnosis) {
@@ -683,7 +695,7 @@ export function DiagnosisWorkspace({
             <div className="flex flex-wrap items-start gap-2">
               <DiagnosisProblemStatusField
                 value={encounterDiagnosisProblemStatus(selectedEntry)}
-                disabled={!canWrite || loading || busy !== undefined || encounter.status === "finished"}
+                disabled={!canWriteDiagnosis || loading || busy !== undefined || encounter.status === "finished"}
                 onChange={(problemStatus) => void run("problem-status", async () => {
                   await updateEncounterDiagnosisProblemStatus({ encounter, condition: selectedCondition, problemStatus });
                 })}
@@ -693,7 +705,7 @@ export function DiagnosisWorkspace({
                 {visitStatusError && <div role="alert" data-testid="diagnosis-status-error">{visitStatusError} <button type="button" onClick={() => void load()}>Retry</button></div>}
                 <OdosSelect<DiagnosisVisitStatus | "">
                   value={visitStatuses[selectedReference!] === "new" ? "" : visitStatuses[selectedReference!] ?? ""}
-                  disabled={!canWrite || loading || busy !== undefined || encounter.status === "finished" || Boolean(visitStatusError)}
+                  disabled={!canWriteDiagnosis || loading || busy !== undefined || encounter.status === "finished" || Boolean(visitStatusError)}
                   options={[
                     { value: "", label: "Select visit status", disabled: true },
                     ...DIAGNOSIS_VISIT_STATUSES.filter((status) => status !== "new").map((status) => ({
@@ -717,7 +729,7 @@ export function DiagnosisWorkspace({
                 <div role="group" aria-label="Diagnosis New or Established" className="flex gap-2">
                   {(["new", "established"] as const).map((value) => (
                     <button key={value} type="button" aria-pressed={newnessRows[selectedReference!]?.value === value}
-                      disabled={!canWrite || loading || busy !== undefined || encounter.status === "finished"}
+                      disabled={!canWriteDiagnosis || loading || busy !== undefined || encounter.status === "finished"}
                       className="min-h-11 rounded border border-[color:var(--odos-line-2)] px-3 text-sm aria-pressed:bg-[color:var(--odos-accent-tint-hi)]"
                       onClick={() => void run("newness", async () => {
                         await updateDiagnosisNewness({ encounterId, conditionId: selectedCondition.id!, value });
@@ -746,7 +758,7 @@ export function DiagnosisWorkspace({
       {reorderOpen && encounter && (
         <ReorderImpressionsModal
           rows={buildReorderImpressionRows(encounter, visitConditions, attachedProcedures)}
-          busy={busy === "reorder"}
+          busy={!canWriteDiagnosis || busy === "reorder"}
           attachmentError={reorderError ?? procedureAttachmentError}
           onCancel={() => setReorderOpen(false)}
           onSave={saveDiagnosisOrder}

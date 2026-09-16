@@ -45,6 +45,7 @@ export interface EncounterVoidEntry {
 }
 
 export interface EncounterVoidResult {
+  canWriteDiagnosis?: boolean;
   voided: string[];
   count: number;
   sections: EncounterVoidSection[];
@@ -54,6 +55,11 @@ export interface EncounterVoidResult {
   ledger?: EncounterUndoLedger;
 }
 
+export function diagnosisVoidDenied(result: EncounterVoidResult): boolean {
+  return result.canWriteDiagnosis !== true && result.voided.some((reference) => reference.startsWith("Condition/"));
+}
+
+export const DIAGNOSIS_WRITE_TOOLTIP = "Diagnosis changes require diagnosis write permission.";
 export const SIGNED_ENCOUNTER_TOOLTIP = "Signed — use an amendment.";
 
 const CLOSED_ENCOUNTER_STATUSES: ReadonlySet<string> = new Set(["finished", "cancelled", "entered-in-error"]);
@@ -83,6 +89,7 @@ export async function voidEncounterEntries(
     throw clinicalGraphResponseError(response, body, `Void failed (${response.status}).`);
   }
   return {
+    canWriteDiagnosis: body.canWriteDiagnosis === true,
     voided: body.voided ?? [],
     count: body.count ?? 0,
     sections: body.sections ?? [],

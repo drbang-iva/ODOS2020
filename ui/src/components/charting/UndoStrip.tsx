@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { undoButtonTitle, undoStripCopy, type UndoLedgerSlot } from "../../lib/encounter-undo";
-import { SIGNED_ENCOUNTER_TOOLTIP } from "../../lib/encounter-void";
+import { undoSlotRequiresDiagnosisWrite, undoButtonTitle, undoStripCopy, type UndoLedgerSlot } from "../../lib/encounter-undo";
+import { DIAGNOSIS_WRITE_TOOLTIP, SIGNED_ENCOUNTER_TOOLTIP } from "../../lib/encounter-void";
 
 /**
  * The Undo strip (§4b.1): a row of text with one verb at the end. Same alert-colored ghost
@@ -18,12 +18,14 @@ import { SIGNED_ENCOUNTER_TOOLTIP } from "../../lib/encounter-void";
 export function UndoStrip({
   slot,
   closed,
+  canWriteDiagnosis = false,
   onUndo,
   confirmed = false,
   scope = slot.scope === "encounter" ? "encounter" : "section",
 }: {
   slot: UndoLedgerSlot;
   closed: boolean;
+  canWriteDiagnosis?: boolean;
   onUndo: () => void | Promise<void>;
   /** True only for a slot returned by a successful void in this page's session. */
   confirmed?: boolean;
@@ -33,8 +35,10 @@ export function UndoStrip({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
 
+  const diagnosisDenied = !canWriteDiagnosis && undoSlotRequiresDiagnosisWrite(slot);
+
   async function undo() {
-    if (closed || busy) return;
+    if (closed || busy || diagnosisDenied) return;
     setBusy(true);
     setMessage(undefined);
     try {
@@ -53,8 +57,8 @@ export function UndoStrip({
       <button
         type="button"
         data-entry-sheet-pristine-action
-        disabled={closed || busy || undefined}
-        title={closed ? SIGNED_ENCOUNTER_TOOLTIP : undoButtonTitle(slot, confirmed)}
+        disabled={closed || busy || diagnosisDenied || undefined}
+        title={closed ? SIGNED_ENCOUNTER_TOOLTIP : diagnosisDenied ? DIAGNOSIS_WRITE_TOOLTIP : undoButtonTitle(slot, confirmed)}
         onClick={undo}
       >
         Undo

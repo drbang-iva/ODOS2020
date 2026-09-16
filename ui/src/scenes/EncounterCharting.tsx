@@ -67,6 +67,7 @@ import {
   emptyUndoLedger,
   confirmedSlotKeys,
   readEncounterUndoLedger,
+  undoSlotRequiresDiagnosisWrite,
   undoSlotKey,
   undoEncounterVoid,
   undoSlotForSection,
@@ -156,6 +157,8 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   // The Undo ledger (§4b.4) is loaded with the encounter and replaced by every void / undo
   // response, so the strips survive navigation and reload rather than living in component state.
   const [undoLedger, setUndoLedger] = useState<EncounterUndoLedger>(() => emptyUndoLedger(encounterId));
+  const [undoDiagnosisCapability, setUndoDiagnosisCapability] = useState(false);
+  const canWriteDiagnosis = undoLedger.encounterId === encounterId && undoDiagnosisCapability;
   // Slots this page saw come back from a SUCCESSFUL void, so their counts are exact. Every
   // other slot — read on load, or re-read after a refused clear — was written from intent and
   // renders as an upper bound (see UndoStrip). Keyed by placement + the action's timestamp.
@@ -210,6 +213,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   // section's saved status; a visit clear drops every status and remounts the open sheet blank.
   function handleEncounterCleared(detail: EncounterClearedDetail) {
     const ledger = detail.result.ledger;
+    setUndoDiagnosisCapability(detail.result.canWriteDiagnosis === true);
     if (ledger) {
       setUndoLedger(ledger);
       // Vouch only for the slot whose rows this response actually enumerated; a no-op success
@@ -238,8 +242,13 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
     // slot (and most of its voids); that slot is the clinician's way back from a partially
     // erased chart, and Undo restores only what was actually voided. Show the slot the server
     // holds, not the one this page last loaded.
+    setUndoDiagnosisCapability(false);
     void readEncounterUndoLedger(`Encounter/${encounterId}`)
-      .then((ledger) => { if (ledger.encounterId === encounterId) setUndoLedger(ledger); })
+      .then(({ ledger, canWriteDiagnosis }) => {
+        if (ledger.encounterId !== encounterId) return;
+        setUndoLedger(ledger);
+        setUndoDiagnosisCapability(canWriteDiagnosis);
+      })
       .catch((caught) => { console.error("Undo ledger unavailable after a failed clear.", caught); });
   }
 
@@ -247,6 +256,8 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   // response's ledger replaces ours (the slot is gone). The open section remounts so its
   // history shows the restored values.
   async function handleUndo(request: EncounterUndoRequest) {
+    const slot = request.scope === "encounter" ? undoLedger.encounter : undoLedger.sections[request.sectionKey];
+    if (!canWriteDiagnosis && slot && undoSlotRequiresDiagnosisWrite(slot)) return;
     // The remount below discards whatever is typed and unsaved in the open sheet. Undo is not
     // an edit, so its button never marks the sheet dirty — but it must still respect what the
     // clinician has typed since. Same guard, same question, as leaving the sheet.
@@ -256,6 +267,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
     const result = await undoEncounterVoid(encounterReference, request);
     if (entrySheetSection) entrySheetGuard.resetDirty();
     setUndoLedger(result.ledger);
+    setUndoDiagnosisCapability(result.canWriteDiagnosis === true);
     setChartClearVersion((current) => current + 1);
     refreshExamOverview();
   }
@@ -478,6 +490,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
     setEncounterRecordedAt(undefined);
     setEncounterLoadState({ encounterId, status: "loading" });
     setUndoLedger(emptyUndoLedger(encounterId));
+    setUndoDiagnosisCapability(false);
     setConfirmedUndoSlots(new Set());
     fhir.read<Encounter>("Encounter", encounterId)
       .then((encounter) => {
@@ -486,8 +499,10 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
         )?.code;
         if (cancelled) return;
         setEncounterLoadState({ encounterId, status: "ready", encounter });
-        void readEncounterUndoLedger(`Encounter/${encounterId}`).then((ledger) => {
-          if (!cancelled) setUndoLedger(ledger);
+        void readEncounterUndoLedger(`Encounter/${encounterId}`).then(({ ledger, canWriteDiagnosis }) => {
+          if (cancelled) return;
+          setUndoLedger(ledger);
+          setUndoDiagnosisCapability(canWriteDiagnosis);
         });
         setEncounterRecordedAt(encounter.period?.start ?? encounter.period?.end);
         if (code === "eyecare" || code === "aesthetics") {
@@ -775,6 +790,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   const sheetUndo = sheetUndoSlot
     ? {
         slot: sheetUndoSlot.slot,
+        canWriteDiagnosis,
         confirmed: confirmedUndoSlots.has(undoSlotKey(sheetUndoSlot.sectionKey, sheetUndoSlot.slot)),
         onUndo: () => handleUndo({ scope: "section", sectionKey: sheetUndoSlot.sectionKey }),
       }
@@ -827,6 +843,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
         clinicalActionUnavailableReason={clinicalActionUnavailableReason}
         onToggleVisitCharges={() => setVisitChargesOpen((current) => !current)}
         undoSlot={undoLedger.encounter ?? undefined}
+        canWriteDiagnosis={canWriteDiagnosis}
         undoConfirmed={undoLedger.encounter ? confirmedUndoSlots.has(undoSlotKey("encounter", undoLedger.encounter)) : false}
         onUndo={() => handleUndo({ scope: "encounter" })}
       />
@@ -884,6 +901,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
           {bodyUndoSlot && (
             <UndoStrip
               slot={bodyUndoSlot.slot}
+              canWriteDiagnosis={canWriteDiagnosis}
               scope="section"
               confirmed={confirmedUndoSlots.has(undoSlotKey(bodyUndoSlot.sectionKey, bodyUndoSlot.slot))}
               closed={isClosedEncounterStatus(encounter?.status)}

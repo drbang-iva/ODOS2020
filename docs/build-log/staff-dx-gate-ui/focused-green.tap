@@ -1,0 +1,2823 @@
+TAP version 13
+# Subtest: SpineNav preserves its section inventory for an empty custom registry and safely appends missing-status custom sections
+ok 1 - SpineNav preserves its section inventory for an empty custom registry and safely appends missing-status custom sections
+  ---
+  duration_ms: 6.936375
+  type: 'test'
+  ...
+# Subtest: SpineNav groups the traditional spine and appends custom sections after every built-in group
+ok 2 - SpineNav groups the traditional spine and appends custom sections after every built-in group
+  ---
+  duration_ms: 0.935
+  type: 'test'
+  ...
+# Subtest: only the active SpineNav group opens by default and a new active section auto-opens its group
+ok 3 - only the active SpineNav group opens by default and a new active section auto-opens its group
+  ---
+  duration_ms: 11.251958
+  type: 'test'
+  ...
+# Subtest: SpineNav status dots expose complete, incomplete, and read-only labels without dropping detailed summaries
+ok 4 - SpineNav status dots expose complete, incomplete, and read-only labels without dropping detailed summaries
+  ---
+  duration_ms: 0.944292
+  type: 'test'
+  ...
+# Subtest: ongoing Dry Eye, Eye Growth, and Myopia Management summaries stay incomplete
+ok 5 - ongoing Dry Eye, Eye Growth, and Myopia Management summaries stay incomplete
+  ---
+  duration_ms: 1.15975
+  type: 'test'
+  ...
+# Subtest: Dry Eye questionnaire persists total-score-only records and keeps unsaved scores bound to their instrument
+ok 6 - Dry Eye questionnaire persists total-score-only records and keeps unsaved scores bound to their instrument
+  ---
+  duration_ms: 21.705541
+  type: 'test'
+  ...
+# Subtest: Dry Eye treatment series survives a navigate-away-and-back round trip
+ok 7 - Dry Eye treatment series survives a navigate-away-and-back round trip
+  ---
+  duration_ms: 6.544084
+  type: 'test'
+  ...
+# Subtest: Dry Eye disables series creation when the server reports a clinical conflict
+ok 8 - Dry Eye disables series creation when the server reports a clinical conflict
+  ---
+  duration_ms: 1.7675
+  type: 'test'
+  ...
+# Subtest: Eye Growth is default-visible for paediatric patients independent of reference-band coverage
+ok 9 - Eye Growth is default-visible for paediatric patients independent of reference-band coverage
+  ---
+  duration_ms: 2.191916
+  type: 'test'
+  ...
+# Subtest: Eye Growth screening and Myopia Management plan stay on separate surfaces
+ok 10 - Eye Growth screening and Myopia Management plan stay on separate surfaces
+  ---
+  duration_ms: 0.445458
+  type: 'test'
+  ...
+# Subtest: atropine frequency input accepts alternate dosing text and saves it to MedicationStatement dosage
+ok 11 - atropine frequency input accepts alternate dosing text and saves it to MedicationStatement dosage
+  ---
+  duration_ms: 3.229667
+  type: 'test'
+  ...
+# Subtest: the generic renderer shows ordered fields, OD and OS columns, automatic notes, and history
+ok 12 - the generic renderer shows ordered fields, OD and OS columns, automatic notes, and history
+  ---
+  duration_ms: 0.928708
+  type: 'test'
+  ...
+# Subtest: an optionless toggle displays its true fallback and can be unset
+ok 13 - an optionless toggle displays its true fallback and can be unset
+  ---
+  duration_ms: 1.725375
+  type: 'test'
+  ...
+# Subtest: gland-structure history reads the saved dropout grade back beside its meibography image
+ok 14 - gland-structure history reads the saved dropout grade back beside its meibography image
+  ---
+  duration_ms: 3.388166
+  type: 'test'
+  ...
+# Subtest: gland-structure grade retry reuses the successful image upload
+ok 15 - gland-structure grade retry reuses the successful image upload
+  ---
+  duration_ms: 4.303125
+  type: 'test'
+  ...
+# Subtest: the same generic renderer records a data-defined Procedure without an aesthetics component fork
+ok 16 - the same generic renderer records a data-defined Procedure without an aesthetics component fork
+  ---
+  duration_ms: 2.107708
+  type: 'test'
+  ...
+# Subtest: aesthetics consent renders server-owned Questionnaire text and submits the shared Patient reference
+ok 17 - aesthetics consent renders server-owned Questionnaire text and submits the shared Patient reference
+  ---
+  duration_ms: 2.489917
+  type: 'test'
+  ...
+# Subtest: the generic renderer reaches and captures a nested child option under its parent
+ok 18 - the generic renderer reaches and captures a nested child option under its parent
+  ---
+  duration_ms: 2.036666
+  type: 'test'
+  ...
+# Subtest: the custom-field editor captures hierarchy and priority metadata for new options
+ok 19 - the custom-field editor captures hierarchy and priority metadata for new options
+  ---
+  duration_ms: 0.88375
+  type: 'test'
+  ...
+# Subtest: the shared section editor composes fields through the shipped custom-field editor affordance
+ok 20 - the shared section editor composes fields through the shipped custom-field editor affordance
+  ---
+  duration_ms: 0.345833
+  type: 'test'
+  ...
+# Subtest: the ocular-health renderer exposes segment headers, accelerators, bilateral copy, deferred, priority, nesting, and Other controls
+ok 21 - the ocular-health renderer exposes segment headers, accelerators, bilateral copy, deferred, priority, nesting, and Other controls
+  ---
+  duration_ms: 5.117833
+  type: 'test'
+  ...
+# Subtest: every active top-level ocular finding renders immediately in priority-first order
+ok 22 - every active top-level ocular finding renders immediately in priority-first order
+  ---
+  duration_ms: 2.953125
+  type: 'test'
+  ...
+# Subtest: ocular-health save derives abnormal from findings and normal after they are cleared
+ok 23 - ocular-health save derives abnormal from findings and normal after they are cleared
+  ---
+  duration_ms: 6.231166
+  type: 'test'
+  ...
+# Subtest: ocular-health deferral controls come only from each definition's allowDeferred flag
+ok 24 - ocular-health deferral controls come only from each definition's allowDeferred flag
+  ---
+  duration_ms: 0.55275
+  type: 'test'
+  ...
+# Subtest: deferred and recorded ocular findings cannot coexist at the client-server boundary
+ok 25 - deferred and recorded ocular findings cannot coexist at the client-server boundary
+  ---
+  duration_ms: 6.658916
+  type: 'test'
+  ...
+# Subtest: qualified finding definitions render qualifier controls for legacy presence-only history
+ok 26 - qualified finding definitions render qualifier controls for legacy presence-only history
+  ---
+  duration_ms: 1.197875
+  type: 'test'
+  ...
+# Subtest: prior history never seeds current controls or changes the base POST body
+ok 27 - prior history never seeds current controls or changes the base POST body
+  ---
+  duration_ms: 2.922042
+  type: 'test'
+  ...
+# Subtest: unsaved ocular edits survive an asynchronously arriving encounter cutoff and prior history
+ok 28 - unsaved ocular edits survive an asynchronously arriving encounter cutoff and prior history
+  ---
+  duration_ms: 5.884708
+  type: 'test'
+  ...
+# Subtest: a failed optional prior read leaves current-encounter ocular hydration intact
+ok 29 - a failed optional prior read leaves current-encounter ocular hydration intact
+  ---
+  duration_ms: 2.587541
+  type: 'test'
+  ...
+# Subtest: prior ocular readings stay in the accessibility tree without renaming or focusing controls
+ok 30 - prior ocular readings stay in the accessibility tree without renaming or focusing controls
+  ---
+  duration_ms: 1.667459
+  type: 'test'
+  ...
+# Subtest: ocular priors remain absent without a stable encounter period date
+ok 31 - ocular priors remain absent without a stable encounter period date
+  ---
+  duration_ms: 2.512958
+  type: 'test'
+  ...
+# Subtest: every rendered qualifier and ungraded prior carries its own date and stays eye-specific
+ok 32 - every rendered qualifier and ungraded prior carries its own date and stays eye-specific
+  ---
+  duration_ms: 3.207417
+  type: 'test'
+  ...
+# Subtest: missing prior data renders no annotation or reserved prior slot
+ok 33 - missing prior data renders no annotation or reserved prior slot
+  ---
+  duration_ms: 2.382834
+  type: 'test'
+  ...
+# Subtest: the current encounter is removed before choosing the most recent prior reading
+ok 34 - the current encounter is removed before choosing the most recent prior reading
+  ---
+  duration_ms: 2.253709
+  type: 'test'
+  ...
+# Subtest: ocular-health read-forward preserves stored finding details through an unrelated save
+ok 35 - ocular-health read-forward preserves stored finding details through an unrelated save
+  ---
+  duration_ms: 2.409375
+  type: 'test'
+  ...
+# Subtest: reopened history hydrates structures but posts only the one modified structure
+ok 36 - reopened history hydrates structures but posts only the one modified structure
+  ---
+  duration_ms: 6.401625
+  type: 'test'
+  ...
+# Subtest: ocular-health worksheet keeps four described findings in selection order and leaves Zone A stable
+ok 37 - ocular-health worksheet keeps four described findings in selection order and leaves Zone A stable
+  ---
+  duration_ms: 1.616458
+  type: 'test'
+  ...
+# Subtest: segmented finding grades replace the value and re-tapping clears the findingDetails entry
+ok 38 - segmented finding grades replace the value and re-tapping clears the findingDetails entry
+  ---
+  duration_ms: 7.390167
+  type: 'test'
+  ...
+# Subtest: all four finding qualifier controls write the server-validated value shapes
+ok 39 - all four finding qualifier controls write the server-validated value shapes
+  ---
+  duration_ms: 5.287875
+  type: 'test'
+  ...
+# Subtest: numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values
+ok 40 - numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values
+  ---
+  duration_ms: 4.969625
+  type: 'test'
+  ...
+# Subtest: presence-only ocular findings never create worksheet rows
+ok 41 - presence-only ocular findings never create worksheet rows
+  ---
+  duration_ms: 0.825333
+  type: 'test'
+  ...
+# Subtest: described finding destruction is guarded from Zone A and the row remove path prunes the next POST
+ok 42 - described finding destruction is guarded from Zone A and the row remove path prunes the next POST
+  ---
+  duration_ms: 3.717
+  type: 'test'
+  ...
+# Subtest: undescribed finding deselection is instant without a confirmation dialog
+ok 43 - undescribed finding deselection is instant without a confirmation dialog
+  ---
+  duration_ms: 1.187541
+  type: 'test'
+  ...
+# Subtest: removing a parent with selected child codes confirms before destroying the nested details
+ok 44 - removing a parent with selected child codes confirms before destroying the nested details
+  ---
+  duration_ms: 1.291709
+  type: 'test'
+  ...
+# Subtest: copying an eye confirms before replacing destination finding details
+ok 45 - copying an eye confirms before replacing destination finding details
+  ---
+  duration_ms: 3.733417
+  type: 'test'
+  ...
+# Subtest: copying into an undescribed destination does not ask for confirmation
+ok 46 - copying into an undescribed destination does not ask for confirmation
+  ---
+  duration_ms: 1.306292
+  type: 'test'
+  ...
+# Subtest: child details fold into the worksheet row and remain selection codes in the POST body
+ok 47 - child details fold into the worksheet row and remain selection codes in the POST body
+  ---
+  duration_ms: 2.85275
+  type: 'test'
+  ...
+# Subtest: copying mixed qualifiers mirrors only extents and clock-hour mirroring round-trips
+ok 48 - copying mixed qualifiers mirrors only extents and clock-hour mirroring round-trips
+  ---
+  duration_ms: 0.352375
+  type: 'test'
+  ...
+# Subtest: a saved normal keeps its captured template snapshot after the live template changes
+ok 49 - a saved normal keeps its captured template snapshot after the live template changes
+  ---
+  duration_ms: 1.091416
+  type: 'test'
+  ...
+# Subtest: SpineNav groups anterior and posterior definitions with Cup Disc in posterior
+ok 50 - SpineNav groups anterior and posterior definitions with Cup Disc in posterior
+  ---
+  duration_ms: 0.81225
+  type: 'test'
+  ...
+# Subtest: the full ocular-health runner lists all seeded structures blank and stays out of tear-film-only charting
+ok 51 - the full ocular-health runner lists all seeded structures blank and stays out of tear-film-only charting
+  ---
+  duration_ms: 6.1395
+  type: 'test'
+  ...
+# Subtest: the ocular-health runner derives finding count from capture selections
+ok 52 - the ocular-health runner derives finding count from capture selections
+  ---
+  duration_ms: 5.90275
+  type: 'test'
+  ...
+# Subtest: saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract
+ok 53 - saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract
+  ---
+  duration_ms: 9.657375
+  type: 'test'
+  ...
+# Subtest: fresh ocular-health history restores scoped diagnosis suggestions without a save
+ok 54 - fresh ocular-health history restores scoped diagnosis suggestions without a save
+  ---
+  duration_ms: 4.136167
+  type: 'test'
+  ...
+# Subtest: the ocular-health runner Next and Previous reuse structure scrolling and update the highlight
+ok 55 - the ocular-health runner Next and Previous reuse structure scrolling and update the highlight
+  ---
+  duration_ms: 5.698125
+  type: 'test'
+  ...
+# Subtest: posterior seeded history renders honestly and zero-data eyes remain untouched
+ok 56 - posterior seeded history renders honestly and zero-data eyes remain untouched
+  ---
+  duration_ms: 2.10675
+  type: 'test'
+  ...
+# Subtest: Fundus All Normal fills only the five posterior narratives and skips Cup Disc by construction
+ok 57 - Fundus All Normal fills only the five posterior narratives and skips Cup Disc by construction
+  ---
+  duration_ms: 0.199333
+  type: 'test'
+  ...
+# Subtest: posterior re-save stays pristine, round-trips selections, and preserves the saved normal template snapshot
+ok 58 - posterior re-save stays pristine, round-trips selections, and preserves the saved normal template snapshot
+  ---
+  duration_ms: 2.687708
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine
+ok 59 - AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine
+  ---
+  duration_ms: 4.014
+  type: 'test'
+  ...
+# Subtest: remaining anterior structure grades render blank, persist typed values, and hydrate per eye
+ok 60 - remaining anterior structure grades render blank, persist typed values, and hydrate per eye
+  ---
+  duration_ms: 8.731125
+  type: 'test'
+  ...
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/scenes/EncounterCharting.tsx:1390:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/scenes/EncounterCharting.tsx:378:63)
+# Subtest: ocular-health cleanup qualifiers render only for their selected finding
+ok 61 - ocular-health cleanup qualifiers render only for their selected finding
+  ---
+  duration_ms: 4.227333
+  type: 'test'
+  ...
+# Subtest: EXAM-1B per-eye negative act leaves touched OD alone and asserts OS
+ok 62 - EXAM-1B per-eye negative act leaves touched OD alone and asserts OS
+  ---
+  duration_ms: 11.140167
+  type: 'test'
+  ...
+# Subtest: hydrated state is pristine until a capture differs from its baseline
+ok 63 - hydrated state is pristine until a capture differs from its baseline
+  ---
+  duration_ms: 0.112083
+  type: 'test'
+  ...
+# Subtest: EncounterCharting keeps the shipped eyecare branches, adds three dry-eye renderers, and reuses the custom renderer for procedure definitions
+ok 64 - EncounterCharting keeps the shipped eyecare branches, adds three dry-eye renderers, and reuses the custom renderer for procedure definitions
+  ---
+  duration_ms: 0.583833
+  type: 'test'
+  ...
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/scenes/EncounterCharting.tsx:1390:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/scenes/EncounterCharting.tsx:378:63)
+# Subtest: an aesthetics-tagged Encounter loads the procedure catalog into the shared clinical spine
+ok 65 - an aesthetics-tagged Encounter loads the procedure catalog into the shared clinical spine
+  ---
+  duration_ms: 23.805041
+  type: 'test'
+  ...
+# Subtest: an eyecare-tagged Encounter does not load or render aesthetics procedure sections
+ok 66 - an eyecare-tagged Encounter does not load or render aesthetics procedure sections
+  ---
+  duration_ms: 12.594583
+  type: 'test'
+  ...
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/scenes/EncounterCharting.tsx:1390:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/scenes/EncounterCharting.tsx:378:63)
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/scenes/EncounterCharting.tsx:1390:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/scenes/EncounterCharting.tsx:378:63)
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/scenes/EncounterCharting.tsx:1390:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/scenes/EncounterCharting.tsx:378:63)
+# Subtest: changing encounterId remounts charting and clears encounter-scoped completion statuses
+ok 67 - changing encounterId remounts charting and clears encounter-scoped completion statuses
+  ---
+  duration_ms: 22.527167
+  type: 'test'
+  ...
+# Subtest: CupDiscSection clears every eye field before loading a different encounter
+ok 68 - CupDiscSection clears every eye field before loading a different encounter
+  ---
+  duration_ms: 6.137917
+  type: 'test'
+  ...
+# Subtest: CupDiscSection preserves descriptor codes and selected order through OdosChips
+ok 69 - CupDiscSection preserves descriptor codes and selected order through OdosChips
+  ---
+  duration_ms: 3.855834
+  type: 'test'
+  ...
+# Subtest: GonioscopySection clears encounter state before fetch and hydrates pigmentation and note without dirty records
+ok 70 - GonioscopySection clears encounter state before fetch and hydrates pigmentation and note without dirty records
+  ---
+  duration_ms: 6.86475
+  type: 'test'
+  ...
+# Subtest: GonioscopySection eye copy preserves anatomical quadrant names
+ok 71 - GonioscopySection eye copy preserves anatomical quadrant names
+  ---
+  duration_ms: 2.455458
+  type: 'test'
+  ...
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/scenes/EncounterCharting.tsx:1390:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/scenes/EncounterCharting.tsx:378:63)
+# Subtest: GonioscopySection preserves documented target pigmentation when the source is blank
+ok 72 - GonioscopySection preserves documented target pigmentation when the source is blank
+  ---
+  duration_ms: 1.53175
+  type: 'test'
+  ...
+# Subtest: EncounterCharting retains the shared ChartSidebar after the chart-open prototype is removed
+ok 73 - EncounterCharting retains the shared ChartSidebar after the chart-open prototype is removed
+  ---
+  duration_ms: 0.20825
+  type: 'test'
+  ...
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/scenes/EncounterCharting.tsx:1390:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/scenes/EncounterCharting.tsx:378:63)
+# Subtest: EncounterCharting collapses its chart sidebar at the existing tablet container breakpoint and persists expansion
+ok 74 - EncounterCharting collapses its chart sidebar at the existing tablet container breakpoint and persists expansion
+  ---
+  duration_ms: 24.252625
+  type: 'test'
+  ...
+# EXAM-1B PARTIAL: named failure; 3 initial writes, 1 retry, 0 successful structures reasserted
+# Subtest: EXAM-1B partial failure names the structure and All Normal retries only that failure
+ok 75 - EXAM-1B partial failure names the structure and All Normal retries only that failure
+  ---
+  duration_ms: 9.2665
+  type: 'test'
+  ...
+# Subtest: EXAM-1B retry keeps the other segment failure visible until it succeeds
+ok 76 - EXAM-1B retry keeps the other segment failure visible until it succeeds
+  ---
+  duration_ms: 5.1265
+  type: 'test'
+  ...
+# Subtest: EXAM-1B reverted failed edit cannot trap All Normal in an empty retry
+ok 77 - EXAM-1B reverted failed edit cannot trap All Normal in an empty retry
+  ---
+  duration_ms: 3.210583
+  type: 'test'
+  ...
+# Subtest: EXAM-1B re-edit after partial save remains unsaved when another structure is retried
+ok 78 - EXAM-1B re-edit after partial save remains unsaved when another structure is retried
+  ---
+  duration_ms: 5.298792
+  type: 'test'
+  ...
+# Subtest: EXAM-1B in-flight edit remains unsaved after the older request completes
+ok 79 - EXAM-1B in-flight edit remains unsaved after the older request completes
+  ---
+  duration_ms: 3.850083
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 unentered normal does not invent an A/V ratio
+ok 80 - AVFILL-1 unentered normal does not invent an A/V ratio
+  ---
+  duration_ms: 2.801
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 blank control does not invent an A/V ratio
+ok 81 - AVFILL-1 blank control does not invent an A/V ratio
+  ---
+  duration_ms: 0.987
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 Fundus All Normal does not invent an A/V ratio
+ok 82 - AVFILL-1 Fundus All Normal does not invent an A/V ratio
+  ---
+  duration_ms: 8.780125
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 selecting then clearing an unsaved ratio leaves no clinical write
+ok 83 - AVFILL-1 selecting then clearing an unsaved ratio leaves no clinical write
+  ---
+  duration_ms: 1.726125
+  type: 'test'
+  ...
+# Subtest: previous-exam helpers append unique encounters in server order and summarize exact recorded findings
+ok 84 - previous-exam helpers append unique encounters in server order and summarize exact recorded findings
+  ---
+  duration_ms: 0.853333
+  type: 'test'
+  ...
+# Subtest: previous-exam client rejects malformed successful rows and does not surface unsafe error detail
+ok 85 - previous-exam client rejects malformed successful rows and does not surface unsafe error detail
+  ---
+  duration_ms: 8.933708
+  type: 'test'
+  ...
+# Subtest: previous-exam client enforces four-row pages, FHIR dates, and trimmed clinical labels
+ok 86 - previous-exam client enforces four-row pages, FHIR dates, and trimmed clinical labels
+  ---
+  duration_ms: 1.7835
+  type: 'test'
+  ...
+# Subtest: FHIR history dates preserve partial precision and validate leap seconds and boundary offsets
+ok 87 - FHIR history dates preserve partial precision and validate leap seconds and boundary offsets
+  ---
+  duration_ms: 9.131541
+  type: 'test'
+  ...
+# Subtest: previous exams loads four encounters automatically, keeps them through paging failure, and retries the same cursor
+ok 88 - previous exams loads four encounters automatically, keeps them through paging failure, and retries the same cursor
+  ---
+  duration_ms: 15.155666
+  type: 'test'
+  ...
+# Subtest: previous exams renders the exact plain empty state
+ok 89 - previous exams renders the exact plain empty state
+  ---
+  duration_ms: 0.952583
+  type: 'test'
+  ...
+# Subtest: visible paging sentinel starts one request per cursor and ignores repeated observer delivery
+ok 90 - visible paging sentinel starts one request per cursor and ignores repeated observer delivery
+  ---
+  duration_ms: 4.506459
+  type: 'test'
+  ...
+# Subtest: consumed observer cursors cannot replay or restore paging after a terminal next page
+ok 91 - consumed observer cursors cannot replay or restore paging after a terminal next page
+  ---
+  duration_ms: 6.858875
+  type: 'test'
+  ...
+# Subtest: encounter changes ignore stale previous-exam responses
+ok 92 - encounter changes ignore stale previous-exam responses
+  ---
+  duration_ms: 2.92625
+  type: 'test'
+  ...
+# Subtest: checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific
+ok 93 - checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific
+  ---
+  duration_ms: 6.96175
+  type: 'test'
+  ...
+# Subtest: a stale pull cannot release the same row lock owned by the next encounter generation
+ok 94 - a stale pull cannot release the same row lock owned by the next encounter generation
+  ---
+  duration_ms: 8.815208
+  type: 'test'
+  ...
+# Subtest: a deferred pull settling after true unmount schedules no state update warning
+ok 95 - a deferred pull settling after true unmount schedules no state update warning
+  ---
+  duration_ms: 4.491875
+  type: 'test'
+  ...
+# Subtest: finding rows distinguish unchanged carried presence, prior absence, and fresh assertions
+ok 96 - finding rows distinguish unchanged carried presence, prior absence, and fresh assertions
+  ---
+  duration_ms: 2.120458
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: false
+ok 97 - STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: false
+  ---
+  duration_ms: 1.3545
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: undefined
+ok 98 - STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: undefined
+  ---
+  duration_ms: 2.255417
+  type: 'test'
+  ...
+# Subtest: the shared demotion presenter shows the charge, line-total amount, and claim consequence
+ok 99 - the shared demotion presenter shows the charge, line-total amount, and claim consequence
+  ---
+  duration_ms: 2.169459
+  type: 'test'
+  ...
+# Subtest: the shared demotion presenter makes an unavailable post-write impact computation explicit
+ok 100 - the shared demotion presenter makes an unavailable post-write impact computation explicit
+  ---
+  duration_ms: 0.770667
+  type: 'test'
+  ...
+# Subtest: DiagnosisPicker surfaces a stranded-charge warning after its variable Possible action
+ok 101 - DiagnosisPicker surfaces a stranded-charge warning after its variable Possible action
+  ---
+  duration_ms: 26.012333
+  type: 'test'
+  ...
+# Subtest: AssessmentSection surfaces a stranded-charge warning after its variable Discard action
+ok 102 - AssessmentSection surfaces a stranded-charge warning after its variable Discard action
+  ---
+  duration_ms: 21.563875
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE proposal picker requires diagnosis capability: true
+ok 103 - STAFF-DX-GATE proposal picker requires diagnosis capability: true
+  ---
+  duration_ms: 1.506958
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE proposal picker requires diagnosis capability: false
+ok 104 - STAFF-DX-GATE proposal picker requires diagnosis capability: false
+  ---
+  duration_ms: 1.219791
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE proposal picker requires diagnosis capability: undefined
+ok 105 - STAFF-DX-GATE proposal picker requires diagnosis capability: undefined
+  ---
+  duration_ms: 2.258458
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE decision picker requires diagnosis capability: true
+ok 106 - STAFF-DX-GATE decision picker requires diagnosis capability: true
+  ---
+  duration_ms: 2.641125
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE decision picker requires diagnosis capability: false
+ok 107 - STAFF-DX-GATE decision picker requires diagnosis capability: false
+  ---
+  duration_ms: 2.532875
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE decision picker requires diagnosis capability: undefined
+ok 108 - STAFF-DX-GATE decision picker requires diagnosis capability: undefined
+  ---
+  duration_ms: 1.146917
+  type: 'test'
+  ...
+# Subtest: by-structure projection filters one section and preserves both finding origins
+ok 109 - by-structure projection filters one section and preserves both finding origins
+  ---
+  duration_ms: 0.660583
+  type: 'test'
+  ...
+# Subtest: structure overlay renders sign grade and laterality and refreshes after diagnosis-side changes
+ok 110 - structure overlay renders sign grade and laterality and refreshes after diagnosis-side changes
+  ---
+  duration_ms: 6.6485
+  type: 'test'
+  ...
+# Subtest: diagnosis picker stays collapsed until clicked and exposes paired Possible and Confirm actions plus catalog search
+ok 111 - diagnosis picker stays collapsed until clicked and exposes paired Possible and Confirm actions plus catalog search
+  ---
+  duration_ms: 0.428541
+  type: 'test'
+  ...
+# Subtest: cup-disc and refraction charted rows use the shared picker route
+ok 112 - cup-disc and refraction charted rows use the shared picker route
+  ---
+  duration_ms: 0.172917
+  type: 'test'
+  ...
+# Subtest: Assessment renders Possible decisions, hides refuted rows, and shows linked finding provenance only when present
+ok 113 - Assessment renders Possible decisions, hides refuted rows, and shows linked finding provenance only when present
+  ---
+  duration_ms: 0.246958
+  type: 'test'
+  ...
+# Subtest: Assessment hydrates protocol state, aborts stale offers, surfaces errors, and traps staging-sheet focus
+ok 114 - Assessment hydrates protocol state, aborts stale offers, surfaces errors, and traps staging-sheet focus
+  ---
+  duration_ms: 0.185709
+  type: 'test'
+  ...
+# Subtest: sign advisory renders one quiet diagnosis line with non-blocking actions
+ok 115 - sign advisory renders one quiet diagnosis line with non-blocking actions
+  ---
+  duration_ms: 2.224166
+  type: 'test'
+  ...
+# Subtest: the sign advisory names a deferred staged code in the same completeness dialog
+ok 116 - the sign advisory names a deferred staged code in the same completeness dialog
+  ---
+  duration_ms: 0.311708
+  type: 'test'
+  ...
+# Subtest: sign-time completeness advises when needed but signs on empty results and read failures
+ok 117 - sign-time completeness advises when needed but signs on empty results and read failures
+  ---
+  duration_ms: 0.222208
+  type: 'test'
+  ...
+# Subtest: a hung completeness read aborts at its deadline and still signs
+ok 118 - a hung completeness read aborts at its deadline and still signs
+  ---
+  duration_ms: 4.590875
+  type: 'test'
+  ...
+# Subtest: dialog actions invoke only their corresponding callbacks
+ok 119 - dialog actions invoke only their corresponding callbacks
+  ---
+  duration_ms: 0.518083
+  type: 'test'
+  ...
+# Subtest: encounter changes clear advisories, cancel late checks, and reset only checking state
+ok 120 - encounter changes clear advisories, cancel late checks, and reset only checking state
+  ---
+  duration_ms: 0.208416
+  type: 'test'
+  ...
+# Subtest: diagnosis completeness is called only from the explicit EncounterHeader sign path
+ok 121 - diagnosis completeness is called only from the explicit EncounterHeader sign path
+  ---
+  duration_ms: 2.587959
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows suggested-new
+ok 122 - Assessment ranking feed follows suggested-new
+  ---
+  duration_ms: 20.712084
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows doctor-new
+ok 123 - Assessment ranking feed follows doctor-new
+  ---
+  duration_ms: 3.165459
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows doctor-established
+ok 124 - Assessment ranking feed follows doctor-established
+  ---
+  duration_ms: 7.547167
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows suggested-established
+ok 125 - Assessment ranking feed follows suggested-established
+  ---
+  duration_ms: 1.794834
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows newness-read-failure
+ok 126 - Assessment ranking feed follows newness-read-failure
+  ---
+  duration_ms: 2.497917
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows visit-status-read-failure
+ok 127 - Assessment ranking feed follows visit-status-read-failure
+  ---
+  duration_ms: 1.655459
+  type: 'test'
+  ...
+# Subtest: assessment protocol routing delegates diagnosis matching and charge acceptance to server offers
+ok 128 - assessment protocol routing delegates diagnosis matching and charge acceptance to server offers
+  ---
+  duration_ms: 0.544125
+  type: 'test'
+  ...
+# Subtest: creation rank rules retain the duplicate-principal guard and append secondaries
+ok 129 - creation rank rules retain the duplicate-principal guard and append secondaries
+  ---
+  duration_ms: 0.243083
+  type: 'test'
+  ...
+# Subtest: Make Principal computes one complete exact permutation without losing a diagnosis
+ok 130 - Make Principal computes one complete exact permutation without losing a diagnosis
+  ---
+  duration_ms: 0.411
+  type: 'test'
+  ...
+# Subtest: Make Principal moves a non-adjacent diagnosis first and shifts earlier diagnoses down in order
+ok 131 - Make Principal moves a non-adjacent diagnosis first and shifts earlier diagnoses down in order
+  ---
+  duration_ms: 0.048042
+  type: 'test'
+  ...
+# Subtest: Make Principal normalizes a rank-gap encounter through the complete permutation
+ok 132 - Make Principal normalizes a rank-gap encounter through the complete permutation
+  ---
+  duration_ms: 0.051542
+  type: 'test'
+  ...
+# Subtest: Make Principal refuses a provisional target before the endpoint call
+ok 133 - Make Principal refuses a provisional target before the endpoint call
+  ---
+  duration_ms: 0.074791
+  type: 'test'
+  ...
+# Subtest: rank actions retain one-click Make Principal without legacy secondary move controls
+ok 134 - rank actions retain one-click Make Principal without legacy secondary move controls
+  ---
+  duration_ms: 1.603667
+  type: 'test'
+  ...
+# Subtest: problem status patch targets one diagnosis entry and preserves unrelated extensions
+ok 135 - problem status patch targets one diagnosis entry and preserves unrelated extensions
+  ---
+  duration_ms: 0.180292
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE problem status delegates versioned writes and Provenance to the diagnosis endpoint
+ok 136 - STAFF-DX-GATE problem status delegates versioned writes and Provenance to the diagnosis endpoint
+  ---
+  duration_ms: 8.100834
+  type: 'test'
+  ...
+# Subtest: diagnosis laterality Provenance directly targets the Patient and affected Condition
+ok 137 - diagnosis laterality Provenance directly targets the Patient and affected Condition
+  ---
+  duration_ms: 2.298125
+  type: 'test'
+  ...
+# Subtest: diagnosis laterality PATCH atomically reconciles the existing catalog identifier suffix
+ok 138 - diagnosis laterality PATCH atomically reconciles the existing catalog identifier suffix
+  ---
+  duration_ms: 0.528125
+  type: 'test'
+  ...
+# Subtest: diagnosis stage PATCH atomically replaces the code and stable catalog key
+ok 139 - diagnosis stage PATCH atomically replaces the code and stable catalog key
+  ---
+  duration_ms: 0.799375
+  type: 'test'
+  ...
+# Subtest: bilateral eyelid laterality PATCH atomically replaces singular ICD coding with the catalog concept
+ok 140 - bilateral eyelid laterality PATCH atomically replaces singular ICD coding with the catalog concept
+  ---
+  duration_ms: 0.434459
+  type: 'test'
+  ...
+# Subtest: diagnosis laterality PATCH atomically reconciles a legacy two-part catalog identifier suffix
+ok 141 - diagnosis laterality PATCH atomically reconciles a legacy two-part catalog identifier suffix
+  ---
+  duration_ms: 0.329292
+  type: 'test'
+  ...
+# Subtest: problem status control renders a conspicuous required-empty state without unspecified
+ok 142 - problem status control renders a conspicuous required-empty state without unspecified
+  ---
+  duration_ms: 1.911625
+  type: 'test'
+  ...
+# Subtest: unavailable MDM axis renders the missing problem-status reason where a tier would appear
+ok 143 - unavailable MDM axis renders the missing problem-status reason where a tier would appear
+  ---
+  duration_ms: 0.257208
+  type: 'test'
+  ...
+# Subtest: one bilateral eyelid diagnosis contributes exactly one MDM problem
+ok 144 - one bilateral eyelid diagnosis contributes exactly one MDM problem
+  ---
+  duration_ms: 0.079958
+  type: 'test'
+  ...
+# Subtest: retracting a classified diagnosis atomically removes its High MDM contribution
+ok 145 - retracting a classified diagnosis atomically removes its High MDM contribution
+  ---
+  duration_ms: 0.67325
+  type: 'test'
+  ...
+# Subtest: retracting an unclassified diagnosis removes the permanent blocked MDM state
+ok 146 - retracting an unclassified diagnosis removes the permanent blocked MDM state
+  ---
+  duration_ms: 1.492375
+  type: 'test'
+  ...
+# Subtest: the free-form diagnosis rank input and state wiring are removed
+ok 147 - the free-form diagnosis rank input and state wiring are removed
+  ---
+  duration_ms: 0.340042
+  type: 'test'
+  ...
+# Subtest: both diagnosis surfaces retain Make Principal on the authoritative reorder write path
+ok 148 - both diagnosis surfaces retain Make Principal on the authoritative reorder write path
+  ---
+  duration_ms: 0.294959
+  type: 'test'
+  ...
+# Subtest: principal permutation fails closed for invalid or duplicate encounter ranks
+ok 149 - principal permutation fails closed for invalid or duplicate encounter ranks
+  ---
+  duration_ms: 0.111333
+  type: 'test'
+  ...
+# Subtest: rank action has no competing arbitrary-order buttons
+ok 150 - rank action has no competing arbitrary-order buttons
+  ---
+  duration_ms: 0.156375
+  type: 'test'
+  ...
+# Subtest: claim prefill keeps diagnosis order as the source of per-line pointer positions
+ok 151 - claim prefill keeps diagnosis order as the source of per-line pointer positions
+  ---
+  duration_ms: 0.421708
+  type: 'test'
+  ...
+# Subtest: diagnosis settings render grouped mappings, provisional catalog state, and read-only posture
+ok 152 - diagnosis settings render grouped mappings, provisional catalog state, and read-only posture
+  ---
+  duration_ms: 3.481375
+  type: 'test'
+  ...
+# Subtest: existing mapping saves reject finding changes and keep unchanged saves on their persisted finding
+ok 153 - existing mapping saves reject finding changes and keep unchanged saves on their persisted finding
+  ---
+  duration_ms: 0.34
+  type: 'test'
+  ...
+# Subtest: newly saved diagnoses appear in mapping options without a reload
+ok 154 - newly saved diagnoses appear in mapping options without a reload
+  ---
+  duration_ms: 0.52875
+  type: 'test'
+  ...
+# Subtest: key-finding settings save ordered practice rows and deactivate instead of deleting
+ok 155 - key-finding settings save ordered practice rows and deactivate instead of deleting
+  ---
+  duration_ms: 0.309041
+  type: 'test'
+  ...
+# Subtest: rapid key-finding edits serialize against the latest saved array
+ok 156 - rapid key-finding edits serialize against the latest saved array
+  ---
+  duration_ms: 1.782084
+  type: 'test'
+  ...
+# Subtest: height-capped common diagnosis rows opt out of flex shrinking
+ok 157 - height-capped common diagnosis rows opt out of flex shrinking
+  ---
+  duration_ms: 0.853708
+  type: 'test'
+  ...
+# Subtest: diagnosis workspace preferences default safely and round-trip valid selections
+ok 158 - diagnosis workspace preferences default safely and round-trip valid selections
+  ---
+  duration_ms: 0.15325
+  type: 'test'
+  ...
+# Subtest: diagnosis rail follows Encounter.diagnosis rank order without normalizing gaps
+ok 159 - diagnosis rail follows Encounter.diagnosis rank order without normalizing gaps
+  ---
+  duration_ms: 1.58325
+  type: 'test'
+  ...
+# Subtest: lateralized structure, Assessment, and Common surfaces keep one resolved code
+ok 160 - lateralized structure, Assessment, and Common surfaces keep one resolved code
+  ---
+  duration_ms: 5.2315
+  type: 'test'
+  ...
+# Subtest: Common names both active proposal eyes instead of arbitrarily choosing one code
+ok 161 - Common names both active proposal eyes instead of arbitrarily choosing one code
+  ---
+  duration_ms: 0.336709
+  type: 'test'
+  ...
+# Subtest: a non-lateralized Possible preserves the Common catalog code
+ok 162 - a non-lateralized Possible preserves the Common catalog code
+  ---
+  duration_ms: 0.274458
+  type: 'test'
+  ...
+# Subtest: Possible rows with identical recordedDate use id instead of FHIR search order
+ok 163 - Possible rows with identical recordedDate use id instead of FHIR search order
+  ---
+  duration_ms: 4.645917
+  type: 'test'
+  ...
+# Subtest: diagnosis door pages encounter Conditions and renders Possible provenance plus confirmed rank drift
+ok 164 - diagnosis door pages encounter Conditions and renders Possible provenance plus confirmed rank drift
+  ---
+  duration_ms: 21.075042
+  type: 'test'
+  ...
+# Subtest: excluded Encounter diagnosis references expose a disabled reorder explanation naming the condition
+ok 165 - excluded Encounter diagnosis references expose a disabled reorder explanation naming the condition
+  ---
+  duration_ms: 3.867167
+  type: 'test'
+  ...
+# Subtest: server-cleaned three-minus-one state renders two rows and submits their exact reorder
+ok 166 - server-cleaned three-minus-one state renders two rows and submits their exact reorder
+  ---
+  duration_ms: 9.454833
+  type: 'test'
+  ...
+# Subtest: catalog identity and pin reorder are explicit and stable
+ok 167 - catalog identity and pin reorder are explicit and stable
+  ---
+  duration_ms: 0.137709
+  type: 'test'
+  ...
+# Subtest: laterality-required diagnosis identity keeps OD, OS, and OU picks distinct
+ok 168 - laterality-required diagnosis identity keeps OD, OS, and OU picks distinct
+  ---
+  duration_ms: 0.05975
+  type: 'test'
+  ...
+# Subtest: diagnosis workspace remount identity changes at either patient or encounter boundary
+ok 169 - diagnosis workspace remount identity changes at either patient or encounter boundary
+  ---
+  duration_ms: 0.042667
+  type: 'test'
+  ...
+# Subtest: diagnosis rank actions are disabled for read-only users and while a write is busy
+ok 170 - diagnosis rank actions are disabled for read-only users and while a write is busy
+  ---
+  duration_ms: 0.027167
+  type: 'test'
+  ...
+# Subtest: workspace keeps one-click Make Principal on the complete reorder endpoint and opens grouped reorder rows
+ok 171 - workspace keeps one-click Make Principal on the complete reorder endpoint and opens grouped reorder rows
+  ---
+  duration_ms: 19.864542
+  type: 'test'
+  ...
+# Subtest: diagnosis pin moves require write access and respect the ordered-list edges
+ok 172 - diagnosis pin moves require write access and respect the ordered-list edges
+  ---
+  duration_ms: 0.086708
+  type: 'test'
+  ...
+# Subtest: Find dx searches the eligible catalog beyond bounded Common diagnoses
+ok 173 - Find dx searches the eligible catalog beyond bounded Common diagnoses
+  ---
+  duration_ms: 2.648625
+  type: 'test'
+  ...
+# Subtest: staged family search resolves an explicit member statement without exposing member rows
+ok 174 - staged family search resolves an explicit member statement without exposing member rows
+  ---
+  duration_ms: 0.2425
+  type: 'test'
+  ...
+# Subtest: staged family add uses segmented Stage then Scope and never offers unspecified
+ok 175 - staged family add uses segmented Stage then Scope and never offers unspecified
+  ---
+  duration_ms: 3.203125
+  type: 'test'
+  ...
+# Subtest: explicit stage search asks scope only and pending staged codes use the warning label
+ok 176 - explicit stage search asks scope only and pending staged codes use the warning label
+  ---
+  duration_ms: 2.900292
+  type: 'test'
+  ...
+# Subtest: selected pending family renders warning badges and re-stages from the header control
+ok 177 - selected pending family renders warning badges and re-stages from the header control
+  ---
+  duration_ms: 8.7485
+  type: 'test'
+  ...
+# Subtest: most recent prior stage is dated, excludes the selected Condition, and never supplies a default
+ok 178 - most recent prior stage is dated, excludes the selected Condition, and never supplies a default
+  ---
+  duration_ms: 0.131208
+  type: 'test'
+  ...
+# Subtest: bilateral eyelid diagnoses render both resolved codes while legacy unspecified-eyelid codes remain visible
+ok 179 - bilateral eyelid diagnoses render both resolved codes while legacy unspecified-eyelid codes remain visible
+  ---
+  duration_ms: 3.675667
+  type: 'test'
+  ...
+# Subtest: eyelid laterality edit fails closed before FHIR writes when its declared catalog row is unavailable
+ok 180 - eyelid laterality edit fails closed before FHIR writes when its declared catalog row is unavailable
+  ---
+  duration_ms: 4.470375
+  type: 'test'
+  ...
+# Subtest: selected diagnosis fails closed to edited when carry integrity is uncertain
+ok 181 - selected diagnosis fails closed to edited when carry integrity is uncertain
+  ---
+  duration_ms: 3.360583
+  type: 'test'
+  ...
+# Subtest: edited diagnosis carry is named distinctly without unchanged aging
+ok 182 - edited diagnosis carry is named distinctly without unchanged aging
+  ---
+  duration_ms: 2.977417
+  type: 'test'
+  ...
+# Subtest: ordinary unedited carry renders the immediate source and oldest unchanged exam
+ok 183 - ordinary unedited carry renders the immediate source and oldest unchanged exam
+  ---
+  duration_ms: 6.006542
+  type: 'test'
+  ...
+# Subtest: a failed same-diagnosis verification refresh cannot retain stale carry assertions
+ok 184 - a failed same-diagnosis verification refresh cannot retain stale carry assertions
+  ---
+  duration_ms: 4.728125
+  type: 'test'
+  ...
+# Subtest: switching diagnoses hides the prior findings payload while the new request is pending
+ok 185 - switching diagnoses hides the prior findings payload while the new request is pending
+  ---
+  duration_ms: 6.774875
+  type: 'test'
+  ...
+# Subtest: an older findings response cannot overwrite the newer selected diagnosis
+ok 186 - an older findings response cannot overwrite the newer selected diagnosis
+  ---
+  duration_ms: 5.432459
+  type: 'test'
+  ...
+# Subtest: finding rows sort charted before offered and search prioritizes selected-diagnosis candidates
+ok 187 - finding rows sort charted before offered and search prioritizes selected-diagnosis candidates
+  ---
+  duration_ms: 0.22225
+  type: 'test'
+  ...
+# Subtest: findings table keeps presence explicit, grade unanswered, laterality source visible, and re-click clears
+ok 188 - findings table keeps presence explicit, grade unanswered, laterality source visible, and re-click clears
+  ---
+  duration_ms: 0.903459
+  type: 'test'
+  ...
+# Subtest: unassigned tray offers current visit assignment and standalone without diagnosis creation
+ok 189 - unassigned tray offers current visit assignment and standalone without diagnosis creation
+  ---
+  duration_ms: 0.272708
+  type: 'test'
+  ...
+# Subtest: unassigned tray renders quiet equal-weight suggestions in endpoint order and delegates the clinician pick
+ok 190 - unassigned tray renders quiet equal-weight suggestions in endpoint order and delegates the clinician pick
+  ---
+  duration_ms: 0.153541
+  type: 'test'
+  ...
+# Subtest: tray leaf and family suggestions reuse the existing scope and stage prompt and persist only after explicit scope
+ok 191 - tray leaf and family suggestions reuse the existing scope and stage prompt and persist only after explicit scope
+  ---
+  duration_ms: 3.468833
+  type: 'test'
+  ...
+# Subtest: same-encounter finding refresh reloads diagnosis candidates for newly charted findings
+ok 192 - same-encounter finding refresh reloads diagnosis candidates for newly charted findings
+  ---
+  duration_ms: 2.686417
+  type: 'test'
+  ...
+# Subtest: imaging hides the prior patient's rows as soon as the patient reference changes
+ok 193 - imaging hides the prior patient's rows as soon as the patient reference changes
+  ---
+  duration_ms: 0.812542
+  type: 'test'
+  ...
+# Subtest: diagnosis header visit-status picker excludes new and saves the selected diagnosis
+ok 194 - diagnosis header visit-status picker excludes new and saves the selected diagnosis
+  ---
+  duration_ms: 7.671875
+  type: 'test'
+  ...
+# Subtest: diagnosis status controls: finished
+ok 195 - diagnosis status controls: finished
+  ---
+  duration_ms: 3.115708
+  type: 'test'
+  ...
+# Subtest: diagnosis status controls: status-read-failure
+ok 196 - diagnosis status controls: status-read-failure
+  ---
+  duration_ms: 2.972417
+  type: 'test'
+  ...
+# Subtest: Assessment completion pointer targets the diagnosis and disappears when complete
+ok 197 - Assessment completion pointer targets the diagnosis and disappears when complete
+  ---
+  duration_ms: 0.420834
+  type: 'test'
+  ...
+# Subtest: doctor chooses Established with one tap and the header shows the saved choice after reload
+ok 198 - doctor chooses Established with one tap and the header shows the saved choice after reload
+  ---
+  duration_ms: 10.27975
+  type: 'test'
+  ...
+# Subtest: partial newness response keeps doctor choice visible and marks only unavailable diagnosis
+ok 199 - partial newness response keeps doctor choice visible and marks only unavailable diagnosis
+  ---
+  duration_ms: 6.397708
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE workspace separates diagnosis writes from pins: true
+ok 200 - STAFF-DX-GATE workspace separates diagnosis writes from pins: true
+  ---
+  duration_ms: 9.041292
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE findings retain grade and laterality while gating evidence links: true
+ok 201 - STAFF-DX-GATE findings retain grade and laterality while gating evidence links: true
+  ---
+  duration_ms: 0.644125
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Assessment reads diagnosis permission from the server: true
+ok 202 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: true
+  ---
+  duration_ms: 5.114625
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE workspace separates diagnosis writes from pins: false
+ok 203 - STAFF-DX-GATE workspace separates diagnosis writes from pins: false
+  ---
+  duration_ms: 10.032542
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE findings retain grade and laterality while gating evidence links: false
+ok 204 - STAFF-DX-GATE findings retain grade and laterality while gating evidence links: false
+  ---
+  duration_ms: 0.45375
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Assessment reads diagnosis permission from the server: false
+ok 205 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: false
+  ---
+  duration_ms: 1.111792
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE workspace separates diagnosis writes from pins: undefined
+ok 206 - STAFF-DX-GATE workspace separates diagnosis writes from pins: undefined
+  ---
+  duration_ms: 7.77825
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE findings retain grade and laterality while gating evidence links: undefined
+ok 207 - STAFF-DX-GATE findings retain grade and laterality while gating evidence links: undefined
+  ---
+  duration_ms: 0.425375
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Assessment reads diagnosis permission from the server: undefined
+ok 208 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: undefined
+  ---
+  duration_ms: 0.928416
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE diagnosis capability cannot grant ordinary finding writes
+ok 209 - STAFF-DX-GATE diagnosis capability cannot grant ordinary finding writes
+  ---
+  duration_ms: 0.334666
+  type: 'test'
+  ...
+# Subtest: readEncounterUndoLedger fetches the ledger, and answers the empty ledger for a non-ledger body or a failed request
+ok 210 - readEncounterUndoLedger fetches the ledger, and answers the empty ledger for a non-ledger body or a failed request
+  ---
+  duration_ms: 10.437292
+  type: 'test'
+  ...
+# Subtest: undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error
+ok 211 - undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error
+  ---
+  duration_ms: 0.527041
+  type: 'test'
+  ...
+# Subtest: undoSlotForSection finds the sheet's slot by any of its keys, exact or by prefix, and prefers the most recent
+ok 212 - undoSlotForSection finds the sheet's slot by any of its keys, exact or by prefix, and prefers the most recent
+  ---
+  duration_ms: 4.676959
+  type: 'test'
+  ...
+# Subtest: G2: a successful void vouches only for slots whose every ref it actually enumerated — a no-op 200 vouches for nothing
+ok 213 - G2: a successful void vouches only for slots whose every ref it actually enumerated — a no-op 200 vouches for nothing
+  ---
+  duration_ms: 0.276416
+  type: 'test'
+  ...
+# Subtest: strip copy says Removed for a tier-1 remove and Cleared for a section or the visit, scaled by count — exact only for a slot this page saw confirmed
+ok 214 - strip copy says Removed for a tier-1 remove and Cleared for a section or the visit, scaled by count — exact only for a slot this page saw confirmed
+  ---
+  duration_ms: 0.111917
+  type: 'test'
+  ...
+# Subtest: F2: a slot read back from the server is intent-derived, so its count is an upper bound and the copy says so — by default
+ok 215 - F2: a slot read back from the server is intent-derived, so its count is an upper bound and the copy says so — by default
+  ---
+  duration_ms: 0.061709
+  type: 'test'
+  ...
+# Subtest: UndoStrip is a polite status row with one Undo verb; Undo calls back and reports a failure inline
+ok 216 - UndoStrip is a polite status row with one Undo verb; Undo calls back and reports a failure inline
+  ---
+  duration_ms: 7.65525
+  type: 'test'
+  ...
+# Subtest: F2: a strip for a slot this page saw confirmed renders the exact count and the exact Undo title
+ok 217 - F2: a strip for a slot this page saw confirmed renders the exact count and the exact Undo title
+  ---
+  duration_ms: 0.672
+  type: 'test'
+  ...
+# Subtest: UndoStrip renders present-but-disabled with the amendment tooltip once the encounter is signed
+ok 218 - UndoStrip renders present-but-disabled with the amendment tooltip once the encounter is signed
+  ---
+  duration_ms: 0.915792
+  type: 'test'
+  ...
+# Subtest: the entry sheet renders the section's Undo strip directly beneath its heading row, scoped to that section
+ok 219 - the entry sheet renders the section's Undo strip directly beneath its heading row, scoped to that section
+  ---
+  duration_ms: 1.679292
+  type: 'test'
+  ...
+# Subtest: the entry sheet shows no strip when the section has nothing to undo, and a disabled one after sign
+ok 220 - the entry sheet shows no strip when the section has nothing to undo, and a disabled one after sign
+  ---
+  duration_ms: 0.658625
+  type: 'test'
+  ...
+# Subtest: the chart bar carries the visit Undo in its own slot immediately after exam-sections, only while a visit clear is pending
+ok 221 - the chart bar carries the visit Undo in its own slot immediately after exam-sections, only while a visit clear is pending
+  ---
+  duration_ms: 1.346916
+  type: 'test'
+  ...
+# Subtest: CvfSection's tier-1 remove names both of the sheet's section keys so the server files one Undo slot for the sheet
+ok 222 - CvfSection's tier-1 remove names both of the sheet's section keys so the server files one Undo slot for the sheet
+  ---
+  duration_ms: 0.243125
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, observation
+ok 223 - STAFF-DX-GATE Undo protects diagnosis slots: true, observation
+  ---
+  duration_ms: 0.500834
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, condition
+ok 224 - STAFF-DX-GATE Undo protects diagnosis slots: true, condition
+  ---
+  duration_ms: 0.343292
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, diagnosis-row
+ok 225 - STAFF-DX-GATE Undo protects diagnosis slots: true, diagnosis-row
+  ---
+  duration_ms: 0.278666
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, observation
+ok 226 - STAFF-DX-GATE Undo protects diagnosis slots: false, observation
+  ---
+  duration_ms: 0.277
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, condition
+ok 227 - STAFF-DX-GATE Undo protects diagnosis slots: false, condition
+  ---
+  duration_ms: 0.218583
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, diagnosis-row
+ok 228 - STAFF-DX-GATE Undo protects diagnosis slots: false, diagnosis-row
+  ---
+  duration_ms: 0.256541
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, observation
+ok 229 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, observation
+  ---
+  duration_ms: 0.334375
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, condition
+ok 230 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, condition
+  ---
+  duration_ms: 0.349667
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, diagnosis-row
+ok 231 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, diagnosis-row
+  ---
+  duration_ms: 0.214
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE ledger and undo capabilities stay outside the persisted ledger
+ok 232 - STAFF-DX-GATE ledger and undo capabilities stay outside the persisted ledger
+  ---
+  duration_ms: 1.339375
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: true
+ok 233 - STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: true
+  ---
+  duration_ms: 0.786375
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: false
+ok 234 - STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: false
+  ---
+  duration_ms: 0.462167
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: undefined
+ok 235 - STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: undefined
+  ---
+  duration_ms: 0.407542
+  type: 'test'
+  ...
+# Subtest: voidEncounterEntries posts the scope to the encounter void endpoint and returns the server's summary
+ok 236 - voidEncounterEntries posts the scope to the encounter void endpoint and returns the server's summary
+  ---
+  duration_ms: 7.352458
+  type: 'test'
+  ...
+# Subtest: previewEncounterVoid sends preview: true and surfaces the server error on failure
+ok 237 - previewEncounterVoid sends preview: true and surfaces the server error on failure
+  ---
+  duration_ms: 0.411666
+  type: 'test'
+  ...
+# Subtest: isClosedEncounterStatus mirrors the server's sign gate
+ok 238 - isClosedEncounterStatus mirrors the server's sign gate
+  ---
+  duration_ms: 0.047333
+  type: 'test'
+  ...
+# Subtest: confirm copy names the count and, for the visit, every section
+ok 239 - confirm copy names the count and, for the visit, every section
+  ---
+  duration_ms: 0.120708
+  type: 'test'
+  ...
+# Subtest: Clear section stays hidden while the section has nothing recorded
+ok 240 - Clear section stays hidden while the section has nothing recorded
+  ---
+  duration_ms: 10.127333
+  type: 'test'
+  ...
+# Subtest: Clear section previews the count, confirms with it, voids, and reports the result
+ok 241 - Clear section previews the count, confirms with it, voids, and reports the result
+  ---
+  duration_ms: 17.4635
+  type: 'test'
+  ...
+# Subtest: Clear section does nothing when the clinician declines the confirm
+ok 242 - Clear section does nothing when the clinician declines the confirm
+  ---
+  duration_ms: 15.970791
+  type: 'test'
+  ...
+# Subtest: a failed Clear section keeps the server's error on screen AND tells the encounter to re-read the chart
+ok 243 - a failed Clear section keeps the server's error on screen AND tells the encounter to re-read the chart
+  ---
+  duration_ms: 16.304833
+  type: 'test'
+  ...
+# Subtest: a failed Clear everything keeps the server's error on screen AND tells the encounter to re-read the chart
+ok 244 - a failed Clear everything keeps the server's error on screen AND tells the encounter to re-read the chart
+  ---
+  duration_ms: 16.67975
+  type: 'test'
+  ...
+# Subtest: a failed preview reports but does not claim a clear failed — nothing was attempted
+ok 245 - a failed preview reports but does not claim a clear failed — nothing was attempted
+  ---
+  duration_ms: 5.076666
+  type: 'test'
+  ...
+# Subtest: Clear section renders present-but-disabled with the amendment tooltip once the encounter is signed
+ok 246 - Clear section renders present-but-disabled with the amendment tooltip once the encounter is signed
+  ---
+  duration_ms: 4.423708
+  type: 'test'
+  ...
+# Subtest: Remove confirms only when typed detail would be lost, and is reachable only through Edit
+ok 247 - Remove confirms only when typed detail would be lost, and is reachable only through Edit
+  ---
+  duration_ms: 25.057667
+  type: 'test'
+  ...
+# Subtest: once the encounter is signed no Remove is rendered; the Edit door is present-but-disabled with the amendment tooltip
+ok 248 - once the encounter is signed no Remove is rendered; the Edit door is present-but-disabled with the amendment tooltip
+  ---
+  duration_ms: 6.121208
+  type: 'test'
+  ...
+# Subtest: HPI, IOP, and CVF sheets expose a working Back to exam overview action
+ok 249 - HPI, IOP, and CVF sheets expose a working Back to exam overview action
+  ---
+  duration_ms: 0.677417
+  type: 'test'
+  ...
+# Subtest: the entry sheet chrome carries Clear chart left of Back to exam overview, from any section
+ok 250 - the entry sheet chrome carries Clear chart left of Back to exam overview, from any section
+  ---
+  duration_ms: 16.611459
+  type: 'test'
+  ...
+# Subtest: the visit-level control is disabled with the amendment tooltip after sign and absent from non-clinical sheets
+ok 251 - the visit-level control is disabled with the amendment tooltip after sign and absent from non-clinical sheets
+  ---
+  duration_ms: 9.895125
+  type: 'test'
+  ...
+# Subtest: an empty visit tells the clinician there is nothing to clear instead of confirming
+ok 252 - an empty visit tells the clinician there is nothing to clear instead of confirming
+  ---
+  duration_ms: 4.853167
+  type: 'test'
+  ...
+# Subtest: count honesty: Dilation section preview, confirm, void result, section subtotal, and stored statuses all agree
+ok 253 - count honesty: Dilation section preview, confirm, void result, section subtotal, and stored statuses all agree
+  ---
+  duration_ms: 13.071083
+  type: 'test'
+  ...
+# Subtest: count honesty: whole-visit preview, confirm, void result, section subtotals, and stored statuses all agree
+ok 254 - count honesty: whole-visit preview, confirm, void result, section subtotals, and stored statuses all agree
+  ---
+  duration_ms: 11.272334
+  type: 'test'
+  ...
+# Subtest: guard 4: removing the only refraction block voids its saved Observations on the server
+ok 255 - guard 4: removing the only refraction block voids its saved Observations on the server
+  ---
+  duration_ms: 140.351667
+  type: 'test'
+  ...
+# Subtest: every surface in the design table renders Clear section, and HpiSection no longer carries a dead onClear stub
+ok 256 - every surface in the design table renders Clear section, and HpiSection no longer carries a dead onClear stub
+  ---
+  duration_ms: 1.097958
+  type: 'test'
+  ...
+# Subtest: Wearing Rx offers the standard persisted section clear and resets its editor to blank
+ok 257 - Wearing Rx offers the standard persisted section clear and resets its editor to blank
+  ---
+  duration_ms: 45.368042
+  type: 'test'
+  ...
+# Subtest: fixback 5: refraction block Remove is disabled with the amendment tooltip once the encounter is signed
+ok 258 - fixback 5: refraction block Remove is disabled with the amendment tooltip once the encounter is signed
+  ---
+  duration_ms: 49.658583
+  type: 'test'
+  ...
+# Subtest: Auto-refraction reopens with the current encounter's stored AR, Auto-K, PD, and remarks in the editor
+ok 259 - Auto-refraction reopens with the current encounter's stored AR, Auto-K, PD, and remarks in the editor
+  ---
+  duration_ms: 58.506917
+  type: 'test'
+  ...
+# Subtest: Auto-refraction history cannot overwrite an edit made while hydration is in flight
+ok 260 - Auto-refraction history cannot overwrite an edit made while hydration is in flight
+  ---
+  duration_ms: 43.776833
+  type: 'test'
+  ...
+# Subtest: Auto-refraction encounter changes reset fields and replace saved references before new history resolves
+ok 261 - Auto-refraction encounter changes reset fields and replace saved references before new history resolves
+  ---
+  duration_ms: 84.808208
+  type: 'test'
+  ...
+# Subtest: Auto-refraction Remove keeps preview-only references when latest-value history resolves later
+ok 262 - Auto-refraction Remove keeps preview-only references when latest-value history resolves later
+  ---
+  duration_ms: 54.7665
+  type: 'test'
+  ...
+# Subtest: Auto-refraction late persisted preview cannot restore references after Remove succeeds
+ok 263 - Auto-refraction late persisted preview cannot restore references after Remove succeeds
+  ---
+  duration_ms: 62.400667
+  type: 'test'
+  ...
+# Subtest: fixback 56ff8d36 P2\#A (restraint §5): a signed reopened chart renders Clear section AND the Edit door for VA, IOP, and Auto-refraction present-but-disabled with the amendment tooltip, and no Remove
+ok 264 - fixback 56ff8d36 P2\#A (restraint §5): a signed reopened chart renders Clear section AND the Edit door for VA, IOP, and Auto-refraction present-but-disabled with the amendment tooltip, and no Remove
+  ---
+  duration_ms: 66.261125
+  type: 'test'
+  ...
+# Subtest: fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when the server holds recorded values
+ok 265 - fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when the server holds recorded values
+  ---
+  duration_ms: 185.975333
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=true
+ok 266 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=true
+  ---
+  duration_ms: 6.0375
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=false
+ok 267 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=false
+  ---
+  duration_ms: 4.446084
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=true
+ok 268 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=true
+  ---
+  duration_ms: 5.615375
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=false
+ok 269 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=false
+  ---
+  duration_ms: 5.710958
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+ok 270 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+  ---
+  duration_ms: 5.326125
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+ok 271 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+  ---
+  duration_ms: 5.737542
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=true
+ok 272 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=true
+  ---
+  duration_ms: 5.817542
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=false
+ok 273 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=false
+  ---
+  duration_ms: 5.748792
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=true
+ok 274 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=true
+  ---
+  duration_ms: 5.574542
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=false
+ok 275 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=false
+  ---
+  duration_ms: 4.510542
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+ok 276 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+  ---
+  duration_ms: 5.518625
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+ok 277 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+  ---
+  duration_ms: 5.873917
+  type: 'test'
+  ...
+# Subtest: diagnosis Engage prefilters content, names guardian recipients, blocks marketing, and warns on a front-desk override
+ok 278 - diagnosis Engage prefilters content, names guardian recipients, blocks marketing, and warns on a front-desk override
+  ---
+  duration_ms: 25.949
+  type: 'test'
+  ...
+# Subtest: marketing companion: a withheld cell disables despite no legacy record
+ok 279 - marketing companion: a withheld cell disables despite no legacy record
+  ---
+  duration_ms: 2.764167
+  type: 'test'
+  ...
+# Subtest: toolbar Engage stays unfiltered and a locked practice pins retail content to clinical without a toggle
+ok 280 - toolbar Engage stays unfiltered and a locked practice pins retail content to clinical without a toggle
+  ---
+  duration_ms: 3.031
+  type: 'test'
+  ...
+# Subtest: the chart routes diagnosis-row and permanent-tab doors to the same Engage sheet
+ok 281 - the chart routes diagnosis-row and permanent-tab doors to the same Engage sheet
+  ---
+  duration_ms: 0.390708
+  type: 'test'
+  ...
+# Subtest: the shared communications client lists filtered education and posts the exact dispatch body
+ok 282 - the shared communications client lists filtered education and posts the exact dispatch body
+  ---
+  duration_ms: 1.145958
+  type: 'test'
+  ...
+# Subtest: the education client rejects missing or malformed channel availability
+ok 283 - the education client rejects missing or malformed channel availability
+  ---
+  duration_ms: 0.43275
+  type: 'test'
+  ...
+# Subtest: an unavailable email channel stays visible, disabled, and explained
+ok 284 - an unavailable email channel stays visible, disabled, and explained
+  ---
+  duration_ms: 2.157417
+  type: 'test'
+  ...
+# Subtest: card notices distinguish no SMS lane from the unavailable default lane
+ok 285 - card notices distinguish no SMS lane from the unavailable default lane
+  ---
+  duration_ms: 4.736959
+  type: 'test'
+  ...
+# Subtest: the SMS lane toggle explains only the unavailable selected lane
+ok 286 - the SMS lane toggle explains only the unavailable selected lane
+  ---
+  duration_ms: 5.0145
+  type: 'test'
+  ...
+# Subtest: a minor without a recorded consent-authority guardian cannot dispatch education
+ok 287 - a minor without a recorded consent-authority guardian cannot dispatch education
+  ---
+  duration_ms: 1.798917
+  type: 'test'
+  ...
+# Subtest: a suppressed default SMS lane disables Text before compose and names the suppression
+ok 288 - a suppressed default SMS lane disables Text before compose and names the suppression
+  ---
+  duration_ms: 2.897791
+  type: 'test'
+  ...
+# Subtest: a provider-shaped 403 preference probe keeps Text available for dispatch enforcement
+ok 289 - a provider-shaped 403 preference probe keeps Text available for dispatch enforcement
+  ---
+  duration_ms: 1.833334
+  type: 'test'
+  ...
+# Subtest: suppressed and rescheduled education outcomes render actionable sentences
+ok 290 - suppressed and rescheduled education outcomes render actionable sentences
+  ---
+  duration_ms: 2.388583
+  type: 'test'
+  ...
+# Subtest: a failed confirmation reuses its idempotency key until the send succeeds
+ok 291 - a failed confirmation reuses its idempotency key until the send succeeds
+  ---
+  duration_ms: 3.0265
+  type: 'test'
+  ...
+# Subtest: selecting a second guardian clears and disables a one-person override
+ok 292 - selecting a second guardian clears and disables a one-person override
+  ---
+  duration_ms: 2.720417
+  type: 'test'
+  ...
+# Subtest: chart update appears only after an override value and print returns a user-clicked link
+ok 293 - chart update appears only after an override value and print returns a user-clicked link
+  ---
+  duration_ms: 2.16225
+  type: 'test'
+  ...
+# Subtest: chart contact conflict is sent success and clears pending using real dispatch client
+ok 294 - chart contact conflict is sent success and clears pending using real dispatch client
+  ---
+  duration_ms: 1.959791
+  type: 'test'
+  ...
+# Subtest: education dispatch client rejects malformed chart update metadata
+ok 295 - education dispatch client rejects malformed chart update metadata
+  ---
+  duration_ms: 0.204417
+  type: 'test'
+  ...
+# Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
+#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/section-editing.tsx:29:42)
+#     at CvfSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/CvfSection.tsx:42:30)
+# Subtest: screenshot refinement preserves PRETEST order with the backend confrontation label
+ok 296 - screenshot refinement preserves PRETEST order with the backend confrontation label
+  ---
+  duration_ms: 3.871333
+  type: 'test'
+  ...
+# Subtest: stereopsis renders once as binocular and flags its unseeded arcsec setup
+ok 297 - stereopsis renders once as binocular and flags its unseeded arcsec setup
+  ---
+  duration_ms: 0.851875
+  type: 'test'
+  ...
+# Subtest: practice-setup warnings keep their clinical refusal and link to chart-field settings
+ok 298 - practice-setup warnings keep their clinical refusal and link to chart-field settings
+  ---
+  duration_ms: 0.322334
+  type: 'test'
+  ...
+# Subtest: color vision derives only the operator-confirmed Ishihara total
+ok 299 - color vision derives only the operator-confirmed Ishihara total
+  ---
+  duration_ms: 0.194292
+  type: 'test'
+  ...
+# Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
+#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/section-editing.tsx:29:42)
+#     at CvfSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/CvfSection.tsx:42:30)
+# Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
+#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/section-editing.tsx:29:42)
+#     at CvfSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/CvfSection.tsx:42:30)
+# Subtest: CVF renders four accessible quadrant wedges and preserves per-eye controls
+ok 300 - CVF renders four accessible quadrant wedges and preserves per-eye controls
+  ---
+  duration_ms: 30.701417
+  type: 'test'
+  ...
+# Subtest: CVF entry leads with the quadrant diagrams before the Field Defect panel
+ok 301 - CVF entry leads with the quadrant diagrams before the Field Defect panel
+  ---
+  duration_ms: 1.269375
+  type: 'test'
+  ...
+# Subtest: Visual Field renders exactly the approved lesion-site descriptor vocabulary
+ok 302 - Visual Field renders exactly the approved lesion-site descriptor vocabulary
+  ---
+  duration_ms: 0.495333
+  type: 'test'
+  ...
+# Subtest: changing a reloaded Field Defect hides the stale diagnosis until the descriptor is saved
+ok 303 - changing a reloaded Field Defect hides the stale diagnosis until the descriptor is saved
+  ---
+  duration_ms: 4.16175
+  type: 'test'
+  ...
+# Subtest: suppressed visual-field diagnosis stays visible and the override reveals clinician actions
+ok 304 - suppressed visual-field diagnosis stays visible and the override reveals clinician actions
+  ---
+  duration_ms: 1.524958
+  type: 'test'
+  ...
+# Subtest: structure diagnosis rail keeps full search when the persisted finding has no seeded suggestions
+ok 305 - structure diagnosis rail keeps full search when the persisted finding has no seeded suggestions
+  ---
+  duration_ms: 2.7865
+  type: 'test'
+  ...
+# Subtest: bilateral structure catalog picks stay scoped to the eye where the search selection was made
+ok 306 - bilateral structure catalog picks stay scoped to the eye where the search selection was made
+  ---
+  duration_ms: 4.811583
+  type: 'test'
+  ...
+# Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
+#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/section-editing.tsx:29:42)
+#     at CoverTestSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/CoverTestSection.tsx:38:36)
+# Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
+#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/section-editing.tsx:29:42)
+#     at EntranceStateSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/EntranceStateSection.tsx:34:40)
+# Subtest: structure proposal toggles find provisional Conditions beyond the first FHIR search page
+ok 307 - structure proposal toggles find provisional Conditions beyond the first FHIR search page
+  ---
+  duration_ms: 2.618791
+  type: 'test'
+  ...
+# Subtest: cover magnitude uses the shared spinner and is bounded from 0 through 60 delta
+ok 308 - cover magnitude uses the shared spinner and is bounded from 0 through 60 delta
+  ---
+  duration_ms: 1.258667
+  type: 'test'
+  ...
+# Subtest: diplopia choices are blank-safe and cannot be complete without all five selections
+ok 309 - diplopia choices are blank-safe and cannot be complete without all five selections
+  ---
+  duration_ms: 0.400584
+  type: 'test'
+  ...
+# Subtest: pupil state sections retain explicit per-eye states and centered spinner controls
+ok 310 - pupil state sections retain explicit per-eye states and centered spinner controls
+  ---
+  duration_ms: 0.231709
+  type: 'test'
+  ...
+# Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
+#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/section-editing.tsx:29:42)
+#     at EntranceMeasurementSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/EntranceMeasurementSection.tsx:24:46)
+# Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
+#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/section-editing.tsx:29:42)
+#     at DilationSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/DilationSection.tsx:15:35)
+#     at ConfirmDestructiveProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/ConfirmDestructive.tsx:26:46)
+# Subtest: selecting Pupils Normal OU fills only the definition-supplied 3 mm and 5 mm normal values
+ok 311 - selecting Pupils Normal OU fills only the definition-supplied 3 mm and 5 mm normal values
+  ---
+  duration_ms: 20.463667
+  type: 'test'
+  ...
+# Subtest: manual keratometry uses a shrinkable five-column grid that fits the content pane
+ok 312 - manual keratometry uses a shrinkable five-column grid that fits the content pane
+  ---
+  duration_ms: 69.175958
+  type: 'test'
+  ...
+# Subtest: missing entrance definitions render an explicit practice-setup state
+ok 313 - missing entrance definitions render an explicit practice-setup state
+  ---
+  duration_ms: 0.256542
+  type: 'test'
+  ...
+# Subtest: dilation retains agent capture, DFE flag, declined counseling, and chart-note history
+ok 314 - dilation retains agent capture, DFE flag, declined counseling, and chart-note history
+  ---
+  duration_ms: 0.959458
+  type: 'test'
+  ...
+# Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.
+#     at SectionEditingProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/section-editing.tsx:29:42)
+#     at EntranceStateSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/src/components/charting/EntranceStateSection.tsx:34:40)
+# Subtest: clearing Dilation leaves the editor unrecorded instead of pre-filling an administration row
+ok 315 - clearing Dilation leaves the editor unrecorded instead of pre-filling an administration row
+  ---
+  duration_ms: 18.488417
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 5: entrance Deferred button follows the definition permission
+ok 316 - DEFER-1 guard 5: entrance Deferred button follows the definition permission
+  ---
+  duration_ms: 7.43925
+  type: 'test'
+  ...
+# Subtest: by-exception board renders exactly one row per performed or deferred finding
+ok 317 - by-exception board renders exactly one row per performed or deferred finding
+  ---
+  duration_ms: 11.492292
+  type: 'test'
+  ...
+# Subtest: five row patterns use clinical display values without exposing machine state
+ok 318 - five row patterns use clinical display values without exposing machine state
+  ---
+  duration_ms: 3.343625
+  type: 'test'
+  ...
+# Subtest: finding rows keep native disclosures accessible beside a finite editor button
+ok 319 - finding rows keep native disclosures accessible beside a finite editor button
+  ---
+  duration_ms: 1.610375
+  type: 'test'
+  ...
+# Subtest: refraction chooses the latest manifest, preserves stored signs, and keeps non-primary blocks collapsed
+ok 320 - refraction chooses the latest manifest, preserves stored signs, and keeps non-primary blocks collapsed
+  ---
+  duration_ms: 1.981459
+  type: 'test'
+  ...
+# Subtest: refraction uses a manifest when present and otherwise labels the recorded non-final block by type
+ok 321 - refraction uses a manifest when present and otherwise labels the recorded non-final block by type
+  ---
+  duration_ms: 0.892834
+  type: 'test'
+  ...
+# Subtest: refraction distance acuity never renders a code-only machine value
+ok 322 - refraction distance acuity never renders a code-only machine value
+  ---
+  duration_ms: 0.255584
+  type: 'test'
+  ...
+# Subtest: manual keratometry projects only its allowlisted measurements in OD-first order
+ok 323 - manual keratometry projects only its allowlisted measurements in OD-first order
+  ---
+  duration_ms: 0.340708
+  type: 'test'
+  ...
+# Subtest: stored visual acuity renders the raw Snellen value and correction
+ok 324 - stored visual acuity renders the raw Snellen value and correction
+  ---
+  duration_ms: 1.21625
+  type: 'test'
+  ...
+# Subtest: stored non-Snellen visual acuity discloses its chart type
+ok 325 - stored non-Snellen visual acuity discloses its chart type
+  ---
+  duration_ms: 1.326542
+  type: 'test'
+  ...
+# Subtest: stored pachymetry resolves laterality-prefixed CCT components
+ok 326 - stored pachymetry resolves laterality-prefixed CCT components
+  ---
+  duration_ms: 1.18225
+  type: 'test'
+  ...
+# Subtest: stored auto keratometry shares the manual keratometry display convention
+ok 327 - stored auto keratometry shares the manual keratometry display convention
+  ---
+  duration_ms: 0.87725
+  type: 'test'
+  ...
+# Subtest: stored Wearing Rx renders in its own worksheet row
+ok 328 - stored Wearing Rx renders in its own worksheet row
+  ---
+  duration_ms: 0.994875
+  type: 'test'
+  ...
+# Subtest: a newer OD-only Wearing save retains the latest stored OS in the worksheet row
+ok 329 - a newer OD-only Wearing save retains the latest stored OS in the worksheet row
+  ---
+  duration_ms: 0.912833
+  type: 'test'
+  ...
+# Subtest: a newer OD-only Wearing save retains both eyes in the refraction comparison
+ok 330 - a newer OD-only Wearing save retains both eyes in the refraction comparison
+  ---
+  duration_ms: 0.665833
+  type: 'test'
+  ...
+# Subtest: overview truth changes preserve the exact IOP value
+ok 331 - overview truth changes preserve the exact IOP value
+  ---
+  duration_ms: 0.748291
+  type: 'test'
+  ...
+# Subtest: overview truth changes preserve the exact Dilation event value
+ok 332 - overview truth changes preserve the exact Dilation event value
+  ---
+  duration_ms: 0.724208
+  type: 'test'
+  ...
+# Subtest: the pending overview projection exception map is empty after History is formatted
+ok 333 - the pending overview projection exception map is empty after History is formatted
+  ---
+  duration_ms: 0.050667
+  type: 'test'
+  ...
+# Subtest: complaint-only History renders its summary while completeness remains Not examined
+ok 334 - complaint-only History renders its summary while completeness remains Not examined
+  ---
+  duration_ms: 0.739333
+  type: 'test'
+  ...
+# Subtest: the finding formatter exposes one exact unformatted sentinel
+ok 335 - the finding formatter exposes one exact unformatted sentinel
+  ---
+  duration_ms: 0.046708
+  type: 'test'
+  ...
+# Subtest: every active catalog finding has a fixture and no pending exception
+ok 336 - every active catalog finding has a fixture and no pending exception
+  ---
+  duration_ms: 7.958291
+  type: 'test'
+  ...
+# Subtest: every catalog fixture control reaches the exact unformatted sentinel
+ok 337 - every catalog fixture control reaches the exact unformatted sentinel
+  ---
+  duration_ms: 0.112209
+  type: 'test'
+  ...
+# Subtest: every charted catalog fixture leaves the exact unformatted sentinel
+ok 338 - every charted catalog fixture leaves the exact unformatted sentinel
+  ---
+  duration_ms: 0.350666
+  type: 'test'
+  ...
+# Subtest: charted EOM renders writer-shaped OU positions in anatomical eye groups on the preserved grading scale
+ok 339 - charted EOM renders writer-shaped OU positions in anatomical eye groups on the preserved grading scale
+  ---
+  duration_ms: 6.402833
+  type: 'test'
+  ...
+# Subtest: charted EOM renders writer-permitted abnormal details and the normal template
+ok 340 - charted EOM renders writer-permitted abnormal details and the normal template
+  ---
+  duration_ms: 28.030292
+  type: 'test'
+  ...
+# Subtest: charted CVF defects survive the persisted per-eye prefixes into the review diagrams
+ok 341 - charted CVF defects survive the persisted per-eye prefixes into the review diagrams
+  ---
+  duration_ms: 7.930583
+  type: 'test'
+  ...
+# Subtest: abnormal cover-test endpoint persistence projects an exception row with details
+ok 342 - abnormal cover-test endpoint persistence projects an exception row with details
+  ---
+  duration_ms: 6.607333
+  type: 'test'
+  ...
+# Subtest: high-risk cup-disc capture path projects an exception row with details
+ok 343 - high-risk cup-disc capture path projects an exception row with details
+  ---
+  duration_ms: 7.341458
+  type: 'test'
+  ...
+# Subtest: EOM free-text notes preserve delimiter text as one atomic segment
+ok 344 - EOM free-text notes preserve delimiter text as one atomic segment
+  ---
+  duration_ms: 6.384541
+  type: 'test'
+  ...
+# Subtest: custom state writer preserves other-only notes for normal and abnormal findings
+ok 345 - custom state writer preserves other-only notes for normal and abnormal findings
+  ---
+  duration_ms: 13.514416
+  type: 'test'
+  ...
+# Subtest: normal OTHER notes preserve delimiter text exactly once
+ok 346 - normal OTHER notes preserve delimiter text exactly once
+  ---
+  duration_ms: 6.400959
+  type: 'test'
+  ...
+# Subtest: abnormal custom state other-only value leaves the exact unformatted sentinel behind
+ok 347 - abnormal custom state other-only value leaves the exact unformatted sentinel behind
+  ---
+  duration_ms: 6.840208
+  type: 'test'
+  ...
+# Subtest: normal other composition preserves the template and every selected sheet finding
+ok 348 - normal other composition preserves the template and every selected sheet finding
+  ---
+  duration_ms: 0.091
+  type: 'test'
+  ...
+# Subtest: normal other composition preserves sheet findings when a normal label wins the base formatter
+ok 349 - normal other composition preserves sheet findings when a normal label wins the base formatter
+  ---
+  duration_ms: 0.104833
+  type: 'test'
+  ...
+# Subtest: slice-added component formatters preserve a stored scalar value
+ok 350 - slice-added component formatters preserve a stored scalar value
+  ---
+  duration_ms: 0.065208
+  type: 'test'
+  ...
+# Subtest: normal other composition preserves downstream summary and scalar values
+ok 351 - normal other composition preserves downstream summary and scalar values
+  ---
+  duration_ms: 0.054667
+  type: 'test'
+  ...
+# Subtest: exercised EOM and custom-state writers declare every schema-blind component code
+ok 352 - exercised EOM and custom-state writers declare every schema-blind component code
+  ---
+  duration_ms: 30.208708
+  type: 'test'
+  ...
+# Subtest: the permanent chart bar keeps draft state reserved instead of inferring it from section status
+ok 353 - the permanent chart bar keeps draft state reserved instead of inferring it from section status
+  ---
+  duration_ms: 51.232333
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: true
+ok 354 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: true
+  ---
+  duration_ms: 41.721625
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: false
+ok 355 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: false
+  ---
+  duration_ms: 32.5585
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: undefined
+ok 356 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: undefined
+  ---
+  duration_ms: 34.351125
+  type: 'test'
+  ...
+# Subtest: fixback P2\#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger
+ok 357 - fixback P2\#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger
+  ---
+  duration_ms: 35.899041
+  type: 'test'
+  ...
+# Subtest: a failed Clear everything re-reads the overview alongside its error, so the screen cannot contradict the database
+ok 358 - a failed Clear everything re-reads the overview alongside its error, so the screen cannot contradict the database
+  ---
+  duration_ms: 19.593584
+  type: 'test'
+  ...
+# Subtest: F2: a successful Clear everything renders the exact count — this page saw the slot confirmed by the void's own response
+ok 359 - F2: a successful Clear everything renders the exact count — this page saw the slot confirmed by the void's own response
+  ---
+  duration_ms: 24.17125
+  type: 'test'
+  ...
+# Subtest: G2: a successful no-op clear must not promote an older partial slot from 'up to 3' to an exact '3'
+ok 360 - G2: a successful no-op clear must not promote an older partial slot from 'up to 3' to an exact '3'
+  ---
+  duration_ms: 25.688208
+  type: 'test'
+  ...
+# Subtest: fixback P2\#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing
+ok 361 - fixback P2\#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing
+  ---
+  duration_ms: 32.141375
+  type: 'test'
+  ...
+# Subtest: fixback 56ff8d36 P2\#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks
+ok 362 - fixback 56ff8d36 P2\#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks
+  ---
+  duration_ms: 33.134917
+  type: 'test'
+  ...
+# Subtest: a zero-finding comprehensive encounter renders every required trace row with its projected state
+ok 363 - a zero-finding comprehensive encounter renders every required trace row with its projected state
+  ---
+  duration_ms: 0.562375
+  type: 'test'
+  ...
+# Subtest: the worksheet omits Imaging because patient studies live in the permanent Images tab
+ok 364 - the worksheet omits Imaging because patient studies live in the permanent Images tab
+  ---
+  duration_ms: 0.30625
+  type: 'test'
+  ...
+# Subtest: the combined Pretest row resolves only when both Entrance and Pretest traces resolve
+ok 365 - the combined Pretest row resolves only when both Entrance and Pretest traces resolve
+  ---
+  duration_ms: 0.548667
+  type: 'test'
+  ...
+# Subtest: worksheet rows expose owners and keep Contact Lenses visibly optional
+ok 366 - worksheet rows expose owners and keep Contact Lenses visibly optional
+  ---
+  duration_ms: 0.35025
+  type: 'test'
+  ...
+# Subtest: a zero-finding Pretest section renders one labeled blank per chartable editor
+ok 367 - a zero-finding Pretest section renders one labeled blank per chartable editor
+  ---
+  duration_ms: 0.368834
+  type: 'test'
+  ...
+# Subtest: only the single-slot Refraction group keeps Chart another finding
+ok 368 - only the single-slot Refraction group keeps Chart another finding
+  ---
+  duration_ms: 0.484167
+  type: 'test'
+  ...
+# Subtest: Assessment keeps prescription available but visibly not required
+ok 369 - Assessment keeps prescription available but visibly not required
+  ---
+  duration_ms: 0.287084
+  type: 'test'
+  ...
+# Subtest: partial sections use a clinical label and remain unresolved
+ok 370 - partial sections use a clinical label and remain unresolved
+  ---
+  duration_ms: 0.847584
+  type: 'test'
+  ...
+# Subtest: ocular rows stay in anatomical slots and render findings instead of status words
+ok 371 - ocular rows stay in anatomical slots and render findings instead of status words
+  ---
+  duration_ms: 0.673208
+  type: 'test'
+  ...
+# Subtest: the encounter screen renders only the registry-backed completeness count
+ok 372 - the encounter screen renders only the registry-backed completeness count
+  ---
+  duration_ms: 9.692417
+  type: 'test'
+  ...
+# Subtest: structure view keeps required blanks while collapsing performed findings into by-exception rows
+ok 373 - structure view keeps required blanks while collapsing performed findings into by-exception rows
+  ---
+  duration_ms: 10.448708
+  type: 'test'
+  ...
+# Subtest: charted findings keep their FindingRow while sibling editors receive distinct empty slots
+ok 374 - charted findings keep their FindingRow while sibling editors receive distinct empty slots
+  ---
+  duration_ms: 0.345209
+  type: 'test'
+  ...
+# Subtest: completeness moves to the chart bar, opens its trace, and disclaims billing-code meaning
+ok 375 - completeness moves to the chart bar, opens its trace, and disclaims billing-code meaning
+  ---
+  duration_ms: 8.513709
+  type: 'test'
+  ...
+# Subtest: unconfigured completeness renders as a neutral state instead of complete or erroneous
+ok 376 - unconfigured completeness renders as a neutral state instead of complete or erroneous
+  ---
+  duration_ms: 9.264333
+  type: 'test'
+  ...
+# Subtest: blackout preserves the open Visit sheet and focused control through keyboard restore
+ok 377 - blackout preserves the open Visit sheet and focused control through keyboard restore
+  ---
+  duration_ms: 11.719834
+  type: 'test'
+  ...
+# Subtest: Visit opens the shared sheet with exact booking coverage and every relocated billing surface
+ok 378 - Visit opens the shared sheet with exact booking coverage and every relocated billing surface
+  ---
+  duration_ms: 10.221417
+  type: 'test'
+  ...
+# Subtest: an open finding sheet visibly requires Finish or Cancel before Visit can open
+ok 379 - an open finding sheet visibly requires Finish or Cancel before Visit can open
+  ---
+  duration_ms: 11.832709
+  type: 'test'
+  ...
+# Subtest: EncounterCharting passes the clinical sheet guard to enabled and disabled header actions
+ok 380 - EncounterCharting passes the clinical sheet guard to enabled and disabled header actions
+  ---
+  duration_ms: 11.362
+  type: 'test'
+  ...
+# Subtest: unknown encounter keeps both Visit write surfaces locked during load and after fetch failure
+    # Subtest: initial encounter load
+    ok 1 - initial encounter load
+      ---
+      duration_ms: 7.583709
+      type: 'test'
+      ...
+    # Subtest: persistent encounter fetch failure
+    ok 2 - persistent encounter fetch failure
+      ---
+      duration_ms: 11.552375
+      type: 'test'
+      ...
+    1..2
+ok 381 - unknown encounter keeps both Visit write surfaces locked during load and after fetch failure
+  ---
+  duration_ms: 19.410625
+  type: 'test'
+  ...
+# Subtest: switching to the diagnosis view preserves the existing DiagnosisWorkspace branch
+ok 382 - switching to the diagnosis view preserves the existing DiagnosisWorkspace branch
+  ---
+  duration_ms: 12.795458
+  type: 'test'
+  ...
+# Subtest: DXIMAGING both datasets are reachable in distinct tabs
+ok 383 - DXIMAGING both datasets are reachable in distinct tabs
+  ---
+  duration_ms: 13.23475
+  type: 'test'
+  ...
+# Subtest: DXIMAGING ordinary imaging survives a missing projection
+ok 384 - DXIMAGING ordinary imaging survives a missing projection
+  ---
+  duration_ms: 14.455584
+  type: 'test'
+  ...
+# Subtest: DXIMAGING diagnosis owns no imaging strip
+ok 385 - DXIMAGING diagnosis owns no imaging strip
+  ---
+  duration_ms: 11.485209
+  type: 'test'
+  ...
+# Subtest: DXIMAGING imaging preference survives stages with four tabs
+ok 386 - DXIMAGING imaging preference survives stages with four tabs
+  ---
+  duration_ms: 17.633917
+  type: 'test'
+  ...
+# Subtest: C1 tab survives a stage change
+ok 387 - C1 tab survives a stage change
+  ---
+  duration_ms: 13.371875
+  type: 'test'
+  ...
+# Subtest: C1 panel is available off the structure stage
+ok 388 - C1 panel is available off the structure stage
+  ---
+  duration_ms: 10.249166
+  type: 'test'
+  ...
+# Subtest: C1 modal editor still suppresses the panel
+ok 389 - C1 modal editor still suppresses the panel
+  ---
+  duration_ms: 61.086625
+  type: 'test'
+  ...
+# Subtest: C1 dirty-sheet stage transition prompts and retains edits until accepted
+ok 390 - C1 dirty-sheet stage transition prompts and retains edits until accepted
+  ---
+  duration_ms: 22.144375
+  type: 'test'
+  ...
+# Subtest: C1 context survives entering and leaving a full-page board editor
+ok 391 - C1 context survives entering and leaving a full-page board editor
+  ---
+  duration_ms: 60.990708
+  type: 'test'
+  ...
+# Subtest: C1 closing entry for a stage uses its return tab but preserves a selected context tab
+    # Subtest: entry
+    ok 1 - entry
+      ---
+      duration_ms: 14.019916
+      type: 'test'
+      ...
+    # Subtest: images
+    ok 2 - images
+      ---
+      duration_ms: 17.796542
+      type: 'test'
+      ...
+    # Subtest: engage
+    ok 3 - engage
+      ---
+      duration_ms: 13.687958
+      type: 'test'
+      ...
+    1..3
+ok 392 - C1 closing entry for a stage uses its return tab but preserves a selected context tab
+  ---
+  duration_ms: 45.777333
+  type: 'test'
+  ...
+# Subtest: EncounterCharting keeps a dirty mapped sheet mounted until its guarded transition is accepted
+ok 393 - EncounterCharting keeps a dirty mapped sheet mounted until its guarded transition is accepted
+  ---
+  duration_ms: 20.860083
+  type: 'test'
+  ...
+# Subtest: distributed board rows anchor mapped editors and retain full-page fallback for deferred editors
+ok 394 - distributed board rows anchor mapped editors and retain full-page fallback for deferred editors
+  ---
+  duration_ms: 70.31725
+  type: 'test'
+  ...
+# Subtest: each mapped layout wraps its existing section and supports both cancel and saved close paths
+ok 395 - each mapped layout wraps its existing section and supports both cancel and saved close paths
+  ---
+  duration_ms: 184.18825
+  type: 'test'
+  ...
+# Subtest: adding a declaration-backed complaint autosaves History and keeps its sheet open
+ok 396 - adding a declaration-backed complaint autosaves History and keeps its sheet open
+  ---
+  duration_ms: 20.19325
+  type: 'test'
+  ...
+# Subtest: autosaving a declaration-backed complaint refreshes the exam overview to Examined
+ok 397 - autosaving a declaration-backed complaint refreshes the exam overview to Examined
+  ---
+  duration_ms: 19.183625
+  type: 'test'
+  ...
+# Subtest: every measured deferred editor retains its existing full-page route
+ok 398 - every measured deferred editor retains its existing full-page route
+  ---
+  duration_ms: 220.519042
+  type: 'test'
+  ...
+# Subtest: malformed nested finding, section, and completeness rows use the editor fallback
+    # Subtest: finding
+    ok 1 - finding
+      ---
+      duration_ms: 11.458584
+      type: 'test'
+      ...
+    # Subtest: section
+    ok 2 - section
+      ---
+      duration_ms: 11.271834
+      type: 'test'
+      ...
+    # Subtest: completeness trace
+    ok 3 - completeness trace
+      ---
+      duration_ms: 11.3415
+      type: 'test'
+      ...
+    1..3
+ok 399 - malformed nested finding, section, and completeness rows use the editor fallback
+  ---
+  duration_ms: 34.385917
+  type: 'test'
+  ...
+# Subtest: manual refresh replaces the mounted board projection
+ok 400 - manual refresh replaces the mounted board projection
+  ---
+  duration_ms: 12.541917
+  type: 'test'
+  ...
+# Subtest: a mapped editor save closes its sheet while a deferred editor retains the explicit return path
+ok 401 - a mapped editor save closes its sheet while a deferred editor retains the explicit return path
+  ---
+  duration_ms: 67.368375
+  type: 'test'
+  ...
+# Subtest: a referral suspends the underlying Assessment sheet layer without discarding it
+ok 402 - a referral suspends the underlying Assessment sheet layer without discarding it
+  ---
+  duration_ms: 16.7815
+  type: 'test'
+  ...
+# Subtest: a section save refreshes the permanent unassigned count
+ok 403 - a section save refreshes the permanent unassigned count
+  ---
+  duration_ms: 18.283209
+  type: 'test'
+  ...
+# Subtest: a diagnosis-led finding mutation refreshes permanent completeness
+ok 404 - a diagnosis-led finding mutation refreshes permanent completeness
+  ---
+  duration_ms: 13.591125
+  type: 'test'
+  ...
+# Subtest: staging shows authored titles and hides unavailable items
+ok 405 - staging shows authored titles and hides unavailable items
+  ---
+  duration_ms: 3.433208
+  type: 'test'
+  ...
+# Subtest: follow-up with missing interval and unit can be confirmed before editing
+ok 406 - follow-up with missing interval and unit can be confirmed before editing
+  ---
+  duration_ms: 3.362834
+  type: 'test'
+  ...
+# Subtest: Assessment shows each offer's added count once and keeps the nonselected count
+ok 407 - Assessment shows each offer's added count once and keeps the nonselected count
+  ---
+  duration_ms: 17.240083
+  type: 'test'
+  ...
+# Subtest: carotenoid labels use label anchors while colors use independent color bands
+ok 408 - carotenoid labels use label anchors while colors use independent color bands
+  ---
+  duration_ms: 0.852542
+  type: 'test'
+  ...
+# Subtest: shared serial chart preserves same-time repeats and renders constant, band, and x-varying overlays
+ok 409 - shared serial chart preserves same-time repeats and renders constant, band, and x-varying overlays
+  ---
+  duration_ms: 2.676459
+  type: 'test'
+  ...
+# Subtest: shared serial chart states the honest empty condition
+ok 410 - shared serial chart states the honest empty condition
+  ---
+  duration_ms: 0.095541
+  type: 'test'
+  ...
+# Subtest: carotenoid color bands render the canonical scanner gauge ranges
+ok 411 - carotenoid color bands render the canonical scanner gauge ranges
+  ---
+  duration_ms: 7.935666
+  type: 'test'
+  ...
+# Subtest: pretest section names the two honest empty states and the fixed S3 device
+ok 412 - pretest section names the two honest empty states and the fixed S3 device
+  ---
+  duration_ms: 1.178917
+  type: 'test'
+  ...
+# Subtest: blood pressure position starts as Not recorded
+ok 413 - blood pressure position starts as Not recorded
+  ---
+  duration_ms: 0.431958
+  type: 'test'
+  ...
+# Subtest: blood pressure save omits blank cuff site and position
+ok 414 - blood pressure save omits blank cuff site and position
+  ---
+  duration_ms: 20.4175
+  type: 'test'
+  ...
+# Subtest: systolic chart titles compose only recorded blood pressure context
+ok 415 - systolic chart titles compose only recorded blood pressure context
+  ---
+  duration_ms: 4.023417
+  type: 'test'
+  ...
+# Subtest: diastolic chart titles compose only recorded blood pressure context
+ok 416 - diastolic chart titles compose only recorded blood pressure context
+  ---
+  duration_ms: 1.544458
+  type: 'test'
+  ...
+# Subtest: blood pressure history rows compose only recorded context before the timestamp
+ok 417 - blood pressure history rows compose only recorded context before the timestamp
+  ---
+  duration_ms: 1.60325
+  type: 'test'
+  ...
+# Subtest: pretest section presents height and weight as one customary-unit card with one shared time
+ok 418 - pretest section presents height and weight as one customary-unit card with one shared time
+  ---
+  duration_ms: 1.840916
+  type: 'test'
+  ...
+# Subtest: height and weight save together to the body-measurements endpoint in inches and pounds
+ok 419 - height and weight save together to the body-measurements endpoint in inches and pounds
+  ---
+  duration_ms: 3.840417
+  type: 'test'
+  ...
+# Subtest: diagnosis workspace does not expose a blood-pressure entry control
+ok 420 - diagnosis workspace does not expose a blood-pressure entry control
+  ---
+  duration_ms: 1.220833
+  type: 'test'
+  ...
+# (node:16278) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: builder autosave survives immediate navigation and restores the saved draft
+ok 421 - builder autosave survives immediate navigation and restores the saved draft
+  ---
+  duration_ms: 17.550084
+  type: 'test'
+  ...
+# Subtest: builder preview and encounter staging use the same shared renderer
+ok 422 - builder preview and encounter staging use the same shared renderer
+  ---
+  duration_ms: 1.79325
+  type: 'test'
+  ...
+# Subtest: protocol staging distinguishes coverage review from a charge with no rule
+ok 423 - protocol staging distinguishes coverage review from a charge with no rule
+  ---
+  duration_ms: 0.203667
+  type: 'test'
+  ...
+# Subtest: protocol charge disclosure and confirmation follow the server offer capability
+ok 424 - protocol charge disclosure and confirmation follow the server offer capability
+  ---
+  duration_ms: 0.045416
+  type: 'test'
+  ...
+# Subtest: assessment protocol UI is diagnosis-generic and renders ranked multi-offer selection
+ok 425 - assessment protocol UI is diagnosis-generic and renders ranked multi-offer selection
+  ---
+  duration_ms: 0.36125
+  type: 'test'
+  ...
+# Subtest: an applied protocol remains un-applyable after its triggering diagnosis is removed
+ok 426 - an applied protocol remains un-applyable after its triggering diagnosis is removed
+  ---
+  duration_ms: 0.584625
+  type: 'test'
+  ...
+# Subtest: protocol requests time out and preserve useful errors for non-JSON failures
+ok 427 - protocol requests time out and preserve useful errors for non-JSON failures
+  ---
+  duration_ms: 0.704791
+  type: 'test'
+  ...
+# Subtest: builder flags duplicate item keys and gives reorder controls accessible names
+ok 428 - builder flags duplicate item keys and gives reorder controls accessible names
+  ---
+  duration_ms: 0.189959
+  type: 'test'
+  ...
+# Subtest: whole and item applications retain separate badges and undo targets
+ok 429 - whole and item applications retain separate badges and undo targets
+  ---
+  duration_ms: 6.695792
+  type: 'test'
+  ...
+# Subtest: followup recommendations can be explicitly confirmed or edited
+ok 430 - followup recommendations can be explicitly confirmed or edited
+  ---
+  duration_ms: 3.315958
+  type: 'test'
+  ...
+# Subtest: Assessment route loads persisted followup without matching offers and refreshes after confirmation
+ok 431 - Assessment route loads persisted followup without matching offers and refreshes after confirmation
+  ---
+  duration_ms: 12.615792
+  type: 'test'
+  ...
+# Subtest: Assessment route loads persisted followup without matching offers and refreshes after editing
+ok 432 - Assessment route loads persisted followup without matching offers and refreshes after editing
+  ---
+  duration_ms: 4.661875
+  type: 'test'
+  ...
+# Subtest: dirty followup requires saving the displayed change
+ok 433 - dirty followup requires saving the displayed change
+  ---
+  duration_ms: 0.515584
+  type: 'test'
+  ...
+# Subtest: Assessment preserves unmatched plan item undo alongside a current offer
+ok 434 - Assessment preserves unmatched plan item undo alongside a current offer
+  ---
+  duration_ms: 5.393
+  type: 'test'
+  ...
+# Subtest: followup fields stay fixed while saving
+ok 435 - followup fields stay fixed while saving
+  ---
+  duration_ms: 0.516
+  type: 'test'
+  ...
+# Subtest: followup clinician recommendation is labelled your change
+ok 436 - followup clinician recommendation is labelled your change
+  ---
+  duration_ms: 0.1885
+  type: 'test'
+  ...
+# Subtest: the compose surface presents the locked clinical rail and honest transport controls
+ok 437 - the compose surface presents the locked clinical rail and honest transport controls
+  ---
+  duration_ms: 5.308125
+  type: 'test'
+  ...
+# Subtest: the compose surface owns focus and Escape as the visible top layer
+ok 438 - the compose surface owns focus and Escape as the visible top layer
+  ---
+  duration_ms: 12.358667
+  type: 'test'
+  ...
+# Subtest: consultant changes regenerate untouched letters but protect clinician edits
+ok 439 - consultant changes regenerate untouched letters but protect clinician edits
+  ---
+  duration_ms: 0.08975
+  type: 'test'
+  ...
+# Subtest: the packet preview embeds the server-rendered PDF and never uses artifact HTML as the iframe source
+ok 440 - the packet preview embeds the server-rendered PDF and never uses artifact HTML as the iframe source
+  ---
+  duration_ms: 0.348208
+  type: 'test'
+  ...
+# Subtest: the assessment disposition exposes the referral compose screen from the live encounter
+ok 441 - the assessment disposition exposes the referral compose screen from the live encounter
+  ---
+  duration_ms: 0.2275
+  type: 'test'
+  ...
+# Subtest: Vite proxies the server-owned fax and correspondence boundaries to MCP
+ok 442 - Vite proxies the server-owned fax and correspondence boundaries to MCP
+  ---
+  duration_ms: 0.090042
+  type: 'test'
+  ...
+# Subtest: the referral API uses the directory, mutation, artifact, and fax contracts
+ok 443 - the referral API uses the directory, mutation, artifact, and fax contracts
+  ---
+  duration_ms: 10.01475
+  type: 'test'
+  ...
+# Subtest: the referral API turns documented 409 responses into a reopen-required conflict
+ok 444 - the referral API turns documented 409 responses into a reopen-required conflict
+  ---
+  duration_ms: 0.300458
+  type: 'test'
+  ...
+# Subtest: the referral API posts front-desk inbound capture through the correspondence boundary
+ok 445 - the referral API posts front-desk inbound capture through the correspondence boundary
+  ---
+  duration_ms: 0.222833
+  type: 'test'
+  ...
+# Subtest: clearing the composed reason sends an explicit null draft update
+ok 446 - clearing the composed reason sends an explicit null draft update
+  ---
+  duration_ms: 14.677958
+  type: 'test'
+  ...
+# Subtest: sending freezes composition and ignores previews that finish after the sent artifact
+ok 447 - sending freezes composition and ignores previews that finish after the sent artifact
+  ---
+  duration_ms: 17.059833
+  type: 'test'
+  ...
+# Subtest: Fax sends the combined PDF to the consultant number and renders callback completion
+ok 448 - Fax sends the combined PDF to the consultant number and renders callback completion
+  ---
+  duration_ms: 6.153792
+  type: 'test'
+  ...
+# Subtest: Fax failure surfaces an inline error instead of a false sent state
+ok 449 - Fax failure surfaces an inline error instead of a false sent state
+  ---
+  duration_ms: 6.057167
+  type: 'test'
+  ...
+# Subtest: Print starts the audit request first and still invokes browser print when audit fails
+ok 450 - Print starts the audit request first and still invokes browser print when audit fails
+  ---
+  duration_ms: 3.732959
+  type: 'test'
+  ...
+# Subtest: the created ServiceRequest supplies the editable generated letter without another fetch
+ok 451 - the created ServiceRequest supplies the editable generated letter without another fetch
+  ---
+  duration_ms: 0.0495
+  type: 'test'
+  ...
+1..451
+# tests 459
+# suites 0
+# pass 459
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7121.615917

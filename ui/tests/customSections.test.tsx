@@ -2811,7 +2811,7 @@ test("saved ocular-health findings expose real scoped diagnosis suggestions and 
       });
     }
     if (url.includes("diagnosis-catalog")) {
-      return jsonResponse({
+      return jsonResponse({ canWriteDiagnosis: true,
         diagnoses: [{
           stableKey: "cataract_nuclear_sclerosis",
           display: "Age-related nuclear cataract",
@@ -3044,7 +3044,7 @@ test("fresh ocular-health history restores scoped diagnosis suggestions without 
         }],
       });
     }
-    if (url.includes("diagnosis-catalog")) return jsonResponse({ diagnoses: [] });
+    if (url.includes("diagnosis-catalog")) return jsonResponse({ canWriteDiagnosis: true, diagnoses: [] });
     if (url.includes("/fhir/R4/Condition")) {
       return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
     }

@@ -1,0 +1,303 @@
+TAP version 13
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, observation
+ok 1 - STAFF-DX-GATE Undo protects diagnosis slots: true, observation
+  ---
+  duration_ms: 5.996542
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, condition
+ok 2 - STAFF-DX-GATE Undo protects diagnosis slots: true, condition
+  ---
+  duration_ms: 1.214625
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, diagnosis-row
+ok 3 - STAFF-DX-GATE Undo protects diagnosis slots: true, diagnosis-row
+  ---
+  duration_ms: 1.593917
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, observation
+ok 4 - STAFF-DX-GATE Undo protects diagnosis slots: false, observation
+  ---
+  duration_ms: 0.528625
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, condition
+not ok 5 - STAFF-DX-GATE Undo protects diagnosis slots: false, condition
+  ---
+  duration_ms: 1.879958
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:1:14958'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:342:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, diagnosis-row
+not ok 6 - STAFF-DX-GATE Undo protects diagnosis slots: false, diagnosis-row
+  ---
+  duration_ms: 0.283167
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:1:14958'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:342:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, observation
+ok 7 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, observation
+  ---
+  duration_ms: 2.069166
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, condition
+not ok 8 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, condition
+  ---
+  duration_ms: 0.267416
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:1:14958'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:342:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, diagnosis-row
+not ok 9 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, diagnosis-row
+  ---
+  duration_ms: 0.478
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:1:14958'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:342:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE ledger and undo capabilities stay outside the persisted ledger
+not ok 10 - STAFF-DX-GATE ledger and undo capabilities stay outside the persisted ledger
+  ---
+  duration_ms: 7.542417
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:1:15742'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:355:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=true
+ok 11 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=true
+  ---
+  duration_ms: 18.609959
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=false
+ok 12 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=false
+  ---
+  duration_ms: 5.517333
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=true
+not ok 13 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=true
+  ---
+  duration_ms: 8.615584
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:2:5142'
+  failureType: 'testCodeFailure'
+  error: |-
+    denied diagnosis clears never open a confirmation
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:1396:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=false
+ok 14 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=false
+  ---
+  duration_ms: 6.432583
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+not ok 15 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+  ---
+  duration_ms: 5.9675
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:2:5142'
+  failureType: 'testCodeFailure'
+  error: |-
+    denied diagnosis clears never open a confirmation
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:1396:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+ok 16 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+  ---
+  duration_ms: 6.690916
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=true
+ok 17 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=true
+  ---
+  duration_ms: 5.649458
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=false
+ok 18 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=false
+  ---
+  duration_ms: 5.342084
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=true
+not ok 19 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=true
+  ---
+  duration_ms: 4.471875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:2:5142'
+  failureType: 'testCodeFailure'
+  error: |-
+    denied diagnosis clears never open a confirmation
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:1396:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=false
+ok 20 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=false
+  ---
+  duration_ms: 5.808792
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+not ok 21 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+  ---
+  duration_ms: 5.176875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:2:5142'
+  failureType: 'testCodeFailure'
+  error: |-
+    denied diagnosis clears never open a confirmation
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:1396:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+ok 22 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+  ---
+  duration_ms: 5.436583
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 13
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 454.069084

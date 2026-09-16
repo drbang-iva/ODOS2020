@@ -1,0 +1,105 @@
+TAP version 13
+# Subtest: STAFF-DX-GATE problem status delegates versioned writes and Provenance to the diagnosis endpoint
+not ok 1 - STAFF-DX-GATE problem status delegates versioned writes and Provenance to the diagnosis endpoint
+  ---
+  duration_ms: 11.860209
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/diagnosisRankSafety.test.tsx:1:4847'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+    +   encounter: {
+    +     class: {},
+    +     diagnosis: [
+    +       {
+    +         condition: {
+    +           reference: 'Condition/principal'
+    +         },
+    +         rank: 1
+    -   class: {},
+    -   diagnosis: [
+    -     {
+    -       condition: {
+    -         reference: 'Condition/principal'
+            },
+    +       {
+    +         condition: {
+    +           reference: 'Condition/secondary-a'
+    +         },
+    +         rank: 2
+    -       rank: 1
+    -     },
+    -     {
+    -       condition: {
+    -         reference: 'Condition/secondary-a'
+            },
+    +     ],
+    +     id: 'encounter-1',
+    +     meta: {
+    +       versionId: '8'
+    -       rank: 2
+          },
+    +     resourceType: 'Encounter',
+    +     status: 'in-progress'
+    -   ],
+    -   id: 'encounter-1',
+    -   meta: {
+    -     versionId: '8'
+        },
+    -   resourceType: 'Encounter',
+    -   status: 'in-progress'
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    resourceType: 'Encounter'
+    id: 'encounter-1'
+    meta:
+      versionId: '8'
+    status: 'in-progress'
+    class:
+    diagnosis:
+      0:
+        condition:
+          reference: 'Condition/principal'
+        rank: 1
+      1:
+        condition:
+          reference: 'Condition/secondary-a'
+        rank: 2
+  actual:
+    encounter:
+      resourceType: 'Encounter'
+      id: 'encounter-1'
+      meta:
+        versionId: '8'
+      status: 'in-progress'
+      class:
+      diagnosis:
+        0:
+          condition:
+            reference: 'Condition/principal'
+          rank: 1
+        1:
+          condition:
+            reference: 'Condition/secondary-a'
+          rank: 2
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/diagnosisRankSafety.test.tsx:156:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 166.975833

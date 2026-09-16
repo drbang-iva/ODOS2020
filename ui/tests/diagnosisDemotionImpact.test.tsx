@@ -61,7 +61,7 @@ test("DiagnosisPicker surfaces a stranded-charge warning after its variable Poss
         }],
       });
     }
-    if (url.includes("diagnosis-catalog")) return Response.json({ diagnoses: [] });
+    if (url.includes("diagnosis-catalog")) return Response.json({ canWriteDiagnosis: true, diagnoses: [] });
     if (url.includes("diagnosis-picks") && init?.method === "POST") {
       if (deferPick) return new Promise<Response>((resolve) => { resolveDeferredPick = resolve; });
       return Response.json({
@@ -209,7 +209,7 @@ test("AssessmentSection surfaces a stranded-charge warning after its variable Di
       return Response.json({ options: [], diagnoses: [], proposals: [], attachedProcedures: [] });
     }
     if (url.includes("/protocols/applications")) return Response.json({ applications: [] });
-    if (url.includes("/diagnosis-catalog")) return Response.json({ diagnoses: [] });
+    if (url.includes("/diagnosis-catalog")) return Response.json({ canWriteDiagnosis: true, diagnoses: [] });
     throw new Error(`Unexpected request: ${url}`);
   };
   let renderer!: ReactTestRenderer;
@@ -308,4 +308,47 @@ function installWindow(): () => void {
     configurable: true,
     value: originalWindow,
   });
+}
+
+for (const mode of ["proposal", "decision"] as const) {
+  for (const canWriteDiagnosis of [true, false, undefined]) {
+    test(`STAFF-DX-GATE ${mode} picker requires diagnosis capability: ${canWriteDiagnosis}`, async () => {
+      const originalFetch = globalThis.fetch;
+      const restoreWindow = installWindow();
+      let writes = 0;
+      globalThis.fetch = async (input, init) => {
+        if (init?.method && init.method !== "GET") writes += 1;
+        const url = String(input);
+        if (url.includes("diagnosis-candidates")) return Response.json({ findings: [{ findingInstanceId: "finding-1", observationReference: "Observation/finding-1", candidates: [{ diagnosisKey: "presbyopia", display: "Presbyopia", codingStatus: "verified", priority: true, source: "rule" }] }] });
+        if (url.includes("diagnosis-catalog")) return Response.json({ canWrite: true, canWriteDiagnosis, diagnoses: [] });
+        if (url.includes("/Condition?")) return Response.json({ resourceType: "Bundle", type: "searchset", entry: [] });
+        throw new Error(`Unexpected request: ${url}`);
+      };
+      let renderer!: ReactTestRenderer;
+      try {
+        await act(async () => {
+          renderer = create(<DiagnosisPicker encounterReference="Encounter/e1" observationReferences={["Observation/finding-1"]} mode={mode} />);
+          await flushEffects();
+        });
+        if (mode === "proposal") {
+          const proposal = renderer.root.findByProps({ "aria-label": "Propose Presbyopia" });
+          assert.equal(proposal.props.disabled, canWriteDiagnosis !== true);
+          if (canWriteDiagnosis !== true) await act(async () => { await proposal.props.onClick(); });
+        } else {
+          const toggle = renderer.root.findAllByType("button").find((button) => textContent(button).includes("dx ▾"))!;
+          act(() => toggle.props.onClick());
+          for (const label of ["Possible", "Confirm"]) {
+            const button = renderer.root.findAllByType("button").find((node) => textContent(node) === label)!;
+            assert.equal(button.props.disabled, canWriteDiagnosis !== true, label);
+            if (canWriteDiagnosis !== true) await act(async () => { await button.props.onClick(); });
+          }
+        }
+        assert.equal(writes, 0, "denied picker callbacks do not issue writes");
+      } finally {
+        act(() => renderer?.unmount());
+        globalThis.fetch = originalFetch;
+        restoreWindow();
+      }
+    });
+  }
 }

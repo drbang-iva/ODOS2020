@@ -11,12 +11,14 @@ import {
 
 interface Props {
   encounterReference: string;
+  canWriteDiagnosis?: boolean;
   onSelectDiagnosis: (reference: string) => void;
   fetchImpl?: typeof fetch;
 }
 
 export function PreviousExams({
   encounterReference,
+  canWriteDiagnosis = false,
   onSelectDiagnosis,
   fetchImpl = fetch,
 }: Props) {
@@ -102,6 +104,7 @@ export function PreviousExams({
       onSelectDiagnosis(diagnosis.currentConditionReference);
       return;
     }
+    if (!canWriteDiagnosis) return;
     const rowKey = `${encounter.encounterReference}|${diagnosis.conditionReference}`;
     if (pendingPulls.current.has(rowKey)) return;
     const requestGeneration = generation.current;
@@ -171,7 +174,7 @@ export function PreviousExams({
                   aria-label={`${diagnosis.checked ? "Select" : "Pull"} ${previousDiagnosisRowLabel(diagnosis)}`}
                   aria-pressed={diagnosis.checked}
                   aria-busy={pending}
-                  disabled={pending}
+                  disabled={pending || (!canWriteDiagnosis && !(diagnosis.checked && diagnosis.currentConditionReference))}
                   data-source-condition-reference={diagnosis.conditionReference}
                   onClick={() => void selectOrPull(encounter, diagnosis)}
                 >

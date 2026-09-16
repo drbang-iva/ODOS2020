@@ -1,0 +1,292 @@
+TAP version 13
+# Subtest: STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: false
+ok 1 - STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: false
+  ---
+  duration_ms: 26.987666
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: undefined
+ok 2 - STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: undefined
+  ---
+  duration_ms: 3.768916
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE proposal picker requires diagnosis capability: true
+ok 3 - STAFF-DX-GATE proposal picker requires diagnosis capability: true
+  ---
+  duration_ms: 17.813416
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE proposal picker requires diagnosis capability: false
+ok 4 - STAFF-DX-GATE proposal picker requires diagnosis capability: false
+  ---
+  duration_ms: 2.268292
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE proposal picker requires diagnosis capability: undefined
+ok 5 - STAFF-DX-GATE proposal picker requires diagnosis capability: undefined
+  ---
+  duration_ms: 1.835541
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE decision picker requires diagnosis capability: true
+ok 6 - STAFF-DX-GATE decision picker requires diagnosis capability: true
+  ---
+  duration_ms: 1.033333
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE decision picker requires diagnosis capability: false
+ok 7 - STAFF-DX-GATE decision picker requires diagnosis capability: false
+  ---
+  duration_ms: 1.296833
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE decision picker requires diagnosis capability: undefined
+ok 8 - STAFF-DX-GATE decision picker requires diagnosis capability: undefined
+  ---
+  duration_ms: 2.569583
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE problem status delegates versioned writes and Provenance to the diagnosis endpoint
+ok 9 - STAFF-DX-GATE problem status delegates versioned writes and Provenance to the diagnosis endpoint
+  ---
+  duration_ms: 8.467416
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE workspace separates diagnosis writes from pins: true
+ok 10 - STAFF-DX-GATE workspace separates diagnosis writes from pins: true
+  ---
+  duration_ms: 44.306792
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE findings retain grade and laterality while gating evidence links: true
+ok 11 - STAFF-DX-GATE findings retain grade and laterality while gating evidence links: true
+  ---
+  duration_ms: 1.780875
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Assessment reads diagnosis permission from the server: true
+ok 12 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: true
+  ---
+  duration_ms: 7.070458
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE workspace separates diagnosis writes from pins: false
+ok 13 - STAFF-DX-GATE workspace separates diagnosis writes from pins: false
+  ---
+  duration_ms: 12.237083
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE findings retain grade and laterality while gating evidence links: false
+ok 14 - STAFF-DX-GATE findings retain grade and laterality while gating evidence links: false
+  ---
+  duration_ms: 0.889125
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Assessment reads diagnosis permission from the server: false
+ok 15 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: false
+  ---
+  duration_ms: 1.373208
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE workspace separates diagnosis writes from pins: undefined
+ok 16 - STAFF-DX-GATE workspace separates diagnosis writes from pins: undefined
+  ---
+  duration_ms: 10.195334
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE findings retain grade and laterality while gating evidence links: undefined
+ok 17 - STAFF-DX-GATE findings retain grade and laterality while gating evidence links: undefined
+  ---
+  duration_ms: 0.507
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Assessment reads diagnosis permission from the server: undefined
+ok 18 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: undefined
+  ---
+  duration_ms: 1.673417
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE diagnosis capability cannot grant ordinary finding writes
+ok 19 - STAFF-DX-GATE diagnosis capability cannot grant ordinary finding writes
+  ---
+  duration_ms: 0.485
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, observation
+ok 20 - STAFF-DX-GATE Undo protects diagnosis slots: true, observation
+  ---
+  duration_ms: 6.218167
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, condition
+ok 21 - STAFF-DX-GATE Undo protects diagnosis slots: true, condition
+  ---
+  duration_ms: 1.660709
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, diagnosis-row
+ok 22 - STAFF-DX-GATE Undo protects diagnosis slots: true, diagnosis-row
+  ---
+  duration_ms: 0.8825
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, observation
+ok 23 - STAFF-DX-GATE Undo protects diagnosis slots: false, observation
+  ---
+  duration_ms: 0.444334
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, condition
+ok 24 - STAFF-DX-GATE Undo protects diagnosis slots: false, condition
+  ---
+  duration_ms: 0.40125
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, diagnosis-row
+ok 25 - STAFF-DX-GATE Undo protects diagnosis slots: false, diagnosis-row
+  ---
+  duration_ms: 1.414791
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, observation
+ok 26 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, observation
+  ---
+  duration_ms: 0.452208
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, condition
+ok 27 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, condition
+  ---
+  duration_ms: 0.24125
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, diagnosis-row
+ok 28 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, diagnosis-row
+  ---
+  duration_ms: 0.5695
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE ledger and undo capabilities stay outside the persisted ledger
+ok 29 - STAFF-DX-GATE ledger and undo capabilities stay outside the persisted ledger
+  ---
+  duration_ms: 8.375333
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: true
+ok 30 - STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: true
+  ---
+  duration_ms: 2.046709
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: false
+ok 31 - STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: false
+  ---
+  duration_ms: 0.557459
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: undefined
+ok 32 - STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: undefined
+  ---
+  duration_ms: 0.449125
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=true
+ok 33 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=true
+  ---
+  duration_ms: 18.236042
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=false
+ok 34 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=false
+  ---
+  duration_ms: 7.170458
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=true
+ok 35 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=true
+  ---
+  duration_ms: 5.254125
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=false
+ok 36 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=false
+  ---
+  duration_ms: 6.724042
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+ok 37 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+  ---
+  duration_ms: 4.846917
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+ok 38 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+  ---
+  duration_ms: 5.732958
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=true
+ok 39 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=true
+  ---
+  duration_ms: 6.359625
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=false
+ok 40 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=false
+  ---
+  duration_ms: 5.945083
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=true
+ok 41 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=true
+  ---
+  duration_ms: 6.099125
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=false
+ok 42 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=false
+  ---
+  duration_ms: 6.261875
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+ok 43 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+  ---
+  duration_ms: 5.781625
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+ok 44 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+  ---
+  duration_ms: 6.012625
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: true
+ok 45 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: true
+  ---
+  duration_ms: 93.240583
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: false
+ok 46 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: false
+  ---
+  duration_ms: 39.093042
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: undefined
+ok 47 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: undefined
+  ---
+  duration_ms: 34.85575
+  type: 'test'
+  ...
+1..47
+# tests 47
+# suites 0
+# pass 47
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1661.41875

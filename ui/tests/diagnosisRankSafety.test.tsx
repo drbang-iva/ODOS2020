@@ -141,38 +141,24 @@ test("problem status patch targets one diagnosis entry and preserves unrelated e
   assert.equal(encounterDiagnosisProblemStatus(encounter.diagnosis![1]!), "stable-chronic");
 });
 
-test("problem status Provenance directly targets the Patient, Encounter, and affected Condition", async () => {
+test("STAFF-DX-GATE problem status delegates versioned writes and Provenance to the diagnosis endpoint", async () => {
   const encounter = rankedEncounter([1, 2]);
   const condition = encounterCondition("secondary-a");
+  const updated = { ...encounter, meta: { versionId: "8" } };
   const originalFetch = globalThis.fetch;
-  let provenance: Provenance | undefined;
+  const calls: Array<{ url: string; method?: string; body: unknown }> = [];
   globalThis.fetch = async (input, init) => {
-    const url = String(input);
-    if (url.endsWith(`/Encounter/${encounter.id}`) && init?.method === "PATCH") {
-      return jsonResponse({ ...encounter, meta: { versionId: "8" } });
-    }
-    if (url.endsWith("/Provenance") && init?.method === "POST") {
-      provenance = JSON.parse(String(init.body)) as Provenance;
-      return jsonResponse({ ...provenance, id: "problem-status-provenance" });
-    }
-    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+    calls.push({ url: String(input), method: init?.method, body: JSON.parse(String(init?.body)) });
+    return jsonResponse({ encounter: updated });
   };
   try {
-    await updateEncounterDiagnosisProblemStatus({
-      encounter,
-      condition,
-      problemStatus: "stable-chronic",
-    });
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-
-  assert.deepEqual(provenance?.target.map((target) => target.reference), [
-    "Encounter/encounter-1",
-    "Condition/secondary-a",
-    "Patient/patient-1",
-  ]);
-  assert.equal(provenance?.activity?.coding?.[0]?.code, "UPDATE");
+    const result = await updateEncounterDiagnosisProblemStatus({ encounter, condition, problemStatus: "stable-chronic" });
+    assert.deepEqual(result, updated);
+    assert.equal(calls.length, 1, "the server owns the Condition-scoped write and its Provenance");
+    assert.match(calls[0]!.url, /\/clinical-graph\/encounters\/encounter-1\/diagnoses\/secondary-a\/problem-status$/);
+    assert.equal(calls[0]!.method, "PUT");
+    assert.deepEqual(calls[0]!.body, { problemStatus: "stable-chronic", expectedEncounterVersion: "7" });
+  } finally { globalThis.fetch = originalFetch; }
 });
 
 test("diagnosis laterality Provenance directly targets the Patient and affected Condition", async () => {

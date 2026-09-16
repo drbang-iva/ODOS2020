@@ -272,7 +272,7 @@ test("changing a reloaded Field Defect hides the stale diagnosis until the descr
         }],
       }] });
     }
-    if (url.includes("diagnosis-catalog")) return Response.json({ diagnoses: [] });
+    if (url.includes("diagnosis-catalog")) return Response.json({ canWriteDiagnosis: true, diagnoses: [] });
     throw new Error(`Unexpected request: ${url}`);
   };
   let renderer!: ReactTestRenderer;
@@ -325,7 +325,7 @@ test("suppressed visual-field diagnosis stays visible and the override reveals c
         }],
       });
     }
-    if (url.includes("diagnosis-catalog")) return Response.json({ diagnoses: [] });
+    if (url.includes("diagnosis-catalog")) return Response.json({ canWriteDiagnosis: true, diagnoses: [] });
     throw new Error(`Unexpected request: ${url}`);
   };
   let renderer!: ReactTestRenderer;
@@ -369,7 +369,7 @@ test("structure diagnosis rail keeps full search when the persisted finding has 
       });
     }
     if (url.includes("diagnosis-catalog")) {
-      return Response.json({
+      return Response.json({ canWriteDiagnosis: true,
         diagnoses: [{
           stableKey: "iritis",
           display: "Iritis",
@@ -420,7 +420,7 @@ test("bilateral structure catalog picks stay scoped to the eye where the search 
       });
     }
     if (url.includes("diagnosis-catalog")) {
-      return Response.json({
+      return Response.json({ canWriteDiagnosis: true,
         diagnoses: [{
           stableKey: "cataract_nuclear_sclerosis",
           display: "Age-related nuclear cataract",
@@ -493,7 +493,7 @@ test("structure proposal toggles find provisional Conditions beyond the first FH
       });
     }
     if (url.includes("diagnosis-catalog")) {
-      return Response.json({ diagnoses: [] });
+      return Response.json({ canWriteDiagnosis: true, diagnoses: [] });
     }
     if (url.includes("page=2")) {
       return Response.json({

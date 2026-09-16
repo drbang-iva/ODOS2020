@@ -44,17 +44,17 @@ test("readEncounterUndoLedger fetches the ledger, and answers the empty ledger f
     urls.push(String(input));
     return Response.json({ ledger: { encounterId: "e1", encounter: null, sections: { "entrance:pupils": slot() } } });
   };
-  const ledger = await readEncounterUndoLedger(ENCOUNTER, good);
+  const { ledger } = await readEncounterUndoLedger(ENCOUNTER, good);
   assert.match(urls[0]!, /\/clinical-graph\/encounters\/e1\/void\/ledger$/);
   assert.equal(ledger.sections["entrance:pupils"]?.count, 6);
 
   // The overview harness answers unknown routes with a search Bundle; that is not a ledger.
   const bundle: typeof fetch = async () => Response.json({ resourceType: "Bundle", type: "searchset", entry: [] });
-  assert.deepEqual(await readEncounterUndoLedger(ENCOUNTER, bundle), emptyUndoLedger("e1"));
+  assert.deepEqual((await readEncounterUndoLedger(ENCOUNTER, bundle)).ledger, emptyUndoLedger("e1"));
   const failing: typeof fetch = async () => { throw new Error("offline"); };
-  assert.deepEqual(await readEncounterUndoLedger(ENCOUNTER, failing), emptyUndoLedger("e1"));
+  assert.deepEqual((await readEncounterUndoLedger(ENCOUNTER, failing)).ledger, emptyUndoLedger("e1"));
   const denied: typeof fetch = async () => Response.json({ error: "chart.read role required" }, { status: 403 });
-  assert.deepEqual(await readEncounterUndoLedger(ENCOUNTER, denied), emptyUndoLedger("e1"));
+  assert.deepEqual((await readEncounterUndoLedger(ENCOUNTER, denied)).ledger, emptyUndoLedger("e1"));
 });
 
 test("undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error", async () => {
@@ -326,4 +326,58 @@ function render(element: React.ReactElement): ReactTestRenderer {
 
 function textOf(node: ReactTestInstance): string {
   return node.children.map((child) => typeof child === "string" ? child : textOf(child)).join("");
+}
+
+for (const canWriteDiagnosis of [true, false, undefined]) {
+  for (const kind of ["observation", "condition", "diagnosis-row"] as const) {
+    test(`STAFF-DX-GATE Undo protects diagnosis slots: ${canWriteDiagnosis}, ${kind}`, async () => {
+      let writes = 0;
+      const entry = kind === "condition"
+        ? { ref: "Condition/dx1", priorStatus: "confirmed" }
+        : { ref: "Observation/o1", priorStatus: "final", ...(kind === "diagnosis-row" ? { diagnosis: { condition: { reference: "Condition/dx1" } } } : {}) };
+      const harness = render(<UndoStrip slot={slot({ voided: [entry] })} canWriteDiagnosis={canWriteDiagnosis} closed={false} onUndo={() => { writes += 1; }} />);
+      try {
+        const button = harness.root.findByType("button");
+        const denied = kind !== "observation" && canWriteDiagnosis !== true;
+        assert.equal(Boolean(button.props.disabled), denied);
+        await act(async () => { await button.props.onClick(); });
+        assert.equal(writes, denied ? 0 : 1, "even direct invocation cannot bypass a denied control");
+      } finally { act(() => harness.unmount()); }
+    });
+  }
+}
+
+test("STAFF-DX-GATE ledger and undo capabilities stay outside the persisted ledger", async () => {
+  for (const canWriteDiagnosis of [true, false, undefined]) {
+    const ledger = { encounterId: "e1", encounter: slot(), sections: {} };
+    const fetchImpl: typeof fetch = async () => Response.json({ ledger, canWriteDiagnosis });
+    const loaded = await readEncounterUndoLedger(ENCOUNTER, fetchImpl);
+    assert.equal(loaded.canWriteDiagnosis, canWriteDiagnosis === true);
+    assert.deepEqual(loaded.ledger, ledger);
+    const undone = await undoEncounterVoid(ENCOUNTER, { scope: "encounter" }, fetchImpl);
+    assert.equal(undone.canWriteDiagnosis, canWriteDiagnosis === true);
+    assert.deepEqual(undone.ledger, ledger);
+  }
+});
+
+for (const canWriteDiagnosis of [true, false, undefined]) {
+  test(`STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: ${canWriteDiagnosis}`, async () => {
+    let writes = 0;
+    const diagnosisSlot = slot({ voided: [{ ref: "Condition/dx1", priorStatus: "confirmed" }] });
+    const elements = [
+      <ExamEntrySheet sectionId="pupils" onCancel={() => undefined} encounterReference={ENCOUNTER} encounterStatus="in-progress" onEncounterCleared={() => undefined}
+        undo={{ slot: diagnosisSlot, canWriteDiagnosis, onUndo: () => { writes += 1; } }}><div>body</div></ExamEntrySheet>,
+      <ExamChartBar patientName="Pat" patientDetail="" visitControlsOpen={false} onToggleVisitControls={() => undefined} onBlackout={() => undefined}
+        requestFinishEncounter={() => undefined} signDisabled={false} signLabel="Sign & finish" undoSlot={diagnosisSlot} canWriteDiagnosis={canWriteDiagnosis} onUndo={() => { writes += 1; }} />,
+    ];
+    for (const element of elements) {
+      const renderer = render(element);
+      try {
+        const undo = renderer.root.findByType(UndoStrip).findByType("button");
+        assert.equal(Boolean(undo.props.disabled), canWriteDiagnosis !== true);
+        await act(async () => { await undo.props.onClick(); });
+      } finally { act(() => renderer.unmount()); }
+    }
+    assert.equal(writes, canWriteDiagnosis === true ? 2 : 0);
+  });
 }

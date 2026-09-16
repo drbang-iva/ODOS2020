@@ -31,6 +31,7 @@ export interface EncounterFindingRow extends AtomicFindingCatalogRow {
 
 export interface DiagnosisFindingsPayload {
   canWrite: boolean;
+  canWriteDiagnosis?: boolean;
   diagnosis?: {
     id: string;
     stableKey: string;
@@ -80,6 +81,15 @@ export type DiagnosisFindingMutation =
       conditionReference: string;
     }
   | { action: "standalone"; patientReference: string; observationReference: string };
+
+export function canMutateDiagnosisFinding(
+  payload: DiagnosisFindingsPayload,
+  mutation: DiagnosisFindingMutation,
+): boolean {
+  return payload.canWrite === true && (
+    mutation.action === "grade" || mutation.action === "laterality" || payload.canWriteDiagnosis === true
+  );
+}
 
 export function orderedFindingRows(rows: readonly EncounterFindingRow[]): EncounterFindingRow[] {
   return [...rows].sort((left, right) => {

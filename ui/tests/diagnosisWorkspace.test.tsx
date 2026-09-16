@@ -22,7 +22,8 @@ import {
   mostRecentPriorStage,
   orderedEncounterConditions,
 } from "../src/components/charting/DiagnosisWorkspace";
-import { DiagnosisCompletionLink } from "../src/components/charting/AssessmentSection";
+import { AssessmentSection, DiagnosisCompletionLink } from "../src/components/charting/AssessmentSection";
+import { RoleProvider } from "../src/lib/role-context";
 import { OdosSelect } from "../src/components/inputs/OdosSelect";
 import { OdosSearchPicker } from "../src/components/inputs/OdosSearchPicker";
 import { DiagnosisImagingRegion } from "../src/components/charting/DiagnosisImagingRegion";
@@ -203,10 +204,10 @@ test("diagnosis door pages encounter Conditions and renders Possible provenance 
     }
     if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
     if (url.includes("/clinical-graph/diagnosis-quick-list")) {
-      return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [cataractRow()], catalog: [cataractRow()] });
+      return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [cataractRow()], catalog: [cataractRow()] });
     }
     if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [] });
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     if (url.includes("/procedure-charges")) return jsonResponse({ options: [], diagnoses: [], proposals: [], attachedProcedures: [] });
@@ -256,9 +257,9 @@ test("excluded Encounter diagnosis references expose a disabled reorder explanat
     if (url.includes("/fhir/R4/Condition?")) {
       return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: confirmed }, { resource: discarded }] });
     }
-    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
     if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [] });
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     if (url.includes("/procedure-charges")) return jsonResponse({ options: [], diagnoses: [], proposals: [], attachedProcedures: [] });
@@ -329,9 +330,9 @@ test("server-cleaned three-minus-one state renders two rows and submits their ex
         headers: { "Content-Type": "application/json" },
       });
     }
-    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
     if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [] });
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     if (url.includes("/procedure-charges")) return jsonResponse({ options: [], diagnoses: [], proposals: [], attachedProcedures: [] });
@@ -512,14 +513,14 @@ test("Find dx searches the eligible catalog beyond bounded Common diagnoses", as
     if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
     if (url.includes("/clinical-graph/diagnosis-quick-list")) {
       return jsonResponse({
-        canWrite: true,
+        canWrite: true, canWriteDiagnosis: true,
         pinnedDiagnosisKeys: [],
         diagnoses: [common],
         catalog: [common, catalogOnly],
       });
     }
     if (url.includes("/clinical-graph/encounters/e1/findings")) {
-      return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+      return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     }
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) {
       return jsonResponse({ pageSize: 4, encounters: [] });
@@ -670,8 +671,8 @@ test("selected pending family renders warning badges and re-stages from the head
     if (url.endsWith("/fhir/R4/Provenance") && init?.method === "POST") {
       return jsonResponse({ resourceType: "Provenance", id: "stage-provenance", target: [], recorded: "2026-08-11T12:00:00Z", agent: [] });
     }
-    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [family], catalog: [family] });
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [family], catalog: [family] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
@@ -780,7 +781,7 @@ test("bilateral eyelid diagnoses render both resolved codes while legacy unspeci
     if (url.includes("/fhir/R4/Condition/legacy-ulcerative")) return jsonResponse(legacy);
     if (url.includes("/clinical-graph/diagnosis-quick-list")) {
       return jsonResponse({
-        canWrite: true,
+        canWrite: true, canWriteDiagnosis: true,
         pinnedDiagnosisKeys: [],
         diagnoses: [],
         catalog: [{
@@ -802,7 +803,7 @@ test("bilateral eyelid diagnoses render both resolved codes while legacy unspeci
         }],
       });
     }
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     throw new Error(`Unexpected request: ${url}`);
@@ -869,9 +870,9 @@ test("eyelid laterality edit fails closed before FHIR writes when its declared c
     if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: condition }] });
     if (url.includes("/fhir/R4/Condition/mgd-od")) return jsonResponse(condition);
     if (url.includes("/clinical-graph/diagnosis-quick-list")) {
-      return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+      return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
     }
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     if (url.includes("/fhir/R4/BodyStructure?")) {
@@ -925,11 +926,11 @@ test("selected diagnosis fails closed to edited when carry integrity is uncertai
     if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: condition("selected", "Dry eye syndrome") }] });
     if (url.includes("/fhir/R4/Condition/selected")) return jsonResponse(condition("selected", "Dry eye syndrome"));
     if (url.includes("/clinical-graph/diagnosis-quick-list")) {
-      return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+      return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
     }
     if (url.includes("/clinical-graph/encounters/e1/findings")) {
       return jsonResponse({
-        canWrite: true,
+        canWrite: true, canWriteDiagnosis: true,
         carryProvenance: {
           pulledFromDate: "2026-08-01",
           unchangedSinceDate: "2026-06-15",
@@ -983,8 +984,8 @@ test("edited diagnosis carry is named distinctly without unchanged aging", async
     }
     if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: condition("selected", "Dry eye syndrome") }] });
     if (url.includes("/fhir/R4/Condition/selected")) return jsonResponse(condition("selected", "Dry eye syndrome"));
-    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, carryProvenance: { pulledFromDate: "2026-08-01", unchangedSinceDate: "2026-06-15", edited: true }, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, carryProvenance: { pulledFromDate: "2026-08-01", unchangedSinceDate: "2026-06-15", edited: true }, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     throw new Error(`Unexpected request: ${url}`);
@@ -1053,7 +1054,7 @@ test("a failed same-diagnosis verification refresh cannot retain stale carry ass
     }
     if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: condition("selected", "Dry eye syndrome") }] });
     if (url.includes("/fhir/R4/Condition/selected")) return jsonResponse(condition("selected", "Dry eye syndrome"));
-    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
     if (url.includes("/clinical-graph/encounters/e1/findings")) {
       if (init?.method === "PUT") {
         findingWrites += 1;
@@ -1364,8 +1365,8 @@ test("tray leaf and family suggestions reuse the existing scope and stage prompt
     if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
     if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
-    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [leaf, family] });
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ ...payload, canWrite: true, findings: [], catalog: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [leaf, family] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ ...payload, canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [{
       findingInstanceId: "finding-unassigned",
       observationReference: "Observation/unassigned",
@@ -1426,9 +1427,9 @@ test("same-encounter finding refresh reloads diagnosis candidates for newly char
     if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
     if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
-    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [leaf] });
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [leaf] });
     if (url.includes("/clinical-graph/encounters/e1/findings") && init?.method === "PUT") return jsonResponse({});
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ ...payload, canWrite: true, findings: [], catalog: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ ...payload, canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) {
       candidateReads += 1;
       return jsonResponse({ findings: candidateReads === 1 ? [] : [{
@@ -1667,10 +1668,10 @@ function stagedWorkspaceFetch(family: ReturnType<typeof stagedFamilyRow>): typeo
       });
     }
     if (url.includes("/clinical-graph/diagnosis-quick-list")) {
-      return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [family], catalog: [family] });
+      return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [family], catalog: [family] });
     }
     if (url.includes("/clinical-graph/encounters/e1/findings")) {
-      return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+      return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     }
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
@@ -1722,7 +1723,7 @@ function workspaceRaceFetch({
     }
     if (url.includes("/fhir/R4/Condition/a")) return jsonResponse(condition("a", "Diagnosis A"));
     if (url.includes("/fhir/R4/Condition/b")) return jsonResponse(condition("b", "Diagnosis B"));
-    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
     if (url.includes("/clinical-graph/encounters/e1/findings")) {
       const conditionReference = new URL(url, "http://localhost").searchParams.get("condition") ?? "";
       return findings(conditionReference);
@@ -1758,7 +1759,7 @@ function raceFindingsPayload(
     conditionReference,
   };
   return {
-    canWrite: true,
+    canWrite: true, canWriteDiagnosis: true,
     carryProvenance: { pulledFromDate, ...(unchangedSinceDate ? { unchangedSinceDate } : {}), edited: false },
     findings: [row],
     catalog: [],
@@ -1827,7 +1828,7 @@ function findingsPayload(): DiagnosisFindingsPayload {
     observationReference: "Observation/unassigned",
   };
   return {
-    canWrite: true,
+    canWrite: true, canWriteDiagnosis: true,
     diagnosis: {
       id: "diagnosis-dx-selected",
       stableKey: "dx-selected",
@@ -2010,4 +2011,140 @@ test("partial newness response keeps doctor choice visible and marks only unavai
     assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /ODOS suggestion/);
     assert.ok(buttons().every((button) => !button.props["aria-pressed"] && !button.props.disabled));
   } finally { act(() => renderer?.unmount()); globalThis.fetch = originalFetch; }
+});
+
+for (const canWriteDiagnosis of [true, false, undefined]) {
+  test(`STAFF-DX-GATE workspace separates diagnosis writes from pins: ${canWriteDiagnosis}`, async () => {
+    const originalFetch = globalThis.fetch;
+    const writes: string[] = [];
+    const row = diagnosisRow("test-common", "Common diagnosis");
+    const payload = { ...findingsPayload(), canWriteDiagnosis };
+    const baseFetch = workspaceRaceFetch({ findings: async () => jsonResponse(payload) });
+    globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      if (init?.method && init.method !== "GET") writes.push(url);
+      if (url.includes("diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis, pinnedDiagnosisKeys: [], diagnoses: [row], catalog: [row] });
+      if (url.includes("procedure-charges")) return jsonResponse({ options: [], diagnoses: [], proposals: [], attachedProcedures: [] });
+      return baseFetch(input, init);
+    };
+    let renderer!: ReactTestRenderer;
+    try {
+      await act(async () => {
+        renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/b" onSelectDiagnosis={() => undefined} />);
+      });
+      const denied = canWriteDiagnosis !== true;
+      const common = renderer.root.findByProps({ className: "odos-diagnosis-common-row" }).findAllByType("button")[0]!;
+      const pin = () => renderer.root.findByProps({ "aria-label": "Pin Common diagnosis" });
+      assert.equal(common.props.disabled, denied);
+      assert.equal(pin().props.disabled, false, "pins retain ordinary write capability");
+      assert.equal(renderer.root.findByType(OdosSearchPicker).props.disabled, denied);
+      for (const label of ["Problem status", "Diagnosis visit status"]) {
+        assert.equal(renderer.root.findAllByType(OdosSelect).find((node) => node.props.ariaLabel === label)!.props.disabled, denied, label);
+      }
+      for (const label of ["Diagnosis scope", "Diagnosis New or Established"]) {
+        assert.ok(renderer.root.findByProps({ "aria-label": label }).findAllByType("button").every((button) => button.props.disabled === denied), label);
+      }
+      for (const label of ["Reorder Impressions", "Make Principal"]) {
+        const button = renderer.root.findAllByType("button").find((node) => node.children.join("") === label)!;
+        assert.equal(button.props.disabled, denied, label);
+      }
+      const tray = renderer.root.findByType(UnassignedFindingsTray);
+      assert.equal(tray.props.disabled, denied, "assignment and standalone change diagnosis evidence");
+      if (denied) {
+        await act(async () => { await common.props.onClick(); });
+        assert.equal(writes.length, 0, "a stale add callback cannot issue a diagnosis write");
+      }
+      await act(async () => { await pin().props.onClick(); });
+      assert.equal(writes.filter((url) => url.includes("diagnosis-quick-list")).length, 1);
+    } finally {
+      act(() => renderer?.unmount());
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test(`STAFF-DX-GATE findings retain grade and laterality while gating evidence links: ${canWriteDiagnosis}`, () => {
+    const payload = { ...findingsPayload(), canWriteDiagnosis };
+    const mutations: DiagnosisFindingMutation[] = [];
+    const renderer = create(<DiagnosisFindingsTable payload={payload} patientReference="Patient/p1" conditionReference="Condition/selected" disabled={false} onMutate={(mutation) => { mutations.push(mutation); }} />);
+    try {
+      for (const label of ["Record Offered finding present", "Record Offered finding absent", "Clear present Charted finding", "Clear absent Absent finding"]) {
+        const control = renderer.root.findByProps({ "aria-label": label });
+        assert.equal(control.props.disabled, canWriteDiagnosis !== true, label);
+        if (canWriteDiagnosis !== true) act(() => control.props.onClick());
+      }
+      assert.deepEqual(mutations, [], "denied evidence callbacks do not issue writes");
+      for (const label of ["Grade Charted finding", "Laterality Charted finding"]) {
+        assert.equal(renderer.root.findByProps({ "aria-label": label }).props.disabled, false, label);
+      }
+      act(() => renderer.root.findByProps({ "aria-label": "Grade Charted finding" }).props.onChange({ target: { value: "2+" } }));
+      act(() => renderer.root.findByProps({ "aria-label": "Laterality Charted finding" }).props.onChange({ target: { value: "OS" } }));
+      assert.deepEqual(mutations.map((mutation) => mutation.action), ["grade", "laterality"]);
+      act(() => renderer.root.findByType("input").props.onChange({ target: { value: "General" } }));
+      assert.equal(renderer.root.findByProps({ className: "odos-diagnosis-finding-search-results" }).findByType("button").props.disabled, canWriteDiagnosis !== true);
+    } finally {
+      act(() => renderer.unmount());
+    }
+  });
+
+  test(`STAFF-DX-GATE Assessment reads diagnosis permission from the server: ${canWriteDiagnosis}`, async () => {
+    let currentDiagnosisCapability = canWriteDiagnosis;
+    const originalFetch = globalThis.fetch;
+    const originalWindow = globalThis.window;
+    globalThis.window = new EventTarget() as Window & typeof globalThis;
+    const baseFetch = workspaceRaceFetch({ findings: async () => jsonResponse(findingsPayload()) });
+    globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      if (url.includes("diagnosis-catalog")) return jsonResponse({ canWrite: true, canWriteDiagnosis: currentDiagnosisCapability, diagnoses: [] });
+      if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [
+        { resource: condition("a", "Diagnosis A") },
+        { resource: visitCondition("b", "Possible diagnosis", "provisional") },
+      ] });
+      if (url.includes("procedure-charges")) return jsonResponse({ options: [], diagnoses: [], proposals: [], attachedProcedures: [] });
+      if (url.includes("protocols/applications")) return jsonResponse({ applications: [] });
+      return baseFetch(input, init);
+    };
+    let renderer!: ReactTestRenderer;
+    try {
+      await act(async () => {
+        renderer = create(<RoleProvider initialRole="provider"><AssessmentSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></RoleProvider>);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      const allowed = canWriteDiagnosis === true;
+      assert.equal(renderer.root.findAllByProps({ "data-testid": "diagnosis-tier-tagger" }).length, allowed ? 1 : 0);
+      for (const label of ["Edit", "Confirm", "Discard", "Reorder Impressions"]) {
+        assert.equal(renderer.root.findAllByType("button").some((button) => button.children.join("") === label), allowed, label);
+      }
+      assert.ok(renderer.root.findAllByType("button").some((button) => button.children.join("") === "Save as Protocol"), "ordinary Assessment actions remain available");
+      if (allowed) {
+        currentDiagnosisCapability = false;
+        await act(async () => {
+          window.dispatchEvent(new CustomEvent("odos:diagnosis-picked", { detail: { encounterReference: "Encounter/e1" } }));
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        });
+        assert.equal(renderer.root.findAllByProps({ "data-testid": "diagnosis-tier-tagger" }).length, 0, "a refresh reads current capability even with catalog rows cached");
+      }
+    } finally {
+      act(() => renderer?.unmount());
+      globalThis.fetch = originalFetch;
+      globalThis.window = originalWindow;
+    }
+  });
+}
+
+test("STAFF-DX-GATE diagnosis capability cannot grant ordinary finding writes", () => {
+  const mutations: DiagnosisFindingMutation[] = [];
+  const renderer = create(<DiagnosisFindingsTable payload={{ ...findingsPayload(), canWrite: false, canWriteDiagnosis: true }} patientReference="Patient/p1" conditionReference="Condition/selected" disabled={false} onMutate={(mutation) => { mutations.push(mutation); }} />);
+  try {
+    for (const label of ["Record Offered finding present", "Clear present Charted finding"]) {
+      const control = renderer.root.findByProps({ "aria-label": label });
+      assert.equal(control.props.disabled, true);
+      act(() => control.props.onClick());
+    }
+    for (const label of ["Grade Charted finding", "Laterality Charted finding"]) {
+      const control = renderer.root.findByProps({ "aria-label": label });
+      assert.equal(control.props.disabled, true);
+      act(() => control.props.onChange({ target: { value: label.startsWith("Grade") ? "2+" : "OS" } }));
+    }
+    assert.deepEqual(mutations, []);
+  } finally { act(() => renderer.unmount()); }
 });
