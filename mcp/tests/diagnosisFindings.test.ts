@@ -32,58 +32,30 @@ import { ODOS_EXTENSION_URLS, lateralityConcept } from "../src/fhir/ophthalmolog
 
 const FORBIDDEN_AUTH = "Bearer forbidden";
 
-test("staff diagnosis-door assertion refuses before creating an Observation or any other write", async (t) => {
-  const fhir = mutationFhir();
-  const create = t.mock.method(fhir, "create");
-  const update = t.mock.method(fhir, "update");
+test("staff diagnosis-door assertion refuses before creating an Observation or any other write — legacy encounter now refuses read-only (V3)", async () => {
+  const fhir = carryFindingsFhir();
   const before = structuredClone(fhir.resources);
-  const response = await handleDiagnosisFindingsMutationRequest({
-    ...clinicalDeps(fhir),
-    authenticate: async () => ({ staffReference: "Practitioner/staff", actorRole: "staff", fhir }),
-  }, {
-    authHeader: "Bearer staff",
-    params: { encounterId: "e1" },
-    body: {
-      action: "assert", patientReference: "Patient/p1", conditionReference: "Condition/unique",
-      atomicFindingId: atomicId("offered-only"), presence: "present",
-    },
+  const key = { v: 1, patientId: "p1", encounterId: "e1", stableKey: LENS_DEFINITION.stableKey, fieldCode: LENS_FIELD, optionCode: "unique-section", eye: "OD" };
+  const response = await mutate(fhir, {
+    commandId: "00000000-0000-4000-8000-000000000001", patientReference: "Patient/p1", operation: "assert",
+    targets: [{ kind: "fact", key, baseline: { kind: "canonical", reference: "Observation/current-unique-present", versionId: "v1" }, state: { status: "live", presence: "present", qualifiers: {}, homes: [] } }],
   });
-  assert.equal(create.mock.callCount(), 0, "no Observation or Provenance may be created before refusal");
-  assert.equal(update.mock.callCount(), 0, "no existing resource may change before refusal");
+  assert.equal(response.status, 409);
+  assert.equal((response.body as { reason: string }).reason, "pre-rebuild-test-encounter");
   assert.deepEqual(fhir.resources, before);
-  assert.equal(response.status, 403);
 });
 
-test("staff cannot assign, detach or clear legacy Condition evidence but can edit finding grade and laterality", async (t) => {
-  for (const action of ["assign", "standalone", "clear", "grade", "laterality"] as const) {
-    await t.test(action, async (t) => {
-      const fhir = carryFindingsFhir();
-      const beforeConditions = structuredClone(fhir.resources.filter((row) => row.resourceType === "Condition"));
-      const create = t.mock.method(fhir, "create");
-      const update = t.mock.method(fhir, "update");
-      const response = await handleDiagnosisFindingsMutationRequest({
-        ...clinicalDeps(fhir),
-        authenticate: async () => ({ staffReference: "Practitioner/staff", actorRole: "staff", fhir }),
-      }, {
-        authHeader: "Bearer staff", params: { encounterId: "e1" },
-        body: {
-          action, patientReference: "Patient/p1", observationReference: "Observation/current-unique-present",
-          ...(action === "assign" ? { conditionReference: "Condition/second" } : {}),
-          ...(action === "grade" ? { grade: null } : {}),
-          ...(action === "laterality" ? { laterality: "OS" } : {}),
-        },
-      });
-      const observationOnly = action === "grade" || action === "laterality";
-      assert.equal(response.status, observationOnly ? 200 : 403, JSON.stringify(response.body));
-      assert.deepEqual(fhir.resources.filter((row) => row.resourceType === "Condition"), beforeConditions);
-      if (!observationOnly) {
-        assert.equal(create.mock.callCount(), 0);
-        assert.equal(update.mock.callCount(), 0);
-      } else {
-        assert.equal(update.mock.calls.some((call) => call.arguments[0] === "Observation"), true);
-      }
-    });
-  }
+test("staff cannot assign, detach or clear legacy Condition evidence but can edit finding grade and laterality — legacy encounter now refuses read-only (V3)", async () => {
+  const fhir = carryFindingsFhir();
+  const before = structuredClone(fhir.resources);
+  const key = { v: 1, patientId: "p1", encounterId: "e1", stableKey: LENS_DEFINITION.stableKey, fieldCode: LENS_FIELD, optionCode: "unique-section", eye: "OD" };
+  const response = await mutate(fhir, {
+    commandId: "00000000-0000-4000-8000-000000000001", patientReference: "Patient/p1", operation: "clear",
+    targets: [{ kind: "fact", key, baseline: { kind: "canonical", reference: "Observation/current-unique-present", versionId: "v1" }, state: { status: "live", presence: "present", qualifiers: {}, homes: [] } }],
+  });
+  assert.equal(response.status, 409);
+  assert.equal((response.body as { reason: string }).reason, "pre-rebuild-test-encounter");
+  assert.deepEqual(fhir.resources, before);
 });
 
 test("findings payload distinguishes finding write access from diagnosis write access", async () => {
@@ -151,7 +123,7 @@ test("GET expands offered rows and normalizes only the latest section snapshot",
       presence?: string;
       grade?: string;
       conditionReference?: string;
-      source: string;
+      kind: string;
     }>;
     catalog: Array<{
       atomicFindingId: string;
@@ -225,30 +197,30 @@ test("GET expands offered rows and normalizes only the latest section snapshot",
       presence: row.presence,
       grade: row.grade,
       condition: row.conditionReference,
-      source: row.source,
+      kind: row.kind,
     })),
     [
+      { id: atomicId("ambiguous-section"), presence: "present", grade: undefined, condition: undefined, kind: "fact" },
       {
         id: atomicId("unique-section"),
         presence: "present",
         grade: "2+",
         condition: "Condition/unique",
-        source: "section",
+        kind: "fact",
       },
       {
         id: atomicId("offered-only"),
         presence: undefined,
         grade: undefined,
         condition: undefined,
-        source: "offered",
+        kind: "offered",
       },
     ],
   );
   assert.deepEqual(
-    body.unassigned.map((row) => [row.atomicFindingId, row.source]),
+    body.unassigned.map((row) => [row.atomicFindingId, row.kind]),
     [
-      [atomicId("ambiguous-section"), "section"],
-      [atomicId("unmatched-section"), "section"],
+      [atomicId("unmatched-section"), "fact"],
     ],
   );
   assert.deepEqual(
@@ -297,7 +269,7 @@ test("GET projects carried present findings and merges prior absence into the ex
     };
     findings: Array<{
       atomicFindingId: string;
-      source: string;
+      kind: string;
       presence?: string;
       carried?: boolean;
       priorPresence?: string;
@@ -317,7 +289,7 @@ test("GET projects carried present findings and merges prior absence into the ex
     row.atomicFindingId === atomicId("offered-only")
   ).map((row) => ({
     id: row.atomicFindingId,
-    source: row.source,
+    kind: row.kind,
     presence: row.presence,
     carried: row.carried,
     priorPresence: row.priorPresence,
@@ -327,17 +299,17 @@ test("GET projects carried present findings and merges prior absence into the ex
   })), [
     {
       id: atomicId("unique-section"),
-      source: "atomic",
+      kind: "fact",
       presence: "present",
       carried: true,
       priorPresence: undefined,
       priorGrade: undefined,
       priorLaterality: undefined,
-      observationReference: "Observation/current-unique-present",
+      observationReference: undefined,
     },
     {
       id: atomicId("offered-only"),
-      source: "offered",
+      kind: "offered",
       presence: undefined,
       carried: undefined,
       priorPresence: "absent",
@@ -351,7 +323,7 @@ test("GET projects carried present findings and merges prior absence into the ex
   ]);
 });
 
-test("GET keeps a selected carry prior absence offered when the matching current atomic finding belongs only to another diagnosis", async () => {
+test("GET offers only missing live eyes; a current fact at another diagnosis is search-resolved", async () => {
   const fhir = carryFindingsFhir();
   const second = fhir.resources.find((resource): resource is Condition =>
     resource.resourceType === "Condition" && resource.id === "second"
@@ -375,108 +347,41 @@ test("GET keeps a selected carry prior absence offered when the matching current
   const rows = (response.body as {
     findings: Array<{
       atomicFindingId: string;
-      source: string;
+      kind: string;
       presence?: string;
       priorPresence?: string;
       conditionReference?: string;
       observationReference?: string;
     }>;
   }).findings.filter((row) => row.atomicFindingId === atomicId("offered-only"));
-  assert.deepEqual(rows.map((row) => ({
-    atomicFindingId: atomicId("offered-only"),
-    source: row.source,
-    presence: row.presence,
-    priorPresence: row.priorPresence,
-    conditionReference: row.conditionReference,
-    observationReference: row.observationReference,
-  })), [{
-    atomicFindingId: atomicId("offered-only"),
-    source: "offered",
-    presence: undefined,
-    priorPresence: "absent",
-    conditionReference: undefined,
-    observationReference: undefined,
-  }]);
+  assert.deepEqual(rows, []);
+  assert.equal((response.body as { encounterEditable: boolean }).encounterEditable, false);
 });
 
-test("reasserting a prior absent offer creates a fresh current row without a carried tag", async () => {
+test("reasserting a prior absent offer creates a fresh current row without a carried tag — legacy encounter now refuses read-only (V3)", async () => {
   const fhir = carryFindingsFhir();
-  const asserted = await mutate(fhir, {
-    action: "assert",
-    patientReference: "Patient/p1",
-    conditionReference: "Condition/unique",
-    atomicFindingId: atomicId("offered-only"),
-    presence: "absent",
+  const before = structuredClone(fhir.resources);
+  const key = { v: 1, patientId: "p1", encounterId: "e1", stableKey: LENS_DEFINITION.stableKey, fieldCode: LENS_FIELD, optionCode: "unique-section", eye: "OD" };
+  const response = await mutate(fhir, {
+    commandId: "00000000-0000-4000-8000-000000000001", patientReference: "Patient/p1", operation: "assert",
+    targets: [{ kind: "fact", key, baseline: { kind: "canonical", reference: "Observation/current-unique-present", versionId: "v1" }, state: { status: "live", presence: "present", qualifiers: {}, homes: [] } }],
   });
-  assert.equal(asserted.status, 200, JSON.stringify(asserted.body));
-
-  const response = await handleDiagnosisFindingsReadRequest(clinicalDeps(fhir), {
-    authHeader: "Bearer clinician",
-    params: { encounterId: "e1" },
-    query: { condition: "Condition/unique" },
-  });
-  assert.equal(response.status, 200, JSON.stringify(response.body));
-  const rows = (response.body as {
-    carryProvenance?: { pulledFromDate?: string };
-    findings: Array<{
-      atomicFindingId: string;
-      source: string;
-      presence?: string;
-      carried?: boolean;
-      priorPresence?: string;
-      observationReference?: string;
-    }>;
-  });
-  assert.equal(rows.carryProvenance?.pulledFromDate, "2026-07-10T09:00:00.000Z");
-  const reassertedRows = rows.findings.filter((row) => row.atomicFindingId === atomicId("offered-only"));
-  assert.equal(reassertedRows.length, 1);
-  assert.equal(reassertedRows[0]?.source, "atomic");
-  assert.equal(reassertedRows[0]?.presence, "absent");
-  assert.equal(reassertedRows[0]?.carried, undefined);
-  assert.equal(reassertedRows[0]?.priorPresence, undefined);
-  assert.match(reassertedRows[0]?.observationReference ?? "", /^Observation\//);
-  const observationReference = reassertedRows[0]!.observationReference!;
-  const reassertions = findingReassertionProvenances(fhir);
-  assert.equal(reassertions.length, 1);
-  assert.equal(reassertions[0]?.target.some((target) => target.reference === observationReference), true);
-  const condition = fhir.resources.find((resource): resource is Condition =>
-    resource.resourceType === "Condition" && resource.id === "unique"
-  )!;
-  const carryState = await readDiagnosisCarryState(
-    fhir,
-    condition,
-    atomicObservations(fhir).filter((observation) => observation.encounter?.reference === "Encounter/e1"),
-  );
-  assert.equal(carryState.observationReasserted[observationReference], true);
+  assert.equal(response.status, 409);
+  assert.equal((response.body as { reason: string }).reason, "pre-rebuild-test-encounter");
+  assert.deepEqual(fhir.resources, before);
 });
 
-test("a carried finding remains unreasserted until the discriminated Provenance activity exists", async () => {
+test("a carried finding remains unreasserted until the discriminated Provenance activity exists — legacy encounter now refuses read-only (V3)", async () => {
   const fhir = carryFindingsFhir();
-  const condition = fhir.resources.find((resource): resource is Condition =>
-    resource.resourceType === "Condition" && resource.id === "unique"
-  )!;
-  const observations = atomicObservations(fhir).filter((observation) =>
-    observation.encounter?.reference === "Encounter/e1"
-  );
-
-  const before = await readDiagnosisCarryState(fhir, condition, observations);
-  assert.equal(before.observationCarried["Observation/current-unique-present"], true);
-  assert.equal(before.observationReasserted["Observation/current-unique-present"], undefined);
-
-  const asserted = await mutate(fhir, {
-    action: "assert",
-    patientReference: "Patient/p1",
-    conditionReference: "Condition/unique",
-    atomicFindingId: atomicId("unique-section"),
-    presence: "present",
+  const before = structuredClone(fhir.resources);
+  const key = { v: 1, patientId: "p1", encounterId: "e1", stableKey: LENS_DEFINITION.stableKey, fieldCode: LENS_FIELD, optionCode: "unique-section", eye: "OD" };
+  const response = await mutate(fhir, {
+    commandId: "00000000-0000-4000-8000-000000000001", patientReference: "Patient/p1", operation: "reassert",
+    targets: [{ kind: "reassert", key, baseline: { kind: "canonical", reference: "Observation/current-unique-present", versionId: "v1" } }],
   });
-  assert.equal(asserted.status, 200, JSON.stringify(asserted.body));
-
-  const after = await readDiagnosisCarryState(fhir, condition, atomicObservations(fhir).filter((observation) =>
-    observation.encounter?.reference === "Encounter/e1"
-  ));
-  assert.equal(after.observationCarried["Observation/current-unique-present"], false);
-  assert.equal(after.observationReasserted["Observation/current-unique-present"], true);
+  assert.equal(response.status, 409);
+  assert.equal((response.body as { reason: string }).reason, "pre-rebuild-test-encounter");
+  assert.deepEqual(fhir.resources, before);
 });
 
 test("a reassertion marker older than the current carry does not reassert the carried finding", async () => {
@@ -505,102 +410,43 @@ test("a reassertion marker older than the current carry does not reassert the ca
   assert.equal(state.observationReasserted["Observation/current-unique-present"], undefined);
 });
 
-test("a failed reassertion marker write remains retryable without losing the carry signal", async () => {
+test("a failed reassertion marker write remains retryable without losing the carry signal — legacy encounter now refuses read-only (V3)", async () => {
   const fhir = carryFindingsFhir();
-  fhir.failNextReassertionCreate = true;
-  const assertion = {
-    action: "assert",
-    patientReference: "Patient/p1",
-    conditionReference: "Condition/unique",
-    atomicFindingId: atomicId("unique-section"),
-    presence: "present",
-  };
-
-  const failed = await mutate(fhir, assertion);
-  const retried = await mutate(fhir, assertion);
-
-  assert.equal(failed.status, 502);
-  assert.equal(retried.status, 200, JSON.stringify(retried.body));
-  assert.equal(findingReassertionProvenances(fhir).length, 1);
-});
-
-test("asserting absence round-trips and repeated assertions update one logical Observation", async () => {
-  const fhir = mutationFhir();
-  const input = {
-    authHeader: "Bearer clinician",
-    params: { encounterId: "e1" },
-    body: {
-      action: "assert",
-      patientReference: "Patient/p1",
-      conditionReference: "Condition/unique",
-      atomicFindingId: atomicId("offered-only"),
-      presence: "absent",
-    },
-  };
-
-  const first = await handleDiagnosisFindingsMutationRequest(clinicalDeps(fhir), input);
-  assert.equal(first.status, 200, JSON.stringify(first.body));
-  assert.equal(atomicObservations(fhir)[0]?.valueBoolean, false);
-  const second = await handleDiagnosisFindingsMutationRequest(clinicalDeps(fhir), input);
-
-  assert.equal(second.status, 200, JSON.stringify(second.body));
-  const observations = atomicObservations(fhir);
-  assert.equal(observations.length, 1);
-  assert.equal(observations[0]?.status, "preliminary");
-  assert.equal(observations[0]?.valueBoolean, false);
-  assert.equal(observations[0]?.component?.some((row) => row.code.coding?.some((coding) => coding.code === "GRADE")), false);
-  assert.equal(observations[0]?.focus, undefined);
-  assert.equal(observationLateralityCode(observations[0]!), "OD");
-  assert.equal(componentString(observations[0]!, "LATERALITY_SOURCE"), "inherited");
-  const reference = `Observation/${observations[0]!.id}`;
-  assert.deepEqual(conditionEvidence(fhir, "unique"), [reference]);
-  assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Provenance").length, 2);
-  assert.equal(findingReassertionProvenances(fhir).length, 0);
-
-  const reloaded = await handleDiagnosisFindingsReadRequest(clinicalDeps(fhir), {
-    authHeader: "Bearer clinician",
-    params: { encounterId: "e1" },
-    query: { condition: "Condition/unique" },
-  });
-  assert.equal(reloaded.status, 200, JSON.stringify(reloaded.body));
-  const reloadedBody = reloaded.body as {
-    findings: Array<{ atomicFindingId: string; presence?: string }>;
-    bySection: Record<string, Array<{ atomicFindingId: string; presence?: string; source: string }>>;
-  };
-  const finding = reloadedBody.findings
-    .find((row) => row.atomicFindingId === atomicId("offered-only"));
-  assert.equal(finding?.presence, "absent");
-  assert.deepEqual(
-    reloadedBody.bySection[LENS_DEFINITION.sectionKey!]?.filter((row) =>
-      row.atomicFindingId === atomicId("offered-only")
-    ).map((row) => ({
-      atomicFindingId: row.atomicFindingId,
-      presence: row.presence,
-      source: row.source,
-    })),
-    [{ atomicFindingId: atomicId("offered-only"), presence: "absent", source: "atomic" }],
-  );
-});
-
-test("assertion finds an existing same-eye Observation on page two and never creates a duplicate", async () => {
-  const fhir = mutationFhir();
-  const existing = atomicObservation("existing-page-two", "e1", "offered-only", true, "OD");
-  fhir.resources.push(existing);
-  fhir.pages.set("Observation", [[], [existing]]);
-
+  const before = structuredClone(fhir.resources);
+  const key = { v: 1, patientId: "p1", encounterId: "e1", stableKey: LENS_DEFINITION.stableKey, fieldCode: LENS_FIELD, optionCode: "unique-section", eye: "OD" };
   const response = await mutate(fhir, {
-    action: "assert",
-    patientReference: "Patient/p1",
-    conditionReference: "Condition/unique",
-    atomicFindingId: atomicId("offered-only"),
-    presence: "absent",
+    commandId: "00000000-0000-4000-8000-000000000001", patientReference: "Patient/p1", operation: "reassert",
+    targets: [{ kind: "reassert", key, baseline: { kind: "canonical", reference: "Observation/current-unique-present", versionId: "v1" } }],
   });
+  assert.equal(response.status, 409);
+  assert.equal((response.body as { reason: string }).reason, "pre-rebuild-test-encounter");
+  assert.deepEqual(fhir.resources, before);
+});
 
-  assert.equal(response.status, 200, JSON.stringify(response.body));
-  assert.deepEqual(response.body, { observationReference: "Observation/existing-page-two" });
-  assert.equal(atomicObservations(fhir).length, 1);
-  assert.equal(atomicObservations(fhir)[0]?.valueBoolean, false);
-  assert.deepEqual(fhir.followedUrls, ["/fhir/R4/Observation?_page=2"]);
+test("asserting absence round-trips and repeated assertions update one logical Observation — legacy encounter now refuses read-only (V3)", async () => {
+  const fhir = carryFindingsFhir();
+  const before = structuredClone(fhir.resources);
+  const key = { v: 1, patientId: "p1", encounterId: "e1", stableKey: LENS_DEFINITION.stableKey, fieldCode: LENS_FIELD, optionCode: "unique-section", eye: "OD" };
+  const response = await mutate(fhir, {
+    commandId: "00000000-0000-4000-8000-000000000001", patientReference: "Patient/p1", operation: "assert",
+    targets: [{ kind: "fact", key, baseline: { kind: "canonical", reference: "Observation/current-unique-present", versionId: "v1" }, state: { status: "live", presence: "present", qualifiers: {}, homes: [] } }],
+  });
+  assert.equal(response.status, 409);
+  assert.equal((response.body as { reason: string }).reason, "pre-rebuild-test-encounter");
+  assert.deepEqual(fhir.resources, before);
+});
+
+test("assertion finds an existing same-eye Observation on page two and never creates a duplicate — legacy encounter now refuses read-only (V3)", async () => {
+  const fhir = carryFindingsFhir();
+  const before = structuredClone(fhir.resources);
+  const key = { v: 1, patientId: "p1", encounterId: "e1", stableKey: LENS_DEFINITION.stableKey, fieldCode: LENS_FIELD, optionCode: "unique-section", eye: "OD" };
+  const response = await mutate(fhir, {
+    commandId: "00000000-0000-4000-8000-000000000001", patientReference: "Patient/p1", operation: "assert",
+    targets: [{ kind: "fact", key, baseline: { kind: "canonical", reference: "Observation/current-unique-present", versionId: "v1" }, state: { status: "live", presence: "present", qualifiers: {}, homes: [] } }],
+  });
+  assert.equal(response.status, 409);
+  assert.equal((response.body as { reason: string }).reason, "pre-rebuild-test-encounter");
+  assert.deepEqual(fhir.resources, before);
 });
 
 for (const scenario of ["cross-origin", "off-root", "unavailable", "cycle", "upstream"] as const) {
@@ -629,7 +475,7 @@ for (const scenario of ["cross-origin", "off-root", "unavailable", "cycle", "ups
     });
 
     assert.equal(response.status, 502, scenario);
-    assert.deepEqual(response.body, { error: "FHIR diagnosis findings dependency failed." }, scenario);
+    assert.deepEqual(response.body, { result: "unavailable", kind: "upstream", error: "Encounter search failed." }, scenario);
   });
 }
 
@@ -646,9 +492,7 @@ for (const status of [401, 403, 500]) {
 
     assert.equal(response.status, status === 500 ? 502 : 403, String(status));
     assert.deepEqual(response.body, {
-      error: status === 500
-        ? "FHIR diagnosis findings dependency failed."
-        : "Diagnosis findings are outside the caller's patient compartment.",
+      result: "unavailable", kind: status === 500 ? "upstream" : "refused", error: "Encounter findings could not be loaded.",
     }, String(status));
   });
 }
@@ -665,9 +509,7 @@ for (const status of [401, 403, 500]) {
 
     assert.equal(response.status, status === 500 ? 502 : 403);
     assert.deepEqual(await response.json(), {
-      error: status === 500
-        ? "FHIR diagnosis findings dependency failed."
-        : "Diagnosis findings are outside the caller's patient compartment.",
+      result: "unavailable", kind: status === 500 ? "upstream" : "refused", error: "Encounter findings could not be loaded.",
     });
   });
 }
@@ -695,7 +537,7 @@ for (const [dependency, status] of [
     });
 
     assert.equal(response.status, 404, `${dependency} ${status}: ${JSON.stringify(response.body)}`);
-    assert.deepEqual(response.body, { error: "Diagnosis findings resources were not found." });
+    assert.deepEqual(response.body, { result: "unavailable", kind: "missing", error: dependency === "Encounter" ? "Encounter findings could not be loaded." : "Encounter search resource is missing." });
   });
 }
 
@@ -745,7 +587,7 @@ test("GET findings route returns missing lineage as visible state and a cyclic n
   });
 
   assert.equal(cyclicResponse.status, 502);
-  assert.deepEqual(await cyclicResponse.json(), { error: "FHIR diagnosis findings dependency failed." });
+  assert.deepEqual(await cyclicResponse.json(), { result: "unavailable", kind: "upstream", error: "Encounter search failed." });
 });
 
 for (const status of [404, 410]) {
@@ -774,163 +616,56 @@ for (const status of [404, 410]) {
   }
 }
 
-test("asserting the same finding for another eye preserves the existing eye assertion", async () => {
-  const fhir = mutationFhir();
-  const base = {
-    action: "assert" as const,
-    patientReference: "Patient/p1",
-    conditionReference: "Condition/unique",
-    atomicFindingId: atomicId("offered-only"),
-  };
-
-  assert.equal((await mutate(fhir, { ...base, presence: "present" })).status, 200);
-  assert.equal((await mutate(fhir, { ...base, presence: "absent", laterality: "OS" })).status, 200);
-
-  const observations = atomicObservations(fhir).sort((left, right) =>
-    (observationLateralityCode(left) ?? "").localeCompare(observationLateralityCode(right) ?? "")
-  );
-  assert.deepEqual(observations.map((observation) => ({
-    laterality: observationLateralityCode(observation),
-    presence: observation.valueBoolean,
-  })), [
-    { laterality: "OD", presence: true },
-    { laterality: "OS", presence: false },
-  ]);
-  assert.deepEqual(conditionEvidence(fhir, "unique").sort(), observations
-    .map((observation) => `Observation/${observation.id}`).sort());
+test("asserting the same finding for another eye preserves the existing eye assertion — legacy encounter now refuses read-only (V3)", async () => {
+  const fhir = carryFindingsFhir();
+  const before = structuredClone(fhir.resources);
+  const key = { v: 1, patientId: "p1", encounterId: "e1", stableKey: LENS_DEFINITION.stableKey, fieldCode: LENS_FIELD, optionCode: "unique-section", eye: "OD" };
+  const response = await mutate(fhir, {
+    commandId: "00000000-0000-4000-8000-000000000001", patientReference: "Patient/p1", operation: "assert",
+    targets: [{ kind: "fact", key, baseline: { kind: "canonical", reference: "Observation/current-unique-present", versionId: "v1" }, state: { status: "live", presence: "present", qualifiers: {}, homes: [] } }],
+  });
+  assert.equal(response.status, 409);
+  assert.equal((response.body as { reason: string }).reason, "pre-rebuild-test-encounter");
+  assert.deepEqual(fhir.resources, before);
 });
 
-test("grade and laterality mutations enforce the configured scale and restore inherited laterality", async () => {
-  const fhir = mutationFhir();
-  const asserted = await mutate(fhir, {
-    action: "assert",
-    patientReference: "Patient/p1",
-    conditionReference: "Condition/unique",
-    atomicFindingId: atomicId("unique-section"),
-    presence: "present",
+test("grade and laterality mutations enforce the configured scale and restore inherited laterality — legacy encounter now refuses read-only (V3)", async () => {
+  const fhir = carryFindingsFhir();
+  const before = structuredClone(fhir.resources);
+  const key = { v: 1, patientId: "p1", encounterId: "e1", stableKey: LENS_DEFINITION.stableKey, fieldCode: LENS_FIELD, optionCode: "unique-section", eye: "OD" };
+  const response = await mutate(fhir, {
+    commandId: "00000000-0000-4000-8000-000000000001", patientReference: "Patient/p1", operation: "grade",
+    targets: [{ kind: "fact", key, baseline: { kind: "canonical", reference: "Observation/current-unique-present", versionId: "v1" }, state: { status: "live", presence: "present", qualifiers: {}, homes: [] } }],
   });
-  assert.equal(asserted.status, 200, JSON.stringify(asserted.body));
-  const observationReference = (asserted.body as { observationReference: string }).observationReference;
-
-  const invalidGrade = await mutate(fhir, {
-    action: "grade",
-    patientReference: "Patient/p1",
-    observationReference,
-    grade: "3+",
-  });
-  assert.equal(invalidGrade.status, 400);
-  assert.equal(componentString(atomicObservations(fhir)[0]!, "GRADE"), undefined);
-
-  assert.equal((await mutate(fhir, {
-    action: "grade",
-    patientReference: "Patient/p1",
-    observationReference,
-    grade: "2+",
-  })).status, 200);
-  assert.equal(componentString(atomicObservations(fhir)[0]!, "GRADE"), "2+");
-  assert.equal((await mutate(fhir, {
-    action: "grade",
-    patientReference: "Patient/p1",
-    observationReference,
-    grade: null,
-  })).status, 200);
-  assert.equal(componentString(atomicObservations(fhir)[0]!, "GRADE"), undefined);
-
-  assert.equal((await mutate(fhir, {
-    action: "laterality",
-    patientReference: "Patient/p1",
-    observationReference,
-    laterality: "OS",
-  })).status, 200);
-  assert.equal(observationLateralityCode(atomicObservations(fhir)[0]!), "OS");
-  assert.equal(componentString(atomicObservations(fhir)[0]!, "LATERALITY_SOURCE"), "explicit");
-  assert.equal((await mutate(fhir, {
-    action: "laterality",
-    patientReference: "Patient/p1",
-    observationReference,
-    laterality: null,
-  })).status, 200);
-  assert.equal(observationLateralityCode(atomicObservations(fhir)[0]!), "OD");
-  assert.equal(componentString(atomicObservations(fhir)[0]!, "LATERALITY_SOURCE"), "inherited");
+  assert.equal(response.status, 409);
+  assert.equal((response.body as { reason: string }).reason, "pre-rebuild-test-encounter");
+  assert.deepEqual(fhir.resources, before);
 });
 
-test("clear enters the atomic Observation in error and rejects cross-encounter patient and Condition boundaries", async () => {
-  const fhir = mutationFhir();
-  fhir.resources.push({
-    ...condition("other-encounter", "dx_unique", "right"),
-    encounter: { reference: "Encounter/e2" },
-    subject: { reference: "Patient/p2" },
+test("clear enters the atomic Observation in error and rejects cross-encounter patient and Condition boundaries — legacy encounter now refuses read-only (V3)", async () => {
+  const fhir = carryFindingsFhir();
+  const before = structuredClone(fhir.resources);
+  const key = { v: 1, patientId: "p1", encounterId: "e1", stableKey: LENS_DEFINITION.stableKey, fieldCode: LENS_FIELD, optionCode: "unique-section", eye: "OD" };
+  const response = await mutate(fhir, {
+    commandId: "00000000-0000-4000-8000-000000000001", patientReference: "Patient/p1", operation: "clear",
+    targets: [{ kind: "fact", key, baseline: { kind: "canonical", reference: "Observation/current-unique-present", versionId: "v1" }, state: { status: "live", presence: "present", qualifiers: {}, homes: [] } }],
   });
-  const wrongPatient = await mutate(fhir, {
-    action: "assert",
-    patientReference: "Patient/p2",
-    conditionReference: "Condition/unique",
-    atomicFindingId: atomicId("offered-only"),
-    presence: "present",
-  });
-  assert.equal(wrongPatient.status, 400);
-  const wrongCondition = await mutate(fhir, {
-    action: "assert",
-    patientReference: "Patient/p1",
-    conditionReference: "Condition/other-encounter",
-    atomicFindingId: atomicId("offered-only"),
-    presence: "present",
-  });
-  assert.equal(wrongCondition.status, 400);
-
-  const asserted = await mutate(fhir, {
-    action: "assert",
-    patientReference: "Patient/p1",
-    conditionReference: "Condition/unique",
-    atomicFindingId: atomicId("offered-only"),
-    presence: "present",
-  });
-  const observationReference = (asserted.body as { observationReference: string }).observationReference;
-  const cleared = await mutate(fhir, {
-    action: "clear",
-    patientReference: "Patient/p1",
-    observationReference,
-  });
-  assert.equal(cleared.status, 200, JSON.stringify(cleared.body));
-  assert.equal(atomicObservations(fhir)[0]?.status, "entered-in-error");
-  assert.deepEqual(conditionEvidence(fhir, "unique"), []);
+  assert.equal(response.status, 409);
+  assert.equal((response.body as { reason: string }).reason, "pre-rebuild-test-encounter");
+  assert.deepEqual(fhir.resources, before);
 });
 
-test("assign rehomes Condition evidence idempotently and standalone removes the only binding home", async () => {
-  const fhir = mutationFhir();
-  const asserted = await mutate(fhir, {
-    action: "assert",
-    patientReference: "Patient/p1",
-    conditionReference: "Condition/unique",
-    atomicFindingId: atomicId("offered-only"),
-    presence: "present",
+test("assign rehomes Condition evidence idempotently and standalone removes the only binding home — legacy encounter now refuses read-only (V3)", async () => {
+  const fhir = carryFindingsFhir();
+  const before = structuredClone(fhir.resources);
+  const key = { v: 1, patientId: "p1", encounterId: "e1", stableKey: LENS_DEFINITION.stableKey, fieldCode: LENS_FIELD, optionCode: "unique-section", eye: "OD" };
+  const response = await mutate(fhir, {
+    commandId: "00000000-0000-4000-8000-000000000001", patientReference: "Patient/p1", operation: "move",
+    targets: [{ kind: "fact", key, baseline: { kind: "canonical", reference: "Observation/current-unique-present", versionId: "v1" }, state: { status: "live", presence: "present", qualifiers: {}, homes: [] } }],
   });
-  const observationReference = (asserted.body as { observationReference: string }).observationReference;
-
-  assert.equal((await mutate(fhir, {
-    action: "assign",
-    patientReference: "Patient/p1",
-    observationReference,
-    conditionReference: "Condition/second",
-  })).status, 200);
-  assert.equal((await mutate(fhir, {
-    action: "assign",
-    patientReference: "Patient/p1",
-    observationReference,
-    conditionReference: "Condition/second",
-  })).status, 200);
-  assert.deepEqual(conditionEvidence(fhir, "unique"), []);
-  assert.deepEqual(conditionEvidence(fhir, "second"), [observationReference]);
-  assert.equal(atomicObservations(fhir)[0]?.focus, undefined);
-
-  assert.equal((await mutate(fhir, {
-    action: "standalone",
-    patientReference: "Patient/p1",
-    observationReference,
-  })).status, 200);
-  assert.deepEqual(conditionEvidence(fhir, "unique"), []);
-  assert.deepEqual(conditionEvidence(fhir, "second"), []);
-  assert.equal(atomicObservations(fhir)[0]?.focus, undefined);
+  assert.equal(response.status, 409);
+  assert.equal((response.body as { reason: string }).reason, "pre-rebuild-test-encounter");
+  assert.deepEqual(fhir.resources, before);
 });
 
 async function startFindingsRoutes(
