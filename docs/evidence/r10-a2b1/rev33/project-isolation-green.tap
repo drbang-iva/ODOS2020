@@ -1,0 +1,80 @@
+TAP version 13
+# Subtest: SMART registration refuses a session project mismatch before POSTing a client
+ok 1 - SMART registration refuses a session project mismatch before POSTing a client
+  ---
+  duration_ms: 10.88425
+  type: 'test'
+  ...
+# Subtest: SMART registration checks auth/me before creating a client in the configured project
+ok 2 - SMART registration checks auth/me before creating a client in the configured project
+  ---
+  duration_ms: 0.399584
+  type: 'test'
+  ...
+# Subtest: SMART registration resolves its default project from the installation manifest
+ok 3 - SMART registration resolves its default project from the installation manifest
+  ---
+  duration_ms: 0.967292
+  type: 'test'
+  ...
+# Subtest: SMART registration refuses an explicit foreign project without acknowledgement
+ok 4 - SMART registration refuses an explicit foreign project without acknowledgement
+  ---
+  duration_ms: 0.442667
+  type: 'test'
+  ...
+# {
+#   "level": "WARNING",
+#   "test": "audit-header",
+#   "outcome": "x-odos-source-not-surfaced-in-fhir-auditevent",
+#   "searchedFor": "mcp/create_encounter",
+#   "encounterReference": "Encounter/ef19ce85-91b1-4b31-86b4-050e928da81f",
+#   "recordedAt": "2026-09-16T17:15:04.646Z",
+#   "attempts": [
+#     {
+#       "label": "date+entity",
+#       "path": "http://localhost:29123/fhir/R4/AuditEvent?date=ge2026-09-16T17%3A15%3A04.646Z&entity=Encounter%2Fef19ce85-91b1-4b31-86b4-050e928da81f",
+#       "ok": true,
+#       "entryCount": 0
+#     },
+#     {
+#       "label": "entity",
+#       "path": "http://localhost:29123/fhir/R4/AuditEvent?entity=Encounter%2Fef19ce85-91b1-4b31-86b4-050e928da81f",
+#       "ok": true,
+#       "entryCount": 0
+#     },
+#     {
+#       "label": "date",
+#       "path": "http://localhost:29123/fhir/R4/AuditEvent?date=ge2026-09-16T17%3A15%3A04.646Z",
+#       "ok": true,
+#       "entryCount": 20
+#     },
+#     {
+#       "label": "_lastUpdated",
+#       "path": "http://localhost:29123/fhir/R4/AuditEvent?_lastUpdated=ge2026-09-16T17%3A15%3A04.646Z",
+#       "ok": true,
+#       "entryCount": 20
+#     },
+#     {
+#       "label": "recent",
+#       "path": "http://localhost:29123/fhir/R4/AuditEvent?_count=50&_sort=-date",
+#       "ok": true,
+#       "entryCount": 50
+#     }
+#   ]
+# }
+# Subtest: X-ODOS-Source header visibility in Medplum AuditEvent
+ok 5 - X-ODOS-Source header visibility in Medplum AuditEvent
+  ---
+  duration_ms: 26571.496291
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 26856.14825

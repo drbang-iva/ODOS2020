@@ -1,0 +1,26 @@
+R10 A3 release BLOCKED
+T4: missing ui suite ui/tests/r10A3ReleaseScenarios.test.ts
+T5: missing ui suite ui/tests/r10A3ReleaseScenarios.test.ts
+T6: missing ui suite ui/tests/r10A3ReleaseScenarios.test.ts
+T15: missing ui suite ui/tests/r10A3ReleaseScenarios.test.ts
+T16: missing ui suite ui/tests/r10A3ReleaseScenarios.test.ts
+T17: missing ui suite ui/tests/r10A3ReleaseScenarios.test.ts
+T18: missing ui suite ui/tests/r10A3ReleaseScenarios.test.ts
+T21: missing ui suite ui/tests/r10A3ReleaseScenarios.test.ts
+T22: missing ui suite ui/tests/r10A3ReleaseScenarios.test.ts
+T1: mcp TODO remains open
+T2: mcp TODO remains open
+T3: mcp TODO remains open
+T7: mcp TODO remains open
+T8: mcp TODO remains open
+T9: mcp TODO remains open
+T10: mcp TODO remains open
+T11: mcp TODO remains open
+T12: mcp TODO remains open
+T13: mcp TODO remains open
+T14: mcp TODO remains open
+T17: mcp TODO remains open
+T19: mcp TODO remains open
+T20: mcp TODO remains open
+T21: mcp TODO remains open
+T22: mcp TODO remains open
