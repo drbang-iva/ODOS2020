@@ -3,7 +3,7 @@ import { rateLimit } from "express-rate-limit";
 import type { MedplumClient } from "../fhir-client.js";
 import { handleGuarantorOperation, type GuarantorOperationDeps, type GuarantorOperationStaff } from "./guarantor-link-operation.js";
 
-import { createGuarantor, handleGuarantorSearch } from "./guarantor-search.js";
+import { createGuarantor, handleGuarantorSearch, listUnusedGuarantors, discardUnusedGuarantor } from "./guarantor-search.js";
 
 export interface GuarantorRouteDeps {
   authenticateService(): Promise<void>;
@@ -26,6 +26,8 @@ export function registerGuarantorRoutes(app: Pick<Application, "get" | "post">, 
       const operationDeps = { serviceFhir: deps.serviceFhir,
         serviceReference: await deps.serviceFhir.getAuthenticatedProfileReference(), recordAudit: deps.recordAudit, now: deps.now };
       const result = action === "search" ? await handleGuarantorSearch(operationDeps, staff, req.query)
+        : action === "unused" ? await listUnusedGuarantors(operationDeps, staff)
+        : action === "discard" ? await discardUnusedGuarantor(operationDeps, staff, String(req.params.personId ?? ""), req.body)
         : action === "new-person" ? await createGuarantor(operationDeps, staff, req.body)
         : await handleGuarantorOperation(operationDeps, staff, { action, taskId, body: action === "history" ? req.query : req.body });
       res.status(result.status).json(result.body);
@@ -34,6 +36,8 @@ export function registerGuarantorRoutes(app: Pick<Application, "get" | "post">, 
       if (!res.headersSent) res.status(500).json({ error: "The guarantor operation result could not be confirmed. Reload before continuing." });
     }
   };
+  app.get("/guarantors/unused", limit, handle("unused"));
+  app.post("/guarantors/:personId/discard", limit, handle("discard"));
   app.get("/guarantors/search", limit, handle("search"));
   app.post("/guarantors", limit, handle("new-person"));
   app.post("/guarantors/link-operations/draft", limit, handle("draft"));

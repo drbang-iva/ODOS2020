@@ -1,0 +1,22 @@
+$ node --import tsx docs/build-log/guarantor-cleanup-a/browser/live-browser.mjs
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: O8 Cancel must persist inactive Person
+
+true !== false
+
+    at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/docs/build-log/guarantor-cleanup-a/browser/live-browser.mjs:41:111)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: true,
+  expected: false,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.22.3
+
+Exit: 1

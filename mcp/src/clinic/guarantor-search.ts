@@ -1,10 +1,12 @@
-import type { Bundle, Person } from "@medplum/fhirtypes";
+import type { Bundle, Person, Task } from "@medplum/fhirtypes";
 import { validatePatientPhones } from "./patient-telecom.js";
 import { z } from "zod";
-import { FhirSearchLimitError, searchProjectAll } from "../fhir-search.js";
+import { FhirSearchLimitError, FhirSearchPageLimitError, searchProjectAll } from "../fhir-search.js";
 import { staffHasBusinessAction } from "../authz/roles.js";
 import { registrationProjectId, isR4Date } from "./patient-registration-endpoint.js";
 import { buildResponsiblePartyDemographics, guarantorPersonIsAttachable } from "./responsible-party-demographics.js";
+import { buildOdosAuditEventRow } from "../authz/odosAudit.js";
+import { GUARANTOR_OPERATION_SYSTEM } from "./guarantor-link-operation.js";
 import type { GuarantorOperationDeps, GuarantorOperationResult, GuarantorOperationStaff } from "./guarantor-link-operation.js";
 
 const normalName = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
@@ -62,4 +64,69 @@ export async function createGuarantor(deps: GuarantorOperationDeps, staff: Guara
   const versionId = entry.resource?.resourceType === "Person" ? entry.resource.meta?.versionId : location?.[2];
   if (!personId || !versionId) throw new Error("Guarantor creation did not return an id and version. Reload before continuing.");
   return { status: 201, body: { personId, versionId } };
+}
+
+
+function unusedPerson(person: Person, project: string, referenced: ReadonlySet<string>): boolean {
+  return person.meta?.project?.replace(/^Project\//, "") === project
+    && person.active !== false && !person.link?.length && !referenced.has(`Person/${person.id}`);
+}
+async function operationPersons(deps: GuarantorOperationDeps, project: string): Promise<Set<string>> {
+  // The Task scan is a courtesy check, not an atomic reservation. The operation engine enforces G1.
+  const tasks = await searchProjectAll<Task>(deps.serviceFhir, "Task", project, { code: `${GUARANTOR_OPERATION_SYSTEM}|` });
+  return new Set(tasks.flatMap(task => {
+    if (task.meta?.project?.replace(/^Project\//, "") !== project) throw new Error("Guarantor Task search returned a foreign-practice Task.");
+    return (task.input ?? []).filter(input => input.type.text === "source" || input.type.text === "destination")
+      .flatMap(input => input.valueReference?.reference ? [input.valueReference.reference] : []);
+  }));
+}
+const noLongerUnused = { status: 409, body: { error: "This guarantor record changed or is no longer unused. Reload before continuing." } };
+const searchRefused = { status: 409, body: { error: "The complete guarantor search could not be checked. No records were discarded." } };
+const discardSchema = z.object({ reason: z.string().trim().min(1), expectedVersion: z.string().regex(/^[A-Za-z0-9.-]{1,64}$/) }).strict();
+export async function listUnusedGuarantors(deps: GuarantorOperationDeps, staff: GuarantorOperationStaff): Promise<GuarantorOperationResult> {
+  if (!staffHasBusinessAction(staff, "guarantor.link")) return { status: 403, body: { error: "guarantor.link action required." } };
+  if (!staff.project) return { status: 422, body: { error: "Staff practice is unavailable." } };
+  const project = registrationProjectId(staff.project);
+  try {
+    const referenced = await operationPersons(deps, project);
+    const persons = await searchProjectAll<Person>(deps.serviceFhir, "Person", project);
+    return { status: 200, body: persons.filter(person => unusedPerson(person, project, referenced)).map(person => ({
+      personId: person.id, versionId: person.meta?.versionId,
+      name: person.name?.[0]?.text || [...person.name?.[0]?.given ?? [], person.name?.[0]?.family].filter(Boolean).join(" "),
+      birthDate: person.birthDate ?? "", phones: (person.telecom ?? []).filter(contact => contact.system === "phone").map(contact => contact.value ?? ""),
+      city: person.address?.[0]?.city ?? "", postalCode: person.address?.[0]?.postalCode ?? "", lastUpdated: person.meta?.lastUpdated ?? "",
+    })) };
+  } catch (error) { if (error instanceof FhirSearchLimitError || error instanceof FhirSearchPageLimitError) return searchRefused; throw error; }
+}
+export async function discardUnusedGuarantor(deps: GuarantorOperationDeps, staff: GuarantorOperationStaff, personId: string, input: unknown): Promise<GuarantorOperationResult> {
+  if (!staffHasBusinessAction(staff, "guarantor.link")) return { status: 403, body: { error: "guarantor.link action required." } };
+  const parsed = discardSchema.safeParse(input);
+  if (!parsed.success || !/^[A-Za-z0-9.-]{1,64}$/.test(personId)) return { status: 400, body: { error: "A valid guarantor id, version and reason are required." } };
+  if (!staff.project) return { status: 422, body: { error: "Staff practice is unavailable." } };
+  const project = registrationProjectId(staff.project);
+  try {
+    const referenced = await operationPersons(deps, project);
+    const person = await deps.serviceFhir.readExtended<Person>("Person", personId);
+    if (!unusedPerson(person, project, referenced) || person.meta?.versionId !== parsed.data.expectedVersion) return noLongerUnused;
+    const actionReason = `guarantor.link discard Person; ${parsed.data.reason}`;
+    // fhir-service-write: Person
+    const response = await deps.serviceFhir.executeTransactionAsActor({ resourceType: "Bundle", type: "transaction", entry: [{
+      resource: { ...person, active: false }, request: { method: "PUT", url: `Person/${personId}`, ifMatch: `W/"${person.meta.versionId}"` },
+    }] }, { actorReference: staff.staffReference, actorRole: staff.actorRole, actionReason },
+    { "X-ODOS-Source": "mcp/guarantor-search", "X-Medplum": "extended" }, { autoRollbackCreatedEntries: false, validateResponse: result => {
+      const status = result.entry?.[0]?.response?.status ?? "";
+      if (/^412(?:\s|$)/.test(status)) throw Object.assign(new Error("Guarantor changed."), { status: 412 });
+      if (result.entry?.length !== 1 || !/^2\d\d(?:\s|$)/.test(status)) throw new Error("Guarantor discard could not be confirmed.");
+    } });
+    await deps.recordAudit(buildOdosAuditEventRow({ eventType: "guarantor.link.completed", eventTime: deps.now?.(), actorReference: staff.staffReference,
+      actorRole: staff.actorRole, resourceType: "Person", resourceId: personId, actionOutcome: "granted", actionReason }));
+    const entry = response.entry![0];
+    const versionId = entry.resource?.meta?.versionId ?? entry.response?.location?.match(/\/_history\/([^/]+)/)?.[1];
+    if (!versionId) throw new Error("Guarantor discard did not return a version. Reload before continuing.");
+    return { status: 200, body: { personId, versionId } };
+  } catch (error) {
+    if (error instanceof FhirSearchLimitError || error instanceof FhirSearchPageLimitError) return searchRefused;
+    if (typeof error === "object" && error !== null && "status" in error && (error.status === 412 || error.status === 404)) return noLongerUnused;
+    throw error;
+  }
 }

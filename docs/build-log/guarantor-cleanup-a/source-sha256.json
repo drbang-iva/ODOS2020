@@ -1,0 +1,14 @@
+{
+  "mcp/src/clinic/clinic-routes.ts": "a99356f3482bf7e7a2bd8746530567d9f8149e16fd866f480a336c311790ae6c",
+  "mcp/src/clinic/guarantor-link-operation.ts": "e3458a4f451eab45ed97b1a9d3d76d72b0b83847b7312e8cd362ec81fca1c9ce",
+  "mcp/src/clinic/guarantor-routes.ts": "66d9d8d4cba458aa3ea26dbf79578b81fc55aeafdd5898c3e7eb967032b8ca83",
+  "mcp/src/clinic/guarantor-search.ts": "8cca7d3f33bfa6bbe27098a21188a4b3def508c3e39fb3becef9f560870caf19",
+  "mcp/src/clinic/patient-registration-endpoint.ts": "1979d8ff101de5687f3661f3d289f4f44b24a9f700c31ae36523c2c469af0de0",
+  "mcp/src/desk/desk-routes.ts": "b21de57d6689368b465c1a74155084e707069fc68a9d789b03524858aff68cc6",
+  "mcp/src/index.ts": "8e1755c1eac4f866a547ea9c5dab9ae7618346e287d695baa4eb8391a424bc13",
+  "ui/src/App.tsx": "c7f9c95b0dd3b5f942db1b6cc347147f5928563e9e983d08b7323ae6ee75d7db",
+  "ui/src/components/patient/GuarantorLinkScreens.tsx": "9de9b9c938f1e5c8a04f3956f3fe452b8534638c13dc26e35b60a16634c30efc",
+  "ui/src/lib/guarantor-link-operations.ts": "b0ff74aef3ccdeefc60111141509c4220d991f3ff7d70e8d48af4d0e45796365",
+  "ui/src/scenes/settings/SettingsIndex.tsx": "d23ea6042c4ae8a18806e8834ef1eedd011746b413ac502100c354b99809f1c8",
+  "ui/src/scenes/settings/UnusedGuarantorsSettings.tsx": "c0e3400182c084ad301c8862911b3a1a4edb198ee7098bb2e07b7d00c89257d6"
+}

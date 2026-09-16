@@ -64,7 +64,7 @@ export function fixture(count = 2) {
         else { resource.id = randomUUID(); actual = seed(resource); }
       } else {
         const prior = data.get(`${resource.resourceType}/${resource.id}`);
-        if (prior?.meta?.versionId !== write.expected) status = 412;
+        if (write.expected !== undefined && prior?.meta?.versionId !== write.expected) status = 412;
         else if (entry.request?.method === "DELETE") data.delete(`${resource.resourceType}/${resource.id}`);
         else {
           actual = { ...resource, meta: { ...resource.meta, versionId: String(Number(prior.meta!.versionId) + 1), author: { reference: SERVICE } } };

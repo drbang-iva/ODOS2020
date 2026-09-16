@@ -7826,7 +7826,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
             authHeader: header,
             serviceClient: fhir,
           });
-          return resolved ? { email: resolved.email, roles: resolved.roles } : null;
+          return resolved ? { email: resolved.email, roles: resolved.roles, businessActions: resolved.businessActions } : null;
         },
         terminalMode: process.env.ODOS_PAYMENT_TERMINAL_MODE
           ?? (paymentDispatch.methods().includes("stripe") ? "TEST MODE"

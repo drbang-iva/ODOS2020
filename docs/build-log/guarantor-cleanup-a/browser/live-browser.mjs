@@ -1,0 +1,45 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync,copyFileSync,unlinkSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {createHash} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import {PORTS,refreshFixtureTokens,createLiveClients,successfulHttp,grantPatients,writeEvidence,saveHttpTrace,sourceRoot} from '../live/live-fixture.mjs';
+const fixture=await refreshFixtureTokens();
+const {default:express}=await import(resolve(sourceRoot,'mcp/node_modules/express/index.js'));
+const {registerGuarantorRoutes}=await import(resolve(sourceRoot,'mcp/src/clinic/guarantor-routes.ts'));
+const {registerDeskRoutes}=await import(resolve(sourceRoot,'mcp/src/desk/desk-routes.ts'));
+const {authenticateStaffRoute,resolveStaffRoles}=await import(resolve(sourceRoot,'mcp/src/payments/payment-endpoint.ts'));
+const {createServer}=await import(resolve(sourceRoot,'ui/node_modules/vite/dist/node/index.js'));
+const {default:react}=await import(resolve(sourceRoot,'ui/node_modules/@vitejs/plugin-react/dist/index.cjs'));
+const {chromium}=await import(resolve(sourceRoot,'ui/node_modules/playwright-core/index.mjs'));
+const {audit,serviceFhir}=await createLiveClients(fixture);
+const app=express();app.use(express.json());
+const authenticate=header=>authenticateStaffRoute({baseUrl:fixture.baseUrl,authHeader:header,serviceClient:serviceFhir,audit});
+registerGuarantorRoutes(app,{authenticateService:async()=>{},authenticate,serviceFhir,recordAudit:row=>audit.record(row,()=>undefined)});
+registerDeskRoutes(app,{authenticateService:async()=>{},authenticate,resolveRoles:header=>resolveStaffRoles({baseUrl:fixture.baseUrl,authHeader:header,serviceClient:serviceFhir}),terminalMode:'SYNTHETIC'});
+const server=await new Promise((done,fail)=>{const s=app.listen(PORTS.odos,'127.0.0.1',()=>done(s));s.once('error',fail);});
+const output=resolve(sourceRoot,'docs/build-log/guarantor-cleanup-a/browser');
+const target=resolve(sourceRoot,'ui/tests/fixtures/guarantor-cleanup-live');
+copyFileSync(resolve(output,'fixture.tsx'),target+'.tsx');writeFileSync(target+'.html','<html><head><title>Synthetic guarantor cleanup proof</title></head><body><div id="root"></div><script type="module" src="./guarantor-cleanup-live.tsx"></script></body></html>');
+let vite,browser;
+const requests=[],checks=[];const sourceFiles=['mcp/src/clinic/guarantor-search.ts','mcp/src/clinic/guarantor-link-operation.ts','ui/src/components/patient/GuarantorLinkScreens.tsx','ui/src/scenes/settings/UnusedGuarantorsSettings.tsx'];
+const provenance=()=>({head:execFileSync('git',['rev-parse','HEAD'],{cwd:sourceRoot,encoding:'utf8'}).trim(),files:Object.fromEntries(sourceFiles.map(p=>[p,createHash('sha256').update(readFileSync(resolve(sourceRoot,p))).digest('hex')]))});
+const before=provenance();
+try{
+ process.chdir(resolve(sourceRoot,'ui'));
+ vite=await createServer({configFile:false,root:resolve(sourceRoot,'ui'),plugins:[react()],server:{host:'127.0.0.1',port:PORTS.ui,strictPort:true,proxy:{'/guarantors':`http://127.0.0.1:${PORTS.odos}`,'/desk':`http://127.0.0.1:${PORTS.odos}`,'/fhir':fixture.baseUrl}},logLevel:'error'});await vite.listen();
+ const patient=await successfulHttp(fixture,'POST','/fhir/R4/Patient',{body:{resourceType:'Patient',meta:{project:fixture.projectA},name:[{family:'Synthetic cleanup browser'}]}});
+ const child=await successfulHttp(fixture,'POST','/fhir/R4/RelatedPerson',{body:{resourceType:'RelatedPerson',meta:{project:fixture.projectA},patient:{reference:`Patient/${patient.id}`},name:[{family:'Synthetic guardian'}]}});
+ await grantPatients(fixture,'staff',[fixture.patientId,patient.id]);
+ browser=await chromium.launch({channel:'chrome',headless:true});
+ const context=await browser.newContext({viewport:{width:1440,height:1000}});
+ await context.addInitScript(({token})=>sessionStorage.setItem('odos.session.v1',JSON.stringify({accessToken:token,expiresAt:Date.now()+3600000})),{token:fixture.principals.staff.token});
+ context.on('response',async response=>{const url=new URL(response.url());if(!url.pathname.startsWith('/guarantors')&&!url.pathname.startsWith('/desk/'))return;let body;try{body=await response.json();}catch{}requests.push({method:response.request().method(),path:url.pathname+url.search,request:response.request().postDataJSON(),status:response.status(),response:body});});
+ const base=`http://127.0.0.1:${PORTS.ui}/tests/fixtures/guarantor-cleanup-live.html`;
+ async function createInBrowser(label){const page=await context.newPage();await page.goto(`${base}?child=${child.id}`);await page.getByRole('button',{name:'Attach a guarantor',exact:true}).click();await page.getByLabel('Search last name').fill(label);await page.getByLabel('Search first name').fill('Synthetic');await page.getByRole('button',{name:'Search guarantors',exact:true}).click();await page.getByText('No matching guarantors.',{exact:true}).waitFor();await page.getByRole('button',{name:'Create new guarantor',exact:true}).click();await page.getByLabel('New guarantor date of birth (required)').fill('1980-01-01');const saved=page.waitForResponse(r=>new URL(r.url()).pathname==='/guarantors'&&r.request().method()==='POST');await page.getByRole('button',{name:'Continue',exact:true}).click();const created=await(await saved).json();await page.getByRole('region',{name:'Confirm guarantor change'}).waitFor();return {page,created};}
+ const cancelled=await createInBrowser('UnusedCancel');await cancelled.page.screenshot({path:resolve(output,'cancel-preview.png')});await cancelled.page.getByRole('button',{name:'Cancel',exact:true}).click();await cancelled.page.getByRole('button',{name:'Attach a guarantor',exact:true}).waitFor();
+ const afterCancel=await successfulHttp(fixture,'GET',`/fhir/R4/Person/${cancelled.created.personId}`);assert.equal(afterCancel.active,false,"O8 Cancel must persist inactive Person");assert.equal(afterCancel.link?.length??0,0);checks.push({name:'Cancel after create persisted inactive zero-link Person',passed:true,person:afterCancel});await cancelled.page.close();
+ const abandoned=await createInBrowser('UnusedAbandoned');await abandoned.page.close();const settings=await context.newPage();await settings.goto(`${base}?settings=/settings`);await settings.getByRole('link',{name:/Unused guarantor records/}).waitFor();await settings.screenshot({path:resolve(output,'settings-entry.png')});await settings.goto(`${base}?settings=/settings/unused-guarantors`);await settings.getByRole('button',{name:'Discard Synthetic UnusedAbandoned',exact:true}).waitFor();await settings.getByText('Caution: this record may be mid-registration.').first().waitFor();await settings.screenshot({path:resolve(output,'unused-list.png')});assert.equal(await settings.getByRole('button',{name:'Discard Synthetic UnusedAbandoned',exact:true}).isDisabled(),true);await settings.getByLabel('Reason to discard Synthetic UnusedAbandoned').fill('Synthetic abandoned create');const discarded=settings.waitForResponse(r=>r.url().endsWith(`/${abandoned.created.personId}/discard`));await settings.getByRole('button',{name:'Discard Synthetic UnusedAbandoned',exact:true}).click();assert.equal((await discarded).status(),200);const afterDiscard=await successfulHttp(fixture,'GET',`/fhir/R4/Person/${abandoned.created.personId}`);assert.equal(afterDiscard.active,false);assert.equal(afterDiscard.link?.length??0,0);checks.push({name:'Abandoned create listed then discarded by staff through actual Settings route',passed:true,person:afterDiscard});
+ await settings.getByText('Synthetic UnusedAbandoned was deactivated.',{exact:true}).waitFor();await settings.screenshot({path:resolve(output,'discarded.png')});await context.close();
+ assert.deepEqual(provenance(),before);writeEvidence('browser-proof.json',{provenance:before,scope:'Real GuarantorLinkScreens and RouteSwitch in synthetic shell, authenticated staff, actual loopback Medplum; not full App startup',checks,requests});saveHttpTrace('browser-fhir-requests.json');console.log(JSON.stringify({checks:checks.length,passed:checks.length,browserRequests:requests.length}));
+}finally{saveHttpTrace("browser-fhir-requests.json");await browser?.close();await vite?.close();await new Promise(r=>server.close(r));await audit.close();unlinkSync(target+'.tsx');unlinkSync(target+'.html');}

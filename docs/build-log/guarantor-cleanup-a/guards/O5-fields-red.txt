@@ -1,0 +1,82 @@
+$ node --import tsx --test --test-name-pattern=O5  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# Subtest: O5 discard changes only active, uses fresh version, and audits staff and reason
+not ok 1 - O5 discard changes only active, uses fresh version, and audits staff and reason
+  ---
+  duration_ms: 35.357125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:5565'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        active: false,
+        birthDate: '1980-01-01',
+        id: '1389c15d-637b-48d0-82e2-b8dd969451f4',
+        meta: {
+    ...
+        },
+    +   name: [],
+    -   name: [
+    -     {
+    -       family: 'Unused',
+    -       given: [
+    -         'Synthetic'
+    -       ],
+    -       use: 'official'
+    -     }
+    -   ],
+        resourceType: 'Person'
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    resourceType: 'Person'
+    birthDate: '1980-01-01'
+    active: false
+    meta:
+      versionId: '1'
+      project: 'g2b1-synthetic'
+      author:
+        reference: 'ClientApplication/g2b1-service'
+    name:
+      0:
+        use: 'official'
+        given:
+          0: 'Synthetic'
+        family: 'Unused'
+    id: '1389c15d-637b-48d0-82e2-b8dd969451f4'
+  actual:
+    resourceType: 'Person'
+    birthDate: '1980-01-01'
+    active: false
+    meta:
+      versionId: '1'
+      project: 'g2b1-synthetic'
+      author:
+        reference: 'ClientApplication/g2b1-service'
+    name:
+    id: '1389c15d-637b-48d0-82e2-b8dd969451f4'
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:55:34)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 240.76125
+
+Exit: 1

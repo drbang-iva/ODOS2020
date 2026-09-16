@@ -1,0 +1,19 @@
+$ node --import tsx --test --test-name-pattern=X2  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# Subtest: X2 attaching write wins; discard If-Match refuses with no inactive write
+ok 1 - X2 attaching write wins; discard If-Match refuses with no inactive write
+  ---
+  duration_ms: 44.014875
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 223.592541
+
+Exit: 0

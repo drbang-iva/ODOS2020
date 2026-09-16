@@ -1,5 +1,5 @@
 import type { Application, Request, Response } from "express";
-import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
+import { resolveBusinessActionRole, type BusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 import { loadDayLedger, practiceDate } from "./day-ledger.js";
 import { loadDeskSummary } from "./desk-summary.js";
@@ -12,6 +12,7 @@ export interface DeskRouteDeps {
   resolveRoles(authHeader: string | undefined): Promise<{
     email: string;
     roles: PracticeRoleId[];
+    businessActions?: BusinessAction[];
   } | null>;
   terminalMode: string;
   timeZone?: string;
@@ -168,7 +169,7 @@ async function handleDeskWhoAmI(req: Request, res: Response, deps: DeskRouteDeps
       });
       return;
     }
-    res.json({ roles: resolved.roles });
+    res.json({ roles: resolved.roles, businessActions: resolved.businessActions ?? [] });
   } catch (error) {
     console.error("odos-mcp: /desk/whoami failed:", error);
     if (!res.headersSent) res.status(503).json({ error: "Practice role service unavailable." });

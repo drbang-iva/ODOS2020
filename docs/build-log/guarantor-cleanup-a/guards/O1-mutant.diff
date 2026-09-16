@@ -1,0 +1,11 @@
+--- mcp/src/clinic/guarantor-search.ts
++++ mcp/src/clinic/guarantor-search.ts
+@@ -69,7 +69,7 @@
+ 
+ function unusedPerson(person: Person, project: string, referenced: ReadonlySet<string>): boolean {
+   return person.meta?.project?.replace(/^Project\//, "") === project
+-    && person.active !== false && !person.link?.length && !referenced.has(`Person/${person.id}`);
++    && person.active !== false  && !referenced.has(`Person/${person.id}`);
+ }
+ async function operationPersons(deps: GuarantorOperationDeps, project: string): Promise<Set<string>> {
+   // The Task scan is a courtesy check, not an atomic reservation. The operation engine enforces G1.

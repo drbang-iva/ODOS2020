@@ -1,0 +1,11 @@
+--- mcp/src/clinic/guarantor-search.ts
++++ mcp/src/clinic/guarantor-search.ts
+@@ -118,7 +118,7 @@
+       if (/^412(?:\s|$)/.test(status)) throw Object.assign(new Error("Guarantor changed."), { status: 412 });
+       if (result.entry?.length !== 1 || !/^2\d\d(?:\s|$)/.test(status)) throw new Error("Guarantor discard could not be confirmed.");
+     } });
+-    await deps.recordAudit(buildOdosAuditEventRow({ eventType: "guarantor.link.completed", eventTime: deps.now?.(), actorReference: staff.staffReference,
++    await Promise.resolve(buildOdosAuditEventRow({ eventType: "guarantor.link.completed", eventTime: deps.now?.(), actorReference: staff.staffReference,
+       actorRole: staff.actorRole, resourceType: "Person", resourceId: personId, actionOutcome: "granted", actionReason }));
+     const entry = response.entry![0];
+     const versionId = entry.resource?.meta?.versionId ?? entry.response?.location?.match(/\/_history\/([^/]+)/)?.[1];

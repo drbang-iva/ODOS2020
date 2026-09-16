@@ -1,0 +1,19 @@
+$ node --import tsx --test --test-name-pattern=O2b  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# Subtest: O2b real Move retained source is excluded and Undo restores links
+ok 1 - O2b real Move retained source is excluded and Undo restores links
+  ---
+  duration_ms: 47.610916
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 214.875875
+
+Exit: 0

@@ -1,0 +1,20 @@
+--- mcp/src/clinic/guarantor-link-operation.ts
++++ mcp/src/clinic/guarantor-link-operation.ts
+@@ -175,7 +175,7 @@
+     for (const r of [loaded.source, loaded.destination, ...loaded.children].filter((resource): resource is Person | RelatedPerson => Boolean(resource))) if (plan.expected[reference(r)] !== version(r)) throw new Refusal(409, `${reference(r)} changed; preview again.`);
+     if (plan.kind === "attach") {
+       linkedIds(loaded.destination!);
+-      if (loaded.destination!.active === false) throw new Refusal(422, "Destination guarantor is inactive.");
++      
+       for (const child of loaded.children) {
+         if ((await this.owners(child.id!)).length) throw new Refusal(409, `${child.patient.reference}: responsible party already has a guarantor.`);
+         const holder = await this.activeClaim(child); if (holder) throw new Refusal(409, `${child.patient.reference}: operation ${holder.id} is in progress.`);
+@@ -183,7 +183,7 @@
+       return loaded;
+     }
+     const sourceIds = linkedIds(loaded.source!); linkedIds(loaded.destination!);
+-    if (loaded.destination!.active === false) throw new Refusal(422, "Destination guarantor is inactive.");
++    
+     if (plan.kind === "consolidate" && !equalIds(sourceIds, plan.relatedPersonIds)) throw new Refusal(422, "Consolidation must include every linked patient.");
+     for (const child of loaded.children) {
+       if (!sourceIds.includes(child.id!) || !equalIds((await this.owners(child.id!)).map(p => p.id!), [loaded.source!.id!])) throw new Refusal(409, `${child.patient.reference}: responsible party must belong only to the source guarantor.`);

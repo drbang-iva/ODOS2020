@@ -150,10 +150,18 @@ type HarnessOptions = {
   dropRegistrationReply?: boolean;
   duplicateRecoveredRelatedPerson?: boolean;
   registrationBody?: unknown;
+  guarantor?: Person;
+  afterGrant?: (fhir: RegistrationAttachFhir) => Promise<void>;
+  attachImplementation?: (input: unknown) => Promise<{ status: number; body: unknown }>;
 };
 
 async function postRegistration(options: HarnessOptions = {}) {
   const fhir = new RegistrationAttachFhir();
+  if (options.guarantor) {
+    fhir.resources.delete("Person/guarantor-existing");
+    fhir.person = JSON.parse(JSON.stringify(options.guarantor));
+    fhir.resources.set(`Person/${fhir.person.id}`, fhir.person);
+  }
   if (options.mutatePerson) {
     fhir.person = options.mutatePerson(fhir.person);
     fhir.resources.set("Person/guarantor-existing", structuredClone(fhir.person));
@@ -172,10 +180,11 @@ async function postRegistration(options: HarnessOptions = {}) {
     }),
     serviceFhir: fhir,
     now: () => "2026-09-14T12:00:00.000Z",
-    grantRegistrationAccess: async () => { fhir.events.push("grant"); },
+    grantRegistrationAccess: async () => { fhir.events.push("grant"); await options.afterGrant?.(fhir); },
     attachRegistrationGuarantor: async (_staff, input) => {
       fhir.events.push("attach");
       attachedInput = structuredClone(input);
+      if (options.attachImplementation) return options.attachImplementation(input);
       return options.attachResult ?? { status: 200, body: { task: { resourceType: "Task", id: "attach-task", status: "completed" }, phase: "linked" } };
     },
   } as never);
@@ -358,4 +367,44 @@ test("A15: an existing parent keeps consent authority, active period, and projec
   assert.deepEqual(related.period, { start: "2026-09-14" });
   assert.equal(related.extension?.find(extension => extension.url === CONSENT_AUTHORITY_EXTENSION_URL)?.valueBoolean, true);
   assert.deepEqual({ name: related.name, telecom: related.telecom, address: related.address }, { name: fhir.person.name, telecom: fhir.person.telecom, address: fhir.person.address });
+});
+
+
+import { fixture as operationFixture } from "./guarantorScreensFixture.js";
+import { createGuarantor, discardUnusedGuarantor } from "../src/clinic/guarantor-search.js";
+import { handleGuarantorOperation } from "../src/clinic/guarantor-link-operation.js";
+
+test("X4 X6 real discard between registration precheck and engine attach preserves 201 and missing guarantor", async () => {
+  const f = operationFixture(0);
+  const staff = { staffReference: "Practitioner/staff-1", actorRole: "staff" as const, businessActions: ["guarantor.link" as const], project: { reference: "Project/practice-1" } };
+  const created = await createGuarantor(f.deps as never, staff, { firstName: "Synthetic", lastName: "Guardian", birthDate: "1980-01-01", address: "1 Synthetic Way", city: "Greenville", state: "SC", postalCode: "29601" });
+  assert.equal(created.status, 201);
+  const {personId, versionId} = created.body as {personId:string;versionId:string};
+  const {response,body} = await postRegistration({
+    guarantor: JSON.parse(JSON.stringify(f.get(`Person/${personId}`))),
+    registrationBody: {...registrationBody,responsibleParties:[{...existingParty,personId}]},
+    afterGrant: async registration => {
+      for (const [key,resource] of registration.resources) if (resource.resourceType !== "Person") f.data.set(key,JSON.parse(JSON.stringify({...resource,meta:{...resource.meta,project:"practice-1"}})));
+      const discarded = await discardUnusedGuarantor(f.deps as never,staff,personId,{expectedVersion:versionId,reason:"Synthetic registration race"});
+      assert.equal(discarded.status,200);
+      registration.resources.set(`Person/${personId}`,JSON.parse(JSON.stringify(f.get(`Person/${personId}`))));
+    },
+    attachImplementation: async input => handleGuarantorOperation(f.deps as never,staff,{action:"create",body:input}),
+  });
+  assert.equal(response.status,201);assert.equal(body.guarantorLinks[0].status,"failed");assert.match(body.guarantorLinks[0].message,/inactive/);
+  const childId=body.guarantorLinks[0].relatedPersonId;
+  assert.deepEqual(f.owners(childId),[]);assert.equal(f.get<Person>(`Person/${personId}`).active,false);assert.equal(f.get<Person>(`Person/${personId}`).link?.length??0,0);
+  assert.equal(f.get<RelatedPerson>(`RelatedPerson/${childId}`).extension?.filter(e=>e.url.endsWith("/guarantor-link-claim")).length??0,0);
+  for(const resource of f.data.values()) if(resource.resourceType==="Person") assert.ok(resource.active!==false||!resource.link?.length,"G1");
+});
+
+test("O9 registration initially sees a real discarded Person and writes no identity resources", async () => {
+  const f=operationFixture(0);
+  const staff={staffReference:"Practitioner/staff-1",actorRole:"staff" as const,businessActions:["guarantor.link" as const],project:{reference:"Project/practice-1"}};
+  const created=await createGuarantor(f.deps as never,staff,{firstName:"Synthetic",lastName:"Guardian",birthDate:"1980-01-01",address:"1 Synthetic Way",city:"Greenville",state:"SC",postalCode:"29601"});
+  const {personId,versionId}=created.body as {personId:string;versionId:string};
+  assert.equal((await discardUnusedGuarantor(f.deps as never,staff,personId,{expectedVersion:versionId,reason:"Synthetic initial discard"})).status,200);
+  const result=await postRegistration({guarantor:JSON.parse(JSON.stringify(f.get(`Person/${personId}`))),registrationBody:{...registrationBody,responsibleParties:[{...existingParty,personId}]}});
+  assert.equal(result.response.status,422);assert.match(result.body.error,/not an active guarantor/);assert.equal(result.fhir.reservationWrites,0);assert.equal(result.fhir.transaction,undefined);assert.deepEqual(result.fhir.events,[]);
+  for(const resource of f.data.values())if(resource.resourceType==="Person")assert.ok(resource.active!==false||!resource.link?.length,"X6 G1");
 });

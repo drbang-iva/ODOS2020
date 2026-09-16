@@ -1,0 +1,86 @@
+[
+  {
+    "guard": "O1",
+    "green": 0,
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "guard": "O2",
+    "green": 0,
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "guard": "O3",
+    "green": 0,
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "guard": "O4",
+    "green": 0,
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "guard": "O5-fields",
+    "green": 0,
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "guard": "O5-audit",
+    "green": 0,
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "guard": "O5-version",
+    "green": 0,
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "guard": "O6",
+    "green": 0,
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "guard": "O7",
+    "green": 0,
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "guard": "O9",
+    "green": 0,
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "guard": "X1",
+    "green": 0,
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "guard": "X2",
+    "green": 0,
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "guard": "X4",
+    "green": 0,
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "guard": "X5",
+    "green": 0,
+    "red": 1,
+    "restored": 0
+  }
+]

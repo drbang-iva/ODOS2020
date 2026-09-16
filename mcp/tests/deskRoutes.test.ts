@@ -150,7 +150,7 @@ test("GET /desk/whoami returns the authenticated staff member's practice-role ta
     authenticateService: async () => undefined,
     authenticate: async () => null,
     resolveRoles: async (header) => header === "Bearer good"
-      ? { email: "clinician@example.test", roles: ["provider", "staff"] }
+      ? { email: "clinician@example.test", roles: ["provider", "staff"], businessActions: ["guarantor.link"] }
       : null,
     terminalMode: "TEST MODE",
   });
@@ -162,7 +162,7 @@ test("GET /desk/whoami returns the authenticated staff member's practice-role ta
     assert.equal(unauthorized.status, 401);
     const response = await fetch(`http://127.0.0.1:${port}/desk/whoami`, { headers: { Authorization: "Bearer good" } });
     assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), { roles: ["provider", "staff"] });
+    assert.deepEqual(await response.json(), { roles: ["provider", "staff"], businessActions: ["guarantor.link"] });
   } finally {
     await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
   }
