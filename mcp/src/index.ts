@@ -8572,7 +8572,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisFindingsAuditRepairRequest(
-            { fhirBaseUrl: BASE_URL, authenticate: authenticateStaffRouteForAction("chart.write") },
+            { fhirBaseUrl: BASE_URL, ...await clinicalGraphRouteDeps(req.header("authorization"), "chart.write") },
             { authHeader: req.header("authorization"), params: req.params, body: req.body },
           );
           res.status(result.status).json(result.body);
