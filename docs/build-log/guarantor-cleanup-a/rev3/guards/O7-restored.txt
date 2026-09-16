@@ -1,0 +1,20 @@
+cwd: .
+$ node --import tsx --test --test-name-pattern=O7  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# Subtest: O7 no guarantor.link refuses both endpoints before reads or writes
+ok 1 - O7 no guarantor.link refuses both endpoints before reads or writes
+  ---
+  duration_ms: 32.594209
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 212.724375
+
+Exit: 0

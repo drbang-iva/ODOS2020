@@ -1,0 +1,159 @@
+{
+  "purpose": "CodeRabbit active-filter proposal capability probe; no production filter change",
+  "inactive": {
+    "resourceType": "Person",
+    "active": false,
+    "name": [
+      {
+        "family": "CleanupQuery24498c2603c4476bb44825a25acdbf84",
+        "given": [
+          "inactive"
+        ]
+      }
+    ],
+    "meta": {
+      "project": "81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+      "versionId": "df57e122-b34c-4580-9552-85fe9e47f126",
+      "lastUpdated": "2026-09-16T11:32:14.504Z",
+      "author": {
+        "reference": "Practitioner/42a59963-721b-42fd-84db-df50889b96e4",
+        "display": "Medplum Admin"
+      },
+      "compartment": [
+        {
+          "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71"
+        }
+      ]
+    },
+    "id": "945fe87a-45dd-4beb-afa9-6049c364e770"
+  },
+  "absent": {
+    "resourceType": "Person",
+    "name": [
+      {
+        "family": "CleanupQuery24498c2603c4476bb44825a25acdbf84",
+        "given": [
+          "active-absent"
+        ]
+      }
+    ],
+    "meta": {
+      "project": "81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+      "versionId": "eb7acaf2-44ea-453e-b7f4-c75e1e08a00c",
+      "lastUpdated": "2026-09-16T11:32:14.509Z",
+      "author": {
+        "reference": "Practitioner/42a59963-721b-42fd-84db-df50889b96e4",
+        "display": "Medplum Admin"
+      },
+      "compartment": [
+        {
+          "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71"
+        }
+      ]
+    },
+    "id": "d9cd92e4-84dc-4603-af41-b693dd393ff7"
+  },
+  "seeds": [
+    {
+      "label": "omitted",
+      "id": "a08d4325-3876-4e98-b170-70d71423e84a",
+      "links": []
+    },
+    {
+      "label": "empty",
+      "id": "365f9f71-360e-45c9-8d3a-1c84a9b56230",
+      "links": []
+    },
+    {
+      "label": "related-person",
+      "id": "80f741d9-869c-4e2c-834a-d515564bdc1f",
+      "links": [
+        {
+          "target": {
+            "reference": "RelatedPerson/d373f3ad-2a69-4630-bffc-e25a54fd8542"
+          }
+        }
+      ]
+    },
+    {
+      "label": "patient",
+      "id": "37c4b9b8-5368-4756-bd93-80495cd49abc",
+      "links": [
+        {
+          "target": {
+            "reference": "Patient/9e1539fb-27d9-47f8-bfa9-fca821b02497"
+          }
+        }
+      ]
+    }
+  ],
+  "desiredIds": [
+    "365f9f71-360e-45c9-8d3a-1c84a9b56230",
+    "a08d4325-3876-4e98-b170-70d71423e84a",
+    "d9cd92e4-84dc-4603-af41-b693dd393ff7"
+  ],
+  "probes": [
+    {
+      "query": "/fhir/R4/Person?_id=a08d4325-3876-4e98-b170-70d71423e84a%2C365f9f71-360e-45c9-8d3a-1c84a9b56230%2C80f741d9-869c-4e2c-834a-d515564bdc1f%2C37c4b9b8-5368-4756-bd93-80495cd49abc%2C945fe87a-45dd-4beb-afa9-6049c364e770%2Cd9cd92e4-84dc-4603-af41-b693dd393ff7&link%3Amissing=true&active%3Anot=false&_count=100",
+      "status": 400,
+      "result": {
+        "resourceType": "OperationOutcome",
+        "issue": [
+          {
+            "severity": "error",
+            "code": "invalid",
+            "details": {
+              "text": "Unknown search parameter: active"
+            }
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://medplum.com/fhir/StructureDefinition/tracing",
+            "extension": [
+              {
+                "url": "requestId",
+                "valueId": "c70db3ac-89ab-4f6c-9871-8298f645bde3"
+              },
+              {
+                "url": "traceId",
+                "valueId": "baf421d8-f2c7-433b-ad0d-a8181b36b6fc"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "query": "/fhir/R4/Person?_id=a08d4325-3876-4e98-b170-70d71423e84a%2C365f9f71-360e-45c9-8d3a-1c84a9b56230%2C80f741d9-869c-4e2c-834a-d515564bdc1f%2C37c4b9b8-5368-4756-bd93-80495cd49abc%2C945fe87a-45dd-4beb-afa9-6049c364e770%2Cd9cd92e4-84dc-4603-af41-b693dd393ff7&link%3Amissing=true&active=true&_count=100",
+      "status": 400,
+      "result": {
+        "resourceType": "OperationOutcome",
+        "issue": [
+          {
+            "severity": "error",
+            "code": "invalid",
+            "details": {
+              "text": "Unknown search parameter: active"
+            }
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://medplum.com/fhir/StructureDefinition/tracing",
+            "extension": [
+              {
+                "url": "requestId",
+                "valueId": "d8281382-890b-4088-9328-43551cf66f11"
+              },
+              {
+                "url": "traceId",
+                "valueId": "6f756863-10ae-4acf-8230-fb1ae81b2ee8"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

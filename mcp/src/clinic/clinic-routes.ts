@@ -4,6 +4,7 @@ import { staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 import { loadClinicSummary } from "./clinic-summary.js";
 import {
+  RegistrationGuarantorUnavailableError,
   parsePatientRegistrationInput,
   registerPatientFromDemographics,
   type PatientRegistrationEndpointDeps,
@@ -243,7 +244,7 @@ async function handlePatientRegistration(req: Request, res: Response, deps: Clin
     res.status(status).json({
       error: status === 403
         ? "You do not have permission to register patients. Ask a practice administrator to review your role."
-        : status === 400
+        : status === 400 || error instanceof RegistrationGuarantorUnavailableError
         ? error instanceof Error ? error.message : "Patient registration fields are invalid."
         : "Patient registration could not be confirmed. Check patient search before trying again, or ask a practice administrator for help.",
     });

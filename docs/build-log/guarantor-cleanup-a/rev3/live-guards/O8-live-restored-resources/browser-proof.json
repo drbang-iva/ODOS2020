@@ -1,0 +1,470 @@
+{
+  "provenance": {
+    "head": "23e0249b50078dab4a119064e1ca179592c60de8",
+    "files": {
+      "mcp/src/clinic/guarantor-search.ts": "a4d04b06778c8f237b6d84105f19d5d50b444cba0162426ff59c9f25926c60da",
+      "mcp/src/clinic/guarantor-link-operation.ts": "6371e674bedf6ce83fd7badb11cf1027aa15918c6bc350ed4364f86e619fd385",
+      "ui/src/components/patient/GuarantorLinkScreens.tsx": "9de9b9c938f1e5c8a04f3956f3fe452b8534638c13dc26e35b60a16634c30efc",
+      "ui/src/scenes/settings/UnusedGuarantorsSettings.tsx": "c0e3400182c084ad301c8862911b3a1a4edb198ee7098bb2e07b7d00c89257d6"
+    }
+  },
+  "scope": "Real GuarantorLinkScreens and RouteSwitch in synthetic shell, authenticated staff, actual loopback Medplum; not full App startup",
+  "checks": [
+    {
+      "name": "Cancel after create persisted inactive zero-link Person",
+      "passed": true,
+      "person": {
+        "resourceType": "Person",
+        "birthDate": "1980-01-01",
+        "active": false,
+        "meta": {
+          "project": "81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+          "versionId": "00f8dbde-5c6e-4cf3-9713-5014096cf5e7",
+          "lastUpdated": "2026-09-16T11:14:17.419Z",
+          "author": {
+            "reference": "Practitioner/42a59963-721b-42fd-84db-df50889b96e4",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71"
+            }
+          ]
+        },
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "UnusedCancel"
+          }
+        ],
+        "id": "5d255035-69b1-42e7-aff5-1378a8a2f4e0"
+      }
+    },
+    {
+      "name": "Abandoned create listed then discarded by staff through actual Settings route",
+      "passed": true,
+      "person": {
+        "resourceType": "Person",
+        "birthDate": "1980-01-01",
+        "active": false,
+        "meta": {
+          "project": "81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+          "versionId": "07fc826c-4856-456a-9049-ef2b6cba57ff",
+          "lastUpdated": "2026-09-16T11:14:18.660Z",
+          "author": {
+            "reference": "Practitioner/42a59963-721b-42fd-84db-df50889b96e4",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71"
+            }
+          ]
+        },
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "UnusedAbandoned"
+          }
+        ],
+        "id": "da063991-00cf-4338-a276-062ffe49e844"
+      }
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/desk/whoami",
+      "request": null,
+      "status": 200,
+      "response": {
+        "roles": [
+          "staff"
+        ],
+        "businessActions": [
+          "chart.read",
+          "chart.write",
+          "patients.register",
+          "scheduling.manage",
+          "demographics.update",
+          "guarantor.link",
+          "billing-context.read",
+          "watchers.manage",
+          "payment.charge",
+          "claims.manage",
+          "document.fax-send",
+          "communications.read",
+          "communications.content.read",
+          "communications.send",
+          "communications.call",
+          "communications.optout.manage",
+          "communications.preferences.manage"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/guarantors/search?lastName=UnusedCancel&firstName=Synthetic",
+      "request": null,
+      "status": 200,
+      "response": []
+    },
+    {
+      "method": "POST",
+      "path": "/guarantors",
+      "request": {
+        "birthDate": "1980-01-01",
+        "firstName": "Synthetic",
+        "middleName": "",
+        "lastName": "UnusedCancel",
+        "phones": [
+          {
+            "value": "",
+            "use": "mobile"
+          },
+          {
+            "value": "",
+            "use": "mobile"
+          }
+        ],
+        "textable": "",
+        "address": "",
+        "city": "",
+        "state": "",
+        "postalCode": ""
+      },
+      "status": 201,
+      "response": {
+        "personId": "5d255035-69b1-42e7-aff5-1378a8a2f4e0",
+        "versionId": "ca082f6d-ae0e-4437-8a43-6120f448338d"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/guarantors/link-operations/draft",
+      "request": {
+        "kind": "attach",
+        "destinationPersonId": "5d255035-69b1-42e7-aff5-1378a8a2f4e0",
+        "relatedPersonIds": [
+          "0445a2ad-3291-49d0-8316-78f9a57cb742"
+        ]
+      },
+      "status": 200,
+      "response": {
+        "expected": {
+          "Person/5d255035-69b1-42e7-aff5-1378a8a2f4e0": "ca082f6d-ae0e-4437-8a43-6120f448338d",
+          "RelatedPerson/0445a2ad-3291-49d0-8316-78f9a57cb742": "896e5133-2960-4182-a582-1c1de1d4d802"
+        },
+        "relatedPersonIds": [
+          "0445a2ad-3291-49d0-8316-78f9a57cb742"
+        ],
+        "patients": [
+          {
+            "relatedPersonId": "0445a2ad-3291-49d0-8316-78f9a57cb742",
+            "patientId": "8149b431-b47e-48c0-8897-5221325a4658",
+            "name": [
+              {
+                "family": "Synthetic cleanup browser"
+              }
+            ],
+            "current": {
+              "name": [
+                {
+                  "family": "Synthetic guardian"
+                }
+              ]
+            },
+            "resulting": {
+              "name": [
+                {
+                  "use": "official",
+                  "given": [
+                    "Synthetic"
+                  ],
+                  "family": "UnusedCancel"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/guarantors/5d255035-69b1-42e7-aff5-1378a8a2f4e0/discard",
+      "request": {
+        "reason": "Create new guarantor cancelled before confirming",
+        "expectedVersion": "ca082f6d-ae0e-4437-8a43-6120f448338d"
+      },
+      "status": 200,
+      "response": {
+        "personId": "5d255035-69b1-42e7-aff5-1378a8a2f4e0",
+        "versionId": "00f8dbde-5c6e-4cf3-9713-5014096cf5e7"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/desk/whoami",
+      "request": null,
+      "status": 200,
+      "response": {
+        "roles": [
+          "staff"
+        ],
+        "businessActions": [
+          "chart.read",
+          "chart.write",
+          "patients.register",
+          "scheduling.manage",
+          "demographics.update",
+          "guarantor.link",
+          "billing-context.read",
+          "watchers.manage",
+          "payment.charge",
+          "claims.manage",
+          "document.fax-send",
+          "communications.read",
+          "communications.content.read",
+          "communications.send",
+          "communications.call",
+          "communications.optout.manage",
+          "communications.preferences.manage"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/guarantors/search?lastName=UnusedAbandoned&firstName=Synthetic",
+      "request": null,
+      "status": 200,
+      "response": []
+    },
+    {
+      "method": "POST",
+      "path": "/guarantors",
+      "request": {
+        "birthDate": "1980-01-01",
+        "firstName": "Synthetic",
+        "middleName": "",
+        "lastName": "UnusedAbandoned",
+        "phones": [
+          {
+            "value": "",
+            "use": "mobile"
+          },
+          {
+            "value": "",
+            "use": "mobile"
+          }
+        ],
+        "textable": "",
+        "address": "",
+        "city": "",
+        "state": "",
+        "postalCode": ""
+      },
+      "status": 201,
+      "response": {
+        "personId": "da063991-00cf-4338-a276-062ffe49e844",
+        "versionId": "b9c31f80-b00d-4d14-ae3e-1ab3eedc986f"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/guarantors/link-operations/draft",
+      "request": {
+        "kind": "attach",
+        "destinationPersonId": "da063991-00cf-4338-a276-062ffe49e844",
+        "relatedPersonIds": [
+          "0445a2ad-3291-49d0-8316-78f9a57cb742"
+        ]
+      },
+      "status": 200,
+      "response": {
+        "expected": {
+          "Person/da063991-00cf-4338-a276-062ffe49e844": "b9c31f80-b00d-4d14-ae3e-1ab3eedc986f",
+          "RelatedPerson/0445a2ad-3291-49d0-8316-78f9a57cb742": "896e5133-2960-4182-a582-1c1de1d4d802"
+        },
+        "relatedPersonIds": [
+          "0445a2ad-3291-49d0-8316-78f9a57cb742"
+        ],
+        "patients": [
+          {
+            "relatedPersonId": "0445a2ad-3291-49d0-8316-78f9a57cb742",
+            "patientId": "8149b431-b47e-48c0-8897-5221325a4658",
+            "name": [
+              {
+                "family": "Synthetic cleanup browser"
+              }
+            ],
+            "current": {
+              "name": [
+                {
+                  "family": "Synthetic guardian"
+                }
+              ]
+            },
+            "resulting": {
+              "name": [
+                {
+                  "use": "official",
+                  "given": [
+                    "Synthetic"
+                  ],
+                  "family": "UnusedAbandoned"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/desk/whoami",
+      "request": null,
+      "status": 200,
+      "response": {
+        "roles": [
+          "staff"
+        ],
+        "businessActions": [
+          "chart.read",
+          "chart.write",
+          "patients.register",
+          "scheduling.manage",
+          "demographics.update",
+          "guarantor.link",
+          "billing-context.read",
+          "watchers.manage",
+          "payment.charge",
+          "claims.manage",
+          "document.fax-send",
+          "communications.read",
+          "communications.content.read",
+          "communications.send",
+          "communications.call",
+          "communications.optout.manage",
+          "communications.preferences.manage"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/desk/whoami",
+      "request": null,
+      "status": 200,
+      "response": {
+        "roles": [
+          "staff"
+        ],
+        "businessActions": [
+          "chart.read",
+          "chart.write",
+          "patients.register",
+          "scheduling.manage",
+          "demographics.update",
+          "guarantor.link",
+          "billing-context.read",
+          "watchers.manage",
+          "payment.charge",
+          "claims.manage",
+          "document.fax-send",
+          "communications.read",
+          "communications.content.read",
+          "communications.send",
+          "communications.call",
+          "communications.optout.manage",
+          "communications.preferences.manage"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/guarantors/unused",
+      "request": null,
+      "status": 200,
+      "response": [
+        {
+          "personId": "970632d7-a743-4d47-bd96-037134a2350f",
+          "versionId": "1819438f-00b8-468a-925e-c0bb90328cb9",
+          "name": "Synthetic UnusedCancel",
+          "birthDate": "1980-01-01",
+          "phones": [],
+          "city": "",
+          "postalCode": "",
+          "lastUpdated": "2026-09-16T10:16:35.629Z"
+        },
+        {
+          "personId": "34d46e67-5295-4b71-8a38-031eabafea97",
+          "versionId": "cda5063a-d5d8-4574-832e-dcc6d049bb8a",
+          "name": "omitted CleanupQuery10aedd58d5174068b50ab5c1653f79f3",
+          "birthDate": "",
+          "phones": [],
+          "city": "",
+          "postalCode": "",
+          "lastUpdated": "2026-09-16T11:02:06.256Z"
+        },
+        {
+          "personId": "e9cdb857-2974-41b5-aecd-0239e84fdfa9",
+          "versionId": "2477f3cd-96a1-4289-b933-367ed9187d38",
+          "name": "empty CleanupQuery10aedd58d5174068b50ab5c1653f79f3",
+          "birthDate": "",
+          "phones": [],
+          "city": "",
+          "postalCode": "",
+          "lastUpdated": "2026-09-16T11:02:06.266Z"
+        },
+        {
+          "personId": "1338f871-5483-4405-bcc1-0ee2712cbb7b",
+          "versionId": "7668ffbb-19b4-4e78-a577-e849a63a6f5f",
+          "name": "ScaleOrphan CleanupSynthetic",
+          "birthDate": "1980-01-02",
+          "phones": [],
+          "city": "",
+          "postalCode": "",
+          "lastUpdated": "2026-09-16T11:06:30.344Z"
+        },
+        {
+          "personId": "1b5350bc-492d-4975-9788-04bb91a1bd60",
+          "versionId": "db022571-f922-4b6d-9409-c1d76ca0f43c",
+          "name": "Synthetic UnusedCancel",
+          "birthDate": "1980-01-01",
+          "phones": [],
+          "city": "",
+          "postalCode": "",
+          "lastUpdated": "2026-09-16T11:14:12.352Z"
+        },
+        {
+          "personId": "da063991-00cf-4338-a276-062ffe49e844",
+          "versionId": "b9c31f80-b00d-4d14-ae3e-1ab3eedc986f",
+          "name": "Synthetic UnusedAbandoned",
+          "birthDate": "1980-01-01",
+          "phones": [],
+          "city": "",
+          "postalCode": "",
+          "lastUpdated": "2026-09-16T11:14:17.892Z"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/guarantors/da063991-00cf-4338-a276-062ffe49e844/discard",
+      "request": {
+        "reason": "Synthetic abandoned create",
+        "expectedVersion": "b9c31f80-b00d-4d14-ae3e-1ab3eedc986f"
+      },
+      "status": 200,
+      "response": {
+        "personId": "da063991-00cf-4338-a276-062ffe49e844",
+        "versionId": "07fc826c-4856-456a-9049-ef2b6cba57ff"
+      }
+    }
+  ]
+}

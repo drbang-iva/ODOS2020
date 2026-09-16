@@ -1,0 +1,38 @@
+cwd: .
+$ node --import tsx --test --test-name-pattern=X2  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# Subtest: X2 attaching write wins; discard If-Match refuses with no inactive write
+not ok 1 - X2 attaching write wins; discard If-Match refuses with no inactive write
+  ---
+  duration_ms: 44.1465
+  type: 'test'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:14622'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:142:75)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 225.152834
+
+Exit: 1

@@ -1,0 +1,204 @@
+{
+  "label": "EXECUTED synthetic prototype, not a built discard endpoint",
+  "base": "6a3ad04abf623d4e2602b0239a658c575c43827f",
+  "orphanSnapshot": {
+    "active": true,
+    "links": 0,
+    "tasks": 0,
+    "version": "1"
+  },
+  "discard": {
+    "status": 200,
+    "taskAlreadyPresent": true
+  },
+  "attach": {
+    "status": 409,
+    "phase": "attach-pending"
+  },
+  "complete": {
+    "status": 409,
+    "taskStatus": "in-progress",
+    "writes": 0
+  },
+  "finalPerson": {
+    "resourceType": "Person",
+    "birthDate": "1980-01-01",
+    "active": false,
+    "meta": {
+      "versionId": "2",
+      "project": "g2b1-synthetic",
+      "author": {
+        "reference": "ClientApplication/g2b1-service"
+      }
+    },
+    "name": [
+      {
+        "use": "official",
+        "given": [
+          "Synthetic"
+        ],
+        "family": "Unused"
+      }
+    ],
+    "id": "063c9d78-7d19-4c44-9ecb-914e975f3cfd"
+  }
+}
+{
+  "undo": {
+    "status": 200,
+    "body": {
+      "task": {
+        "resourceType": "Task",
+        "id": "4ed0f3f3-0a6a-4142-9bcc-584eed8745c8",
+        "intent": "order",
+        "status": "completed",
+        "identifier": [
+          {
+            "system": "https://odos2020.com/fhir/identifier/guarantor-link-operation",
+            "value": "fc09684e-3c3e-4112-90b4-9b4f925e73cb"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation",
+              "code": "correct"
+            }
+          ]
+        },
+        "input": [
+          {
+            "type": {
+              "text": "kind"
+            },
+            "valueCode": "correct"
+          },
+          {
+            "type": {
+              "text": "source"
+            },
+            "valueReference": {
+              "reference": "Person/063c9d78-7d19-4c44-9ecb-914e975f3cfd"
+            }
+          },
+          {
+            "type": {
+              "text": "moved"
+            },
+            "valueReference": {
+              "reference": "RelatedPerson/r1"
+            }
+          },
+          {
+            "type": {
+              "text": "expected:Person/063c9d78-7d19-4c44-9ecb-914e975f3cfd"
+            },
+            "valueString": "2"
+          },
+          {
+            "type": {
+              "text": "expected:RelatedPerson/r1"
+            },
+            "valueString": "2"
+          },
+          {
+            "type": {
+              "text": "reason"
+            },
+            "valueString": "Undo discarded destination"
+          }
+        ],
+        "requester": {
+          "reference": "Practitioner/g2b1-staff"
+        },
+        "basedOn": [
+          {
+            "reference": "Task/118af644-d83d-48f6-ba19-711fe3ae7110"
+          }
+        ],
+        "meta": {
+          "versionId": "11",
+          "project": "g2b1-synthetic",
+          "author": {
+            "reference": "ClientApplication/g2b1-service"
+          }
+        },
+        "businessStatus": {
+          "text": "unlinked"
+        },
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-journal",
+            "valueString": "{\"intents\":[{\"id\":\"7935d9e1-ca52-430b-af8b-099fdd6d019e\",\"phase\":\"fence-source\",\"target\":\"Person/063c9d78-7d19-4c44-9ecb-914e975f3cfd\",\"expectedVersion\":\"2\",\"intendedContentHash\":\"c18eaff8494fcf59016b44264002fba89b7353b6aa49c7885bcab8dedd23424e\",\"ownedHash\":\"bdfb7cb60572ef559e872dc314da07478e6c28cf8dc0739c7ab98bcca5c63694\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"ClientApplication/g2b1-service\"},{\"id\":\"601d5076-a50d-4614-bf85-82767fb09ef4\",\"phase\":\"claiming\",\"target\":\"RelatedPerson/r1\",\"expectedVersion\":\"2\",\"intendedContentHash\":\"0aa0869f2e69b4b1eaf97a5d547ae38fdb1d01dae030b8832178376b5fe7b256\",\"ownedHash\":\"403d7860462c6b729b46c44745e9d3e1697bd84b1537dd25fca2ed2ed298c91b\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"ClientApplication/g2b1-service\"},{\"id\":\"9823339e-edc4-44c0-9000-0578184fa0cb\",\"phase\":\"releasing\",\"target\":\"RelatedPerson/r1\",\"expectedVersion\":\"3\",\"intendedContentHash\":\"998f3daf414490202caac209d3768f0bdbacf14c2511a5f5b7c9fcb380668942\",\"ownedHash\":\"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"ClientApplication/g2b1-service\"},{\"id\":\"1b7e5d59-33eb-434b-a9fa-2c8616186262\",\"phase\":\"cancel-original\",\"target\":\"Task/118af644-d83d-48f6-ba19-711fe3ae7110\",\"expectedVersion\":\"6\",\"intendedContentHash\":\"a7e6dd646e473ddb85d5c672c9b4e99901e92debeb41089a5af11cc042f49a1f\",\"ownedHash\":\"a7e6dd646e473ddb85d5c672c9b4e99901e92debeb41089a5af11cc042f49a1f\",\"disposition\":\"landed\",\"responseStatus\":200,\"writer\":\"ClientApplication/g2b1-service\"}]}"
+          }
+        ]
+      },
+      "active": false,
+      "kind": "correct",
+      "phase": "unlinked",
+      "sourcePersonId": "063c9d78-7d19-4c44-9ecb-914e975f3cfd",
+      "relatedPersonIds": [
+        "r1"
+      ],
+      "patients": [
+        {
+          "relatedPersonId": "r1",
+          "patientId": "p-r1",
+          "name": "Synthetic r1"
+        }
+      ]
+    }
+  },
+  "remainingClaims": [],
+  "owners": [],
+  "personBeforeUndo": {
+    "resourceType": "Person",
+    "birthDate": "1980-01-01",
+    "active": false,
+    "meta": {
+      "versionId": "2",
+      "project": "g2b1-synthetic",
+      "author": {
+        "reference": "ClientApplication/g2b1-service"
+      }
+    },
+    "name": [
+      {
+        "use": "official",
+        "given": [
+          "Synthetic"
+        ],
+        "family": "Unused"
+      }
+    ],
+    "id": "063c9d78-7d19-4c44-9ecb-914e975f3cfd"
+  },
+  "personAfterUndo": {
+    "resourceType": "Person",
+    "birthDate": "1980-01-01",
+    "active": false,
+    "meta": {
+      "versionId": "3",
+      "project": "g2b1-synthetic",
+      "author": {
+        "reference": "ClientApplication/g2b1-service"
+      }
+    },
+    "name": [
+      {
+        "use": "official",
+        "given": [
+          "Synthetic"
+        ],
+        "family": "Unused"
+      }
+    ],
+    "id": "063c9d78-7d19-4c44-9ecb-914e975f3cfd",
+    "extension": [
+      {
+        "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+        "valueString": "23e97335-6145-4a90-b8bf-ad84e384b5ad"
+      }
+    ]
+  }
+}

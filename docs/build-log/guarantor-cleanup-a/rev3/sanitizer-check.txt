@@ -1,0 +1,6 @@
+macOS repository path: PASS
+Linux repository path: PASS
+Windows repository path: PASS
+Linux home path: PASS
+Windows home path: PASS
+5 cases; 5 passed; 0 failed.

@@ -1,0 +1,11 @@
+--- mcp/src/clinic/guarantor-link-operation.ts
++++ mcp/src/clinic/guarantor-link-operation.ts
+@@ -603,7 +603,7 @@
+ 
+ function withoutLinks(person: Person, ids: string[]): Person {
+   const link = (person.link ?? []).filter(l => !ids.includes(l.target.reference!.slice(14)));
+-  return { ...person, link, ...(!link.length ? { active: false } : {}) };
++  return { ...person, link,  };
+ }
+ 
+ export async function handleGuarantorOperation(deps: GuarantorOperationDeps, staff: GuarantorOperationStaff,

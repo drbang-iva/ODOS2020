@@ -41,6 +41,7 @@ export function fixture(count = 2) {
     async searchProject(type: string, project: string, params: Record<string, string> = {}) {
       await beforeSearch?.(type, params);
       const rows = [...data.values()].filter((r: any) => r.resourceType === type && r.meta?.project === project
+        && (!params.status || r.status === params.status)
         && (!params.link || r.link?.some((l: any) => l.target.reference === params.link))
         && (!params["based-on"] || r.basedOn?.some((l: any) => l.reference === params["based-on"]))
         && (!params.code || r.code?.coding?.some((c: any) => params.code === `${c.system}|` || params.code === `${c.system}|${c.code}`))
@@ -64,7 +65,7 @@ export function fixture(count = 2) {
         else { resource.id = randomUUID(); actual = seed(resource); }
       } else {
         const prior = data.get(`${resource.resourceType}/${resource.id}`);
-        if (prior?.meta?.versionId !== write.expected) status = 412;
+        if (write.expected !== undefined && prior?.meta?.versionId !== write.expected) status = 412;
         else if (entry.request?.method === "DELETE") data.delete(`${resource.resourceType}/${resource.id}`);
         else {
           actual = { ...resource, meta: { ...resource.meta, versionId: String(Number(prior.meta!.versionId) + 1), author: { reference: SERVICE } } };
@@ -89,4 +90,3 @@ export async function run(f: ReturnType<typeof fixture>, action: string, body?: 
   const api = await import("../src/clinic/guarantor-link-operation.js");
   return api.handleGuarantorOperation(f.deps, staff, { action, body, taskId });
 }
-

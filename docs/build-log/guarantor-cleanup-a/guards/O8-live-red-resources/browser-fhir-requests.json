@@ -1,0 +1,332 @@
+{
+  "sourceHead": "a0e5269df013a7c82f84bceabb9cda6796963b68",
+  "events": [
+    {
+      "sequence": 1,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/Patient",
+      "status": 201,
+      "request": {
+        "resourceType": "Patient",
+        "meta": {
+          "project": "81bc7f7c-af71-440f-bc73-cb4af8d61b71"
+        },
+        "name": [
+          {
+            "family": "Synthetic cleanup browser"
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Patient",
+        "meta": {
+          "project": "81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+          "versionId": "7b403fb0-1cde-4ab8-afbf-85d4bd7cf19a",
+          "lastUpdated": "2026-09-16T10:16:32.033Z",
+          "author": {
+            "reference": "Practitioner/42a59963-721b-42fd-84db-df50889b96e4",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71"
+            },
+            {
+              "reference": "Patient/49a0b8e0-878a-4054-9328-85607764a62d"
+            }
+          ]
+        },
+        "name": [
+          {
+            "family": "Synthetic cleanup browser"
+          }
+        ],
+        "id": "49a0b8e0-878a-4054-9328-85607764a62d"
+      }
+    },
+    {
+      "sequence": 2,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "POST",
+      "path": "/fhir/R4/RelatedPerson",
+      "status": 201,
+      "request": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "81bc7f7c-af71-440f-bc73-cb4af8d61b71"
+        },
+        "patient": {
+          "reference": "Patient/49a0b8e0-878a-4054-9328-85607764a62d"
+        },
+        "name": [
+          {
+            "family": "Synthetic guardian"
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "RelatedPerson",
+        "meta": {
+          "project": "81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+          "versionId": "7529bee4-e4c0-4ce5-b011-95c9172436f1",
+          "lastUpdated": "2026-09-16T10:16:32.144Z",
+          "author": {
+            "reference": "Practitioner/42a59963-721b-42fd-84db-df50889b96e4",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71"
+            },
+            {
+              "reference": "Patient/49a0b8e0-878a-4054-9328-85607764a62d"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/49a0b8e0-878a-4054-9328-85607764a62d"
+        },
+        "name": [
+          {
+            "family": "Synthetic guardian"
+          }
+        ],
+        "id": "44b6ac98-5b13-4a65-8f50-3f5d10ac1b07"
+      }
+    },
+    {
+      "sequence": 3,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/ProjectMembership/6fd7ab52-d6db-43ef-9198-90b338822e3f",
+      "status": 200,
+      "response": {
+        "invitedBy": {
+          "reference": "User/fda80a1c-41ad-49fa-849a-cfff288568bc",
+          "display": "cleanup-a-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+          "display": "Cleanup A build synthetic A"
+        },
+        "user": {
+          "reference": "User/74023a4c-135b-4370-909f-6433a64b7e72",
+          "display": "cleanup-a-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/643b87cf-3feb-4971-856f-97fc2caf54b0",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "6fd7ab52-d6db-43ef-9198-90b338822e3f",
+        "meta": {
+          "versionId": "117b9477-dcef-4fcd-910e-a5a502e80361",
+          "lastUpdated": "2026-09-16T10:15:20.859Z",
+          "author": {
+            "reference": "Practitioner/42a59963-721b-42fd-84db-df50889b96e4",
+            "display": "Medplum Admin"
+          },
+          "project": "81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+          "compartment": [
+            {
+              "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/63ef3d30-52d9-48eb-aef1-781e78d607eb"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/10e6b559-213a-4c83-90cd-28969aaefef0"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/63ef3d30-52d9-48eb-aef1-781e78d607eb"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/56cab0e8-5679-4867-ac0b-009d11d913bf"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 4,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "PUT",
+      "path": "/fhir/R4/ProjectMembership/6fd7ab52-d6db-43ef-9198-90b338822e3f",
+      "status": 200,
+      "ifMatch": "W/\"117b9477-dcef-4fcd-910e-a5a502e80361\"",
+      "request": {
+        "invitedBy": {
+          "reference": "User/fda80a1c-41ad-49fa-849a-cfff288568bc",
+          "display": "cleanup-a-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+          "display": "Cleanup A build synthetic A"
+        },
+        "user": {
+          "reference": "User/74023a4c-135b-4370-909f-6433a64b7e72",
+          "display": "cleanup-a-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/643b87cf-3feb-4971-856f-97fc2caf54b0",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "6fd7ab52-d6db-43ef-9198-90b338822e3f",
+        "meta": {
+          "versionId": "117b9477-dcef-4fcd-910e-a5a502e80361",
+          "lastUpdated": "2026-09-16T10:15:20.859Z",
+          "author": {
+            "reference": "Practitioner/42a59963-721b-42fd-84db-df50889b96e4",
+            "display": "Medplum Admin"
+          },
+          "project": "81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+          "compartment": [
+            {
+              "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/63ef3d30-52d9-48eb-aef1-781e78d607eb"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/10e6b559-213a-4c83-90cd-28969aaefef0"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/63ef3d30-52d9-48eb-aef1-781e78d607eb"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/49a0b8e0-878a-4054-9328-85607764a62d"
+              }
+            ]
+          }
+        ]
+      },
+      "response": {
+        "invitedBy": {
+          "reference": "User/fda80a1c-41ad-49fa-849a-cfff288568bc",
+          "display": "cleanup-a-service@example.invalid"
+        },
+        "resourceType": "ProjectMembership",
+        "project": {
+          "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+          "display": "Cleanup A build synthetic A"
+        },
+        "user": {
+          "reference": "User/74023a4c-135b-4370-909f-6433a64b7e72",
+          "display": "cleanup-a-staff@example.invalid"
+        },
+        "profile": {
+          "reference": "Practitioner/643b87cf-3feb-4971-856f-97fc2caf54b0",
+          "display": "ODOS EXAMPLEV"
+        },
+        "id": "6fd7ab52-d6db-43ef-9198-90b338822e3f",
+        "meta": {
+          "versionId": "3286ef9a-354a-4380-9810-496b6fbdc172",
+          "lastUpdated": "2026-09-16T10:16:32.158Z",
+          "author": {
+            "reference": "Practitioner/42a59963-721b-42fd-84db-df50889b96e4",
+            "display": "Medplum Admin"
+          },
+          "project": "81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+          "compartment": [
+            {
+              "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71"
+            }
+          ]
+        },
+        "admin": false,
+        "access": [
+          {
+            "policy": {
+              "reference": "AccessPolicy/63ef3d30-52d9-48eb-aef1-781e78d607eb"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/10e6b559-213a-4c83-90cd-28969aaefef0"
+              }
+            ]
+          },
+          {
+            "policy": {
+              "reference": "AccessPolicy/63ef3d30-52d9-48eb-aef1-781e78d607eb"
+            },
+            "parameter": [
+              {
+                "name": "patient_compartment",
+                "valueString": "Patient/49a0b8e0-878a-4054-9328-85607764a62d"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 5,
+      "scenario": "fixture",
+      "principal": "service",
+      "method": "GET",
+      "path": "/fhir/R4/Person/970632d7-a743-4d47-bd96-037134a2350f",
+      "status": 200,
+      "response": {
+        "resourceType": "Person",
+        "birthDate": "1980-01-01",
+        "active": true,
+        "meta": {
+          "project": "81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+          "versionId": "1819438f-00b8-468a-925e-c0bb90328cb9",
+          "lastUpdated": "2026-09-16T10:16:35.629Z",
+          "author": {
+            "reference": "Practitioner/42a59963-721b-42fd-84db-df50889b96e4",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71"
+            }
+          ]
+        },
+        "name": [
+          {
+            "use": "official",
+            "given": [
+              "Synthetic"
+            ],
+            "family": "UnusedCancel"
+          }
+        ],
+        "id": "970632d7-a743-4d47-bd96-037134a2350f"
+      }
+    }
+  ]
+}

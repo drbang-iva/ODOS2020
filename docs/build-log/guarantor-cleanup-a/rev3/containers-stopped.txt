@@ -1,0 +1,3 @@
+/guarantor-cleanup-a-live-medplum-1 exited exit=0
+/guarantor-cleanup-a-live-redis-1 exited exit=0
+/guarantor-cleanup-a-live-postgres-1 exited exit=0

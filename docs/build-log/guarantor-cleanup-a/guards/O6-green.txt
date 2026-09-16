@@ -1,0 +1,19 @@
+$ node --import tsx --test --test-name-pattern=O6  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# Subtest: O6 search limits refuse both list and discard without writes
+ok 1 - O6 search limits refuse both list and discard without writes
+  ---
+  duration_ms: 36.716291
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 213.997083
+
+Exit: 0

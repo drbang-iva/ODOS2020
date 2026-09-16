@@ -1,0 +1,20 @@
+--- mcp/src/clinic/guarantor-search.ts
++++ mcp/src/clinic/guarantor-search.ts
+@@ -96,7 +96,7 @@
+       birthDate: person.birthDate ?? "", phones: (person.telecom ?? []).filter(contact => contact.system === "phone").map(contact => contact.value ?? ""),
+       city: person.address?.[0]?.city ?? "", postalCode: person.address?.[0]?.postalCode ?? "", lastUpdated: person.meta?.lastUpdated ?? "",
+     })) };
+-  } catch (error) { if (error instanceof FhirSearchLimitError || error instanceof FhirSearchPageLimitError) return searchRefused; throw error; }
++  } catch (error) { if (error instanceof FhirSearchLimitError || error instanceof FhirSearchPageLimitError) return {status:200,body:[]}; throw error; }
+ }
+ export async function discardUnusedGuarantor(deps: GuarantorOperationDeps, staff: GuarantorOperationStaff, personId: string, input: unknown): Promise<GuarantorOperationResult> {
+   if (!staffHasBusinessAction(staff, "guarantor.link")) return { status: 403, body: { error: "guarantor.link action required." } };
+@@ -129,7 +129,7 @@
+     if (!versionId) throw new Error("Guarantor discard did not return a version. Reload before continuing.");
+     return { status: 200, body: { personId, versionId } };
+   } catch (error) {
+-    if (error instanceof FhirSearchLimitError || error instanceof FhirSearchPageLimitError) return searchRefused;
++    if (error instanceof FhirSearchLimitError || error instanceof FhirSearchPageLimitError) return {status:200,body:[]};
+     if (typeof error === "object" && error !== null && "status" in error && (error.status === 412 || error.status === 404)) return noLongerUnused;
+     throw error;
+   }

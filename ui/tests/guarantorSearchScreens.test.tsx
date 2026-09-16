@@ -13,12 +13,13 @@ import { GuarantorLinkScreens } from "../src/components/patient/GuarantorLinkScr
 const loaded={resourceType:"Person" as const,id:"S",name:[{given:["Loaded"],family:"Ann"}],link:[{target:{reference:"RelatedPerson/r"}}]};
 const found={...loaded,id:"D",name:[{given:["Found"],family:"Ann"}]};
 const card={personId:"D",versionId:"1",name:"Found Ann",phones:["864-555-0102"],city:"Town",postalCode:"00000"};
-async function screen(run:(s:any)=>Promise<void>,options:{conflict?:boolean;cards?:any[];history?:any[]}={}){
+async function screen(run:(s:any)=>Promise<void>,options:{conflict?:boolean;cards?:any[];history?:any[];discardRefused?:boolean;draft?:any}={}){
  const original=globalThis.fetch;const calls:any[]=[];let reloads=0;let tree:any;
  globalThis.fetch=async(input,init)=>{const url=new URL(String(input),"http://synthetic.test"),body=init?.body?JSON.parse(String(init.body)):undefined;calls.push({path:url.pathname,body});
  if(url.pathname.endsWith("/search"))return Response.json(options.cards??[card]);
  if(url.pathname==="/guarantors")return Response.json({personId:"N",versionId:"1"},{status:201});
- if(url.pathname.endsWith("/draft"))return Response.json({expected:{"Person/S":"1","Person/D":"1","RelatedPerson/r":"1"},relatedPersonIds:body.kind==="consolidate"?["r","r2"]:["r"],patients:[{relatedPersonId:"r",patientId:"p",name:[{given:["Child"]}],current:loaded,resulting:found}]});
+ if(url.pathname.endsWith("/discard"))return Response.json(options.discardRefused?{error:"This guarantor is no longer unused."}:{personId:"N",versionId:"2"},{status:options.discardRefused?409:200});
+ if(url.pathname.endsWith("/draft"))return Response.json(options.draft??{expected:{"Person/S":"1","Person/D":"1","RelatedPerson/r":"1"},relatedPersonIds:body.kind==="consolidate"?["r","r2"]:["r"],patients:[{relatedPersonId:"r",patientId:"p",name:[{given:["Child"]}],current:loaded,resulting:found}]});
  if(url.pathname==="/guarantors/link-operations"&&body)return Response.json(options.conflict?{error:"RelatedPerson/r changed; preview again."}:{task:{id:"op",status:"completed"}},{status:options.conflict?409:200});
  if(url.pathname==="/guarantors/link-operations")return Response.json(options.history??[]);
  if(url.pathname.endsWith("/correct"))return Response.json({task:{status:"completed"}});
@@ -55,3 +56,22 @@ for(const action of ["create","Undo"] as const)test(`K15 failed paused ${action}
  const base=globalThis.fetch;globalThis.fetch=async(input,init)=>{const result=await base(input,init);return (String(input)==="/guarantors/link-operations"&&init?.body)||String(input).endsWith("/correct")?Response.json({task:{id:"paused",status:"in-progress"},phase:"attach-pending",active:true},{status:409}):result;};
  await s.click(action==="create"?"Confirm guarantor change":"Undo");assert.equal(reloads,1);assert.equal(s.button("Review again"),undefined);assert.equal(s.button(action==="create"?"Confirm guarantor change":"Undo").props.disabled,true);assert.match(JSON.stringify(s.tree.toJSON()),/Reload the patient page before continuing/);const count=s.calls.length;await act(async()=>s.button(action==="create"?"Confirm guarantor change":"Undo").props.onClick());assert.equal(s.calls.length,count);
 },{history:[{kind:"transfer",task:{id:"move",status:"completed"},patients:[]}]}));
+
+for(const refused of [false,true])test(`O8 Cancel after create ${refused ? "retains preview on refusal" : "discards the created version"}`,async()=>screen(async s=>{
+ await s.click("Move to another guarantor");await s.search();await s.click("Create new guarantor");await s.field("New guarantor date of birth (required)","1980-01-02");await s.click("Continue");await s.click("Cancel");
+ const calls=s.calls.filter((c:any)=>c.path==="/guarantors/N/discard");assert.equal(calls.length,1);assert.deepEqual(calls[0].body,{reason:"Create new guarantor cancelled before confirming",expectedVersion:"1"});
+ assert.equal(Boolean(s.button("Cancel")),refused);if(refused)assert.match(JSON.stringify(s.tree.toJSON()),/no longer unused/);
+},{cards:[],discardRefused:refused}));
+test("U2 reopening Attach clears last first and phone search keys",async()=>screen(async s=>{
+ await act(async()=>s.tree.update(<GuarantorLinkScreens relatedPersonId="r" disabled={false} attachOnly onReload={async()=>{}}/>));
+ await s.click("Attach a guarantor");await s.field("Search last name","Ann");await s.field("Search first name","Beth");
+ const select=()=>s.tree.root.findByType("select");await act(async()=>select().props.onChange({target:{value:"phone"}}));await s.field("Search phone","8645550102");await s.click("Cancel");await s.click("Attach a guarantor");
+ const values=()=>s.tree.root.findAllByType("input").map((i:any)=>i.props.value);assert.deepEqual(values(),["",""]);await act(async()=>select().props.onChange({target:{value:"first"}}));assert.deepEqual(values(),["",""]);
+}));
+import { buildResponsiblePartyDemographics } from "../../mcp/src/clinic/responsible-party-demographics";
+const textingPair=(["phone1","phone2"] as const).map(textable=>JSON.parse(JSON.stringify(buildResponsiblePartyDemographics({firstName:"Same",middleName:"",lastName:"Person",phones:[{value:"864-555-0101",use:"mobile"},{value:"864-555-0102",use:"mobile"}],textable,address:"",city:"",state:"",postalCode:""}))));
+test("U1 preview distinguishes only the selected textable number",async()=>screen(async s=>{
+ await s.click("Move to another guarantor");await s.search();await s.click("Select Found Ann");
+ const text=(node:any):string=>typeof node==="string"?node:(node.children??[]).map(text).join("");
+ const lines=s.tree.root.findAllByType("p").map(text).filter((line:string)=>line.startsWith("Texting:"));assert.deepEqual(lines,["Texting: 864-555-0101","Texting: 864-555-0102"]);
+},{draft:{expected:{"Person/D":"1"},relatedPersonIds:["r"],patients:[{relatedPersonId:"r",patientId:"p",current:textingPair[0],resulting:textingPair[1]}]}}));

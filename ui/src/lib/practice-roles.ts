@@ -8,7 +8,7 @@ export const PRACTICE_ROLE_LABELS: Record<PracticeRoleId, string> = {
   staff: "Staff",
   admin: "Admin / Manager",
 };
-export interface WhoAmIResponse { roles: PracticeRoleId[] }
+export interface WhoAmIResponse { roles: PracticeRoleId[]; businessActions?: string[] }
 
 export function canStartAppointmentChart(roles: readonly PracticeRoleId[]): boolean {
   return roles.includes("provider");
@@ -29,7 +29,7 @@ export async function fetchWhoAmI(fetchImpl: typeof fetch = fetch): Promise<WhoA
   if (!body) throw new Error(`Practice role lookup failed with HTTP ${response.status}.`);
   const roles = PRACTICE_ROLE_IDS.filter((role) => body.roles?.includes(role));
   if (roles.length === 0) throw new Error("No recognized practice role is assigned to this account.");
-  return { roles };
+  return { roles, businessActions: body.businessActions?.filter((action): action is string => typeof action === "string") ?? [] };
 }
 
 export function resolveSessionRoles(

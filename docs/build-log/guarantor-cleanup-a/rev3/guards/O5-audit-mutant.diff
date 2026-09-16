@@ -1,0 +1,11 @@
+--- mcp/src/clinic/guarantor-search.ts
++++ mcp/src/clinic/guarantor-search.ts
+@@ -119,7 +119,7 @@
+       if (result.entry?.length !== 1 || !/^2\d\d(?:\s|$)/.test(status)) throw new Error("Guarantor discard could not be confirmed.");
+     } });
+     try {
+-      await deps.recordAudit(buildOdosAuditEventRow({ eventType: "guarantor.link.completed", eventTime: deps.now?.(), actorReference: staff.staffReference,
++      await Promise.resolve(buildOdosAuditEventRow({ eventType: "guarantor.link.completed", eventTime: deps.now?.(), actorReference: staff.staffReference,
+         actorRole: staff.actorRole, resourceType: "Person", resourceId: personId, actionOutcome: "granted", actionReason }));
+     } catch (error) {
+       console.warn("Guarantor discard secondary audit failed; write-level audit retained.", error);

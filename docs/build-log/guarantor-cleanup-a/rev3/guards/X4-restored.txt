@@ -1,0 +1,20 @@
+cwd: .
+$ node --import tsx --test --test-name-pattern=X4  mcp/tests/guarantorRegistrationAttach.test.ts
+TAP version 13
+# Subtest: X4 X6 real discard between registration precheck and engine attach preserves 201 and missing guarantor
+ok 1 - X4 X6 real discard between registration precheck and engine attach preserves 201 and missing guarantor
+  ---
+  duration_ms: 32.185833
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 216.960792
+
+Exit: 0

@@ -1,0 +1,11 @@
+--- mcp/src/clinic/guarantor-search.ts
++++ mcp/src/clinic/guarantor-search.ts
+@@ -89,7 +89,7 @@
+   const project = registrationProjectId(staff.project);
+   try {
+     const referenced = await operationPersons(deps, project);
+-    const persons = await searchProjectAll<Person>(deps.serviceFhir, "Person", project, { "link:missing": "true" });
++    const persons = await searchProjectAll<Person>(deps.serviceFhir, "Person", project);
+     return { status: 200, body: persons.filter(person => unusedPerson(person, project, referenced)).map(person => ({
+       personId: person.id, versionId: person.meta?.versionId,
+       name: person.name?.[0]?.text || [...person.name?.[0]?.given ?? [], person.name?.[0]?.family].filter(Boolean).join(" "),

@@ -1,0 +1,11 @@
+--- mcp/src/clinic/guarantor-link-operation.ts
++++ mcp/src/clinic/guarantor-link-operation.ts
+@@ -516,7 +516,7 @@
+     }
+     if (!this.loaded.destination) return this.verifyUnlinkAndRelease();
+     const attach = async (destination: Person): Promise<Person> => {
+-      await this.refuseInactiveDestination(destination);
++      
+       for (const id of pendingIds) {
+         const owners = await this.operation.owners(id);
+         if (owners.some(p => p.id !== destination.id)) return this.pause("interfered", `RelatedPerson/${id}`);

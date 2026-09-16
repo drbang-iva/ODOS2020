@@ -1,0 +1,18 @@
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+200 !== 409
+
+    at <anonymous> (<repo>/.odos/guarantor-cleanup-a/rev2-stop-check.ts:33:8) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 200,
+  expected: 409,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.22.3

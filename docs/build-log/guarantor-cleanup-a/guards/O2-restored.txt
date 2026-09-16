@@ -1,0 +1,19 @@
+$ node --import tsx --test --test-name-pattern=O2  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# Subtest: O2 real create then discard stays hidden and second discard refuses without write
+ok 1 - O2 real create then discard stays hidden and second discard refuses without write
+  ---
+  duration_ms: 39.105875
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 208.677875
+
+Exit: 0

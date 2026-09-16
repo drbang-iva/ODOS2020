@@ -1,0 +1,149 @@
+cwd: .
+$ node --import tsx --test --test-name-pattern=O15  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# {"guard":"O15","kind":"attach","terminal":"completed","tasks":[{"kind":"attach","status":"completed"}],"persons":[{"id":"5ce18170-ca44-46ea-96f1-dfccc86ce496","active":true,"links":1}],"activeZeroLink":0}
+# Subtest: O15 attach completed: real terminal writers cannot act on an active zero-link Person
+ok 1 - O15 attach completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 43.422167
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"attach","terminal":"undone-completed","tasks":[{"kind":"attach","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"f9d5af58-9eb2-4552-b1f6-00fb67293476","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 attach undone-completed: real terminal writers cannot act on an active zero-link Person
+ok 2 - O15 attach undone-completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 15.1255
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"attach","terminal":"undone-before-link","tasks":[{"kind":"attach","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"d35ea246-b534-4a5a-b809-800566e0aae0","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 attach undone-before-link: real terminal writers cannot act on an active zero-link Person
+ok 3 - O15 attach undone-before-link: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 8.563292
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"attach","terminal":"failed","tasks":[{"kind":"attach","status":"failed"}],"persons":[{"id":"e961de5d-4fa7-41ac-8bbc-1157f47c581f","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 attach failed: real terminal writers cannot act on an active zero-link Person
+ok 4 - O15 attach failed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 7.158166
+  type: 'test'
+  ...
+# Subtest: O15 transfer completed: real terminal writers cannot act on an active zero-link Person
+not ok 5 - O15 transfer completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 11.150292
+  type: 'test'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:2798'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok([409,422].includes((await run(f,'correct',{operationId:randomUUID(),reason:'O15 terminal refusal'},task.id)).status))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:46:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"guard":"O15","kind":"transfer","terminal":"undone-completed","tasks":[{"kind":"transfer","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"c41c4539-33e1-456a-a24a-7e652e214155","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 transfer undone-completed: real terminal writers cannot act on an active zero-link Person
+ok 6 - O15 transfer undone-completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 12.801042
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"transfer","terminal":"undone-before-link","tasks":[{"kind":"transfer","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"ea501565-528d-4006-a61c-aed624e25897","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 transfer undone-before-link: real terminal writers cannot act on an active zero-link Person
+ok 7 - O15 transfer undone-before-link: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 7.499709
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"transfer","terminal":"failed","tasks":[{"kind":"transfer","status":"failed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"0dec2ccc-6078-41a9-a69b-542334813b20","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 transfer failed: real terminal writers cannot act on an active zero-link Person
+ok 8 - O15 transfer failed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 4.010875
+  type: 'test'
+  ...
+# Subtest: O15 consolidate completed: real terminal writers cannot act on an active zero-link Person
+not ok 9 - O15 consolidate completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 4.112042
+  type: 'test'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:2798'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    409 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:36:9)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: O15 consolidate undone-completed: real terminal writers cannot act on an active zero-link Person
+not ok 10 - O15 consolidate undone-completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 3.617125
+  type: 'test'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:2798'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    409 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:36:9)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"guard":"O15","kind":"consolidate","terminal":"undone-before-link","tasks":[{"kind":"consolidate","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"826c06c8-30c2-46d6-95d1-d249755ea2c4","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 consolidate undone-before-link: real terminal writers cannot act on an active zero-link Person
+ok 11 - O15 consolidate undone-before-link: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 7.453333
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"consolidate","terminal":"failed","tasks":[{"kind":"consolidate","status":"failed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"6445791c-9a69-41c8-bbdc-0abf30b40786","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 consolidate failed: real terminal writers cannot act on an active zero-link Person
+ok 12 - O15 consolidate failed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 3.8715
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 9
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 316.846958
+
+Exit: 1

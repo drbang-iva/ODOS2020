@@ -1,0 +1,824 @@
+TAP version 13
+# Subtest: A1: two concurrent chart attaches admit one winner and fail the loser at the claim before its Person write
+ok 1 - A1: two concurrent chart attaches admit one winner and fail the loser at the claim before its Person write
+  ---
+  duration_ms: 10.879917
+  type: 'test'
+  ...
+# Subtest: A2: attach refuses an already-owned RelatedPerson before recording a Task
+ok 2 - A2: attach refuses an already-owned RelatedPerson before recording a Task
+  ---
+  duration_ms: 0.545792
+  type: 'test'
+  ...
+# Subtest: A3: a destination edit after validation pauses attach, and Complete fences only that destination
+ok 3 - A3: a destination edit after validation pauses attach, and Complete fences only that destination
+  ---
+  duration_ms: 2.804583
+  type: 'test'
+  ...
+# Subtest: A4: Complete classifies a landed attach after reply loss without a second attaching PUT
+ok 4 - A4: Complete classifies a landed attach after reply loss without a second attaching PUT
+  ---
+  duration_ms: 2.062
+  type: 'test'
+  ...
+# Subtest: A5/A15: correcting a completed attach unlinks without projection and preserves every child-owned field
+ok 5 - A5/A15: correcting a completed attach unlinks without projection and preserves every child-owned field
+  ---
+  duration_ms: 4.377417
+  type: 'test'
+  ...
+# Subtest: A6: unlink takes over a pending attach whose Person write landed
+ok 6 - A6: unlink takes over a pending attach whose Person write landed
+  ---
+  duration_ms: 3.786375
+  type: 'test'
+  ...
+# Subtest: A7: unlink of a pending attach before the attach lands performs no detaching Person PUT
+ok 7 - A7: unlink of a pending attach before the attach lands performs no detaching Person PUT
+  ---
+  duration_ms: 2.003375
+  type: 'test'
+  ...
+# Subtest: A8: correcting an unlink is refused without a Task
+ok 8 - A8: correcting an unlink is refused without a Task
+  ---
+  duration_ms: 2.662667
+  type: 'test'
+  ...
+# Subtest: A16: lost unlink release cannot overwrite a later completed attach
+ok 9 - A16: lost unlink release cannot overwrite a later completed attach
+  ---
+  duration_ms: 6.631833
+  type: 'test'
+  ...
+# Subtest: A17: lost unlink detach plus a staff rename completes, then a later attach remains live
+ok 10 - A17: lost unlink detach plus a staff rename completes, then a later attach remains live
+  ---
+  duration_ms: 9.889583
+  type: 'test'
+  ...
+# Subtest: A18: only attach and correct-of-attach may omit their designated endpoints
+ok 11 - A18: only attach and correct-of-attach may omit their designated endpoints
+  ---
+  duration_ms: 2.762708
+  type: 'test'
+  ...
+# Subtest: S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+ok 12 - S9 transaction reasons omit an unassigned Task id and retain assigned resource references
+  ---
+  duration_ms: 47.034208
+  type: 'test'
+  ...
+# Subtest: L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
+ok 13 - L6/L7/L8: consolidate retains S, D wins, moved child fields and write set are fenced
+  ---
+  duration_ms: 3.544458
+  type: 'test'
+  ...
+# Subtest: L9: stale confirmation refuses before any Task or resource write
+ok 14 - L9: stale confirmation refuses before any Task or resource write
+  ---
+  duration_ms: 0.745458
+  type: 'test'
+  ...
+# Subtest: L10: consolidate subset refuses before any write
+ok 15 - L10: consolidate subset refuses before any write
+  ---
+  duration_ms: 0.455083
+  type: 'test'
+  ...
+# Subtest: L11: foreign D and separately foreign child Patient refuse without writes
+ok 16 - L11: foreign D and separately foreign child Patient refuse without writes
+  ---
+  duration_ms: 0.620542
+  type: 'test'
+  ...
+# Subtest: L21: repeated operation identifier returns one Task and performs no second writes
+ok 17 - L21: repeated operation identifier returns one Task and performs no second writes
+  ---
+  duration_ms: 3.372667
+  type: 'test'
+  ...
+# Subtest: L3: detach-first leaves an unowned claimed child and Complete projects current D
+ok 18 - L3: detach-first leaves an unowned claimed child and Complete projects current D
+  ---
+  duration_ms: 4.796333
+  type: 'test'
+  ...
+# Subtest: L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
+ok 19 - L24 step 0: foreign-code based-on lab Tasks and foreign-author operations are excluded
+  ---
+  duration_ms: 3.168083
+  type: 'test'
+  ...
+# Subtest: L24b: a live service-authored correction stops Complete before every write
+ok 20 - L24b: a live service-authored correction stops Complete before every write
+  ---
+  duration_ms: 1.709333
+  type: 'test'
+  ...
+# Subtest: L12/L14: landed and unsent detach intents use the expected-version fence classifier
+ok 21 - L12/L14: landed and unsent detach intents use the expected-version fence classifier
+  ---
+  duration_ms: 6.956584
+  type: 'test'
+  ...
+# Subtest: L13: an unresolved changed child intent is interference with no further domain writes
+ok 22 - L13: an unresolved changed child intent is interference with no further domain writes
+  ---
+  duration_ms: 1.053292
+  type: 'test'
+  ...
+# Subtest: L26: pending Correct detaches a landed attachment before returning children to retained S
+ok 23 - L26: pending Correct detaches a landed attachment before returning children to retained S
+  ---
+  duration_ms: 10.603
+  type: 'test'
+  ...
+# Subtest: S6: completed Correct restores retained S, preserves D sibling, and refuses a later owner
+ok 24 - S6: completed Correct restores retained S, preserves D sibling, and refuses a later owner
+  ---
+  duration_ms: 5.454042
+  type: 'test'
+  ...
+# Subtest: L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
+ok 25 - L15/L24a/L25: partial takeover fails while original stays live and descends the orphaned claim
+  ---
+  duration_ms: 5.029
+  type: 'test'
+  ...
+# Subtest: L27/L29: one or two descent refusals resolve each intent; a later Complete is live
+ok 26 - L27/L29: one or two descent refusals resolve each intent; a later Complete is live
+  ---
+  duration_ms: 10.028125
+  type: 'test'
+  ...
+# Subtest: L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim
+ok 27 - L28: a missing checkpointed claim is reclaimed only on an unowned child without another live claim
+  ---
+  duration_ms: 4.48475
+  type: 'test'
+  ...
+# Subtest: L1: two admitted starters produce one source detach and one completed operation
+ok 28 - L1: two admitted starters produce one source detach and one completed operation
+  ---
+  duration_ms: 1.623208
+  type: 'test'
+  ...
+# Subtest: L2: sorted claims give a winner with two shared children and opposed request orders
+ok 29 - L2: sorted claims give a winner with two shared children and opposed request orders
+  ---
+  duration_ms: 3.189208
+  type: 'test'
+  ...
+# Subtest: L5: D changes after r1 projection so no stale r2 projection is submitted
+ok 30 - L5: D changes after r1 projection so no stale r2 projection is submitted
+  ---
+  duration_ms: 2.721708
+  type: 'test'
+  ...
+# Subtest: L16/L20: another claim or name edit after verification refuses release and completion audit
+ok 31 - L16/L20: another claim or name edit after verification refuses release and completion audit
+  ---
+  duration_ms: 2.320083
+  type: 'test'
+  ...
+# Subtest: L23: D editing after verify is later drift; conditional child release still completes
+ok 32 - L23: D editing after verify is later drift; conditional child release still completes
+  ---
+  duration_ms: 1.20725
+  type: 'test'
+  ...
+# Subtest: L19: a revoked business action refuses before any read or write
+ok 33 - L19: a revoked business action refuses before any read or write
+  ---
+  duration_ms: 0.217166
+  type: 'test'
+  ...
+# Subtest: S4/status: a missing operation is inert and a staff-authored copied Task cannot activate claims
+ok 34 - S4/status: a missing operation is inert and a staff-authored copied Task cannot activate claims
+  ---
+  duration_ms: 0.826417
+  type: 'test'
+  ...
+# Subtest: L15: correction fences a paused Complete before its already-intended destination PUT
+ok 35 - L15: correction fences a paused Complete before its already-intended destination PUT
+  ---
+  duration_ms: 2.835459
+  type: 'test'
+  ...
+# Subtest: L24c: completed correction causes one cancel attempt, never an attempted fence intent
+ok 36 - L24c: completed correction causes one cancel attempt, never an attempted fence intent
+  ---
+  duration_ms: 8.744125
+  type: 'test'
+  ...
+# Subtest: S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes
+ok 37 - S6 bounded cancellation: three fresh versions and intents, then pending; later Complete finishes
+  ---
+  duration_ms: 3.002792
+  type: 'test'
+  ...
+# Subtest: S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response
+ok 38 - S6 crash prefix: Complete finishes a partial takeover after a lost or unsent claim response
+  ---
+  duration_ms: 8.105125
+  type: 'test'
+  ...
+# Subtest: S6 resumed takeover refusal fails only the correction before ownership and preserves original recovery
+ok 39 - S6 resumed takeover refusal fails only the correction before ownership and preserves original recovery
+  ---
+  duration_ms: 7.134
+  type: 'test'
+  ...
+# Subtest: L15 fresh retry: a partially running correction stops the old runner before a fresh destination write
+ok 40 - L15 fresh retry: a partially running correction stops the old runner before a fresh destination write
+  ---
+  duration_ms: 3.783417
+  type: 'test'
+  ...
+# Subtest: S3 released children: Complete preserves later transfers after partial release or an unsent terminal write
+ok 41 - S3 released children: Complete preserves later transfers after partial release or an unsent terminal write
+  ---
+  duration_ms: 14.521458
+  type: 'test'
+  ...
+# Subtest: L29: double re-claim refusals and a lost successful descent retry remain resumable
+ok 42 - L29: double re-claim refusals and a lost successful descent retry remain resumable
+  ---
+  duration_ms: 9.053166
+  type: 'test'
+  ...
+# Subtest: S3 intent rule: a definite server error is rejected history, not an unresolved response
+ok 43 - S3 intent rule: a definite server error is rejected history, not an unresolved response
+  ---
+  duration_ms: 0.637167
+  type: 'test'
+  ...
+# Subtest: S3 checkpoint refusal stops immediately without replaying a stale Task version
+ok 44 - S3 checkpoint refusal stops immediately without replaying a stale Task version
+  ---
+  duration_ms: 0.324125
+  type: 'test'
+  ...
+# Subtest: S3 late successful release checkpoints its result without completing or auditing twice
+ok 45 - S3 late successful release checkpoints its result without completing or auditing twice
+  ---
+  duration_ms: 1.344208
+  type: 'test'
+  ...
+# Subtest: S3 terminal response checkpoint refusal is reported and never replayed
+ok 46 - S3 terminal response checkpoint refusal is reported and never replayed
+  ---
+  duration_ms: 1.875125
+  type: 'test'
+  ...
+# Subtest: L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan
+ok 47 - L17: a genuine claim copied to an unlisted child is inert; an untrusted Task needs no readable plan
+  ---
+  duration_ms: 0.857
+  type: 'test'
+  ...
+# Subtest: S5 retry classification: a fresh foreign live claim stops a recovery Person retry
+ok 48 - S5 retry classification: a fresh foreign live claim stops a recovery Person retry
+  ---
+  duration_ms: 1.30575
+  type: 'test'
+  ...
+# Subtest: L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands
+ok 49 - L15 pre-takeover retry: the correction record stops a fresh retry even before its first claim lands
+  ---
+  duration_ms: 2.914708
+  type: 'test'
+  ...
+# Subtest: R1 X1: lost correction detach followed by a staff rename completes with source ownership and no claim
+ok 50 - R1 X1: lost correction detach followed by a staff rename completes with source ownership and no claim
+  ---
+  duration_ms: 14.377375
+  type: 'test'
+  ...
+# {"schedule":"X1","complete":[{"status":200,"phase":"linked"}],"correct":422,"owners":["S"],"claims":[],"correctionStatus":"completed"}
+# Subtest: R2 X2: lost correction release followed by transfer B completes without rewriting B's child
+ok 51 - R2 X2: lost correction release followed by transfer B completes without rewriting B's child
+  ---
+  duration_ms: 10.147
+  type: 'test'
+  ...
+# {"schedule":"X2","complete":[{"status":200,"phase":"linked"}],"correct":422,"owners":["D"],"claims":[],"correctionStatus":"completed","originalStatus":"cancelled"}
+# Subtest: R3: a service competitor changing an unresolved Person link intent remains interfered
+ok 52 - R3: a service competitor changing an unresolved Person link intent remains interfered
+  ---
+  duration_ms: 4.205458
+  type: 'test'
+  ...
+# Subtest: R4: an old journal without ownedHash retains full-content interference after a staff rename
+ok 53 - R4: an old journal without ownedHash retains full-content interference after a staff rename
+  ---
+  duration_ms: 3.44275
+  type: 'test'
+  ...
+# Subtest: R5: each phase hashes its owned fields and ignores non-owned changes
+ok 54 - R5: each phase hashes its owned fields and ignores non-owned changes
+  ---
+  duration_ms: 0.673208
+  type: 'test'
+  ...
+# Subtest: R6: second Undo of completed original refuses without a write or a Task
+ok 55 - R6: second Undo of completed original refuses without a write or a Task
+  ---
+  duration_ms: 6.512084
+  type: 'test'
+  ...
+# {"status":409,"writes":0,"newTasks":[]}
+# Subtest: R6: second Undo of pending original refuses without a write or a Task
+ok 56 - R6: second Undo of pending original refuses without a write or a Task
+  ---
+  duration_ms: 4.468541
+  type: 'test'
+  ...
+# {"status":409,"writes":0,"newTasks":[]}
+# Subtest: R6: a untrusted correction does not block a new Undo
+ok 57 - R6: a untrusted correction does not block a new Undo
+  ---
+  duration_ms: 3.881792
+  type: 'test'
+  ...
+# Subtest: R6: a failed correction does not block a new Undo
+ok 58 - R6: a failed correction does not block a new Undo
+  ---
+  duration_ms: 4.135541
+  type: 'test'
+  ...
+# Subtest: R6: a cancelled correction does not block a new Undo
+ok 59 - R6: a cancelled correction does not block a new Undo
+  ---
+  duration_ms: 5.956292
+  type: 'test'
+  ...
+# Subtest: A9: registration with an existing guarantor commits no Person and attaches after access grant
+ok 60 - A9: registration with an existing guarantor commits no Person and attaches after access grant
+  ---
+  duration_ms: 32.863708
+  type: 'test'
+  ...
+# Subtest: A10: an attach claim conflict after the registration bundle preserves 201 and reports the failed Task
+ok 61 - A10: an attach claim conflict after the registration bundle preserves 201 and reports the failed Task
+  ---
+  duration_ms: 5.223834
+  type: 'test'
+  ...
+# Subtest: F3: an attach refusal without a Task is reported as failed with its refusal message
+ok 62 - F3: an attach refusal without a Task is reported as failed with its refusal message
+  ---
+  duration_ms: 2.983125
+  type: 'test'
+  ...
+# Subtest: Follow-up F1: a 500 attach result without a Task is unconfirmed while a 409 remains failed
+ok 63 - Follow-up F1: a 500 attach result without a Task is unconfirmed while a 409 remains failed
+  ---
+  duration_ms: 4.938959
+  type: 'test'
+  ...
+# Subtest: B3: a lost committed registration reply is recovered before the existing guarantor attach
+ok 64 - B3: a lost committed registration reply is recovered before the existing guarantor attach
+  ---
+  duration_ms: 3.043708
+  type: 'test'
+  ...
+# Subtest: F1: a lost registration reply still links an existing guarantor without telecom
+ok 65 - F1: a lost registration reply still links an existing guarantor without telecom
+  ---
+  duration_ms: 3.041375
+  type: 'test'
+  ...
+# Subtest: F2: ambiguous committed-state recovery emits one unconfirmed row without guessing an attach target
+ok 66 - F2: ambiguous committed-state recovery emits one unconfirmed row without guessing an attach target
+  ---
+  duration_ms: 2.236917
+  type: 'test'
+  ...
+# Subtest: A11: registration with an existing party requires guarantor.link before any write or MRN reservation
+ok 67 - A11: registration with an existing party requires guarantor.link before any write or MRN reservation
+  ---
+  duration_ms: 4.184792
+  type: 'test'
+  ...
+# Subtest: B3: one existing Person cannot be selected twice in the same registration
+ok 68 - B3: one existing Person cannot be selected twice in the same registration
+  ---
+  duration_ms: 7.2475
+  type: 'test'
+  ...
+# Subtest: A12: a foreign existing Person is rejected before every write
+ok 69 - A12: a foreign existing Person is rejected before every write
+  ---
+  duration_ms: 1.720208
+  type: 'test'
+  ...
+# Subtest: A12: a inactive existing Person is rejected before every write
+ok 70 - A12: a inactive existing Person is rejected before every write
+  ---
+  duration_ms: 1.109125
+  type: 'test'
+  ...
+# Subtest: A12: a unsupported-link existing Person is rejected before every write
+ok 71 - A12: a unsupported-link existing Person is rejected before every write
+  ---
+  duration_ms: 1.050583
+  type: 'test'
+  ...
+# Subtest: A13: a financially responsible existing Person without a complete address is rejected with the established message
+ok 72 - A13: a financially responsible existing Person without a complete address is rejected with the established message
+  ---
+  duration_ms: 1.835708
+  type: 'test'
+  ...
+# Subtest: A15: an existing parent keeps consent authority, active period, and projected identity in the created RelatedPerson
+ok 73 - A15: an existing parent keeps consent authority, active period, and projected identity in the created RelatedPerson
+  ---
+  duration_ms: 1.927041
+  type: 'test'
+  ...
+# Subtest: X4 X6 real discard between registration precheck and engine attach preserves 201 and missing guarantor
+ok 74 - X4 X6 real discard between registration precheck and engine attach preserves 201 and missing guarantor
+  ---
+  duration_ms: 4.553667
+  type: 'test'
+  ...
+# Subtest: O9 registration initially sees a real discarded Person and writes no identity resources
+ok 75 - O9 registration initially sees a real discarded Person and writes no identity resources
+  ---
+  duration_ms: 2.127958
+  type: 'test'
+  ...
+# Subtest: K1 search refuses a prefix-only family
+ok 76 - K1 search refuses a prefix-only family
+  ---
+  duration_ms: 28.395875
+  type: 'test'
+  ...
+# Subtest: K2 phone compares digits and rejects a different digit
+ok 77 - K2 phone compares digits and rejects a different digit
+  ---
+  duration_ms: 5.210792
+  type: 'test'
+  ...
+# Subtest: Follow-up F2: US phone search matches country-code and ten-digit forms without trimming ten-digit leading 1
+ok 78 - Follow-up F2: US phone search matches country-code and ten-digit forms without trimming ten-digit leading 1
+  ---
+  duration_ms: 9.725917
+  type: 'test'
+  ...
+# Subtest: Fixback F2: stored country-code and ten-digit phones match every supported US search form
+ok 79 - Fixback F2: stored country-code and ten-digit phones match every supported US search form
+  ---
+  duration_ms: 12.999375
+  type: 'test'
+  ...
+# Subtest: K3 search card exposes exactly seven keys
+ok 80 - K3 search card exposes exactly seven keys
+  ---
+  duration_ms: 2.7945
+  type: 'test'
+  ...
+# Subtest: K4 inactive excluded
+ok 81 - K4 inactive excluded
+  ---
+  duration_ms: 1.696584
+  type: 'test'
+  ...
+# Subtest: K4 zero-link excluded
+ok 82 - K4 zero-link excluded
+  ---
+  duration_ms: 3.664416
+  type: 'test'
+  ...
+# Subtest: K4 non-RelatedPerson excluded
+ok 83 - K4 non-RelatedPerson excluded
+  ---
+  duration_ms: 2.466041
+  type: 'test'
+  ...
+# Subtest: K5 21 matches return 422
+ok 84 - K5 21 matches return 422
+  ---
+  duration_ms: 2.122
+  type: 'test'
+  ...
+# Subtest: K5 201 matches return 422
+ok 85 - K5 201 matches return 422
+  ---
+  duration_ms: 2.280166
+  type: 'test'
+  ...
+# Subtest: K7 create writes exactly one active unlinked Person; missing surname writes nothing
+ok 86 - K7 create writes exactly one active unlinked Person; missing surname writes nothing
+  ---
+  duration_ms: 12.025708
+  type: 'test'
+  ...
+# Subtest: K8 draft includes every source link, writes nothing, refuses consolidate subset
+ok 87 - K8 draft includes every source link, writes nothing, refuses consolidate subset
+  ---
+  duration_ms: 2.003375
+  type: 'test'
+  ...
+# Subtest: K9 draft versions reject changed child at create
+ok 88 - K9 draft versions reject changed child at create
+  ---
+  duration_ms: 0.722459
+  type: 'test'
+  ...
+# Subtest: K13 history filters trusted child plans and queries newest 50 once
+ok 89 - K13 history filters trusted child plans and queries newest 50 once
+  ---
+  duration_ms: 11.640542
+  type: 'test'
+  ...
+# Subtest: Follow-up F3: history skips one malformed trusted Task and returns every valid entry
+ok 90 - Follow-up F3: history skips one malformed trusted Task and returns every valid entry
+  ---
+  duration_ms: 1.890166
+  type: 'test'
+  ...
+# Subtest: K8 empty consolidation draft refuses with zero writes
+ok 91 - K8 empty consolidation draft refuses with zero writes
+  ---
+  duration_ms: 0.492708
+  type: 'test'
+  ...
+# Subtest: K6 search denies staff without guarantor.link before FHIR searches or writes
+ok 92 - K6 search denies staff without guarantor.link before FHIR searches or writes
+  ---
+  duration_ms: 1.843875
+  type: 'test'
+  ...
+# Subtest: K6 create denies staff without guarantor.link before FHIR searches or writes
+ok 93 - K6 create denies staff without guarantor.link before FHIR searches or writes
+  ---
+  duration_ms: 1.220959
+  type: 'test'
+  ...
+# Subtest: K6 draft denies staff without guarantor.link before FHIR searches or writes
+ok 94 - K6 draft denies staff without guarantor.link before FHIR searches or writes
+  ---
+  duration_ms: 1.077917
+  type: 'test'
+  ...
+# Subtest: K6 history denies staff without guarantor.link before FHIR searches or writes
+ok 95 - K6 history denies staff without guarantor.link before FHIR searches or writes
+  ---
+  duration_ms: 0.94125
+  type: 'test'
+  ...
+# Subtest: D2 create requires valid nonfuture DOB before writing
+ok 96 - D2 create requires valid nonfuture DOB before writing
+  ---
+  duration_ms: 4.463416
+  type: 'test'
+  ...
+# Subtest: D5 search cards expose Person DOB or empty string
+ok 97 - D5 search cards expose Person DOB or empty string
+  ---
+  duration_ms: 2.96625
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"attach","terminal":"completed","tasks":[{"kind":"attach","status":"completed"}],"persons":[{"id":"355837f8-0f7d-4f69-9e4a-3a188cc47485","active":true,"links":1}],"activeZeroLink":0}
+# Subtest: O15 attach completed: real terminal writers cannot act on an active zero-link Person
+ok 98 - O15 attach completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 46.2675
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"attach","terminal":"undone-completed","tasks":[{"kind":"attach","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"8dde3dc3-76e3-47a2-9a20-5f1f162d37b0","active":false,"links":0}],"activeZeroLink":0}
+# Subtest: O15 attach undone-completed: real terminal writers cannot act on an active zero-link Person
+ok 99 - O15 attach undone-completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 9.136042
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"attach","terminal":"undone-before-link","tasks":[{"kind":"attach","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"fd2a8f5d-b80c-4f8c-bb44-bacdead9bed0","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 attach undone-before-link: real terminal writers cannot act on an active zero-link Person
+ok 100 - O15 attach undone-before-link: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 15.66175
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"attach","terminal":"failed","tasks":[{"kind":"attach","status":"failed"}],"persons":[{"id":"31c50778-fc9e-4e48-989c-aa1db2f338dc","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 attach failed: real terminal writers cannot act on an active zero-link Person
+ok 101 - O15 attach failed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 7.022417
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"transfer","terminal":"completed","tasks":[{"kind":"transfer","status":"completed"}],"persons":[{"id":"S","active":false,"links":0},{"id":"2ad6d61e-468b-4eba-bd8b-46e55fd1dcef","active":true,"links":1}],"activeZeroLink":0}
+# Subtest: O15 transfer completed: real terminal writers cannot act on an active zero-link Person
+ok 102 - O15 transfer completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 5.260625
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"transfer","terminal":"undone-completed","tasks":[{"kind":"transfer","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"2c362c10-12f1-4c15-aa18-04f51593ba5b","active":false,"links":0}],"activeZeroLink":0}
+# Subtest: O15 transfer undone-completed: real terminal writers cannot act on an active zero-link Person
+ok 103 - O15 transfer undone-completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 7.033333
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"transfer","terminal":"undone-before-link","tasks":[{"kind":"transfer","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"b42254ba-ee7a-42d8-9d1d-ad9fed9532e7","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 transfer undone-before-link: real terminal writers cannot act on an active zero-link Person
+ok 104 - O15 transfer undone-before-link: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 9.300708
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"transfer","terminal":"failed","tasks":[{"kind":"transfer","status":"failed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"3c19d8e2-e045-4671-b5af-43552808fcee","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 transfer failed: real terminal writers cannot act on an active zero-link Person
+ok 105 - O15 transfer failed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 7.692458
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"consolidate","terminal":"completed","tasks":[{"kind":"consolidate","status":"completed"}],"persons":[{"id":"S","active":false,"links":0},{"id":"6092c2fa-5f8d-4003-a158-6424db5cb765","active":true,"links":1}],"activeZeroLink":0}
+# Subtest: O15 consolidate completed: real terminal writers cannot act on an active zero-link Person
+ok 106 - O15 consolidate completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 4.381916
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"consolidate","terminal":"undone-completed","tasks":[{"kind":"consolidate","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"42b39a5c-7fe5-493c-b9fa-624c3bce8ada","active":false,"links":0}],"activeZeroLink":0}
+# Subtest: O15 consolidate undone-completed: real terminal writers cannot act on an active zero-link Person
+ok 107 - O15 consolidate undone-completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 6.225042
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"consolidate","terminal":"undone-before-link","tasks":[{"kind":"consolidate","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"7f6c6e65-cc4d-4d2a-9e9d-6cf22b5115c4","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 consolidate undone-before-link: real terminal writers cannot act on an active zero-link Person
+ok 108 - O15 consolidate undone-before-link: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 8.187959
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"consolidate","terminal":"failed","tasks":[{"kind":"consolidate","status":"failed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"a63f8b0c-cdd0-4853-a3cb-7c4d4f17b15f","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 consolidate failed: real terminal writers cannot act on an active zero-link Person
+ok 109 - O15 consolidate failed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 4.575959
+  type: 'test'
+  ...
+# Subtest: O12 1001 real terminal Tasks do not block discarding a fresh orphan
+ok 110 - O12 1001 real terminal Tasks do not block discarding a fresh orphan
+  ---
+  duration_ms: 496.727875
+  type: 'test'
+  ...
+# Subtest: O14 secondary audit failure returns landed discard and logs it
+ok 111 - O14 secondary audit failure returns landed discard and logs it
+  ---
+  duration_ms: 2.825125
+  type: 'test'
+  ...
+# Subtest: O1 linked Person cannot be listed or discarded
+ok 112 - O1 linked Person cannot be listed or discarded
+  ---
+  duration_ms: 2.8655
+  type: 'test'
+  ...
+# Subtest: O2 real create then discard stays hidden and second discard refuses without write
+ok 113 - O2 real create then discard stays hidden and second discard refuses without write
+  ---
+  duration_ms: 6.958666
+  type: 'test'
+  ...
+# Subtest: O2b real Move retained source is excluded and Undo restores links
+ok 114 - O2b real Move retained source is excluded and Undo restores links
+  ---
+  duration_ms: 6.501792
+  type: 'test'
+  ...
+# Subtest: O3 active zero-link destination of real in-progress attach Task is excluded
+ok 115 - O3 active zero-link destination of real in-progress attach Task is excluded
+  ---
+  duration_ms: 3.991625
+  type: 'test'
+  ...
+# Subtest: O4 list then link change refuses discard without write
+ok 116 - O4 list then link change refuses discard without write
+  ---
+  duration_ms: 2.796875
+  type: 'test'
+  ...
+# Subtest: O5 discard changes only active, uses fresh version, and audits staff and reason
+ok 117 - O5 discard changes only active, uses fresh version, and audits staff and reason
+  ---
+  duration_ms: 2.464416
+  type: 'test'
+  ...
+# Subtest: O6 search limits refuse both list and discard without writes
+ok 118 - O6 search limits refuse both list and discard without writes
+  ---
+  duration_ms: 2.479958
+  type: 'test'
+  ...
+# Subtest: O7 no guarantor.link refuses both endpoints before reads or writes
+ok 119 - O7 no guarantor.link refuses both endpoints before reads or writes
+  ---
+  duration_ms: 2.12025
+  type: 'test'
+  ...
+# Subtest: X1 X3 X6 attach: discard wins after Task recording; Complete refuses; existing Undo resolves
+ok 120 - X1 X3 X6 attach: discard wins after Task recording; Complete refuses; existing Undo resolves
+  ---
+  duration_ms: 4.445166
+  type: 'test'
+  ...
+# Subtest: X1 X3 X6 transfer: discard wins after Task recording; Complete refuses; existing Undo resolves
+ok 121 - X1 X3 X6 transfer: discard wins after Task recording; Complete refuses; existing Undo resolves
+  ---
+  duration_ms: 6.081333
+  type: 'test'
+  ...
+# Subtest: X1 X3 X6 consolidate: discard wins after Task recording; Complete refuses; existing Undo resolves
+ok 122 - X1 X3 X6 consolidate: discard wins after Task recording; Complete refuses; existing Undo resolves
+  ---
+  duration_ms: 6.763833
+  type: 'test'
+  ...
+# Subtest: X2 attaching write wins; discard If-Match refuses with no inactive write
+ok 123 - X2 attaching write wins; discard If-Match refuses with no inactive write
+  ---
+  duration_ms: 4.119959
+  type: 'test'
+  ...
+# Subtest: X7 attach rebuild directly refuses a service-level inactivation after fencing
+ok 124 - X7 attach rebuild directly refuses a service-level inactivation after fencing
+  ---
+  duration_ms: 3.076208
+  type: 'test'
+  ...
+# Subtest: O9 draft attach refuses real discarded Person before writes
+ok 125 - O9 draft attach refuses real discarded Person before writes
+  ---
+  duration_ms: 2.829042
+  type: 'test'
+  ...
+# Subtest: O9 preview attach refuses real discarded Person before writes
+ok 126 - O9 preview attach refuses real discarded Person before writes
+  ---
+  duration_ms: 2.606292
+  type: 'test'
+  ...
+# Subtest: O9 create attach refuses real discarded Person before writes
+ok 127 - O9 create attach refuses real discarded Person before writes
+  ---
+  duration_ms: 2.457667
+  type: 'test'
+  ...
+# Subtest: O9 draft transfer refuses real discarded Person before writes
+ok 128 - O9 draft transfer refuses real discarded Person before writes
+  ---
+  duration_ms: 2.711916
+  type: 'test'
+  ...
+# Subtest: O9 preview transfer refuses real discarded Person before writes
+ok 129 - O9 preview transfer refuses real discarded Person before writes
+  ---
+  duration_ms: 2.303792
+  type: 'test'
+  ...
+# Subtest: O9 create transfer refuses real discarded Person before writes
+ok 130 - O9 create transfer refuses real discarded Person before writes
+  ---
+  duration_ms: 2.609875
+  type: 'test'
+  ...
+# Subtest: O9 draft consolidate refuses real discarded Person before writes
+ok 131 - O9 draft consolidate refuses real discarded Person before writes
+  ---
+  duration_ms: 2.420041
+  type: 'test'
+  ...
+# Subtest: O9 preview consolidate refuses real discarded Person before writes
+ok 132 - O9 preview consolidate refuses real discarded Person before writes
+  ---
+  duration_ms: 2.357541
+  type: 'test'
+  ...
+# Subtest: O9 create consolidate refuses real discarded Person before writes
+ok 133 - O9 create consolidate refuses real discarded Person before writes
+  ---
+  duration_ms: 2.303708
+  type: 'test'
+  ...
+1..133
+# tests 133
+# suites 0
+# pass 133
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 936.098792

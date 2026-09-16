@@ -1,0 +1,172 @@
+TAP version 13
+# Subtest: K14 create-new starts disabled before any keyed search
+ok 1 - K14 create-new starts disabled before any keyed search
+  ---
+  duration_ms: 26.664292
+  type: 'test'
+  ...
+# Subtest: K9 stale confirmation makes one create and requires Review again
+ok 2 - K9 stale confirmation makes one create and requires Review again
+  ---
+  duration_ms: 6.016334
+  type: 'test'
+  ...
+# Subtest: K10 existing Move drafts before create
+ok 3 - K10 existing Move drafts before create
+  ---
+  duration_ms: 3.099375
+  type: 'test'
+  ...
+# Subtest: K10 new Move creates Person before draft and Review again reuses it
+ok 4 - K10 new Move creates Person before draft and Review again reuses it
+  ---
+  duration_ms: 5.668666
+  type: 'test'
+  ...
+# Subtest: K11 Join keeps Loaded Ann and moves loser full set
+ok 5 - K11 Join keeps Loaded Ann and moves loser full set
+  ---
+  duration_ms: 3.227625
+  type: 'test'
+  ...
+# Subtest: K11 Join keeps Found Ann and moves loser full set
+ok 6 - K11 Join keeps Found Ann and moves loser full set
+  ---
+  duration_ms: 2.497
+  type: 'test'
+  ...
+# Subtest: K13 Undo only on completed non-correct and requires a reason
+ok 7 - K13 Undo only on completed non-correct and requires a reason
+  ---
+  duration_ms: 2.044708
+  type: 'test'
+  ...
+# Subtest: K14 matching cards require None of these before new guarantor
+ok 8 - K14 matching cards require None of these before new guarantor
+  ---
+  duration_ms: 1.058292
+  type: 'test'
+  ...
+# Subtest: K12 missing offers no Move Join or history Undo
+ok 9 - K12 missing offers no Move Join or history Undo
+  ---
+  duration_ms: 0.92325
+  type: 'test'
+  ...
+# Subtest: K12 ambiguous offers no Move Join or history Undo
+ok 10 - K12 ambiguous offers no Move Join or history Undo
+  ---
+  duration_ms: 0.663166
+  type: 'test'
+  ...
+# Subtest: K12 dangling offers no Move Join or history Undo
+ok 11 - K12 dangling offers no Move Join or history Undo
+  ---
+  duration_ms: 0.569542
+  type: 'test'
+  ...
+# Subtest: K12 unknown offers no Move Join or history Undo
+ok 12 - K12 unknown offers no Move Join or history Undo
+  ---
+  duration_ms: 0.622166
+  type: 'test'
+  ...
+# Subtest: K12 pending offers no Move Join or history Undo
+ok 13 - K12 pending offers no Move Join or history Undo
+  ---
+  duration_ms: 0.612208
+  type: 'test'
+  ...
+# Subtest: K9 uncertain confirmation retry reuses the submitted operation id
+ok 14 - K9 uncertain confirmation retry reuses the submitted operation id
+  ---
+  duration_ms: 2.096291
+  type: 'test'
+  ...
+# Subtest: K13 uncertain Undo retry reuses the submitted correction id
+ok 15 - K13 uncertain Undo retry reuses the submitted correction id
+  ---
+  duration_ms: 1.817916
+  type: 'test'
+  ...
+# Subtest: K15 paused create reloads once and closes without Review again or a second create
+ok 16 - K15 paused create reloads once and closes without Review again or a second create
+  ---
+  duration_ms: 2.614208
+  type: 'test'
+  ...
+# Subtest: K15 paused Undo reloads once and closes without a second correction
+ok 17 - K15 paused Undo reloads once and closes without a second correction
+  ---
+  duration_ms: 1.62225
+  type: 'test'
+  ...
+# Subtest: K15 failed paused create reload locks the screen and reports reload required
+ok 18 - K15 failed paused create reload locks the screen and reports reload required
+  ---
+  duration_ms: 2.503292
+  type: 'test'
+  ...
+# Subtest: K15 failed paused Undo reload locks the screen and reports reload required
+ok 19 - K15 failed paused Undo reload locks the screen and reports reload required
+  ---
+  duration_ms: 2.031
+  type: 'test'
+  ...
+# Subtest: O8 Cancel after create discards the created version
+ok 20 - O8 Cancel after create discards the created version
+  ---
+  duration_ms: 3.074334
+  type: 'test'
+  ...
+# Subtest: O8 Cancel after create retains preview on refusal
+ok 21 - O8 Cancel after create retains preview on refusal
+  ---
+  duration_ms: 2.83725
+  type: 'test'
+  ...
+# Subtest: U2 reopening Attach clears last first and phone search keys
+ok 22 - U2 reopening Attach clears last first and phone search keys
+  ---
+  duration_ms: 1.4575
+  type: 'test'
+  ...
+# Subtest: U1 preview distinguishes only the selected textable number
+ok 23 - U1 preview distinguishes only the selected textable number
+  ---
+  duration_ms: 1.38275
+  type: 'test'
+  ...
+# Subtest: unused guarantor Settings visibility follows business action, not admin role
+ok 24 - unused guarantor Settings visibility follows business action, not admin role
+  ---
+  duration_ms: 6.814375
+  type: 'test'
+  ...
+# Subtest: unused guarantor actual route denies missing business action without fetching
+ok 25 - unused guarantor actual route denies missing business action without fetching
+  ---
+  duration_ms: 0.812167
+  type: 'test'
+  ...
+# Subtest: unused Settings required reason and discard
+ok 26 - unused Settings required reason and discard
+  ---
+  duration_ms: 9.812916
+  type: 'test'
+  ...
+# Subtest: unused Settings required reason and refusal
+ok 27 - unused Settings required reason and refusal
+  ---
+  duration_ms: 1.62575
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 431.607167

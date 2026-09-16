@@ -1,0 +1,70 @@
+{
+  "label": "EXECUTED synthetic prototype, not a built discard endpoint",
+  "base": "6a3ad04abf623d4e2602b0239a658c575c43827f",
+  "orphanSnapshot": {
+    "active": true,
+    "links": 0,
+    "tasks": 0,
+    "version": "1"
+  },
+  "discard": {
+    "status": 200,
+    "taskAlreadyPresent": true
+  },
+  "attach": {
+    "status": 409,
+    "phase": "attach-pending"
+  },
+  "complete": {
+    "status": 200,
+    "taskStatus": "completed",
+    "writes": 14
+  },
+  "finalPerson": {
+    "resourceType": "Person",
+    "birthDate": "1980-01-01",
+    "active": false,
+    "meta": {
+      "versionId": "4",
+      "project": "g2b1-synthetic",
+      "author": {
+        "reference": "ClientApplication/g2b1-service"
+      }
+    },
+    "name": [
+      {
+        "use": "official",
+        "given": [
+          "Synthetic"
+        ],
+        "family": "Unused"
+      }
+    ],
+    "id": "ed4a5622-fd7e-419f-8aba-e66c89cefda4",
+    "extension": [
+      {
+        "url": "https://odos2020.com/fhir/StructureDefinition/guarantor-link-epoch",
+        "valueString": "d4b18866-19d2-4751-bcaf-eac7a5a682a6"
+      }
+    ],
+    "link": [
+      {
+        "target": {
+          "reference": "RelatedPerson/r1"
+        },
+        "assurance": "level2"
+      }
+    ]
+  }
+}
+{
+  "O2": {
+    "realMove": true,
+    "active": false,
+    "links": 0,
+    "taskReferenced": true,
+    "eligibleWithActiveCheckRemoved": false
+  }
+}
+
+Exit: 0

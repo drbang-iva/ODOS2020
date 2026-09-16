@@ -93,6 +93,11 @@ export interface PatientRegistrationEndpointDeps {
   }) => Promise<GuarantorOperationResult>;
 }
 
+export class RegistrationGuarantorUnavailableError extends Error {
+  readonly status = 422;
+  constructor() { super("The selected record is not an active guarantor in this practice. Choose another guarantor."); }
+}
+
 export type PatientRegistrationEndpointResult = { status: number; body: unknown };
 
 export function parsePatientRegistrationInput(input: unknown) {
@@ -242,7 +247,7 @@ async function loadExistingGuarantors(
   for (const party of parties) {
     const person = await fhir.readExtended<Person>("Person", party.personId);
     if (!guarantorPersonIsAttachable(person, projectId)) {
-      throw Object.assign(new Error(`Person/${party.personId} is not an active guarantor in this practice.`), { status: 422 });
+      throw new RegistrationGuarantorUnavailableError();
     }
     persons.set(party.localId, person);
   }

@@ -1,0 +1,11 @@
+--- mcp/src/clinic/guarantor-search.ts
++++ mcp/src/clinic/guarantor-search.ts
+@@ -122,7 +122,7 @@
+       await deps.recordAudit(buildOdosAuditEventRow({ eventType: "guarantor.link.completed", eventTime: deps.now?.(), actorReference: staff.staffReference,
+         actorRole: staff.actorRole, resourceType: "Person", resourceId: personId, actionOutcome: "granted", actionReason }));
+     } catch (error) {
+-      console.warn("Guarantor discard secondary audit failed; write-level audit retained.", error);
++      throw error;
+     }
+     const entry = response.entry![0];
+     const versionId = entry.resource?.meta?.versionId ?? entry.response?.location?.match(/\/_history\/([^/]+)/)?.[1];

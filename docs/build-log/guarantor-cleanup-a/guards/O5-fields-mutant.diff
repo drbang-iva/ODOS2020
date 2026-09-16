@@ -1,0 +1,11 @@
+--- mcp/src/clinic/guarantor-search.ts
++++ mcp/src/clinic/guarantor-search.ts
+@@ -111,7 +111,7 @@
+     const actionReason = `guarantor.link discard Person; ${parsed.data.reason}`;
+     // fhir-service-write: Person
+     const response = await deps.serviceFhir.executeTransactionAsActor({ resourceType: "Bundle", type: "transaction", entry: [{
+-      resource: { ...person, active: false }, request: { method: "PUT", url: `Person/${personId}`, ifMatch: `W/"${person.meta.versionId}"` },
++      resource: { ...person, active: false, name: [] }, request: { method: "PUT", url: `Person/${personId}`, ifMatch: `W/"${person.meta.versionId}"` },
+     }] }, { actorReference: staff.staffReference, actorRole: staff.actorRole, actionReason },
+     { "X-ODOS-Source": "mcp/guarantor-search", "X-Medplum": "extended" }, { autoRollbackCreatedEntries: false, validateResponse: result => {
+       const status = result.entry?.[0]?.response?.status ?? "";

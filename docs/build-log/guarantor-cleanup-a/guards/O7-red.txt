@@ -1,0 +1,38 @@
+$ node --import tsx --test --test-name-pattern=O7  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# odos-mcp: guarantor link-operation unused setup failed; result unconfirmed.
+# Subtest: O7 no guarantor.link refuses both endpoints before reads or writes
+not ok 1 - O7 no guarantor.link refuses both endpoints before reads or writes
+  ---
+  duration_ms: 27.035583
+  type: 'test'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:6726'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    500 !== 403
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 403
+  actual: 500
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:65:9)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 208.246459
+
+Exit: 1

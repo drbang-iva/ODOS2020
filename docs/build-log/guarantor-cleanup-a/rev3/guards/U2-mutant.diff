@@ -1,0 +1,11 @@
+--- ui/src/components/patient/GuarantorLinkScreens.tsx
++++ ui/src/components/patient/GuarantorLinkScreens.tsx
+@@ -19,7 +19,7 @@
+  const [history,setHistory]=useState<GuarantorLinkOperation[]>();const [historyOpen,setHistoryOpen]=useState(false);const [undoReason,setUndoReason]=useState<Record<string,string>>({});
+  const attempts=useRef<Record<string,{payload:string;id:string}|undefined>>({});
+  const operationIdFor=(key:string,body:object)=>{const payload=JSON.stringify(body);const previous=attempts.current[key];if(previous?.payload===payload)return previous.id;const id=newGuarantorOperationId();attempts.current[key]={payload,id};return id;};
+- const reset=()=>{setLast("");setFirst("");setPhone("");delete attempts.current.confirmation;setMode(undefined);setCards(undefined);setNone(false);setFound(undefined);setNewDetails(undefined);setCreated(undefined);setCreationAttempted(false);setInput(undefined);setDraft(undefined);setReason("");setReview(false);setNotice("");};
++ const reset=()=>{delete attempts.current.confirmation;setMode(undefined);setCards(undefined);setNone(false);setFound(undefined);setNewDetails(undefined);setCreated(undefined);setCreationAttempted(false);setInput(undefined);setDraft(undefined);setReason("");setReview(false);setNotice("");};
+  const perform=async(fn:()=>Promise<void>)=>{if(busy||disabled||reloadRequired)return;setBusy(true);setNotice("");try{await fn();}catch(e){if(e instanceof GuarantorScreenError&&e.status===409&&e.body?.task){setReview(false);try{await onReload();reset();setHistory(undefined);setHistoryOpen(false);}catch{setReloadRequired(true);setNotice("The paused operation could not be reloaded. Reload the patient page before continuing.");}return;}setNotice(e instanceof Error?e.message:"Result unknown. Reload before continuing.");if(e instanceof GuarantorScreenError&&e.status===409)setReview(true);}finally{setBusy(false);}};
+  const makeDraft=async(next:GuarantorDraftInput)=>{delete attempts.current.confirmation;setInput(next);setDraft(undefined);setReview(false);const value=await draftGuarantorOperation(next);setDraft(value);};
+  const destination=(id:string):GuarantorDraftInput=>mode==="attach"?{kind:"attach",destinationPersonId:id,relatedPersonIds:[relatedPersonId]}:{kind:"transfer",sourcePersonId:person!.id!,destinationPersonId:id,relatedPersonIds:[relatedPersonId]};

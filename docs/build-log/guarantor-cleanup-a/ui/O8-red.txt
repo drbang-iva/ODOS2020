@@ -1,0 +1,58 @@
+Mutation: if(created)await discardGuarantor(created.personId,{reason:"Create new guarantor cancelled before confirming",expectedVersion:created.versionId}); -> 
+Exit: 1
+TAP version 13
+# Subtest: O8 Cancel after create discards the created version
+not ok 1 - O8 Cancel after create discards the created version
+  ---
+  duration_ms: 20.549166
+  type: 'test'
+  location: '<repo>/ui/tests/guarantorSearchScreens.test.tsx:1:14415'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    screen.cards (<repo>/ui/tests/guarantorSearchScreens.test.tsx:62:79)
+    async screen (<repo>/ui/tests/guarantorSearchScreens.test.tsx:32:152)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: O8 Cancel after create retains preview on refusal
+not ok 2 - O8 Cancel after create retains preview on refusal
+  ---
+  duration_ms: 4.137166
+  type: 'test'
+  location: '<repo>/ui/tests/guarantorSearchScreens.test.tsx:1:14415'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    screen.cards (<repo>/ui/tests/guarantorSearchScreens.test.tsx:62:79)
+    async screen (<repo>/ui/tests/guarantorSearchScreens.test.tsx:32:152)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 186.165333

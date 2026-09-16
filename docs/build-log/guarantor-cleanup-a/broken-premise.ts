@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { fixture, run } from '../../../mcp/tests/guarantorScreensFixture.js';
+import { createGuarantor } from '../../../mcp/src/clinic/guarantor-search.js';
+import { GUARANTOR_OPERATION_SYSTEM } from '../../../mcp/src/clinic/guarantor-link-operation.js';
+import { searchProjectAll } from '../../../mcp/src/fhir-search.js';
+const f = fixture(1);
+const staff = {staffReference:'Practitioner/g2b1-staff',actorRole:'staff' as const,businessActions:['guarantor.link' as const],project:{reference:'Project/g2b1-synthetic'}};
+f.compete('Person/S', p => ({...p,link:[],active:false}));
+const created = await createGuarantor(f.deps as never, staff, {firstName:'Synthetic',lastName:'Unused',birthDate:'1980-01-01'});
+assert.equal(created.status,201);
+const id = (created.body as any).personId;
+for (const [key,value] of f.data) f.data.set(key,JSON.parse(JSON.stringify(value)));
+// Prototype exactly the proposed read + Task scan + conditional Person-only write.
+const snapshot:any = f.get(`Person/${id}`);
+const tasks = await searchProjectAll(f.deps.serviceFhir as never,'Task','g2b1-synthetic',{code:`${GUARANTOR_OPERATION_SYSTEM}|`});
+assert.equal(snapshot.active,true);assert.equal(snapshot.link?.length??0,0);assert.equal(tasks.length,0);
+let raced=false;
+f.afterWrite = async write => {
+ if(raced || write.method!=='POST' || write.resource.resourceType!=='Task') return;
+ raced=true;
+ const nowTasks = await searchProjectAll(f.deps.serviceFhir as never,'Task','g2b1-synthetic',{code:`${GUARANTOR_OPERATION_SYSTEM}|`});
+ assert.equal(nowTasks.length,1);
+ assert.equal(f.get<any>(`Person/${id}`).meta.versionId,snapshot.meta.versionId);
+ await f.deps.serviceFhir.executeTransactionAsActor({resourceType:'Bundle',type:'transaction',entry:[{resource:{...snapshot,active:false},request:{method:'PUT',url:`Person/${id}`,ifMatch:`W/"${snapshot.meta.versionId}"`}}]}, {actorReference:staff.staffReference,actorRole:'staff',actionReason:'Synthetic discard premise'}, {}, {autoRollbackCreatedEntries:false,validateResponse:(response:any)=>assert.equal(response.entry[0].response.status,'200')});
+};
+const started:any=await run(f,'create',{operationId:randomUUID(),kind:'attach',destinationPersonId:id,relatedPersonIds:['r1'],expected:{[`Person/${id}`]:snapshot.meta.versionId,'RelatedPerson/r1':f.get<any>('RelatedPerson/r1').meta.versionId},reason:'Synthetic concurrent attach'});
+f.afterWrite=undefined;
+assert.equal(raced,true);assert.equal(started.status,409);assert.equal(started.body.phase,'attach-pending');
+const beforeComplete=f.writes.length;
+const completed:any=await run(f,'complete',undefined,started.body.task.id);
+const final:any=f.get(`Person/${id}`);
+assert.equal(completed.status,200);assert.equal(completed.body.task.status,'completed');assert.equal(final.active,false);assert.equal(final.link.length,1);
+console.log(JSON.stringify({label:'EXECUTED synthetic prototype, not a built discard endpoint',base:'6a3ad04abf623d4e2602b0239a658c575c43827f',orphanSnapshot:{active:snapshot.active,links:snapshot.link?.length??0,tasks:tasks.length,version:snapshot.meta.versionId},discard:{status:200,taskAlreadyPresent:true},attach:{status:started.status,phase:started.body.phase},complete:{status:completed.status,taskStatus:completed.body.task.status,writes:f.writes.length-beforeComplete},finalPerson:final},null,2));
+// The mandated real Move produces BOTH independent exclusions for O2.
+const moved=fixture(1);const result:any=await run(moved,'create',moved.input());assert.equal(result.status,200);
+for (const [key,value] of moved.data) moved.data.set(key,JSON.parse(JSON.stringify(value)));
+const retained:any=moved.get('Person/S');const moveTasks:any[]=await searchProjectAll(moved.deps.serviceFhir as never,'Task','g2b1-synthetic',{code:`${GUARANTOR_OPERATION_SYSTEM}|`});
+const referenced=moveTasks.some(t=>t.input?.some((i:any)=>['source','destination'].includes(i.type?.text)&&i.valueReference?.reference==='Person/S'));
+assert.equal(retained.active,false);assert.equal(retained.link?.length??0,0);assert.equal(referenced,true);
+console.log(JSON.stringify({O2:{realMove:true,active:retained.active,links:retained.link?.length??0,taskReferenced:referenced,eligibleWithActiveCheckRemoved:!(retained.link?.length)&&!referenced}},null,2));
