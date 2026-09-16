@@ -1,27 +1,17 @@
-# Overlay, count, picker evidence
+# Overlay, count and legacy picker evidence (rev 3.6)
 
-Owned implementation: `EncounterFindingOverlay.tsx`, `EncounterCharting.tsx` (count load only), `DiagnosisPicker.tsx`.
+Production changes: EncounterFindingOverlay and EncounterCharting count load only. DiagnosisPicker is byte-identical to A2b.1; it has no linkMode prop and still uses the original throwing submitDiagnosisPick.
 
-- Overlay explicitly renders `Findings unavailable` for typed unavailable and rejected loads; uses server row identity/kind.
-- Count maps typed unavailable to undefined, which the existing chart bar renders as `Unassigned unavailable`.
-- Candidate failures render `Suggestions unavailable`.
-- Picker has `linkMode` default legacy; its existing submitDiagnosisPick call and applied-result/error handling remain unchanged under rev 3.5.
+Overlay renders Findings unavailable for typed unavailable and rejected loads, using server row identity. Count maps unavailable to undefined, which the existing chart bar renders as Unassigned unavailable. Workspace candidate failure renders Suggestions unavailable; legacy Picker retains its original error text.
 
-`cd ui && node --import tsx --test tests/r10DiagnosisSurfaces.test.tsx`: 9 tests, 5 pass, 4 TODO, 0 fail. The count test mounts the full EncounterCharting scene against a synthetic unavailable findings response. Picker tests exercise real transport calls for ocular_health and cup_disc_ratio scopes; neither sends supportingFacts or commandId.
+From ui/: `node --import tsx --test tests/r10DiagnosisSurfaces.test.tsx`: **9 tests, 5 pass, 4 A3 TODO, 0 fail**. The count test mounts the full EncounterCharting scene with synthetic transport. Picker tests exercise real requests for ocular_health and cup_disc_ratio; neither sends supportingFacts or commandId. The demotion suite now has **11/11**, including W54's added failed-pick test.
 
-`cd ui && node --import tsx --test tests/diagnosisDemotionImpact.test.tsx`: 10 tests, 10 pass, 0 fail. Existing assertions unchanged.
+## Guards
 
-## Mandate 17
-
-- W49 overlay: suppress unavailable rendering. Targeted suite exits 1; restored suite exits 0.
-- W49 count: turn typed unavailable into zero. Full scene assertion exits 1; restored suite exits 0.
-- W49 candidates: suppress load error. Targeted suite exits 1; restored suite exits 0.
-- W51: real legacy transport tests pass. Required default-to-facts mutant is pending operator adjudication because rev 3.5 freezes the legacy submit call, so facts/default changes cannot affect its request body.
-
-Exact outputs: `W49-overlay-red.tap`, `W49-count-red.tap`, `W49-candidates-red.tap`, `green.tap`.
+W49 overlay and count mutations each produced 2 pass/1 fail in the then-targeted three-test suite; restored final suite is 5 pass/4 TODO. Workspace W49 separately proves candidate unavailability. Historical W49-candidates-red.tap describes the superseded generic-picker-error implementation and is not claimed for final production. W51's approved API/supports mutation is recorded in ../W51: 0/2 pass red, 2/2 green.
 
 ## A3
 
-T15, T16, T17 UI and T18 are named `{ todo: "R10 A3" }` tests in the manifest's `.ts` file. The `.tsx` surfaces suite imports that file so npm's `.test.tsx` glob actually executes these slots. Current slot assertions are migration-readiness source checks, not completed A3 behavioral coverage. The independent A3 gate directly executes `.ts` through its tsx loader and reports all four as TODO rather than absent. T4/T5/T6/T21/T22 UI remain absent (outside this subtask's authorized slots). See `a3-gate.txt`.
+T15, T16, T17 UI and T18 are real component tests marked `{ todo: "R10 A3" }` in r10A3ReleaseScenarios.test.ts. They mount the legacy section/picker/Assessment components and fail their future-contract assertions today. The surfaces .tsx suite imports them so the package glob executes them. The gate reports these four as TODO rather than absent. Other A3 UI slots remain outside this slice. Historical a3-gate.txt is superseded by ../checks/a3-rev36.txt.
 
-No existing assertions changed; no V/W assertion migration rows needed for this subtask. New tests map to W49/W51 and named A3 slots. No commits, pushes, Docker processes or account operations by this subtask. NOT EVALUATED.
+Existing grouping assertions are mapped in ../existing-assertions.md. New surface guards map to W49/W51; W54 is recorded separately. NOT EVALUATED.

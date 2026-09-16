@@ -1,0 +1,19 @@
+
+> odos-ui@0.2.0 build
+> tsc --noEmit --skipLibCheck && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 332 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/version.json                   0.16 kB │ gzip:   0.14 kB
+dist/index.html                     0.94 kB │ gzip:   0.56 kB
+dist/assets/index-DF84U2Dz.css    226.76 kB │ gzip:  38.22 kB
+dist/assets/index-CRyHgMHV.js   1,952.68 kB │ gzip: 528.14 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.30s

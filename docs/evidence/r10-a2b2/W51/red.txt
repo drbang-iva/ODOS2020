@@ -1,0 +1,54 @@
+TAP version 13
+# Subtest: W51 default legacy ocular_health pick omits supportingFacts
+not ok 1 - W51 default legacy ocular_health pick omits supportingFacts
+  ---
+  duration_ms: 18.418833
+  type: 'test'
+  location: '<repo>/ui/tests/r10DiagnosisSurfaces.test.tsx:1:1239'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisSurfaces.test.tsx:45:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W51 default legacy cup_disc_ratio pick omits supportingFacts
+not ok 2 - W51 default legacy cup_disc_ratio pick omits supportingFacts
+  ---
+  duration_ms: 3.364417
+  type: 'test'
+  location: '<repo>/ui/tests/r10DiagnosisSurfaces.test.tsx:1:1239'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisSurfaces.test.tsx:45:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 283.212958

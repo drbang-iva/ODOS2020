@@ -50,13 +50,13 @@ for (const definition of ["ocular_health", "cup_disc_ratio"]) {
     }
   });
 }
-test("W49 candidate load failure shows Suggestions unavailable", async () => {
+test("Legacy picker preserves candidate load failure text", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => Response.json({ error: "synthetic unavailable" }, { status: 502 });
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => { renderer = create(<DiagnosisPicker encounterReference="Encounter/e1" />); await flush(); });
-    assert.match(JSON.stringify(renderer.toJSON()), /Suggestions unavailable/);
+    assert.match(JSON.stringify(renderer.toJSON()), /synthetic unavailable/);
   } finally { act(() => renderer?.unmount()); globalThis.fetch = originalFetch; }
 });
 

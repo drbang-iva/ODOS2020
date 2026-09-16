@@ -1,6 +1,6 @@
 # Guard evidence
 
-All temporary production mutations restored. W51 remains pending an operator ruling; it is not counted as proven.
+All temporary production mutations restored. W51 follows the approved rev 3.6 request-boundary mutation; DiagnosisPicker production is unchanged.
 
 | Guard mutation | Red counts | Evidence |
 |---|---|---|
@@ -15,8 +15,10 @@ All temporary production mutations restored. W51 remains pending an operator rul
 | W49-workspace-red | 10 pass / 1 fail / 11 total | `workspace/W49-workspace-red.tap` |
 | W52-red | 10 pass / 1 fail / 11 total | `workspace/W52-red.tap` |
 | W53-red | 10 pass / 1 fail / 11 total | `workspace/W53-red.tap` |
-| W49-candidates-red | 2 pass / 1 fail / 3 total | `surfaces/W49-candidates-red.tap` |
+| W51 legacy requests | 0 pass / 2 fail / 2 total; restored 2/2 | `W51/red.txt`, `W51/green.txt` |
 | W49-count-red | 2 pass / 1 fail / 3 total | `surfaces/W49-count-red.tap` |
 | W49-overlay-red | 2 pass / 1 fail / 3 total | `surfaces/W49-overlay-red.tap` |
 
 Restored workspace: 11/11; table:16/16; surfaces:5 pass +4 A3 TODO; W54:1/1 and tsc exit0. See W54/README.md for mutation failure and separate typecheck evidence.
+
+Historical surfaces/W49-candidates logs are superseded by rev 3.6. W49 suggestions failure is covered by the workspace mutation above; legacy picker error handling remains unchanged.

@@ -1,36 +1,39 @@
-# R10 A2b.2 author work in progress
+# R10 A2b.2 author sealed bundle
 
-NOT EVALUATED. HELD OPEN. Never merge this branch independently of the R10 joint release.
+**NOT EVALUATED · HELD OPEN · never merge independently of the R10 joint release.** Coder: Codex, GPT-6, high effort. Independent evaluation belongs to Claude Opus; this bundle is author evidence only.
 
-Base: A2b.1 `6025d836643fdf74298834f8290a8fdacabef5b7` (independently evaluated by Opus; server unchanged by this slice).
-Contract: performance-od kickoff rev 3.5, sections 3.10 and 12. Shared checkouts were only read/fetched.
+## Summary and scope
 
-## Pending operator ruling
+Diagnosis screens consume the shared finding record: per-eye commands and OU grouping, typed outcomes and identical retries, conflict recovery, unavailable states, audit repair, origin lines from homeSources, and workspace pick/bodySite/link recovery. The legacy picker and Assessment source are unchanged; only Workspace uses submitDiagnosisPickResult. Rev 3.6 removes the unused linkMode prop.
 
-Rev 3.5 preserves the legacy `submitDiagnosisPick` call in DiagnosisPicker, so changing its new linkMode default to facts does not change the request's supportingFacts. The requested W51 mutation cannot fail the no-supports request assertion under that preserved call. Asked whether to guard the default mode explicitly while retaining the two real legacy request tests; no answer yet. No W51 success is claimed. The new facts-mode API is used only by DiagnosisWorkspace.
+Contract: performance-od kickoff rev 3.6 §§3.10/12. Original base: evaluated A2b.1 `6025d836643fdf74298834f8290a8fdacabef5b7`. Rebased onto main `c742b2e4b543e0706b24f66aec6883a82f0d18a3`; refreshed A2b.1 still 6025d836. All §12.1 premises were checked before implementation, including unchanged UI since 6f44c050, payloads/unions, four legacy picker callers, workspace origins/early return, absent A3 UI slots, and the actual UI test command. Shared checkouts were only read/fetched.
 
-## Verification so far
+Six allowed production files: ui/src/lib/{diagnosis-findings,clinical-graph-client}.ts; ui/src/components/charting/{DiagnosisFindingsTable,DiagnosisWorkspace,EncounterFindingOverlay}.tsx; ui/src/scenes/EncounterCharting.tsx (unassigned unavailable count only). Tests: diagnosisWorkspace, diagnosisCarryForward, diagnosisFindingGrouping, diagnosisDemotionImpact; new r10DiagnosisWorkspace, r10DiagnosisTable, r10DiagnosisSurfaces and r10A3ReleaseScenarios. Evidence is confined to docs/evidence/r10-a2b2/. No MCP implementation delta, Assessment or structure-section edits. The main-target PR necessarily inherits A2b.1 server commits; the A2b.2 source/test delta is limited to this inventory.
 
-- Six original door suites baseline: 91 pass, 0 fail.
-- Final rebased full UI: 1666 total, 1662 pass, 0 fail, 0 skipped, 4 A3 TODO.
-- Final rebased full MCP on isolated synthetic PostgreSQL: 5687 total, 5618 pass, 0 fail, 53 environment skips, 16 A3 TODO. `ODOS_ALLOW_UNGATED_MCP=1` explicitly acknowledges missing Medplum credentials; this is not live-authz proof.
-- UI and MCP builds exit 0. Preflight 0 warnings, 0 hard blocks. A3 gate exits 1; requested UI slots are present and TODO.
-- Mutation evidence is in table/, workspace/, surfaces/, and W54/. W54 is a newly added failure case in the existing demotion suite, because that suite did not previously assert a failed HTTP pick. Legacy API mutation fails the test and tsc at Assessment353; restoration passes.
-- Every changed existing assertion is recorded in existing-assertions.md. No Assessment or structure-section source changes, no MCP delta from the inherited base.
-- Synthetic before/after browser evidence is in visual/. Real rendered components, transport fakes; not a deployed clinical walkthrough.
+## Checks and assertions
 
-## Author review fixes
+- Original six door suites: 91 pass, 0 fail.
+- Full UI after rev 3.6: see checks/ui-rev36-counts.txt (1666 total, 1662 pass, 0 fail, 0 skipped, 4 A3 TODO).
+- Full MCP after rebase with fresh root/MCP dependencies and isolated synthetic PostgreSQL16: **5687 total, 5618 pass, 0 fail, 53 named environment skips, 16 A3 TODO**. MEDPLUM_PROJECT_ID and Medplum credentials unset; ODOS_ALLOW_UNGATED_MCP=1 acknowledges missing live Medplum credentials. This is not live-authz proof. Setup: disposable odos-r10-a2b2-postgres-1 on loopback port 29543; no shared database.
+- Affected suites: Workspace 53/53; LinkL2 4/4; LinkL3 7/7; grouping 2/2; carry 15/15; demotion 11/11; new workspace 11/11; table 16/16; surfaces 5 pass + 4 A3 TODO. Exact machine-readable counts: checks/affected-counts.json.
+- UI/MCP builds exit 0; UI retains its existing large-chunk warning. Preflight: 0 warnings, 0 hard blocks. git diff --check clean.
+- check-r10-a3-release.mjs exits **1, expected**: T1–T22 remain open. T15/T16/T17 UI/T18 are now real component TODO tests; A3's other UI slots remain absent. See checks/a3-rev36.txt for exact output.
+- Every changed existing assertion has before/after and V/W mapping in [existing-assertions.md](existing-assertions.md). No tests removed or skipped. W54 is a new failure test in an existing suite.
 
-- Notices/recovery buttons live inside the selected diagnosis panel rather than occupying grid columns.
-- Existing-diagnosis support links permit staff chart.write without Condition-write permission.
-- Unknown/conflicting overlay presence is not labelled Present.
-- Applied picks clear the old scope prompt before attempting bodySite, preventing accidental re-pick after scope failure.
-- Link prevalidation uses the frozen supporting rows and baselines; conflict recovery offers a new command rather than repeatedly resending a stale one.
+## Mutation proof
 
-Audit authenticity remains the separately scoped release blocker from A2b.1. A3 consumers remain deliberately unimplemented here.
+[guard-index.md](guard-index.md) inventories every required guard: W3/W9/W36/W37/W46–W54, with red counts and restored green evidence. W51: real Ocular Health and Cup/Disc legacy picker requests mutated to the result API plus supports → **0 pass, 2 fail**; restored **2/2**. W54: legacy API made nonthrowing → **0 pass, 1 fail**, plus tsc exit 2 at Assessment353 and Picker158; restored **1/1**, tsc exit 0. All mutations restored. The historical generic-picker-error W49 proof is superseded by rev 3.6; the final candidate failure guard is Workspace W49.
 
-## Rebase and checkpoint
+## Visual evidence and limits
 
-Main moved to `c742b2e4b543e0706b24f66aec6883a82f0d18a3` (#618 dependency audit). Rebase completed without conflict; root/MCP dependencies freshly installed before full reruns. A2b.1 remote remains `6025d836`. UI source delta is exactly seven allowed files; implementation commit has no MCP edits. Counts per affected suite are in checks/affected-counts.json. No PR or push yet because W51 is unresolved.
+Twelve screenshots in visual/: ou-before/after, conflict-before/after, prebuild-before/after, unavailable-before/after, partial-before/after, audit-before/after. Source hashes and capture assertions are recorded there. These are real rendered React components with synthetic transport, not a deployed route walkthrough or persistence/authz proof. Rev 3.6 restores the unused legacy Picker; none of the six screenshot scenarios mounts it, so these captures remain representative of the changed surfaces.
 
-Docker project prefix: odos-r10-a2b2. Only container started: odos-r10-a2b2-postgres-1, disposable PostgreSQL16 on127.0.0.1:29543. It is stopped at checkpoint, not removed.
+## Risks and follow-ups
+
+Audit authenticity remains A2b.1's separately scoped release blocker. A3 consumer migration and T1–T22 remain deliberately open; four UI TODO failures are intentional. Real role policy and clinical persistence are outside these UI transport fixtures; A2b.1's independent live evidence is inherited, not rerun or claimed here. No medical codes or regulatory facts introduced; no new Mandate 14 ledger rows or strategy decisions required.
+
+## Delivery status
+
+Author checks complete; PR publication and final-head bot adjudication are tracked in the PR body and handoff. NOT EVALUATED until independent Opus review. Never merge this held-open slice.
+
+Docker project prefix: odos-r10-a2b2. Only container started: odos-r10-a2b2-postgres-1. Stopped, not removed. Visual Vite processes were also stopped.
