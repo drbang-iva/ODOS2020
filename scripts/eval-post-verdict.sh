@@ -62,13 +62,6 @@ done
 
 command -v node >/dev/null 2>&1 || die "required command not found: node"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if ! node -e '
-  const { isTrustedEvaluator } = require(process.argv[1]);
-  process.exit(isTrustedEvaluator(process.argv[2]) ? 0 : 1);
-' "$script_dir/../.github/scripts/evaluation-verdict.cjs" "$model"; then
-  die "evaluator model '$model' would be rejected by evaluation-verdict.cjs"
-fi
-
 command -v gh >/dev/null 2>&1 || die "required command not found: gh"
 command -v git >/dev/null 2>&1 || die "required command not found: git"
 
@@ -76,9 +69,34 @@ command -v git >/dev/null 2>&1 || die "required command not found: git"
 source "$script_dir/lib/bot-review-status.sh"
 repo_root="$(git -C "$script_dir" rev-parse --show-toplevel)"
 repo_name="${GH_REPO:-$(cd "$repo_root" && gh repo view --json nameWithOwner --jq .nameWithOwner)}"
-head_sha="$(gh pr view "$pr_number" --repo "$repo_name" --json headRefOid --jq .headRefOid)"
+pr_json="$(gh api "repos/$repo_name/pulls/$pr_number")"
+head_sha="$(node -e '
+  const pr = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+  process.stdout.write(pr.head.sha);
+' <<<"$pr_json")"
 [[ "$head_sha" =~ ^[0-9a-fA-F]{40}$ ]] || die "could not resolve a full head SHA for PR #$pr_number"
 head_sha="$(printf '%s' "$head_sha" | tr '[:upper:]' '[:lower:]')"
+if ! node -e '
+  const { evaluateEvaluationGate } = require(process.argv[1]);
+  const pr = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+  const [model, verdict] = process.argv.slice(2);
+  const decision = evaluateEvaluationGate({
+    currentHeadSha: pr.head.sha,
+    prBody: pr.body,
+    prAuthorType: pr.user.type,
+    comments: [{
+      body: "Evaluated-by: " + model + " — " + verdict + "\nHead-SHA: " + pr.head.sha,
+      user: { login: "posting-script" },
+    }],
+  });
+  if (!decision.passed && !(verdict === "FAIL" && decision.reason === "failing-verdict")) {
+    console.error(decision.message);
+    process.exit(1);
+  }
+' "$script_dir/../.github/scripts/evaluation-verdict.cjs" "$model" "$verdict" <<<"$pr_json"; then
+  exit 1
+fi
+
 expected_conclusion="success"
 if [[ "$verdict" == "FAIL" ]]; then
   expected_conclusion="failure"

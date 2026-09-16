@@ -37,6 +37,8 @@ By submitting this PR, I agree my contribution is licensed under the project's *
 
 ## Independent evaluation
 
+Coded-by: <Codex | Claude> — <model, effort>
+
 The newest marker decides the `check-evaluation` gate, regardless of which
 GitHub account posts it. For an evaluation, the named model must be Fable, Opus,
 or Codex in a form accepted by the parser (including `Codex (gpt-5.6-sol)`;
@@ -62,5 +64,9 @@ Override-Reason: <nonempty reason for the authorized bypass>
 The Head-SHA must match the current PR head, and each field must appear exactly
 once. A newer OVERRIDE deliberately supersedes NEEDS-WORK; older evidence cannot
 rescue a newer negative or malformed marker. The typed name is a record, not
-authentication. Author != evaluator remains a procedural expectation stated in
-coding kickoffs, not a mechanically enforced login rule.
+authentication. Every human-authored PR declares its coding tool above, outside
+fenced code blocks. Replace the placeholder with Codex or Claude; list both on
+separate Coded-by lines if both coded the PR. The gate rejects a PASS signed by
+any declared coding tool, even from a separate session. Bot-authored PRs and
+operator OVERRIDEs do not require Coded-by. With one shared login, this catches
+honest mistakes, not forged declarations.

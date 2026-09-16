@@ -2,7 +2,7 @@ name: evaluation-gate
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
     branches: [main]
   issue_comment:
     types: [created, edited, deleted]
@@ -12,7 +12,9 @@ concurrency:
   cancel-in-progress: false
 
 # Every PR into main needs a Fable, Opus, or Codex model review before it merges.
-# Author != evaluator remains a procedural expectation in coding kickoffs;
+# Every human-authored PR declares Coded-by in its body; the gate rejects a PASS
+# signed by the same tool (Codex or Claude), even from a separate session.
+# Bot-authored PRs are exempt from declaring a coder.
 # review bots are a first pass, not a substitute for model review.
 #
 # The workflow runs from the protected default branch and publishes the required
@@ -142,6 +144,8 @@ jobs:
                 labels,
                 comments,
                 currentHeadSha: headSha,
+                prBody: pullRequest.body,
+                prAuthorType: pullRequest.user.type,
               });
               const message = `PR #${prNumber}: ${decision.message}`;
 
