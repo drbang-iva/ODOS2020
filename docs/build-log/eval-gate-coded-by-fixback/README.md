@@ -1,74 +1,56 @@
-# Coded-by fixback — revision 2 author proof
+# Coded-by fixback — revision 2.1 author proof
 
-Status: NOT EVALUATED. Codex — GPT-6 Astra (high) authored this revision.
-The independent Claude Opus session owns reevaluation. No author marker or merge.
+Status: NOT EVALUATED. Codex — GPT-6 Astra (high) authored this guard-only revision.
+The Claude Opus session that posted NEEDS-WORK owns independent reevaluation.
 
-Evaluated base: `7d5ea2afb97fff9a385d1ca41b23bdf2b6f52ee4`, PR #616.
-The NEEDS-WORK comment is #5701008780. The rev 2 kickoff was read from freshly
-fetched PerformanceOD origin/main. N1 is a surviving mutation/guard gap; N2 is
-an amendment to the evaluator's F2 contract.
+Evaluated base: `6ca2d69d2292dcb90c9cdd870866fb4f1f570579`, PR #616.
+Read NEEDS-WORK comment #5701417350 and the rev 2.1 kickoff section from freshly
+fetched PerformanceOD origin/main. N3 is a guard gap; the parser is correct.
 
-## Reproduce first
+## Reproduce first at the exact evaluated base
 
-At the evaluated base, in the task's disposable mutation worktree:
+A fresh detached worktree was created at `6ca2d69d` before adding G19.
 
-- N1 without the break: `same-tool-evaluator`.
-- Insert `visibleLine += line.slice(cursor); break;` after `cursor = commentEnd + 3;`:
-  the old gate suite remains 102 pass / 0 fail, but N1 becomes `passing-verdict`.
-- N2 on unchanged code: `passing-verdict`.
-- Restore: N1 again returns `same-tool-evaluator`; parser bytes match exactly.
+- Exact six-line N3 body + Codex (GPT-6) PASS: `same-tool-evaluator`.
+- Replace `} else if (fenceMatch && ` with `}\n      if (fenceMatch && `:
+  the complete old gate suite stays 105 pass / 0 fail, while N3 becomes
+  `passing-verdict` (fail-open).
+- Restore the parser: N3 returns `same-tool-evaluator`; bytes match exactly.
 
-Before changing implementation, adding G16/G17/G18 produced 104 pass / 1 fail
-(G17). All 102 tests from the evaluated head remain; no existing expected
-outcome was changed for rev 2.
+GitHub's render-only `POST /markdown` endpoint, with `mode: gfm`, returned Codex
+in a paragraph and Claude inside `pre/code` for that exact six-line body. The
+returned HTML is recorded in `proof.json`; G19 cites this behavior in its name.
 
-## Change and checks
+## Guard and proof
 
-An active HTML comment closes at the first closing delimiter. Its remaining line
-uses the existing inline span handling, so a final unclosed opener restores
-comment state. That remainder cannot declare, even with no space before Coded-by.
-The active-fence ordering and inline handling are otherwise retained.
-
-From the repository root with locked MCP dependencies installed:
+Only G19 is added to the test suite. All existing tests and expectations remain.
+The parser file is byte-identical to the evaluated base; its git diff is empty.
 
 ```sh
 node --import ./mcp/node_modules/tsx/dist/loader.mjs --test mcp/tests/evaluationVerdict.test.ts mcp/tests/fixturePhiGuard.test.ts
-npm --prefix mcp run build
-node --check .github/scripts/evaluation-verdict.cjs
+git diff 6ca2d69d -- .github/scripts/evaluation-verdict.cjs
 git diff --check
 ```
 
-Results: 106 pass / 0 fail / 0 skip (105 gate + 1 fixture privacy). MCP TypeScript
-build, syntax and whitespace checks exit 0. Marker parsing, the token table,
-trusted-model allowlist, workflow and posting script are byte-identical to the
-evaluated base. No local test stacks were started.
+Results: 107 pass / 0 fail / 0 skip (106 gate + 1 fixture privacy). Parser diff
+and whitespace checks are clean. No local test stacks were started.
 
-## Mutation proof
+With G19 present, the N3 break produces 105 pass / 1 fail, specifically G19.
+Restoring produces 106 pass / 0 fail. All seven rev 1 and all three rev 2 breaks
+were rerun in the disposable worktree, each red then 106/106 green after a
+byte-identical parser restore. The supplemental rev 2 closing-line-declaration
+guard break was rerun too. Exact failing tests and counts are in `proof.json`.
 
-`proof.json` records every failing test name and exact counts. All ten requested
-breaks ran in a separate disposable worktree, with 105/105 green after each
-restore and byte-identical parser restoration. The three added breaks each fail
-exactly their new guard: first span only → G16; ignore closing remainder → G17;
-any opener on the closing line reopens → G18.
-
-The seven rev 1 breaks were also rerun. Removing HTML handling removes both
-active-comment handling and inline handling while retaining fence detection.
-The inline-strip break retains completed comment contents without treating a
-completed opener as unclosed. The comments-before-fences break moves inline
-comment handling before fence processing. The other breaks restore first-word
-coder detection, require standalone closes, remove Sonnet, or trust Sonnet.
-
-A supplemental break deletes the closing-line declaration guard; the strengthened
-no-space suffix case turns red. Its restoration also passes 105/105.
-
-Historical rev 1 proof (including initial 82/82 and red-on-main results, the G4/G8
-companions, CodeQL response and normalized fixture link provenance) is preserved
-in this directory at commit `7d5ea2af`. The two fixtures are unchanged in rev 2.
+The equivalent mutants identified by the evaluator (last closing delimiter and
+last-opener-after-last-closer handling) require no guard under the kickoff.
 
 ## Handoff boundaries
 
-This revision changes only the parser, its tests, and these two proof files.
-No new decision, medical code or FHIR artifact: decisions index and Mandate 14
-ledger updates are N/A. The PerformanceOD contract amendment belongs to Claude.
-CI counts and settled final-head bot status are recorded in the PR after those
-runs finish; the author proof is not an independent evaluation.
+Changes: G19 and these two proof files only. No parser, workflow, token-table,
+posting-script, dependency or fixture changes. No new decision, medical code or
+FHIR artifact: decisions index and Mandate 14 ledger additions are N/A.
+
+Prior rev 2 proof is preserved in this directory at `6ca2d69d`; rev 1 proof is at
+`7d5ea2af`. Final-head CI counts (including live authorization) and settled bot
+status are recorded in the PR after completion. The author posts no evaluation
+marker, applies no override and does not merge.

@@ -1175,3 +1175,10 @@ for (const { id, prBody, evaluator, reason } of [
     assert.equal(decision.passed, reason === "passing-verdict");
   });
 }
+
+test("G19 GitHub GFM renders Codex visible and Claude inside the code block", () => {
+  const prBody = "<!--\n```-->\nCoded-by: Codex\n```\nCoded-by: Claude\n```";
+  const decision = evaluate({ prBody, comments: [comment(marker("Codex (GPT-6)", "PASS"))] });
+  assert.equal(decision.reason, "same-tool-evaluator");
+  assert.equal(decision.passed, false);
+});
