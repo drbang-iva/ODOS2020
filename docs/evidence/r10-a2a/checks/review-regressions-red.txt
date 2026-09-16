@@ -1,0 +1,107 @@
+TAP version 13
+# Subtest: review regression: an audit for a copied marker covers only its actual Observation target
+not ok 1 - review regression: an audit for a copied marker covers only its actual Observation target
+  ---
+  duration_ms: 2.861375
+  type: 'test'
+  location: '<repo-root>/mcp/tests/currentFindingIdentity.test.ts:1:9232'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + []
+    - [
+    -   'Observation/second'
+    - ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'Observation/second'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo-root>/mcp/tests/currentFindingIdentity.test.ts:121:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: review regression: resource search details cannot masquerade as audit lookup failures
+not ok 2 - review regression: resource search details cannot masquerade as audit lookup failures
+  ---
+  duration_ms: 2.808625
+  type: 'test'
+  location: '<repo-root>/mcp/tests/currentFindingReader.test.ts:1:21796'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'refused'
+    - 'missing'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'missing'
+  actual: 'refused'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo-root>/mcp/tests/currentFindingReader.test.ts:295:33)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: review regression: wrong-target audit stays pending and cannot permit marker supersession
+not ok 3 - review regression: wrong-target audit stays pending and cannot permit marker supersession
+  ---
+  duration_ms: 8.225042
+  type: 'test'
+  location: '<repo-root>/mcp/tests/currentFindingWriter.test.ts:1:23535'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'applied'
+    - 'not-attempted'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'not-attempted'
+  actual: 'applied'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo-root>/mcp/tests/currentFindingWriter.test.ts:345:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: review regression: a reassertion tag cannot confirm an audit targeting another Observation
+not ok 4 - review regression: a reassertion tag cannot confirm an audit targeting another Observation
+  ---
+  duration_ms: 1.553584
+  type: 'test'
+  location: '<repo-root>/mcp/tests/currentFindingWriter.test.ts:1:24476'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    true !== false
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo-root>/mcp/tests/currentFindingWriter.test.ts:358:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 188.423416

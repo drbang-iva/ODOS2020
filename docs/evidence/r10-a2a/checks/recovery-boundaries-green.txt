@@ -1,0 +1,220 @@
+TAP version 13
+# Subtest: W11 absent create persists one strict canonical owner, separate operation marker, and self-targeted audit
+ok 1 - W11 absent create persists one strict canonical owner, separate operation marker, and self-targeted audit
+  ---
+  duration_ms: 5.283875
+  type: 'test'
+  ...
+# Subtest: adoption converts legacy GRADE, copies displayed homes, and keeps the resource id
+ok 2 - adoption converts legacy GRADE, copies displayed homes, and keeps the resource id
+  ---
+  duration_ms: 2.432875
+  type: 'test'
+  ...
+# Subtest: W5 materializes only one option, preserving source and sibling, and copies an inferred home
+ok 3 - W5 materializes only one option, preserving source and sibling, and copies an inferred home
+  ---
+  duration_ms: 2.839417
+  type: 'test'
+  ...
+# Subtest: W6 a bare snapshot locator is refused when the addressed key and end state are otherwise valid
+ok 4 - W6 a bare snapshot locator is refused when the addressed key and end state are otherwise valid
+  ---
+  duration_ms: 0.425458
+  type: 'test'
+  ...
+# Subtest: clear then revive keeps one canonical id; an unchanged current state writes nothing
+ok 5 - clear then revive keeps one canonical id; an unchanged current state writes nothing
+  ---
+  duration_ms: 2.362958
+  type: 'test'
+  ...
+# Subtest: W21 reassert writes only its activity-discriminated audit and resolves replay after a lost audit response
+ok 6 - W21 reassert writes only its activity-discriminated audit and resolves replay after a lost audit response
+  ---
+  duration_ms: 0.851542
+  type: 'test'
+  ...
+# Subtest: eye change is two facts; an occupied differing destination conflicts without overwriting it
+ok 7 - eye change is two facts; an occupied differing destination conflicts without overwriting it
+  ---
+  duration_ms: 3.119292
+  type: 'test'
+  ...
+# Subtest: UNKNOWN retirement follows OD destinations and replays via the source
+ok 8 - UNKNOWN retirement follows OD destinations and replays via the source
+  ---
+  duration_ms: 1.601833
+  type: 'test'
+  ...
+# Subtest: UNKNOWN retirement follows OD+OS destinations and replays via the source
+ok 9 - UNKNOWN retirement follows OD+OS destinations and replays via the source
+  ---
+  duration_ms: 2.181333
+  type: 'test'
+  ...
+# Subtest: W22 a destination refusal preserves the unresolved UNKNOWN source, even when retirement was submitted first
+ok 10 - W22 a destination refusal preserves the unresolved UNKNOWN source, even when retirement was submitted first
+  ---
+  duration_ms: 0.629375
+  type: 'test'
+  ...
+# Subtest: duplicates throw 400; missing baselines refuse; incomplete loads attempt no targets
+ok 11 - duplicates throw 400; missing baselines refuse; incomplete loads attempt no targets
+  ---
+  duration_ms: 0.47025
+  type: 'test'
+  ...
+# Subtest: W13 replay requires marker equality and a current-state rehash
+ok 12 - W13 replay requires marker equality and a current-state rehash
+  ---
+  duration_ms: 0.480916
+  type: 'test'
+  ...
+# Subtest: W14 lost second write and failed reread return unconfirmed; unchanged replay resolves both exactly once
+ok 13 - W14 lost second write and failed reread return unconfirmed; unchanged replay resolves both exactly once
+  ---
+  duration_ms: 1.511625
+  type: 'test'
+  ...
+# Subtest: W15 unlink materializes only the addressed option and never attempts a Condition write
+ok 14 - W15 unlink materializes only the addressed option and never attempts a Condition write
+  ---
+  duration_ms: 1.693167
+  type: 'test'
+  ...
+# Subtest: W19 already-applied replay leaves exactly one mutation audit
+ok 15 - W19 already-applied replay leaves exactly one mutation audit
+  ---
+  duration_ms: 0.814833
+  type: 'test'
+  ...
+# Subtest: W20 repair-before-supersede preserves C1's frozen actor and expands self to the carrying record
+ok 16 - W20 repair-before-supersede preserves C1's frozen actor and expands self to the carrying record
+  ---
+  duration_ms: 1.077375
+  type: 'test'
+  ...
+# Subtest: failed prior-audit repair leaves the old marker and content intact
+ok 17 - failed prior-audit repair leaves the old marker and content intact
+  ---
+  duration_ms: 0.740375
+  type: 'test'
+  ...
+# Subtest: W23 conditional-create loser returns conflict and writes no mutation audit
+ok 18 - W23 conditional-create loser returns conflict and writes no mutation audit
+  ---
+  duration_ms: 0.747917
+  type: 'test'
+  ...
+# Subtest: W24 unchanged replay preserves a second-target version conflict
+ok 19 - W24 unchanged replay preserves a second-target version conflict
+  ---
+  duration_ms: 2.286833
+  type: 'test'
+  ...
+# Subtest: W25 reused command id with different content and a fresh baseline owes a distinct audit
+ok 20 - W25 reused command id with different content and a fresh baseline owes a distinct audit
+  ---
+  duration_ms: 0.992625
+  type: 'test'
+  ...
+# Subtest: invalid qualifiers and foreign or missing homes refuse before any write
+ok 21 - invalid qualifiers and foreign or missing homes refuse before any write
+  ---
+  duration_ms: 0.54875
+  type: 'test'
+  ...
+# Subtest: a retired UNKNOWN without this command marker cannot be retired again
+ok 22 - a retired UNKNOWN without this command marker cannot be retired again
+  ---
+  duration_ms: 0.211625
+  type: 'test'
+  ...
+# Subtest: an adoption replay locates its new canonical owner before rechecking the obsolete legacy locator
+ok 23 - an adoption replay locates its new canonical owner before rechecking the obsolete legacy locator
+  ---
+  duration_ms: 0.75975
+  type: 'test'
+  ...
+# Subtest: same key with different property order reuses its operation and audit
+ok 24 - same key with different property order reuses its operation and audit
+  ---
+  duration_ms: 0.508792
+  type: 'test'
+  ...
+# Subtest: absent baseline permits a retired-only legacy record without modifying it
+ok 25 - absent baseline permits a retired-only legacy record without modifying it
+  ---
+  duration_ms: 0.361625
+  type: 'test'
+  ...
+# Subtest: missing baseline is refused even for a matching marker; reassert cannot use an absent baseline
+ok 26 - missing baseline is refused even for a matching marker; reassert cannot use an absent baseline
+  ---
+  duration_ms: 0.534208
+  type: 'test'
+  ...
+# Subtest: canonical key extras are rejected before an invalid identity envelope can be persisted
+ok 27 - canonical key extras are rejected before an invalid identity envelope can be persisted
+  ---
+  duration_ms: 0.254417
+  type: 'test'
+  ...
+# Subtest: extent key order cannot change the persisted digest or duplicate its operation
+ok 28 - extent key order cannot change the persisted digest or duplicate its operation
+  ---
+  duration_ms: 1.19275
+  type: 'test'
+  ...
+# Subtest: a definitive audit refusal remains applied/pending and does not block a different target
+ok 29 - a definitive audit refusal remains applied/pending and does not block a different target
+  ---
+  duration_ms: 0.909125
+  type: 'test'
+  ...
+# Subtest: unchanged is reserved for no audit debt; a new command repairs debt before its planned write
+ok 30 - unchanged is reserved for no audit debt; a new command repairs debt before its planned write
+  ---
+  duration_ms: 0.973917
+  type: 'test'
+  ...
+# Subtest: a definitive reassert audit refusal stops later targets and exposes the known version
+ok 31 - a definitive reassert audit refusal stops later targets and exposes the known version
+  ---
+  duration_ms: 0.446459
+  type: 'test'
+  ...
+# Subtest: lost-response recovery refuses a marker on an owner whose canonical envelope changed
+ok 32 - lost-response recovery refuses a marker on an owner whose canonical envelope changed
+  ---
+  duration_ms: 0.436709
+  type: 'test'
+  ...
+# Subtest: a conditional-create loser includes the winner in its fresh projection
+ok 33 - a conditional-create loser includes the winner in its fresh projection
+  ---
+  duration_ms: 0.690667
+  type: 'test'
+  ...
+# Subtest: review regression: wrong-target audit stays pending and cannot permit marker supersession
+ok 34 - review regression: wrong-target audit stays pending and cannot permit marker supersession
+  ---
+  duration_ms: 1.0865
+  type: 'test'
+  ...
+# Subtest: review regression: a reassertion tag cannot confirm an audit targeting another Observation
+ok 35 - review regression: a reassertion tag cannot confirm an audit targeting another Observation
+  ---
+  duration_ms: 0.639959
+  type: 'test'
+  ...
+1..35
+# tests 35
+# suites 0
+# pass 35
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 206.900208

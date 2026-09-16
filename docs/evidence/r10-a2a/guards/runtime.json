@@ -1,0 +1,23 @@
+{
+  "projectName": "odos-r10-a2a",
+  "baseUrl": "http://127.0.0.1:29023",
+  "image": "medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de",
+  "health": {
+    "ok": true,
+    "version": "5.1.30-9b1bd92",
+    "platform": "linux",
+    "runtime": "v24.18.1",
+    "postgres": true,
+    "redis": true,
+    "redisInstances": {
+      "default": true
+    }
+  },
+  "sourceHead": "1816ac0acf97f5fc6891876459188ac06b6730ce",
+  "containers": [
+    "odos-r10-a2a-test-postgres postgres:16-alpine 127.0.0.1:29024->5432/tcp",
+    "odos-r10-a2a-medplum-1 358ab425b293 5000/tcp, 127.0.0.1:29023->8103/tcp",
+    "odos-r10-a2a-postgres-1 postgres:16-alpine 5432/tcp",
+    "odos-r10-a2a-redis-1 redis:7-alpine 6379/tcp"
+  ]
+}

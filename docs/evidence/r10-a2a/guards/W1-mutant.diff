@@ -1,0 +1,5 @@
+--- <repo-root>/.odos/r10-a2a/W1-original.txt	2026-09-16 09:09:44
++++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 09:09:44
+@@ -148 +148 @@
+-    if (update) saved=await deps.fhir.update<Observation>("Observation",prior!.id!,next,{...WRITE_HEADERS,"If-Match":etag(prior!.meta!.versionId!)});
++    if (update) saved=await deps.fhir.update<Observation>("Observation",prior!.id!,next,{...WRITE_HEADERS});

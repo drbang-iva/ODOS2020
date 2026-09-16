@@ -1,0 +1,28 @@
+{
+  "guard": "W15",
+  "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+  "red": {
+    "exit": 1,
+    "command": "node --import tsx --test --test-name-pattern=W15 tests/currentFindingWriter.test.ts",
+    "summary": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0"
+    ]
+  },
+  "green": {
+    "exit": 0,
+    "command": "node --import tsx --test --test-name-pattern=W15 tests/currentFindingWriter.test.ts",
+    "summary": [
+      "# tests 1",
+      "# pass 1",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0"
+    ]
+  }
+}

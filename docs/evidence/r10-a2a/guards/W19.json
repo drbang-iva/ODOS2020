@@ -1,0 +1,14 @@
+{
+  "guard": "W19",
+  "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+  "red": {
+    "exit": 1,
+    "command": "node --import tsx mcp/scripts/r10-a2a-preflight.mjs writer W19",
+    "summary": []
+  },
+  "green": {
+    "exit": 0,
+    "command": "node --import tsx mcp/scripts/r10-a2a-preflight.mjs writer W19",
+    "summary": []
+  }
+}

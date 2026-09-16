@@ -10,7 +10,7 @@ import { translateRetiredFindingRead } from "./finding-read-compatibility.js";
 import { componentString, observationNegativeAct } from "./finding-section-helpers.js";
 import { isLiveObservation } from "./observation-liveness.js";
 import type { ClinicalFindingDefinition } from "./glaucoma-suspect.js";
-import { classifyFindingObservation, currentFindingIdentifier, eyeSet, findingQualifiers, observationLaterality, SUPPORTS_DIAGNOSIS_URL,
+import { classifyFindingObservation, currentFindingIdentifier, eyeSet, findingQualifiers, observationLaterality, SUPPORTS_DIAGNOSIS_URL, findPendingAudits,
   type CurrentFindingKey, type FindingClassification, type FindingEye } from "./current-finding-identity.js";
 
 export interface EncounterFindingInput {
@@ -19,9 +19,10 @@ export interface EncounterFindingInput {
   definitions: readonly ClinicalFindingDefinition[];
   catalog: readonly AtomicFindingCatalogRow[];
   observationCarried?: Readonly<Record<string, boolean>>;
+  includeAuditState?: boolean;
 }
-export type EncounterFindingState = (EncounterFindingInput & { incomplete: false; observations: Observation[]; conditions: Condition[] }) |
-  { incomplete: true; reason: string };
+export type EncounterFindingState = (EncounterFindingInput & { incomplete: false; observations: Observation[]; conditions: Condition[]; pendingAudits?: Set<string> }) |
+  { incomplete: true; kind: "upstream" | "refused" | "missing" | "foreign-or-unscoped"; reason: string };
 export interface FindingContributor {
   reference: string;
   versionId?: string;
@@ -39,8 +40,14 @@ export interface CurrentFindingFact {
   legacy: boolean;
   contributors: FindingContributor[];
   homes: string[];
+  homeSources: FindingHomeSource[];
+  baseline?: FindingBaseline;
+  auditPending?: boolean;
   effectiveDateTime?: string;
 }
+export interface FindingHomeSource { condition: string; sources: Array<{ kind: "finding-extension" | "condition-evidence" | "inferred"; contributor: { reference: string; versionId?: string } }> }
+export type FindingBaseline = { kind: "canonical"; reference: string; versionId: string } |
+  { kind: "legacy"; sourceReference: string; versionId: string; key: CurrentFindingKey; mode: "adopt" | "materialize" };
 export interface FindingConflict extends Omit<CurrentFindingFact, "presence" | "qualifiers"> {
   presence?: CurrentFindingFact["presence"];
   qualifiers?: CurrentFindingFact["qualifiers"];
@@ -65,7 +72,7 @@ export interface CurrentFindingProjection {
   panels: FindingPanel[];
   definitionViews: FindingDefinitionView[];
   conflicts: FindingConflict[];
-  unresolved: Array<{ reference?: string; reason: string }>;
+  unresolved: Array<{ reference?: string; reason: string; status: "live" | "retired"; baseline?: { kind: "legacy-retire"; sourceReference: string; versionId: string } }>;
 }
 type CompleteState = Extract<EncounterFindingState, { incomplete: false }>;
 interface Assertion {
@@ -82,11 +89,15 @@ interface Assertion {
   snapshotConflict?: boolean;
 }
 interface Snapshot { observation: Observation; definition: ClinicalFindingDefinition; eye: FindingEye; kind: FindingClassification["kind"] }
+class FindingLoadError extends Error {
+  constructor(readonly kind: "refused" | "missing" | "foreign-or-unscoped", message: string) { super(message); }
+}
 
 export async function loadEncounterFindingState(fhir: FhirSearchClient, input: EncounterFindingInput): Promise<EncounterFindingState> {
   try {
     const checked = <T extends Resource>(bundle: Bundle<T>): Bundle<T> => {
-      if (bundle.resourceType !== "Bundle" || bundle.link?.some(l => l.relation === "next" && !l.url)) throw new Error("Malformed search page.");
+      if (bundle.resourceType !== "Bundle" || bundle.link?.some(l => l.relation === "next" && !l.url)) throw new FindingLoadError("refused", "Malformed encounter search page.");
+      if (bundle.entry?.some(e => !e.resource || !e.resource.id)) throw new FindingLoadError("missing", "Encounter search returned a resource without an id.");
       return bundle;
     };
     const client: FhirSearchClient = { baseUrl: fhir.baseUrl, search: fhir.search.bind(fhir),
@@ -102,12 +113,21 @@ export async function loadEncounterFindingState(fhir: FhirSearchClient, input: E
     ]);
     for (const [type, resources] of [["Observation", observations], ["Condition", conditions]] as const) {
       if (resources.some(r => r.resourceType !== type || r.subject?.reference !== input.patientReference || r.encounter?.reference !== input.encounterReference)) {
-        throw new Error(`${type} search returned a resource outside the requested patient/encounter scope.`);
+        throw new FindingLoadError("foreign-or-unscoped", `${type} search returned a resource outside the requested patient/encounter scope.`);
       }
     }
-    return { ...input, incomplete: false, observations, conditions };
+    let pendingAudits: Set<string> | undefined;
+    if (input.includeAuditState) {
+      try { pendingAudits = await findPendingAudits(fhir, observations); }
+      catch { throw new FindingLoadError("refused", "Finding audit state could not be verified."); }
+    }
+    return { ...input, incomplete: false, observations, conditions, ...(pendingAudits ? { pendingAudits } : {}) };
   } catch (error) {
-    return { incomplete: true, reason: error instanceof Error ? error.message : "Encounter search failed." };
+    if (error instanceof FindingLoadError) return { incomplete: true, kind: error.kind, reason: error.message };
+    const httpStatus = (error as { status?: number })?.status;
+    if (httpStatus === 401 || httpStatus === 403) return { incomplete: true, kind: "refused", reason: "Encounter search was refused." };
+    if (httpStatus === 404) return { incomplete: true, kind: "missing", reason: "Encounter search resource is missing." };
+    return { incomplete: true, kind: "upstream", reason: "Encounter search failed." };
   }
 }
 
@@ -119,8 +139,15 @@ export function projectCurrentFindings(state: EncounterFindingState): CurrentFin
   const snapshots = new Map<string, Snapshot[]>();
   const latestSnapshots = new Map<string, Snapshot[]>();
   const panelMap = new Map<string, FindingPanel>();
+  const negativeTimes = new Map<string, string>();
   const passthrough: Observation[] = [];
-  const unresolved = (o: Observation, reason: string) => result.unresolved.push({ ...(o.id ? { reference: `Observation/${o.id}` } : {}), reason });
+  const unresolved = (o: Observation, reason: string) => {
+    const reference = o.id ? `Observation/${o.id}` : undefined;
+    const retire = reason === "UNKNOWN laterality has no eye identity." && reference && o.meta?.versionId && isLiveObservation(o) &&
+      classifyFindingObservation(o, state.definitions, state.catalog, aliases).kind === "legacy-atomic";
+    result.unresolved.push({ ...(reference ? { reference } : {}), reason, status: status(o),
+      ...(retire ? { baseline: { kind: "legacy-retire", sourceReference: reference, versionId: o.meta!.versionId! } as const } : {}) });
+  };
   const panel = (stableKey: string, eye: FindingEye): FindingPanel => {
     const id = panelKey(stableKey, eye);
     if (!panelMap.has(id)) panelMap.set(id, { stableKey, eye, snapshots: [], negativeActs: [], deferred: false });
@@ -141,6 +168,7 @@ export function projectCurrentFindings(state: EncounterFindingState): CurrentFin
       if (!classified.definition || classified.definition.stableKey !== act.definitionStableKey || observationLaterality(observation) !== act.eye) {
         unresolved(observation, "Negative scope does not match its definition/eye."); continue;
       }
+      negativeTimes.set(`Observation/${observation.id}`, time(observation));
       panel(act.definitionStableKey, act.eye).negativeActs.push({ identifier: structuredClone(observation.identifier!.find(i => i.system === "urn:odos:negative-act")!),
         scope: act, exclusions: [...act.exclusions], captureInput: componentString(observation, "NEGATIVE_CAPTURE_INPUT"), actor: act.actorReference, time: act.assertedAt,
         source: contributor(observation, classified.kind, state), status: status(observation) });
@@ -186,16 +214,37 @@ export function projectCurrentFindings(state: EncounterFindingState): CurrentFin
       }
     }
   }
+  const suppressedPanels = new Set<string>();
+  for (const [id, group] of assertions) {
+    for (const assertion of group.filter(a => a.contributor.kind === "legacy-section-snapshot" && a.presence === "present")) {
+      const acts = panelMap.get(panelKey(assertion.key.stableKey, assertion.key.eye))?.negativeActs ?? [];
+      for (const act of acts) {
+        if (act.status !== "live" || !act.scope.optionCodes.includes(assertion.key.optionCode) || act.exclusions.includes(assertion.key.optionCode)) continue;
+        const actTime = negativeTimes.get(act.source.reference)!;
+        if (actTime === time(assertion.observation)) assertion.snapshotConflict = true;
+        else if (actTime > time(assertion.observation)) {
+          group.splice(group.indexOf(assertion), 1);
+          suppressedPanels.add(panelKey(assertion.key.stableKey, assertion.key.eye));
+          break;
+        }
+      }
+    }
+    if (!group.length) assertions.delete(id);
+  }
   const selected = new Map<string, Assertion[]>();
   for (const [id, group] of [...assertions].sort(([a], [b]) => a.localeCompare(b))) {
     const canonical = group.filter(a => a.canonical);
     const live = group.filter(a => !a.canonical && a.status === "live");
     const chosen = (canonical.length ? canonical : live.length ? live : group).sort((a,b) => a.contributor.reference.localeCompare(b.contributor.reference));
     const first = chosen[0];
-    const homes = explicitHomes(chosen, state.conditions);
+    const explicit = explicitHomeSources(chosen, state.conditions);
+    const homeSources = explicit.length || first.canonical ? explicit : inferredHomeSources(chosen.find(a => a.contributor.kind === "legacy-section-snapshot") ?? first, state);
+    const homes = homeSources.map(h => h.condition);
     const contributors = uniqueContributors(chosen.map(a => a.contributor));
     const common = { key: first.key, projectionKey: id, eye: first.key.eye, status: first.status, legacy: !first.canonical, contributors,
-      homes: homes.length || first.canonical ? homes : inferredHomes(chosen.find(a => a.contributor.kind === "legacy-section-snapshot") ?? first, state),
+      homes, homeSources, ...(baselineFor(chosen, latestSnapshots.get(panelKey(first.key.stableKey, first.key.eye))) ?
+        { baseline: baselineFor(chosen, latestSnapshots.get(panelKey(first.key.stableKey, first.key.eye))) } : {}),
+      ...(chosen.some(a => state.pendingAudits?.has(a.contributor.reference)) ? { auditPending: true } : {}),
       effectiveDateTime: contributors.flatMap(c => c.effectiveDateTime ? [c.effectiveDateTime] : []).sort().at(-1) };
     const different = new Set(chosen.map(a => normalized([a.presence, a.qualifiers, a.status]))).size > 1;
     if (canonical.length > 1 || different || chosen.some(a => a.snapshotConflict)) {
@@ -218,7 +267,7 @@ export function projectCurrentFindings(state: EncounterFindingState): CurrentFin
     }
   }
   result.panels = [...panelMap.values()].sort((a,b) => panelKey(a.stableKey,a.eye).localeCompare(panelKey(b.stableKey,b.eye)));
-  buildViews(result, state, selected, latestSnapshots);
+  buildViews(result, state, selected, latestSnapshots, suppressedPanels);
   for (const observation of passthrough) result.definitionViews.push({ ...structuredClone(observation), projectionKey: `passthrough:${observation.id ?? normalized(observation.code)}`,
     contributors: observation.id ? [contributor(observation, "unrelated", state)] : [] });
   result.currentFacts.sort(factOrder); result.conflicts.sort(factOrder);
@@ -256,7 +305,7 @@ function sectionAssertions(snapshot: Snapshot, state: CompleteState, unresolved:
   return assertions;
 }
 
-function buildViews(result: CurrentFindingProjection, state: CompleteState, selected: Map<string, Assertion[]>, latest: Map<string, Snapshot[]>): void {
+function buildViews(result: CurrentFindingProjection, state: CompleteState, selected: Map<string, Assertion[]>, latest: Map<string, Snapshot[]>, suppressedPanels: Set<string>): void {
   const groups = new Map<string, { definition: ClinicalFindingDefinition; eye: FindingEye; facts: CurrentFindingFact[] }>();
   for (const snapshots of latest.values()) {
     const first = snapshots[0]; groups.set(panelKey(first.definition.stableKey,first.eye), { definition: first.definition, eye: first.eye, facts: [] });
@@ -277,7 +326,7 @@ function buildViews(result: CurrentFindingProjection, state: CompleteState, sele
     const source = [...sources.values()].sort((a,b) => time(b).localeCompare(time(a)) || a.id!.localeCompare(b.id!))[0];
     if (!source) continue;
     const removed = result.currentFacts.some(f => f.status === "retired" && panelKey(f.key.stableKey,f.eye) === id);
-    const translated = sources.size !== 1 || !snapshots.length || removed || factAssertions.some(a => a.translated || a.contributor.kind !== "legacy-section-snapshot");
+    const translated = suppressedPanels.has(id) || sources.size !== 1 || !snapshots.length || removed || factAssertions.some(a => a.translated || a.contributor.kind !== "legacy-section-snapshot");
     const view: FindingDefinitionView = { ...structuredClone(source), projectionKey: `definition:${id}`, contributors: uniqueContributors(attributions) };
     if (translated) {
       delete view.id; delete view.identifier; delete view.valueBoolean;
@@ -310,16 +359,19 @@ function contributor(observation: Observation, kind: FindingClassification["kind
   return { reference, ...(observation.meta?.versionId ? {versionId:observation.meta.versionId}:{}), ...(observation.effectiveDateTime ? {effectiveDateTime:observation.effectiveDateTime}:{}), kind,
     ...(Object.hasOwn(state.observationCarried ?? {},reference) ? {carried:state.observationCarried![reference]}:{}) };
 }
-function explicitHomes(assertions: Assertion[], conditions: Condition[]): string[] {
+function explicitHomeSources(assertions: Assertion[], conditions: Condition[]): FindingHomeSource[] {
   const references = new Set(assertions.map(a => a.contributor.reference));
-  return [...new Set([
-    ...conditions.flatMap(c => c.id && c.evidence?.some(e => e.detail?.some(d => d.reference && references.has(d.reference))) ? [`Condition/${c.id}`] : []),
-    ...assertions.flatMap(a => a.observation.extension?.flatMap(e => e.url === SUPPORTS_DIAGNOSIS_URL && /^Condition\/[A-Za-z0-9.-]+$/.test(e.valueReference?.reference ?? "") ? [e.valueReference!.reference!] : []) ?? []),
-  ])].sort();
+  const sources: Array<{condition:string; kind:FindingHomeSource["sources"][number]["kind"]; contributor:FindingHomeSource["sources"][number]["contributor"]}> = [
+    ...(assertions[0].canonical ? [] : conditions).flatMap(c => c.id && c.evidence?.some(e => e.detail?.some(d => d.reference && references.has(d.reference))) ?
+      [{condition:`Condition/${c.id}`,kind:"condition-evidence" as const,contributor:{reference:`Condition/${c.id}`,...(c.meta?.versionId ? {versionId:c.meta.versionId}:{})}}] : []),
+    ...assertions.flatMap(a => a.observation.extension?.flatMap(e => e.url === SUPPORTS_DIAGNOSIS_URL && /^Condition\/[A-Za-z0-9.-]+$/.test(e.valueReference?.reference ?? "") ?
+      [{condition:e.valueReference!.reference!,kind:"finding-extension" as const,contributor:{reference:a.contributor.reference,...(a.contributor.versionId ? {versionId:a.contributor.versionId}:{})}}] : []) ?? []),
+  ];
+  return groupHomeSources(sources);
 }
-function inferredHomes(assertion: Assertion, state: CompleteState): string[] {
+function inferredHomeSources(assertion: Assertion, state: CompleteState): FindingHomeSource[] {
   if (assertion.contributor.kind !== "legacy-section-snapshot") return [];
-  return [...new Set(state.conditions.flatMap(c => {
+  return groupHomeSources(state.conditions.flatMap(c => {
     if (!c.id || !hasConditionCategory(c, "encounter-diagnosis")) return [];
     const verification = c.verificationStatus?.coding?.find(v => v.system === FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM)?.code;
     if (!["confirmed", "provisional", "differential", "unconfirmed"].includes(verification ?? "")) return [];
@@ -328,8 +380,29 @@ function inferredHomes(assertion: Assertion, state: CompleteState): string[] {
     const recorded = c.extension?.find(e => e.url === ODOS_EXTENSION_URLS.eyeLaterality)?.valueCodeableConcept?.coding?.find(v => v.code)?.code ??
       c.bodySite?.flatMap(b => [...(b.coding ?? []).flatMap(v => v.code ? [v.code] : []), ...(b.text ? [b.text] : [])]).find(v => ["OD","OS","OU","right","left","bilateral"].includes(v)) ?? value?.split("::").at(-1);
     const laterality = recorded === "right" ? "OD" : recorded === "left" ? "OS" : recorded === "bilateral" ? "OU" : recorded ?? "UNKNOWN";
-    return keyMatch && eyeSet(laterality).includes(assertion.key.eye) ? [`Condition/${c.id}`] : [];
-  }))].sort();
+    return keyMatch && eyeSet(laterality).includes(assertion.key.eye) ? [{condition:`Condition/${c.id}`,kind:"inferred" as const,
+      contributor:{reference:`Condition/${c.id}`,...(c.meta?.versionId ? {versionId:c.meta.versionId}:{})}}] : [];
+  }));
+}
+function groupHomeSources(sources: Array<{condition:string;kind:FindingHomeSource["sources"][number]["kind"];contributor:FindingHomeSource["sources"][number]["contributor"]}>): FindingHomeSource[] {
+  const grouped = new Map<string, FindingHomeSource["sources"]>();
+  for (const {condition,kind,contributor} of sources) {
+    const list=grouped.get(condition) ?? [];
+    if (!list.some(s => s.kind===kind && s.contributor.reference===contributor.reference && s.contributor.versionId===contributor.versionId)) list.push({kind,contributor});
+    grouped.set(condition,list);
+  }
+  return [...grouped].sort(([a],[b])=>a.localeCompare(b)).map(([condition,entries])=>({condition,
+    sources:entries.sort((a,b)=>a.kind.localeCompare(b.kind)||a.contributor.reference.localeCompare(b.contributor.reference))}));
+}
+function baselineFor(assertions: Assertion[], latest?: Snapshot[]): FindingBaseline | undefined {
+  const first=assertions[0];
+  if (first.canonical) return first.contributor.versionId ? {kind:"canonical",reference:first.contributor.reference,versionId:first.contributor.versionId}:undefined;
+  const atomic=assertions.filter(a => a.contributor.kind==="legacy-atomic" && a.status==="live" && observationLaterality(a.observation)===first.key.eye);
+  if (atomic.length===1 && atomic[0].contributor.versionId) return {kind:"legacy",sourceReference:atomic[0].contributor.reference,
+    versionId:atomic[0].contributor.versionId,key:first.key,mode:"adopt"};
+  const source=latest?.find(s=>s.observation.meta?.versionId)?.observation ?? assertions.find(a => a.contributor.kind==="legacy-atomic" &&
+    observationLaterality(a.observation)==="OU" && a.contributor.versionId)?.observation;
+  return source?.id && source.meta?.versionId ? {kind:"legacy",sourceReference:`Observation/${source.id}`,versionId:source.meta.versionId,key:first.key,mode:"materialize"}:undefined;
 }
 function uniqueContributors(contributors: FindingContributor[]): FindingContributor[] {
   return [...new Map(contributors.map(c => [c.reference,c])).values()].sort((a,b)=>a.reference.localeCompare(b.reference));

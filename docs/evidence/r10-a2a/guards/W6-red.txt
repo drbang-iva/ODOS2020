@@ -1,0 +1,34 @@
+TAP version 13
+# Subtest: W6 a bare snapshot locator is refused when the addressed key and end state are otherwise valid
+not ok 1 - W6 a bare snapshot locator is refused when the addressed key and end state are otherwise valid
+  ---
+  duration_ms: 6.230458
+  type: 'test'
+  location: '<repo-root>/mcp/tests/currentFindingWriter.test.ts:1:4849'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'applied'
+    - 'refused'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'refused'
+  actual: 'applied'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo-root>/mcp/tests/currentFindingWriter.test.ts:62:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 176.59575

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { currentFindingIdentifier, parseCurrentFindingEnvelope, resolveCatalogRow, classifyFindingObservation, eyeSet, findingQualifiers } from "../src/clinical-graph/current-finding-identity.js";
+import { currentFindingIdentifier, parseCurrentFindingEnvelope, resolveCatalogRow, classifyFindingObservation, eyeSet, findingQualifiers, parseFindingOperation, findingAuditKey, findPendingAudits } from "../src/clinical-graph/current-finding-identity.js";
 import { buildFindingReadAliases } from "../src/clinical-graph/finding-read-aliases.js";
 import { observationNegativeAct } from "../src/clinical-graph/finding-section-helpers.js";
 import { customFieldEntries } from "../src/clinical-graph/custom-fields.js";
@@ -80,4 +80,43 @@ test("compiled ocular structure field identities and atomic samples are pinned",
     atomicIds: catalog.filter(r => r.findingDefinitionKey === d.stableKey).slice(0, 3).map(r => r.atomicFindingId) }));
   const pin = JSON.parse(readFileSync(new URL("./fixtures/r10/field-identities.json", import.meta.url), "utf8"));
   assert.deepEqual(actual, pin);
+});
+test("operation marker validates audit envelope and hashes exact digest-keyed identity", () => {
+  const marker={commandId:"cmd-1",target:"finding:one",digest:"digest-1",audit:{kind:"mutation",actor:"Practitioner/test",recorded:"2026-09-15T13:00:00.000Z",activity:"UPDATE",targetReferences:["self","Observation/old"]}};
+  const observation={...atomic(),component:[comp("R10_OPERATION",JSON.stringify(marker))]};
+  assert.deepEqual(parseFindingOperation(observation),marker);
+  assert.equal(findingAuditKey("cmd-1","finding:one","mutation","digest-1"),createHash("sha256").update("cmd-1|finding:one|mutation|digest-1").digest("hex"));
+  assert.notEqual(findingAuditKey("cmd-1","finding:one","mutation","digest-1"),findingAuditKey("cmd-1","finding:one","reassertion","digest-1"));
+  assert.equal(parseFindingOperation(atomic()),undefined);
+  for(const bad of ["{",JSON.stringify({...marker,digest:""}),JSON.stringify({...marker,audit:{...marker.audit,activity:"DELETE"}})])
+    assert.throws(()=>parseFindingOperation({...observation,component:[comp("R10_OPERATION",bad)]}),/operation/i);
+});
+test("pending audit lookup uses one comma-OR tag search, all pages, and fails closed", async () => {
+  const marker=(id:string)=>({...atomic(id),component:[comp("R10_OPERATION",JSON.stringify({commandId:id,target:`finding:${id}`,digest:`digest-${id}`,
+    audit:{kind:"mutation",actor:"Practitioner/test",recorded:"2026-09-15T13:00:00.000Z",activity:"CREATE",targetReferences:["self"]}}))]});
+  const a=marker("one"),b=marker("two");const seen:Record<string,string>[]=[];
+  const expectedA=findingAuditKey("one","finding:one","mutation","digest-one");
+  const expectedB=findingAuditKey("two","finding:two","mutation","digest-two");
+  const bundle=(rows:unknown[],next?:string)=>({resourceType:"Bundle",type:"searchset",entry:rows.map(resource=>({resource})),...(next?{link:[{relation:"next",url:next}]}:{})});
+  const client={baseUrl:"http://localhost:8103/",search:async(_type:string,params:Record<string,string>)=>{seen.push(params);return bundle([],"/fhir/R4/Provenance?_page=2")},
+    searchUrl:async()=>bundle([{resourceType:"Provenance",id:"audit-one",target:[{reference:"Observation/one"}],meta:{tag:[{system:"urn:odos:finding-operation:v1",code:expectedA}]}}])};
+  assert.deepEqual([...await findPendingAudits(client as any,[a,b])],["Observation/two"]);
+  assert.equal(seen.length,1);
+  assert.equal(seen[0]._tag?.split(",").length,2);
+  assert.match(seen[0]._tag, new RegExp(expectedA));assert.match(seen[0]._tag,new RegExp(expectedB));
+  assert.deepEqual([...await findPendingAudits(client as any,[atomic()])],[]);
+  assert.equal(seen.length,1);
+  await assert.rejects(()=>findPendingAudits({...client,searchUrl:async()=>bundle([{resourceType:"Observation",id:"wrong"}])} as any,[a]),/audit|Provenance|resource/i);
+  await assert.rejects(()=>findPendingAudits({...client,searchUrl:async()=>{throw new Error("failed")}} as any,[a]),/failed/);
+});
+
+test("review regression: an audit for a copied marker covers only its actual Observation target", async () => {
+  const operation={commandId:"copied-command",target:"finding:copied",digest:"copied-digest",
+    audit:{kind:"mutation",actor:"Practitioner/test",recorded:"2026-09-15T13:00:00.000Z",activity:"CREATE",targetReferences:["self"]}};
+  const first={...atomic("first"),component:[comp("R10_OPERATION",JSON.stringify(operation))]};
+  const second={...first,id:"second"};
+  const key=findingAuditKey(operation.commandId,operation.target,"mutation",operation.digest);
+  const client={baseUrl:"http://localhost:8103/",search:async()=>({resourceType:"Bundle",type:"searchset",entry:[{resource:{
+    resourceType:"Provenance",id:"audit-first",target:[{reference:"Observation/first"}],meta:{tag:[{system:"urn:odos:finding-operation:v1",code:key}]}}}]})};
+  assert.deepEqual([...await findPendingAudits(client as any,[first,second])],["Observation/second"]);
 });

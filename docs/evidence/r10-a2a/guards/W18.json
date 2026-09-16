@@ -1,0 +1,28 @@
+{
+  "guard": "W18",
+  "changedFile": "mcp/src/clinical-graph/current-finding-reader.ts",
+  "red": {
+    "exit": 1,
+    "command": "node --import tsx --test --test-name-pattern=canonical homes tests/currentFindingReader.test.ts",
+    "summary": [
+      "# tests 2",
+      "# pass 1",
+      "# fail 1",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0"
+    ]
+  },
+  "green": {
+    "exit": 0,
+    "command": "node --import tsx --test --test-name-pattern=canonical homes tests/currentFindingReader.test.ts",
+    "summary": [
+      "# tests 2",
+      "# pass 2",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0"
+    ]
+  }
+}

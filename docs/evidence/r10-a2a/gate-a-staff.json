@@ -1,0 +1,18 @@
+{
+  "code": "d0c65b5d003e3b86991683c964c1a9d000cd878ecdc220fc10911da1f720a232",
+  "concurrentStatuses": [
+    201,
+    200
+  ],
+  "concurrentIds": [
+    "07db7703-4f1a-41c4-b481-659578209ef0",
+    "07db7703-4f1a-41c4-b481-659578209ef0"
+  ],
+  "thirdStatus": 200,
+  "thirdCreated": false,
+  "thirdId": "07db7703-4f1a-41c4-b481-659578209ef0",
+  "persistedCount": 1,
+  "persistedIds": [
+    "07db7703-4f1a-41c4-b481-659578209ef0"
+  ]
+}

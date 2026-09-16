@@ -1,0 +1,5 @@
+--- <repo-root>/.odos/r10-a2a/W21-original.txt	2026-09-16 09:09:51
++++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 09:09:51
+@@ -94 +94 @@
+-  if (target.kind==="reassert") return executeReassert(deps,command,target,state);
++  if (target.kind==="reassert") return {status:"unchanged",target:id};

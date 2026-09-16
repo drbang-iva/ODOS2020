@@ -1,0 +1,41 @@
+TAP version 13
+# Subtest: W14 lost second write and failed reread return unconfirmed; unchanged replay resolves both exactly once
+not ok 1 - W14 lost second write and failed reread return unconfirmed; unchanged replay resolves both exactly once
+  ---
+  duration_ms: 7.412833
+  type: 'test'
+  location: '<repo-root>/mcp/tests/currentFindingWriter.test.ts:1:10583'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+        'applied',
+    +   'applied'
+    -   'unconfirmed'
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'applied'
+    1: 'unconfirmed'
+  actual:
+    0: 'applied'
+    1: 'applied'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo-root>/mcp/tests/currentFindingWriter.test.ts:151:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 177.337667

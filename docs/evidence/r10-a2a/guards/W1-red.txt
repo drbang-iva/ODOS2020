@@ -1,0 +1,6 @@
+{"role":"provider","login":"r10-a2a-provider@example.invalid","policyId":"b809c9cc-a14e-462a-b150-9405f6796494","probe":"W1","status":"FAIL","firstEvent":1,"lastEvent":15,"error":"Expected values to be strictly equal:\n+ actual - expected\n\n+ 'applied'\n- 'conflict'\n"}
+Expected values to be strictly equal:
++ actual - expected
+
++ 'applied'
+- 'conflict'

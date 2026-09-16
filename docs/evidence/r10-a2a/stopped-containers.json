@@ -1,0 +1,32 @@
+{
+  "command": "docker ps -q --filter \"name=^odos-r10-a2a-\" | xargs -r docker stop",
+  "recordedAt": "2026-09-16T13:12:15.154814+00:00",
+  "stopped": [
+    {
+      "name": "odos-r10-a2a-test-postgres",
+      "id": "735bc2e83414",
+      "status": "exited",
+      "finishedAt": "2026-09-16T13:12:14.904175667Z"
+    },
+    {
+      "name": "odos-r10-a2a-medplum-1",
+      "id": "4ba131514404",
+      "status": "exited",
+      "finishedAt": "2026-09-16T13:12:15.003268329Z"
+    },
+    {
+      "name": "odos-r10-a2a-postgres-1",
+      "id": "eed6effadc6e",
+      "status": "exited",
+      "finishedAt": "2026-09-16T13:12:14.918597257Z"
+    },
+    {
+      "name": "odos-r10-a2a-redis-1",
+      "id": "b677093be55f",
+      "status": "exited",
+      "finishedAt": "2026-09-16T13:12:14.979360763Z"
+    }
+  ],
+  "retained": true,
+  "remainingRunning": 0
+}

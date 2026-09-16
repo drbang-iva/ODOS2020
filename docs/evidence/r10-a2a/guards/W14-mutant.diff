@@ -1,0 +1,5 @@
+--- <repo-root>/.odos/r10-a2a/W14-original.txt	2026-09-16 09:09:47
++++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 09:09:47
+@@ -357 +357 @@
+-  } catch { return {status:"unconfirmed",target:id,reference:prior?.id?`Observation/${prior.id}`:undefined,
++  } catch { return {status:"applied",target:id,reference:prior?.id?`Observation/${prior.id}`:undefined,

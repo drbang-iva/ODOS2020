@@ -1,0 +1,6 @@
+--- <repo-root>/.odos/r10-a2a/W11-original.txt	2026-09-16 09:09:46
++++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 09:09:46
+@@ -185,2 +185 @@
+-      ...qualifiers,{code:odosConcept("R10_CURRENT_META"),valueString:JSON.stringify(key)},
+-      {code:odosConcept("R10_OPERATION"),valueString:JSON.stringify(operation)}] };
++      ...qualifiers,{code:odosConcept("R10_CURRENT_META"),valueString:JSON.stringify({...key,operation})}] };

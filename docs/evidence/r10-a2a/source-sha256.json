@@ -1,0 +1,17 @@
+{
+  "codeHead": "1816ac0acf97f5fc6891876459188ac06b6730ce",
+  "base": "87ca9f1d10c63a4796068c0a8d8cbda88fdf968c",
+  "files": {
+    "mcp/scripts/r10-a2a-preflight.mjs": "2cfa555aea8a53ae2fe9c26304e17bb1524cbaf742cc05449538bfbddae8c94d",
+    "mcp/src/authz/roles.ts": "f8c8c2552fcd4d5a8869dca783e440c48c31fab454f9c30df38ec55760284967",
+    "mcp/src/clinical-graph/current-finding-identity.ts": "2422b35820f5955c4c71d6f476e058157b8a9f7a5e4feb901a8f88b3f5bff6c2",
+    "mcp/src/clinical-graph/current-finding-reader.ts": "03720810194f7024ad78e44f2d48d26e34a56ec1d7a5eead4d64e4cecf60d334",
+    "mcp/src/clinical-graph/current-finding-writer.ts": "aa3d20a8781fb96d9efd2e359ab3a62d44b99aa1ef72eb3911c58f54644b6967",
+    "mcp/tests/currentFindingIdentity.test.ts": "ffea08887d5d2481dec223a20b84d0b77c8006c3274c0c7a4fcd0ce64b84858f",
+    "mcp/tests/currentFindingReader.test.ts": "806e3f0c991cf63579ddd9859309bf90619ba2add2479c719ba3de4b2f65c2a3",
+    "mcp/tests/currentFindingWriter.test.ts": "25e12ba2d3267f066d4f61ca9fcf38191d53efd58efff640e664541f94c8ac05",
+    "mcp/tests/fixtures/r10/parity-divergences.json": "38a1cbbfc325394580d356b80c549c05e717a389409f5ec5096e80afa7a59d76",
+    "mcp/tests/fixtures/r10/premise-replay.ts": "d6db42f06443dae664e7420b95c1188d2903039b0963d9ff6bdee1f03d8ae209",
+    "mcp/tests/fixtures/r10/writer-harness.ts": "0263550cfc748e2305e1fd4422764693384fc07cbc940a2ff813f26484ee4eba"
+  }
+}

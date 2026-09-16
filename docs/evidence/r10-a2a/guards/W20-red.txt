@@ -1,0 +1,4 @@
+{"role":"provider","login":"r10-a2a-provider@example.invalid","policyId":"b809c9cc-a14e-462a-b150-9405f6796494","probe":"W20","status":"FAIL","firstEvent":1,"lastEvent":16,"error":"Expected values to be strictly equal:\n\n0 !== 1\n"}
+Expected values to be strictly equal:
+
+0 !== 1
