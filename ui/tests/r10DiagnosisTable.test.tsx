@@ -124,3 +124,18 @@ test("W64 conflict row replaces offered and choose-presence labels",()=>{
  const {view}=table(payload({findings:[row("OD",{kind:"conflict",status:"conflict",presence:undefined,editable:false,readOnlyReason:"conflict"})]}));
  try{const rendered=JSON.stringify(view.toJSON());assert.match(rendered,/Conflicting records/);assert.doesNotMatch(rendered,/Offered|Choose presence/);}finally{view.unmount();}
 });
+
+test("V13 tray shows only candidates supported by that finding row",()=>{
+ const selected:any[]=[];const first=row("OD",{homes:[]});const other=row("OD",{atomicFindingId:"lens::finding::other",rowKey:"other:OD",display:"Other finding",homes:[],contributors:first.contributors});
+ const support=(r:EncounterFindingRow)=>({rowKey:r.rowKey,key:r.key!,baseline:r.baseline as any});
+ const candidate=(diagnosisKey:string,display:string,supportingFacts?:any[])=>({diagnosisKey,display,codingStatus:"provisional" as const,priority:false,source:"mapping" as const,...(supportingFacts?{supportingFacts}:{})});
+ const suggestions={projection:{findingInstanceId:"projection",contributors:first.contributors,candidates:[candidate("a","Supported A",[support(first)]),candidate("b","Supported B",[support(other)]),candidate("numeric","Unrelated numeric")]}};
+ const view=create(<UnassignedFindingsTray rows={[first,other]} visitDiagnoses={[]} patientReference="Patient/p" disabled={false} suggestionsByFinding={suggestions} onSuggest={(candidate,id)=>selected.push([candidate,id])} onMutate={()=>undefined}/>);
+ try{
+  const groups=view.root.findAllByProps({className:"odos-unassigned-finding"});assert.equal(groups.length,2);
+  for(const [index,label] of ["Supported A","Supported B"].entries()){
+   const buttons=groups[index].findAllByProps({className:"odos-unassigned-finding-suggestion"});assert.equal(buttons.length,1);assert.equal(buttons[0].props["aria-label"],`Add suggested diagnosis ${label}`);act(()=>buttons[0].props.onClick());
+  }
+  assert.deepEqual(selected.map(([candidate,id])=>[candidate.diagnosisKey,id]),[["a","projection"],["b","projection"]]);
+ }finally{view.unmount();}
+});

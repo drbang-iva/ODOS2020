@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W58 search on carried live absent fact asserts present
 not ok 1 - W58 search on carried live absent fact asserts present
   ---
-  duration_ms: 8.194375
+  duration_ms: 8.11975
   type: 'test'
   location: '<repo>/ui/tests/r10DiagnosisTable.test.tsx:1:12534'
   failureType: 'testCodeFailure'
@@ -31,4 +31,4 @@ not ok 1 - W58 search on carried live absent fact asserts present
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 199.765584
+# duration_ms 191.52325

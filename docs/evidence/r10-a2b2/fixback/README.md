@@ -6,7 +6,7 @@ Author: Codex GPT-6, high effort. NOT EVALUATED; HELD OPEN. Base reviewed head: 
 
 F1: Apply kept choice derives the atomic finding from the previous target keys, then rebuilds eye-change from its current live fact rows in searchIndex, retaining eyes.to. It uses fresh baselines and current source qualifiers. Builder errors render as the finding message. F10: conflict rows replace Offered and Choose presence with Conflicting records. F2–F9 add tests only; their production behavior is unchanged.
 
-Only four screen/test files changed: DiagnosisWorkspace.tsx, DiagnosisFindingsTable.tsx, r10DiagnosisWorkspace.test.tsx and r10DiagnosisTable.test.tsx. All evidence is under docs/evidence/r10-a2b2/. No MCP, picker, Assessment, or four section-caller edits. No existing assertion changed or removed.
+Five screen/test files changed: DiagnosisWorkspace.tsx, DiagnosisFindingsTable.tsx, r10DiagnosisWorkspace.test.tsx, r10DiagnosisTable.test.tsx, and diagnosisWorkspace.test.tsx (two fixture-only support additions). All evidence is under docs/evidence/r10-a2b2/. No MCP, picker, Assessment, or four section-caller edits. No existing assertion changed or removed.
 
 ## Guards
 
@@ -27,11 +27,11 @@ The runner applies the evaluator's E1/E2/E3/E4/E5/E6/E8/E9 replacements verbatim
 
 W55 has three real-workspace cases: 409 destination-differs, 400 invalid, and a genuinely incompatible current two-eye state that must display the builder reason. The first two check new commandId, kept from/to, fresh destination baseline and current source grade; all check zero unhandled rejections. W62 exercises both signed and conflict tray rows.
 
-Commands: `python3 docs/evidence/r10-a2b2/fixback/run-guards.py`; each subprocess runs from ui/ with `node --import tsx --test --test-name-pattern=Wnn tests/<suite>.test.tsx`. See counts.json and individual Wnn-red/green.tap files. Focused suites: workspace 19/19, table 21/21. Other affected counts are in affected-counts.json.
+Commands: `python3 docs/evidence/r10-a2b2/fixback/run-guards.py`; each subprocess runs from ui/ with `node --import tsx --test --test-name-pattern=Wnn tests/<suite>.test.tsx`. See counts.json and individual Wnn-red/green.tap files. Focused suites: workspace 19/19, table 22/22. Other affected counts are in affected-counts.json.
 
 ## Checks and limitations
 
-Full UI: **1,679 total, 1,675 pass, 0 fail, 0 skip, 4 A3 TODO** (full-ui-counts.txt). UI build exit 0 (existing large-chunk warning), preflight 0 warnings/0 hard blocks, diff check clean. A3 gate exit 1 expected: T1–T22 open, including the UI slots. MCP/live suites were NOT rerun: no MCP file changed. Earlier MCP/live counts belong to 9f58d5fc, not this fixback head.
+Full UI: **1,680 total, 1,676 pass, 0 fail, 0 skip, 4 A3 TODO** (full-ui-counts.txt). UI build exit 0 (existing large-chunk warning), preflight 0 warnings/0 hard blocks, diff check clean. A3 gate exit 1 expected: T1–T22 open, including the UI slots. MCP/live suites were NOT rerun: no MCP file changed. Earlier MCP/live counts belong to 9f58d5fc, not this fixback head.
 
 Both inherited CodeRabbit MCP threads remain OPEN under the operator/evaluator ruling: checker symlink containment and T17 conditionReference are valid A3 release blockers. Replies record that disposition. CodeQL's 128 missing-rate-limit alerts were independently ruled pre-existing on main c742b2e4; no dismissals or scanner changes.
 
@@ -42,3 +42,9 @@ conflict-before.png uses an isolated source snapshot of 9f58d5fc; conflict-after
 No Docker container started in this fixback. The prior task container odos-r10-a2b2-postgres-1 remains stopped, not removed. Independent Opus re-evaluation is required at the final head; this is author verification only.
 
 Final pre-push refresh: origin/main remains c742b2e4b543e0706b24f66aec6883a82f0d18a3. No rebase needed. Forbidden-file and MCP diffs are empty.
+
+## PR-Agent follow-up: candidate-to-row association (V13 / W-d / W-e)
+
+PR-Agent identified the contributor fallback and collection-wide rendering as allowing unrelated candidates beneath a finding row. The tray now filters each candidate by supportingFacts rowKey, preserving endpoint findingInstanceId and ordering. The tray contains fact rows; unsupported numeric/measurement picks remain on their unchanged legacy section/picker path. A new real-tray test supplies separate supports plus an unrelated no-support numeric candidate. Restoring the old association/rendering yields 0 pass/1 fail; current filter yields 1 pass/0 fail (V13-tray-red/green.tap). Two existing suggestion fixtures now include their canonical support identity; all their assertions are unchanged. Three affected suites together: 94/94. W55–W64 rerun red/green with unchanged counts.
+
+The F10 screenshot pair predates this tray-only adjustment; its displayed FindingRow code is unchanged.

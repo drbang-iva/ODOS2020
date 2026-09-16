@@ -39,3 +39,5 @@ Exact evaluator mutations and executable runner: [fixback/README.md](fixback/REA
 | W62 | 0 pass / 2 fail | 2 pass / 0 fail |
 | W63 | 0 pass / 1 fail | 1 pass / 0 fail |
 | W64 | 0 pass / 1 fail | 1 pass / 0 fail |
+
+PR-Agent V13 / W-d / W-e support association guard: old tray selection/rendering **0 pass / 1 fail**, restored **1 pass / 0 fail**; fixback/V13-tray-red.tap and V13-tray-green.tap.

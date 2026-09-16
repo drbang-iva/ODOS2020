@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W64 conflict row replaces offered and choose-presence labels
 ok 1 - W64 conflict row replaces offered and choose-presence labels
   ---
-  duration_ms: 8.978125
+  duration_ms: 9.239333
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W64 conflict row replaces offered and choose-presence labels
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 207.504791
+# duration_ms 196.562667
