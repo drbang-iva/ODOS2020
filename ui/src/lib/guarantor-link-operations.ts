@@ -84,3 +84,7 @@ export const createNewGuarantor = (body: NewGuarantor) => screenRequest<{personI
 export const draftGuarantorOperation = (body: GuarantorDraftInput) => screenRequest<GuarantorDraft>("/link-operations/draft",body);
 export const createGuarantorOperation = (body: GuarantorCreateInput) => screenRequest<GuarantorLinkOperation>("/link-operations",body);
 export const guarantorOperationHistory = (id: string) => screenRequest<GuarantorLinkOperation[]>(`/link-operations?${new URLSearchParams({relatedPersonId:id})}`);
+
+export interface UnusedGuarantorCard extends GuarantorSearchCard { lastUpdated: string }
+export const listUnusedGuarantors = () => screenRequest<UnusedGuarantorCard[]>("/unused");
+export const discardGuarantor = (personId: string, body: { reason: string; expectedVersion: string }) => screenRequest<{ personId: string; versionId: string }>(`/${encodeURIComponent(personId)}/discard`, body);

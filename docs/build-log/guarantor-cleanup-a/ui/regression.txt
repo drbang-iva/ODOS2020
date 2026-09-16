@@ -1,0 +1,498 @@
+TAP version 13
+# Subtest: A14/B4: only missing ownership offers Attach and a failed attach is explained
+ok 1 - A14/B4: only missing ownership offers Attach and a failed attach is explained
+  ---
+  duration_ms: 29.270667
+  type: 'test'
+  ...
+# Subtest: A14: ambiguous ownership never offers Attach
+ok 2 - A14: ambiguous ownership never offers Attach
+  ---
+  duration_ms: 1.624583
+  type: 'test'
+  ...
+# Subtest: B4: a successful later attach clears an older failed-attach explanation
+ok 3 - B4: a successful later attach clears an older failed-attach explanation
+  ---
+  duration_ms: 2.423334
+  type: 'test'
+  ...
+# Subtest: A3: an attach-pending child renders pending without a source Person
+ok 4 - A3: an attach-pending child renders pending without a source Person
+  ---
+  duration_ms: 1.353417
+  type: 'test'
+  ...
+# Subtest: B4: attach history can be undone through the shipped correction route
+ok 5 - B4: attach history can be undone through the shipped correction route
+  ---
+  duration_ms: 3.153417
+  type: 'test'
+  ...
+# Subtest: L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+ok 6 - L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+  ---
+  duration_ms: 28.228375
+  type: 'test'
+  ...
+# Subtest: S7: a claim on another linked child makes the guarantor pending
+ok 7 - S7: a claim on another linked child makes the guarantor pending
+  ---
+  duration_ms: 0.676291
+  type: 'test'
+  ...
+# Subtest: S7: inert, missing, and copied claims do not suppress ordinary classification
+ok 8 - S7: inert, missing, and copied claims do not suppress ordinary classification
+  ---
+  duration_ms: 1.88125
+  type: 'test'
+  ...
+# Subtest: S7: unreadable operation status remains unknown and does not offer editing
+ok 9 - S7: unreadable operation status remains unknown and does not offer editing
+  ---
+  duration_ms: 1.406625
+  type: 'test'
+  ...
+# Subtest: S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
+ok 10 - S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
+  ---
+  duration_ms: 2.7285
+  type: 'test'
+  ...
+# Subtest: L4 S7: Repair sees a claim in its fresh read and submits no child PUT
+ok 11 - L4 S7: Repair sees a claim in its fresh read and submits no child PUT
+  ---
+  duration_ms: 1.955334
+  type: 'test'
+  ...
+# Subtest: S7: Save fresh-checks claims after the Person save and stops every remaining child
+ok 12 - S7: Save fresh-checks claims after the Person save and stops every remaining child
+  ---
+  duration_ms: 1.73025
+  type: 'test'
+  ...
+# Subtest: S7: Save keeps the loaded child version after its fresh claim-only read
+ok 13 - S7: Save keeps the loaded child version after its fresh claim-only read
+  ---
+  duration_ms: 2.571375
+  type: 'test'
+  ...
+# Subtest: S7: Save checks each child and reloads pending after a late claim
+ok 14 - S7: Save checks each child and reloads pending after a late claim
+  ---
+  duration_ms: 5.616208
+  type: 'test'
+  ...
+# Subtest: L23 S7: an edit after release is ordinary drift and Repair converges to current D
+ok 15 - L23 S7: an edit after release is ordinary drift and Repair converges to current D
+  ---
+  duration_ms: 4.720083
+  type: 'test'
+  ...
+# Subtest: S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+ok 16 - S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+  ---
+  duration_ms: 1.082292
+  type: 'test'
+  ...
+# Subtest: S7: a correction reason survives same-Task refusal and clears when another Task takes over
+ok 17 - S7: a correction reason survives same-Task refusal and clears when another Task takes over
+  ---
+  duration_ms: 3.171416
+  type: 'test'
+  ...
+# Subtest: S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+ok 18 - S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+  ---
+  duration_ms: 2.713833
+  type: 'test'
+  ...
+# Subtest: S7: Correct keeps native randomUUID when available
+ok 19 - S7: Correct keeps native randomUUID when available
+  ---
+  duration_ms: 0.652833
+  type: 'test'
+  ...
+# Subtest: T2 real editor name-only save keeps refusal on Person and both children
+ok 20 - T2 real editor name-only save keeps refusal on Person and both children
+  ---
+  duration_ms: 29.914708
+  type: 'test'
+  ...
+# Subtest: T3 real editor selecting a number clears refusal on both children
+ok 21 - T3 real editor selecting a number clears refusal on both children
+  ---
+  duration_ms: 6.498875
+  type: 'test'
+  ...
+# Subtest: T4 writer-derived guarantor without refusal remains verified for every absent representation
+ok 22 - T4 writer-derived guarantor without refusal remains verified for every absent representation
+  ---
+  duration_ms: 6.892542
+  type: 'test'
+  ...
+# Subtest: T10 real editor preserves email third phone old and period-bounded identities
+ok 23 - T10 real editor preserves email third phone old and period-bounded identities
+  ---
+  duration_ms: 6.230667
+  type: 'test'
+  ...
+# Subtest: T9 guardian refusal prevents SMS and the marked Phone 2 controls delivery
+ok 24 - T9 guardian refusal prevents SMS and the marked Phone 2 controls delivery
+  ---
+  duration_ms: 3.450791
+  type: 'test'
+  ...
+# Subtest: R9: an in-progress correction alone renders Complete and success reloads the patient and history once
+ok 25 - R9: an in-progress correction alone renders Complete and success reloads the patient and history once
+  ---
+  duration_ms: 16.502375
+  type: 'test'
+  ...
+# Subtest: R9 K15: a 409 with a Task from Complete reloads once and closes history
+ok 26 - R9 K15: a 409 with a Task from Complete reloads once and closes history
+  ---
+  duration_ms: 2.889083
+  type: 'test'
+  ...
+# Subtest: login screen renders real email and password fields with no environment credential fallback
+ok 27 - login screen renders real email and password fields with no environment credential fallback
+  ---
+  duration_ms: 3.029458
+  type: 'test'
+  ...
+# Subtest: successful login navigates to the requested Desk home and authenticates
+ok 28 - successful login navigates to the requested Desk home and authenticates
+  ---
+  duration_ms: 0.363208
+  type: 'test'
+  ...
+# Subtest: failed login never navigates or authenticates
+ok 29 - failed login never navigates or authenticates
+  ---
+  duration_ms: 0.220584
+  type: 'test'
+  ...
+# Subtest: set-password submit passes the email-link credentials and new password
+ok 30 - set-password submit passes the email-link credentials and new password
+  ---
+  duration_ms: 0.065
+  type: 'test'
+  ...
+# Subtest: set-password submit surfaces server failures
+ok 31 - set-password submit surfaces server failures
+  ---
+  duration_ms: 0.108792
+  type: 'test'
+  ...
+# Subtest: forgot-password confirmation is neutral on success and failure
+ok 32 - forgot-password confirmation is neutral on success and failure
+  ---
+  duration_ms: 0.070459
+  type: 'test'
+  ...
+# Subtest: forgot-password transport failure does not claim an email is coming
+ok 33 - forgot-password transport failure does not claim an email is coming
+  ---
+  duration_ms: 0.106459
+  type: 'test'
+  ...
+# Subtest: whoami no-role errors render the server detail instead of only the machine code
+ok 34 - whoami no-role errors render the server detail instead of only the machine code
+  ---
+  duration_ms: 7.103042
+  type: 'test'
+  ...
+# Subtest: whoami and Desk summary empty error bodies surface their HTTP status
+ok 35 - whoami and Desk summary empty error bodies surface their HTTP status
+  ---
+  duration_ms: 0.510208
+  type: 'test'
+  ...
+# Subtest: whoami and Desk summary reject successful empty or non-JSON bodies
+ok 36 - whoami and Desk summary reject successful empty or non-JSON bodies
+  ---
+  duration_ms: 0.442375
+  type: 'test'
+  ...
+# Subtest: inbound fax actions accept empty success bodies and preserve JSON error details
+ok 37 - inbound fax actions accept empty success bodies and preserve JSON error details
+  ---
+  duration_ms: 0.246916
+  type: 'test'
+  ...
+# Subtest: inbound fax PDF rejects a cross-origin URL before reading or sending authorization
+ok 38 - inbound fax PDF rejects a cross-origin URL before reading or sending authorization
+  ---
+  duration_ms: 0.1465
+  type: 'test'
+  ...
+# Subtest: Desk home keeps Customize on-page and leaves global navigation to AppShell
+ok 39 - Desk home keeps Customize on-page and leaves global navigation to AppShell
+  ---
+  duration_ms: 11.095125
+  type: 'test'
+  ...
+# Subtest: Desk card configuration sanitizes and reorders only catalog cards
+ok 40 - Desk card configuration sanitizes and reorders only catalog cards
+  ---
+  duration_ms: 0.09675
+  type: 'test'
+  ...
+# Subtest: Desk customization persists reorder, remove, add-back, and Reset for all eleven cards
+ok 41 - Desk customization persists reorder, remove, add-back, and Reset for all eleven cards
+  ---
+  duration_ms: 0.116709
+  type: 'test'
+  ...
+# Subtest: Front Line without a CommsProvider renders one wiring panel and no zero placeholders
+ok 42 - Front Line without a CommsProvider renders one wiring panel and no zero placeholders
+  ---
+  duration_ms: 3.646
+  type: 'test'
+  ...
+# Subtest: Desk home keeps the Correspondence card available when its summary block is absent
+ok 43 - Desk home keeps the Correspondence card available when its summary block is absent
+  ---
+  duration_ms: 1.451167
+  type: 'test'
+  ...
+# Subtest: Needs attention renders the exact all-clear state when every target is met
+ok 44 - Needs attention renders the exact all-clear state when every target is met
+  ---
+  duration_ms: 1.284333
+  type: 'test'
+  ...
+# Subtest: Desk Correspondence renders inbound fax metadata, advisory matching, PDF view, and all three actions
+ok 45 - Desk Correspondence renders inbound fax metadata, advisory matching, PDF view, and all three actions
+  ---
+  duration_ms: 2.182708
+  type: 'test'
+  ...
+# Subtest: inbound fax sender header keeps the number first and adds only a distinct identifier
+ok 46 - inbound fax sender header keeps the number first and adds only a distinct identifier
+  ---
+  duration_ms: 6.863875
+  type: 'test'
+  ...
+# Subtest: inbound fax PDF click opens an embedded document without any new-tab path
+ok 47 - inbound fax PDF click opens an embedded document without any new-tab path
+  ---
+  duration_ms: 15.804458
+  type: 'test'
+  ...
+# Subtest: inbound fax PDF close and Escape immediately revoke the URL and return focus
+ok 48 - inbound fax PDF close and Escape immediately revoke the URL and return focus
+  ---
+  duration_ms: 8.58725
+  type: 'test'
+  ...
+# Subtest: inbound fax PDF replacement and page unmount revoke their object URLs
+ok 49 - inbound fax PDF replacement and page unmount revoke their object URLs
+  ---
+  duration_ms: 4.368625
+  type: 'test'
+  ...
+# Subtest: inbound fax PDF finishing after page unmount is released without reopening
+ok 50 - inbound fax PDF finishing after page unmount is released without reopening
+  ---
+  duration_ms: 4.211208
+  type: 'test'
+  ...
+# Subtest: inbound fax PDF request failure stays on the row and creates no preview URL
+ok 51 - inbound fax PDF request failure stays on the row and creates no preview URL
+  ---
+  duration_ms: 2.275792
+  type: 'test'
+  ...
+# Subtest: successful inbound fax triage updates the Desk count and removes the completed row
+ok 52 - successful inbound fax triage updates the Desk count and removes the completed row
+  ---
+  duration_ms: 2.4915
+  type: 'test'
+  ...
+# Subtest: inbound fax attach and promote buttons send the confirmed payloads
+ok 53 - inbound fax attach and promote buttons send the confirmed payloads
+  ---
+  duration_ms: 3.549167
+  type: 'test'
+  ...
+# (node:3222) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: inbound fax actions disable while pending and surface failures without removing the row
+ok 54 - inbound fax actions disable while pending and surface failures without removing the row
+  ---
+  duration_ms: 1.690292
+  type: 'test'
+  ...
+# Subtest: Desk statement date-time formatting degrades malformed values to an em dash
+ok 55 - Desk statement date-time formatting degrades malformed values to an em dash
+  ---
+  duration_ms: 0.043875
+  type: 'test'
+  ...
+# Subtest: Desk comms rail resolves hover, delayed retract, pinning, switching, Escape, close, and touch input
+ok 56 - Desk comms rail resolves hover, delayed retract, pinning, switching, Escape, close, and touch input
+  ---
+  duration_ms: 13.233875
+  type: 'test'
+  ...
+# Subtest: Desk comms panel position storage round-trips and swallows unavailable storage
+ok 57 - Desk comms panel position storage round-trips and swallows unavailable storage
+  ---
+  duration_ms: 0.141666
+  type: 'test'
+  ...
+# Subtest: Desk comms panel uses a reduced-motion-safe translate transition
+ok 58 - Desk comms panel uses a reduced-motion-safe translate transition
+  ---
+  duration_ms: 0.292292
+  type: 'test'
+  ...
+# Subtest: Practice landing groups existing settings and the owner-only plan-profile route
+ok 59 - Practice landing groups existing settings and the owner-only plan-profile route
+  ---
+  duration_ms: 3.680666
+  type: 'test'
+  ...
+# Subtest: Find a setting filters static Manage links and Cmd-K focuses the search
+ok 60 - Find a setting filters static Manage links and Cmd-K focuses the search
+  ---
+  duration_ms: 9.274833
+  type: 'test'
+  ...
+# Subtest: set-password email links route before the authenticated app
+ok 61 - set-password email links route before the authenticated app
+  ---
+  duration_ms: 1.004417
+  type: 'test'
+  ...
+# Subtest: every non-empty practice-role combination routes from its whoami response to the correct home
+ok 62 - every non-empty practice-role combination routes from its whoami response to the correct home
+  ---
+  duration_ms: 7.953083
+  type: 'test'
+  ...
+# Subtest: entry routing sends Provider to Clinic and Staff or Admin to Desk
+ok 63 - entry routing sends Provider to Clinic and Staff or Admin to Desk
+  ---
+  duration_ms: 0.09375
+  type: 'test'
+  ...
+# Subtest: cross-side access requires at least one Desk role and one Clinic role
+ok 64 - cross-side access requires at least one Desk role and one Clinic role
+  ---
+  duration_ms: 0.04125
+  type: 'test'
+  ...
+# Subtest: cross-side users switch between Desk and Clinic in the same tab
+ok 65 - cross-side users switch between Desk and Clinic in the same tab
+  ---
+  duration_ms: 6.437417
+  type: 'test'
+  ...
+# Subtest: App rehydrates an unexpired session on boot
+ok 66 - App rehydrates an unexpired session on boot
+  ---
+  duration_ms: 9.28075
+  type: 'test'
+  ...
+# Subtest: logout and an authenticated intercepted 401 clear the persisted session
+ok 67 - logout and an authenticated intercepted 401 clear the persisted session
+  ---
+  duration_ms: 0.417167
+  type: 'test'
+  ...
+# Subtest: an authenticated cross-origin 401 cannot clear the active session
+ok 68 - an authenticated cross-origin 401 cannot clear the active session
+  ---
+  duration_ms: 0.290792
+  type: 'test'
+  ...
+# Subtest: a same-origin request redirected to a cross-origin 401 cannot clear the active session
+ok 69 - a same-origin request redirected to a cross-origin 401 cannot clear the active session
+  ---
+  duration_ms: 0.253583
+  type: 'test'
+  ...
+# Subtest: URL normalization and cross-realm shapes cannot misclassify cross-origin requests
+ok 70 - URL normalization and cross-realm shapes cannot misclassify cross-origin requests
+  ---
+  duration_ms: 0.359834
+  type: 'test'
+  ...
+# Subtest: an unauthenticated 401 cannot clear a different active session
+ok 71 - an unauthenticated 401 cannot clear a different active session
+  ---
+  duration_ms: 0.076333
+  type: 'test'
+  ...
+# Subtest: an authenticated Request with an explicit empty header override cannot clear the session on 401
+ok 72 - an authenticated Request with an explicit empty header override cannot clear the session on 401
+  ---
+  duration_ms: 0.394583
+  type: 'test'
+  ...
+# Subtest: single-role users do not render a cross-side switch pill
+ok 73 - single-role users do not render a cross-side switch pill
+  ---
+  duration_ms: 2.041458
+  type: 'test'
+  ...
+# Subtest: practice roles resolve only once for the same bearer-token session
+ok 74 - practice roles resolve only once for the same bearer-token session
+  ---
+  duration_ms: 0.078958
+  type: 'test'
+  ...
+# Subtest: leaving the Clinic route resets its patient view while in-Clinic view changes do not
+ok 75 - leaving the Clinic route resets its patient view while in-Clinic view changes do not
+  ---
+  duration_ms: 0.037625
+  type: 'test'
+  ...
+# Subtest: selecting at Clinic patient search then navigating home renders ClinicHome, not a stale chart
+ok 76 - selecting at Clinic patient search then navigating home renders ClinicHome, not a stale chart
+  ---
+  duration_ms: 0.376333
+  type: 'test'
+  ...
+# Subtest: Clinic initial URLs select a patient or encounter while an empty query keeps the home
+ok 77 - Clinic initial URLs select a patient or encounter while an empty query keeps the home
+  ---
+  duration_ms: 0.500791
+  type: 'test'
+  ...
+# Subtest: a Clinic deep link stays on the chart after front-desk-only role routing
+ok 78 - a Clinic deep link stays on the chart after front-desk-only role routing
+  ---
+  duration_ms: 5.792791
+  type: 'test'
+  ...
+# Subtest: rapid browser Back presses keep one confirmation and restore the committed route
+ok 79 - rapid browser Back presses keep one confirmation and restore the committed route
+  ---
+  duration_ms: 1.879959
+  type: 'test'
+  ...
+# Subtest: logout and re-login route from the current address instead of the first bootstrap address
+ok 80 - logout and re-login route from the current address instead of the first bootstrap address
+  ---
+  duration_ms: 5.714541
+  type: 'test'
+  ...
+# Subtest: authenticated bootstrap preserves non-root hard-reload routes
+ok 81 - authenticated bootstrap preserves non-root hard-reload routes
+  ---
+  duration_ms: 5.518042
+  type: 'test'
+  ...
+1..81
+# tests 81
+# suites 0
+# pass 81
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 472.082833

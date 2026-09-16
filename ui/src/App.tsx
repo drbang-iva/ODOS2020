@@ -30,6 +30,7 @@ import { VisionPlanBenefits } from "./scenes/insurance/VisionPlanBenefits";
 import { PatientPharmacy } from "./scenes/pharmacy/PatientPharmacy";
 import { AccountsReceivableDashboard } from "./scenes/claims/AccountsReceivableDashboard";
 import { BillingToday } from "./scenes/BillingToday";
+import { UnusedGuarantorsSettings } from "./scenes/settings/UnusedGuarantorsSettings";
 import { SettingsIndex } from "./scenes/settings/SettingsIndex";
 import { FloorConfigSettings } from "./scenes/settings/FloorConfigSettings";
 import { VisionPlanTemplatesSettings } from "./scenes/settings/VisionPlanTemplatesSettings";
@@ -92,6 +93,7 @@ export function App({
   }
 
   const [authed, setAuthed] = useState(() => fhir.rehydrateSession());
+  const [businessActions, setBusinessActions] = useState<string[]>([]);
   const [roles, setRoles] = useState<PracticeRoleId[]>();
   const [accountEmail, setAccountEmail] = useState<string>();
   const [roleError, setRoleError] = useState<string>();
@@ -210,6 +212,7 @@ export function App({
       setPath(initialPath.current);
       setAuthed(false);
       setRoles(undefined);
+      setBusinessActions([]);
       setAccountEmail(undefined);
       setRoleError(undefined);
     });
@@ -242,6 +245,7 @@ export function App({
         const renderedPath = rootRequest ? destination : requestedPath;
         const destinationUrl = rootRequest ? destination : `${requestedPath}${initialSearch.current}`;
         setRoles(whoami.roles);
+        setBusinessActions(whoami.businessActions ?? []);
         if (clinicDeepLink) setView(initialClinicView.current);
         window.history.replaceState(window.history.state, "", destinationUrl);
         previousPath.current = renderedPath;
@@ -279,7 +283,7 @@ export function App({
   const content = roleError
     ? <main role="alert">Unable to open your practice home: {roleError}</main>
     : roles
-      ? <RouteComponent view={view} path={path} roles={roles} />
+      ? <RouteComponent view={view} path={path} roles={roles} businessActions={businessActions} />
       : <main>Opening your practice home…</main>;
   const shell = (
     <AppShell
@@ -380,6 +384,7 @@ export interface RouteSwitchProps {
   view: ViewState;
   path?: string;
   roles?: readonly PracticeRoleId[];
+  businessActions?: readonly string[];
   search?: string;
 }
 
@@ -387,6 +392,7 @@ export function RouteSwitch({
   view,
   path = window.location.pathname,
   roles = [],
+  businessActions = [],
   search = typeof window === "undefined" ? "" : window.location.search,
 }: RouteSwitchProps) {
   switch (path) {
@@ -461,7 +467,7 @@ export function RouteSwitch({
     case "/admin/practice/settings/chart-fields":
       return <ChartFieldsSettings />;
     case "/settings":
-      return <SettingsIndex roles={roles} />;
+      return <SettingsIndex roles={roles} businessActions={businessActions} />;
     case "/settings/staff":
       return roles.includes("admin")
         ? <StaffSettings />
@@ -488,6 +494,8 @@ export function RouteSwitch({
       return <ProtocolDefinitionsSettings canWrite={roles.includes("admin")} />;
     case "/settings/procedure-definitions":
       return <ProcedureDefinitionsSettings canWrite={roles.includes("admin")} />;
+    case "/settings/unused-guarantors":
+      return <UnusedGuarantorsSettings canDiscard={businessActions.includes("guarantor.link")} />;
     case "/settings/age-of-majority":
       return <AgeOfMajoritySettings canWrite={roles.includes("admin")} />;
     case "/settings/statement-messages":

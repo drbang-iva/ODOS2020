@@ -7,6 +7,7 @@ type SettingsLink = {
   description: string;
   synonyms: readonly string[];
   practiceAdminOnly?: boolean;
+  businessAction?: string;
 };
 
 type SettingsGroup = {
@@ -177,6 +178,13 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
     tone: "slate",
     links: [
       {
+        href: "/settings/unused-guarantors",
+        title: "Unused guarantor records",
+        description: "Find and deactivate guarantor records with no linked patients.",
+        synonyms: ["guarantor", "unused", "discard", "registration"],
+        businessAction: "guarantor.link",
+      },
+      {
         href: "/settings/age-of-majority",
         title: "Age of majority",
         description: "Set the age used for registration, statements, and communication recipients.",
@@ -193,10 +201,10 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
   },
 ];
 
-export function SettingsIndex({ roles = [] }: { roles?: readonly PracticeRoleId[] }) {
+export function SettingsIndex({ roles = [], businessActions = [] }: { roles?: readonly PracticeRoleId[]; businessActions?: readonly string[] }) {
   const searchRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
-  const groups = useMemo(() => filterSettingsGroups(SETTINGS_GROUPS, roles, query), [query, roles]);
+  const groups = useMemo(() => filterSettingsGroups(SETTINGS_GROUPS, roles, query, businessActions), [query, roles, businessActions]);
   const resultCount = groups.reduce((total, group) => total + group.links.length, 0);
 
   useEffect(() => {
@@ -291,11 +299,12 @@ function filterSettingsGroups(
   groups: readonly SettingsGroup[],
   roles: readonly PracticeRoleId[],
   query: string,
+  businessActions: readonly string[],
 ): SettingsGroup[] {
   const terms = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
   return groups
     .map((group) => {
-      const permitted = group.links.filter((link) => !link.practiceAdminOnly || roles.includes("admin"));
+      const permitted = group.links.filter((link) => (!link.practiceAdminOnly || roles.includes("admin")) && (!link.businessAction || businessActions.includes(link.businessAction)));
       if (terms.length === 0) return { ...group, links: permitted };
       const links = permitted.filter((link) => {
         const haystack = [
