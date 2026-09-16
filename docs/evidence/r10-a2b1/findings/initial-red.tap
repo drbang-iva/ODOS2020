@@ -1,11 +1,11 @@
 TAP version 13
 # odos-mcp: diagnosis findings dependency failed: Error: Synthetic HTTP 500
-#     at httpError (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/fixtures/r10/writer-harness.ts:24:60)
-#     at Object.m.hooks.beforeSearch (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:31:237)
-#     at Object.search (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/fixtures/r10/writer-harness.ts:58:46)
-#     at allEncounterResources (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:822:28)
-#     at Module.handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:206:5)
-#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:31:264)
+#     at httpError (<repo>/mcp/tests/fixtures/r10/writer-harness.ts:24:60)
+#     at Object.m.hooks.beforeSearch (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:31:237)
+#     at Object.search (<repo>/mcp/tests/fixtures/r10/writer-harness.ts:58:46)
+#     at allEncounterResources (<repo>/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:822:28)
+#     at Module.handleDiagnosisFindingsReadRequest (<repo>/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:206:5)
+#     at async TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:31:264)
 #     at async Test.run (node:internal/test_runner/test:1054:7)
 #     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
 #   status: 500
@@ -15,20 +15,20 @@ not ok 1 - W7 staff assert uses chart.write, writes preliminary fact and no Cond
   ---
   duration_ms: 2.465667
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:2593'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:2593'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 400
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:23:167)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:23:167)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -37,20 +37,20 @@ not ok 2 - W27 missing baseline returns 428 and no-store before writes
   ---
   duration_ms: 0.225416
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:2899'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:2899'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 428
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 428
   actual: 400
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:24:176)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:24:176)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -59,21 +59,21 @@ not ok 3 - W43 pre-rebuild GET is read-only and PUT/repair refuse without writes
   ---
   duration_ms: 1.20425
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:3177'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:3177'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:25:142)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:25:142)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -82,20 +82,20 @@ not ok 4 - W39 mixed writable and final target refuses entire command at raw sta
   ---
   duration_ms: 3.248333
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:3765'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:3765'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
   actual: 400
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:26:348)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:26:348)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -110,20 +110,20 @@ not ok 6 - W4 assert under Y preserves X in persisted homes and both selected vi
   ---
   duration_ms: 0.633334
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:4532'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:4532'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 400
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:28:313)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:28:313)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -132,20 +132,20 @@ not ok 7 - W28a clear preserves historical homes
   ---
   duration_ms: 0.605166
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:5300'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:5300'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 400
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:29:96)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:29:96)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -154,13 +154,13 @@ not ok 8 - W28b retired revive links fresh and W33 offered retains revive baseli
   ---
   duration_ms: 0.720458
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:5713'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:5713'
   failureType: 'testCodeFailure'
   error: "Cannot read properties of undefined (reading 'find')"
   code: 'ERR_TEST_FAILURE'
   name: 'TypeError'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:30:262)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:30:262)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -169,21 +169,21 @@ not ok 9 - W8 unavailable and W41 410 missing retain typed read failures
   ---
   duration_ms: 1.993708
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:6440'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:6440'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'unavailable'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'unavailable'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:31:316)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:31:316)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -192,20 +192,20 @@ not ok 10 - W31 conflict carries command result but strips internal fresh
   ---
   duration_ms: 0.449333
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:6812'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:6812'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
   actual: 400
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:32:250)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:32:250)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -214,20 +214,20 @@ not ok 11 - W34 same command with fresh baseline and changed state refuses reuse
   ---
   duration_ms: 0.223875
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:7196'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:7196'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 400
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:33:148)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:33:148)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -236,20 +236,20 @@ not ok 12 - W32 eye-change onto differing live destination refuses zero writes
   ---
   duration_ms: 0.762541
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:7672'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:7672'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
   actual: 400
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:34:311)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:34:311)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -258,20 +258,20 @@ not ok 13 - OD to OS eye-change creates destination and retires source
   ---
   duration_ms: 0.429125
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:8086'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:8086'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 400
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:35:277)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:35:277)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

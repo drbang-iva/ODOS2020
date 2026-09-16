@@ -9,14 +9,14 @@ not ok 1 - W44 refresh failure belongs to first unexecuted target after a confir
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
         undefined,
     -   'refresh',
         'halted-by-earlier-target',
     +   'halted-by-earlier-target'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

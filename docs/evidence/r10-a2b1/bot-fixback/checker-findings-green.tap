@@ -1,0 +1,370 @@
+TAP version 13
+# Subtest: staff diagnosis-door assertion refuses before creating an Observation or any other write — legacy encounter now refuses read-only (V3)
+ok 1 - staff diagnosis-door assertion refuses before creating an Observation or any other write — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 8.352209
+  type: 'test'
+  ...
+# Subtest: staff cannot assign, detach or clear legacy Condition evidence but can edit finding grade and laterality — legacy encounter now refuses read-only (V3)
+ok 2 - staff cannot assign, detach or clear legacy Condition evidence but can edit finding grade and laterality — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.794417
+  type: 'test'
+  ...
+# Subtest: findings payload distinguishes finding write access from diagnosis write access
+ok 3 - findings payload distinguishes finding write access from diagnosis write access
+  ---
+  duration_ms: 1.963167
+  type: 'test'
+  ...
+# Subtest: GET encounter findings returns 401 when unauthenticated
+ok 4 - GET encounter findings returns 401 when unauthenticated
+  ---
+  duration_ms: 21.55875
+  type: 'test'
+  ...
+# Subtest: PUT encounter findings returns 401 when unauthenticated
+ok 5 - PUT encounter findings returns 401 when unauthenticated
+  ---
+  duration_ms: 10.753209
+  type: 'test'
+  ...
+# Subtest: PUT encounter findings returns 403 for read-only Admin
+ok 6 - PUT encounter findings returns 403 for read-only Admin
+  ---
+  duration_ms: 2.440667
+  type: 'test'
+  ...
+# Subtest: GET expands offered rows and normalizes only the latest section snapshot
+ok 7 - GET expands offered rows and normalizes only the latest section snapshot
+  ---
+  duration_ms: 1.909542
+  type: 'test'
+  ...
+# Subtest: GET finds the selected encounter Condition on a later safe Bundle page
+ok 8 - GET finds the selected encounter Condition on a later safe Bundle page
+  ---
+  duration_ms: 1.184792
+  type: 'test'
+  ...
+# Subtest: GET projects carried present findings and merges prior absence into the exact offered eye only
+ok 9 - GET projects carried present findings and merges prior absence into the exact offered eye only
+  ---
+  duration_ms: 1.016292
+  type: 'test'
+  ...
+# Subtest: GET offers only missing live eyes; a current fact at another diagnosis is search-resolved
+ok 10 - GET offers only missing live eyes; a current fact at another diagnosis is search-resolved
+  ---
+  duration_ms: 0.704208
+  type: 'test'
+  ...
+# Subtest: reasserting a prior absent offer creates a fresh current row without a carried tag — legacy encounter now refuses read-only (V3)
+ok 11 - reasserting a prior absent offer creates a fresh current row without a carried tag — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.332833
+  type: 'test'
+  ...
+# Subtest: a carried finding remains unreasserted until the discriminated Provenance activity exists — legacy encounter now refuses read-only (V3)
+ok 12 - a carried finding remains unreasserted until the discriminated Provenance activity exists — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.242209
+  type: 'test'
+  ...
+# Subtest: a reassertion marker older than the current carry does not reassert the carried finding
+ok 13 - a reassertion marker older than the current carry does not reassert the carried finding
+  ---
+  duration_ms: 0.179542
+  type: 'test'
+  ...
+# Subtest: a failed reassertion marker write remains retryable without losing the carry signal — legacy encounter now refuses read-only (V3)
+ok 14 - a failed reassertion marker write remains retryable without losing the carry signal — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.273375
+  type: 'test'
+  ...
+# Subtest: asserting absence round-trips and repeated assertions update one logical Observation — legacy encounter now refuses read-only (V3)
+ok 15 - asserting absence round-trips and repeated assertions update one logical Observation — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.287083
+  type: 'test'
+  ...
+# Subtest: assertion finds an existing same-eye Observation on page two and never creates a duplicate — legacy encounter now refuses read-only (V3)
+ok 16 - assertion finds an existing same-eye Observation on page two and never creates a duplicate — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.237959
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a cross-origin next page
+ok 17 - findings pagination fails closed for a cross-origin next page
+  ---
+  duration_ms: 0.212542
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a off-root next page
+ok 18 - findings pagination fails closed for a off-root next page
+  ---
+  duration_ms: 0.128708
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a unavailable next page
+ok 19 - findings pagination fails closed for a unavailable next page
+  ---
+  duration_ms: 0.238041
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a cycle next page
+ok 20 - findings pagination fails closed for a cycle next page
+  ---
+  duration_ms: 0.298792
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a upstream next page
+ok 21 - findings pagination fails closed for a upstream next page
+  ---
+  duration_ms: 0.228083
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 401 dependency response without a generic route 500
+ok 22 - findings maps a FHIR 401 dependency response without a generic route 500
+  ---
+  duration_ms: 0.109916
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 403 dependency response without a generic route 500
+ok 23 - findings maps a FHIR 403 dependency response without a generic route 500
+  ---
+  duration_ms: 0.041292
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 500 dependency response without a generic route 500
+ok 24 - findings maps a FHIR 500 dependency response without a generic route 500
+  ---
+  duration_ms: 0.038584
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 401 dependency response
+ok 25 - GET findings route preserves the named FHIR 401 dependency response
+  ---
+  duration_ms: 3.636542
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 403 dependency response
+ok 26 - GET findings route preserves the named FHIR 403 dependency response
+  ---
+  duration_ms: 1.525416
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 500 dependency response
+ok 27 - GET findings route preserves the named FHIR 500 dependency response
+  ---
+  duration_ms: 1.141833
+  type: 'test'
+  ...
+# Subtest: findings maps Encounter FHIR 404 to a non-leaking 404
+ok 28 - findings maps Encounter FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.091334
+  type: 'test'
+  ...
+# Subtest: findings maps Encounter FHIR 410 to a non-leaking 404
+ok 29 - findings maps Encounter FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.041542
+  type: 'test'
+  ...
+# Subtest: findings maps Condition FHIR 404 to a non-leaking 404
+ok 30 - findings maps Condition FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.088291
+  type: 'test'
+  ...
+# Subtest: findings maps Condition FHIR 410 to a non-leaking 404
+ok 31 - findings maps Condition FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.067208
+  type: 'test'
+  ...
+# Subtest: findings maps Observation FHIR 404 to a non-leaking 404
+ok 32 - findings maps Observation FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.072625
+  type: 'test'
+  ...
+# Subtest: findings maps Observation FHIR 410 to a non-leaking 404
+ok 33 - findings maps Observation FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.072333
+  type: 'test'
+  ...
+# Subtest: findings gives Condition bodySite laterality precedence over a stale catalog identifier
+ok 34 - findings gives Condition bodySite laterality precedence over a stale catalog identifier
+  ---
+  duration_ms: 0.686292
+  type: 'test'
+  ...
+# Subtest: GET findings route returns missing lineage as visible state and a cyclic next link as 502
+ok 35 - GET findings route returns missing lineage as visible state and a cyclic next link as 502
+  ---
+  duration_ms: 4.435375
+  type: 'test'
+  ...
+# Subtest: 404 Condition/prior-unique lineage stays a 200 visible integrity state
+ok 36 - 404 Condition/prior-unique lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.343541
+  type: 'test'
+  ...
+# Subtest: 404 Encounter/prior-e1 lineage stays a 200 visible integrity state
+ok 37 - 404 Encounter/prior-e1 lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.365875
+  type: 'test'
+  ...
+# Subtest: 404 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+ok 38 - 404 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.249792
+  type: 'test'
+  ...
+# Subtest: 410 Condition/prior-unique lineage stays a 200 visible integrity state
+ok 39 - 410 Condition/prior-unique lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.232542
+  type: 'test'
+  ...
+# Subtest: 410 Encounter/prior-e1 lineage stays a 200 visible integrity state
+ok 40 - 410 Encounter/prior-e1 lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.255791
+  type: 'test'
+  ...
+# Subtest: 410 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+ok 41 - 410 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.281875
+  type: 'test'
+  ...
+# Subtest: asserting the same finding for another eye preserves the existing eye assertion — legacy encounter now refuses read-only (V3)
+ok 42 - asserting the same finding for another eye preserves the existing eye assertion — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.298333
+  type: 'test'
+  ...
+# Subtest: grade and laterality mutations enforce the configured scale and restore inherited laterality — legacy encounter now refuses read-only (V3)
+ok 43 - grade and laterality mutations enforce the configured scale and restore inherited laterality — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.364292
+  type: 'test'
+  ...
+# Subtest: clear enters the atomic Observation in error and rejects cross-encounter patient and Condition boundaries — legacy encounter now refuses read-only (V3)
+ok 44 - clear enters the atomic Observation in error and rejects cross-encounter patient and Condition boundaries — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.246917
+  type: 'test'
+  ...
+# Subtest: assign rehomes Condition evidence idempotently and standalone removes the only binding home — legacy encounter now refuses read-only (V3)
+ok 45 - assign rehomes Condition evidence idempotently and standalone removes the only binding home — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.321041
+  type: 'test'
+  ...
+# Subtest: W40 complete green fixture satisfies the fixed A3 scenario set
+ok 46 - W40 complete green fixture satisfies the fixed A3 scenario set
+  ---
+  duration_ms: 163.903709
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects delete-test and names T1
+ok 47 - W40 strict rejects delete-test and names T1
+  ---
+  duration_ms: 156.56425
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects delete-test-and-manifest and names T1
+ok 48 - W40 strict rejects delete-test-and-manifest and names T1
+  ---
+  duration_ms: 154.409042
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects skip and names T1
+ok 49 - W40 strict rejects skip and names T1
+  ---
+  duration_ms: 158.609875
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects todo and names T1
+ok 50 - W40 strict rejects todo and names T1
+  ---
+  duration_ms: 154.046459
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects failure and names T1
+ok 51 - W40 strict rejects failure and names T1
+  ---
+  duration_ms: 154.338083
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects wrong-suite and names T1
+ok 52 - W40 strict rejects wrong-suite and names T1
+  ---
+  duration_ms: 152.923708
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects duplicate and names T1
+ok 53 - W40 strict rejects duplicate and names T1
+  ---
+  duration_ms: 154.828917
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects child-failure and names T1
+ok 54 - W40 strict rejects child-failure and names T1
+  ---
+  duration_ms: 155.779958
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects truncated
+ok 55 - W40 strict TAP parser rejects truncated
+  ---
+  duration_ms: 0.4475
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects malformed
+ok 56 - W40 strict TAP parser rejects malformed
+  ---
+  duration_ms: 0.086209
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects wrongPlan
+ok 57 - W40 strict TAP parser rejects wrongPlan
+  ---
+  duration_ms: 0.156875
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects duplicateNumber
+ok 58 - W40 strict TAP parser rejects duplicateNumber
+  ---
+  duration_ms: 0.112917
+  type: 'test'
+  ...
+# Subtest: W40 TAP completion requires every final summary and duration
+ok 59 - W40 TAP completion requires every final summary and duration
+  ---
+  duration_ms: 0.03325
+  type: 'test'
+  ...
+# Subtest: W40 rejects traversal that executes MCP scenarios as UI proof
+ok 60 - W40 rejects traversal that executes MCP scenarios as UI proof
+  ---
+  duration_ms: 91.411125
+  type: 'test'
+  ...
+1..60
+# tests 60
+# suites 0
+# pass 60
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1591.352208

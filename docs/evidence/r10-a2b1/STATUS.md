@@ -24,15 +24,15 @@ Existing assertion bodies in the capture test were unchanged. Mapping: W-c and r
 | Candidate/pick L1–L3, visit status and demotion | 128/128 |
 | Candidate consumer custom-section fixtures | 55/55; all original assertions retained |
 | Pagination + existing store/collector | 31/31 |
-| A3 checker | 14/14; separate actual scenario file has16 intentional A3 todos |
+| A3 checker | 15/15; separate actual scenario file has16 intentional A3 todos |
 | Search contract | 5/5 |
 | Integrated focused set after rebase | 429 tests,429 pass,0 fail/skip/todo |
 | Full parity after rebase | 170/170;0 fail/skip/todo |
 | E1–E17 replay | 17 emitted probes,17 PASS comparisons; unchanged wrapper passes |
-| Full MCP, rev3.3 clean configuration | 5,738 tests:5,714 pass,0 fail,8 named environment skips,16 intentional A3 todos; exit0 |
+| Full MCP, final fixback clean configuration | 5,740 tests:5,716 pass,0 fail,8 named environment skips,16 intentional A3 todos; exit0 |
 | UI full | 1,629 tests,1,629 pass,0 fail/skip/todo |
-| Final blocking live-authz lane | 68 tests,68 pass,0 fail/skip/todo |
-| Final diagnosis live suite after diagnostic correction | 3 tests,3 pass,0 fail/skip/todo |
+| Final blocking live-authz lane | 69 tests,69 pass,0 fail/skip/todo |
+| Final diagnosis live suite after diagnostic correction | 4 tests,4 pass,0 fail/skip/todo |
 | Bootstrap live integration | 218/218 |
 | Isolated bulk history | 1/1 after disposable FHIR quota configuration |
 | Setup CLI isolation | 22/22 |
@@ -41,7 +41,7 @@ Existing assertion bodies in the capture test were unchanged. Mapping: W-c and r
 | Preflight | exit0;0 warnings,0 hard blocks |
 | Diff whitespace | exit0 |
 
-The clean full run has zero failures. Earlier configuration attempts and their diagnosed errors are historical checkpoint evidence; they are superseded by `rev33/full-mcp-counts.txt`. The original blocked capture-wrapper test now passes. No failed assertion was weakened and no skip was added.
+The clean full run has zero failures. Earlier configuration attempts and their diagnosed errors are historical checkpoint evidence; they are superseded by `bot-fixback/full-mcp-counts.txt` (rev3.3 baseline was5,738/5,714; two new regression tests account for the increase). The original blocked capture-wrapper test now passes. No failed assertion was weakened and no skip was added.
 
 Eight full-suite skips remain explicitly unproven in that run: operator-assisted scoped clinician exam-start; two isolated Consent matrix checks; Credit Bank Postgres migration; diagnosis-newness Postgres migration; isolated scheduled-enrollment Medplum; reference-population Postgres migration; installed WeasyPrint PDF/A output. The16 todos are the intentional A3 scenarios, not passing release evidence. See raw counts and logs under integration/.
 
@@ -59,7 +59,7 @@ Immutable hashes (same as origin/main):
 
 ## Mutation guards
 
-All23 required IDs were demonstrated red exit1 then restored green exit0: **W4,W7,W8,W10,W26,W27,W28a,W28b,W29,W30,W31,W32,W33,W34,W35,W38,W39,W40,W41,W42,W43,W44,W45**. W7 includes unit and live proof. W38 uses the operator-approved writer-library `[legacy-retire,fact]` fixture; the two-fact partial-failure test remains. W40 includes delete-test, delete-test-and-manifest, and skip mutations. W45 includes handler409/one-audit and writer classifier proof. Exact paired commands/counts: `integration/guard-index.md` and each evidence README. Route/search inventory amendments also have red→green evidence.
+All23 required IDs were demonstrated red exit1 then restored green exit0: **W4,W7,W8,W10,W26,W27,W28a,W28b,W29,W30,W31,W32,W33,W34,W35,W38,W39,W40,W41,W42,W43,W44,W45**. W7 includes unit and live proof. W38 uses the operator-approved writer-library `[legacy-retire,fact]` fixture; the two-fact partial-failure test remains. W40 includes delete-test, delete-test-and-manifest, skip, and cross-suite path traversal mutations. W45 includes handler409/one-audit and writer classifier proof. Exact paired commands/counts: `integration/guard-index.md` and each evidence README. Route/search inventory amendments also have red→green evidence.
 
 ## Live authorization results
 
@@ -72,6 +72,14 @@ Both roles: assert absent→preliminary; clear preliminary→entered-in-error; r
 `node mcp/scripts/check-r10-a3-release.mjs` exits1, expected, listing **T1–T22**. Exact output: `integration/a3-release-red.txt`. UI slots are absent until A2b.2;16 MCP scenario todos remain until A3. T21/T22 require broader consumer/write-path inventories in A3; bounded probes do not establish those universal claims. No release claim is made.
 
 Existing measurement/catalog validation statuses are retained under the contract's unchanged-path rule; pick evidence records that interpretation. Historical untagged reassert audits remain valid. No new medical terminology or FHIR artifact URL was introduced, so no Mandate14 clinical ledger rows. No new strategy decision was authored, so no decisions/INDEX.md edit. The operator scope ruling is complete; independent Claude Opus evaluation follows this PR. Both A2b slices remain held open through A3.
+
+## Bot and CI fixbacks
+
+CodeRabbit raised13 threads at the first review:11 addressed,2 explicitly deferred as pre-existing behavior outside the approved amendments. Every thread receives a reasoned reply; the final-head bot/check state is recorded in the PR description. PR-Agent initially completed with no actionable inline findings. Exact comment IDs, fixes, assertion mappings and deferral rationale: `bot-fixback/README.md`.
+
+The CI live fixture selected composite policies as well as canonical ones. It now requires exactly one role tag, as existing live suites do; the unchanged deep policy comparison remains. Mutation regression1 failed→1 passed; live69/69. New A3 path-containment guard fails on traversal that reuses MCP tests as UI proof; restored checker/findings60/60. Test response type now matches its unchanged assertion. Public evidence paths are normalized without changing counts or diagnostics.
+
+**Unresolved risks for Opus/A3:** writer404/410 deletion classification remains the pre-existing A2a behavior; changing ambiguous-write recovery needs a separate contract. The unchanged audit matcher accepts deterministic key+reference without authenticating all audit fields; a stronger matcher and stable reassert timestamp witness require an expanded persistence/compatibility ruling. These are deferred, not repaired or declared safe. Independent evaluation must judge them before release; this PR remains held.
 
 ## Containers and status
 

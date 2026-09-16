@@ -16,12 +16,12 @@ not ok 3 - all direct fhir.search call sites are statically resolved or explicit
   ---
   duration_ms: 401.9695
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:1:6531'
+  location: '<repo>/mcp/tests/searchParamContract.test.ts:1:6531'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
         'claim-read-model-projector.search-resource',
         'clinic-summary.search-resource',
@@ -33,7 +33,7 @@ not ok 3 - all direct fhir.search call sites are statically resolved or explicit
         'eye-growth.refraction-observations',
         'imaging-endpoint.search-media',
         'inbound-fax.find-referral',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -105,7 +105,7 @@ not ok 3 - all direct fhir.search call sites are statically resolved or explicit
     31: 'weno-mapping.search-basic'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:181:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/searchParamContract.test.ts:181:10)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)
@@ -118,13 +118,13 @@ not ok 4 - static audit finds zero invalid search parameters
   ---
   duration_ms: 279.047209
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:1:7586'
+  location: '<repo>/mcp/tests/searchParamContract.test.ts:1:7586'
   failureType: 'testCodeFailure'
   error: 'Contract override diagnosis-findings.encounter-resources has no matching call site'
   code: 'ERR_TEST_FAILURE'
   stack: |-
-    collectSearchSpecs (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:241:11)
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:185:22)
+    collectSearchSpecs (<repo>/mcp/tests/searchParamContract.test.ts:241:11)
+    TestContext.<anonymous> (<repo>/mcp/tests/searchParamContract.test.ts:185:22)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)
@@ -137,24 +137,24 @@ not ok 5 - static audit rejects a mistyped dynamic override key
   ---
   duration_ms: 281.119167
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:1:7900'
+  location: '<repo>/mcp/tests/searchParamContract.test.ts:1:7900'
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /Contract override referral-service\.encounter-resource has no matching call site/. Input:
-    
+
     'Error: Contract override diagnosis-findings.encounter-resources has no matching call site'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
   actual:
   error: 'Contract override diagnosis-findings.encounter-resources has no matching call site'
   stack: |-
-    collectSearchSpecs (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:241:11)
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:203:11)
+    collectSearchSpecs (<repo>/mcp/tests/searchParamContract.test.ts:241:11)
+    <anonymous> (<repo>/mcp/tests/searchParamContract.test.ts:203:11)
     getActual (node:assert:609:5)
     Function.throws (node:assert:757:24)
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:202:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/searchParamContract.test.ts:202:10)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)
@@ -162,7 +162,7 @@ not ok 5 - static audit rejects a mistyped dynamic override key
     Test.run (node:internal/test_runner/test:1101:12)
   operator: 'throws'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/searchParamContract.test.ts:202:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/searchParamContract.test.ts:202:10)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)

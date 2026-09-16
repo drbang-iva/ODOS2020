@@ -137,7 +137,7 @@ test("GET expands offered rows and normalizes only the latest section snapshot",
       diagnosisKeys: string[];
       origin: string;
     }>;
-    unassigned: Array<{ atomicFindingId: string; source: string }>;
+    unassigned: Array<{ atomicFindingId: string; kind: string }>;
     bySection: Record<string, Array<{ atomicFindingId: string }>>;
   };
   assert.deepEqual(body.diagnosis.applicableFindingDefinitionIds, [LENS_DEFINITION.id]);

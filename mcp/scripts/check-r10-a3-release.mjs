@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync, existsSync } from 'node:fs';
-import { resolve, dirname, relative } from 'node:path';
+import { resolve, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
@@ -47,8 +47,10 @@ export function checkRelease(root) {
     const matches=manifest.scenarios.filter(row=>row.id===id&&row.suite===suite);
     if(matches.length!==1){fail(id,`${suite} manifest expected exactly once, found ${matches.length}`);continue;}
     const row=matches[0];
-    if(typeof row.file!=='string'|| !row.file.startsWith(`${suite}/tests/`) || relative(root,resolve(root,row.file)).startsWith('..')) {fail(id,`wrong ${suite} file`);continue;}
+    if(typeof row.file!=='string') {fail(id,`wrong ${suite} file`);continue;}
     const path=resolve(root,row.file);
+    if(!row.file.startsWith(`${suite}/tests/`) || relative(root,path).startsWith('..') ||
+      !path.startsWith(resolve(root,suite,'tests')+sep)) {fail(id,`wrong ${suite} file`);continue;}
     if(!existsSync(path)){fail(id,`missing ${suite} suite ${row.file}`);continue;}
     const group=groups.get(path)??{suite,rows:[]};group.rows.push(row);groups.set(path,group);
   }

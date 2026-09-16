@@ -4,12 +4,12 @@ not ok 1 - W30 candidates use current projection and omit superseded snapshot su
   ---
   duration_ms: 21.546209
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:95799'
+  location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:95799'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   {
     +     codingStatus: 'verified',
@@ -23,7 +23,7 @@ not ok 1 - W30 candidates use current projection and omit superseded snapshot su
     +   }
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -38,7 +38,7 @@ not ok 1 - W30 candidates use current projection and omit superseded snapshot su
       source: 'mapping'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2596:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2596:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

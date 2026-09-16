@@ -6,13 +6,13 @@ not ok 1 - V8 pagination rejects non-bundle as typed upstream
   ---
   duration_ms: 1.382667
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:1:1187'
+  location: '<repo>/mcp/tests/r10StorePagination.test.ts:1:1187'
   failureType: 'testCodeFailure'
   error: 'Missing expected rejection.'
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   stack: |-
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:15:3)
+    async TestContext.<anonymous> (<repo>/mcp/tests/r10StorePagination.test.ts:15:3)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -21,13 +21,13 @@ not ok 2 - V8 pagination rejects wrong bundle type as typed upstream
   ---
   duration_ms: 0.120375
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:1:1187'
+  location: '<repo>/mcp/tests/r10StorePagination.test.ts:1:1187'
   failureType: 'testCodeFailure'
   error: 'Missing expected rejection.'
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   stack: |-
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:15:3)
+    async TestContext.<anonymous> (<repo>/mcp/tests/r10StorePagination.test.ts:15:3)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -36,13 +36,13 @@ not ok 3 - V8 pagination rejects missing resource as typed upstream
   ---
   duration_ms: 0.072708
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:1:1187'
+  location: '<repo>/mcp/tests/r10StorePagination.test.ts:1:1187'
   failureType: 'testCodeFailure'
   error: 'Missing expected rejection.'
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   stack: |-
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:15:3)
+    async TestContext.<anonymous> (<repo>/mcp/tests/r10StorePagination.test.ts:15:3)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -51,13 +51,13 @@ not ok 4 - V8 pagination rejects missing id as typed upstream
   ---
   duration_ms: 0.064125
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:1:1187'
+  location: '<repo>/mcp/tests/r10StorePagination.test.ts:1:1187'
   failureType: 'testCodeFailure'
   error: 'Missing expected rejection.'
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   stack: |-
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:15:3)
+    async TestContext.<anonymous> (<repo>/mcp/tests/r10StorePagination.test.ts:15:3)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -66,13 +66,13 @@ not ok 5 - V8 pagination rejects missing next url as typed upstream
   ---
   duration_ms: 0.071167
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:1:1187'
+  location: '<repo>/mcp/tests/r10StorePagination.test.ts:1:1187'
   failureType: 'testCodeFailure'
   error: 'Missing expected rejection.'
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   stack: |-
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:15:3)
+    async TestContext.<anonymous> (<repo>/mcp/tests/r10StorePagination.test.ts:15:3)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -81,18 +81,18 @@ not ok 6 - V8 pagination rejects foreign next as typed upstream
   ---
   duration_ms: 0.231834
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:1:1187'
+  location: '<repo>/mcp/tests/r10StorePagination.test.ts:1:1187'
   failureType: 'testCodeFailure'
   error: |-
     The validation function is expected to return "true". Received false
-    
+
     Caught error:
-    
+
     Error: FHIR Basic next link is invalid.
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   stack: |-
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:15:3)
+    async TestContext.<anonymous> (<repo>/mcp/tests/r10StorePagination.test.ts:15:3)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -101,18 +101,18 @@ not ok 7 - V8 pagination validates every page and refuses cycles
   ---
   duration_ms: 0.206958
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:1:1421'
+  location: '<repo>/mcp/tests/r10StorePagination.test.ts:1:1421'
   failureType: 'testCodeFailure'
   error: |-
     The validation function is expected to return "true". Received false
-    
+
     Caught error:
-    
+
     Error: FHIR Basic pagination is unavailable or cyclic.
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   stack: |-
-    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:20:3)
+    async TestContext.<anonymous> (<repo>/mcp/tests/r10StorePagination.test.ts:20:3)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -121,22 +121,22 @@ not ok 8 - V8 finding store reads every page and skips invalid stored payload on
   ---
   duration_ms: 14.520417
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:1:2068'
+  location: '<repo>/mcp/tests/r10StorePagination.test.ts:1:2068'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'History narrative and review of systems'
     - 'Second page override'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'Second page override'
   actual: 'History narrative and review of systems'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:31:68)
+    TestContext.<anonymous> (<repo>/mcp/tests/r10StorePagination.test.ts:31:68)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -145,22 +145,22 @@ not ok 9 - V8 diagnosis store reads every page and skips invalid stored payload 
   ---
   duration_ms: 0.878834
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:1:2068'
+  location: '<repo>/mcp/tests/r10StorePagination.test.ts:1:2068'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'Open angle with borderline findings, low risk'
     - 'Second page override'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'Second page override'
   actual: 'Open angle with borderline findings, low risk'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10StorePagination.test.ts:31:68)
+    TestContext.<anonymous> (<repo>/mcp/tests/r10StorePagination.test.ts:31:68)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

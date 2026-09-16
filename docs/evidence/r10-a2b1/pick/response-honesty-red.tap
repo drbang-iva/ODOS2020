@@ -4,20 +4,20 @@ not ok 1 - applied Condition remains reported when the visit-status side effect 
   ---
   duration_ms: 6.430875
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:109115'
+  location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:109115'
   failureType: 'testCodeFailure'
   error: |-
     {"result":"unavailable","kind":"upstream","error":"Diagnosis pick context could not be loaded."}
-    
+
     502 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 502
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2748:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2748:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -26,20 +26,20 @@ not ok 2 - transaction conflict is a failed pick step with its HTTP cause
   ---
   duration_ms: 12.732792
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:109825'
+  location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:109825'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     'invalid' !== 'pick'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'pick'
   actual: 'invalid'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2755:86)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2755:86)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

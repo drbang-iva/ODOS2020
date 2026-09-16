@@ -9,10 +9,10 @@ not ok 1 - W45 reassert command witness rejects changed-baseline reuse without c
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'not-replay'
     - 'reused-with-different-content'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'reused-with-different-content'

@@ -2,24 +2,24 @@ TAP version 13
 # Subtest: W43 pre-rebuild GET is read-only and PUT/repair refuse without writes
 not ok 1 - W43 pre-rebuild GET is read-only and PUT/repair refuse without writes
   ---
-  duration_ms: 11.236917
+  duration_ms: 10.267
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:3292'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:3292'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'command'
     - 'invalid'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'invalid'
   actual: 'command'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:25:382)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:25:382)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -31,4 +31,4 @@ not ok 1 - W43 pre-rebuild GET is read-only and PUT/repair refuse without writes
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 171.598792
+# duration_ms 187.960875

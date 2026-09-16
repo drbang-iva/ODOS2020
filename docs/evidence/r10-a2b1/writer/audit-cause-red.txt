@@ -266,9 +266,9 @@ not ok 44 - W-h reassert replay audit lookup failure has a typed cause
   failureType: 'testCodeFailure'
   error: |-
     The validation function is expected to return "true". Received false
-    
+
     Caught error:
-    
+
     Error: Synthetic HTTP 502
   code: 'ERR_ASSERTION'
   name: 'AssertionError'

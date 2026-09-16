@@ -4,12 +4,12 @@ not ok 1 - W10 supported pick is a Condition-only step and retains its full resp
   ---
   duration_ms: 18.33375
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:93620'
+  location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:93620'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + [
     +   {
     +     detail: [
@@ -20,7 +20,7 @@ not ok 1 - W10 supported pick is a Condition-only step and retains its full resp
     +   }
     + ]
     - undefined
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   actual:
@@ -30,7 +30,7 @@ not ok 1 - W10 supported pick is a Condition-only step and retains its full resp
           reference: 'Observation/canonical'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2571:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2571:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

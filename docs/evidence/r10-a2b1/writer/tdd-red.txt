@@ -219,13 +219,13 @@ not ok 36 - W38 executionOrder reports actual library ordering with legacy retir
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + undefined
     - [
     -   1,
     -   0
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -247,13 +247,13 @@ not ok 37 - W38 fact pair retains submitted execution order when second target c
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + undefined
     - [
     -   0,
     -   1
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -275,7 +275,7 @@ not ok 38 - W44 refresh failure belongs to first unexecuted target after a confi
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
         undefined,
     +   undefined,
@@ -283,7 +283,7 @@ not ok 38 - W44 refresh failure belongs to first unexecuted target after a confi
     -   'refresh',
     -   'halted-by-earlier-target'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -344,10 +344,10 @@ not ok 41 - W-h typed causes distinguish load, owner search, audit lookup and un
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'load'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'load'
@@ -367,10 +367,10 @@ not ok 42 - W-h successful clinical create remains confirmed when audit create a
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'confirmed'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'confirmed'

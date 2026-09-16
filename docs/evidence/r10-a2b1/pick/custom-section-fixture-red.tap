@@ -146,20 +146,20 @@ not ok 24 - GET diagnosis candidates returns nuclear cataract after ocular-healt
   ---
   duration_ms: 39.411375
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/customSectionEndpoint.test.ts:1:56821'
+  location: '<repo>/mcp/tests/customSectionEndpoint.test.ts:1:56821'
   failureType: 'testCodeFailure'
   error: |-
     {"result":"unavailable","kind":"upstream","error":"Encounter findings could not be loaded."}
-    
+
     502 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 502
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/customSectionEndpoint.test.ts:1891:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/customSectionEndpoint.test.ts:1891:10)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
@@ -169,20 +169,20 @@ not ok 25 - retinal-detachment macula status remains documentation-only for diag
   ---
   duration_ms: 13.461458
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/customSectionEndpoint.test.ts:1:59605'
+  location: '<repo>/mcp/tests/customSectionEndpoint.test.ts:1:59605'
   failureType: 'testCodeFailure'
   error: |-
     {"result":"unavailable","kind":"upstream","error":"Encounter findings could not be loaded."}
-    
+
     502 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 502
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/customSectionEndpoint.test.ts:1941:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/customSectionEndpoint.test.ts:1941:10)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
@@ -198,20 +198,20 @@ not ok 27 - each newly wired Macula selection proposes the ruled target through 
   ---
   duration_ms: 11.122458
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/customSectionEndpoint.test.ts:1:63277'
+  location: '<repo>/mcp/tests/customSectionEndpoint.test.ts:1:63277'
   failureType: 'testCodeFailure'
   error: |-
     epiretinal-membrane-erm: {"result":"unavailable","kind":"upstream","error":"Encounter findings could not be loaded."}
-    
+
     502 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 502
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/customSectionEndpoint.test.ts:2046:12)
+    TestContext.<anonymous> (<repo>/mcp/tests/customSectionEndpoint.test.ts:2046:12)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
@@ -239,20 +239,20 @@ not ok 31 - each folded retinal subtype proposes the same diagnosis as its retir
   ---
   duration_ms: 11.72775
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/customSectionEndpoint.test.ts:1:71622'
+  location: '<repo>/mcp/tests/customSectionEndpoint.test.ts:1:71622'
   failureType: 'testCodeFailure'
   error: |-
     {"result":"unavailable","kind":"upstream","error":"Encounter findings could not be loaded."}
-    
+
     502 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 502
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/customSectionEndpoint.test.ts:2296:12)
+    TestContext.<anonymous> (<repo>/mcp/tests/customSectionEndpoint.test.ts:2296:12)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
@@ -358,20 +358,20 @@ not ok 48 - DE-1 abnormal mappings return proposal badges and never auto-confirm
   ---
   duration_ms: 11.953666
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/customSectionEndpoint.test.ts:1:108164'
+  location: '<repo>/mcp/tests/customSectionEndpoint.test.ts:1:108164'
   failureType: 'testCodeFailure'
   error: |-
     {"result":"unavailable","kind":"upstream","error":"Encounter findings could not be loaded."}
-    
+
     502 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 502
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/customSectionEndpoint.test.ts:3293:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/customSectionEndpoint.test.ts:3293:10)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)

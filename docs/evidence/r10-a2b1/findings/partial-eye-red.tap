@@ -4,20 +4,20 @@ not ok 1 - eye-change identical retry finishes an added eye after removed-first 
   ---
   duration_ms: 11.65875
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:18962'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:18962'
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","error":"eye-source-missing","reason":"eye-source-missing","targetIndex":0}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 400
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:55:656)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:55:656)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

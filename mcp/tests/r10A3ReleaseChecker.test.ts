@@ -41,3 +41,15 @@ for(const [name,tap] of Object.entries({truncated:"TAP version 13\nok 1 - T1 sce
 test("W40 TAP completion requires every final summary and duration",()=>{
   assert.throws(()=>checker.parseTap("TAP version 13\nok 1 - T1 scenario\n1..1\n# tests 1\n"));
 });
+
+test("W40 rejects traversal that executes MCP scenarios as UI proof", () => withFixture(root => {
+  const manifest = join(root, "mcp/tests/fixtures/r10/a3-release-scenarios.json");
+  const data = JSON.parse(readFileSync(manifest, "utf8"));
+  for (const row of data.scenarios) if (row.suite === "ui") row.file = "ui/tests/../../mcp/tests/scenarios.test.mjs";
+  writeFileSync(manifest, JSON.stringify(data));
+  writeFileSync(join(root, "mcp/tests/scenarios.test.mjs"),
+    'import { test } from "node:test";\n' + Object.keys(checker.EXPECTED).map(id => `test("${id} scenario", () => {});`).join("\n"));
+  const result = check(root);
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+  assert.match(result.stdout + result.stderr, /T4: wrong ui file/);
+}));

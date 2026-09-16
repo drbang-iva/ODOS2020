@@ -9,10 +9,10 @@ TAP version 13
 #     at \#cachedDefaultResolve (node:internal/modules/esm/loader:747:20)
 #     at \#resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:783:38)
 #     at nextStep (node:internal/modules/customization_hooks:189:26)
-#     at resolveBaseSync (file:///Users/ericr.bang/GitHub/ODOS2020/mcp/node_modules/tsx/dist/register-C4vWVmug.mjs:2:10932)
-#     at resolveDirectorySync (file:///Users/ericr.bang/GitHub/ODOS2020/mcp/node_modules/tsx/dist/register-C4vWVmug.mjs:2:12238)
-#     at resolveTsPathsSync (file:///Users/ericr.bang/GitHub/ODOS2020/mcp/node_modules/tsx/dist/register-C4vWVmug.mjs:2:13445)
-#     at resolve (file:///Users/ericr.bang/GitHub/ODOS2020/mcp/node_modules/tsx/dist/register-C4vWVmug.mjs:2:15991) {
+#     at resolveBaseSync (file://<repo>/mcp/node_modules/tsx/dist/register-C4vWVmug.mjs:2:10932)
+#     at resolveDirectorySync (file://<repo>/mcp/node_modules/tsx/dist/register-C4vWVmug.mjs:2:12238)
+#     at resolveTsPathsSync (file://<repo>/mcp/node_modules/tsx/dist/register-C4vWVmug.mjs:2:13445)
+#     at resolve (file://<repo>/mcp/node_modules/tsx/dist/register-C4vWVmug.mjs:2:15991) {
 #   code: 'ERR_MODULE_NOT_FOUND',
 #   url: 'file://mcp/scripts/check-r10-a3-release.mjs'
 # }

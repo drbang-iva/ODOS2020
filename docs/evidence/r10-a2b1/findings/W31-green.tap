@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W31 conflict carries command result but strips internal fresh
 ok 1 - W31 conflict carries command result but strips internal fresh
   ---
-  duration_ms: 5.706167
+  duration_ms: 5.204208
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W31 conflict carries command result but strips internal fresh
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 162.760292
+# duration_ms 152.6035

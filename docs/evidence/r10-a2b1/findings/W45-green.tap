@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W45 reassert fresh-baseline command reuse refuses after version change with exactly one reassert audit
 ok 1 - W45 reassert fresh-baseline command reuse refuses after version change with exactly one reassert audit
   ---
-  duration_ms: 9.425708
+  duration_ms: 9.022084
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W45 reassert fresh-baseline command reuse refuses after version change wi
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 166.420125
+# duration_ms 157.953292

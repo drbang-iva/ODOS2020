@@ -243,10 +243,10 @@ not ok 40 - W-h reassert replay uses its new audit witness even after source dri
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'not-replay'
     - 'exact-replay'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'exact-replay'
@@ -314,9 +314,9 @@ not ok 49 - W45 reassert command witness rejects changed-baseline reuse without 
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
-    
+
       assert.ok(audits(m)[0].meta?.tag?.some(t => t.system === "urn:odos:finding-command:v1" && t.code === witness))
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
