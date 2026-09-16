@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: W15 unlink materializes only the addressed option and never attempts a Condition write
+not ok 1 - W15 unlink materializes only the addressed option and never attempts a Condition write
+  ---
+  duration_ms: 7.707375
+  type: 'test'
+  location: '<repo-root>/mcp/tests/currentFindingWriter.test.ts:1:11724'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo-root>/mcp/tests/currentFindingWriter.test.ts:164:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 199.649042

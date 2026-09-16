@@ -1,0 +1,3 @@
+{"sourceHead":"0830f5a5b8f179e28b57324e70dfddb3d7edf36e","server":{"ok":true,"version":"5.1.30-9b1bd92","platform":"linux","runtime":"v24.18.1","postgres":true,"redis":true,"redisInstances":{"default":true}},"sourceHashes":{"identity":"16cdb6bde0a5ecd6eb4cf6b43177079c3d5dc5e6aee611fe03457066758a2e23","reader":"21232d12ef3f01605c09f21d4429edf0ba245e499ba981f3de1bffe4aadb54c0","writer":"24f96c90bd3940946e54510f2f76e05a34437a9773a1ad737e60a9c0eda3d7c9"},"results":[
+{"role":"provider","login":"r10-a2a-provider@example.invalid","policyId":"b9d6df9d-2dde-4dd4-8253-cab5d596bf9c","probe":"W1","status":"FAIL","firstEvent":1,"lastEvent":15,"error":"Expected values to be strictly equal:\n+ actual - expected\n\n+ 'applied'\n- 'conflict'\n"}
+]}

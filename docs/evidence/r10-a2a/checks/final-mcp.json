@@ -1,0 +1,31 @@
+{
+  "label": "final-mcp",
+  "command": "npm --prefix mcp test",
+  "exit": 0,
+  "summary": [
+    "# tests 5493",
+    "# suites 0",
+    "# pass 5441",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 52",
+    "# todo 0",
+    "# duration_ms 82957.226917"
+  ],
+  "tail": [
+    "  duration_ms: 0.52",
+    "  type: 'test'",
+    "  ...",
+    "1..4913",
+    "# tests 5493",
+    "# suites 0",
+    "# pass 5441",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 52",
+    "# todo 0",
+    "# duration_ms 82957.226917",
+    "\u26a0\ufe0f  LIVE STACK NOT CONFIGURED \u2014 44 tests skipped, including live authorization enforcement (ageOfMajorityAuthzLive, audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, protocolItemClaimLive, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.",
+    ""
+  ]
+}

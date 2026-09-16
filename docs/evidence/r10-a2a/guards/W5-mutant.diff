@@ -1,0 +1,11 @@
+--- <repo-root>/.odos/r10-a2a/W5-original.txt	2026-09-16 08:40:15
++++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 08:40:15
+@@ -143,0 +144,8 @@
++  if (baseline.kind==="legacy" && baseline.mode==="materialize") {
++    for (const sibling of projection.currentFacts.filter(f=>f.projectionKey!==id && f.contributors.some(c=>c.reference===baseline.sourceReference))) {
++      const other={...target,key:sibling.key,state:{status:sibling.status,presence:sibling.presence,qualifiers:sibling.qualifiers,homes:sibling.homes}};
++      const identifier=currentFindingIdentifier(sibling.key);
++      await deps.fhir.createWithOutcome(buildFact(other,qualifierComponents(sibling.key,sibling.qualifiers),{...operation,target:sibling.projectionKey}),
++        {"If-None-Exist":`identifier=${identifier.system}|${identifier.value}`});
++    }
++  }

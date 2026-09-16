@@ -1,0 +1,16 @@
+{
+  "suite": "parity",
+  "command": "node --import tsx --test tests/r10-parity.test.ts",
+  "cwd": "mcp",
+  "exit": 0,
+  "summary": [
+    "# tests 170",
+    "# suites 0",
+    "# pass 170",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 0",
+    "# todo 0",
+    "# duration_ms 871.912375"
+  ]
+}

@@ -1,0 +1,4 @@
+--- <repo-root>/.odos/r10-a2a/W20-original.txt	2026-09-16 08:40:20
++++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 08:40:20
+@@ -309,0 +310 @@
++  return true;

@@ -1,0 +1,5 @@
+--- <repo-root>/.odos/r10-a2a/W25-original.txt	2026-09-16 08:40:23
++++ <repo-root>/mcp/src/clinical-graph/current-finding-identity.ts	2026-09-16 08:40:23
+@@ -35 +35 @@
+-  return createHash("sha256").update(`${commandId}|${target}|${kind}|${digest}`).digest("hex");
++  return createHash("sha256").update(`${commandId}|${target}|${kind}`).digest("hex");

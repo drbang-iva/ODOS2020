@@ -1,0 +1,13 @@
+{
+  "label": "final-build-mcp",
+  "command": "npm --prefix mcp run build",
+  "exit": 0,
+  "summary": [],
+  "tail": [
+    "",
+    "> odos-mcp@0.1.0 build",
+    "> tsc",
+    "",
+    ""
+  ]
+}

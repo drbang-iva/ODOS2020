@@ -1,0 +1,202 @@
+TAP version 13
+# Subtest: canonical fact dominates legacy, including its retired clear marker
+ok 1 - canonical fact dominates legacy, including its retired clear marker
+  ---
+  duration_ms: 3.416083
+  type: 'test'
+  ...
+# Subtest: duplicate canonical owners conflict even when assertions agree
+ok 2 - duplicate canonical owners conflict even when assertions agree
+  ---
+  duration_ms: 1.013
+  type: 'test'
+  ...
+# Subtest: retired legacy atomic cannot suppress a live section positive; cancelled is retained but never live
+ok 3 - retired legacy atomic cannot suppress a live section positive; cancelled is retained but never live
+  ---
+  duration_ms: 2.57775
+  type: 'test'
+  ...
+# Subtest: legacy OU expands to two facts, sharing its real source
+ok 4 - legacy OU expands to two facts, sharing its real source
+  ---
+  duration_ms: 0.474083
+  type: 'test'
+  ...
+# Subtest: OD absent versus OU present conflicts only OD; agreeing overlap coalesces
+ok 5 - OD absent versus OU present conflicts only OD; agreeing overlap coalesces
+  ---
+  duration_ms: 0.946292
+  type: 'test'
+  ...
+# Subtest: latest snapshot omission stays unanswered; older snapshot never revives it
+ok 6 - latest snapshot omission stays unanswered; older snapshot never revives it
+  ---
+  duration_ms: 0.5515
+  type: 'test'
+  ...
+# Subtest: equal-time different snapshots conflict independent of input order
+ok 7 - equal-time different snapshots conflict independent of input order
+  ---
+  duration_ms: 1.003125
+  type: 'test'
+  ...
+# Subtest: atomic plus section agree only with equal typed qualifier maps
+ok 8 - atomic plus section agree only with equal typed qualifier maps
+  ---
+  duration_ms: 2.413083
+  type: 'test'
+  ...
+# Subtest: homes union: extension-only
+ok 9 - homes union: extension-only
+  ---
+  duration_ms: 0.510291
+  type: 'test'
+  ...
+# Subtest: homes union: evidence-only
+ok 10 - homes union: evidence-only
+  ---
+  duration_ms: 0.422
+  type: 'test'
+  ...
+# Subtest: homes union: both
+ok 11 - homes union: both
+  ---
+  duration_ms: 0.23375
+  type: 'test'
+  ...
+# Subtest: homes union: disagreeing
+ok 12 - homes union: disagreeing
+  ---
+  duration_ms: 0.146334
+  type: 'test'
+  ...
+# Subtest: coalesced and conflicting sources union homes, canonical homes use only the canonical contributor
+ok 13 - coalesced and conflicting sources union homes, canonical homes use only the canonical contributor
+  ---
+  duration_ms: 0.7175
+  type: 'test'
+  ...
+# Subtest: negative act remains raw and never wins latest snapshot
+ok 14 - negative act remains raw and never wins latest snapshot
+  ---
+  duration_ms: 0.650709
+  type: 'test'
+  ...
+# Subtest: UNKNOWN, invalid, missing definition and unknown options remain unresolved with real references
+ok 15 - UNKNOWN, invalid, missing definition and unknown options remain unresolved with real references
+  ---
+  duration_ms: 0.256958
+  type: 'test'
+  ...
+# Subtest: raw sources are immutable, a single untranslated view retains bytes and its actual id
+ok 16 - raw sources are immutable, a single untranslated view retains bytes and its actual id
+  ---
+  duration_ms: 0.362167
+  type: 'test'
+  ...
+# Subtest: retired option translation retains typed replacement semantics without an aggregate id
+ok 17 - retired option translation retains typed replacement semantics without an aggregate id
+  ---
+  duration_ms: 0.197
+  type: 'test'
+  ...
+# Subtest: mixed carried/current contributors retain attribution and newest clinical date
+ok 18 - mixed carried/current contributors retain attribution and newest clinical date
+  ---
+  duration_ms: 0.314458
+  type: 'test'
+  ...
+# Subtest: loader traverses pages, retains retired and refuses failed, foreign or unscoped pages
+ok 19 - loader traverses pages, retains retired and refuses failed, foreign or unscoped pages
+  ---
+  duration_ms: 0.654292
+  type: 'test'
+  ...
+# Subtest: nested child selections are options, never mistaken for a parent's missing qualifier
+ok 20 - nested child selections are options, never mistaken for a parent's missing qualifier
+  ---
+  duration_ms: 0.2695
+  type: 'test'
+  ...
+# Subtest: active option plus its retired subtype still requires a translated view
+ok 21 - active option plus its retired subtype still requires a translated view
+  ---
+  duration_ms: 0.309
+  type: 'test'
+  ...
+# Subtest: inferred homes intersect eye sets and never replace explicit homes on a coalesced fact
+ok 22 - inferred homes intersect eye sets and never replace explicit homes on a coalesced fact
+  ---
+  duration_ms: 1.317833
+  type: 'test'
+  ...
+# Subtest: panel context and negative acts cannot replace a laterally scoped positive snapshot
+ok 23 - panel context and negative acts cannot replace a laterally scoped positive snapshot
+  ---
+  duration_ms: 0.496208
+  type: 'test'
+  ...
+# Subtest: typed qualifiers resolve the addressed field when a definition has multiple option fields
+ok 24 - typed qualifiers resolve the addressed field when a definition has multiple option fields
+  ---
+  duration_ms: 0.403041
+  type: 'test'
+  ...
+# Subtest: canonical homes ignore Condition evidence, while legacy homeSources identify each asserting resource
+ok 25 - canonical homes ignore Condition evidence, while legacy homeSources identify each asserting resource
+  ---
+  duration_ms: 0.331708
+  type: 'test'
+  ...
+# Subtest: later scoped negative suppresses only older snapshot positives; equal-time scope conflicts
+ok 26 - later scoped negative suppresses only older snapshot positives; equal-time scope conflicts
+  ---
+  duration_ms: 1.988083
+  type: 'test'
+  ...
+# Subtest: baselines select exact-eye unique live atomic, otherwise materialize or canonical
+ok 27 - baselines select exact-eye unique live atomic, otherwise materialize or canonical
+  ---
+  duration_ms: 1.034042
+  type: 'test'
+  ...
+# Subtest: UNKNOWN legacy retirement requires a live version; retired UNKNOWN is visible but not actionable
+ok 28 - UNKNOWN legacy retirement requires a live version; retired UNKNOWN is visible but not actionable
+  ---
+  duration_ms: 0.189584
+  type: 'test'
+  ...
+# Subtest: loader returns sanitized typed incomplete categories
+ok 29 - loader returns sanitized typed incomplete categories
+  ---
+  duration_ms: 0.373666
+  type: 'test'
+  ...
+# Subtest: audit lookup is opt-in and only current marked fact without matching audit is pending
+ok 30 - audit lookup is opt-in and only current marked fact without matching audit is pending
+  ---
+  duration_ms: 0.740875
+  type: 'test'
+  ...
+# Subtest: W16 full, partial, excluded and equal-time negatives use Observation time and preserve unaffected options
+ok 31 - W16 full, partial, excluded and equal-time negatives use Observation time and preserve unaffected options
+  ---
+  duration_ms: 1.494459
+  type: 'test'
+  ...
+# Subtest: typed incomplete maps transport refusal and missing status without upstream details
+ok 32 - typed incomplete maps transport refusal and missing status without upstream details
+  ---
+  duration_ms: 0.123209
+  type: 'test'
+  ...
+1..32
+# tests 32
+# suites 0
+# pass 32
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 200.70375

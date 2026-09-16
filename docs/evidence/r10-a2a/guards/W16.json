@@ -1,0 +1,28 @@
+{
+  "guard": "W16",
+  "changedFile": "mcp/src/clinical-graph/current-finding-reader.ts",
+  "red": {
+    "exit": 1,
+    "command": "node --import tsx --test --test-name-pattern=W16|negative act remains|panel context|E1–E17 tests/currentFindingReader.test.ts tests/r10-parity.test.ts",
+    "summary": [
+      "# tests 4",
+      "# pass 0",
+      "# fail 4",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0"
+    ]
+  },
+  "green": {
+    "exit": 0,
+    "command": "node --import tsx --test --test-name-pattern=W16|negative act remains|panel context|E1–E17 tests/currentFindingReader.test.ts tests/r10-parity.test.ts",
+    "summary": [
+      "# tests 4",
+      "# pass 4",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0"
+    ]
+  }
+}

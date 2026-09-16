@@ -1,0 +1,19 @@
+--- <repo-root>/.odos/r10-a2a/W16-original.txt	2026-09-16 08:40:18
++++ <repo-root>/mcp/src/clinical-graph/current-finding-reader.ts	2026-09-16 08:40:18
+@@ -216,16 +215,0 @@
+-  for (const [id, group] of assertions) {
+-    for (const assertion of group.filter(a => a.contributor.kind === "legacy-section-snapshot" && a.presence === "present")) {
+-      const acts = panelMap.get(panelKey(assertion.key.stableKey, assertion.key.eye))?.negativeActs ?? [];
+-      for (const act of acts) {
+-        if (act.status !== "live" || !act.scope.optionCodes.includes(assertion.key.optionCode) || act.exclusions.includes(assertion.key.optionCode)) continue;
+-        const actTime = negativeTimes.get(act.source.reference)!;
+-        if (actTime === time(assertion.observation)) assertion.snapshotConflict = true;
+-        else if (actTime > time(assertion.observation)) {
+-          group.splice(group.indexOf(assertion), 1);
+-          suppressedPanels.add(panelKey(assertion.key.stableKey, assertion.key.eye));
+-          break;
+-        }
+-      }
+-    }
+-    if (!group.length) assertions.delete(id);
+-  }

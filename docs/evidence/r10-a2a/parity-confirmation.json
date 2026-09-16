@@ -1,0 +1,8 @@
+{
+  "pass": 170,
+  "fail": 0,
+  "divergences": 5,
+  "divergenceFile": "mcp/tests/fixtures/r10/parity-divergences.json",
+  "sha256": "38a1cbbfc325394580d356b80c549c05e717a389409f5ec5096e80afa7a59d76",
+  "unchangedFrom": "87ca9f1d10c63a4796068c0a8d8cbda88fdf968c"
+}

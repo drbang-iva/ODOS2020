@@ -1,0 +1,22 @@
+{
+  "label": "rebased-build-ui",
+  "command": "npm --prefix ui run build",
+  "exit": 0,
+  "summary": [],
+  "tail": [
+    "\u2713 332 modules transformed.",
+    "rendering chunks...",
+    "computing gzip size...",
+    "dist/version.json                   0.16 kB \u2502 gzip:   0.14 kB",
+    "dist/index.html                     0.94 kB \u2502 gzip:   0.55 kB",
+    "dist/assets/index-DF84U2Dz.css    226.76 kB \u2502 gzip:  38.22 kB",
+    "dist/assets/index-CeOAsGvy.js   1,943.41 kB \u2502 gzip: 524.78 kB",
+    "",
+    "(!) Some chunks are larger than 500 kB after minification. Consider:",
+    "- Using dynamic import() to code-split the application",
+    "- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks",
+    "- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+    "\u2713 built in 2.20s",
+    ""
+  ]
+}

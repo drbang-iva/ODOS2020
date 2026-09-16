@@ -1,0 +1,4 @@
+--- <repo-root>/.odos/r10-a2a/W23-original.txt	2026-09-16 08:40:21
++++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 08:40:21
+@@ -152,0 +153 @@
++        return {status:"applied",target:id,reference:`Observation/${saved.id}`,versionId:saved.meta?.versionId};

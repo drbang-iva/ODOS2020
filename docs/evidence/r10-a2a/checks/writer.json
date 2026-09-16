@@ -1,0 +1,16 @@
+{
+  "suite": "writer",
+  "command": "node --import tsx --test tests/currentFindingWriter.test.ts",
+  "cwd": "mcp",
+  "exit": 0,
+  "summary": [
+    "# tests 33",
+    "# suites 0",
+    "# pass 33",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 0",
+    "# todo 0",
+    "# duration_ms 231.820833"
+  ]
+}

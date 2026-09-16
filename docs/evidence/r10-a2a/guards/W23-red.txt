@@ -1,0 +1,9 @@
+{"role":"provider","login":"r10-a2a-provider@example.invalid","policyId":"b9d6df9d-2dde-4dd4-8253-cab5d596bf9c","probe":"W23","status":"FAIL","firstEvent":1,"lastEvent":14,"error":"Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n    'applied',\n+   'applied'\n-   'conflict'\n  ]\n"}
+Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
+    'applied',
++   'applied'
+-   'conflict'
+  ]

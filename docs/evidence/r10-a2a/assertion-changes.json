@@ -1,0 +1,30 @@
+{
+  "baseline": "b761a8a27df29bf954c9b53ed126000f01f449dd",
+  "count": 4,
+  "changes": [
+    {
+      "file": "mcp/tests/currentFindingReader.test.ts",
+      "originalLine": 86,
+      "before": "assert.equal(p.currentFacts.length, 1)",
+      "after": "assert.equal(p.currentFacts.length, 0)"
+    },
+    {
+      "file": "mcp/tests/currentFindingReader.test.ts",
+      "originalLine": 87,
+      "before": "assert.equal(p.currentFacts[0].presence, \"present\")",
+      "after": "(removed)"
+    },
+    {
+      "file": "mcp/tests/currentFindingReader.test.ts",
+      "originalLine": 172,
+      "before": "assert.equal(p.currentFacts[0].presence,\"present\")",
+      "after": "assert.equal(p.currentFacts.length,0)"
+    },
+    {
+      "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+      "originalLine": 146,
+      "before": "assert.equal(p.currentFacts[0].presence,'present')",
+      "after": "assert.equal(p.currentFacts.length,0)"
+    }
+  ]
+}

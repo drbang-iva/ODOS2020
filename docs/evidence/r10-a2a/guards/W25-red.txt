@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: W25 reused command id with different content and a fresh baseline owes a distinct audit
+not ok 1 - W25 reused command id with different content and a fresh baseline owes a distinct audit
+  ---
+  duration_ms: 8.221666
+  type: 'test'
+  location: '<repo-root>/mcp/tests/currentFindingWriter.test.ts:1:15985'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    1 !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo-root>/mcp/tests/currentFindingWriter.test.ts:222:62)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 163.414208

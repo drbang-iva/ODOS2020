@@ -1,0 +1,57 @@
+TAP version 13
+# Subtest: lost-response recovery refuses a marker on an owner whose canonical envelope changed
+not ok 1 - lost-response recovery refuses a marker on an owner whose canonical envelope changed
+  ---
+  duration_ms: 5.687041
+  type: 'test'
+  location: '<repo-root>/mcp/tests/currentFindingWriter.test.ts:1:22347'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'applied'
+    - 'conflict'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'conflict'
+  actual: 'applied'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo-root>/mcp/tests/currentFindingWriter.test.ts:326:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: a conditional-create loser includes the winner in its fresh projection
+not ok 2 - a conditional-create loser includes the winner in its fresh projection
+  ---
+  duration_ms: 1.404708
+  type: 'test'
+  location: '<repo-root>/mcp/tests/currentFindingWriter.test.ts:1:22800'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'Observation/408e840b-e268-40e7-a7ef-96efdab4d470'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Observation/408e840b-e268-40e7-a7ef-96efdab4d470'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo-root>/mcp/tests/currentFindingWriter.test.ts:336:61)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 193.142584

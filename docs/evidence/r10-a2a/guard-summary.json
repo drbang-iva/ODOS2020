@@ -1,0 +1,398 @@
+{
+  "guardCount": 17,
+  "allRedThenGreen": true,
+  "guards": [
+    {
+      "guard": "W1",
+      "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx mcp/scripts/r10-a2a-preflight.mjs writer W1",
+        "summary": []
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx mcp/scripts/r10-a2a-preflight.mjs writer W1",
+        "summary": []
+      }
+    },
+    {
+      "guard": "W2",
+      "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx mcp/scripts/r10-a2a-preflight.mjs writer W2",
+        "summary": []
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx mcp/scripts/r10-a2a-preflight.mjs writer W2",
+        "summary": []
+      }
+    },
+    {
+      "guard": "W5",
+      "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx --test --test-name-pattern=W5 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 0",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx --test --test-name-pattern=W5 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 1",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      }
+    },
+    {
+      "guard": "W6",
+      "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx --test --test-name-pattern=W6 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 0",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx --test --test-name-pattern=W6 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 1",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      }
+    },
+    {
+      "guard": "W11",
+      "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx --test --test-name-pattern=W11 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 0",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx --test --test-name-pattern=W11 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 1",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      }
+    },
+    {
+      "guard": "W13",
+      "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx mcp/scripts/r10-a2a-preflight.mjs writer W13",
+        "summary": []
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx mcp/scripts/r10-a2a-preflight.mjs writer W13",
+        "summary": []
+      }
+    },
+    {
+      "guard": "W14",
+      "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx --test --test-name-pattern=W14 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 0",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx --test --test-name-pattern=W14 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 1",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      }
+    },
+    {
+      "guard": "W15",
+      "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx --test --test-name-pattern=W15 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 0",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx --test --test-name-pattern=W15 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 1",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      }
+    },
+    {
+      "guard": "W16",
+      "changedFile": "mcp/src/clinical-graph/current-finding-reader.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx --test --test-name-pattern=W16|negative act remains|panel context|E1\u2013E17 tests/currentFindingReader.test.ts tests/r10-parity.test.ts",
+        "summary": [
+          "# tests 4",
+          "# pass 0",
+          "# fail 4",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx --test --test-name-pattern=W16|negative act remains|panel context|E1\u2013E17 tests/currentFindingReader.test.ts tests/r10-parity.test.ts",
+        "summary": [
+          "# tests 4",
+          "# pass 4",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      }
+    },
+    {
+      "guard": "W18",
+      "changedFile": "mcp/src/clinical-graph/current-finding-reader.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx --test --test-name-pattern=canonical homes tests/currentFindingReader.test.ts",
+        "summary": [
+          "# tests 2",
+          "# pass 1",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx --test --test-name-pattern=canonical homes tests/currentFindingReader.test.ts",
+        "summary": [
+          "# tests 2",
+          "# pass 2",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      }
+    },
+    {
+      "guard": "W19",
+      "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx mcp/scripts/r10-a2a-preflight.mjs writer W19",
+        "summary": []
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx mcp/scripts/r10-a2a-preflight.mjs writer W19",
+        "summary": []
+      }
+    },
+    {
+      "guard": "W20",
+      "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx mcp/scripts/r10-a2a-preflight.mjs writer W20",
+        "summary": []
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx mcp/scripts/r10-a2a-preflight.mjs writer W20",
+        "summary": []
+      }
+    },
+    {
+      "guard": "W21",
+      "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx --test --test-name-pattern=W21 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 0",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx --test --test-name-pattern=W21 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 1",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      }
+    },
+    {
+      "guard": "W22",
+      "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx --test --test-name-pattern=W22 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 0",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx --test --test-name-pattern=W22 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 1",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      }
+    },
+    {
+      "guard": "W23",
+      "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx mcp/scripts/r10-a2a-preflight.mjs writer W23",
+        "summary": []
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx mcp/scripts/r10-a2a-preflight.mjs writer W23",
+        "summary": []
+      }
+    },
+    {
+      "guard": "W24",
+      "changedFile": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx --test --test-name-pattern=W24 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 0",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx --test --test-name-pattern=W24 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 1",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      }
+    },
+    {
+      "guard": "W25",
+      "changedFile": "mcp/src/clinical-graph/current-finding-identity.ts",
+      "red": {
+        "exit": 1,
+        "command": "node --import tsx --test --test-name-pattern=W25 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 0",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "command": "node --import tsx --test --test-name-pattern=W25 tests/currentFindingWriter.test.ts",
+        "summary": [
+          "# tests 1",
+          "# pass 1",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0",
+          "# todo 0"
+        ]
+      }
+    }
+  ]
+}

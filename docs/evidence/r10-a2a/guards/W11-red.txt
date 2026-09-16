@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: W11 absent create persists one strict canonical owner, separate operation marker, and self-targeted audit
+not ok 1 - W11 absent create persists one strict canonical owner, separate operation marker, and self-targeted audit
+  ---
+  duration_ms: 5.501
+  type: 'test'
+  location: '<repo-root>/mcp/tests/currentFindingWriter.test.ts:1:1601'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    'invalid' !== 'valid'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'valid'
+  actual: 'invalid'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo-root>/mcp/tests/currentFindingWriter.test.ts:25:51)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 191.14575

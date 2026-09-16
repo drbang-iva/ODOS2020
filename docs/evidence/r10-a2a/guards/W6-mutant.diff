@@ -1,0 +1,4 @@
+--- <repo-root>/.odos/r10-a2a/W6-original.txt	2026-09-16 08:40:16
++++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 08:40:16
+@@ -116,0 +117 @@
++  if (target.baseline.kind==="legacy") target={...target,baseline:{...target.baseline,key:target.baseline.key??target.key,mode:target.baseline.mode??"materialize"}};

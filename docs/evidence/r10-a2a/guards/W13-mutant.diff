@@ -1,0 +1,5 @@
+--- <repo-root>/.odos/r10-a2a/W13-original.txt	2026-09-16 08:40:16
++++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 08:40:16
+@@ -113 +113 @@
+-      if (recordFactDigest(owner,definition,row)!==digest) return {status:"conflict",target:id,reference:`Observation/${owner.id}`,reason:"Owner changed after command was recorded.",fresh:projection};
++      if (false) return {status:"conflict",target:id,reference:`Observation/${owner.id}`,reason:"Owner changed after command was recorded.",fresh:projection};
