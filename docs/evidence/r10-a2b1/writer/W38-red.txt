@@ -1,0 +1,43 @@
+TAP version 13
+# Subtest: W38 executionOrder reports actual library ordering with legacy retirement submitted first
+not ok 1 - W38 executionOrder reports actual library ordering with legacy retirement submitted first
+  ---
+  duration_ms: 6.976959
+  type: 'test'
+  location: 'mcp/tests/currentFindingWriter.test.ts:1:25064'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   0,
+        1,
+    -   0
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 1
+    1: 0
+  actual:
+    0: 0
+    1: 1
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (mcp/tests/currentFindingWriter.test.ts:368:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 182.491083
+
+Exit: 1

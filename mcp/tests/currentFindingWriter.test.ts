@@ -1,3 +1,4 @@
+import * as writer from "../src/clinical-graph/current-finding-writer.js";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Condition, Observation, Provenance } from "@medplum/fhirtypes";
@@ -357,4 +358,135 @@ test("review regression: a reassertion tag cannot confirm an audit targeting ano
   const replay=await run(m,c);
   assert.equal(replay.complete,false);assert.equal(replay.outcomes[0].status,"refused");
   assert.equal(observationWrites(m).length,0);assert.equal(audits(m).length,1);
+});
+
+
+test("W38 executionOrder reports actual library ordering with legacy retirement submitted first", async () => {
+  const m = memoryFhir([atomic("unknown", "UNKNOWN")]);
+  const c = command([{ kind: "legacy-retire", sourceReference: "Observation/unknown", baseline: { versionId: "v1" } }, factTarget()]);
+  const result = await run(m, c);
+  assert.deepEqual(result.executionOrder, [1, 0]);
+  assert.equal(result.outcomes[1].clinicalWrite, "confirmed");
+});
+
+test("W38 fact pair retains submitted execution order when second target conflicts", async () => {
+  const m = memoryFhir([canonicalFact("left", "OS")]);
+  const result = await run(m, command([factTarget(), factTarget(keyFor("OS"))]));
+  assert.deepEqual(result.executionOrder, [0, 1]);
+  assert.deepEqual(result.outcomes.map(o => o.status), ["applied", "conflict"]);
+  assert.deepEqual(result.outcomes.map(o => o.clinicalWrite), ["confirmed", "none"]);
+  assert.equal(result.outcomes[1].cause, "verify-read");
+});
+
+test("W44 refresh failure belongs to first unexecuted target after a confirmed write", async () => {
+  const m = memoryFhir();
+  m.hooks.beforeSearch = (type, params) => { if (type === "Observation" && params.encounter && observations(m).length) throw httpError(502); };
+  const result = await run(m, command([factTarget(), factTarget(keyFor("OS")), factTarget(keyFor("OD", "cortical-cataract"))]));
+  assert.deepEqual(result.outcomes.map(o => o.cause), [undefined, "refresh", "halted-by-earlier-target"]);
+  assert.deepEqual(result.outcomes.map(o => o.clinicalWrite), ["confirmed", "none", "none"]);
+  assert.equal(result.complete, false);
+});
+
+test("W-h replay verifier distinguishes exact, new, reused-content and persisted-state mismatch", async () => {
+  const m = memoryFhir(); const c = command([factTarget()]) as FindingCommand;
+  const loaded = () => ({ ...state(observations(m)), fhir: m.fhir });
+  assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "not-replay");
+  await run(m, c);
+  assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "exact-replay");
+  const changed = factTarget(keyFor(), factBaseline(observations(m)), endState({ presence: "absent" })) as FindingCommand["targets"][number];
+  assert.equal(await writer.classifyReplay(loaded(), c, changed), "reused-with-different-content");
+  m.save({ ...observations(m)[0], valueBoolean: false });
+  assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "not-replay");
+});
+
+test("W-h reassert replay requires its exact audit witness and persisted baseline", async () => {
+  const m = memoryFhir([canonicalFact()]);
+  const c = command([{ kind: "reassert", key: keyFor(), baseline: factBaseline(observations(m)) }]) as FindingCommand;
+  const loaded = () => ({ ...state(observations(m)), fhir: m.fhir });
+  assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "not-replay");
+  await run(m, c);
+  assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "exact-replay");
+  m.save({ ...observations(m)[0], valueBoolean: false });
+  assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "not-replay");
+  assert.equal(observationWrites(m).length, 0);
+});
+
+test("W-h typed causes distinguish load, owner search, audit lookup and unknown clinical write", async () => {
+  const initial = memoryFhir(); initial.hooks.beforeSearch = () => { throw httpError(502); };
+  const loadResult = await run(initial, command([factTarget()]));
+  assert.equal(loadResult.outcomes[0].cause, "load"); assert.equal(loadResult.outcomes[0].clinicalWrite, "none");
+  const owner = memoryFhir(); owner.hooks.beforeSearch = (_, params) => { if (params.identifier) throw httpError(502); };
+  assert.equal((await run(owner, command([factTarget()]))).outcomes[0].cause, "owner-search");
+  const unknown = memoryFhir(); let lost = false;
+  unknown.hooks.afterWrite = w => { if (w.resource.resourceType === "Observation") { lost = true; throw Error("lost"); } };
+  unknown.hooks.beforeSearch = () => { if (lost) throw httpError(502); };
+  const result = await run(unknown, command([factTarget()]));
+  assert.equal(result.outcomes[0].cause, "verify-read"); assert.equal(result.outcomes[0].clinicalWrite, "unknown");
+  const reassert = memoryFhir([canonicalFact()]); reassert.hooks.beforeSearch = type => { if (type === "Provenance") throw httpError(502); };
+  assert.equal((await run(reassert, command([{ kind: "reassert", key: keyFor(), baseline: factBaseline(observations(reassert)) }]))).outcomes[0].cause, "audit-lookup");
+});
+
+test("W-h successful clinical create remains confirmed when audit create and lookup fail", async () => {
+  const m = memoryFhir();
+  m.hooks.beforeWrite = w => { if (w.resource.resourceType === "Provenance") throw Error("audit unavailable"); };
+  m.hooks.beforeSearch = type => { if (type === "Provenance") throw Error("audit lookup unavailable"); };
+  const result = await run(m, command([factTarget()]));
+  assert.equal(result.outcomes[0].status, "unconfirmed");
+  assert.equal(result.outcomes[0].clinicalWrite, "confirmed"); assert.equal(result.outcomes[0].cause, "audit-lookup");
+});
+
+test("W-h repairPendingAudits persists frozen debt and never attempts clinical writes", async () => {
+  const m = memoryFhir();
+  m.hooks.beforeWrite = w => { if (w.resource.resourceType === "Provenance") throw httpError(403); };
+  await run(m, command([factTarget()]));
+  const before = structuredClone(observations(m)); const count = observationWrites(m).length;
+  m.hooks.beforeWrite = undefined;
+  const c = command([]);
+  const result = await writer.repairPendingAudits(writerContext(m), c);
+  assert.equal(result.complete, true); assert.deepEqual(result.executionOrder, [0]);
+  assert.equal(result.outcomes[0].clinicalWrite, "none");
+  assert.deepEqual(observations(m), before); assert.equal(observationWrites(m).length, count); assert.equal(audits(m).length, 1);
+  assert.equal((await writer.repairPendingAudits(writerContext(m), c)).outcomes.length, 0);
+});
+
+test("W-h reassert replay audit lookup failure has a typed cause", async () => {
+  const m = memoryFhir([canonicalFact()]);
+  m.hooks.beforeSearch = type => { if (type === "Provenance") throw httpError(502); };
+  const c = command([{ kind: "reassert", key: keyFor(), baseline: factBaseline(observations(m)) }]) as FindingCommand;
+  await assert.rejects(writer.classifyReplay({ ...state(observations(m)), fhir: m.fhir }, c, c.targets[0]),
+    (error: unknown) => (error as { cause?: string }).cause === "audit-lookup");
+});
+
+test("W-h repair failure preserves frozen debt and carries audit-repair with no clinical write", async () => {
+  const m = memoryFhir();
+  m.hooks.beforeWrite = w => { if (w.resource.resourceType === "Provenance") throw httpError(403); };
+  await run(m, command([factTarget()]));
+  const before = structuredClone(observations(m));
+  const result = await writer.repairPendingAudits(writerContext(m), command([]));
+  assert.equal(result.complete, false); assert.equal(result.outcomes[0].cause, "audit-repair");
+  assert.equal(result.outcomes[0].clinicalWrite, "none"); assert.deepEqual(observations(m), before);
+});
+
+test("W-h reassert verified source failure is verify-read and successful reassert writes no clinical data", async () => {
+  const m = memoryFhir([canonicalFact()]);
+  const c = command([{ kind: "reassert", key: keyFor(), baseline: factBaseline(observations(m)) }]);
+  m.hooks.beforeRead = () => { throw httpError(502); };
+  const failed = await run(m, c);
+  assert.equal(failed.outcomes[0].cause, "verify-read"); assert.equal(failed.outcomes[0].clinicalWrite, "none");
+  m.hooks.beforeRead = undefined;
+  assert.equal((await run(m, c)).outcomes[0].clinicalWrite, "none");
+});
+
+for (const status of [403, 404]) test(`W-h load and refresh preserve typed ${status} failure for response selection`, async () => {
+  const m = memoryFhir();
+  m.hooks.beforeSearch = () => { throw httpError(status); };
+  const failed = await run(m, command([factTarget()]));
+  assert.equal((failed.outcomes[0].fresh as { incomplete: boolean }).incomplete, true);
+  assert.equal((failed.outcomes[0].fresh as { kind: string }).kind, status === 403 ? "refused" : "missing");
+  const repair = await writer.repairPendingAudits(writerContext(m), command([]));
+  assert.equal((repair.outcomes[0].fresh as { kind: string }).kind, status === 403 ? "refused" : "missing");
+  m.hooks.beforeSearch = (type, params) => { if (type === "Observation" && params.encounter && observations(m).length) throw httpError(status); };
+  const refreshed = await run(m, command([factTarget(), factTarget(keyFor("OS"))]));
+  assert.equal(refreshed.outcomes[1].cause, "refresh");
+  assert.equal((refreshed.outcomes[1].fresh as { kind: string }).kind, status === 403 ? "refused" : "missing");
 });

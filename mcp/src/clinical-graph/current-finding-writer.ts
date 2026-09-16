@@ -31,9 +31,10 @@ export interface FindingCommandDeps {
   now?: () => string;
 }
 export type FindingOutcomeStatus = "applied" | "unchanged" | "already-applied" | "not-attempted" | "conflict" | "refused" | "unconfirmed";
-export interface FindingOutcome { status: FindingOutcomeStatus; target: string; reference?: string; versionId?: string;
+export type FindingOutcomeCause = "load" | "refresh" | "owner-search" | "verify-read" | "audit-lookup" | "audit-repair" | "halted-by-earlier-target";
+export interface FindingOutcome { clinicalWrite: "confirmed" | "unknown" | "none"; cause?: FindingOutcomeCause; status: FindingOutcomeStatus; target: string; reference?: string; versionId?: string;
   auditPending?: boolean; reason?: string; fresh?: CurrentFindingProjection | Extract<EncounterFindingState, { incomplete: true }> }
-export interface FindingCommandResult { commandId: string; complete: boolean; outcomes: FindingOutcome[] }
+export interface FindingCommandResult { commandId: string; complete: boolean; executionOrder: number[]; outcomes: FindingOutcome[] }
 
 type Complete = Extract<EncounterFindingState, { incomplete: false }>;
 type TargetState = Extract<FindingCommandTarget, {kind:"fact"}>["state"];
@@ -47,23 +48,83 @@ export async function executeFindingCommand(deps: FindingCommandDeps, command: F
   const outcomes: FindingOutcome[] = Array(command.targets.length);
   const ordered = command.targets.map((target,index)=>({target,index})).sort((a,b)=>
     Number(a.target.kind==="legacy-retire")-Number(b.target.kind==="legacy-retire") || a.index-b.index);
+  const executionOrder = ordered.map(({index})=>index);
   let state = await load(deps,command);
   if (state.incomplete === true) { const reason=state.reason;
-    return { commandId:command.commandId, complete:false, outcomes:command.targets.map(t=>({status:"not-attempted",target:targetId(t),reason})) }; }
+    return { commandId:command.commandId, complete:false, executionOrder, outcomes:command.targets.map(t=>({clinicalWrite:"none",cause:"load",status:"not-attempted",target:targetId(t),fresh:state,reason})) }; }
   let stop = false;
   for (const {target,index} of ordered) {
-    if (stop) { outcomes[index]={status:"not-attempted",target:targetId(target),reason:"Earlier target did not complete."}; continue; }
-    if (state.incomplete === true) { outcomes[index]={status:"not-attempted",target:targetId(target),reason:state.reason};stop=true;continue; }
+    if (stop) { outcomes[index]={clinicalWrite:"none",cause:"halted-by-earlier-target",status:"not-attempted",target:targetId(target),reason:"Earlier target did not complete."}; continue; }
+    if (state.incomplete === true) { outcomes[index]={clinicalWrite:"none",cause:"refresh",status:"not-attempted",target:targetId(target),fresh:state,reason:state.reason};stop=true;continue; }
     const outcome = await executeTarget(deps,command,target,state);
     outcomes[index]=outcome;
     if (["conflict","refused","unconfirmed","not-attempted"].includes(outcome.status)) stop=true;
     else if (ordered.at(-1)?.index!==index) {
       state=await load(deps,command);
-      if (state.incomplete) stop=true;
     }
   }
-  for (const {target,index} of ordered) if (!outcomes[index]) outcomes[index]={status:"not-attempted",target:targetId(target),reason:"Encounter state could not be refreshed."};
-  return { commandId:command.commandId, complete:outcomes.every(o=>["applied","unchanged","already-applied"].includes(o.status) && !o.auditPending), outcomes };
+  for (const {target,index} of ordered) if (!outcomes[index]) outcomes[index]={clinicalWrite:"none",cause:"verify-read",status:"not-attempted",target:targetId(target),reason:"Encounter state could not be refreshed."};
+  return { commandId:command.commandId, complete:outcomes.every(o=>["applied","unchanged","already-applied"].includes(o.status) && !o.auditPending), executionOrder, outcomes };
+}
+
+
+export class FindingReplayLookupError extends Error {
+  readonly cause = "audit-lookup" as const;
+  constructor() { super("Reassertion replay audit state could not be verified."); }
+}
+export type FindingReplayClassification = "exact-replay" | "not-replay" | "reused-with-different-content";
+export async function classifyReplay(state: Complete & { fhir?: FindingCommandDeps["fhir"] }, command: FindingCommand,
+  target: FindingCommandTarget): Promise<FindingReplayClassification> {
+  const id=targetId(target);
+  if(target.kind==="reassert") {
+    const baseline=target.baseline;
+    if(!baseline || !validFactBaseline(baseline,target.key))return "not-replay";
+    if(!state.fhir)throw new Error("Reassertion replay requires an audit lookup client.");
+    const reference=baseline.kind==="canonical"?baseline.reference:baseline.sourceReference;
+    const digest=sha({reference,versionId:baseline.versionId});
+    try { if(!await auditExists({fhir:state.fhir},findingAuditKey(command.commandId,id,"reassertion",digest),reference))return "not-replay"; }
+    catch { throw new FindingReplayLookupError(); }
+    const observation=state.observations.find(o=>`Observation/${o.id}`===reference);
+    const fact=projectCurrentFindings(state).currentFacts.find(f=>f.projectionKey===id);
+    return observation?.meta?.versionId===baseline.versionId && !!fact && matchesBaseline(baseline,target.key,
+      baseline.kind==="canonical"?observation:undefined,fact,state)?"exact-replay":"not-replay";
+  }
+  const owners=state.observations.filter(o=>target.kind==="legacy-retire"?`Observation/${o.id}`===target.sourceReference:
+    o.identifier?.some(i=>i.system===currentFindingIdentifier(target.key).system && i.value===currentFindingIdentifier(target.key).value));
+  if(owners.length!==1)return "not-replay";
+  const owner=owners[0],marker=parseFindingOperation(owner);
+  if(marker?.commandId!==command.commandId)return "not-replay";
+  if(marker.target!==id)return "reused-with-different-content";
+  if(target.kind==="legacy-retire") {
+    if(marker.digest!==sha({sourceReference:target.sourceReference,status:"entered-in-error"}))return "reused-with-different-content";
+    return owner.status==="entered-in-error"?"exact-replay":"not-replay";
+  }
+  const row=state.catalog.find(r=>r.atomicFindingId===`${target.key.stableKey}::${target.key.fieldCode}::${target.key.optionCode}`);
+  const definition=state.definitions.find(d=>d.stableKey===target.key.stableKey);
+  const digest=factDigest(target.state,qualifierComponents(target.key,target.state.qualifiers));
+  if(marker.digest!==digest)return "reused-with-different-content";
+  return row && definition && parseCurrentFindingEnvelope(owner).status==="valid" &&
+    recordFactDigest(owner,definition,row)===digest?"exact-replay":"not-replay";
+}
+
+export async function repairPendingAudits(deps: FindingCommandDeps,
+  request: Pick<FindingCommand,"commandId"|"patientReference"|"encounterReference">): Promise<FindingCommandResult> {
+  const command:FindingCommand={...request,surface:"audit-repair",targets:[]};
+  validateCommand(command,true);
+  const state=await load(deps,command);
+  if(state.incomplete)return {commandId:command.commandId,complete:false,executionOrder:[0],outcomes:[{
+    status:"not-attempted",target:command.encounterReference,clinicalWrite:"none",cause:"load",fresh:state,reason:state.reason}]};
+  const debt=state.observations.filter(o=>state.pendingAudits?.has(`Observation/${o.id}`));
+  const outcomes:FindingOutcome[]=[];
+  let stopped=false;
+  for(const observation of debt) {
+    const marker=parseFindingOperation(observation)!;
+    if(stopped){outcomes.push({status:"not-attempted",target:marker.target,clinicalWrite:"none",cause:"halted-by-earlier-target"});continue;}
+    const outcome=await ensureReplayAudit(deps,marker.target,observation,marker);
+    outcomes.push({...outcome,clinicalWrite:"none"});
+    stopped=outcome.auditPending===true || !["applied","already-applied"].includes(outcome.status);
+  }
+  return {commandId:command.commandId,complete:!stopped,executionOrder:outcomes.map((_,index)=>index),outcomes};
 }
 
 async function load(deps: FindingCommandDeps, command: FindingCommand): Promise<EncounterFindingState> {
@@ -97,48 +158,48 @@ async function executeTarget(deps: FindingCommandDeps, command: FindingCommand, 
   const ownerId=currentFindingIdentifier(target.key).value;
   let ownerRows:Observation[];
   try { ownerRows=await findOwners(deps,command,target.key); }
-  catch { return {status:"not-attempted",target:id,reason:"Finding identity search could not be verified."}; }
-  if (ownerRows.length>1 || ownerRows.some(o=>parseCurrentFindingEnvelope(o).status!=="valid")) return {status:"conflict",target:id,reason:"Canonical owner is ambiguous.",fresh:projection};
+  catch { return {clinicalWrite:"none",cause:"owner-search",status:"not-attempted",target:id,reason:"Finding identity search could not be verified."}; }
+  if (ownerRows.length>1 || ownerRows.some(o=>parseCurrentFindingEnvelope(o).status!=="valid")) return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Canonical owner is ambiguous.",fresh:projection};
   const owner=ownerRows[0];
   const row=deps.catalog.find(r=>r.atomicFindingId===`${target.key.stableKey}::${target.key.fieldCode}::${target.key.optionCode}`);
   const definition=deps.definitions.find(d=>d.stableKey===target.key.stableKey);
-  if (!row || !definition) return {status:"refused",target:id,reason:"Finding definition is unavailable."};
-  if (!target.baseline) return {status:"refused",target:id,reason:"A complete baseline is required."};
-  if (!validIntendedState(target.state,definition,target.key,state)) return {status:"refused",target:id,reason:"Intended qualifier or home is outside the effective catalog/encounter."};
+  if (!row || !definition) return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reason:"Finding definition is unavailable."};
+  if (!target.baseline) return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reason:"A complete baseline is required."};
+  if (!validIntendedState(target.state,definition,target.key,state)) return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reason:"Intended qualifier or home is outside the effective catalog/encounter."};
   const components=qualifierComponents(target.key,target.state.qualifiers);
   const digest=factDigest(target.state,components);
   if (owner) {
     let marker:FindingOperation|undefined;
-    try { marker=parseFindingOperation(owner); } catch { return {status:"refused",target:id,reason:"Owner operation marker is invalid."}; }
+    try { marker=parseFindingOperation(owner); } catch { return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reason:"Owner operation marker is invalid."}; }
     if (marker?.commandId===command.commandId && marker.target===id && marker.digest===digest) {
-      if (recordFactDigest(owner,definition,row)!==digest) return {status:"conflict",target:id,reference:`Observation/${owner.id}`,reason:"Owner changed after command was recorded.",fresh:projection};
+      if (recordFactDigest(owner,definition,row)!==digest) return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reference:`Observation/${owner.id}`,reason:"Owner changed after command was recorded.",fresh:projection};
       return ensureReplayAudit(deps,id,owner,marker);
     }
   }
-  if (!validFactBaseline(target.baseline,target.key)) return {status:"refused",target:id,reason:"A complete baseline is required."};
+  if (!validFactBaseline(target.baseline,target.key)) return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reason:"A complete baseline is required."};
   const current=projection.currentFacts.find(f=>f.projectionKey===id);
-  if (projection.conflicts.some(f=>f.projectionKey===id)) return {status:"conflict",target:id,reason:"Finding has conflicting sources.",fresh:projection};
-  if (!matchesBaseline(target.baseline,target.key,owner,current,state)) return {status:"conflict",target:id,reason:"Finding baseline changed.",fresh:projection};
+  if (projection.conflicts.some(f=>f.projectionKey===id)) return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Finding has conflicting sources.",fresh:projection};
+  if (!matchesBaseline(target.baseline,target.key,owner,current,state)) return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Finding baseline changed.",fresh:projection};
   if (owner && recordFactDigest(owner,definition,row)===digest) {
     try {
       if (!(await findPendingAudits(deps.fhir,[owner])).has(`Observation/${owner.id}`))
-        return {status:"unchanged",target:id,reference:`Observation/${owner.id}`,versionId:owner.meta?.versionId};
-    } catch { return {status:"not-attempted",target:id,reason:"prior-audit-unrepaired"}; }
+        return {clinicalWrite:"none",status:"unchanged",target:id,reference:`Observation/${owner.id}`,versionId:owner.meta?.versionId};
+    } catch { return {clinicalWrite:"none",cause:"audit-repair",status:"not-attempted",target:id,reason:"prior-audit-unrepaired"}; }
   }
   const baseline=target.baseline;
   let source:Observation|undefined;
   if (baseline.kind==="legacy") source=state.observations.find(o=>`Observation/${o.id}`===baseline.sourceReference);
-  if (baseline.kind==="legacy" && !source) return {status:"conflict",target:id,reason:"Legacy source is missing.",fresh:projection};
+  if (baseline.kind==="legacy" && !source) return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Legacy source is missing.",fresh:projection};
   if (source) {
     try { const latest=await deps.fhir.read<Observation>("Observation",source.id!);
       if (latest.subject?.reference!==command.patientReference || latest.encounter?.reference!==command.encounterReference ||
-        latest.meta?.versionId!==source.meta?.versionId) return {status:"conflict",target:id,reason:"Legacy source changed.",fresh:await freshProjection(deps,command)};
+        latest.meta?.versionId!==source.meta?.versionId) return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Legacy source changed.",fresh:await freshProjection(deps,command)};
       source=latest;
-    } catch { return {status:"not-attempted",target:id,reason:"Legacy source could not be verified."}; }
+    } catch { return {clinicalWrite:"none",cause:"verify-read",status:"not-attempted",target:id,reason:"Legacy source could not be verified."}; }
   }
   const update=!!owner || (baseline.kind==="legacy" && baseline.mode==="adopt");
   const prior=owner ?? (update ? source : undefined);
-  if (prior && !(await repairPrior(deps,prior))) return {status:"not-attempted",target:id,reason:"prior-audit-unrepaired"};
+  if (prior && !(await repairPrior(deps,prior))) return {clinicalWrite:"none",cause:"audit-repair",status:"not-attempted",target:id,reason:"prior-audit-unrepaired"};
   const recorded=(deps.now??(()=>new Date().toISOString()))();
   const operation:FindingOperation={commandId:command.commandId,target:id,digest,audit:{kind:"mutation",actor:deps.staffReference,
     recorded,activity:update?"UPDATE":"CREATE",targetReferences:["self",command.patientReference]}};
@@ -152,19 +213,19 @@ async function executeTarget(deps: FindingCommandDeps, command: FindingCommand, 
       saved=result.resource;
       if (!result.created) {
         let loser:FindingOperation|undefined;
-        try { loser=parseFindingOperation(saved); } catch { return {status:"conflict",target:id,reason:"Another command owns this finding."}; }
+        try { loser=parseFindingOperation(saved); } catch { return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Another command owns this finding."}; }
         if (parseCurrentFindingEnvelope(saved).status==="valid" && loser?.commandId===command.commandId && loser.target===id && loser.digest===digest &&
           recordFactDigest(saved,definition,row)===digest && saved.id) {
           if (saved.subject?.reference!==command.patientReference || saved.encounter?.reference!==command.encounterReference)
-            return {status:"conflict",target:id,reason:"Returned owner is outside the encounter."};
+            return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Returned owner is outside the encounter."};
           return ensureReplayAudit(deps,id,saved,loser);
         }
-        return {status:"conflict",target:id,reason:"Another command owns this finding.",reference:saved.id?`Observation/${saved.id}`:undefined,
+        return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Another command owns this finding.",reference:saved.id?`Observation/${saved.id}`:undefined,
           versionId:saved.meta?.versionId,fresh:await freshProjection(deps,command)};
       }
     }
   } catch(error) { return recoverFactWrite(deps,command,target,digest,definition,row,error,prior); }
-  if (!saved.id || !saved.meta?.versionId) return {status:"unconfirmed",target:id,reason:"Saved finding lacks an id or version.",
+  if (!saved.id || !saved.meta?.versionId) return {clinicalWrite:"confirmed",cause:"verify-read",status:"unconfirmed",target:id,reason:"Saved finding lacks an id or version.",
     ...(saved.id?{reference:`Observation/${saved.id}`}:{})};
   return finishMutationAudit(deps,id,saved,operation);
 }
@@ -222,25 +283,25 @@ async function executeRetire(deps:FindingCommandDeps,command:FindingCommand,targ
   const id=targetId(target);
   let source:Observation;
   try { source=await deps.fhir.read<Observation>("Observation",target.sourceReference.slice("Observation/".length)); }
-  catch(error) { return (error as {status?:number})?.status===404 ? {status:"conflict",target:id,reason:"Legacy source is missing."} :
-    {status:"not-attempted",target:id,reason:"Legacy source could not be verified."}; }
+  catch(error) { return (error as {status?:number})?.status===404 ? {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Legacy source is missing."} :
+    {clinicalWrite:"none",cause:"verify-read",status:"not-attempted",target:id,reason:"Legacy source could not be verified."}; }
   if(source.resourceType!=="Observation" || source.id!==target.sourceReference.slice("Observation/".length) ||
     source.subject?.reference!==command.patientReference || source.encounter?.reference!==command.encounterReference)
-    return {status:"refused",target:id,reason:"Legacy source is outside the encounter."};
-  if (!target.baseline) return {status:"refused",target:id,reason:"A source version is required."};
+    return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reason:"Legacy source is outside the encounter."};
+  if (!target.baseline) return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reason:"A source version is required."};
   const digest=sha({sourceReference:target.sourceReference,status:"entered-in-error"});
   let marker:FindingOperation|undefined;
-  try { marker=parseFindingOperation(source); } catch { return {status:"refused",target:id,reason:"Source operation marker is invalid."}; }
+  try { marker=parseFindingOperation(source); } catch { return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reason:"Source operation marker is invalid."}; }
   if (marker?.commandId===command.commandId && marker.target===id && marker.digest===digest) {
-    if (source.status!=="entered-in-error") return {status:"conflict",target:id,reason:"Source changed after retirement was recorded.",fresh:projectCurrentFindings(state)};
+    if (source.status!=="entered-in-error") return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Source changed after retirement was recorded.",fresh:projectCurrentFindings(state)};
     return ensureReplayAudit(deps,id,source,marker);
   }
-  if (typeof target.baseline?.versionId!=="string" || !target.baseline.versionId) return {status:"refused",target:id,reason:"A source version is required."};
+  if (typeof target.baseline?.versionId!=="string" || !target.baseline.versionId) return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reason:"A source version is required."};
   const alias=buildFindingReadAliases(deps.definitions,deps.catalog);
   if (source.meta?.versionId!==target.baseline.versionId || observationLaterality(source)!=="UNKNOWN" ||
     classifyFindingObservation(source,deps.definitions,deps.catalog,alias).kind!=="legacy-atomic" || !isLiveObservation(source))
-    return {status:"conflict",target:id,reason:"UNKNOWN source baseline changed.",fresh:projectCurrentFindings(state)};
-  if (!(await repairPrior(deps,source))) return {status:"not-attempted",target:id,reason:"prior-audit-unrepaired"};
+    return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"UNKNOWN source baseline changed.",fresh:projectCurrentFindings(state)};
+  if (!(await repairPrior(deps,source))) return {clinicalWrite:"none",cause:"audit-repair",status:"not-attempted",target:id,reason:"prior-audit-unrepaired"};
   const operation:FindingOperation={commandId:command.commandId,target:id,digest,audit:{kind:"mutation",actor:deps.staffReference,
     recorded:(deps.now??(()=>new Date().toISOString()))(),activity:"UPDATE",targetReferences:["self",command.patientReference]}};
   const next:Observation={...source,status:"entered-in-error",component:[...(source.component??[]).filter(c=>!c.code.coding?.some(v=>v.code==="R10_OPERATION")),
@@ -253,24 +314,24 @@ async function executeRetire(deps:FindingCommandDeps,command:FindingCommand,targ
 
 async function executeReassert(deps:FindingCommandDeps,command:FindingCommand,target:Extract<FindingCommandTarget,{kind:"reassert"}>,state:Complete):Promise<FindingOutcome> {
   const id=targetId(target),baseline=target.baseline;
-  if (!baseline || !["canonical","legacy"].includes(baseline.kind) || !validFactBaseline(baseline,target.key)) return {status:"refused",target:id,reason:"A current finding baseline is required."};
+  if (!baseline || !["canonical","legacy"].includes(baseline.kind) || !validFactBaseline(baseline,target.key)) return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reason:"A current finding baseline is required."};
   const reference=baseline.kind==="canonical"?baseline.reference:baseline.sourceReference;
   const digest=sha({reference,versionId:baseline.versionId});
   const key=findingAuditKey(command.commandId,id,"reassertion",digest);
-  try { if (await auditExists(deps,key,reference)) return {status:"already-applied",target:id,reference,versionId:baseline.versionId}; }
-  catch { return {status:"not-attempted",target:id,reason:"Audit state could not be verified."}; }
+  try { if (await auditExists(deps,key,reference)) return {clinicalWrite:"none",status:"already-applied",target:id,reference,versionId:baseline.versionId}; }
+  catch { return {clinicalWrite:"none",cause:"audit-lookup",status:"not-attempted",target:id,reason:"Audit state could not be verified."}; }
   const projection=projectCurrentFindings(state),fact=projection.currentFacts.find(f=>f.projectionKey===id);
   if (!fact || !matchesBaseline(baseline,target.key,state.observations.find(o=>`Observation/${o.id}`===reference && baseline.kind==="canonical"),fact,state))
-    return {status:"conflict",target:id,reason:"Reassertion baseline changed.",fresh:projection};
+    return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Reassertion baseline changed.",fresh:projection};
   let latest:Observation;
   try { latest=await deps.fhir.read<Observation>("Observation",reference.slice("Observation/".length)); }
-  catch(error) { return (error as {status?:number})?.status===404 ? {status:"conflict",target:id,reason:"Reassertion source is missing.",fresh:await freshProjection(deps,command)} :
-    {status:"not-attempted",target:id,reason:"Reassertion source could not be verified."}; }
+  catch(error) { return (error as {status?:number})?.status===404 ? {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Reassertion source is missing.",fresh:await freshProjection(deps,command)} :
+    {clinicalWrite:"none",cause:"verify-read",status:"not-attempted",target:id,reason:"Reassertion source could not be verified."}; }
   if(latest.id!==reference.slice("Observation/".length) || latest.subject?.reference!==command.patientReference ||
     latest.encounter?.reference!==command.encounterReference || latest.meta?.versionId!==baseline.versionId ||
     (baseline.kind==="canonical" && (parseCurrentFindingEnvelope(latest).status!=="valid" ||
       !latest.identifier?.some(i=>i.system===currentFindingIdentifier(target.key).system && i.value===currentFindingIdentifier(target.key).value))))
-    return {status:"conflict",target:id,reason:"Reassertion source changed.",fresh:await freshProjection(deps,command)};
+    return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Reassertion source changed.",fresh:await freshProjection(deps,command)};
   const recorded=(deps.now??(()=>new Date().toISOString()))();
   const audit=buildProvenance({targetReferences:[reference],patientReference:command.patientReference,recorded,activityCode:"UPDATE",
     activityDisplay:"Diagnosis finding reassertion",agents:[{whoReference:deps.staffReference,typeCode:"author"}]}) as Provenance;
@@ -279,33 +340,33 @@ async function executeReassert(deps:FindingCommandDeps,command:FindingCommand,ta
   audit.meta={...audit.meta,tag:[...(audit.meta?.tag??[]),{system:FINDING_OPERATION_AUDIT_SYSTEM,code:key}]};
   try { const saved=await deps.fhir.createWithOutcome<Provenance>(audit,auditHeaders(key));
     if (!matchesFindingAudit(saved.resource,key,reference)) throw new FindingAuditMismatch("Reassertion audit target does not match.");
-    return {status:saved.created?"applied":"already-applied",target:id,reference,versionId:baseline.versionId}; }
+    return {clinicalWrite:"none",status:saved.created?"applied":"already-applied",target:id,reference,versionId:baseline.versionId}; }
   catch(error) {
-    if(definitivelyRefused(error))return {status:"refused",target:id,reference,versionId:baseline.versionId,reason:"Reassertion audit was refused."};
-    try { if(await auditExists(deps,key,reference)) return {status:"already-applied",target:id,reference,versionId:baseline.versionId}; }
-    catch { return {status:"unconfirmed",target:id,reference,versionId:baseline.versionId,reason:"Reassertion audit response and lookup were lost."}; }
-    return {status:"unconfirmed",target:id,reference,versionId:baseline.versionId,reason:"Reassertion audit was not confirmed."}; }
+    if(definitivelyRefused(error))return {clinicalWrite:"none",cause:"audit-repair",status:"refused",target:id,reference,versionId:baseline.versionId,reason:"Reassertion audit was refused."};
+    try { if(await auditExists(deps,key,reference)) return {clinicalWrite:"none",status:"already-applied",target:id,reference,versionId:baseline.versionId}; }
+    catch { return {clinicalWrite:"none",cause:"audit-lookup",status:"unconfirmed",target:id,reference,versionId:baseline.versionId,reason:"Reassertion audit response and lookup were lost."}; }
+    return {clinicalWrite:"none",cause:"audit-repair",status:"unconfirmed",target:id,reference,versionId:baseline.versionId,reason:"Reassertion audit was not confirmed."}; }
 }
 
 async function finishMutationAudit(deps:FindingCommandDeps,id:string,saved:Observation,operation:FindingOperation):Promise<FindingOutcome> {
   const reference=saved.id?`Observation/${saved.id}`:undefined;
-  if (!reference) return {status:"unconfirmed",target:id,reason:"Saved finding lacks an id."};
-  try { await createAudit(deps,operation,reference);return {status:"applied",target:id,reference,versionId:saved.meta?.versionId}; }
+  if (!reference) return {clinicalWrite:"confirmed",cause:"audit-repair",status:"unconfirmed",target:id,reason:"Saved finding lacks an id."};
+  try { await createAudit(deps,operation,reference);return {clinicalWrite:"confirmed",status:"applied",target:id,reference,versionId:saved.meta?.versionId}; }
   catch(error) {
-    if (definitivelyRefused(error)) return {status:"applied",target:id,reference,versionId:saved.meta?.versionId,auditPending:true};
-    try { if (!(await findPendingAudits(deps.fhir,[saved])).has(reference)) return {status:"applied",target:id,reference,versionId:saved.meta?.versionId}; }
-    catch { return {status:"unconfirmed",target:id,reference,versionId:saved.meta?.versionId,reason:"Audit response and lookup were lost."}; }
-    return {status:"applied",target:id,reference,versionId:saved.meta?.versionId,auditPending:true}; }
+    if (definitivelyRefused(error)) return {clinicalWrite:"confirmed",status:"applied",target:id,reference,versionId:saved.meta?.versionId,auditPending:true,cause:"audit-repair"};
+    try { if (!(await findPendingAudits(deps.fhir,[saved])).has(reference)) return {clinicalWrite:"confirmed",status:"applied",target:id,reference,versionId:saved.meta?.versionId}; }
+    catch { return {clinicalWrite:"confirmed",cause:"audit-lookup",status:"unconfirmed",target:id,reference,versionId:saved.meta?.versionId,reason:"Audit response and lookup were lost."}; }
+    return {clinicalWrite:"confirmed",status:"applied",target:id,reference,versionId:saved.meta?.versionId,auditPending:true,cause:"audit-repair"}; }
 }
 async function ensureReplayAudit(deps:FindingCommandDeps,id:string,observation:Observation,operation:FindingOperation):Promise<FindingOutcome> {
   const reference=`Observation/${observation.id}`, versionId=observation.meta?.versionId;
   try { await createAudit(deps,operation,reference);
-    return {status:"already-applied",target:id,reference,versionId}; }
+    return {clinicalWrite:"confirmed",status:"already-applied",target:id,reference,versionId}; }
   catch(error) {
-    if(definitivelyRefused(error))return {status:"applied",target:id,reference,versionId,auditPending:true};
-    try { if(!(await findPendingAudits(deps.fhir,[observation])).has(reference))return {status:"already-applied",target:id,reference,versionId}; }
-    catch { return {status:"unconfirmed",target:id,reference,versionId,reason:"Audit response and lookup were lost."}; }
-    return {status:"unconfirmed",target:id,reference,versionId,reason:"Audit write was not confirmed."};
+    if(definitivelyRefused(error))return {clinicalWrite:"confirmed",status:"applied",target:id,reference,versionId,auditPending:true,cause:"audit-repair"};
+    try { if(!(await findPendingAudits(deps.fhir,[observation])).has(reference))return {clinicalWrite:"confirmed",status:"already-applied",target:id,reference,versionId}; }
+    catch { return {clinicalWrite:"confirmed",cause:"audit-lookup",status:"unconfirmed",target:id,reference,versionId,reason:"Audit response and lookup were lost."}; }
+    return {clinicalWrite:"confirmed",cause:"audit-repair",status:"unconfirmed",target:id,reference,versionId,reason:"Audit write was not confirmed."};
   }
 }
 async function repairPrior(deps:FindingCommandDeps,observation:Observation):Promise<boolean> {
@@ -325,7 +386,7 @@ async function createAudit(deps:FindingCommandDeps,operation:FindingOperation,se
   const saved=await deps.fhir.createWithOutcome<Provenance>(provenance,auditHeaders(key));
   if (!matchesFindingAudit(saved.resource,key,self)) throw new FindingAuditMismatch("Mutation audit target does not match.");
 }
-async function auditExists(deps:FindingCommandDeps,key:string,reference:string):Promise<boolean> {
+async function auditExists(deps:Pick<FindingCommandDeps,"fhir">,key:string,reference:string):Promise<boolean> {
   const checked=<T extends Resource>(page:Bundle<T>):Bundle<T>=>{
     if(page.resourceType!=="Bundle" || page.type!=="searchset" || page.link?.some(l=>l.relation==="next" && !l.url) ||
       page.entry?.some(e=>e.resource?.resourceType!=="Provenance" || !e.resource.id))throw new Error("Invalid audit lookup.");
@@ -342,37 +403,37 @@ function auditHeaders(key:string):Record<string,string> { return {...WRITE_HEADE
 async function recoverFactWrite(deps:FindingCommandDeps,command:FindingCommand,target:Extract<FindingCommandTarget,{kind:"fact"}>,digest:string,
   definition:ClinicalFindingDefinition,row:AtomicFindingCatalogRow,error:unknown,prior?:Observation):Promise<FindingOutcome> {
   const id=targetId(target),status=(error as {status?:number})?.status;
-  if (status===409 || status===412) return {status:"conflict",target:id,reference:prior?.id?`Observation/${prior.id}`:undefined,
+  if (status===409 || status===412) return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reference:prior?.id?`Observation/${prior.id}`:undefined,
     reason:"Conditional finding write conflicted.",fresh:await freshProjection(deps,command).catch(()=>undefined)};
-  if (status===400 || status===401 || status===403) return {status:"refused",target:id,reason:"Finding write was refused."};
+  if (status===400 || status===401 || status===403) return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reason:"Finding write was refused."};
   try { const state=await load(deps,command);if(state.incomplete) throw new Error("Reload incomplete.");
     const owners=await findOwners(deps,command,target.key);
     if(owners.length>1 || owners.some(o=>parseCurrentFindingEnvelope(o).status!=="valid"))
-      return {status:"conflict",target:id,reason:"Recovered owner identity is ambiguous or invalid.",fresh:projectCurrentFindings(state)};
+      return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Recovered owner identity is ambiguous or invalid.",fresh:projectCurrentFindings(state)};
     const owner=owners[0];
     const marker=owner&&parseFindingOperation(owner);
     if (owner && marker?.commandId===command.commandId && marker.target===id && marker.digest===digest && recordFactDigest(owner,definition,row)===digest)
       return finishMutationAudit(deps,id,owner,marker);
-    if (owner && marker?.commandId===command.commandId && marker.digest===digest) return {status:"conflict",target:id,reason:"Owner changed after command was recorded.",fresh:projectCurrentFindings(state)};
-  } catch { return {status:"unconfirmed",target:id,reference:prior?.id?`Observation/${prior.id}`:undefined,
+    if (owner && marker?.commandId===command.commandId && marker.digest===digest) return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Owner changed after command was recorded.",fresh:projectCurrentFindings(state)};
+  } catch { return {clinicalWrite:"unknown",cause:"verify-read",status:"unconfirmed",target:id,reference:prior?.id?`Observation/${prior.id}`:undefined,
     versionId:prior?.meta?.versionId,reason:"Finding write response and reload were lost."}; }
-  return {status:"unconfirmed",target:id,reference:prior?.id?`Observation/${prior.id}`:undefined,versionId:prior?.meta?.versionId,
+  return {clinicalWrite:"unknown",cause:"verify-read",status:"unconfirmed",target:id,reference:prior?.id?`Observation/${prior.id}`:undefined,versionId:prior?.meta?.versionId,
     reason:"Finding write was not confirmed."};
 }
 async function recoverRetireWrite(deps:FindingCommandDeps,command:FindingCommand,target:Extract<FindingCommandTarget,{kind:"legacy-retire"}>,digest:string,
   error:unknown,prior:Observation):Promise<FindingOutcome> {
   const id=targetId(target),status=(error as {status?:number})?.status;
-  if(status===409||status===412)return {status:"conflict",target:id,reference:target.sourceReference,
+  if(status===409||status===412)return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reference:target.sourceReference,
     reason:"Conditional retirement conflicted.",fresh:await freshProjection(deps,command).catch(()=>undefined)};
-  if(status===400||status===401||status===403)return {status:"refused",target:id,reference:target.sourceReference,reason:"Retirement was refused."};
+  if(status===400||status===401||status===403)return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reference:target.sourceReference,reason:"Retirement was refused."};
   try { const source=await deps.fhir.read<Observation>("Observation",prior.id!);
     const marker=parseFindingOperation(source);
     if(marker?.commandId===command.commandId && marker.target===id && marker.digest===digest && source.status==="entered-in-error")
       return finishMutationAudit(deps,id,source,marker);
-    if(marker?.commandId===command.commandId && marker.digest===digest) return {status:"conflict",target:id,reference:target.sourceReference,reason:"Retired source changed."};
-  } catch { return {status:"unconfirmed",target:id,reference:target.sourceReference,versionId:prior.meta?.versionId,
+    if(marker?.commandId===command.commandId && marker.digest===digest) return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reference:target.sourceReference,reason:"Retired source changed."};
+  } catch { return {clinicalWrite:"unknown",cause:"verify-read",status:"unconfirmed",target:id,reference:target.sourceReference,versionId:prior.meta?.versionId,
     reason:"Retirement response and reload were lost."}; }
-  return {status:"unconfirmed",target:id,reference:target.sourceReference,versionId:prior.meta?.versionId,reason:"Retirement was not confirmed."};
+  return {clinicalWrite:"unknown",cause:"verify-read",status:"unconfirmed",target:id,reference:target.sourceReference,versionId:prior.meta?.versionId,reason:"Retirement was not confirmed."};
 }
 
 function matchesBaseline(baseline:NonNullable<Extract<FindingCommandTarget,{kind:"fact"}>["baseline"]>,key:CurrentFindingKey,
@@ -411,11 +472,11 @@ function definitivelyRefused(error:unknown):boolean {
   const status=(error as {status?:number})?.status;
   return status!==undefined && status>=400 && status<500 && status!==408;
 }
-function validateCommand(command:FindingCommand):void {
+function validateCommand(command:FindingCommand,allowEmpty=false):void {
   const invalid=()=>{const error=new Error("Invalid finding command.") as Error & {status:number};error.status=400;throw error;};
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(command?.commandId??"") ||
     !/^Patient\/[A-Za-z0-9.-]+$/.test(command?.patientReference??"") || !/^Encounter\/[A-Za-z0-9.-]+$/.test(command?.encounterReference??"") ||
-    typeof command?.surface!=="string" || !command.surface.trim() || !Array.isArray(command?.targets) || !command.targets.length) invalid();
+    typeof command?.surface!=="string" || !command.surface.trim() || !Array.isArray(command?.targets) || (!allowEmpty && !command.targets.length)) invalid();
   const keys=new Set<string>();
   for(const t of command.targets){
     if(!t || !["fact","reassert","legacy-retire"].includes(t.kind))invalid();

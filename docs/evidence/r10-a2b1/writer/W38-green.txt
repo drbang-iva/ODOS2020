@@ -1,0 +1,18 @@
+TAP version 13
+# Subtest: W38 executionOrder reports actual library ordering with legacy retirement submitted first
+ok 1 - W38 executionOrder reports actual library ordering with legacy retirement submitted first
+  ---
+  duration_ms: 4.042625
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 147.238333
+
+Exit: 0
