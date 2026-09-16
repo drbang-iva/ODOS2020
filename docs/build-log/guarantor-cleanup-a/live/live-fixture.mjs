@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { createHash, generateKeyPairSync, randomBytes, randomUUID } from 'node:crypto';
+import { generateKeyPairSync, randomBytes, randomUUID } from 'node:crypto';
 import { createServer } from 'node:net';
 import { dirname, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -59,8 +59,7 @@ export function loadPrivateFixture() {
 export function resourceEvidence(resource, path = '') {
   if (Array.isArray(resource) && path.startsWith('/fhir/R4/AccessPolicy/')) {
     return resource.map((operation) => operation.path === '/resource' && Array.isArray(operation.value) ? {
-      ...operation, evidenceProjection: 'Person and Task rules only; digest covers the full value',
-      fullValueSha256: createHash('sha256').update(JSON.stringify(operation.value)).digest('hex'),
+      ...operation, evidenceProjection: 'Person and Task rules only',
       value: operation.value.filter((rule) => ['Person', 'Task'].includes(rule.resourceType)),
     } : redact(operation));
   }
@@ -69,8 +68,7 @@ export function resourceEvidence(resource, path = '') {
   if (resource?.resourceType !== 'AccessPolicy') return redact(resource);
   return {
     resourceType: resource.resourceType, id: resource.id, meta: resource.meta, name: resource.name,
-    evidenceProjection: 'Person and Task rules only; digest covers the full resource',
-    fullResourceSha256: createHash('sha256').update(JSON.stringify(resource)).digest('hex'),
+    evidenceProjection: 'Person and Task rules only',
     resource: resource.resource?.filter((rule) => ['Person', 'Task'].includes(rule.resourceType)),
   };
 }
