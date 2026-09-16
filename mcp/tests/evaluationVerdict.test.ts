@@ -1159,5 +1159,19 @@ test("F2 strips all inline spans and keeps only text before an unclosed comment"
   ]) {
     assert.equal(evaluate({ prBody, comments: [comment(marker("Opus 5", "PASS"))] }).reason, "passing-verdict");
   }
-  assert.equal(evaluate({ prBody: "<!--\n--> Coded-by: Codex", comments: [comment(marker("Opus 5", "PASS"))] }).reason, "missing-coded-by");
+  for (const prBody of ["<!--\n--> Coded-by: Codex", "<!--\n-->Coded-by: Codex"]) {
+    assert.equal(evaluate({ prBody, comments: [comment(marker("Opus 5", "PASS"))] }).reason, "missing-coded-by");
+  }
 });
+
+for (const { id, prBody, evaluator, reason } of [
+  { id: "G16", prBody: "Coded-by: Claude <!-- a --> <!-- b -->\nCoded-by: Codex", evaluator: "Codex (GPT-6)", reason: "same-tool-evaluator" },
+  { id: "G17", prBody: "<!--\n--> <!--\nCoded-by: Claude\n-->", evaluator: "Codex (GPT-6)", reason: "missing-coded-by" },
+  { id: "G18", prBody: "<!--\n--> <!-- x -->\nCoded-by: Codex", evaluator: "Opus 5", reason: "passing-verdict" },
+]) {
+  test(`${id} rev 2 comment state`, () => {
+    const decision = evaluate({ prBody, comments: [comment(marker(evaluator, "PASS"))] });
+    assert.equal(decision.reason, reason);
+    assert.equal(decision.passed, reason === "passing-verdict");
+  });
+}

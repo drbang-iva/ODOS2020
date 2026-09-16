@@ -1,31 +1,36 @@
 {
-  "base": "4b3f6d7c25fb40268e216dcd22ad03a866d03643",
-  "parser_sha256": "d56bed72a2d3e7b10c98dac4c28342d19a557fe203f5ae359c11570b19e320e2",
-  "baseline": {
-    "tests": 82,
-    "pass": 82,
-    "fail": 0
+  "revision": 2,
+  "evaluated_base": "7d5ea2afb97fff9a385d1ca41b23bdf2b6f52ee4",
+  "parser_sha256": "824fd581d4893bd4a3e9f7592f50afd6f35135d723e5d0a68bd6d5e6318d5b27",
+  "reproduce_first": {
+    "base": "{\"name\":\"N1\",\"passed\":false,\"reason\":\"same-tool-evaluator\"}\n{\"name\":\"N2\",\"passed\":true,\"reason\":\"passing-verdict\"}\n",
+    "broken": "{\"name\":\"N1\",\"passed\":true,\"reason\":\"passing-verdict\"}\n{\"name\":\"N2\",\"passed\":true,\"reason\":\"passing-verdict\"}\n",
+    "restored": "{\"name\":\"N1\",\"passed\":false,\"reason\":\"same-tool-evaluator\"}\n{\"name\":\"N2\",\"passed\":true,\"reason\":\"passing-verdict\"}\n",
+    "broken_suite": {
+      "tests": 102,
+      "pass": 102,
+      "fail": 0
+    },
+    "byte_identical_restore": true
   },
-  "red_on_main": {
-    "tests": 88,
-    "pass": 83,
-    "fail": 5,
+  "guards_before_fix": {
+    "tests": 105,
+    "pass": 104,
+    "fail": 1,
     "red": [
-      "G1",
-      "G2",
-      "G5",
-      "G6",
-      "G7"
-    ],
-    "green": [
-      "G9"
+      "G17"
     ]
   },
   "final": {
-    "tests": 102,
-    "pass": 102,
+    "tests": 105,
+    "pass": 105,
     "fail": 0,
     "skipped": 0
+  },
+  "fixture_privacy_guard": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0
   },
   "mutations": [
     {
@@ -38,13 +43,13 @@
         "not ok 85 - G5 coded-by fixback",
         "not ok 92 - G4 Sonnet token companion coded-by fixback",
         "not ok 101 - G4 shared token table recognizes whole words in coder values and signatures",
-        "# tests 102",
-        "# pass 95",
+        "# tests 105",
+        "# pass 98",
         "# fail 7"
       ],
       "green": [
-        "# tests 102",
-        "# pass 102",
+        "# tests 105",
+        "# pass 105",
         "# fail 0"
       ],
       "restored": true
@@ -59,13 +64,14 @@
         "not ok 96 - G11 coded-by fixback",
         "not ok 97 - G11 fence inside active comment coded-by fixback",
         "not ok 102 - F2 strips all inline spans and keeps only text before an unclosed comment",
-        "# tests 102",
-        "# pass 95",
-        "# fail 7"
+        "not ok 104 - G17 rev 2 comment state",
+        "# tests 105",
+        "# pass 97",
+        "# fail 8"
       ],
       "green": [
-        "# tests 102",
-        "# pass 102",
+        "# tests 105",
+        "# pass 105",
         "# fail 0"
       ],
       "restored": true
@@ -75,13 +81,13 @@
       "red": [
         "not ok 88 - G9 coded-by fixback",
         "not ok 102 - F2 strips all inline spans and keeps only text before an unclosed comment",
-        "# tests 102",
-        "# pass 100",
+        "# tests 105",
+        "# pass 103",
         "# fail 2"
       ],
       "green": [
-        "# tests 102",
-        "# pass 102",
+        "# tests 105",
+        "# pass 105",
         "# fail 0"
       ],
       "restored": true
@@ -93,13 +99,14 @@
         "not ok 94 - G8 closing-line companion coded-by fixback",
         "not ok 99 - G12 real merged PR template refuses the placeholder",
         "not ok 102 - F2 strips all inline spans and keeps only text before an unclosed comment",
-        "# tests 102",
-        "# pass 98",
-        "# fail 4"
+        "not ok 105 - G18 rev 2 comment state",
+        "# tests 105",
+        "# pass 100",
+        "# fail 5"
       ],
       "green": [
-        "# tests 102",
-        "# pass 102",
+        "# tests 105",
+        "# pass 105",
         "# fail 0"
       ],
       "restored": true
@@ -108,13 +115,15 @@
       "name": "comments-before-fences",
       "red": [
         "not ok 95 - G10 coded-by fixback",
-        "# tests 102",
-        "# pass 101",
-        "# fail 1"
+        "not ok 102 - F2 strips all inline spans and keeps only text before an unclosed comment",
+        "not ok 104 - G17 rev 2 comment state",
+        "# tests 105",
+        "# pass 102",
+        "# fail 3"
       ],
       "green": [
-        "# tests 102",
-        "# pass 102",
+        "# tests 105",
+        "# pass 105",
         "# fail 0"
       ],
       "restored": true
@@ -124,13 +133,13 @@
       "red": [
         "not ok 92 - G4 Sonnet token companion coded-by fixback",
         "not ok 101 - G4 shared token table recognizes whole words in coder values and signatures",
-        "# tests 102",
-        "# pass 100",
+        "# tests 105",
+        "# pass 103",
         "# fail 2"
       ],
       "green": [
-        "# tests 102",
-        "# pass 102",
+        "# tests 105",
+        "# pass 105",
         "# fail 0"
       ],
       "restored": true
@@ -144,31 +153,76 @@
         "not ok 41 - the evaluated label does not change ordinary evaluation decisions",
         "not ok 80 - existing failure reasons win even when the coder declaration is missing",
         "not ok 98 - G15 coded-by fixback",
-        "# tests 102",
-        "# pass 96",
+        "# tests 105",
+        "# pass 99",
         "# fail 6"
       ],
       "green": [
-        "# tests 102",
-        "# pass 102",
+        "# tests 105",
+        "# pass 105",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "first-inline-only",
+      "red": [
+        "not ok 103 - G16 rev 2 comment state",
+        "# tests 105",
+        "# pass 104",
+        "# fail 1"
+      ],
+      "green": [
+        "# tests 105",
+        "# pass 105",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "ignore-closing-remainder",
+      "red": [
+        "not ok 104 - G17 rev 2 comment state",
+        "# tests 105",
+        "# pass 104",
+        "# fail 1"
+      ],
+      "green": [
+        "# tests 105",
+        "# pass 105",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "any-closing-opener",
+      "red": [
+        "not ok 105 - G18 rev 2 comment state",
+        "# tests 105",
+        "# pass 104",
+        "# fail 1"
+      ],
+      "green": [
+        "# tests 105",
+        "# pass 105",
         "# fail 0"
       ],
       "restored": true
     }
   ],
-  "fixture_privacy_guard": {
-    "tests": 1,
-    "pass": 1,
-    "fail": 0
-  },
-  "active_comment_fence_regression": {
-    "before": {
-      "pass": 101,
-      "fail": 1
-    },
-    "after": {
-      "pass": 102,
-      "fail": 0
-    }
+  "supplemental": {
+    "name": "closing-line-declaration-guard",
+    "red": [
+      "not ok 102 - F2 strips all inline spans and keeps only text before an unclosed comment",
+      "# tests 105",
+      "# pass 104",
+      "# fail 1"
+    ],
+    "green": [
+      "# tests 105",
+      "# pass 105",
+      "# fail 0"
+    ],
+    "restored": true
   }
 }

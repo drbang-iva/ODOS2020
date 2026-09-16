@@ -79,11 +79,13 @@ function evaluateToolIndependence({ evaluator, prBody, prAuthorType }) {
         }
         continue;
       }
+      const closingCommentLine = htmlComment;
       if (htmlComment) {
-        if (line.includes("-->")) htmlComment = false;
-        continue;
-      }
-      if (fenceMatch && (fenceMatch[1][0] === "~" || !fenceMatch[2].includes("`"))) {
+        const commentEnd = line.indexOf("-->");
+        if (commentEnd === -1) continue;
+        htmlComment = false;
+        line = line.slice(commentEnd + 3);
+      } else if (fenceMatch && (fenceMatch[1][0] === "~" || !fenceMatch[2].includes("`"))) {
         fence = fenceMatch[1];
         continue;
       }
@@ -109,6 +111,7 @@ function evaluateToolIndependence({ evaluator, prBody, prAuthorType }) {
         htmlComment = true;
         line = line.slice(0, commentStart);
       }
+      if (closingCommentLine) continue;
       const declaration = /^Coded-by:\s*(.+?)\s*$/i.exec(line);
       if (!declaration) continue;
       const coder = /^(Codex|Claude)\b/i.exec(declaration[1]);
