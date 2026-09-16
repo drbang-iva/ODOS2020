@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W5 materializes only one option, preserving source and sibling, and copies an inferred home
 ok 1 - W5 materializes only one option, preserving source and sibling, and copies an inferred home
   ---
-  duration_ms: 7.637958
+  duration_ms: 7.344458
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W5 materializes only one option, preserving source and sibling, and copie
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 166.170083
+# duration_ms 147.14225

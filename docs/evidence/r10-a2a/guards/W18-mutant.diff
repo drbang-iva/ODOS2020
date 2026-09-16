@@ -1,5 +1,5 @@
---- <repo-root>/.odos/r10-a2a/W18-original.txt	2026-09-16 08:40:19
-+++ <repo-root>/mcp/src/clinical-graph/current-finding-reader.ts	2026-09-16 08:40:19
-@@ -363 +363 @@
+--- <repo-root>/.odos/r10-a2a/W18-original.txt	2026-09-16 09:09:49
++++ <repo-root>/mcp/src/clinical-graph/current-finding-reader.ts	2026-09-16 09:09:49
+@@ -365 +365 @@
 -    ...(assertions[0].canonical ? [] : conditions).flatMap(c => c.id && c.evidence?.some(e => e.detail?.some(d => d.reference && references.has(d.reference))) ?
 +    ...conditions.flatMap(c => c.id && c.evidence?.some(e => e.detail?.some(d => d.reference && references.has(d.reference))) ?

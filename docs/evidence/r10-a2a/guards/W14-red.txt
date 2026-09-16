@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W14 lost second write and failed reread return unconfirmed; unchanged replay resolves both exactly once
 not ok 1 - W14 lost second write and failed reread return unconfirmed; unchanged replay resolves both exactly once
   ---
-  duration_ms: 8.077834
+  duration_ms: 7.412833
   type: 'test'
   location: '<repo-root>/mcp/tests/currentFindingWriter.test.ts:1:10583'
   failureType: 'testCodeFailure'
@@ -38,4 +38,4 @@ not ok 1 - W14 lost second write and failed reread return unconfirmed; unchanged
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 171.741625
+# duration_ms 177.337667

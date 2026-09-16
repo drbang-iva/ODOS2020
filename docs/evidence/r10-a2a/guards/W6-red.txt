@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W6 a bare snapshot locator is refused when the addressed key and end state are otherwise valid
 not ok 1 - W6 a bare snapshot locator is refused when the addressed key and end state are otherwise valid
   ---
-  duration_ms: 6.334458
+  duration_ms: 6.230458
   type: 'test'
   location: '<repo-root>/mcp/tests/currentFindingWriter.test.ts:1:4849'
   failureType: 'testCodeFailure'
@@ -31,4 +31,4 @@ not ok 1 - W6 a bare snapshot locator is refused when the addressed key and end 
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 187.684542
+# duration_ms 176.59575

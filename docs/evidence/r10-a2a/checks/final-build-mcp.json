@@ -1,5 +1,5 @@
 {
-  "label": "final-build-mcp",
+  "label": "review-build-mcp",
   "command": "npm --prefix mcp run build",
   "exit": 0,
   "summary": [],

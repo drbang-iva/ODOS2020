@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W5 materializes only one option, preserving source and sibling, and copies an inferred home
 not ok 1 - W5 materializes only one option, preserving source and sibling, and copies an inferred home
   ---
-  duration_ms: 7.631083
+  duration_ms: 7.066042
   type: 'test'
   location: '<repo-root>/mcp/tests/currentFindingWriter.test.ts:1:3495'
   failureType: 'testCodeFailure'
@@ -29,4 +29,4 @@ not ok 1 - W5 materializes only one option, preserving source and sibling, and c
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 190.550667
+# duration_ms 176.334208

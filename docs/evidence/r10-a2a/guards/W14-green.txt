@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W14 lost second write and failed reread return unconfirmed; unchanged replay resolves both exactly once
 ok 1 - W14 lost second write and failed reread return unconfirmed; unchanged replay resolves both exactly once
   ---
-  duration_ms: 8.268875
+  duration_ms: 7.756375
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W14 lost second write and failed reread return unconfirmed; unchanged rep
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 167.91025
+# duration_ms 149.622458

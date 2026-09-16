@@ -1,6 +1,6 @@
---- <repo-root>/.odos/r10-a2a/W15-original.txt	2026-09-16 08:40:18
-+++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 08:40:18
-@@ -143,0 +144,6 @@
+--- <repo-root>/.odos/r10-a2a/W15-original.txt	2026-09-16 09:09:48
++++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 09:09:48
+@@ -144,0 +145,6 @@
 +  if (baseline.kind==="legacy" && !target.state.homes.length) {
 +    for (const condition of state.conditions.filter(c=>c.evidence?.some(e=>e.detail?.some(d=>d.reference===baseline.sourceReference)))) {
 +      await deps.fhir.update("Condition",condition.id!,{...condition,evidence:condition.evidence?.map(e=>({...e,detail:e.detail?.filter(d=>d.reference!==baseline.sourceReference)}))},

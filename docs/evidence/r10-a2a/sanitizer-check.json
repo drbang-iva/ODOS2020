@@ -1,7 +1,8 @@
 {
-  "filesScanned": 136,
+  "filesScanned": 142,
   "knownPrivateValuesFound": 0,
   "jwtTokensFound": 0,
   "absoluteWorkspacePathsFound": 0,
+  "localHomePathsFound": 0,
   "syntheticOnly": true
 }

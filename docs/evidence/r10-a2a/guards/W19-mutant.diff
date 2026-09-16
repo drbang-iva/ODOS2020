@@ -1,5 +1,5 @@
---- <repo-root>/.odos/r10-a2a/W19-original.txt	2026-09-16 08:40:19
-+++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 08:40:19
-@@ -337 +337 @@
+--- <repo-root>/.odos/r10-a2a/W19-original.txt	2026-09-16 09:09:49
++++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 09:09:49
+@@ -340 +340 @@
 -function auditHeaders(key:string):Record<string,string> { return {...WRITE_HEADERS,"If-None-Exist":`_tag=${FINDING_OPERATION_AUDIT_SYSTEM}|${key}`}; }
 +function auditHeaders(key:string):Record<string,string> { return {...WRITE_HEADERS}; }

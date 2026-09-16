@@ -1,5 +1,5 @@
 {
-  "sourceHead": "d00b49da3ecb30e9cce98f90df239ca893807133",
+  "sourceHead": "1816ac0acf97f5fc6891876459188ac06b6730ce",
   "projectId": "31b9c9e1-8e7a-4a82-9046-3c959549496a",
   "patientReference": "Patient/11b6c7a6-208f-4b90-a25c-9773aa706eea",
   "encounterReference": "Encounter/4f2e0bbe-affb-47df-8796-bf1feded0920",
@@ -15,7 +15,7 @@
       "membershipAccess": [
         {
           "policy": {
-            "reference": "AccessPolicy/b9d6df9d-2dde-4dd4-8253-cab5d596bf9c"
+            "reference": "AccessPolicy/b809c9cc-a14e-462a-b150-9405f6796494"
           },
           "parameter": [
             {
@@ -42,8 +42,8 @@
             }
           ],
           "project": "31b9c9e1-8e7a-4a82-9046-3c959549496a",
-          "versionId": "561f3ecf-538e-44aa-8ea9-673cf53352d7",
-          "lastUpdated": "2026-09-16T12:28:59.891Z",
+          "versionId": "913435ed-1d6b-48f1-8731-ced71fbea291",
+          "lastUpdated": "2026-09-16T13:06:34.402Z",
           "author": {
             "reference": "Practitioner/2d906218-f301-4cc2-9957-48d0646908d6",
             "display": "Medplum Admin"
@@ -1054,7 +1054,7 @@
             "criteria": "Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config"
           }
         ],
-        "id": "b9d6df9d-2dde-4dd4-8253-cab5d596bf9c"
+        "id": "b809c9cc-a14e-462a-b150-9405f6796494"
       }
     },
     "staff": {
@@ -1064,7 +1064,7 @@
       "membershipAccess": [
         {
           "policy": {
-            "reference": "AccessPolicy/cbf76362-24e6-4905-aa90-79f3c74d8043"
+            "reference": "AccessPolicy/d115777f-38fe-4e02-a477-a06d89727b69"
           },
           "parameter": [
             {
@@ -1085,8 +1085,8 @@
             }
           ],
           "project": "31b9c9e1-8e7a-4a82-9046-3c959549496a",
-          "versionId": "61eb5048-8306-4147-a51e-755dc51c7d99",
-          "lastUpdated": "2026-09-16T12:29:00.000Z",
+          "versionId": "c95a8582-fb3c-43e9-8eae-2ba147b1accb",
+          "lastUpdated": "2026-09-16T13:06:34.535Z",
           "author": {
             "reference": "Practitioner/2d906218-f301-4cc2-9957-48d0646908d6",
             "display": "Medplum Admin"
@@ -2269,7 +2269,7 @@
             ]
           }
         ],
-        "id": "cbf76362-24e6-4905-aa90-79f3c74d8043"
+        "id": "d115777f-38fe-4e02-a477-a06d89727b69"
       }
     }
   }

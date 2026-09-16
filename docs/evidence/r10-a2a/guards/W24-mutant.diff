@@ -1,6 +1,6 @@
---- <repo-root>/.odos/r10-a2a/W24-original.txt	2026-09-16 08:40:22
-+++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 08:40:22
-@@ -51,0 +52,7 @@
+--- <repo-root>/.odos/r10-a2a/W24-original.txt	2026-09-16 09:09:52
++++ <repo-root>/mcp/src/clinical-graph/current-finding-writer.ts	2026-09-16 09:09:52
+@@ -52,0 +53,7 @@
 +  if (state.observations.some(o=>parseFindingOperation(o)?.commandId===command.commandId)) {
 +    for (const target of command.targets) if (target.kind!=="legacy-retire" && target.baseline?.kind==="canonical") {
 +      const baseline=target.baseline;

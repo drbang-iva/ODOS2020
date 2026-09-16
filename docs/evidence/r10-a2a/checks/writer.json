@@ -4,13 +4,13 @@
   "cwd": "mcp",
   "exit": 0,
   "summary": [
-    "# tests 33",
+    "# tests 35",
     "# suites 0",
-    "# pass 33",
+    "# pass 35",
     "# fail 0",
     "# cancelled 0",
     "# skipped 0",
     "# todo 0",
-    "# duration_ms 231.820833"
+    "# duration_ms 206.900208"
   ]
 }

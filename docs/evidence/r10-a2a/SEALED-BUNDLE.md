@@ -10,7 +10,7 @@ Production imports remain library-to-library only. Application handlers, routes,
 
 Contract: PerformanceOD revision 3.1, `05d83563b34c8e213a959cac7c6e15ee387bfd74`, `decisions/2026-09-16-odos-r10-a2-codex-kickoff.md`. Both adjudications were read. All §2 premises were rechecked; their source files remain unchanged across `6a3ad04a`, `b761a8a2`, and final base `87ca9f1d10c63a4796068c0a8d8cbda88fdf968c`. See [premises](premises.md).
 
-Branch: `drbang-iva/r10-a2a`. Code commits after rebase: `d00b49da3ecb30e9cce98f90df239ca893807133` and `0830f5a5b8f179e28b57324e70dfddb3d7edf36e`. Final fetch/rebase targeted `87ca9f1d10c63a4796068c0a8d8cbda88fdf968c` (#612); the rebase had no conflicts. [Source hashes](source-sha256.json) bind the checks to the code, independent of later evidence-only commits.
+Branch: `drbang-iva/r10-a2a`. Code commits after rebase: `d00b49da3ecb30e9cce98f90df239ca893807133`, `0830f5a5b8f179e28b57324e70dfddb3d7edf36e`, and `1816ac0acf97f5fc6891876459188ac06b6730ce`. Final fetch/rebase targeted `87ca9f1d10c63a4796068c0a8d8cbda88fdf968c` (#612); the rebase had no conflicts. [Source hashes](source-sha256.json) bind the checks to the code, independent of later evidence-only commits.
 
 ## Files touched, all within §4
 
@@ -29,12 +29,12 @@ No new decision was made; PerformanceOD and `decisions/INDEX.md` were left uncha
 
 ## Disposable capability gate and writer proof
 
-Server: `5.1.30-9b1bd92`; Node `v24.18.1`; image `medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de`. Endpoint `http://127.0.0.1:29023`; project `odos-r10-a2a`; synthetic patients and identities only. Provider/staff policies were recompiled and the attached memberships verified on rebased code head `d00b49da3ecb30e9cce98f90df239ca893807133`. Their compiler is byte-identical at the final code head.
+Server: `5.1.30-9b1bd92`; Node `v24.18.1`; image `medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de`. Endpoint `http://127.0.0.1:29023`; project `odos-r10-a2a`; synthetic patients and identities only. Provider/staff policies were recompiled and the attached memberships verified on rebased code head `1816ac0acf97f5fc6891876459188ac06b6730ce`. Their compiler is byte-identical at the final code head.
 
 | Role | Login | AccessPolicy id | Version |
 |---|---|---|---|
-| provider | `r10-a2a-provider@example.invalid` | `b9d6df9d-2dde-4dd4-8253-cab5d596bf9c` | `561f3ecf-538e-44aa-8ea9-673cf53352d7` |
-| staff | `r10-a2a-staff@example.invalid` | `cbf76362-24e6-4905-aa90-79f3c74d8043` | `61eb5048-8306-4147-a51e-755dc51c7d99` |
+| provider | `r10-a2a-provider@example.invalid` | `b809c9cc-a14e-462a-b150-9405f6796494` | `913435ed-1d6b-48f1-8731-ced71fbea291` |
+| staff | `r10-a2a-staff@example.invalid` | `d115777f-38fe-4e02-a477-a06d89727b69` | `c95a8582-fb3c-43e9-8eae-2ba147b1accb` |
 
 [G-a..G-d results](gate-results.json): **8 passed / 0 failed**. [Raw gate HTTP](gate-http.json), [compiled policies/memberships](principals.json), [policy recompilation HTTP](recompile-http.json), [runtime](runtime.json), [bootstrap HTTP](bootstrap-http.json).
 
@@ -43,7 +43,7 @@ Server: `5.1.30-9b1bd92`; Node `v24.18.1`; image `medplum/medplum-server@sha256:
 - G-c: each role retrieves the tag-keyed audit.
 - G-d: each role retrieves exactly two records for two existing tag tokens and one absent token.
 
-[Live writer results](writer-results.json): **15 passed / 0 failed**, through `executeFindingCommand`, at `0830f5a5b8f179e28b57324e70dfddb3d7edf36e`. [Raw writer HTTP](writer-http.json). W1, W2, W13, W19, W20 and W23 ran under both roles; both roles also ran the two-target lost-second-response replay. Staff unlink made one Observation write, attempted zero Condition writes, and preserved both the source and the sibling home. W20 records the repaired C1 audit and asserts its target is the Observation carrying the `self` marker.
+[Live writer results](writer-results.json): **15 passed / 0 failed**, through `executeFindingCommand`, at `1816ac0acf97f5fc6891876459188ac06b6730ce`. [Raw writer HTTP](writer-http.json). W1, W2, W13, W19, W20 and W23 ran under both roles; both roles also ran the two-target lost-second-response replay. Staff unlink made one Observation write, attempted zero Condition writes, and preserved both the source and the sibling home. W20 records the repaired C1 audit and asserts its target is the Observation carrying the `self` marker.
 
 ## Mandate 14
 
@@ -53,22 +53,23 @@ Server: `5.1.30-9b1bd92`; Node `v24.18.1`; image `medplum/medplum-server@sha256:
 
 | Suite / command | Result |
 |---|---|
-| `currentFindingIdentity.test.ts` | 17 passed / 0 failed / 0 skipped |
-| `currentFindingReader.test.ts` | 32 passed / 0 failed / 0 skipped |
-| `currentFindingWriter.test.ts` | 33 passed / 0 failed / 0 skipped |
+| `currentFindingIdentity.test.ts` | 18 passed / 0 failed / 0 skipped |
+| `currentFindingReader.test.ts` | 33 passed / 0 failed / 0 skipped |
+| `currentFindingWriter.test.ts` | 35 passed / 0 failed / 0 skipped |
 | `r10-parity.test.ts` | **170 passed / 0 failed / 0 skipped** |
-| Focused total | 252 passed / 0 failed / 0 skipped |
-| `npm --prefix mcp test` | **5441 passed / 0 failed / 52 skipped**, 5493 total |
+| Focused total | 256 passed / 0 failed / 0 skipped |
+| `npm --prefix mcp test` | **5445 passed / 0 failed / 52 skipped**, 5497 total |
 | `npm --prefix ui test` | **1629 passed / 0 failed / 0 skipped**, 1629 total |
 | `npm --prefix mcp run build` | exit 0 |
 | `npm --prefix ui run build` | exit 0; existing large-chunk warning |
 | `npm run preflight` | exit 0; 0 warnings / 0 hard blocks |
+| Evidence runner regressions | 3 passed / 0 failed; 3 failed before the fixes |
 | Scope/assertion checker | exactly 4 authorized changed statements; other existing assertions unchanged |
 | `git diff --check` | exit 0 |
 
 Raw TAP per focused suite and compressed full-suite output are under [checks](checks/). Full MCP uses a separate PostgreSQL 16 test database `odos_r10_a2a_tests` on `127.0.0.1:29024`, with `ODOS_POSTGRES_URL` injected from ignored private configuration. `ODOS_ALLOW_UNGATED_MCP=1` was explicit: 44 general live-stack checks plus 8 other environmental checks were skipped. The 8 capability and 15 writer live proofs above were separately executed against real Medplum policies; the broad suite is not their substitute.
 
-The five established parity divergences are byte-identical to origin/main; see [hash confirmation](parity-confirmation.json). The two additional recovery boundary checks were also observed red (2 failed) before their repairs and green in the 33-test writer suite ([red](checks/recovery-boundaries-red.txt), [green](checks/recovery-boundaries-green.txt)).
+The five established parity divergences are byte-identical to origin/main; see [hash confirmation](parity-confirmation.json). The two additional recovery boundary checks were also observed red (2 failed) before their repairs and green in the 35-test writer suite ([red](checks/recovery-boundaries-red.txt), [green](checks/recovery-boundaries-green.txt)).
 
 ## Four existing assertion changes — three tests
 
@@ -108,6 +109,10 @@ All 17 required mutations were killed by behavioral assertions, restored, and ch
 W15's red is specifically the attempted Condition-write spy (`1 != 0`). W16 also demonstrates all three amended existing tests (four statements including E8). W20's green checks the repaired audit's expanded self target. W24's mutation changes baseline verification on a replay only: its second target incorrectly applies; restored code preserves the conflict.
 
 Reproduce the guards with `node docs/evidence/r10-a2a/run-guards.mjs W1 W2 W5 W6 W11 W13 W14 W15 W16 W18 W19 W20 W21 W22 W23 W24 W25` from the retained task worktree after restarting its disposable stack. The runner retains exact mutant diffs and restores each source in a finally block. Ordinary checks and live proof commands are recorded with their outputs. Private credentials are not in this bundle.
+
+## Bot-review fixes and re-verification
+
+[Five findings and their resolutions](review-fixes.md). Four additional library regressions were observed red then green; three runner regressions were also red then green. The full affected suites, capability gate, live writer proofs, and all 17 guards were rerun after the fixes. The audit-key protocol and the four authorized existing assertion changes are unchanged.
 
 ## Risks, follow-ups and status
 

@@ -2,13 +2,13 @@ TAP version 13
 # Subtest: coalesced and conflicting sources union homes, canonical homes use only the canonical contributor
 ok 1 - coalesced and conflicting sources union homes, canonical homes use only the canonical contributor
   ---
-  duration_ms: 4.697375
+  duration_ms: 4.602208
   type: 'test'
   ...
 # Subtest: canonical homes ignore Condition evidence, while legacy homeSources identify each asserting resource
 not ok 2 - canonical homes ignore Condition evidence, while legacy homeSources identify each asserting resource
   ---
-  duration_ms: 3.352041
+  duration_ms: 2.861666
   type: 'test'
   location: '<repo-root>/mcp/tests/currentFindingReader.test.ts:1:13109'
   failureType: 'testCodeFailure'
@@ -46,4 +46,4 @@ not ok 2 - canonical homes ignore Condition evidence, while legacy homeSources i
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 160.567166
+# duration_ms 179.825083

@@ -1,6 +1,6 @@
---- <repo-root>/.odos/r10-a2a/W16-original.txt	2026-09-16 08:40:18
-+++ <repo-root>/mcp/src/clinical-graph/current-finding-reader.ts	2026-09-16 08:40:18
-@@ -216,16 +215,0 @@
+--- <repo-root>/.odos/r10-a2a/W16-original.txt	2026-09-16 09:09:48
++++ <repo-root>/mcp/src/clinical-graph/current-finding-reader.ts	2026-09-16 09:09:48
+@@ -218,16 +217,0 @@
 -  for (const [id, group] of assertions) {
 -    for (const assertion of group.filter(a => a.contributor.kind === "legacy-section-snapshot" && a.presence === "present")) {
 -      const acts = panelMap.get(panelKey(assertion.key.stableKey, assertion.key.eye))?.negativeActs ?? [];
