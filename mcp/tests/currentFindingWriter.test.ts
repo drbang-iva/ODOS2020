@@ -1,4 +1,5 @@
 import * as writer from "../src/clinical-graph/current-finding-writer.js";
+import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Condition, Observation, Provenance } from "@medplum/fhirtypes";
@@ -399,7 +400,7 @@ test("W-h replay verifier distinguishes exact, new, reused-content and persisted
   assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "not-replay");
 });
 
-test("W-h reassert replay requires its exact audit witness and persisted baseline", async () => {
+test("W-h reassert replay uses its new audit witness even after source drift", async () => {
   const m = memoryFhir([canonicalFact()]);
   const c = command([{ kind: "reassert", key: keyFor(), baseline: factBaseline(observations(m)) }]) as FindingCommand;
   const loaded = () => ({ ...state(observations(m)), fhir: m.fhir });
@@ -407,7 +408,7 @@ test("W-h reassert replay requires its exact audit witness and persisted baselin
   await run(m, c);
   assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "exact-replay");
   m.save({ ...observations(m)[0], valueBoolean: false });
-  assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "not-replay");
+  assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "exact-replay");
   assert.equal(observationWrites(m).length, 0);
 });
 
@@ -489,4 +490,35 @@ for (const status of [403, 404]) test(`W-h load and refresh preserve typed ${sta
   const refreshed = await run(m, command([factTarget(), factTarget(keyFor("OS"))]));
   assert.equal(refreshed.outcomes[1].cause, "refresh");
   assert.equal((refreshed.outcomes[1].fresh as { kind: string }).kind, status === 403 ? "refused" : "missing");
+});
+
+
+test("W45 reassert command witness rejects changed-baseline reuse without changing mutation audits", async () => {
+  const m = memoryFhir([canonicalFact()]);
+  const c = command([{ kind: "reassert", key: keyFor(), baseline: factBaseline(observations(m)) }]) as FindingCommand;
+  await run(m, c);
+  const target = projection(m).currentFacts[0].projectionKey;
+  const witness = createHash("sha256").update(`${c.commandId}|${target}`).digest("hex");
+  assert.ok(audits(m)[0].meta?.tag?.some(t => t.system === "urn:odos:finding-command:v1" && t.code === witness));
+  m.save({ ...observations(m)[0], valueBoolean: false });
+  const retry = { ...c, targets: [{ ...c.targets[0], baseline: factBaseline(observations(m)) }] } as FindingCommand;
+  const before = m.writes.length;
+  assert.equal(await writer.classifyReplay({ ...state(observations(m)), fhir: m.fhir }, retry, retry.targets[0]), "reused-with-different-content");
+  assert.equal(m.writes.length, before); assert.equal(audits(m).length, 1);
+  const mutation = memoryFhir(); await run(mutation, command([factTarget()]));
+  assert.equal(audits(mutation)[0].meta?.tag?.some(t => t.system === "urn:odos:finding-command:v1"), false);
+});
+
+test("W-h old reassert audits without command witness keep exact-key fallback semantics", async () => {
+  const m = memoryFhir([canonicalFact()]);
+  const c = command([{ kind: "reassert", key: keyFor(), baseline: factBaseline(observations(m)) }]) as FindingCommand;
+  await run(m, c);
+  const audit = audits(m)[0];
+  m.save({ ...audit, meta: { ...audit.meta, tag: audit.meta?.tag?.filter(t => t.system !== "urn:odos:finding-command:v1") } });
+  const loaded = () => ({ ...state(observations(m)), fhir: m.fhir });
+  assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "exact-replay");
+  m.save({ ...observations(m)[0], valueBoolean: false });
+  assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "not-replay");
+  const retry = { ...c, targets: [{ ...c.targets[0], baseline: factBaseline(observations(m)) }] } as FindingCommand;
+  assert.equal(await writer.classifyReplay(loaded(), retry, retry.targets[0]), "not-replay");
 });
