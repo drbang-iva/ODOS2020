@@ -32,6 +32,22 @@ test('W4 assert under Y preserves X in persisted homes and both selected views',
     assert.deepEqual((selected.body as any).findings.find((r: any) => r.kind === 'fact').homes, ['Condition/x', 'Condition/y']);
 } const invalid = await put(m, body('assert', [factTarget(keyFor(), baseline(m), endState({ homes: ['Condition/y'] }))], { context: { selectedConditionReference: 'Condition/y' } })); assert.equal(invalid.status, 400); });
 test('W28a clear preserves historical homes', async () => { const m = setup([linked(), home()]); assert.equal((await put(m, body('clear', [factTarget(keyFor(), baseline(m), endState({ status: 'retired', homes: ['Condition/x'] }))]))).status, 200); assert.equal(obs(m)[0].status, 'entered-in-error'); assert.deepEqual(obs(m)[0].extension?.filter(e => e.url === SUPPORTS_DIAGNOSIS_URL).map(e => e.valueReference?.reference), ['Condition/x']); });
+test('W28a clear rejects changed homes without writes', async () => {
+    const m = setup([linked(), home(), home('y')]);
+    const result = await put(m, body('clear', [factTarget(keyFor(), baseline(m), endState({ status: 'retired', homes: ['Condition/y'] }))]));
+    assert.equal(result.status, 400);
+    assert.equal((result.body as any).result, 'invalid');
+    assert.equal(m.writes.length, 0);
+});
+for (const operation of ['move', 'standalone', 'link'])
+    test(`§3.2 ${operation} rejects changed qualifiers without writes`, async () => {
+        const m = setup([linked(), home(), home('y')]);
+        const homes = operation === 'standalone' ? [] : operation === 'move' ? ['Condition/y'] : ['Condition/x', 'Condition/y'];
+        const result = await put(m, body(operation, [factTarget(keyFor(), baseline(m), endState({ homes, qualifiers: { grade: '2+' } }))], { context: { selectedConditionReference: 'Condition/y' } }));
+        assert.equal(result.status, 400);
+        assert.equal((result.body as any).result, 'invalid');
+        assert.equal(m.writes.length, 0);
+    });
 test('W28b retired revive links fresh and W33 offered retains revive baseline and same id', async () => { const m = setup([{ ...linked(), status: 'entered-in-error' }, home(), home('y')]); const read = await get(m, 'Condition/y'); const index = (read.body as any).searchIndex; assert.equal((read.body as any).findings.find((r: any) => r.atomicFindingId === nuclear.atomicFindingId && r.eye === 'OD').baseline.reference, 'Observation/canonical'); assert.equal(index.find((r: any) => r.atomicFindingId === nuclear.atomicFindingId && r.eye === 'OD').baseline.kind, 'canonical'); assert.equal((await put(m, body('assert', [factTarget(keyFor(), baseline(m), endState({ homes: ['Condition/y'] }))], { context: { selectedConditionReference: 'Condition/y' } }))).status, 200); assert.equal(obs(m).length, 1); assert.equal(obs(m)[0].id, 'canonical'); assert.deepEqual(obs(m)[0].extension?.filter(e => e.url === SUPPORTS_DIAGNOSIS_URL).map(e => e.valueReference?.reference), ['Condition/y']); });
 test('W8 unavailable and W41 410 missing retain typed read failures', async () => { for (const [status, expected, kind] of [[500, 502, 'upstream'], [410, 404, 'missing'], [403, 403, 'refused']] as const) {
     const m = setup();
