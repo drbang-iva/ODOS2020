@@ -166,6 +166,11 @@ export async function searchProjectAll<T extends Resource>(
   }
 }
 
+export class FhirSearchUpstreamError extends Error {
+  readonly kind = "upstream";
+  readonly status = 502;
+}
+
 export async function collectAllFhirSearchPages<T extends Resource>(
   client: FhirSearchClient,
   resourceType: T["resourceType"],
@@ -176,13 +181,21 @@ export async function collectAllFhirSearchPages<T extends Resource>(
   const resources: T[] = [];
   const followed = new Set<string>();
   for (;;) {
-    resources.push(...(bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));
-    const next = bundle.link?.find((link) => link.relation === "next")?.url;
-    if (!next) return resources;
-    const path = validateLocalFhirSearchNextPath(next, fhirBaseUrl, resourceType);
-    if (!client.searchUrl || followed.has(path)) {
-      throw new Error(`FHIR ${resourceType} pagination is unavailable or cyclic.`);
+    if (!bundle || bundle.resourceType !== "Bundle" || bundle.type !== "searchset" ||
+      (bundle.entry !== undefined && !Array.isArray(bundle.entry)) ||
+      (bundle.link !== undefined && !Array.isArray(bundle.link)) ||
+      bundle.entry?.some(entry => !entry?.resource || entry.resource.resourceType !== resourceType || !entry.resource.id) ||
+      bundle.link?.some(link => !link || typeof link.relation !== "string")) {
+      throw new FhirSearchUpstreamError(`Malformed FHIR ${resourceType} search page.`);
     }
+    resources.push(...(bundle.entry ?? []).map(entry => entry.resource!));
+    const nextLinks = bundle.link?.filter(link => link.relation === "next") ?? [];
+    if (!nextLinks.length) return resources;
+    if (nextLinks.length !== 1 || !nextLinks[0].url) throw new FhirSearchUpstreamError(`Invalid FHIR ${resourceType} next link.`);
+    let path: string;
+    try { path = validateLocalFhirSearchNextPath(nextLinks[0].url, fhirBaseUrl, resourceType); }
+    catch { throw new FhirSearchUpstreamError(`Invalid FHIR ${resourceType} next link.`); }
+    if (!client.searchUrl || followed.has(path)) throw new FhirSearchUpstreamError(`FHIR ${resourceType} pagination is unavailable or cyclic.`);
     followed.add(path);
     bundle = await client.searchUrl<T>(path, resourceType);
   }

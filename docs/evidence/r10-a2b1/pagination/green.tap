@@ -1,0 +1,198 @@
+TAP version 13
+# Subtest: MCP searchAll follows every next link and defaults the page size to 100
+ok 1 - MCP searchAll follows every next link and defaults the page size to 100
+  ---
+  duration_ms: 0.7395
+  type: 'test'
+  ...
+# Subtest: MCP searchAll collects more than 100 Provenance rows through a validated next path
+ok 2 - MCP searchAll collects more than 100 Provenance rows through a validated next path
+  ---
+  duration_ms: 0.214667
+  type: 'test'
+  ...
+# Subtest: MCP searchAll rejects a malformed Medplum next link without surfacing TypeError
+ok 3 - MCP searchAll rejects a malformed Medplum next link without surfacing TypeError
+  ---
+  duration_ms: 0.198042
+  type: 'test'
+  ...
+# Subtest: MCP searchAll rejects a next link from a different origin
+ok 4 - MCP searchAll rejects a next link from a different origin
+  ---
+  duration_ms: 0.075334
+  type: 'test'
+  ...
+# Subtest: MCP searchAll honors a per-call row cap without returning a partial result
+ok 5 - MCP searchAll honors a per-call row cap without returning a partial result
+  ---
+  duration_ms: 0.155958
+  type: 'test'
+  ...
+# Subtest: MCP searchAll fails when a returned next link cannot be followed
+ok 6 - MCP searchAll fails when a returned next link cannot be followed
+  ---
+  duration_ms: 0.126125
+  type: 'test'
+  ...
+# Subtest: MCP bounded search enforces explicit page and row caps without partial results
+ok 7 - MCP bounded search enforces explicit page and row caps without partial results
+  ---
+  duration_ms: 1.677292
+  type: 'test'
+  ...
+# Subtest: MCP Medplum client follows same-endpoint next links and rejects cross-origin links
+ok 8 - MCP Medplum client follows same-endpoint next links and rejects cross-origin links
+  ---
+  duration_ms: 19.093333
+  type: 'test'
+  ...
+# Subtest: MCP searchAll bounds empty-page streams with a counted page failure
+ok 9 - MCP searchAll bounds empty-page streams with a counted page failure
+  ---
+  duration_ms: 0.399042
+  type: 'test'
+  ...
+# Subtest: finding definitions persist as one coded Basic carrying the interface JSON verbatim
+ok 10 - finding definitions persist as one coded Basic carrying the interface JSON verbatim
+  ---
+  duration_ms: 13.595042
+  type: 'test'
+  ...
+# Subtest: E2 seeds ten entrance definitions with canonical Pachymetry and declarative documentation elements
+ok 11 - E2 seeds ten entrance definitions with canonical Pachymetry and declarative documentation elements
+  ---
+  duration_ms: 6.728125
+  type: 'test'
+  ...
+# Subtest: DE-1 seeds seven new definitions and references the one existing TBUT stable key as the eighth workup section
+ok 12 - DE-1 seeds seven new definitions and references the one existing TBUT stable key as the eighth workup section
+  ---
+  duration_ms: 6.143167
+  type: 'test'
+  ...
+# Subtest: stored rows override compiled seeds by stableKey and survive a store restart
+ok 13 - stored rows override compiled seeds by stableKey and survive a store restart
+  ---
+  duration_ms: 6.894334
+  type: 'test'
+  ...
+# Subtest: a persisted practice option drives capture validation through the runtime dependency
+ok 14 - a persisted practice option drives capture validation through the runtime dependency
+  ---
+  duration_ms: 8.181417
+  type: 'test'
+  ...
+# Subtest: saving again updates the same Basic and deactivation materializes active false
+ok 15 - saving again updates the same Basic and deactivation materializes active false
+  ---
+  duration_ms: 5.684125
+  type: 'test'
+  ...
+# Subtest: save re-searches before create and updates a competing row that appeared
+ok 16 - save re-searches before create and updates a competing row that appeared
+  ---
+  duration_ms: 6.097083
+  type: 'test'
+  ...
+# Subtest: bad rows are skipped and duplicates resolve by lastUpdated then id
+ok 17 - bad rows are skipped and duplicates resolve by lastUpdated then id
+  ---
+  duration_ms: 10.693833
+  type: 'test'
+  ...
+# Subtest: a handler still receives working definitions when one stored row is garbage
+ok 18 - a handler still receives working definitions when one stored row is garbage
+  ---
+  duration_ms: 6.525791
+  type: 'test'
+  ...
+# Subtest: every definition-backed clinical-graph HTTP closure receives the persistent dependency
+ok 19 - every definition-backed clinical-graph HTTP closure receives the persistent dependency
+  ---
+  duration_ms: 2.311083
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 1: dilation permits deferral
+ok 20 - DEFER-1 guard 1: dilation permits deferral
+  ---
+  duration_ms: 5.566459
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 2: the complete seed has exactly one deferrable definition
+ok 21 - DEFER-1 guard 2: the complete seed has exactly one deferrable definition
+  ---
+  duration_ms: 5.572125
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 3: stateDefinition factory output does not grant deferral
+ok 22 - DEFER-1 guard 3: stateDefinition factory output does not grant deferral
+  ---
+  duration_ms: 5.231583
+  type: 'test'
+  ...
+# Finding-definition Basic/bad-payload skipped: Basic resource is not an ODOS finding definition.
+# Diagnosis-definition Basic/bad-payload skipped: Basic resource is not an ODOS diagnosis definition.
+# Subtest: V8 pagination rejects non-bundle as typed upstream
+ok 23 - V8 pagination rejects non-bundle as typed upstream
+  ---
+  duration_ms: 0.573625
+  type: 'test'
+  ...
+# Subtest: V8 pagination rejects wrong bundle type as typed upstream
+ok 24 - V8 pagination rejects wrong bundle type as typed upstream
+  ---
+  duration_ms: 0.055
+  type: 'test'
+  ...
+# Subtest: V8 pagination rejects missing resource as typed upstream
+ok 25 - V8 pagination rejects missing resource as typed upstream
+  ---
+  duration_ms: 0.049667
+  type: 'test'
+  ...
+# Subtest: V8 pagination rejects missing id as typed upstream
+ok 26 - V8 pagination rejects missing id as typed upstream
+  ---
+  duration_ms: 0.041208
+  type: 'test'
+  ...
+# Subtest: V8 pagination rejects missing next url as typed upstream
+ok 27 - V8 pagination rejects missing next url as typed upstream
+  ---
+  duration_ms: 0.053833
+  type: 'test'
+  ...
+# Subtest: V8 pagination rejects foreign next as typed upstream
+ok 28 - V8 pagination rejects foreign next as typed upstream
+  ---
+  duration_ms: 0.098959
+  type: 'test'
+  ...
+# Subtest: V8 pagination validates every page and refuses cycles
+ok 29 - V8 pagination validates every page and refuses cycles
+  ---
+  duration_ms: 0.203875
+  type: 'test'
+  ...
+# Subtest: V8 finding store reads every page and skips invalid stored payload only
+ok 30 - V8 finding store reads every page and skips invalid stored payload only
+  ---
+  duration_ms: 13.896625
+  type: 'test'
+  ...
+# Subtest: V8 diagnosis store reads every page and skips invalid stored payload only
+ok 31 - V8 diagnosis store reads every page and skips invalid stored payload only
+  ---
+  duration_ms: 0.795042
+  type: 'test'
+  ...
+1..31
+# tests 31
+# suites 0
+# pass 31
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 224.90075
