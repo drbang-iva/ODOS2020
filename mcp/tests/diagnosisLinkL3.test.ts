@@ -25,7 +25,7 @@ test("L3 ships empty-tolerant with no seeded clinical key findings or windows", 
 test("the existing confirmation completeness gate surfaces a staged diagnosis with no selected member", async () => {
   const fhir = new MemoryFhir();
   fhir.resources.push(encounter());
-  fhir.resources.push(...buildDiagnosisCatalogSeeds().map(buildDiagnosisCatalogResource));
+  fhir.resources.push(...buildDiagnosisCatalogSeeds().map((row, index) => ({ ...buildDiagnosisCatalogResource(row), id: `catalog-${index}` })));
   fhir.resources.push(diagnosisCondition("confirmed", "primary-open-angle-glaucoma", "right", "pending-stage", true));
 
   const result = await handleDiagnosisCompletenessRequest(

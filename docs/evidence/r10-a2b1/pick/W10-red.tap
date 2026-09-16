@@ -1,0 +1,45 @@
+TAP version 13
+# Subtest: W10 supported pick is a Condition-only step and retains its full response
+not ok 1 - W10 supported pick is a Condition-only step and retains its full response
+  ---
+  duration_ms: 18.33375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:93620'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + [
+    +   {
+    +     detail: [
+    +       {
+    +         reference: 'Observation/canonical'
+    +       }
+    +     ]
+    +   }
+    + ]
+    - undefined
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual:
+    0:
+      detail:
+        0:
+          reference: 'Observation/canonical'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2571:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 580.601334

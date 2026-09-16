@@ -1,4 +1,9 @@
-import type { Basic, Bundle, Condition, Observation } from "@medplum/fhirtypes";
+import { collectAllFhirSearchPages, type FhirSearchClient } from "../fhir-search.js";
+import { customFieldEntries } from "./custom-fields.js";
+import { currentFindingIdentifier, type CurrentFindingKey } from "./current-finding-identity.js";
+import type { CurrentFindingFact, FindingBaseline, CurrentFindingProjection, FindingDefinitionView } from "./current-finding-reader.js";
+import { loadDiagnosisFindingContext } from "./diagnosis-findings-endpoint.js";
+import type { Basic, Bundle, Condition, Observation, Resource } from "@medplum/fhirtypes";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
@@ -20,16 +25,14 @@ import {
   type FindingInstance,
   type FindingInterpretation,
   type FindingValue,
+  type MappingTrigger,
 } from "./glaucoma-suspect.js";
 import { evaluateRefractiveErrorSuggestions } from "./refraction-suspect.js";
 import { visualFieldDescriptorResolution } from "./entrance-definition.js";
 import { stagedDiagnosisFamilyRow } from "./diagnosis-quick-list-endpoint.js";
 
-export interface DiagnosisCandidatesFhirClient {
-  search<T extends Basic | Condition | Observation>(
-    resourceType: T["resourceType"],
-    params?: Record<string, string>,
-  ): Promise<Bundle<T>>;
+export interface DiagnosisCandidatesFhirClient extends FhirSearchClient {
+  read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
   create<T extends Basic>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
   update<T extends Basic>(
     resourceType: T["resourceType"],
@@ -65,7 +68,8 @@ export interface DiagnosisCandidateFamilyRow {
   source: "rule" | "mapping";
 }
 
-export type DiagnosisCandidateRow = DiagnosisCandidateLeafRow | DiagnosisCandidateFamilyRow;
+export interface SupportingFindingFact { rowKey: string; key: CurrentFindingKey; baseline: Extract<FindingBaseline, {kind: "canonical"}> }
+export type DiagnosisCandidateRow = (DiagnosisCandidateLeafRow | DiagnosisCandidateFamilyRow) & { supportingFacts?: SupportingFindingFact[] };
 
 export const VISUAL_FIELD_GLAUCOMA_SUPPRESSION_MESSAGE =
   "H53.4x not proposed — the glaucoma stage already carries the field defect.";
@@ -84,27 +88,30 @@ export async function handleDiagnosisCandidatesRequest(
   input: { authHeader: string | undefined; params: unknown },
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
-  if (!staff) return { status: 401, body: { error: "Authentication required to read diagnosis candidates." } };
+  if (!staff) return { status: 401, body: { result: "unauthenticated", error: "Authentication required to read diagnosis candidates." } };
   if (!staffHasBusinessAction(staff, "chart.read")) {
-    return { status: 403, body: { error: "chart.read role required" } };
+    return { status: 403, body: { result: "forbidden", error: "chart.read role required" } };
   }
   const encounterId = readEncounterId(input.params);
-  if (!encounterId) return { status: 400, body: { error: "A valid encounter id is required." } };
+  if (!encounterId) return { status: 400, body: { result: "invalid", reason: "invalid-encounter", error: "A valid encounter id is required." } };
   const encounterReference = `Encounter/${encounterId}`;
-  const [definitions, catalog, observations, conditions, tally] = await Promise.all([
+  try {
+  const [definitions, catalog, tally] = await Promise.all([
     new FhirFindingDefinitionStore(staff.fhir).list(),
     new FhirDiagnosisCatalogStore(staff.fhir).list(),
-    staff.fhir.search<Observation>("Observation", { encounter: encounterReference, _count: "500" }),
-    staff.fhir.search<Condition>("Condition", { encounter: encounterReference, _count: "200" }),
     new FhirDiagnosisPickTallyStore(staff.fhir).read(staff.staffReference),
   ]);
-  const findings = (observations.entry ?? []).flatMap((entry) =>
-    entry.resource ? findingInstancesFromObservation(entry.resource, definitions) : []
-  );
-  const patientReference = findings.find((finding) => finding.patientReference)?.patientReference;
-  const patientConditions: Bundle<Condition> = patientReference
-    ? await staff.fhir.search<Condition>("Condition", { subject: patientReference, _count: "200" })
-    : { resourceType: "Bundle", type: "searchset", entry: [] };
+  const context = await loadDiagnosisFindingContext(staff.fhir, encounterId, definitions);
+  if (context.incomplete) return { status: context.kind === "refused" ? 403 : context.kind === "missing" ? 404 : 502,
+    body: { result: "unavailable", kind: context.kind, error: context.reason } };
+  const { projection, state } = context;
+  const views = diagnosisDefinitionViews(projection, definitions);
+  const findings = views.flatMap(view => findingInstancesFromObservation(view, definitions));
+  const patientConditions = await collectAllFhirSearchPages<Condition>(staff.fhir, "Condition",
+    await staff.fhir.search<Condition>("Condition", { subject: state.patientReference, _count: "200" }), staff.fhir.baseUrl);
+  if (patientConditions.some(c => c.resourceType !== "Condition" || c.subject?.reference !== state.patientReference)) {
+    return { status: 502, body: { result: "unavailable", kind: "foreign-or-unscoped", error: "Patient history returned a foreign Condition." } };
+  }
   const provenance: ClinicalGraphProvenance = {
     source: "rule",
     recordedAt: deps.now?.() ?? new Date().toISOString(),
@@ -118,13 +125,8 @@ export async function handleDiagnosisCandidatesRequest(
   ];
   const rulesByFinding = groupRulesByFinding(rules);
   const activeCatalog = new Map(catalog.filter((row) => row.active).map((row) => [row.stableKey, row]));
-  const stagedGlaucomaPresent = (conditions.entry ?? []).some((entry) =>
-    entry.resource ? isConfirmedStagedGlaucoma(entry.resource) : false
-  );
-  const patientStagedGlaucomaPresent = (patientConditions.entry ?? []).some((entry) =>
-    entry.resource?.encounter?.reference !== encounterReference &&
-      (entry.resource ? isConfirmedStagedGlaucoma(entry.resource) : false)
-  );
+  const stagedGlaucomaPresent = state.conditions.some(isConfirmedStagedGlaucoma);
+  const patientStagedGlaucomaPresent = patientConditions.some(condition => condition.encounter?.reference !== encounterReference && isConfirmedStagedGlaucoma(condition));
 
   return {
     status: 200,
@@ -132,6 +134,14 @@ export async function handleDiagnosisCandidatesRequest(
       encounterReference,
       findings: findings.map((finding) => {
         const definition = definitions.find((row) => row.id === finding.findingDefinitionId);
+        const view = views.find(v => (v.id ?? v.projectionKey) === finding.id)!;
+        const liveFacts = !projection.preRebuild && definition && customFieldEntries(definition, true).some(f => f.valueType === "multi-select")
+          ? projection.currentFacts.filter(f => f.status === "live" && f.presence === "present" && f.key.stableKey === definition.stableKey && f.eye === finding.laterality)
+          : [];
+        const support = (trigger?: MappingTrigger) => {
+          const facts = supportingFactsForTrigger(liveFacts, finding, trigger);
+          return facts.length ? { supportingFacts: facts } : {};
+        };
         const ruleCandidates = (rulesByFinding.get(finding.id) ?? []).flatMap((evaluation, order) => {
           const diagnosisKey = catalogKeyForRule(evaluation.diagnosisDefinition.stableKey);
           const row = activeCatalog.get(diagnosisKey);
@@ -144,6 +154,7 @@ export async function handleDiagnosisCandidatesRequest(
             codingStatus: row.codingStatus,
             priority: true,
             source: "rule" as const,
+            ...support(),
             order,
           }];
         });
@@ -173,11 +184,12 @@ export async function handleDiagnosisCandidatesRequest(
               codingStatus: row.codingStatus,
               priority: mapping.priority === true,
               source: "mapping" as const,
+              ...support(mapping.trigger),
               order,
             }];
           }
           const family = diagnosisFamilyCandidate(catalog, mapping.familyGroup, "mapping", mapping.priority === true);
-          return family ? [{ ...family, source: "mapping", order }] : [];
+          return family ? [{ ...family, source: "mapping", ...support(mapping.trigger), order }] : [];
         });
         const baseCandidates = orderDiagnosisCandidates(
           deduplicateDiagnosisCandidates([...ruleCandidates, ...mappingCandidates]),
@@ -190,13 +202,15 @@ export async function handleDiagnosisCandidatesRequest(
               return family ? [family] : [];
             })
           : [];
-        const candidates = [...baseCandidates, ...revealedGlaucomaFamilies];
+        const candidates: DiagnosisCandidateRow[] = [...baseCandidates, ...revealedGlaucomaFamilies];
         const suppress = definition?.stableKey === "entrance:visual-field-defect" &&
           stagedGlaucomaPresent && candidates.length > 0;
         return {
           findingInstanceId: finding.id,
           findingDefinitionKey: definition?.stableKey,
-          observationReference: finding.observationReference,
+          ...(finding.observationReference ? { observationReference: finding.observationReference } : {}),
+          contributors: view.contributors,
+          ...(!finding.observationReference && !candidates.some(c => c.supportingFacts?.length) ? { linkable: false } : {}),
           candidates: suppress ? [] : candidates,
           ...(suppress ? {
             suppressedCandidates: candidates,
@@ -209,13 +223,56 @@ export async function handleDiagnosisCandidatesRequest(
       }),
     },
   };
+  } catch (error) {
+    const status = (error as { status?: number })?.status;
+    const kind = status === 401 || status === 403 ? "refused" : status === 404 || status === 410 ? "missing" : "upstream";
+    return { status: kind === "refused" ? 403 : kind === "missing" ? 404 : 502, body: { result: "unavailable", kind, error: "Diagnosis candidates could not be loaded." } };
+  }
+}
+
+export function diagnosisDefinitionViews(projection: CurrentFindingProjection, definitions: readonly ClinicalFindingDefinition[]): FindingDefinitionView[] {
+  return projection.definitionViews.map(view => {
+    const definition = definitions.find(d => observationMatchesFindingDefinition(view, d));
+    const panel = projection.panels.find(p => p.stableKey === definition?.stableKey && p.eye === observationLaterality(view));
+    if (!definition || !panel) return view;
+    const contexts = panel.snapshots.filter(s => s.source.kind === "panel-context" && s.status === "live");
+    if (!contexts.length) return view;
+    if (panel.conflict) throw new Error("Current finding panel context is ambiguous.");
+    const time = (o: Observation) => o.effectiveDateTime ?? o.issued ?? o.meta?.lastUpdated ?? "";
+    const latestTime = contexts.map(s => time(s.observation)).sort().at(-1);
+    const latest = contexts.filter(s => time(s.observation) === latestTime);
+    const fields = customFieldEntries(definition, true).filter(f => f.valueType !== "multi-select");
+    const isContext = (c: NonNullable<Observation["component"]>[number]) => c.code.coding?.some(code => fields.some(f => code.code === f.localCode || code.code === `${panel.eye}_${f.localCode}`));
+    return { ...view,
+      component: [...(view.component ?? []).filter(c => !isContext(c)), ...(latest[0].observation.component ?? []).filter(isContext)],
+      contributors: [...new Map([...view.contributors, ...latest.map(s => s.source)].map(c => [c.reference, c])).values()],
+    };
+  });
+}
+
+export function supportingFactsForTrigger(facts: readonly CurrentFindingFact[], finding: FindingInstance, trigger?: MappingTrigger): SupportingFindingFact[] {
+  if (trigger && !evaluateMappingTrigger(trigger, finding)) return [];
+  if (trigger?.kind === "numeric") return [];
+  if (trigger?.kind === "allOf") return unionSupports(trigger.triggers.flatMap(t => supportingFactsForTrigger(facts, finding, t)));
+  return facts.flatMap(f => {
+    if (f.baseline?.kind !== "canonical") return [];
+    if (trigger?.kind === "option" && (f.key.fieldCode !== trigger.field || !trigger.anyOf.includes(f.key.optionCode))) return [];
+    if (trigger?.kind === "qualifier" && (f.key.fieldCode !== trigger.field || f.key.optionCode !== trigger.option ||
+      Object.entries(trigger.qualifiers).some(([k,v]) => f.qualifiers[k] !== v))) return [];
+    return [{ rowKey: f.projectionKey, key: f.key, baseline: f.baseline }];
+  });
+}
+function unionSupports(facts: readonly SupportingFindingFact[]): SupportingFindingFact[] {
+  return [...new Map(facts.map(f => [currentFindingIdentifier(f.key).value, f])).values()];
 }
 
 export function deduplicateDiagnosisCandidates(candidates: readonly OrderedCandidate[]): OrderedCandidate[] {
   const byDiagnosisKey = new Map<string, OrderedCandidate>();
-  for (const candidate of candidates) {
+  for (let candidate of candidates) {
     const key = diagnosisCandidateKey(candidate);
     const current = byDiagnosisKey.get(key);
+    const supports = unionSupports([...(current?.supportingFacts ?? []), ...(candidate.supportingFacts ?? [])]);
+    if (supports.length) { candidate = { ...candidate, supportingFacts: supports }; if (current) current.supportingFacts = supports; }
     if (!current || candidate.source === "rule" && current.source !== "rule") {
       byDiagnosisKey.set(key, candidate);
       continue;
@@ -271,7 +328,7 @@ export function findingInstancesFromObservation(
   definitions: readonly ClinicalFindingDefinition[],
 ): FindingInstance[] {
   const definition = definitions.find((row) => observationMatchesFindingDefinition(observation, row));
-  const id = observation.id;
+  const id = observation.id ?? (observation as { projectionKey?: string }).projectionKey;
   const encounterReference = observation.encounter?.reference;
   const patientReference = observation.subject?.reference;
   const recordedAt = observation.effectiveDateTime ?? observation.issued ?? observation.meta?.lastUpdated;
@@ -285,7 +342,7 @@ export function findingInstancesFromObservation(
     findingDefinitionId: definition.id,
     patientReference,
     encounterReference,
-    observationReference: `Observation/${id}`,
+    ...(observation.id ? { observationReference: `Observation/${observation.id}` } : {}),
     laterality: observationLaterality(observation),
     value,
     interpretation: observationInterpretation(observation),
