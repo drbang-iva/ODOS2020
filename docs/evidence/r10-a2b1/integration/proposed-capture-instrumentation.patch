@@ -1,0 +1,4 @@
+--- a/mcp/tests/fixtures/r10/capture-baseline.mjs
++++ b/mcp/tests/fixtures/r10/capture-baseline.mjs
+@@ -16,1 +16,0 @@
+-      'diagnosis-findings-endpoint': ['atomicFindingRows', 'sectionFindingRows'],

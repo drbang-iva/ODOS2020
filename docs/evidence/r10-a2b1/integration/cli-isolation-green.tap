@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: planner folds five legacy roles into three new policies and preserves access parameters
+ok 1 - planner folds five legacy roles into three new policies and preserves access parameters
+  ---
+  duration_ms: 0.994708
+  type: 'test'
+  ...
+# Subtest: planner deduplicates only identical canonical role and parameter entries
+ok 2 - planner deduplicates only identical canonical role and parameter entries
+  ---
+  duration_ms: 0.134833
+  type: 'test'
+  ...
+# Subtest: planner treats a compiled multi-role membership as an already migrated no-op
+ok 3 - planner treats a compiled multi-role membership as an already migrated no-op
+  ---
+  duration_ms: 4.258583
+  type: 'test'
+  ...
+# Subtest: planner refuses a drifted compiled policy instead of preserving its authorization
+ok 4 - planner refuses a drifted compiled policy instead of preserving its authorization
+  ---
+  duration_ms: 4.031834
+  type: 'test'
+  ...
+# Subtest: planner stops on ambiguous tags, ownership mismatch, missing version, and unmappable access
+ok 5 - planner stops on ambiguous tags, ownership mismatch, missing version, and unmappable access
+  ---
+  duration_ms: 0.405875
+  type: 'test'
+  ...
+# Subtest: planner retains the foreign-membership ownership invariant
+ok 6 - planner retains the foreign-membership ownership invariant
+  ---
+  duration_ms: 0.164417
+  type: 'test'
+  ...
+# Subtest: planner skips a migration-importer membership whose legacy policy has no practice-role tag
+ok 7 - planner skips a migration-importer membership whose legacy policy has no practice-role tag
+  ---
+  duration_ms: 0.14375
+  type: 'test'
+  ...
+# Subtest: planner skips the entire membership when a non-role legacy policy accompanies role access
+ok 8 - planner skips the entire membership when a non-role legacy policy accompanies role access
+  ---
+  duration_ms: 0.062583
+  type: 'test'
+  ...
+# Subtest: planner refuses a legacy accessPolicy that carries a practice-role tag
+ok 9 - planner refuses a legacy accessPolicy that carries a practice-role tag
+  ---
+  duration_ms: 0.265208
+  type: 'test'
+  ...
+# Subtest: planner refuses a legacy accessPolicy unavailable in the target-scoped policy set
+ok 10 - planner refuses a legacy accessPolicy unavailable in the target-scoped policy set
+  ---
+  duration_ms: 0.2935
+  type: 'test'
+  ...
+# Subtest: dry-run performs zero writes; apply creates policies, conditionally patches, audits, and converges
+ok 11 - dry-run performs zero writes; apply creates policies, conditionally patches, audits, and converges
+  ---
+  duration_ms: 1.331291
+  type: 'test'
+  ...
+# Subtest: migration credentials preserve access-token auth and prefer it over admin credentials
+ok 12 - migration credentials preserve access-token auth and prefer it over admin credentials
+  ---
+  duration_ms: 0.098541
+  type: 'test'
+  ...
+# Subtest: migration credentials reuse the admin PKCE login when no access token exists
+ok 13 - migration credentials reuse the admin PKCE login when no access token exists
+  ---
+  duration_ms: 0.066084
+  type: 'test'
+  ...
+# Subtest: migration credentials name both supported options when neither is complete
+ok 14 - migration credentials name both supported options when neither is complete
+  ---
+  duration_ms: 0.1965
+  type: 'test'
+  ...
+# Subtest: migration project resolution prefers explicit and environment values before session membership
+ok 15 - migration project resolution prefers explicit and environment values before session membership
+  ---
+  duration_ms: 0.053375
+  type: 'test'
+  ...
+# Subtest: migration project resolution uses exactly one active membership for the authenticated profile
+ok 16 - migration project resolution uses exactly one active membership for the authenticated profile
+  ---
+  duration_ms: 1.378041
+  type: 'test'
+  ...
+# Subtest: migration project resolution refuses ambiguous session memberships and names the explicit override
+ok 17 - migration project resolution refuses ambiguous session memberships and names the explicit override
+  ---
+  duration_ms: 0.232083
+  type: 'test'
+  ...
+# Subtest: the migration CLI accepts an access token, resolves its session membership, and stays dry-run
+ok 18 - the migration CLI accepts an access token, resolves its session membership, and stays dry-run
+  ---
+  duration_ms: 149.766334
+  type: 'test'
+  ...
+# Subtest: the migration CLI scopes both reads to the resolved project and stays dry-run
+ok 19 - the migration CLI scopes both reads to the resolved project and stays dry-run
+  ---
+  duration_ms: 144.81475
+  type: 'test'
+  ...
+# Subtest: the migration CLI refuses a mismatched access-token project before any write
+ok 20 - the migration CLI refuses a mismatched access-token project before any write
+  ---
+  duration_ms: 113.76825
+  type: 'test'
+  ...
+# Subtest: the migration CLI accepts only admin email and password through the shared PKCE login
+ok 21 - the migration CLI accepts only admin email and password through the shared PKCE login
+  ---
+  duration_ms: 147.418125
+  type: 'test'
+  ...
+# Subtest: the migration CLI rejects missing credentials and names both supported options
+ok 22 - the migration CLI rejects missing credentials and names both supported options
+  ---
+  duration_ms: 102.3285
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 797.365

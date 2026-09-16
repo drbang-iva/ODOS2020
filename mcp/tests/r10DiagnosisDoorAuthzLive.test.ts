@@ -62,7 +62,7 @@ test('R10 diagnosis door enforces canonical policies through real handlers for s
       const target=(baseline:unknown,state:unknown,eye:'OD'|'OS'='OD')=>({kind:'fact',key:key(eye),baseline,state});
       const command=(operation:string,targets:unknown[],selected?:string,extra={})=>({commandId:randomUUID(),patientReference,operation,targets,...(selected?{context:{selectedConditionReference:selected}}:{}),...extra});
       const observationWrites=()=>writes.filter(w=>w.type==='Observation').length;
-      const evidence=(operation:string,reference:string,before:string,after:string)=>t.diagnostic(JSON.stringify({role,project:projectId,resourceType:'Observation',reference,operation,before,after,policyReference,policyVersion:policy.meta?.versionId,lane:'test:live-authz',blocking:true}));
+      const evidence=(operation:string,reference:string,before:string,after:string)=>t.diagnostic(JSON.stringify({role,project:projectId,resourceType:reference.split('/')[0],reference,operation,before,after,policyReference,policyVersion:policy.meta?.versionId,lane:'test:live-authz',blocking:true}));
       const state={status:'live',presence:'present',qualifiers:{},homes:[refs[0]]};
       let result=await send(command('assert',[target({kind:'absent',key:key()},state)],refs[0]));assert.equal(result.status,200,JSON.stringify(result.body));
       let current=await fact();assert.equal(current.baseline?.kind,'canonical');let reference=current.contributors[0].reference;
@@ -80,7 +80,7 @@ test('R10 diagnosis door enforces canonical policies through real handlers for s
         const pick=await handleDiagnosisPickRequest({authenticate:deps.authenticate,diagnosisVisitStatusStore:{} as any} as any,{authHeader:'synthetic',params:{encounterId:e.id},body:{diagnosisKey:nuclear.diagnosisKeys[0],action:'confirm'}});
         assert.equal(pick.status,403);assert.equal(writes.length,count);
         await assert.rejects(real.update('Condition',homes[0].id!,{...homes[0],note:[{text:'Synthetic denied mutation'}]}),(error:any)=>error.status===403);
-        t.diagnostic(JSON.stringify({role,project:projectId,resourceType:'Condition',operation:'update/pick',before:'unchanged',after:'403 unchanged',policyReference,blocking:true}));
+        t.diagnostic(JSON.stringify({role,project:projectId,resourceType:'Condition',operation:'update/pick',before:'unchanged',after:'403 unchanged',policyReference,policyVersion:policy.meta?.versionId,lane:'test:live-authz',blocking:true}));
       }
       for(const status of ['final','cancelled'] as const) {
         const stored=await seederFhir.read<Observation>('Observation',reference.slice(12));const saved=await seederFhir.update('Observation',stored.id!,{...stored,status});
@@ -101,14 +101,14 @@ test('R10 diagnosis door enforces canonical policies through real handlers for s
       const beforeRace=writes.length;
       const collision=await send(command('eye-change',[raceTarget('OS','present'),{kind:'fact',key:rk('OD'),baseline:od.baseline,state:{status:'retired',presence:'present',qualifiers:{},homes:[]}}],undefined,{eyes:{from:['OD'],to:['OS']}}),race.id);
       assert.equal(collision.status,409,JSON.stringify(collision.body));assert.equal((collision.body as any).reason,'destination-differs');assert.equal(writes.length,beforeRace);
-      t.diagnostic(JSON.stringify({role,project:projectId,resourceType:'Observation',operation:'two-tab eye-change',before:'OS differs',after:'409 zero writes',policyReference,blocking:true}));
+      t.diagnostic(JSON.stringify({role,project:projectId,resourceType:'Observation',operation:'two-tab eye-change',before:'OS differs',after:'409 zero writes',policyReference,policyVersion:policy.meta?.versionId,lane:'test:live-authz',blocking:true}));
       const retryEncounter=await encounter();const retryKey={...key(),encounterId:retryEncounter.id!};
       const retryBody=command('assert',[{kind:'fact',key:retryKey,baseline:{kind:'absent',key:retryKey},state:{status:'live',presence:'present',qualifiers:{},homes:[]}}]);
       const beforeRetry=observationWrites();loseNext=true;
       const uncertain=await send(retryBody,retryEncounter.id);assert.equal(uncertain.status,502,JSON.stringify(uncertain.body));lost=false;
       const retried=await send(retryBody,retryEncounter.id);assert.equal(retried.status,200,JSON.stringify(retried.body));assert.equal(observationWrites()-beforeRetry,1);
       const persisted=await searchAll<Observation>(real,'Observation',{encounter:`Encounter/${retryEncounter.id}`});assert.equal(persisted.length,1);
-      t.diagnostic(JSON.stringify({role,project:projectId,resourceType:'Observation',operation:'lost response then identical Retry',before:'absent',after:'one persisted owner and one clinical write',policyReference,blocking:true}));
+      t.diagnostic(JSON.stringify({role,project:projectId,resourceType:'Observation',operation:'lost response then identical Retry',before:'absent',after:'one persisted owner and one clinical write',policyReference,policyVersion:policy.meta?.versionId,lane:'test:live-authz',blocking:true}));
     });
   } finally {await cleanupReferences(baseUrl,seederAccessToken,cleanup.filter(r=>!r.startsWith("ProjectMembership/")&&!r.startsWith("ClientApplication/"))); await cleanupReferences(baseUrl,callerAccessToken,cleanup.filter(r=>r.startsWith("ProjectMembership/")||r.startsWith("ClientApplication/")));}
 });
