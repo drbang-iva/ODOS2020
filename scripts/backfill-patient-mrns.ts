@@ -2,12 +2,13 @@
 import { randomInt, randomUUID } from "node:crypto";
 import type {
   Account,
+  Basic,
   Bundle,
   BundleEntry,
   Patient,
 } from "@medplum/fhirtypes";
 import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/fhir-client.js";
-import { searchAll } from "../mcp/src/fhir-search.js";
+import { searchAll, searchProjectAll } from "../mcp/src/fhir-search.js";
 import {
   ODOS_MRN_ALLOCATION_TOKEN_SYSTEM,
   ODOS_MRN_MAX,
@@ -20,9 +21,10 @@ import {
 } from "../mcp/src/clinic/patient-mrn.js";
 import {
   isR4Date,
-  isMinorOn,
   patientOdosMrn,
 } from "../ui/src/lib/patient-identity.js";
+
+import { isMinorAtAge, resolveAgeOfMajorityYears, ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM, ODOS_AGE_OF_MAJORITY_CONFIG_CODE } from "../mcp/src/clinic/age-of-majority-config.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 const BACKFILL_MAX_RESOURCES_PER_TYPE = 100_000;
@@ -58,11 +60,13 @@ export async function backfillPatientMrns(
   adapter: PatientMrnBackfillAdapter,
   options: {
     today: string;
+    ageOfMajorityConfig?: Basic;
     nextMrnBase?: () => number;
     nextUuid?: () => string;
   },
 ): Promise<PatientMrnBackfillResult> {
   if (!isR4Date(options.today)) throw new Error("MRN backfill requires a valid current date.");
+  const ageOfMajorityYears = resolveAgeOfMajorityYears(options.ageOfMajorityConfig);
   const patients = await adapter.listPatients();
   const accounts = await adapter.listAccounts();
   const nextMrnBase = options.nextMrnBase ?? (() => randomInt(ODOS_MRN_MIN, ODOS_MRN_MAX + 1));
@@ -86,7 +90,7 @@ export async function backfillPatientMrns(
     }
   }
   const patientStates = patients.map((patient) =>
-    inspectPatientBackfillState(patient, accountsByPatient, options.today));
+    inspectPatientBackfillState(patient, accountsByPatient, options.today, ageOfMajorityYears));
 
   for (const {
     patient,
@@ -176,6 +180,7 @@ function inspectPatientBackfillState(
   patient: Patient,
   accountsByPatient: ReadonlyMap<string, Account[]>,
   today: string,
+  ageOfMajorityYears: number,
 ): PatientBackfillState {
   if (!patient.id || !patient.meta?.versionId) {
     throw new Error("Patient backfill requires every Patient search row to include id and meta.versionId.");
@@ -219,7 +224,7 @@ function inspectPatientBackfillState(
     existingAccount,
     ageStatus: !patient.birthDate || !isR4Date(patient.birthDate)
       ? "indeterminate"
-      : isMinorOn(patient.birthDate, today) ? "minor" : "adult",
+      : isMinorAtAge(patient.birthDate, today, ageOfMajorityYears) ? "minor" : "adult",
   };
 }
 
@@ -344,6 +349,15 @@ class LivePatientMrnBackfillAdapter implements PatientMrnBackfillAdapter {
   }
 }
 
+export async function loadBackfillAgeOfMajorityConfig(fhir: Pick<MedplumClient, "getActiveProjectId" | "searchProject" | "searchProjectUrl" | "baseUrl">): Promise<Basic | undefined> {
+  const projectId = await fhir.getActiveProjectId();
+  const configs = await searchProjectAll<Basic>(fhir, "Basic", projectId, {
+    code: `${ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM}|${ODOS_AGE_OF_MAJORITY_CONFIG_CODE}`,
+  });
+  if (configs.length > 1) throw new Error("Age of majority is not configured: multiple practice settings exist.");
+  return configs[0];
+}
+
 async function runCli(): Promise<void> {
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL;
   assertLocalOrPrivateBaseUrl(baseUrl);
@@ -360,6 +374,7 @@ async function runCli(): Promise<void> {
   }
   const result = await backfillPatientMrns(new LivePatientMrnBackfillAdapter(fhir), {
     today: new Date().toISOString().slice(0, 10),
+    ageOfMajorityConfig: await loadBackfillAgeOfMajorityConfig(fhir),
   });
   console.log(JSON.stringify(result, null, 2));
 }

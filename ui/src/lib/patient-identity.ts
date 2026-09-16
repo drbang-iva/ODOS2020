@@ -1,5 +1,6 @@
 import { emptyPatientPhone, validatePatientPhones, type PhoneDraft } from "../../../mcp/src/clinic/patient-telecom";
-import type { Patient } from "@medplum/fhirtypes";
+import { resolveAgeOfMajorityYears, isMinorAtAge } from "../../../mcp/src/clinic/age-of-majority-config";
+import type { Basic, Patient } from "@medplum/fhirtypes";
 
 export const ODOS_MRN_SYSTEM = "https://odos2020.com/fhir/NamingSystem/odos-mrn";
 export const EYEFINITY_EPM_PATIENT_ID_SYSTEM =
@@ -34,7 +35,7 @@ interface ResponsiblePartyCommon {
 
 export interface PersonResponsiblePartyDraft extends ResponsiblePartyCommon {
   kind: "person";
-  firstName: string; middleName: string; lastName: string;
+  firstName: string; middleName: string; lastName: string; birthDate: string;
   phones: PhoneDraft["phones"]; textable: PhoneDraft["textable"];
   address: string; city: string; state: string; postalCode: string;
 }
@@ -42,11 +43,11 @@ export interface PersonResponsiblePartyDraft extends ResponsiblePartyCommon {
 export interface ExistingResponsiblePartyDraft extends ResponsiblePartyCommon {
   kind: "existing";
   personId: string;
-  card: { personId: string; versionId: string; name: string; phones: string[]; city: string; postalCode: string };
+  card: { personId: string; versionId: string; name: string; birthDate: string; phones: string[]; city: string; postalCode: string };
   previous: PersonResponsiblePartyDraft;
 }
 
-export type SelfResponsiblePartyDraft = Omit<PersonResponsiblePartyDraft, "kind" | "phones" | "textable"> & { kind: "self"; phone: string };
+export type SelfResponsiblePartyDraft = Omit<PersonResponsiblePartyDraft, "kind" | "phones" | "textable" | "birthDate"> & { kind: "self"; phone: string };
 export type ResponsiblePartyDraft = SelfResponsiblePartyDraft | PersonResponsiblePartyDraft | ExistingResponsiblePartyDraft;
 
 export function emptySelfResponsibleParty(localId: string): SelfResponsiblePartyDraft {
@@ -79,6 +80,7 @@ export function emptyRelatedResponsibleParty(
   return {
     ...common,
     kind: "person",
+    birthDate: "",
     phones: [emptyPatientPhone(), emptyPatientPhone()], textable: "",
     relationship: "parent",
     financialResponsible: true,
@@ -135,24 +137,30 @@ export function isR4Date(value: string): boolean {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
-export function isMinorOn(birthDate: string | undefined, today: string): boolean {
+export function isMinorOn(birthDate: string | undefined, today: string, ageOfMajorityConfig?: Basic): boolean {
   if (!birthDate || !isR4Date(birthDate)) {
     throw new Error("A valid birth date is required to determine whether a patient is a minor.");
   }
   if (!isR4Date(today)) throw new Error("A valid current date is required to determine whether a patient is a minor.");
-  const eighteenthBirthday = `${String(Number(birthDate.slice(0, 4)) + 18)}${birthDate.slice(4)}`;
-  return eighteenthBirthday > today;
+  return isMinorAtAge(birthDate, today, resolveAgeOfMajorityYears(ageOfMajorityConfig));
 }
 
 export function validateResponsibleParties(
   parties: readonly ResponsiblePartyDraft[],
   birthDate: string,
   today: string,
+  ageOfMajorityConfig?: Basic,
 ): Record<string, string> {
   const errors: Record<string, string> = {};
   const collectionErrors: string[] = [];
   const minorStatusKnown = isR4Date(birthDate) && isR4Date(today);
-  const minor = minorStatusKnown ? isMinorOn(birthDate, today) : undefined;
+  let minor: boolean | undefined;
+  try {
+    resolveAgeOfMajorityYears(ageOfMajorityConfig);
+    minor = minorStatusKnown ? isMinorOn(birthDate, today, ageOfMajorityConfig) : undefined;
+  } catch {
+    collectionErrors.push("Age of majority is not configured");
+  }
   if (!minorStatusKnown) {
     collectionErrors.push("A valid birth date and current date are required before responsible parties can be validated.");
   }
@@ -174,6 +182,7 @@ export function validateResponsibleParties(
       return;
     }
     if (party.kind === "person") Object.entries(validatePatientPhones(party.phones, party.textable)).forEach(([field, error]) => { errors[key(field)] = error; });
+    if (party.kind === "person" && (!isR4Date(party.birthDate) || party.birthDate > today)) errors[key("birthDate")] = "A valid guarantor date of birth, not in the future, is required.";
     if (party.kind === "person" && !party.firstName.trim()) errors[key("firstName")] = "First name is required.";
     if (party.kind === "person" && !party.lastName.trim()) errors[key("lastName")] = "Last name is required.";
     if (!party.relationship) errors[key("relationship")] = "Relationship is required.";

@@ -280,3 +280,20 @@ test("K4: real editor name and phone save preserves an inert child claim", async
     (data.records.get("RelatedPerson/party-a") as RelatedPerson).extension!.push(claim);
   });
 });
+
+test("D4 editor saves Person DOB", async () => {
+ const { world, withEditor: withWriterEditor, get } = await import("../../mcp/tests/helpers/guarantor-phone-fixture.js");
+ const data = await world();
+ await withWriterEditor(data, async () => {
+  let renderer!: ReactTestRenderer;
+  await act(async()=>{renderer=create(<ResponsiblePartiesControl patientId="p-r1"/>);});
+  try {
+   const field = renderer.root.findAllByType("label").find(label => label.children[0] === "Guarantor date of birth")!.findByType("input");
+   assert.equal(field.props.value,"1980-01-02");
+   await act(async()=>{field.props.onChange({target:{value:"1981-01-02"}});});
+   const save = renderer.root.findAllByType("button").find(button => button.children.join("") === "Save guarantor")!;
+   await act(async()=>{await save.props.onClick();});
+   assert.equal(get(data,"Person/S").birthDate,"1981-01-02");
+  } finally { await act(async()=>renderer.unmount()); }
+ });
+});

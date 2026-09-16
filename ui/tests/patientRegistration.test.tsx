@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../../mcp/src/clinic/age-of-majority-config";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Patient } from "@medplum/fhirtypes";
@@ -112,6 +113,7 @@ test("minor registration validation refuses a missing consent authority", () => 
   const minorDraft = { ...COMPLETE_DRAFT, birthDate: "2015-01-02" };
   assert.match(
     validatePatientRegistration(minorDraft, {
+      ageOfMajorityConfig: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18}))),
       today: "2026-07-30",
       responsibleParties: [guardian],
     }).responsibleParties,
@@ -130,6 +132,7 @@ test("responsible-party collection errors accumulate without hiding minor consen
   const errors = validatePatientRegistration(
     { ...COMPLETE_DRAFT, birthDate: "2015-01-02" },
     {
+      ageOfMajorityConfig: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18}))),
       today: "2026-07-30",
       responsibleParties: [self, { ...self, localId: "duplicate-self" }],
     },

@@ -1,0 +1,22 @@
+[
+  {
+    "guard": "D6-registration",
+    "mutation": "isMinorAtAge(input.demographics.birthDate, today, 18)",
+    "exit": 1
+  },
+  {
+    "guard": "D6-statements",
+    "mutation": "isMinorAtAge(birthDate, onDate, 18)",
+    "exit": 1
+  },
+  {
+    "guard": "D7-registration",
+    "mutation": "ageOfMajorityYears = setting ? resolveAgeOfMajorityYears(setting) : 18;",
+    "exit": 1
+  },
+  {
+    "guard": "D7-statements",
+    "mutation": "ageOfMajorityYears = majorityResources[0] ? resolveAgeOfMajorityYears(majorityResources[0]) : 18;",
+    "exit": 1
+  }
+]

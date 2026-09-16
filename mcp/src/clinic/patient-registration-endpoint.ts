@@ -1,3 +1,4 @@
+import { ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM, ODOS_AGE_OF_MAJORITY_CONFIG_CODE, resolveAgeOfMajorityYears, isMinorAtAge } from "./age-of-majority-config.js";
 import { buildResponsiblePartyDemographics, guarantorPersonIsAttachable, applyResponsiblePartyDemographics } from "./responsible-party-demographics.js";
 import { resolvePractitionerReference } from "../authz/practitioner-reference.js";
 import { buildCommsConsent, communicationPreferencesInputSchema, parsePreferenceWriteInput } from "../comms/comms-preferences.js";
@@ -6,6 +7,7 @@ import { randomInt, randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type {
   Account,
+  Basic,
   Bundle,
   BundleEntry,
   Patient,
@@ -58,7 +60,7 @@ const responsiblePartyDemographicFields = {
 const { phone: _legacyPartyPhone, ...personDemographicFields } = responsiblePartyDemographicFields;
 const responsiblePartySchema = z.discriminatedUnion("kind", [
   z.object({ ...responsiblePartyFields, ...responsiblePartyDemographicFields, kind: z.literal("self") }).strict(),
-  z.object({ ...responsiblePartyFields, ...personDemographicFields, kind: z.literal("person"), phones: z.tuple([patientPhoneSchema, patientPhoneSchema]), textable: z.enum(["phone1", "phone2", "neither", ""]) }).strict(),
+  z.object({ ...responsiblePartyFields, ...personDemographicFields, kind: z.literal("person"), birthDate: z.string(), phones: z.tuple([patientPhoneSchema, patientPhoneSchema]), textable: z.enum(["phone1", "phone2", "neither", ""]) }).strict(),
   z.object({ ...responsiblePartyFields, kind: z.literal("existing"), personId: idSchema }).strict(),
 ]);
 
@@ -125,7 +127,19 @@ export async function registerPatientFromDemographics(
   const projectId = registrationProjectId(staff.project);
   const existingPersons = await loadExistingGuarantors(input, staff, deps.serviceFhir, projectId);
   const resolvedInput = resolveExistingParties(input, existingPersons);
-  validateRegistration(resolvedInput, today, new Set(existingPersons.keys()));
+  const majorityResources = await searchProjectAll<Basic>(deps.serviceFhir, "Basic", projectId, {
+    code: `${ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM}|${ODOS_AGE_OF_MAJORITY_CONFIG_CODE}`,
+  });
+  let ageOfMajorityYears: number;
+  try {
+    if (majorityResources.length > 1) throw new Error("Age of majority is not configured: multiple settings found.");
+    const setting = majorityResources[0];
+    if (setting && setting.meta?.project?.replace(/^Project\//, "") !== projectId) throw new Error("Age of majority is not configured for this practice.");
+    ageOfMajorityYears = resolveAgeOfMajorityYears(setting);
+  } catch (error) {
+    return { status: 422, body: { error: "Age of majority is not configured (ageOfMajorityYears)." } };
+  }
+  validateRegistration(resolvedInput, today, new Set(existingPersons.keys()), ageOfMajorityYears);
   const duplicates = await findExactDuplicates(deps.serviceFhir, projectId, input.demographics);
   if (duplicates.length > 0 && !input.confirmDuplicate) {
     return { status: 409, body: { kind: "duplicates", patients: duplicates } };
@@ -246,6 +260,7 @@ function resolveExistingParties(input: PatientRegistrationInput, persons: Map<st
       return {
         ...party,
         kind: "person" as const,
+        birthDate: person.birthDate ?? "",
         firstName: name?.given?.[0] ?? "",
         middleName: name?.given?.slice(1).join(" ") ?? "",
         lastName: name?.family ?? "",
@@ -392,7 +407,7 @@ function buildPatientIdentityTransaction(
     const fullUrl = `urn:uuid:${randomUUID()}`;
     partyReferences.set(party.localId, fullUrl);
     if (party.kind === "existing") existingRelatedPersonEntryIndexes.set(party.localId, entries.length);
-    const source: Person = party.kind === "existing" ? existingPersons.get(party.localId)! : { resourceType: "Person", ...buildResponsiblePartyDemographics(party) };
+    const source: Person = party.kind === "existing" ? existingPersons.get(party.localId)! : { resourceType: "Person", birthDate: party.birthDate, ...buildResponsiblePartyDemographics(party) };
     entries.push({
       fullUrl,
       resource: registrationResourceInProject(buildRelatedPerson(party, patientFullUrl, today, source), projectId),
@@ -480,7 +495,7 @@ export function registrationProjectId(project: Reference<Project>): string {
   return projectId;
 }
 
-function validateRegistration(input: PatientRegistrationInput, today: string, existingIds: ReadonlySet<string>): void {
+function validateRegistration(input: PatientRegistrationInput, today: string, existingIds: ReadonlySet<string>, ageOfMajorityYears: number): void {
   const errors: string[] = [];
   if (!input.demographics.firstName.trim()) errors.push("Legal first name is required.");
   if (!input.demographics.lastName.trim()) errors.push("Legal last name is required.");
@@ -491,7 +506,7 @@ function validateRegistration(input: PatientRegistrationInput, today: string, ex
   if (new Set(input.responsibleParties.map((party) => party.localId)).size !== input.responsibleParties.length) {
     errors.push("Responsible-party identifiers must be unique.");
   }
-  const minor = isR4Date(input.demographics.birthDate) && `${Number(input.demographics.birthDate.slice(0, 4)) + 18}${input.demographics.birthDate.slice(4)}` > today;
+  const minor = isR4Date(input.demographics.birthDate) && isMinorAtAge(input.demographics.birthDate, today, ageOfMajorityYears);
   const selfCount = input.responsibleParties.filter((party) => party.kind === "self").length;
   if (selfCount > 1) errors.push("The patient can appear as self only once.");
   if (minor && input.responsibleParties.some((party) => party.kind === "self")) errors.push("A minor cannot be registered as their own responsible party.");
@@ -504,6 +519,7 @@ function validateRegistration(input: PatientRegistrationInput, today: string, ex
     if (party.financialResponsible && (party.kind === "existing" || [party.address, party.city, party.state, party.postalCode].some((value) => !value.trim()))) errors.push("A guarantor mailing address is required.");
   }
   for (const party of relatedParties) {
+    if (!existingIds.has(party.localId) && (!isR4Date(party.birthDate) || party.birthDate > today)) errors.push("Guarantor date of birth must be a valid YYYY-MM-DD date, not in the future.");
     if (!existingIds.has(party.localId)) errors.push(...Object.values(validatePatientPhones(party.phones, party.textable)));
     if (!party.firstName.trim() || !party.lastName.trim()) errors.push("Responsible-party name is required.");
     if (!isR4Date(party.effectiveDate)) errors.push("A valid responsible-party effective date is required.");
@@ -641,7 +657,7 @@ function responsiblePartyActiveOn(party: ResponsiblePartyInput, today: string): 
   return (!party.effectiveDate || party.effectiveDate <= today) && (!party.endDate || party.endDate >= today);
 }
 
-function isR4Date(value: string): boolean {
+export function isR4Date(value: string): boolean {
   const date = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00.000Z`) : undefined;
   return Boolean(date && !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value);
 }

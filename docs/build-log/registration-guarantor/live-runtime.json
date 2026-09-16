@@ -1,0 +1,24 @@
+{
+  "composeProject": "registration-majority-live",
+  "ports": {
+    "medplum": 29160,
+    "postgres": 29161,
+    "redis": 29162,
+    "odos": 29163,
+    "ui": 29164,
+    "proof": 29165
+  },
+  "image": "medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de",
+  "health": {
+    "ok": true,
+    "version": "5.1.30-9b1bd92",
+    "platform": "linux",
+    "runtime": "v24.18.1",
+    "postgres": true,
+    "redis": true,
+    "redisInstances": {
+      "default": true
+    }
+  },
+  "baseHead": "6d41a717060fe7d01a185496279ee67f47e82fa5"
+}

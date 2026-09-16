@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../src/clinic/age-of-majority-config.js";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type {
@@ -33,6 +34,7 @@ import {
   STATEMENT_TASK_CODE_SYSTEM,
   STATEMENT_TRANSACTION_CHILD_LIMIT,
   type StatementRunResult,
+  StatementValidationError,
 } from "../src/statements/statements.js";
 import { buildStatementMessageConfigResource } from "../src/statements/statement-message-config.js";
 
@@ -668,6 +670,7 @@ function fakeFhir(
     practitioners?: Practitioner[];
     practitionerRoles?: PractitionerRole[];
     basics?: Basic[];
+    majority?: Basic | null;
     accounts?: Account[];
     relatedPeople?: RelatedPerson[];
   },
@@ -677,7 +680,7 @@ function fakeFhir(
   const storedTasks: Task[] = [];
   let storedTaskCount = 0;
   const fhir = {
-    search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => {
+    search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> => {
       const rows: Resource[] = resourceType === "Patient" ? input.patients
         : resourceType === "Invoice" ? input.invoices
           : resourceType === "PaymentReconciliation" ? input.payments
@@ -685,7 +688,7 @@ function fakeFhir(
               : resourceType === "ClaimResponse" ? input.claimResponses ?? []
                 : resourceType === "Practitioner" ? input.practitioners ?? []
                   : resourceType === "PractitionerRole" ? input.practitionerRoles ?? []
-                    : resourceType === "Basic" ? input.basics ?? []
+                    : resourceType === "Basic" ? params.code?.includes("age-of-majority-config") ? (input.majority === null ? [] : [input.majority ?? buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 })]) : input.basics ?? []
                       : resourceType === "Account" ? input.accounts ?? []
                         : resourceType === "RelatedPerson" ? input.relatedPeople ?? []
                           : resourceType === "Task" ? storedTasks.map((task) => ({
@@ -1024,3 +1027,18 @@ function sequentialIds(): () => string {
   let value = 0;
   return () => `id-${++value}`;
 }
+
+
+test("D6 statements: configured 21 refuses a 19-year-old self recipient", async () => {
+  const fixture = fakeFhir({ patients: [{ ...patient("p1", "Synthetic Adult"), birthDate: "2007-01-01" }], invoices: [invoice("i1", "p1", 1000)], payments: [], majority: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 21 }))) });
+  const result = await generatePatientStatementForOperator(fixture.fhir, { patientReference: "Patient/p1", generatedAt: GENERATED_AT });
+  assert.equal(result.generatedCount, 0);
+  assert.equal(result.invalidRejects, 1);
+  assert.match(result.rejects[0].reason, /minor/);
+});
+
+test("D7 statements: absent majority raises StatementValidationError and writes no Tasks", async () => {
+  const fixture = fakeFhir({ patients: [patient("p1", "Synthetic Adult")], invoices: [invoice("i1", "p1", 1000)], payments: [], majority: null });
+  await assert.rejects(generatePatientStatementForOperator(fixture.fhir, { patientReference: "Patient/p1", generatedAt: GENERATED_AT }), error => error instanceof StatementValidationError && /[Aa]ge of majority|ageOfMajorityYears/.test(error.message));
+  assert.equal(fixture.transactions.length, 0);
+});

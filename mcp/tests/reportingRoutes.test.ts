@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../src/clinic/age-of-majority-config.js";
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
@@ -136,6 +137,7 @@ async function server() {
     read: async <T extends Resource>(): Promise<T> => { throw new Error("not reached"); },
     update: async <T extends Resource>(_resourceType: T["resourceType"], _id: string, resource: T): Promise<T> => resource,
     search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> => {
+      if (resourceType === "Basic" && params.code?.includes("age-of-majority-config")) return { resourceType: "Bundle", type: "searchset", entry: [{ resource: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))) as T }] };
       if (resourceType !== "Task") return { resourceType: "Bundle", type: "searchset" };
       const resources = tasks.filter((task) => {
         if (params._id && !params._id.split(",").includes(task.id ?? "")) return false;

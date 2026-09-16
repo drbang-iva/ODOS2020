@@ -40,10 +40,10 @@ test("Fixback F2: stored country-code and ten-digit phones match every supported
   });
  }
 });
-test("K3 search card exposes exactly six keys",async()=>route([person("ann","Ann",{extension:[{url:"urn:sentinel",valueString:"private"}],address:[{line:["Private street"],city:"Town",postalCode:"00000"}]})],async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,200);assert.deepEqual(Object.keys((await r.json())[0]).sort(),["personId","versionId","name","phones","city","postalCode"].sort());}));
+test("K3 search card exposes exactly seven keys",async()=>route([person("ann","Ann",{extension:[{url:"urn:sentinel",valueString:"private"}],address:[{line:["Private street"],city:"Town",postalCode:"00000"}]})],async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,200);assert.deepEqual(Object.keys((await r.json())[0]).sort(),["personId","versionId","name","birthDate","phones","city","postalCode"].sort());}));
 for(const [kind,extra] of [["inactive",{active:false}],["zero-link",{link:[]}],["non-RelatedPerson",{link:[{target:{reference:"Patient/child"}}]}]] as const)test(`K4 ${kind} excluded`,async()=>route([person("ann","Ann",extra)],async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,200);assert.deepEqual(await r.json(),[]);}));
 for(const count of [21,201])test(`K5 ${count} matches return 422`,async()=>route(Array.from({length:count},(_,i)=>person("ann"+i)),async base=>{const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.equal(r.status,422);assert.equal((await r.json()).error,"Too many matches; add a first name or phone.");}));
-test("K7 create writes exactly one active unlinked Person; missing surname writes nothing",async()=>route([],async(base,writes)=>{let r=await fetch(base+"/guarantors",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({firstName:"Beth",lastName:"Ann"})});assert.equal(r.status,201);assert.deepEqual(await r.json(),{personId:"new",versionId:"1"});assert.equal(writes.length,1);assert.equal(writes[0].request.method,"POST");assert.equal(writes[0].resource.resourceType,"Person");assert.equal(writes[0].resource.active,true);assert.equal(writes[0].resource.link,undefined);r=await fetch(base+"/guarantors",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({firstName:"Beth"})});assert.equal(r.status,400);assert.equal(writes.length,1);}));
+test("K7 create writes exactly one active unlinked Person; missing surname writes nothing",async()=>route([],async(base,writes)=>{let r=await fetch(base+"/guarantors",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({firstName:"Beth",lastName:"Ann",birthDate:"1980-01-02"})});assert.equal(r.status,201);assert.deepEqual(await r.json(),{personId:"new",versionId:"1"});assert.equal(writes.length,1);assert.equal(writes[0].request.method,"POST");assert.equal(writes[0].resource.resourceType,"Person");assert.equal(writes[0].resource.active,true);assert.equal(writes[0].resource.birthDate,"1980-01-02");assert.equal(writes[0].resource.link,undefined);r=await fetch(base+"/guarantors",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({firstName:"Beth"})});assert.equal(r.status,400);assert.equal(writes.length,1);}));
 
 import { fixture, run } from "./guarantorScreensFixture.js";
 test("K8 draft includes every source link, writes nothing, refuses consolidate subset",async()=>{const f=fixture();const input={kind:"consolidate",sourcePersonId:"S",destinationPersonId:"D"};const result=await run(f,"draft",input);assert.equal(result.status,200);assert.deepEqual(result.body.relatedPersonIds,["r1","r2"]);assert.equal(result.body.patients.length,2);assert.equal(f.writes.length,0);assert.equal((await run(f,"draft",{...input,relatedPersonIds:["r1"]})).status,422);assert.equal(f.writes.length,0);});
@@ -75,4 +75,19 @@ for (const [label,path,body] of [
  const server=app.listen(0,"127.0.0.1");await new Promise<void>(r=>server.once("listening",r));
  try {const result=await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}${path}`,body?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}:undefined);assert.deepEqual({status:result.status,searches,writes:f.writes.length},{status:403,searches:0,writes:0});}
  finally {await new Promise<void>(r=>server.close(()=>r()));}
+});
+
+test("D2 create requires valid nonfuture DOB before writing", async()=>route([],async(base,writes)=>{
+ for(const birthDate of [undefined,"","2026-02-30","9999-01-01"]){const r=await fetch(base+"/guarantors",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({firstName:"Beth",lastName:"Ann",birthDate})});assert.equal(r.status,400);assert.equal(writes.length,0);}
+}));
+test("D5 search cards expose Person DOB or empty string",async()=>{
+ const rows:any[]=[];
+ await route(rows,async(base,writes)=>{
+  const created=await fetch(base+"/guarantors",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({firstName:"Beth",lastName:"Ann",birthDate:"1980-01-02"})});
+  assert.equal(created.status,201);
+  const dated=JSON.parse(JSON.stringify({...writes[0].resource,id:"dated",meta:{project:"practice",versionId:"1"},link:[{target:{reference:"RelatedPerson/child"}}]}));
+  const undated=JSON.parse(JSON.stringify({...dated,id:"undated"}));delete undated.birthDate;
+  rows.push(dated,undated);
+  const r=await fetch(base+"/guarantors/search?lastName=Ann&firstName=Beth");assert.deepEqual((await r.json()).map((r:any)=>r.birthDate),["1980-01-02",""]);
+ });
 });

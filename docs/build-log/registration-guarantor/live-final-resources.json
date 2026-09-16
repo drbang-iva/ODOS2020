@@ -1,0 +1,425 @@
+{
+  "first": {
+    "resourceType": "Patient",
+    "active": true,
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "text": "ODOS medical record number"
+        },
+        "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+        "value": "3967726"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "given": [
+          "Synthetic"
+        ],
+        "family": "Majority Child"
+      }
+    ],
+    "birthDate": "2015-01-01",
+    "gender": "unknown",
+    "telecom": [
+      {
+        "system": "phone",
+        "use": "mobile",
+        "value": "864-555-0103",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+            "valueBoolean": true
+          }
+        ]
+      }
+    ],
+    "meta": {
+      "project": "62023a15-f13a-4f4e-b8d8-3da238ded8eb",
+      "versionId": "7c665c94-9cfa-4c5c-9b89-6dc3e7a92b30",
+      "lastUpdated": "2026-09-15T22:28:38.337Z",
+      "author": {
+        "reference": "Practitioner/b8cba417-dfb5-488c-88fd-aab5df06f497",
+        "display": "Medplum Admin"
+      },
+      "compartment": [
+        {
+          "reference": "Project/62023a15-f13a-4f4e-b8d8-3da238ded8eb"
+        },
+        {
+          "reference": "Patient/b2ffce30-1e9e-4ebc-a685-394d2ae5e766"
+        }
+      ]
+    },
+    "id": "b2ffce30-1e9e-4ebc-a685-394d2ae5e766"
+  },
+  "second": {
+    "resourceType": "Patient",
+    "active": true,
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "text": "ODOS medical record number"
+        },
+        "system": "https://odos2020.com/fhir/NamingSystem/odos-mrn",
+        "value": "2462570"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "given": [
+          "Synthetic"
+        ],
+        "family": "Majority Nineteen"
+      }
+    ],
+    "birthDate": "2007-01-01",
+    "gender": "unknown",
+    "telecom": [
+      {
+        "system": "phone",
+        "use": "mobile",
+        "value": "864-555-0103",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+            "valueBoolean": true
+          }
+        ]
+      }
+    ],
+    "meta": {
+      "project": "62023a15-f13a-4f4e-b8d8-3da238ded8eb",
+      "versionId": "d4403b28-90be-42e2-a322-429aba3a54b2",
+      "lastUpdated": "2026-09-15T22:28:38.601Z",
+      "author": {
+        "reference": "Practitioner/b8cba417-dfb5-488c-88fd-aab5df06f497",
+        "display": "Medplum Admin"
+      },
+      "compartment": [
+        {
+          "reference": "Project/62023a15-f13a-4f4e-b8d8-3da238ded8eb"
+        },
+        {
+          "reference": "Patient/e9e30e44-43a2-4749-8fbf-2455be48b36c"
+        }
+      ]
+    },
+    "id": "e9e30e44-43a2-4749-8fbf-2455be48b36c"
+  },
+  "parent": {
+    "resourceType": "Person",
+    "birthDate": "1980-01-01",
+    "name": [
+      {
+        "use": "official",
+        "given": [
+          "Synthetic"
+        ],
+        "family": "Majority Guardian"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "use": "home",
+        "value": "864-555-0101"
+      },
+      {
+        "system": "phone",
+        "use": "mobile",
+        "value": "864-555-0102",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+            "valueBoolean": true
+          }
+        ]
+      }
+    ],
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "1 Synthetic Way"
+        ],
+        "city": "Synthetic Town",
+        "state": "SC",
+        "postalCode": "29601"
+      }
+    ],
+    "link": [
+      {
+        "target": {
+          "reference": "RelatedPerson/4b32b881-316d-4af9-a8a6-8e23d24f54a2"
+        },
+        "assurance": "level2"
+      }
+    ],
+    "meta": {
+      "project": "62023a15-f13a-4f4e-b8d8-3da238ded8eb",
+      "versionId": "6238c9a1-95a8-45ca-b542-d807df1ecddf",
+      "lastUpdated": "2026-09-15T22:28:38.353Z",
+      "author": {
+        "reference": "Practitioner/b8cba417-dfb5-488c-88fd-aab5df06f497",
+        "display": "Medplum Admin"
+      },
+      "compartment": [
+        {
+          "reference": "Project/62023a15-f13a-4f4e-b8d8-3da238ded8eb"
+        }
+      ]
+    },
+    "id": "7c25e660-aa2c-492f-9511-c5357e3a047e"
+  },
+  "child": {
+    "resourceType": "RelatedPerson",
+    "active": true,
+    "patient": {
+      "reference": "Patient/b2ffce30-1e9e-4ebc-a685-394d2ae5e766"
+    },
+    "relationship": [
+      {
+        "text": "Parent"
+      }
+    ],
+    "period": {
+      "start": "2026-01-01"
+    },
+    "extension": [
+      {
+        "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+        "valueBoolean": true
+      },
+      {
+        "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+        "valueBoolean": true
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "given": [
+          "Synthetic"
+        ],
+        "family": "Majority Guardian"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "use": "home",
+        "value": "864-555-0101"
+      },
+      {
+        "system": "phone",
+        "use": "mobile",
+        "value": "864-555-0102",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+            "valueBoolean": true
+          }
+        ]
+      }
+    ],
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "1 Synthetic Way"
+        ],
+        "city": "Synthetic Town",
+        "state": "SC",
+        "postalCode": "29601"
+      }
+    ],
+    "meta": {
+      "project": "62023a15-f13a-4f4e-b8d8-3da238ded8eb",
+      "versionId": "3a260196-4a79-456f-8fc7-639f15438bc7",
+      "lastUpdated": "2026-09-15T22:28:38.344Z",
+      "author": {
+        "reference": "Practitioner/b8cba417-dfb5-488c-88fd-aab5df06f497",
+        "display": "Medplum Admin"
+      },
+      "compartment": [
+        {
+          "reference": "Project/62023a15-f13a-4f4e-b8d8-3da238ded8eb"
+        },
+        {
+          "reference": "Patient/b2ffce30-1e9e-4ebc-a685-394d2ae5e766"
+        }
+      ]
+    },
+    "id": "4b32b881-316d-4af9-a8a6-8e23d24f54a2"
+  },
+  "guardian": {
+    "resourceType": "RelatedPerson",
+    "active": true,
+    "patient": {
+      "reference": "Patient/e9e30e44-43a2-4749-8fbf-2455be48b36c"
+    },
+    "relationship": [
+      {
+        "text": "Parent"
+      }
+    ],
+    "period": {
+      "start": "2026-01-01"
+    },
+    "extension": [
+      {
+        "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+        "valueBoolean": true
+      },
+      {
+        "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+        "valueBoolean": true
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "given": [
+          "Synthetic"
+        ],
+        "family": "Majority Guardian"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "use": "home",
+        "value": "864-555-0101"
+      },
+      {
+        "system": "phone",
+        "use": "mobile",
+        "value": "864-555-0102",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/odos-textable-number",
+            "valueBoolean": true
+          }
+        ]
+      }
+    ],
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "1 Synthetic Way"
+        ],
+        "city": "Synthetic Town",
+        "state": "SC",
+        "postalCode": "29601"
+      }
+    ],
+    "meta": {
+      "project": "62023a15-f13a-4f4e-b8d8-3da238ded8eb",
+      "versionId": "f6f34d6a-aac5-47e9-832f-cc9747f21446",
+      "lastUpdated": "2026-09-15T22:28:38.605Z",
+      "author": {
+        "reference": "Practitioner/b8cba417-dfb5-488c-88fd-aab5df06f497",
+        "display": "Medplum Admin"
+      },
+      "compartment": [
+        {
+          "reference": "Project/62023a15-f13a-4f4e-b8d8-3da238ded8eb"
+        },
+        {
+          "reference": "Patient/e9e30e44-43a2-4749-8fbf-2455be48b36c"
+        }
+      ]
+    },
+    "id": "3a0e7bc1-3c33-4fa0-952e-bb43975d653a"
+  },
+  "encounter": {
+    "resourceType": "Encounter",
+    "meta": {
+      "project": "62023a15-f13a-4f4e-b8d8-3da238ded8eb",
+      "versionId": "dc9ee296-e0aa-4d53-9848-a3ffa1142f72",
+      "lastUpdated": "2026-09-15T22:28:38.742Z",
+      "author": {
+        "reference": "Practitioner/b8cba417-dfb5-488c-88fd-aab5df06f497",
+        "display": "Medplum Admin"
+      },
+      "compartment": [
+        {
+          "reference": "Project/62023a15-f13a-4f4e-b8d8-3da238ded8eb"
+        },
+        {
+          "reference": "Patient/e9e30e44-43a2-4749-8fbf-2455be48b36c"
+        }
+      ]
+    },
+    "status": "in-progress",
+    "class": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+      "code": "AMB"
+    },
+    "subject": {
+      "reference": "Patient/e9e30e44-43a2-4749-8fbf-2455be48b36c"
+    },
+    "period": {
+      "start": "2026-09-15T12:00:00.000Z"
+    },
+    "id": "933b1960-5409-460e-9be1-28fc25f3954c"
+  },
+  "invoice": {
+    "resourceType": "Invoice",
+    "meta": {
+      "project": "62023a15-f13a-4f4e-b8d8-3da238ded8eb",
+      "versionId": "1a2ef7e5-f154-4e8a-b0a3-4399cffef0a0",
+      "lastUpdated": "2026-09-15T22:28:38.754Z",
+      "author": {
+        "reference": "Practitioner/b8cba417-dfb5-488c-88fd-aab5df06f497",
+        "display": "Medplum Admin"
+      },
+      "compartment": [
+        {
+          "reference": "Project/62023a15-f13a-4f4e-b8d8-3da238ded8eb"
+        },
+        {
+          "reference": "Patient/e9e30e44-43a2-4749-8fbf-2455be48b36c"
+        }
+      ]
+    },
+    "status": "issued",
+    "subject": {
+      "reference": "Patient/e9e30e44-43a2-4749-8fbf-2455be48b36c"
+    },
+    "date": "2026-09-15T12:00:00.000Z",
+    "totalGross": {
+      "value": 10,
+      "currency": "USD"
+    },
+    "totalNet": {
+      "value": 10,
+      "currency": "USD"
+    },
+    "lineItem": [
+      {
+        "sequence": 1,
+        "chargeItemCodeableConcept": {
+          "text": "Synthetic service"
+        },
+        "priceComponent": [
+          {
+            "type": "base",
+            "amount": {
+              "value": 10,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ],
+    "id": "666a4fb3-04bb-4b17-9cdf-fa240bcd6164"
+  },
+  "settingDeleted": "bd6130ab-1624-4a42-93f6-8824f27a55e6"
+}

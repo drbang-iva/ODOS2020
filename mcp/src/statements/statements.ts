@@ -1,6 +1,8 @@
+import { ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM, ODOS_AGE_OF_MAJORITY_CONFIG_CODE, resolveAgeOfMajorityYears, isMinorAtAge } from "../clinic/age-of-majority-config.js";
 import { randomUUID } from "node:crypto";
 import type {
   Account,
+  Basic,
   Bundle,
   BundleEntry,
   Claim,
@@ -569,6 +571,17 @@ async function runStatements(
   options: { generatedAt: string; patientReference?: string; generateId?: () => string },
 ): Promise<StatementHandlerResult> {
   try {
+    // fhir-scope-contract: Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config
+    const majorityResources = await searchAll<Basic>(fhir, "Basic", {
+      code: `${ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM}|${ODOS_AGE_OF_MAJORITY_CONFIG_CODE}`,
+    });
+    let ageOfMajorityYears: number;
+    try {
+      if (majorityResources.length > 1) throw new Error("Age of majority is not configured: multiple settings found.");
+      ageOfMajorityYears = resolveAgeOfMajorityYears(majorityResources[0]);
+    } catch (error) {
+      throw new StatementValidationError(messageOf(error));
+    }
     const invoiceParams: Record<string, string> = options.patientReference
       ? { status: "issued", subject: options.patientReference, _sort: "date" }
       : { status: "issued", _sort: "subject,date" };
@@ -645,6 +658,7 @@ async function runStatements(
           accountsByPatientReference.get(patientReference) ?? [],
           relatedPersonByReference,
           options.generatedAt.slice(0, 10),
+          ageOfMajorityYears,
         );
         const snapshot = addStatementDetail({
           snapshot: addAccountCredit(
@@ -973,6 +987,7 @@ function resolveStatementRecipient(
   accounts: readonly Account[],
   relatedPeople: ReadonlyMap<string, RelatedPerson>,
   onDate: string,
+  ageOfMajorityYears: number,
 ): Patient | RelatedPerson {
   const patientReference = patientReferenceOf(patient);
   const patientAccounts = accounts.filter((account) =>
@@ -987,7 +1002,7 @@ function resolveStatementRecipient(
     : [];
   const candidates = matchingMrnAccounts.length > 0 ? matchingMrnAccounts : patientAccounts;
   if (candidates.length === 0) {
-    if (!minorOn(patient.birthDate, onDate)) return patient;
+    if (!minorOn(patient.birthDate, onDate, ageOfMajorityYears)) return patient;
     throw new StatementValidationError(`${patientReference} is a minor without a patient Account guarantor.`);
   }
   if (candidates.length > 1) {
@@ -1010,7 +1025,7 @@ function resolveStatementRecipient(
       );
     }
     if (reference === patientReference) {
-      if (minorOn(patient.birthDate, onDate)) {
+      if (minorOn(patient.birthDate, onDate, ageOfMajorityYears)) {
         throw new StatementValidationError(
           `${patientReference} is a minor and cannot receive a statement as their own Account guarantor.`,
         );
@@ -1058,14 +1073,14 @@ function personName(person: Patient | RelatedPerson): string | undefined {
   return label || undefined;
 }
 
-function minorOn(birthDate: string | undefined, onDate: string): boolean {
+function minorOn(birthDate: string | undefined, onDate: string, ageOfMajorityYears: number): boolean {
   if (!birthDate || !isR4Date(birthDate)) {
     throw new StatementValidationError(
       "Statement recipient cannot be determined without a valid patient birth date.",
     );
   }
   if (!isR4Date(onDate)) throw new StatementValidationError("Statement date is invalid.");
-  return `${String(Number(birthDate.slice(0, 4)) + 18)}${birthDate.slice(4)}` > onDate;
+  return isMinorAtAge(birthDate, onDate, ageOfMajorityYears);
 }
 
 function isR4Date(value: string): boolean {

@@ -1,0 +1,3 @@
+GREEN: actual test callback retains original body error and cleanup HTTP 403
+RED: removing body-error capture fails assertion: original body error is retained
+RESTORED: actual callback retains both errors

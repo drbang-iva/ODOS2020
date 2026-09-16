@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../src/clinic/age-of-majority-config.js";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Account, Bundle, Person, RelatedPerson, Resource } from "@medplum/fhirtypes";
@@ -16,7 +17,7 @@ const INPUT: PatientRegistrationInput = {
     email: "", address: "1 Synthetic Way", city: "Greenville", state: "SC", postalCode: "29601",
   },
   responsibleParties: [{
-    localId: "guardian", kind: "person", relationship: "legal-guardian",
+    localId: "guardian", kind: "person", birthDate: "1980-01-02", relationship: "legal-guardian",
     firstName: " Responsible ", middleName: " Middle ", lastName: " Synthetic ", phones: [{ value: " 864-555-0101 ", use: "home" }, { value: "", use: "mobile" }], textable: "",
     address: " 1 Synthetic Way ", city: " Greenville ", state: " SC ", postalCode: " 29601 ",
     financialResponsible: true, consentAuthority: true, primary: true,
@@ -35,7 +36,7 @@ async function registrationBundle(input = structuredClone(INPUT)): Promise<Bundl
     serviceFhir: {
       baseUrl: "http://g1-synthetic.test",
       search: async () => ({ resourceType: "Bundle", type: "searchset", entry: [] }),
-      searchProject: async () => ({ resourceType: "Bundle", type: "searchset", entry: [] }),
+      searchProject: async (type: string) => ({ resourceType: "Bundle", type: "searchset", entry: type === "Basic" ? [{ resource: JSON.parse(JSON.stringify({ ...buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }), meta: { project: PROJECT } })) }] : [] }),
       create: async (resource: Account) => ({ ...resource, id: "g1-reservation", meta: { ...resource.meta, versionId: "1" } }),
       executeTransactionAsActor: async (bundle: Bundle) => { submitted = structuredClone(bundle); throw captured; },
     } as never,
@@ -160,6 +161,7 @@ test("P8: a statement run retains the base minor recipient without reading Perso
   let sequence = 0;
   const fhir = {
     search: async (type: string, params: Record<string, string> = {}) => {
+      if (type === "Basic" && params.code?.includes("age-of-majority")) return { resourceType: "Bundle", type: "searchset", entry: [{ resource: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))) }] };
       assert.notEqual(type, "Person", "Statements must not consult the inert Person spine");
       return { resourceType: "Bundle", type: "searchset", entry: [...stored.values()]
         .filter(resource => resource.resourceType === type && (!params._id || params._id.split(",").includes(resource.id!)))

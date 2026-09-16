@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: statement age query requires its exact scope grant
+not ok 1 - statement age query requires its exact scope grant
+  ---
+  duration_ms: 383.60125
+  type: 'test'
+  location: '<workspace>/mcp/tests/ageOfMajorityConfig.test.ts:1:3762'
+  failureType: 'testCodeFailure'
+  error: |-
+    the real statements query must carry its exact scope contract
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<workspace>/mcp/tests/ageOfMajorityConfig.test.ts:71:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 455.899209

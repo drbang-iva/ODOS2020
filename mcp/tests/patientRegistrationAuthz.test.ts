@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../src/clinic/age-of-majority-config.js";
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
@@ -499,6 +500,7 @@ const REGISTRATION_BODY = {
   responsibleParties: [{
     localId: "guardian",
     kind: "person",
+    birthDate: "1980-01-02",
     relationship: "legal-guardian",
     firstName: "Responsible",
     middleName: "",
@@ -560,6 +562,7 @@ async function postRegistration(
 }
 
 class RegistrationFhir {
+  majorityConfig: Resource | undefined = JSON.parse(JSON.stringify({ ...buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }), meta: { project: "practice-1" } }));
   readonly baseUrl = "http://fhir.test";
   account?: Account;
   transaction?: Bundle;
@@ -642,7 +645,7 @@ class RegistrationFhir {
     params: Record<string, string> = {},
   ): Promise<Bundle<T>> {
     assert.equal(projectId, "practice-1");
-    const resources = resourceType === "ProjectMembership"
+    const resources = resourceType === "Basic" ? this.majorityConfig : resourceType === "ProjectMembership"
       ? this.memberships
         .filter((membership) => !params.profile || membership.profile?.reference === params.profile)
         .filter((membership) => params.active === "true" ? membership.active === true : true)
@@ -923,3 +926,35 @@ test('T7 guardian marked Phone 2 survives registration and lost-reply recovery',
     assert.deepEqual(entry.resource.telecom.map((p: any) => p.extension?.some((e: any) => e.url === ODOS_TEXTABLE_NUMBER_EXTENSION_URL) ?? false), [false, true]);
   }
 });
+
+
+test("D6 registration: configured 21 makes a 19-year-old require consent authority", async () => {
+  const fhir = new RegistrationFhir("staff");
+  fhir.majorityConfig = JSON.parse(JSON.stringify({ ...buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 21 }), meta: { project: "practice-1" } }));
+  const body = JSON.parse(JSON.stringify(REGISTRATION_BODY));
+  body.demographics.birthDate = "2007-01-02";
+  body.responsibleParties[0].consentAuthority = false;
+  const response = await postRegistration("staff", fhir, undefined, body);
+  assert.equal(response.status, 400);
+  assert.match(JSON.stringify(await response.json()), /consent-authority/);
+  assert.equal(fhir.transaction, undefined);
+  assert.equal(fhir.account, undefined);
+});
+
+test("D7 registration: absent or invalid majority setting refuses before any write", async () => {
+  for (const value of [undefined, { resourceType: "Basic", code: { text: "invalid" } }]) {
+    const fhir = new RegistrationFhir("staff");
+    fhir.majorityConfig = value as Resource | undefined;
+    const response = await postRegistration("staff", fhir);
+    assert.equal(response.status, 422);
+    assert.match(JSON.stringify(await response.json()), /[Aa]ge of majority|ageOfMajorityYears/);
+    assert.equal(fhir.transaction, undefined);
+    assert.equal(fhir.account, undefined);
+  }
+});
+ test("D1 new guarantor requires DOB before any registration write", async () => {
+ const body = JSON.parse(JSON.stringify(REGISTRATION_BODY)); delete body.responsibleParties[0].birthDate;
+ const fhir = new RegistrationFhir("staff");
+ const response = await postRegistration("staff", fhir, undefined, body);
+ assert.equal(response.status, 400); assert.equal(fhir.searchCalls, 0);
+ });

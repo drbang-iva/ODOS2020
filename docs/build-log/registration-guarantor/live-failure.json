@@ -1,0 +1,13 @@
+{
+  "error": "TypeError: registrations.map is not a function",
+  "stack": "TypeError: registrations.map is not a function\n    at createCommsDispatch (<source-root>/mcp/src/comms/comms-config.ts:117:19)\n    at serve (<source-root>/docs/build-log/registration-guarantor/live-proof.mjs:40:102)\n    at <anonymous> (<source-root>/docs/build-log/registration-guarantor/live-proof.mjs:56:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)",
+  "checks": [
+    {
+      "seed": {
+        "mode": "apply",
+        "action": "unchanged",
+        "projectId": "62023a15-f13a-4f4e-b8d8-3da238ded8eb"
+      }
+    }
+  ]
+}

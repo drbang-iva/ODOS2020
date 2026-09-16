@@ -1,6 +1,8 @@
 import { PhoneFields } from "../components/patient/PhoneFields";
 import { useEffect, useState } from "react";
-import type { Patient } from "@medplum/fhirtypes";
+import { loadAgeOfMajorityConfig } from "../lib/age-of-majority";
+import { resolveAgeOfMajorityYears } from "../../../mcp/src/clinic/age-of-majority-config";
+import type { Basic, Patient } from "@medplum/fhirtypes";
 import { CommunicationPreferencesControl, communicationPreferencesInput, type CommunicationPreferencesDraft } from "../components/patient/CommunicationPreferencesControl";
 import { PatientDemographicsFields } from "../components/patient/PatientDemographicsEditor";
 import {
@@ -31,6 +33,16 @@ export function NewPatient() {
   const [responsibleParties, setResponsibleParties] = useState<ResponsiblePartyDraft[]>(() => [
     emptySelfResponsibleParty("self"),
   ]);
+  const [ageOfMajorityConfig, setAgeOfMajorityConfig] = useState<Basic>();
+  const [majorityStatus, setMajorityStatus] = useState("Loading age of majority…");
+  useEffect(() => {
+    let active = true;
+    loadAgeOfMajorityConfig().then(config => {
+      resolveAgeOfMajorityYears(config);
+      if (active) { setAgeOfMajorityConfig(config); setMajorityStatus(""); }
+    }).catch(() => { if (active) setMajorityStatus("Age of majority is not configured"); });
+    return () => { active = false; };
+  }, []);
   const [preferences, setPreferences] = useState<CommunicationPreferencesDraft>();
   const [preferenceAvailability, setPreferenceAvailability] = useState<"loading" | "available" | "unavailable">("loading");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -51,10 +63,10 @@ export function NewPatient() {
   };
 
   const registrationOptions = (): PatientRegistrationOptions => {
-    if (!preferences && preferenceAvailability === "unavailable") return { responsibleParties, today };
+    if (!preferences && preferenceAvailability === "unavailable") return { responsibleParties, today, ageOfMajorityConfig };
     if (!preferences) throw new Error("Wait for communication preference defaults to load.");
     const communicationPreferences = communicationPreferencesInput(preferences);
-    return { responsibleParties, today, ...(communicationPreferences.cells.length ? { communicationPreferences } : {}) };
+    return { responsibleParties, today, ageOfMajorityConfig, ...(communicationPreferences.cells.length ? { communicationPreferences } : {}) };
   };
 
   const acceptCreated = (result: CreatedPatientRegistrationResult) => {
@@ -108,6 +120,7 @@ export function NewPatient() {
           <div><p className="text-xs uppercase tracking-widest text-white/40">Front desk</p><h1 className="mt-1 text-2xl font-semibold">New patient</h1></div>
           <button type="button" onClick={returnToSearch} className="rounded border border-white/15 px-3 py-2 text-sm text-white/65">Back to patient search</button>
         </header>
+        {majorityStatus && <p role="alert">{majorityStatus}</p>}
         {saveError && <div role="alert" className="mb-4 rounded border border-red-400/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">{saveError}</div>}
         <PatientDemographicsFields draft={draft} errors={errors} onChange={(next) => { setDraft(next); setDuplicates([]); }}
           communicationPreferences={<CommunicationPreferencesControl mode="registration" value={preferences} onChange={setPreferences} onAvailabilityChange={setPreferenceAvailability} canEdit={!saving} />} />
@@ -217,6 +230,7 @@ function ResponsiblePartiesEditor({
           </div>
           {party.kind === "person" && <>
             <div className="grid gap-4 md:grid-cols-3">
+              <ResponsibleInput label="Guarantor date of birth (required)" type="date" value={party.birthDate} error={partyError(errors, index, "birthDate")} onChange={(value) => update(index, { birthDate: value })} />
               <ResponsibleInput label="First name" value={party.firstName} error={partyError(errors, index, "firstName")} onChange={(value) => update(index, { firstName: value })} />
               <ResponsibleInput label="Middle name" value={party.middleName} onChange={(value) => update(index, { middleName: value })} />
               <ResponsibleInput label="Last name" value={party.lastName} error={partyError(errors, index, "lastName")} onChange={(value) => update(index, { lastName: value })} />
@@ -236,7 +250,7 @@ function ResponsiblePartiesEditor({
             </div>
             <ExistingGuarantorOffer party={party} onSelect={card => replace(index, existingPartySelection(party, card))} />
           </>}
-          {party.kind === "existing" && <div className="grid gap-3 rounded border border-blue-300/30 p-3"><p className="text-sm font-semibold">Already on file</p><p>{party.card.name}</p><p>{party.card.phones.join(" · ") || "No phone recorded"}</p><p>{party.card.city} {party.card.postalCode}</p><button type="button" onClick={() => replace(index, { ...party.previous, relationship: party.relationship, financialResponsible: party.financialResponsible, consentAuthority: party.consentAuthority, primary: party.primary, courtOrderNotes: party.courtOrderNotes, effectiveDate: party.effectiveDate, endDate: party.endDate })} className="w-fit rounded border border-[color:var(--odos-line-2)] px-3 py-2 text-sm">Not this person</button><div className="grid gap-4 md:grid-cols-3"><label className="grid gap-1 text-sm font-medium text-[color:var(--odos-muted)]">Relationship<select className="scheduler-input" value={party.relationship} onChange={(event) => update(index, { relationship: event.target.value as ResponsiblePartyRelationship })}><option value="parent">Parent</option><option value="legal-guardian">Legal guardian</option><option value="spouse">Spouse</option><option value="other">Other</option></select></label><ResponsibleInput label="Effective date" type="date" value={party.effectiveDate} error={partyError(errors, index, "effectiveDate")} onChange={(value) => update(index, { effectiveDate: value })} /><ResponsibleInput label="End date" type="date" value={party.endDate} error={partyError(errors, index, "endDate")} onChange={(value) => update(index, { endDate: value })} /></div></div>}
+          {party.kind === "existing" && <div className="grid gap-3 rounded border border-blue-300/30 p-3"><p className="text-sm font-semibold">Already on file</p><p>{party.card.name}</p><p>Date of birth: {party.card.birthDate}</p><p>{party.card.phones.join(" · ") || "No phone recorded"}</p><p>{party.card.city} {party.card.postalCode}</p><button type="button" onClick={() => replace(index, { ...party.previous, relationship: party.relationship, financialResponsible: party.financialResponsible, consentAuthority: party.consentAuthority, primary: party.primary, courtOrderNotes: party.courtOrderNotes, effectiveDate: party.effectiveDate, endDate: party.endDate })} className="w-fit rounded border border-[color:var(--odos-line-2)] px-3 py-2 text-sm">Not this person</button><div className="grid gap-4 md:grid-cols-3"><label className="grid gap-1 text-sm font-medium text-[color:var(--odos-muted)]">Relationship<select className="scheduler-input" value={party.relationship} onChange={(event) => update(index, { relationship: event.target.value as ResponsiblePartyRelationship })}><option value="parent">Parent</option><option value="legal-guardian">Legal guardian</option><option value="spouse">Spouse</option><option value="other">Other</option></select></label><ResponsibleInput label="Effective date" type="date" value={party.effectiveDate} error={partyError(errors, index, "effectiveDate")} onChange={(value) => update(index, { effectiveDate: value })} /><ResponsibleInput label="End date" type="date" value={party.endDate} error={partyError(errors, index, "endDate")} onChange={(value) => update(index, { endDate: value })} /></div></div>}
           {party.kind !== "self" && <label className="grid gap-1 text-sm font-medium text-[color:var(--odos-muted)]">Court order / custody notes<textarea className="scheduler-input min-h-24" value={party.courtOrderNotes} onChange={(event) => update(index, { courtOrderNotes: event.target.value })} /></label>}
           <div className="flex flex-wrap gap-5 text-sm text-[color:var(--odos-muted)]">
             <ResponsibleCheckbox label="Financially responsible" checked={party.financialResponsible} onChange={(checked) => update(index, { financialResponsible: checked })} />
@@ -279,7 +293,7 @@ function ExistingGuarantorOffer({ party, onSelect }: { party: PersonResponsibleP
     return () => { active = false; };
   }, [party.lastName, party.firstName, party.phones[0].value]);
   if (!cards?.length && !error) return null;
-  return <section aria-label="Already on file" className="grid gap-2 rounded border border-blue-300/30 p-3"><strong>Already on file?</strong>{error ? <p role="status">{error}</p> : <ul>{cards!.map(card => <li key={card.personId} className="grid gap-1 border-t border-[color:var(--odos-line)] py-2"><span>{card.name}</span><span>{card.phones.join(" · ") || "No phone recorded"}</span><span>{card.city} {card.postalCode}</span><button type="button" className="w-fit rounded border border-blue-300/30 px-3 py-2 text-sm" onClick={() => onSelect(card)}>Use {card.name}</button></li>)}</ul>}</section>;
+  return <section aria-label="Already on file" className="grid gap-2 rounded border border-blue-300/30 p-3"><strong>Already on file?</strong>{error ? <p role="status">{error}</p> : <ul>{cards!.map(card => <li key={card.personId} className="grid gap-1 border-t border-[color:var(--odos-line)] py-2"><span>{card.name}</span><span>Date of birth: {card.birthDate}</span><span>{card.phones.join(" · ") || "No phone recorded"}</span><span>{card.city} {card.postalCode}</span><button type="button" className="w-fit rounded border border-blue-300/30 px-3 py-2 text-sm" onClick={() => onSelect(card)}>Use {card.name}</button></li>)}</ul>}</section>;
 }
 
 function ResponsibleInput({

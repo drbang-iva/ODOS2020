@@ -1,0 +1,9 @@
+const fs=require('node:fs'), vm=require('node:vm'),assert=require('node:assert/strict'),ts=require('typescript');
+let source=fs.readFileSync('mcp/tests/ageOfMajorityAuthzLive.test.ts','utf8');
+source=source.replace(/^import .*;\n/gm,'');
+async function run(dropCapture){let callback;const tested=source.replace('    const policies =','    throw new Error("synthetic body failure");\n    const policies =').replace('    bodyFailure = { error };',dropCapture?'    bodyFailure = undefined;':'    bodyFailure = { error };');
+const context={test:(_name,fn)=>callback=fn,requireMedplumAdmin:()=>({email:'synthetic',password:'synthetic'}),createLiveAuthorizationClients:async()=>({seederAccessToken:'synthetic-seeder',callerAccessToken:'synthetic-caller'}),fetch:async()=>({status:200,json:async()=>({project:{id:'synthetic'},profile:{id:'synthetic'}})}),assert,process:{env:{}},cleanupReferences:async()=>{throw new Error('ProjectMembership/synthetic: HTTP 403');},AggregateError};
+vm.runInNewContext(ts.transpileModule(tested,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,context);
+let failure;try{await callback({});}catch(error){failure=error;}
+assert.ok(failure instanceof AggregateError);assert.ok(failure.errors.some(e=>e.message==='synthetic body failure'),'original body error is retained');assert.ok(failure.errors.some(e=>e.message.includes('HTTP 403')),'cleanup error is retained');}
+(async()=>{await run(false);console.log('GREEN: actual test callback retains original body error and cleanup HTTP 403');let mutantFailed=false;try{await run(true);}catch(error){mutantFailed=true;console.log('RED: removing body-error capture fails assertion:',error.message);}assert.ok(mutantFailed);await run(false);console.log('RESTORED: actual callback retains both errors');})().catch(e=>{console.error(e);process.exitCode=1;});

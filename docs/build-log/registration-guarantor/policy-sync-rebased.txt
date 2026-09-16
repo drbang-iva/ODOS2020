@@ -1,0 +1,12 @@
+<workspace>/scripts/repair-practice-roles.ts:352
+    throw new Error(`Medplum login failed: ${loginResponse.status} ${await loginResponse.text()}`);
+          ^
+
+Error: Medplum login failed: 429 {"resourceType":"OperationOutcome","id":"too-many-requests","issue":[{"severity":"error","code":"throttled","details":{"text":"Too Many Requests"},"diagnostics":"{\"_remainingPoints\":0,\"_msBeforeNext\":59355,\"_consumedPoints\":6,\"_isFirstInDuration\":false,\"limit\":5}"}]}
+    at loginForLocalRepair (<workspace>/scripts/repair-practice-roles.ts:352:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async refreshFixtureTokens (<workspace>/.odos/registration-majority-live/fixture.mjs:128:53)
+    at async sync (<workspace>/.odos/registration-majority-live/fixture.mjs:295:3)
+    at async <anonymous> (<workspace>/.odos/registration-majority-live/fixture.mjs:378:3)
+
+Node.js v22.22.3

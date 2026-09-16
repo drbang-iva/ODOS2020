@@ -1,0 +1,37 @@
+TAP version 13
+# Subtest: D4 editor saves Person DOB
+not ok 1 - D4 editor saves Person DOB
+  ---
+  duration_ms: 71.289209
+  type: 'test'
+  location: '<workspace>/ui/tests/guarantorEditor.test.tsx:1:15344'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + '1980-01-02'
+    - '1981-01-02'
+          ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '1981-01-02'
+  actual: '1980-01-02'
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<workspace>/ui/tests/guarantorEditor.test.tsx:296:11)
+    async withEditor (<workspace>/mcp/tests/helpers/guarantor-phone-fixture.ts:113:16)
+    async TestContext.<anonymous> (<workspace>/ui/tests/guarantorEditor.test.tsx:287:2)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 281.486083

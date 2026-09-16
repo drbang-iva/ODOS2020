@@ -1,0 +1,42 @@
+TAP version 13
+# Subtest: Editor DOB rejects malformed impossible and future nonblank values before any write
+ok 1 - Editor DOB rejects malformed impossible and future nonblank values before any write
+  ---
+  duration_ms: 17.361375
+  type: 'test'
+  ...
+# Subtest: Editor DOB stays optional for clearing and legacy records and allows today
+not ok 2 - Editor DOB stays optional for clearing and legacy records and allows today
+  ---
+  duration_ms: 3.015458
+  type: 'test'
+  location: '<workspace>/mcp/tests/guarantorDob.test.ts:1:2667'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'not-saved'
+    - 'saved'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'saved'
+  actual: 'not-saved'
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<workspace>/mcp/tests/guarantorDob.test.ts:51:11)
+    async withEditor (<workspace>/mcp/tests/helpers/guarantor-phone-fixture.ts:113:16)
+    async TestContext.<anonymous> (<workspace>/mcp/tests/guarantorDob.test.ts:48:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 148.488458

@@ -1,0 +1,1 @@
+{"health":{"ok":true,"version":"5.1.30-9b1bd92","platform":"linux","runtime":"v24.18.1","postgres":true,"redis":true,"redisInstances":{"default":true}},"projectCount":3,"serviceReference":"Practitioner/b8cba417-dfb5-488c-88fd-aab5df06f497","staffPrincipals":["staff","composite"],"sourceHead":"7557f7f7f6f30762a59200191f4eae3ce5f21293"}

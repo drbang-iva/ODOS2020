@@ -56,7 +56,7 @@ export async function correctGuarantorLinkOperation(taskId: string, reason: stri
   return readResponse(await request(taskId, "correct", { operationId, reason }));
 }
 
-export interface GuarantorSearchCard { personId: string; versionId: string; name: string; phones: string[]; city: string; postalCode: string }
+export interface GuarantorSearchCard { personId: string; versionId: string; name: string; birthDate: string; phones: string[]; city: string; postalCode: string }
 export type GuarantorDraftInput = {
   kind: "attach"; destinationPersonId: string; relatedPersonIds: [string];
 } | {
@@ -70,7 +70,7 @@ type GuarantorCreateInput =
   | (Omit<Extract<GuarantorDraftInput, { kind: "attach" }>, "relatedPersonIds"> & GuarantorCreateFields)
   | (Omit<Extract<GuarantorDraftInput, { kind: "transfer" }>, "relatedPersonIds"> & GuarantorCreateFields)
   | (Omit<Extract<GuarantorDraftInput, { kind: "consolidate" }>, "relatedPersonIds"> & GuarantorCreateFields);
-export type NewGuarantor = Record<"firstName"|"middleName"|"lastName"|"address"|"city"|"state"|"postalCode",string> & import("../../../mcp/src/clinic/patient-telecom").PhoneDraft;
+export type NewGuarantor = Record<"birthDate"|"firstName"|"middleName"|"lastName"|"address"|"city"|"state"|"postalCode",string> & import("../../../mcp/src/clinic/patient-telecom").PhoneDraft;
 export class GuarantorScreenError extends Error { constructor(message: string, readonly status: number, readonly body?: { task?: unknown }) { super(message); } }
 async function screenRequest<T>(path: string, body?: object): Promise<T> {
   const authorization = fhir.authHeader();

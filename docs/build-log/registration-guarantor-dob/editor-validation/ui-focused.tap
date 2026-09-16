@@ -1,0 +1,322 @@
+TAP version 13
+# Subtest: Q10: missing linked Person is read-only and direct save handler cannot create
+ok 1 - Q10: missing linked Person is read-only and direct save handler cannot create
+  ---
+  duration_ms: 18.266667
+  type: 'test'
+  ...
+# Subtest: Q11: reopening a clean editor offers repair by patient name and converges
+ok 2 - Q11: reopening a clean editor offers repair by patient name and converges
+  ---
+  duration_ms: 16.218208
+  type: 'test'
+  ...
+# Subtest: Q12: multiple linked Persons refuse editing and identify both records
+ok 3 - Q12: multiple linked Persons refuse editing and identify both records
+  ---
+  duration_ms: 1.269792
+  type: 'test'
+  ...
+# Subtest: editing one name preserves every loaded contact and address entry without a Patient write
+ok 4 - editing one name preserves every loaded contact and address entry without a Patient write
+  ---
+  duration_ms: 6.657834
+  type: 'test'
+  ...
+# Subtest: structured address edits clear stale display text only on the edited address
+ok 5 - structured address edits clear stale display text only on the edited address
+  ---
+  duration_ms: 22.087375
+  type: 'test'
+  ...
+# Subtest: clearing then replacing the first phone keeps the second phone in its original slot
+ok 6 - clearing then replacing the first phone keeps the second phone in its original slot
+  ---
+  duration_ms: 4.763333
+  type: 'test'
+  ...
+# Subtest: saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+ok 7 - saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+  ---
+  duration_ms: 2.932833
+  type: 'test'
+  ...
+# Subtest: per-patient results distinguish rejected child writes from lost update responses
+ok 8 - per-patient results distinguish rejected child writes from lost update responses
+  ---
+  duration_ms: 5.114791
+  type: 'test'
+  ...
+# Subtest: F1e superseded save reloads automatically and one Repair converges
+ok 9 - F1e superseded save reloads automatically and one Repair converges
+  ---
+  duration_ms: 4.748666
+  type: 'test'
+  ...
+# Subtest: K4: real editor name and phone save preserves an inert child claim
+ok 10 - K4: real editor name and phone save preserves an inert child claim
+  ---
+  duration_ms: 3.115667
+  type: 'test'
+  ...
+# Subtest: D4 editor saves Person DOB
+ok 11 - D4 editor saves Person DOB
+  ---
+  duration_ms: 35.270875
+  type: 'test'
+  ...
+# Subtest: L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+ok 12 - L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+  ---
+  duration_ms: 29.4835
+  type: 'test'
+  ...
+# Subtest: S7: a claim on another linked child makes the guarantor pending
+ok 13 - S7: a claim on another linked child makes the guarantor pending
+  ---
+  duration_ms: 0.901958
+  type: 'test'
+  ...
+# Subtest: S7: inert, missing, and copied claims do not suppress ordinary classification
+ok 14 - S7: inert, missing, and copied claims do not suppress ordinary classification
+  ---
+  duration_ms: 1.774917
+  type: 'test'
+  ...
+# Subtest: S7: unreadable operation status remains unknown and does not offer editing
+ok 15 - S7: unreadable operation status remains unknown and does not offer editing
+  ---
+  duration_ms: 1.48375
+  type: 'test'
+  ...
+# Subtest: S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
+ok 16 - S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
+  ---
+  duration_ms: 3.1605
+  type: 'test'
+  ...
+# Subtest: L4 S7: Repair sees a claim in its fresh read and submits no child PUT
+ok 17 - L4 S7: Repair sees a claim in its fresh read and submits no child PUT
+  ---
+  duration_ms: 1.576
+  type: 'test'
+  ...
+# Subtest: S7: Save fresh-checks claims after the Person save and stops every remaining child
+ok 18 - S7: Save fresh-checks claims after the Person save and stops every remaining child
+  ---
+  duration_ms: 2.122167
+  type: 'test'
+  ...
+# Subtest: S7: Save keeps the loaded child version after its fresh claim-only read
+ok 19 - S7: Save keeps the loaded child version after its fresh claim-only read
+  ---
+  duration_ms: 1.505708
+  type: 'test'
+  ...
+# Subtest: S7: Save checks each child and reloads pending after a late claim
+ok 20 - S7: Save checks each child and reloads pending after a late claim
+  ---
+  duration_ms: 5.803541
+  type: 'test'
+  ...
+# Subtest: L23 S7: an edit after release is ordinary drift and Repair converges to current D
+ok 21 - L23 S7: an edit after release is ordinary drift and Repair converges to current D
+  ---
+  duration_ms: 4.812459
+  type: 'test'
+  ...
+# Subtest: S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+ok 22 - S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+  ---
+  duration_ms: 1.167625
+  type: 'test'
+  ...
+# Subtest: S7: a correction reason survives same-Task refusal and clears when another Task takes over
+ok 23 - S7: a correction reason survives same-Task refusal and clears when another Task takes over
+  ---
+  duration_ms: 3.914583
+  type: 'test'
+  ...
+# Subtest: S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+ok 24 - S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+  ---
+  duration_ms: 3.460291
+  type: 'test'
+  ...
+# Subtest: S7: Correct keeps native randomUUID when available
+ok 25 - S7: Correct keeps native randomUUID when available
+  ---
+  duration_ms: 0.594
+  type: 'test'
+  ...
+# Subtest: T2 real editor name-only save keeps refusal on Person and both children
+ok 26 - T2 real editor name-only save keeps refusal on Person and both children
+  ---
+  duration_ms: 31.177583
+  type: 'test'
+  ...
+# Subtest: T3 real editor selecting a number clears refusal on both children
+ok 27 - T3 real editor selecting a number clears refusal on both children
+  ---
+  duration_ms: 6.193208
+  type: 'test'
+  ...
+# Subtest: T4 writer-derived guarantor without refusal remains verified for every absent representation
+ok 28 - T4 writer-derived guarantor without refusal remains verified for every absent representation
+  ---
+  duration_ms: 5.700416
+  type: 'test'
+  ...
+# Subtest: T10 real editor preserves email third phone old and period-bounded identities
+ok 29 - T10 real editor preserves email third phone old and period-bounded identities
+  ---
+  duration_ms: 7.8315
+  type: 'test'
+  ...
+# Subtest: T9 guardian refusal prevents SMS and the marked Phone 2 controls delivery
+ok 30 - T9 guardian refusal prevents SMS and the marked Phone 2 controls delivery
+  ---
+  duration_ms: 4.665875
+  type: 'test'
+  ...
+# Subtest: Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+ok 31 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+  ---
+  duration_ms: 22.601292
+  type: 'test'
+  ...
+# Subtest: Q5a Q6a preflight mismatch zero writes reload
+ok 32 - Q5a Q6a preflight mismatch zero writes reload
+  ---
+  duration_ms: 1.932
+  type: 'test'
+  ...
+# Subtest: Q5b parent stale after preflight prevents children
+ok 33 - Q5b parent stale after preflight prevents children
+  ---
+  duration_ms: 0.998958
+  type: 'test'
+  ...
+# Subtest: Q6b Q8 late child conflict preserves competitor and labels correct patient
+ok 34 - Q6b Q8 late child conflict preserves competitor and labels correct patient
+  ---
+  duration_ms: 3.161292
+  type: 'test'
+  ...
+# Subtest: Q8 failed re-read and unresolved lost response are unknown
+ok 35 - Q8 failed re-read and unresolved lost response are unknown
+  ---
+  duration_ms: 2.009375
+  type: 'test'
+  ...
+# Subtest: lost parent response confirmed landed proceeds once
+ok 36 - lost parent response confirmed landed proceeds once
+  ---
+  duration_ms: 1.145958
+  type: 'test'
+  ...
+# Subtest: Q9a converged repeat zero writes and unchanged versions
+ok 37 - Q9a converged repeat zero writes and unchanged versions
+  ---
+  duration_ms: 2.431417
+  type: 'test'
+  ...
+# Subtest: Q9b repair only failed child fresh ETag and second pass zero writes
+ok 38 - Q9b repair only failed child fresh ETag and second pass zero writes
+  ---
+  duration_ms: 2.549834
+  type: 'test'
+  ...
+# Subtest: Q9c repair superseded generation uses newest values
+ok 39 - Q9c repair superseded generation uses newest values
+  ---
+  duration_ms: 2.262791
+  type: 'test'
+  ...
+# Subtest: Q10 Q12 missing or many matches refuse direct save
+ok 40 - Q10 Q12 missing or many matches refuse direct save
+  ---
+  duration_ms: 1.344667
+  type: 'test'
+  ...
+# Subtest: Q13 trailing parent catches torn verification
+ok 41 - Q13 trailing parent catches torn verification
+  ---
+  duration_ms: 0.494291
+  type: 'test'
+  ...
+# Subtest: Q2 fresh SMS resolver independently observes propagated phone
+ok 42 - Q2 fresh SMS resolver independently observes propagated phone
+  ---
+  duration_ms: 1.159709
+  type: 'test'
+  ...
+# Subtest: Q6a independently stale child preflight zero writes
+ok 43 - Q6a independently stale child preflight zero writes
+  ---
+  duration_ms: 0.736042
+  type: 'test'
+  ...
+# Subtest: Q10 directly supplied unlinked snapshot refuses create or update
+ok 44 - Q10 directly supplied unlinked snapshot refuses create or update
+  ---
+  duration_ms: 0.26375
+  type: 'test'
+  ...
+# Subtest: Q8 child lost response and verification failure remain unknown
+ok 45 - Q8 child lost response and verification failure remain unknown
+  ---
+  duration_ms: 0.860542
+  type: 'test'
+  ...
+# Subtest: F1a repair fences generation after fresh child read
+ok 46 - F1a repair fences generation after fresh child read
+  ---
+  duration_ms: 0.823375
+  type: 'test'
+  ...
+# Subtest: F1b repair fences moved ownership after fresh child read
+ok 47 - F1b repair fences moved ownership after fresh child read
+  ---
+  duration_ms: 1.33025
+  type: 'test'
+  ...
+# Subtest: F1c save stops Leo after competitor on Sam PUT
+ok 48 - F1c save stops Leo after competitor on Sam PUT
+  ---
+  duration_ms: 0.950291
+  type: 'test'
+  ...
+# Subtest: F1d failed generation check stops child submission
+ok 49 - F1d failed generation check stops child submission
+  ---
+  duration_ms: 0.870666
+  type: 'test'
+  ...
+# Subtest: F1e superseded message does not promise absent Repair
+ok 50 - F1e superseded message does not promise absent Repair
+  ---
+  duration_ms: 0.576166
+  type: 'test'
+  ...
+# Subtest: F1f dangling 410 and 404 are named but 403 stays unknown
+ok 51 - F1f dangling 410 and 404 are named but 403 stays unknown
+  ---
+  duration_ms: 0.655917
+  type: 'test'
+  ...
+# Subtest: F1 moved generation stays superseded if trailing verification fails
+ok 52 - F1 moved generation stays superseded if trailing verification fails
+  ---
+  duration_ms: 4.273834
+  type: 'test'
+  ...
+1..52
+# tests 52
+# suites 0
+# pass 52
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 294.817625

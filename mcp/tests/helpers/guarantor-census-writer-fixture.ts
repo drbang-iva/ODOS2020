@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../../src/clinic/age-of-majority-config.js";
 import { randomUUID } from "node:crypto";
 import type { Account, Bundle, Coverage, Patient, Person, RelatedPerson, Resource, Task } from "@medplum/fhirtypes";
 import { buildCoverageSaveBundle, emptyCoverageDraft } from "../../../ui/src/lib/patient-insurance.js";
@@ -30,7 +31,7 @@ async function registrationWriterResources(): Promise<{ patient: Patient; relate
     responsibleParties: [{
       localId: "guardian-new", kind: "person", relationship: "parent", financialResponsible: true,
       consentAuthority: true, primary: true, courtOrderNotes: "", effectiveDate: "2026-01-01", endDate: "",
-      firstName: "ODOS", middleName: "", lastName: "EXAM", phones: [{ value: "864-555-0101", use: "home" }, { value: "", use: "mobile" }], textable: "",
+      birthDate: "1980-01-02", firstName: "ODOS", middleName: "", lastName: "EXAM", phones: [{ value: "864-555-0101", use: "home" }, { value: "", use: "mobile" }], textable: "",
       address: "2 Synthetic Way", city: "Greenville", state: "SC", postalCode: "29601",
     }],
     confirmDuplicate: false,
@@ -38,7 +39,7 @@ async function registrationWriterResources(): Promise<{ patient: Patient; relate
   const fhir = {
     baseUrl: "http://registration-writer-fixture.test",
     async search<T extends Resource>(): Promise<Bundle<T>> { return { resourceType: "Bundle", type: "searchset", entry: [] }; },
-    async searchProject<T extends Resource>(): Promise<Bundle<T>> { return { resourceType: "Bundle", type: "searchset", entry: [] }; },
+    async searchProject<T extends Resource>(type: string): Promise<Bundle<T>> { return { resourceType: "Bundle", type: "searchset", entry: type === "Basic" ? [{ resource: jsonRoundTrip({ ...buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }), meta: { project: CENSUS_PROJECT_A } }) as T }] : [] }; },
     async searchProjectUrl<T extends Resource>(): Promise<Bundle<T>> { throw new Error("unexpected registration pagination"); },
     async create<T extends Resource>(resource: T): Promise<T> {
       return { ...resource, id: "registration-reservation", meta: { ...resource.meta, project: CENSUS_PROJECT_A, versionId: "1" } } as T;

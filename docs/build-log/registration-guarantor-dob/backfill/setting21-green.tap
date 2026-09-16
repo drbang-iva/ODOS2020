@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: majority setting21 prevents nineteen-year-old self guarantor in MRN backfill
+ok 1 - majority setting21 prevents nineteen-year-old self guarantor in MRN backfill
+  ---
+  duration_ms: 6.607167
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 92.296458

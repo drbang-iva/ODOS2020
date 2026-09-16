@@ -1,0 +1,80 @@
+{
+  "checks": [
+    {
+      "seed": {
+        "mode": "apply",
+        "action": "seeded",
+        "projectId": "62023a15-f13a-4f4e-b8d8-3da238ded8eb"
+      }
+    },
+    {
+      "settingsUiSaved21": true
+    },
+    {
+      "engageGuardianAt21": true
+    },
+    {
+      "statementGuardianAt21": true,
+      "statement": {
+        "runReference": "Task/56588cf6-665b-461c-8714-46b5c591ad94",
+        "generatedAt": "2026-09-15T12:00:00.000Z",
+        "generatedCount": 1,
+        "invalidRejects": 0,
+        "skippedZeroBalanceCount": 0,
+        "statements": [
+          {
+            "generatedAt": "2026-09-15T12:00:00.000Z",
+            "patientReference": "Patient/e9e30e44-43a2-4749-8fbf-2455be48b36c",
+            "patientName": "Synthetic Majority Nineteen",
+            "paymentReconciliationReferences": [],
+            "invoices": [
+              {
+                "invoiceReference": "Invoice/666a4fb3-04bb-4b17-9cdf-fa240bcd6164",
+                "date": "2026-09-15T12:00:00.000Z",
+                "grossCents": 1000,
+                "netCents": 1000,
+                "paymentsAppliedCents": 0,
+                "balanceCents": 1000
+              }
+            ],
+            "totalGrossCents": 1000,
+            "totalNetCents": 1000,
+            "paymentsAppliedCents": 0,
+            "balanceCents": 1000,
+            "unappliedPaymentReconciliationReferences": [],
+            "unappliedCreditCents": 0,
+            "balanceDueCents": 1000,
+            "creditBalanceCents": 0,
+            "detail": {
+              "header": {
+                "practiceName": "Practice",
+                "recipientName": "Synthetic Majority Guardian",
+                "recipientAddress": {
+                  "lines": [
+                    "1 Synthetic Way"
+                  ],
+                  "cityStatePostal": "Synthetic Town, SC 29601"
+                }
+              },
+              "orders": [
+                {
+                  "invoiceReference": "Invoice/666a4fb3-04bb-4b17-9cdf-fa240bcd6164",
+                  "orderNumber": "666a4fb3-04bb-4b17-9cdf-fa240bcd6164",
+                  "mode": "invoice-only",
+                  "lines": [],
+                  "patientPayments": []
+                }
+              ]
+            },
+            "statementReference": "Task/720fb0c3-72ec-4941-b9b4-3c31686c17b2",
+            "runReference": "Task/56588cf6-665b-461c-8714-46b5c591ad94"
+          }
+        ],
+        "rejects": []
+      }
+    },
+    {
+      "missingSetting422": true
+    }
+  ]
+}

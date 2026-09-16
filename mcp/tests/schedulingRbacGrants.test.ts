@@ -117,6 +117,7 @@ test("front-desk Basic grants stay criteria-scoped to approved records and the p
   const rules = rulesFor("staff", "Basic");
   const billingIdentityCriteria = BILLING_IDENTITY_CRITERIA;
   const writeTierCriteria = [
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/floor-config|odos-floor-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/insurance-config|odos-insurance-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-era-import|odos-era-import",

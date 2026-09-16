@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../src/clinic/age-of-majority-config.js";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -2313,6 +2314,7 @@ test("patient-responsibility Invoice is create-once; a differing remit preserves
 
 test("insurance visit flows Claim to ERA to PR Invoice to the unchanged T0 statement at $171.89", async () => {
   const fixture = deps();
+  fixture.created.Basic.push(JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }))));
   const claim = { ...buildProfessionalClaim(professionalClaim), id: "claim-1" };
   fixture.created.Claim.push(claim);
   fixture.created.Patient.push({

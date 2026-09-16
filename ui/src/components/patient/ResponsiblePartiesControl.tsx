@@ -13,8 +13,8 @@ import { GuarantorLinkScreens } from "./GuarantorLinkScreens";
 
 const writeStatusMessages = { stopped: "not updated — the guarantor changed or a link operation is pending", updated: "update accepted", conflict: "record changed while you were editing", error: "update failed", "no-response": "update response not received" };
 
-type Demographics = ResponsiblePartyDemographics;
-const demographics = projectResponsiblePartyDemographics;
+type Demographics = ResponsiblePartyDemographics & Pick<Person, "birthDate">;
+const demographics = (person: Person): Demographics => ({ ...projectResponsiblePartyDemographics(person), birthDate: person.birthDate });
 const displayName = (person: Demographics) => person.name?.[0]?.text || [...(person.name?.[0]?.given ?? []), person.name?.[0]?.family].filter(Boolean).join(" ") || "Unnamed responsible party";
 
 export function ResponsiblePartiesControl({ patientId }: { patientId: string }) {
@@ -132,6 +132,7 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
   return <section className="grid gap-3 rounded border border-[var(--odos-line)] p-3" aria-label={displayName(loaded.snapshot.person)}>
     <h3 className="font-semibold">{displayName(loaded.snapshot.person)}</h3>
     <fieldset disabled={busy} className="grid gap-3 sm:grid-cols-2">
+      <Field type="date" label="Guarantor date of birth" value={draft.birthDate ?? ""} change={value => setDraft({ ...draft, birthDate: value || undefined })} />
       {names.map((name, index) => <div className="grid gap-2" key={`name-${index}`}>
         <Field label={`Given names ${index + 1}`} value={name.given?.join(" ") ?? ""} change={value => setDraft({ ...draft, name: names.map((entry, i) => i === index ? { ...entry, given: value ? value.split(" ") : undefined } : entry) })} />
         <Field label={`Family name ${index + 1}`} value={name.family ?? ""} change={value => setDraft({ ...draft, name: names.map((entry, i) => i === index ? { ...entry, family: value || undefined } : entry) })} />
@@ -156,6 +157,6 @@ function PartyEditor({ initial }: { initial: GuarantorLoad }) {
   </section>;
 }
 
-function Field({ label, value, change }: { label: string; value: string; change: (value: string) => void }) {
-  return <label className="grid gap-1 text-sm text-[color:var(--odos-muted)]">{label}<input className="scheduler-input" value={value} onChange={event => change(event.target.value)} /></label>;
+function Field({ label, value, change, type = "text" }: { label: string; value: string; change: (value: string) => void; type?: string }) {
+  return <label className="grid gap-1 text-sm text-[color:var(--odos-muted)]">{label}<input type={type} className="scheduler-input" value={value} onChange={event => change(event.target.value)} /></label>;
 }

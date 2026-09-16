@@ -1,0 +1,652 @@
+TAP version 13
+# Subtest: A14/B4: only missing ownership offers Attach and a failed attach is explained
+ok 1 - A14/B4: only missing ownership offers Attach and a failed attach is explained
+  ---
+  duration_ms: 154.878666
+  type: 'test'
+  ...
+# Subtest: A14: ambiguous ownership never offers Attach
+ok 2 - A14: ambiguous ownership never offers Attach
+  ---
+  duration_ms: 3.598209
+  type: 'test'
+  ...
+# Subtest: B4: a successful later attach clears an older failed-attach explanation
+ok 3 - B4: a successful later attach clears an older failed-attach explanation
+  ---
+  duration_ms: 4.21225
+  type: 'test'
+  ...
+# Subtest: A3: an attach-pending child renders pending without a source Person
+ok 4 - A3: an attach-pending child renders pending without a source Person
+  ---
+  duration_ms: 4.236042
+  type: 'test'
+  ...
+# Subtest: B4: attach history can be undone through the shipped correction route
+ok 5 - B4: attach history can be undone through the shipped correction route
+  ---
+  duration_ms: 12.375791
+  type: 'test'
+  ...
+# Subtest: B3: registration offers an existing guarantor, serializes only owned fields, and surfaces a failed attach with a chart link
+ok 6 - B3: registration offers an existing guarantor, serializes only owned fields, and surfaces a failed attach with a chart link
+  ---
+  duration_ms: 137.546125
+  type: 'test'
+  ...
+# Subtest: B3: registration rejects a non-string guarantor link status
+ok 7 - B3: registration rejects a non-string guarantor link status
+  ---
+  duration_ms: 1.597709
+  type: 'test'
+  ...
+# Subtest: F4: the created screen renders an unconfirmed guarantor row without a RelatedPerson id
+ok 8 - F4: the created screen renders an unconfirmed guarantor row without a RelatedPerson id
+  ---
+  duration_ms: 2.809125
+  type: 'test'
+  ...
+# Subtest: L7: default consent-guardian list and primary selection retain the moved party through an actual transfer
+ok 9 - L7: default consent-guardian list and primary selection retain the moved party through an actual transfer
+  ---
+  duration_ms: 142.670167
+  type: 'test'
+  ...
+# Subtest: Q10: missing linked Person is read-only and direct save handler cannot create
+ok 10 - Q10: missing linked Person is read-only and direct save handler cannot create
+  ---
+  duration_ms: 37.400958
+  type: 'test'
+  ...
+# Subtest: Q11: reopening a clean editor offers repair by patient name and converges
+ok 11 - Q11: reopening a clean editor offers repair by patient name and converges
+  ---
+  duration_ms: 104.695416
+  type: 'test'
+  ...
+# Subtest: Q12: multiple linked Persons refuse editing and identify both records
+ok 12 - Q12: multiple linked Persons refuse editing and identify both records
+  ---
+  duration_ms: 4.72125
+  type: 'test'
+  ...
+# Subtest: editing one name preserves every loaded contact and address entry without a Patient write
+ok 13 - editing one name preserves every loaded contact and address entry without a Patient write
+  ---
+  duration_ms: 18.151083
+  type: 'test'
+  ...
+# Subtest: structured address edits clear stale display text only on the edited address
+ok 14 - structured address edits clear stale display text only on the edited address
+  ---
+  duration_ms: 101.093333
+  type: 'test'
+  ...
+# Subtest: clearing then replacing the first phone keeps the second phone in its original slot
+ok 15 - clearing then replacing the first phone keeps the second phone in its original slot
+  ---
+  duration_ms: 9.991041
+  type: 'test'
+  ...
+# Subtest: saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+ok 16 - saving an intentionally blank phone removes only that contact and retains untouched valueless entries
+  ---
+  duration_ms: 36.228916
+  type: 'test'
+  ...
+# Subtest: per-patient results distinguish rejected child writes from lost update responses
+ok 17 - per-patient results distinguish rejected child writes from lost update responses
+  ---
+  duration_ms: 23.95125
+  type: 'test'
+  ...
+# Subtest: F1e superseded save reloads automatically and one Repair converges
+ok 18 - F1e superseded save reloads automatically and one Repair converges
+  ---
+  duration_ms: 18.750334
+  type: 'test'
+  ...
+# Subtest: D4 editor saves Person DOB
+ok 19 - D4 editor saves Person DOB
+  ---
+  duration_ms: 98.27525
+  type: 'test'
+  ...
+# Subtest: L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+ok 20 - L3 S7: unowned claimed child is pending, names every patient, and Complete reloads the editor
+  ---
+  duration_ms: 107.23925
+  type: 'test'
+  ...
+# Subtest: S7: a claim on another linked child makes the guarantor pending
+ok 21 - S7: a claim on another linked child makes the guarantor pending
+  ---
+  duration_ms: 1.400542
+  type: 'test'
+  ...
+# Subtest: S7: inert, missing, and copied claims do not suppress ordinary classification
+ok 22 - S7: inert, missing, and copied claims do not suppress ordinary classification
+  ---
+  duration_ms: 3.516459
+  type: 'test'
+  ...
+# Subtest: S7: unreadable operation status remains unknown and does not offer editing
+ok 23 - S7: unreadable operation status remains unknown and does not offer editing
+  ---
+  duration_ms: 4.267875
+  type: 'test'
+  ...
+# Subtest: S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
+ok 24 - S7: Correct requires a reason, sends one new operation id, and reloads after a refusal
+  ---
+  duration_ms: 19.693209
+  type: 'test'
+  ...
+# Subtest: L4 S7: Repair sees a claim in its fresh read and submits no child PUT
+ok 25 - L4 S7: Repair sees a claim in its fresh read and submits no child PUT
+  ---
+  duration_ms: 3.549375
+  type: 'test'
+  ...
+# Subtest: S7: Save fresh-checks claims after the Person save and stops every remaining child
+ok 26 - S7: Save fresh-checks claims after the Person save and stops every remaining child
+  ---
+  duration_ms: 2.608792
+  type: 'test'
+  ...
+# Subtest: S7: Save keeps the loaded child version after its fresh claim-only read
+ok 27 - S7: Save keeps the loaded child version after its fresh claim-only read
+  ---
+  duration_ms: 7.804541
+  type: 'test'
+  ...
+# Subtest: S7: Save checks each child and reloads pending after a late claim
+ok 28 - S7: Save checks each child and reloads pending after a late claim
+  ---
+  duration_ms: 36.200042
+  type: 'test'
+  ...
+# Subtest: L23 S7: an edit after release is ordinary drift and Repair converges to current D
+ok 29 - L23 S7: an edit after release is ordinary drift and Repair converges to current D
+  ---
+  duration_ms: 16.055667
+  type: 'test'
+  ...
+# Subtest: S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+ok 30 - S7: Repair stops at a newly claimed matching child before repairing a mismatched sibling
+  ---
+  duration_ms: 1.921833
+  type: 'test'
+  ...
+# Subtest: S7: a correction reason survives same-Task refusal and clears when another Task takes over
+ok 31 - S7: a correction reason survives same-Task refusal and clears when another Task takes over
+  ---
+  duration_ms: 5.361792
+  type: 'test'
+  ...
+# Subtest: S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+ok 32 - S7: Correct sends fresh v4 operation IDs when randomUUID is unavailable
+  ---
+  duration_ms: 6.7735
+  type: 'test'
+  ...
+# Subtest: S7: Correct keeps native randomUUID when available
+ok 33 - S7: Correct keeps native randomUUID when available
+  ---
+  duration_ms: 1.118375
+  type: 'test'
+  ...
+# Subtest: T2 real editor name-only save keeps refusal on Person and both children
+ok 34 - T2 real editor name-only save keeps refusal on Person and both children
+  ---
+  duration_ms: 104.401167
+  type: 'test'
+  ...
+# Subtest: T3 real editor selecting a number clears refusal on both children
+ok 35 - T3 real editor selecting a number clears refusal on both children
+  ---
+  duration_ms: 14.538791
+  type: 'test'
+  ...
+# Subtest: T4 writer-derived guarantor without refusal remains verified for every absent representation
+ok 36 - T4 writer-derived guarantor without refusal remains verified for every absent representation
+  ---
+  duration_ms: 8.584042
+  type: 'test'
+  ...
+# Subtest: T10 real editor preserves email third phone old and period-bounded identities
+ok 37 - T10 real editor preserves email third phone old and period-bounded identities
+  ---
+  duration_ms: 11.634833
+  type: 'test'
+  ...
+# Subtest: T9 guardian refusal prevents SMS and the marked Phone 2 controls delivery
+ok 38 - T9 guardian refusal prevents SMS and the marked Phone 2 controls delivery
+  ---
+  duration_ms: 9.102833
+  type: 'test'
+  ...
+# Subtest: Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+ok 39 - Q1 Q2 Q3 Q4 Q7 persisted demographics SMS sentinels and precise write set
+  ---
+  duration_ms: 99.703666
+  type: 'test'
+  ...
+# Subtest: Q5a Q6a preflight mismatch zero writes reload
+ok 40 - Q5a Q6a preflight mismatch zero writes reload
+  ---
+  duration_ms: 3.811334
+  type: 'test'
+  ...
+# Subtest: Q5b parent stale after preflight prevents children
+ok 41 - Q5b parent stale after preflight prevents children
+  ---
+  duration_ms: 34.656167
+  type: 'test'
+  ...
+# Subtest: Q6b Q8 late child conflict preserves competitor and labels correct patient
+ok 42 - Q6b Q8 late child conflict preserves competitor and labels correct patient
+  ---
+  duration_ms: 5.551041
+  type: 'test'
+  ...
+# Subtest: Q8 failed re-read and unresolved lost response are unknown
+ok 43 - Q8 failed re-read and unresolved lost response are unknown
+  ---
+  duration_ms: 10.143167
+  type: 'test'
+  ...
+# Subtest: lost parent response confirmed landed proceeds once
+ok 44 - lost parent response confirmed landed proceeds once
+  ---
+  duration_ms: 2.202
+  type: 'test'
+  ...
+# Subtest: Q9a converged repeat zero writes and unchanged versions
+ok 45 - Q9a converged repeat zero writes and unchanged versions
+  ---
+  duration_ms: 4.743875
+  type: 'test'
+  ...
+# Subtest: Q9b repair only failed child fresh ETag and second pass zero writes
+ok 46 - Q9b repair only failed child fresh ETag and second pass zero writes
+  ---
+  duration_ms: 4.893166
+  type: 'test'
+  ...
+# Subtest: Q9c repair superseded generation uses newest values
+ok 47 - Q9c repair superseded generation uses newest values
+  ---
+  duration_ms: 3.612625
+  type: 'test'
+  ...
+# Subtest: Q10 Q12 missing or many matches refuse direct save
+ok 48 - Q10 Q12 missing or many matches refuse direct save
+  ---
+  duration_ms: 8.650208
+  type: 'test'
+  ...
+# Subtest: Q13 trailing parent catches torn verification
+ok 49 - Q13 trailing parent catches torn verification
+  ---
+  duration_ms: 3.764917
+  type: 'test'
+  ...
+# Subtest: Q2 fresh SMS resolver independently observes propagated phone
+ok 50 - Q2 fresh SMS resolver independently observes propagated phone
+  ---
+  duration_ms: 1.893542
+  type: 'test'
+  ...
+# Subtest: Q6a independently stale child preflight zero writes
+ok 51 - Q6a independently stale child preflight zero writes
+  ---
+  duration_ms: 1.039583
+  type: 'test'
+  ...
+# Subtest: Q10 directly supplied unlinked snapshot refuses create or update
+ok 52 - Q10 directly supplied unlinked snapshot refuses create or update
+  ---
+  duration_ms: 0.826875
+  type: 'test'
+  ...
+# Subtest: Q8 child lost response and verification failure remain unknown
+ok 53 - Q8 child lost response and verification failure remain unknown
+  ---
+  duration_ms: 2.781333
+  type: 'test'
+  ...
+# Subtest: F1a repair fences generation after fresh child read
+ok 54 - F1a repair fences generation after fresh child read
+  ---
+  duration_ms: 2.077291
+  type: 'test'
+  ...
+# Subtest: F1b repair fences moved ownership after fresh child read
+ok 55 - F1b repair fences moved ownership after fresh child read
+  ---
+  duration_ms: 1.798333
+  type: 'test'
+  ...
+# Subtest: F1c save stops Leo after competitor on Sam PUT
+ok 56 - F1c save stops Leo after competitor on Sam PUT
+  ---
+  duration_ms: 5.885667
+  type: 'test'
+  ...
+# Subtest: F1d failed generation check stops child submission
+ok 57 - F1d failed generation check stops child submission
+  ---
+  duration_ms: 1.892792
+  type: 'test'
+  ...
+# Subtest: F1e superseded message does not promise absent Repair
+ok 58 - F1e superseded message does not promise absent Repair
+  ---
+  duration_ms: 4.5215
+  type: 'test'
+  ...
+# Subtest: F1f dangling 410 and 404 are named but 403 stays unknown
+ok 59 - F1f dangling 410 and 404 are named but 403 stays unknown
+  ---
+  duration_ms: 1.697791
+  type: 'test'
+  ...
+# Subtest: F1 moved generation stays superseded if trailing verification fails
+ok 60 - F1 moved generation stays superseded if trailing verification fails
+  ---
+  duration_ms: 4.157583
+  type: 'test'
+  ...
+# Subtest: R9: an in-progress correction alone renders Complete and success reloads the patient and history once
+ok 61 - R9: an in-progress correction alone renders Complete and success reloads the patient and history once
+  ---
+  duration_ms: 62.591125
+  type: 'test'
+  ...
+# Subtest: R9 K15: a 409 with a Task from Complete reloads once and closes history
+ok 62 - R9 K15: a 409 with a Task from Complete reloads once and closes history
+  ---
+  duration_ms: 8.848
+  type: 'test'
+  ...
+# Subtest: R6 UI: history hides Undo when correctionInProgress is true
+ok 63 - R6 UI: history hides Undo when correctionInProgress is true
+  ---
+  duration_ms: 127.318334
+  type: 'test'
+  ...
+# Subtest: R6 UI: history offers Undo when correctionInProgress is false
+ok 64 - R6 UI: history offers Undo when correctionInProgress is false
+  ---
+  duration_ms: 12.421542
+  type: 'test'
+  ...
+# Subtest: K14 create-new starts disabled before any keyed search
+ok 65 - K14 create-new starts disabled before any keyed search
+  ---
+  duration_ms: 73.184166
+  type: 'test'
+  ...
+# Subtest: K9 stale confirmation makes one create and requires Review again
+ok 66 - K9 stale confirmation makes one create and requires Review again
+  ---
+  duration_ms: 13.730416
+  type: 'test'
+  ...
+# Subtest: K10 existing Move drafts before create
+ok 67 - K10 existing Move drafts before create
+  ---
+  duration_ms: 8.373792
+  type: 'test'
+  ...
+# Subtest: K10 new Move creates Person before draft and Review again reuses it
+ok 68 - K10 new Move creates Person before draft and Review again reuses it
+  ---
+  duration_ms: 16.444208
+  type: 'test'
+  ...
+# Subtest: K11 Join keeps Loaded Ann and moves loser full set
+ok 69 - K11 Join keeps Loaded Ann and moves loser full set
+  ---
+  duration_ms: 8.895416
+  type: 'test'
+  ...
+# Subtest: K11 Join keeps Found Ann and moves loser full set
+ok 70 - K11 Join keeps Found Ann and moves loser full set
+  ---
+  duration_ms: 12.468583
+  type: 'test'
+  ...
+# Subtest: K13 Undo only on completed non-correct and requires a reason
+ok 71 - K13 Undo only on completed non-correct and requires a reason
+  ---
+  duration_ms: 20.198042
+  type: 'test'
+  ...
+# Subtest: K14 matching cards require None of these before new guarantor
+ok 72 - K14 matching cards require None of these before new guarantor
+  ---
+  duration_ms: 27.523792
+  type: 'test'
+  ...
+# Subtest: K12 missing offers no Move Join or history Undo
+ok 73 - K12 missing offers no Move Join or history Undo
+  ---
+  duration_ms: 5.254375
+  type: 'test'
+  ...
+# Subtest: K12 ambiguous offers no Move Join or history Undo
+ok 74 - K12 ambiguous offers no Move Join or history Undo
+  ---
+  duration_ms: 1.867417
+  type: 'test'
+  ...
+# Subtest: K12 dangling offers no Move Join or history Undo
+ok 75 - K12 dangling offers no Move Join or history Undo
+  ---
+  duration_ms: 1.881417
+  type: 'test'
+  ...
+# Subtest: K12 unknown offers no Move Join or history Undo
+ok 76 - K12 unknown offers no Move Join or history Undo
+  ---
+  duration_ms: 3.429333
+  type: 'test'
+  ...
+# Subtest: K12 pending offers no Move Join or history Undo
+ok 77 - K12 pending offers no Move Join or history Undo
+  ---
+  duration_ms: 1.612334
+  type: 'test'
+  ...
+# Subtest: K9 uncertain confirmation retry reuses the submitted operation id
+ok 78 - K9 uncertain confirmation retry reuses the submitted operation id
+  ---
+  duration_ms: 9.552667
+  type: 'test'
+  ...
+# Subtest: K13 uncertain Undo retry reuses the submitted correction id
+ok 79 - K13 uncertain Undo retry reuses the submitted correction id
+  ---
+  duration_ms: 3.590916
+  type: 'test'
+  ...
+# Subtest: K15 paused create reloads once and closes without Review again or a second create
+ok 80 - K15 paused create reloads once and closes without Review again or a second create
+  ---
+  duration_ms: 6.900916
+  type: 'test'
+  ...
+# Subtest: K15 paused Undo reloads once and closes without a second correction
+ok 81 - K15 paused Undo reloads once and closes without a second correction
+  ---
+  duration_ms: 4.524709
+  type: 'test'
+  ...
+# Subtest: K15 failed paused create reload locks the screen and reports reload required
+ok 82 - K15 failed paused create reload locks the screen and reports reload required
+  ---
+  duration_ms: 4.035916
+  type: 'test'
+  ...
+# Subtest: K15 failed paused Undo reload locks the screen and reports reload required
+ok 83 - K15 failed paused Undo reload locks the screen and reports reload required
+  ---
+  duration_ms: 3.799042
+  type: 'test'
+  ...
+# Subtest: registration uses the local calendar date and clears stale responsible-party errors
+ok 84 - registration uses the local calendar date and clears stale responsible-party errors
+  ---
+  duration_ms: 3.043459
+  type: 'test'
+  ...
+# Subtest: exact duplicate warning presents both safe choices
+ok 85 - exact duplicate warning presents both safe choices
+  ---
+  duration_ms: 4.255708
+  type: 'test'
+  ...
+# Subtest: a completed registration warning renders a terminal repair state without another create action
+ok 86 - a completed registration warning renders a terminal repair state without another create action
+  ---
+  duration_ms: 0.464083
+  type: 'test'
+  ...
+# Subtest: ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+ok 87 - ODOS MRNs use a six-digit base plus a valid appended Luhn check digit
+  ---
+  duration_ms: 0.255292
+  type: 'test'
+  ...
+# Subtest: minor registration validation refuses a missing consent authority
+ok 88 - minor registration validation refuses a missing consent authority
+  ---
+  duration_ms: 0.896125
+  type: 'test'
+  ...
+# Subtest: registration validation refuses missing and invalid birth dates
+ok 89 - registration validation refuses missing and invalid birth dates
+  ---
+  duration_ms: 0.167417
+  type: 'test'
+  ...
+# Subtest: responsible-party collection errors accumulate without hiding minor consent requirements
+ok 90 - responsible-party collection errors accumulate without hiding minor consent requirements
+  ---
+  duration_ms: 0.186084
+  type: 'test'
+  ...
+# Subtest: required fields block creation while address and email remain optional
+ok 91 - required fields block creation while address and email remain optional
+  ---
+  duration_ms: 0.171334
+  type: 'test'
+  ...
+# Subtest: demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+ok 92 - demographics editor loads shared Patient fields, saves with the update source tag, and discards without a write
+  ---
+  duration_ms: 12.715083
+  type: 'test'
+  ...
+# Subtest: G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+ok 93 - G1: an unchanged demographics save keeps the mobile recipient and byte-identical telecom
+  ---
+  duration_ms: 2.07075
+  type: 'test'
+  ...
+# Subtest: G2: a changed mobile value stays at its original position with metadata intact
+ok 94 - G2: a changed mobile value stays at its original position with metadata intact
+  ---
+  duration_ms: 0.284792
+  type: 'test'
+  ...
+# Subtest: G3: the displayed home slot is updated in place even when it is not the first phone
+ok 95 - G3: the displayed home slot is updated in place even when it is not the first phone
+  ---
+  duration_ms: 0.357791
+  type: 'test'
+  ...
+# Subtest: G4: a missing phone appends exactly one entry with the chosen home use
+ok 96 - G4: a missing phone appends exactly one entry with the chosen home use
+  ---
+  duration_ms: 0.260958
+  type: 'test'
+  ...
+# Subtest: G5: the displayed home email changes in place or is removed when cleared without moving other entries
+ok 97 - G5: the displayed home email changes in place or is removed when cleared without moving other entries
+  ---
+  duration_ms: 0.437916
+  type: 'test'
+  ...
+# Subtest: G13: clearing the email box removes only the displayed entry from the real serialized PUT
+ok 98 - G13: clearing the email box removes only the displayed entry from the real serialized PUT
+  ---
+  duration_ms: 96.152958
+  type: 'test'
+  ...
+# Subtest: G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+ok 99 - G12: duplicate home entries keep the first displayed entry in place on unchanged and changed saves
+  ---
+  duration_ms: 0.52475
+  type: 'test'
+  ...
+# Subtest: H1: obsolete-only contact displays blank and appends a new home without editing history
+ok 100 - H1: obsolete-only contact displays blank and appends a new home without editing history
+  ---
+  duration_ms: 3.024083
+  type: 'test'
+  ...
+# Subtest: H2: obsolete then work displays and edits the same work contact in place
+ok 101 - H2: obsolete then work displays and edits the same work contact in place
+  ---
+  duration_ms: 2.579208
+  type: 'test'
+  ...
+# Subtest: H3: a current home contact retains its value and metadata on unchanged save
+ok 102 - H3: a current home contact retains its value and metadata on unchanged save
+  ---
+  duration_ms: 0.128458
+  type: 'test'
+  ...
+# Subtest: H14: blank phone saves remove the entry while email still exercises contact removal
+ok 103 - H14: blank phone saves remove the entry while email still exercises contact removal
+  ---
+  duration_ms: 0.308333
+  type: 'test'
+  ...
+# Subtest: registration posts only the typed form contract to the clinic orchestrator
+ok 104 - registration posts only the typed form contract to the clinic orchestrator
+  ---
+  duration_ms: 19.69975
+  type: 'test'
+  ...
+# Subtest: create anyway is a server-side duplicate override, not a browser FHIR write
+ok 105 - create anyway is a server-side duplicate override, not a browser FHIR write
+  ---
+  duration_ms: 0.639375
+  type: 'test'
+  ...
+# Subtest: create anyway preserves a successful registration access warning
+ok 106 - create anyway preserves a successful registration access warning
+  ---
+  duration_ms: 0.397916
+  type: 'test'
+  ...
+# Subtest: registration surfaces an actionable permission error without raw FHIR details
+ok 107 - registration surfaces an actionable permission error without raw FHIR details
+  ---
+  duration_ms: 0.592709
+  type: 'test'
+  ...
+1..107
+# tests 107
+# suites 0
+# pass 107
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 848.627917

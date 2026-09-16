@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../../mcp/src/clinic/age-of-majority-config";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Patient, RelatedPerson } from "@medplum/fhirtypes";
@@ -15,6 +16,7 @@ test("L7: default consent-guardian list and primary selection retain the moved p
   const beforeChildren = ["r1", "r2"].map(id => f.get<RelatedPerson>(`RelatedPerson/${id}`));
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input), "http://guarantor-reader-proof.test");
+    if (url.pathname === "/fhir/R4/Basic") return Response.json({resourceType: "Bundle", entry: [{resource: JSON.parse(JSON.stringify(buildAgeOfMajorityConfigResource({ageOfMajorityYears:18})))}]});
     if (url.pathname === "/fhir/R4/RelatedPerson") {
       assert.equal(init?.method ?? "GET", "GET");
       return Response.json(await f.fhir.search("RelatedPerson", Object.fromEntries(url.searchParams)));

@@ -1,9 +1,10 @@
 import type { Bundle, Patient, Person, RelatedPerson, Resource } from "@medplum/fhirtypes";
 import { applyResponsiblePartyDemographics, projectResponsiblePartyDemographics, type ResponsiblePartyDemographics } from "../../../mcp/src/clinic/responsible-party-demographics";
+import { isR4Date } from "./patient-identity";
 import { CONCURRENT_EDIT_MESSAGE, fhir } from "./fhir";
 import { getGuarantorLinkOperation, guarantorOperationHistory, type GuarantorLinkOperation } from "./guarantor-link-operations";
 
-export type GuarantorDemographics = ResponsiblePartyDemographics;
+export type GuarantorDemographics = ResponsiblePartyDemographics & Pick<Person, "birthDate">;
 export interface GuarantorChild { resource: RelatedPerson; patientName: string }
 export interface GuarantorSnapshot { person: Person; children: GuarantorChild[] }
 export type GuarantorClassification = "verified" | "mismatched" | "unknown" | "superseded";
@@ -183,16 +184,20 @@ async function checkGeneration(person: Person): Promise<"stopped" | "no-response
   } catch { return "no-response"; }
 }
 export async function saveGuarantor(snapshot: GuarantorSnapshot, demographics: GuarantorDemographics): Promise<GuarantorResult> {
+  const birthDate = demographics.birthDate || undefined;
+  if (birthDate !== undefined && (!isR4Date(birthDate) || birthDate > new Date().toISOString().slice(0, 10))) {
+    return stopped(snapshot, "not-saved", "Guarantor date of birth must be a valid YYYY-MM-DD date, not in the future.");
+  }
   try {
     await confirmEditable(snapshot);
     const current = await readSnapshot(await fhir.read<Person>("Person", snapshot.person.id!));
     if (version(current.person) !== version(snapshot.person) || !same(linkedIds(current.person).sort(), linkedIds(snapshot.person).sort()) || snapshot.children.some(c => current.children.find(n => n.resource.id === c.resource.id)?.resource.meta?.versionId !== c.resource.meta?.versionId)) return stopped(snapshot, "not-saved", CONCURRENT_EDIT_MESSAGE);
   } catch (error) { return stopped(snapshot, "not-saved", error instanceof Error ? error.message : "Preflight failed; reload."); }
-  if (demographicsMatch(snapshot.person, demographics)) {
+  if (demographicsMatch(snapshot.person, demographics) && snapshot.person.birthDate === birthDate) {
     const verification = await verifyGuarantor(snapshot);
     return { ...verification, status: verification.status === "saved" ? "unchanged" : verification.status };
   }
-  const intended = applyResponsiblePartyDemographics(snapshot.person, demographics);
+  const intended = { ...applyResponsiblePartyDemographics(snapshot.person, demographics), birthDate };
   let accepted: Person;
   try {
     accepted = await fhir.update(intended, source, version(snapshot.person));

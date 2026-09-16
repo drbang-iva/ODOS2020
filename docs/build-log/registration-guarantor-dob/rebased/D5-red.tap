@@ -1,0 +1,43 @@
+TAP version 13
+# Subtest: D5 search cards expose Person DOB or empty string
+not ok 1 - D5 search cards expose Person DOB or empty string
+  ---
+  duration_ms: 36.808208
+  type: 'test'
+  location: '<workspace>/mcp/tests/guarantorSearchScreens.test.ts:1:10751'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   undefined,
+    +   undefined
+    -   '1980-01-02',
+    -   ''
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '1980-01-02'
+    1: ''
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (<workspace>/mcp/tests/guarantorSearchScreens.test.ts:91:85)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async route (<workspace>/mcp/tests/guarantorSearchScreens.test.ts:12:6)
+    async TestContext.<anonymous> (<workspace>/mcp/tests/guarantorSearchScreens.test.ts:85:2)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 265.608042

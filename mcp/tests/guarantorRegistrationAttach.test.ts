@@ -1,3 +1,4 @@
+import { buildAgeOfMajorityConfigResource } from "../src/clinic/age-of-majority-config.js";
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import test from "node:test";
@@ -57,6 +58,7 @@ class RegistrationAttachFhir {
   }
 
   async searchProject<T extends Resource>(resourceType: T["resourceType"], _projectId?: string, params?: Record<string, string>): Promise<Bundle<T>> {
+    if (resourceType === "Basic") return { resourceType: "Bundle", type: "searchset", entry: [{ resource: JSON.parse(JSON.stringify({ ...buildAgeOfMajorityConfigResource({ ageOfMajorityYears: 18 }), meta: { project: "practice-1" } })) as T }] };
     if (resourceType === "Patient") return { resourceType: "Bundle", type: "searchset", entry: [] };
     if (resourceType === "RelatedPerson") {
       const resources = [...this.resources.values()].filter((resource): resource is RelatedPerson => resource.resourceType === "RelatedPerson"

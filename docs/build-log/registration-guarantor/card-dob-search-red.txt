@@ -1,0 +1,44 @@
+TAP version 13
+# Subtest: B3: registration offers an existing guarantor, serializes only owned fields, and surfaces a failed attach with a chart link
+not ok 1 - B3: registration offers an existing guarantor, serializes only owned fields, and surfaces a failed attach with a chart link
+  ---
+  duration_ms: 29.715
+  type: 'test'
+  location: '<workspace>/ui/tests/guarantorAttachRegistration.test.tsx:1:2541'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Date of birth:.*1980-01-02/. Input:
+    
+    'Front desk New patient Back to patient search Patient identity Legal first name Middle name Legal last name Preferred / alias name Gender Select… Male Female Other Unknown Date of birth Contact information Phone 1 Phone  1  type Cell Home Work Phone 2 Phone  2  type Cell Home Work Which number accepts text messages? Phone  1 Phone  2 Neither — none of my numbers can receive texts To stop or change the messages we send you, use the contact-preferences section — this question is only about which of your numbers can receive a text. Home address City State ZIP / postal code Email Communication preferences Communication methods Select all Clear all Purpose Text Call no automated calls Email Mail no automated mail Evidence Recalls ✓ ✓ ✓ ✓ ⚠ No evidence Appointment ✓ ✓ ✓ ✓ ⚠ No evidence Product Pick Up ✓ ✓ ✓ ✓ ⚠ No evidence Marketing Promo ✓ ✓ ✓ ✓ ⚠ No evidence Education ✓ ✓ ✓ ✓ ⚠ No evidence Outlined = practice default, not yet confirmed with the patient · Filled = set explicitly · STOP = patient opted out by text; preferences do not override it. No preferences set yet — showing practice defaults. Confirmed via Not confirmed Patient stated in person Paper form on file Responsible parties Financial responsibility, consent authority, and insurance subscriber status are separate roles. Insurance subscriber linkage stays in Coverage. Patient (self) Remove Financially responsible Related person 2 Remove Guarantor date of birth (required) First name Middle name Last name Relationship Parent Legal guardian Spouse Other Phone 1 Phone  1  type Cell Home Work Phone 2 Phone  2  type Cell Home Work Which number accepts text messages? Phone  1 Phone  2 Neither — none of my numbers can receive texts To stop or change the messages we send you, use the contact-preferences section — this question is only about which of your numbers can receive a text. Mailing address City State ZIP / postal code Effective date End date Already on file? EXAMPLEV Guardian 864-555-0101 · 864-555-0102 Greenville   29601 Use  EXAMPLEV Guardian Court order / custody notes Financially responsible Consent authority Primary related person Add related person Create patient'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Front desk New patient Back to patient search Patient identity Legal first name Middle name Legal last name Preferred / alias name Gender Select… Male Female Other Unknown Date of birth Contact information Phone 1 Phone  1  type Cell Home Work Phone 2 Phone  2  type Cell Home Work Which number accepts text messages? Phone  1 Phone  2 Neither — none of my numbers can receive texts To stop or change the messages we send you, use the contact-preferences section — this question is only about which of your numbers can receive a text. Home address City State ZIP / postal code Email Communication preferences Communication methods Select all Clear all Purpose Text Call no automated calls Email Mail no automated mail Evidence Recalls ✓ ✓ ✓ ✓ ⚠ No evidence Appointment ✓ ✓ ✓ ✓ ⚠ No evidence Product Pick Up ✓ ✓ ✓ ✓ ⚠ No evidence Marketing Promo ✓ ✓ ✓ ✓ ⚠ No evidence Education ✓ ✓ ✓ ✓ ⚠ No evidence Outlined = practice default, not yet confirmed with the patient · Filled = set explicitly · STOP = patient opted out by text; preferences do not override it. No preferences set yet — showing practice defaults. Confirmed via Not confirmed Patient stated in person Paper form on file Responsible parties Financial responsibility, consent authority, and insurance subscriber status are separate roles. Insurance subscriber linkage stays in Coverage. Patient (self) Remove Financially responsible Related person 2 Remove Guarantor date of birth (required) First name Middle name Last name Relationship Parent Legal guardian Spouse Other Phone 1 Phone  1  type Cell Home Work Phone 2 Phone  2  type Cell Home Work Which number accepts text messages? Phone  1 Phone  2 Neither — none of my numbers can receive texts To stop or change the messages we send you, use the contact-preferences section — this question is only about which of your numbers can receive a text. Mailing address City State ZIP / postal code Effective date End date Already on file? EXAMPLEV Guardian 864-555-0101 · 864-555-0102 Greenville   29601 Use  EXAMPLEV Guardian Court order / custody notes Financially responsible Consent authority Primary related person Add related person Create patient'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (<workspace>/ui/tests/guarantorAttachRegistration.test.tsx:77:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: B3: registration rejects a non-string guarantor link status
+ok 2 - B3: registration rejects a non-string guarantor link status
+  ---
+  duration_ms: 0.984417
+  type: 'test'
+  ...
+# Subtest: F4: the created screen renders an unconfirmed guarantor row without a RelatedPerson id
+ok 3 - F4: the created screen renders an unconfirmed guarantor row without a RelatedPerson id
+  ---
+  duration_ms: 1.165292
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 2
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 190.877083
