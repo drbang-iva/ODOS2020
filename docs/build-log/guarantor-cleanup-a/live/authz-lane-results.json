@@ -1,0 +1,27 @@
+{
+  "projectId": "559552b0-935e-40ce-915e-bc0e30eece02",
+  "results": [
+    {
+      "label": "operator seeder",
+      "args": [
+        "<source-root>/scripts/operator-identity.ts",
+        "--project",
+        "559552b0-935e-40ce-915e-bc0e30eece02"
+      ],
+      "exitCode": 0,
+      "output": "Target: Project/559552b0-935e-40ce-915e-bc0e30eece02 (source: --project)\nOperator identity ensure: project=559552b0-935e-40ce-915e-bc0e30eece02 client=31f85c48-adfb-4d32-91d5-f0647536250b status=active\n\n"
+    },
+    {
+      "label": "canonical role repair",
+      "args": [
+        "<source-root>/scripts/repair-practice-roles.ts",
+        "--email",
+        "cleanup-a-authz@example.invalid",
+        "--project",
+        "559552b0-935e-40ce-915e-bc0e30eece02"
+      ],
+      "exitCode": 1,
+      "output": "Target: Project/559552b0-935e-40ce-915e-bc0e30eece02 (source: --project)\n\nFHIR GET /fhir/R4/User/:id [User] 404 Not Found: Not found\n"
+    }
+  ]
+}
