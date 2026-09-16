@@ -76,7 +76,11 @@ export async function handleDiagnosisCatalogListRequest(
   if (!staffHasBusinessAction(staff, "chart.read") && !canWrite) {
     return { status: 403, body: { error: "chart.read or finding-definitions.write role required" } };
   }
-  return { status: 200, body: { canWrite, diagnoses: await new FhirDiagnosisCatalogStore(staff.fhir).list() } };
+  return { status: 200, body: {
+    canWrite,
+    canWriteDiagnosis: staffHasBusinessAction(staff, "chart.diagnosis.write"),
+    diagnoses: await new FhirDiagnosisCatalogStore(staff.fhir).list(),
+  } };
 }
 
 export async function handleDiagnosisCatalogCreationRequest(

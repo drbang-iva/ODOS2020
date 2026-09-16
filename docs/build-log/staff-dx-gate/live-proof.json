@@ -1,0 +1,156 @@
+{
+  "kind": "Author live handler proof with verified caller identities and real Medplum AccessPolicy enforcement",
+  "sourceHead": "94ffeed4a791d80e67ba0aa3d38477330d1e0da3",
+  "sourceHashes": {
+    "mcp/src/authz/roles.ts": "9db544219659ace1a139929ea19c6563140cbf8799003754cb07a843a0bfbd1a",
+    "mcp/src/clinical-graph/diagnosis-pick-endpoint.ts": "a5f80b58fdb8e992afb8379b1e0e2303a314bc1c172f459fe083fd31d4a4c25e",
+    "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts": "7ee17a603cadfcba0d439bf255c93047ba66c636e6f2c40c8f30b6ca8b688495",
+    "mcp/src/clinical-graph/diagnosis-order-endpoint.ts": "51e2c636bbb78da2b473cbe1da69955c52150be73ab874268ca13808b73085af"
+  },
+  "cases": [
+    {
+      "label": "staff pick refuses before any resource write",
+      "status": 403,
+      "attemptedWrites": [],
+      "unchangedResourceVersions": true
+    },
+    {
+      "label": "provider confirm retains Condition and Encounter attachment",
+      "status": 201,
+      "attemptedWrites": [
+        {
+          "actor": "Practitioner/e704a498-2b31-4215-84d1-86dab108d558",
+          "method": "executeTransaction",
+          "resourceType": "Bundle"
+        }
+      ],
+      "unchangedResourceVersions": false
+    },
+    {
+      "label": "staff assertion refuses before Observation creation",
+      "status": 403,
+      "attemptedWrites": [],
+      "unchangedResourceVersions": true
+    },
+    {
+      "label": "provider assertion creates Observation and retains Condition evidence",
+      "status": 200,
+      "attemptedWrites": [
+        {
+          "actor": "Practitioner/e704a498-2b31-4215-84d1-86dab108d558",
+          "method": "create",
+          "resourceType": "Observation"
+        },
+        {
+          "actor": "Practitioner/e704a498-2b31-4215-84d1-86dab108d558",
+          "method": "update",
+          "resourceType": "Condition"
+        },
+        {
+          "actor": "Practitioner/e704a498-2b31-4215-84d1-86dab108d558",
+          "method": "create",
+          "resourceType": "Provenance"
+        }
+      ],
+      "unchangedResourceVersions": false
+    },
+    {
+      "label": "staff visit status refuses before writes",
+      "status": 403,
+      "attemptedWrites": [],
+      "unchangedResourceVersions": true
+    },
+    {
+      "label": "provider visit status succeeds",
+      "status": 200,
+      "attemptedWrites": [],
+      "unchangedResourceVersions": false
+    },
+    {
+      "label": "staff newness refuses before writes",
+      "status": 403,
+      "attemptedWrites": [],
+      "unchangedResourceVersions": true
+    },
+    {
+      "label": "provider newness succeeds",
+      "status": 200,
+      "attemptedWrites": [],
+      "unchangedResourceVersions": false
+    },
+    {
+      "label": "staff complexity refuses before writes",
+      "status": 403,
+      "attemptedWrites": [],
+      "unchangedResourceVersions": true
+    },
+    {
+      "label": "provider complexity succeeds",
+      "status": 200,
+      "attemptedWrites": [
+        {
+          "actor": "Practitioner/e704a498-2b31-4215-84d1-86dab108d558",
+          "method": "update",
+          "resourceType": "Encounter"
+        },
+        {
+          "actor": "Practitioner/e704a498-2b31-4215-84d1-86dab108d558",
+          "method": "create",
+          "resourceType": "Provenance"
+        }
+      ],
+      "unchangedResourceVersions": false
+    },
+    {
+      "label": "staff reorder refuses before writes",
+      "status": 403,
+      "attemptedWrites": [],
+      "unchangedResourceVersions": true
+    },
+    {
+      "label": "provider reorder succeeds",
+      "status": 200,
+      "attemptedWrites": [
+        {
+          "actor": "Practitioner/e704a498-2b31-4215-84d1-86dab108d558",
+          "method": "update",
+          "resourceType": "Encounter"
+        }
+      ],
+      "unchangedResourceVersions": false
+    },
+    {
+      "label": "native staff Condition update rejected by Medplum",
+      "status": 403
+    }
+  ],
+  "identities": [
+    {
+      "name": "staff",
+      "roles": [
+        "staff"
+      ],
+      "canWriteDiagnosis": false
+    },
+    {
+      "name": "composite",
+      "roles": [
+        "provider",
+        "staff",
+        "admin"
+      ],
+      "canWriteDiagnosis": true
+    }
+  ],
+  "limits": [
+    "Handler invocation; HTTP registration is checked separately.",
+    "The provider identity is a real provider+staff+admin composite membership."
+  ],
+  "synthetic": {
+    "patientId": "055485a5-7edb-4e73-95d9-5107bf095c0c",
+    "encounterId": "14ad8a08-aaba-442e-a733-fb6cbb5904c8",
+    "conditionId": "08aa7b6a-e9b0-4158-a395-7d30d2b60bc9",
+    "diagnosisKey": "cataract_anterior_subcapsular",
+    "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-subcapsular"
+  }
+}

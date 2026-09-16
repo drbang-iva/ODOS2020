@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import type { Encounter } from "@medplum/fhirtypes";
 import {
+  DIAGNOSIS_WRITE_TOOLTIP,
   SIGNED_ENCOUNTER_TOOLTIP,
+  diagnosisVoidDenied,
   clearEncounterConfirmSpec,
   clearSectionConfirmSpec,
   isClosedEncounterStatus,
@@ -89,6 +91,10 @@ export function ClearSectionButton({
     try {
       // The count in the confirm is the server's, not the sheet's guess.
       const preview = await previewEncounterVoid(encounterReference, request, fetchImpl);
+      if (diagnosisVoidDenied(preview)) {
+        setMessage(DIAGNOSIS_WRITE_TOOLTIP);
+        return;
+      }
       if (preview.count === 0) {
         setMessage(`Nothing recorded for ${label} this visit.`);
         return;
@@ -146,6 +152,10 @@ export function ClearEncounterButton({
     setMessage(undefined);
     try {
       const preview = await previewEncounterVoid(encounterReference, { scope: "encounter" }, fetchImpl);
+      if (diagnosisVoidDenied(preview)) {
+        setMessage(DIAGNOSIS_WRITE_TOOLTIP);
+        return;
+      }
       if (preview.count === 0) {
         setMessage("Nothing charted this visit yet.");
         return;

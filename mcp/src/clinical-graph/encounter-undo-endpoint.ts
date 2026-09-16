@@ -60,6 +60,7 @@ const requestSchema = z.discriminatedUnion("scope", [
 export type EncounterUndoRequest = z.infer<typeof requestSchema>;
 
 export interface EncounterUndoResponse {
+  canWriteDiagnosis: boolean;
   restored: string[];
   count: number;
   /** Entries the slot named that were no longer voided when Undo ran; left as they are. */
@@ -84,7 +85,7 @@ export async function handleEncounterUndoLedgerRequest(
     return { status: 404, body: { error: "Encounter not found." } };
   }
   const ledger = await new FhirEncounterUndoLedgerStore(staff.fhir).get(encounterId);
-  return { status: 200, body: { ledger } };
+  return { status: 200, body: { ledger, canWriteDiagnosis: staffHasBusinessAction(staff, "chart.diagnosis.write") } };
 }
 
 export async function handleEncounterUndoRequest(
@@ -125,6 +126,10 @@ export async function handleEncounterUndoRequest(
     : ledgerRow?.ledger.sections[request.sectionKey];
   if (!ledgerRow || !slot || slot.voided.length === 0) {
     return { status: 404, body: { error: NOTHING_TO_UNDO_ERROR, code: "nothing-to-undo" } };
+  }
+  const canWriteDiagnosis = staffHasBusinessAction(staff, "chart.diagnosis.write");
+  if (!canWriteDiagnosis && slot.voided.some((entry) => entry.ref.startsWith("Condition/") || entry.diagnosis)) {
+    return { status: 403, body: { error: "chart.diagnosis.write role required to restore diagnoses" } };
   }
 
   // --- Read every listed resource; fail closed if any cannot be read --------------------
@@ -222,6 +227,7 @@ export async function handleEncounterUndoRequest(
     throw error;
   }
   const response: EncounterUndoResponse = {
+    canWriteDiagnosis,
     restored,
     count: restored.length,
     skipped,

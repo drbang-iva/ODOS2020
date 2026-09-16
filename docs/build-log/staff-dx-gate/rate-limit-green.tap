@@ -1,0 +1,403 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/diagnosisWriteGate.test.ts tests/findingDefinitionStore.test.ts tests/v05a-authz.test.ts
+
+TAP version 13
+# Subtest: registered diagnosis write routes share a rate limit before service or staff authentication
+ok 1 - registered diagnosis write routes share a rate limit before service or staff authentication
+  ---
+  duration_ms: 132.339917
+  type: 'test'
+  ...
+# Subtest: diagnosis entrypoints refuse staff before any dependency call
+    # Subtest: pick
+    ok 1 - pick
+      ---
+      duration_ms: 0.115833
+      type: 'test'
+      ...
+    # Subtest: order
+    ok 2 - order
+      ---
+      duration_ms: 0.038083
+      type: 'test'
+      ...
+    # Subtest: pull
+    ok 3 - pull
+      ---
+      duration_ms: 0.15475
+      type: 'test'
+      ...
+    # Subtest: status
+    ok 4 - status
+      ---
+      duration_ms: 0.076958
+      type: 'test'
+      ...
+    # Subtest: newness
+    ok 5 - newness
+      ---
+      duration_ms: 0.028875
+      type: 'test'
+      ...
+    # Subtest: complexity
+    ok 6 - complexity
+      ---
+      duration_ms: 0.028291
+      type: 'test'
+      ...
+    1..6
+ok 2 - diagnosis entrypoints refuse staff before any dependency call
+  ---
+  duration_ms: 0.832834
+  type: 'test'
+  ...
+# Subtest: diagnosis entrypoints refuse admin before any dependency call
+    # Subtest: pick
+    ok 1 - pick
+      ---
+      duration_ms: 0.176708
+      type: 'test'
+      ...
+    # Subtest: order
+    ok 2 - order
+      ---
+      duration_ms: 0.050958
+      type: 'test'
+      ...
+    # Subtest: pull
+    ok 3 - pull
+      ---
+      duration_ms: 0.056333
+      type: 'test'
+      ...
+    # Subtest: status
+    ok 4 - status
+      ---
+      duration_ms: 0.025958
+      type: 'test'
+      ...
+    # Subtest: newness
+    ok 5 - newness
+      ---
+      duration_ms: 0.018875
+      type: 'test'
+      ...
+    # Subtest: complexity
+    ok 6 - complexity
+      ---
+      duration_ms: 0.015958
+      type: 'test'
+      ...
+    1..6
+ok 3 - diagnosis entrypoints refuse admin before any dependency call
+  ---
+  duration_ms: 0.594125
+  type: 'test'
+  ...
+# Subtest: diagnosis entrypoints refuse provider with diagnosis action revoked before any dependency call
+    # Subtest: pick
+    ok 1 - pick
+      ---
+      duration_ms: 0.020584
+      type: 'test'
+      ...
+    # Subtest: order
+    ok 2 - order
+      ---
+      duration_ms: 0.014917
+      type: 'test'
+      ...
+    # Subtest: pull
+    ok 3 - pull
+      ---
+      duration_ms: 0.06525
+      type: 'test'
+      ...
+    # Subtest: status
+    ok 4 - status
+      ---
+      duration_ms: 0.041041
+      type: 'test'
+      ...
+    # Subtest: newness
+    ok 5 - newness
+      ---
+      duration_ms: 0.014459
+      type: 'test'
+      ...
+    # Subtest: complexity
+    ok 6 - complexity
+      ---
+      duration_ms: 0.0135
+      type: 'test'
+      ...
+    1..6
+ok 4 - diagnosis entrypoints refuse provider with diagnosis action revoked before any dependency call
+  ---
+  duration_ms: 0.282542
+  type: 'test'
+  ...
+# Subtest: diagnosis entrypoints refuse staff with diagnosis action revoked before any dependency call
+    # Subtest: pick
+    ok 1 - pick
+      ---
+      duration_ms: 0.019083
+      type: 'test'
+      ...
+    # Subtest: order
+    ok 2 - order
+      ---
+      duration_ms: 0.0135
+      type: 'test'
+      ...
+    # Subtest: pull
+    ok 3 - pull
+      ---
+      duration_ms: 0.013125
+      type: 'test'
+      ...
+    # Subtest: status
+    ok 4 - status
+      ---
+      duration_ms: 0.014416
+      type: 'test'
+      ...
+    # Subtest: newness
+    ok 5 - newness
+      ---
+      duration_ms: 0.01275
+      type: 'test'
+      ...
+    # Subtest: complexity
+    ok 6 - complexity
+      ---
+      duration_ms: 0.012833
+      type: 'test'
+      ...
+    1..6
+ok 5 - diagnosis entrypoints refuse staff with diagnosis action revoked before any dependency call
+  ---
+  duration_ms: 0.154959
+  type: 'test'
+  ...
+# Subtest: finding definitions persist as one coded Basic carrying the interface JSON verbatim
+ok 6 - finding definitions persist as one coded Basic carrying the interface JSON verbatim
+  ---
+  duration_ms: 13.228791
+  type: 'test'
+  ...
+# Subtest: E2 seeds ten entrance definitions with canonical Pachymetry and declarative documentation elements
+ok 7 - E2 seeds ten entrance definitions with canonical Pachymetry and declarative documentation elements
+  ---
+  duration_ms: 6.282125
+  type: 'test'
+  ...
+# Subtest: DE-1 seeds seven new definitions and references the one existing TBUT stable key as the eighth workup section
+ok 8 - DE-1 seeds seven new definitions and references the one existing TBUT stable key as the eighth workup section
+  ---
+  duration_ms: 6.078292
+  type: 'test'
+  ...
+# Subtest: stored rows override compiled seeds by stableKey and survive a store restart
+ok 9 - stored rows override compiled seeds by stableKey and survive a store restart
+  ---
+  duration_ms: 6.03775
+  type: 'test'
+  ...
+# Subtest: a persisted practice option drives capture validation through the runtime dependency
+ok 10 - a persisted practice option drives capture validation through the runtime dependency
+  ---
+  duration_ms: 8.323792
+  type: 'test'
+  ...
+# Subtest: saving again updates the same Basic and deactivation materializes active false
+ok 11 - saving again updates the same Basic and deactivation materializes active false
+  ---
+  duration_ms: 5.8955
+  type: 'test'
+  ...
+# Subtest: save re-searches before create and updates a competing row that appeared
+ok 12 - save re-searches before create and updates a competing row that appeared
+  ---
+  duration_ms: 6.519916
+  type: 'test'
+  ...
+# Subtest: bad rows are skipped and duplicates resolve by lastUpdated then id
+ok 13 - bad rows are skipped and duplicates resolve by lastUpdated then id
+  ---
+  duration_ms: 10.37875
+  type: 'test'
+  ...
+# Subtest: a handler still receives working definitions when one stored row is garbage
+ok 14 - a handler still receives working definitions when one stored row is garbage
+  ---
+  duration_ms: 6.985875
+  type: 'test'
+  ...
+# Subtest: every definition-backed clinical-graph HTTP closure receives the persistent dependency
+ok 15 - every definition-backed clinical-graph HTTP closure receives the persistent dependency
+  ---
+  duration_ms: 2.444167
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 1: dilation permits deferral
+ok 16 - DEFER-1 guard 1: dilation permits deferral
+  ---
+  duration_ms: 5.235709
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 2: the complete seed has exactly one deferrable definition
+ok 17 - DEFER-1 guard 2: the complete seed has exactly one deferrable definition
+  ---
+  duration_ms: 5.892542
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 3: stateDefinition factory output does not grant deferral
+ok 18 - DEFER-1 guard 3: stateDefinition factory output does not grant deferral
+  ---
+  duration_ms: 7.323541
+  type: 'test'
+  ...
+# Subtest: the practice role registry defines only Provider, Staff, and Admin
+ok 19 - the practice role registry defines only Provider, Staff, and Admin
+  ---
+  duration_ms: 0.520958
+  type: 'test'
+  ...
+# Subtest: full role table keeps diagnosis action equivalent to Condition create and update grants
+ok 20 - full role table keeps diagnosis action equivalent to Condition create and update grants
+  ---
+  duration_ms: 0.2215
+  type: 'test'
+  ...
+# Subtest: diagnosis permission cannot be granted independently of a credentialed role and can be revoked
+ok 21 - diagnosis permission cannot be granted independently of a credentialed role and can be revoked
+  ---
+  duration_ms: 0.203792
+  type: 'test'
+  ...
+# Subtest: AccessPolicy generator emits Medplum interactions, criteria, and writeConstraint without business-action leakage
+ok 22 - AccessPolicy generator emits Medplum interactions, criteria, and writeConstraint without business-action leakage
+  ---
+  duration_ms: 0.382125
+  type: 'test'
+  ...
+# Subtest: protocol authoring is credential-bound to Provider with code-fenced Basic grants
+ok 23 - protocol authoring is credential-bound to Provider with code-fenced Basic grants
+  ---
+  duration_ms: 0.292292
+  type: 'test'
+  ...
+# Subtest: front-desk can create the dispensary order + financial resources at practice scope
+ok 24 - front-desk can create the dispensary order + financial resources at practice scope
+  ---
+  duration_ms: 0.092083
+  type: 'test'
+  ...
+# Subtest: front-desk cannot update or delete PaymentReconciliation outside the guarded Phase 6a handlers
+ok 25 - front-desk cannot update or delete PaymentReconciliation outside the guarded Phase 6a handlers
+  ---
+  duration_ms: 0.10475
+  type: 'test'
+  ...
+# Subtest: every role can read payments while only custody roles can create them
+ok 26 - every role can read payments while only custody roles can create them
+  ---
+  duration_ms: 0.104583
+  type: 'test'
+  ...
+# Subtest: compiled front-desk and practice-admin AccessPolicies grant payer Organization directory operations
+ok 27 - compiled front-desk and practice-admin AccessPolicies grant payer Organization directory operations
+  ---
+  duration_ms: 0.240958
+  type: 'test'
+  ...
+# Subtest: every role's AccessPolicy carries a machine-readable practice-role identifier (resolver anchor)
+ok 28 - every role's AccessPolicy carries a machine-readable practice-role identifier (resolver anchor)
+  ---
+  duration_ms: 0.246041
+  type: 'test'
+  ...
+# Subtest: ProjectMembership access builder emits parameterized provider, patient, and state-license values
+ok 29 - ProjectMembership access builder emits parameterized provider, patient, and state-license values
+  ---
+  duration_ms: 0.129208
+  type: 'test'
+  ...
+# Subtest: aesthetics-provider state scoping rejects out-of-state or out-of-scope procedures
+ok 30 - aesthetics-provider state scoping rejects out-of-state or out-of-scope procedures
+  ---
+  duration_ms: 0.108334
+  type: 'test'
+  ...
+# Subtest: Binary parser plugin requires securityContext and rejects outside patient compartment
+ok 31 - Binary parser plugin requires securityContext and rejects outside patient compartment
+  ---
+  duration_ms: 0.132125
+  type: 'test'
+  ...
+# Subtest: Binary parser plugin accepts valid raw upload header and blocks securityContext rewrite
+ok 32 - Binary parser plugin accepts valid raw upload header and blocks securityContext rewrite
+  ---
+  duration_ms: 0.073083
+  type: 'test'
+  ...
+# Subtest: MCP FHIR client refuses direct Binary create without parser guard header
+ok 33 - MCP FHIR client refuses direct Binary create without parser guard header
+  ---
+  duration_ms: 0.167958
+  type: 'test'
+  ...
+# Subtest: ProjectMembership lifecycle transitions emit audit rows and placeholder AuditEvent
+ok 34 - ProjectMembership lifecycle transitions emit audit rows and placeholder AuditEvent
+  ---
+  duration_ms: 0.429667
+  type: 'test'
+  ...
+# Subtest: ProjectMembership role review preserves state and emits a review audit row
+ok 35 - ProjectMembership role review preserves state and emits a review audit row
+  ---
+  duration_ms: 0.914
+  type: 'test'
+  ...
+# Subtest: break-glass requires human reason, creates time-limited access, and flags admin review
+ok 36 - break-glass requires human reason, creates time-limited access, and flags admin review
+  ---
+  duration_ms: 0.225666
+  type: 'test'
+  ...
+# Subtest: break-glass rejects agent self-attestation and blank reason
+ok 37 - break-glass rejects agent self-attestation and blank reason
+  ---
+  duration_ms: 0.059375
+  type: 'test'
+  ...
+# Subtest: audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available
+ok 38 - audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum AccessPolicy round-trip.
+  ---
+  duration_ms: 0.417041
+  type: 'test'
+  ...
+# Subtest: v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)
+ok 39 - v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat) # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the v0.5a enforcement fixture. This is the human-provisioned step per Mandate 8 — the agent does not create credentials, only uses what the human dropped into env vars.
+  ---
+  duration_ms: 0.222333
+  type: 'test'
+  ...
+# Subtest: compiled Staff policy fences RelatedPerson claims without changing other demographic grants
+ok 40 - compiled Staff policy fences RelatedPerson claims without changing other demographic grants
+  ---
+  duration_ms: 0.118875
+  type: 'test'
+  ...
+1..40
+# tests 64
+# suites 0
+# pass 62
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 0
+# duration_ms 1034.140167
+⚠️  LIVE STACK NOT CONFIGURED — 2 tests skipped, including live authorization enforcement (v05a-authz). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.

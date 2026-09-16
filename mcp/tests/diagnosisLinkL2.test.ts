@@ -58,6 +58,25 @@ import {
 
 const { handleDiagnosisPickRequest } = diagnosisPickEndpoint;
 
+test("staff diagnosis pick refuses all actions with zero writes", async (t) => {
+  for (const action of ["possible", "confirm", "discard"] as const) {
+    await t.test(action, async () => {
+      const fhir = diagnosisPickFhir();
+      const before = structuredClone(fhir.resources);
+      const result = await handleDiagnosisPickRequest({
+        authenticate: async () => ({ staffReference: "Practitioner/staff", actorRole: "staff", fhir }),
+      }, {
+        authHeader: "Bearer staff", params: { encounterId: "e1" },
+        body: { diagnosisKey: "presbyopia", action, source: "catalog-search" },
+      });
+      assert.equal(fhir.writes.length, 0);
+      assert.equal(fhir.transactions.length, 0);
+      assert.deepEqual(fhir.resources, before);
+      assert.equal(result.status, 403);
+    });
+  }
+});
+
 const GLAUCOMA_RULE_FINDING_KEYS_NOT_YET_EXERCISED = new Set([
   "corneal_hysteresis",
   "pachymetry_um",

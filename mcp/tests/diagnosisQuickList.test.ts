@@ -14,6 +14,31 @@ import {
 } from "../src/clinical-graph/diagnosis-pick-tally-store.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
 import type { DiagnosisCatalogRow } from "../src/clinical-graph/glaucoma-suspect.js";
+import { handleDiagnosisCatalogListRequest } from "../src/clinical-graph/diagnosis-catalog-endpoint.js";
+
+test("quick-list and catalog payloads expose diagnosis permission separately from pin and catalog editing", async () => {
+  for (const actorRole of ["provider", "staff", "admin"] as const) {
+    const fhir = new MemoryFhir();
+    const authenticate = async () => ({ staffReference: "Practitioner/synthetic", actorRole, fhir });
+    const deps = { authenticate, tallyFhir: fhir, diagnosisCatalog: async () => buildDiagnosisCatalogSeeds() };
+    await new FhirDiagnosisPickTallyStore(fhir).replacePinned("Practitioner/synthetic", [], "2026-08-09T12:00:00.000Z");
+    const read = await handleDiagnosisQuickListRequest(deps, { authHeader: "Bearer synthetic" });
+    const body = read.body as { canWrite: boolean; canWriteDiagnosis: boolean };
+    assert.equal(read.status, 200);
+    assert.equal(body.canWrite, actorRole !== "admin");
+    assert.equal(body.canWriteDiagnosis, actorRole === "provider");
+    const saved = await handleDiagnosisQuickListMutationRequest(deps, {
+      authHeader: "Bearer synthetic", body: { pinnedDiagnosisKeys: [] },
+    });
+    assert.equal(saved.status, actorRole === "admin" ? 403 : 200);
+    if (saved.status === 200) {
+      assert.equal((saved.body as { canWriteDiagnosis: boolean }).canWriteDiagnosis, actorRole === "provider");
+    }
+    const catalog = await handleDiagnosisCatalogListRequest({ authenticate }, { authHeader: "Bearer synthetic" });
+    assert.equal(catalog.status, 200);
+    assert.equal((catalog.body as { canWriteDiagnosis: boolean }).canWriteDiagnosis, actorRole === "provider");
+  }
+});
 
 const STARTER_DIAGNOSIS_KEYS = [
   "astigmatism",
@@ -240,6 +265,7 @@ test("fresh Admin reads an honest empty quick list without attempting the writab
   assert.equal(response.status, 200);
   assert.deepEqual(response.body, {
     canWrite: false,
+    canWriteDiagnosis: false,
     pinnedDiagnosisKeys: [],
     diagnoses: [],
     catalog: (response.body as { catalog: unknown[] }).catalog,

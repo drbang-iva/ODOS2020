@@ -98,6 +98,11 @@ interface DiagnosisCatalogCodeRow {
   bilateralResolution?: "emit-both-eyes";
   icd10?: { code: string; display?: string } | { pattern: { unspecifiedEye?: string; right?: string; left?: string; bilateral?: string } };
 }
+interface DiagnosisCatalogResponse {
+  diagnoses?: DiagnosisCatalogCodeRow[];
+  canWriteDiagnosis?: boolean;
+  error?: string;
+}
 let cachedDiagnosisCatalog: DiagnosisCatalogCodeRow[] | undefined;
 interface ProtocolOffer {
   id: string;
@@ -122,6 +127,9 @@ const BUTTON_CLASS = "rounded border border-[color:var(--odos-accent-border)] bg
 export function AssessmentSection({ patientReference, encounterReference, onSaved, onRefer, onEngageDiagnosis, onOpenDiagnosis }: Props) {
   const { role } = useRole();
   const canShowEditing = role !== "front-desk";
+  const [diagnosisCapability, setDiagnosisCapability] = useState<{ encounterReference: string; allowed: boolean }>();
+  const canEditDiagnosis = canShowEditing && diagnosisCapability?.encounterReference === encounterReference && diagnosisCapability.allowed;
+  const loadGeneration = useRef(0);
   const { onCleared } = useEncounterEdit();
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [conditions, setConditions] = useState<Condition[]>([]);
@@ -156,10 +164,12 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   currentEncounterReference.current = encounterReference;
 
   async function load() {
+    const generation = ++loadGeneration.current;
+    setDiagnosisCapability(undefined);
     setDiagnosisDemotionImpact(undefined);
     setError(null);
     const loadedEncounter = await fhir.read<Encounter>("Encounter", encounterId);
-    const [conditionBundle, visitStatuses, newness, procedureResult] = await Promise.all([
+    const [conditionBundle, visitStatuses, newness, procedureResult, catalogResponse] = await Promise.all([
       fhir.search<Condition>("Condition", {
         encounter: encounterReference,
         _count: "40",
@@ -173,7 +183,11 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
           error: caught instanceof Error ? caught.message : String(caught),
         }),
       ),
+      fetchDiagnosisCatalog().catch(() => ({ canWriteDiagnosis: false, diagnoses: cachedDiagnosisCatalog })),
     ]);
+    if (generation !== loadGeneration.current || currentEncounterReference.current !== encounterReference) return;
+    setDiagnosisCapability({ encounterReference, allowed: catalogResponse.canWriteDiagnosis === true });
+    setDiagnosisCatalog(catalogResponse.diagnoses ?? []);
     setEncounter(loadedEncounter);
     setDiagnosisVisitStatuses(Object.fromEntries(visitStatuses.rows.map((row) => [row.conditionReference, row.status])));
     setDiagnosisNewness(Object.fromEntries(newness.rows.map((row) => [row.conditionReference, row])));
@@ -205,13 +219,8 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
 
   useEffect(() => {
     void load().catch((err) => setError(err instanceof Error ? err.message : String(err)));
+    return () => { loadGeneration.current += 1; };
   }, [encounterId, encounterReference]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void loadDiagnosisCatalog(controller.signal).then(setDiagnosisCatalog).catch(() => undefined);
-    return () => controller.abort();
-  }, []);
 
   useEffect(() => {
     const refresh = (event: Event) => {
@@ -232,7 +241,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     [conditions, encounter],
   );
   async function addDiagnosis() {
-    if (!encounter) return;
+    if (!encounter || !canEditDiagnosis) return;
     setBusy("add");
     setError(null);
     try {
@@ -298,6 +307,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   }
 
   async function saveDiagnosisOrder(conditionReferences: string[]) {
+    if (!canEditDiagnosis) return;
     setBusy("reorder");
     setReorderError(undefined);
     try {
@@ -345,6 +355,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   }
 
   async function runEdit(label: string, action: () => Promise<void>, refreshAfter = true) {
+    if (!canEditDiagnosis) return;
     setBusy(label);
     setError(null);
     try {
@@ -583,7 +594,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
           </div>
         </div>
 
-        {canShowEditing && (
+        {canEditDiagnosis && (
           <div data-testid="diagnosis-tier-tagger" className="mt-5 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4">
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-[150px_150px_1fr_auto]">
               <OdosSelect
@@ -754,7 +765,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
           </div>
         )}
 
-        {canShowEditing && sortedConditions.length > 1 && encounter?.status !== "finished" && (
+        {canEditDiagnosis && sortedConditions.length > 1 && encounter?.status !== "finished" && (
           <div className="mt-5 flex justify-end">
             <button
               type="button"
@@ -784,8 +795,8 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                   condition={condition}
                   codeLabel={conditionResolvedCodeLabel(condition, diagnosisCatalog)}
                   rank={rank}
-                  editing={editingId === condition.id}
-                  canShowEditing={canShowEditing}
+                  editing={canEditDiagnosis && editingId === condition.id}
+                  canShowEditing={canEditDiagnosis}
                   busy={busy}
                   provenanceLine={condition.id ? provenanceLines[condition.id] : undefined}
                   possible={verificationStatus(condition) === "provisional"}
@@ -822,7 +833,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
         {reorderOpen && encounter && (
           <ReorderImpressionsModal
             rows={buildReorderImpressionRows(encounter, conditions, attachedProcedures)}
-            busy={busy === "reorder"}
+            busy={!canEditDiagnosis || busy === "reorder"}
             attachmentError={reorderError ?? procedureAttachmentError}
             onCancel={() => setReorderOpen(false)}
             onSave={saveDiagnosisOrder}
@@ -1029,19 +1040,20 @@ function notifyEncounterDiagnosisUpdated(encounterReference: string): void {
   }));
 }
 
-async function loadDiagnosisCatalog(signal: AbortSignal): Promise<DiagnosisCatalogCodeRow[]> {
-  if (cachedDiagnosisCatalog) return cachedDiagnosisCatalog;
+async function fetchDiagnosisCatalog(signal?: AbortSignal): Promise<DiagnosisCatalogResponse> {
   const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-catalog`, {
     headers: authHeaders(),
     signal,
   });
-  const body = await response.json() as {
-    diagnoses?: DiagnosisCatalogCodeRow[];
-    error?: string;
-  };
+  const body = await response.json() as DiagnosisCatalogResponse;
   if (!response.ok) throw new Error(body.error ?? `Diagnosis catalog request failed: ${response.status}`);
   cachedDiagnosisCatalog = body.diagnoses ?? [];
-  return cachedDiagnosisCatalog;
+  return body;
+}
+
+async function loadDiagnosisCatalog(signal: AbortSignal): Promise<DiagnosisCatalogCodeRow[]> {
+  if (cachedDiagnosisCatalog) return cachedDiagnosisCatalog;
+  return (await fetchDiagnosisCatalog(signal)).diagnoses ?? [];
 }
 
 async function searchDiagnosisCodeOptions(query: string, signal: AbortSignal) {

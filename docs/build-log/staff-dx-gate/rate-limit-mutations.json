@@ -1,0 +1,73 @@
+{
+  "scratch": ".odos/staff-dx-gate/rate-limit-mutation-1yaCXH",
+  "retained": true,
+  "restoredDiffIdentical": true,
+  "results": [
+    {
+      "name": "rate-limit-mutation-diagnosis-picks-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "rate-limit-mutation-diagnosis-order-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "rate-limit-mutation-problem-status-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "rate-limit-mutation-status-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "rate-limit-mutation-newness-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "rate-limit-restored-green",
+      "exitCode": 0,
+      "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+      "counts": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  ]
+}

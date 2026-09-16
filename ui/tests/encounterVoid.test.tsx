@@ -441,7 +441,7 @@ test("count honesty: Dilation section preview, confirm, void result, section sub
     assert.deepEqual([...result!.voided].sort(), ["MedicationAdministration/ma1", "MedicationAdministration/ma2", "Observation/dfe"]);
     assert.equal(result?.sections.reduce((sum, section) => sum + section.count, 0), result?.count);
     assert.equal(result?.sections.find((section) => section.sectionKey === "entrance:dilation")?.count, 3);
-    assert.deepEqual(cleared, [result]);
+    assert.deepEqual(cleared, [{ ...result, canWriteDiagnosis: (result as Partial<EncounterVoidResult>)?.canWriteDiagnosis === true }]);
     assert.equal(fhir.get<ReturnType<typeof administration>>("MedicationAdministration", "ma1").status, "entered-in-error");
     assert.equal(fhir.get<ReturnType<typeof administration>>("MedicationAdministration", "ma2").status, "entered-in-error");
     assert.equal(fhir.get<ReturnType<typeof observation>>("Observation", "dfe").status, "entered-in-error");
@@ -499,7 +499,7 @@ test("count honesty: whole-visit preview, confirm, void result, section subtotal
     assert.deepEqual([...result!.voided].sort(), ["MedicationAdministration/ma1", "MedicationAdministration/ma2", "Observation/dfe", "Observation/today"]);
     assert.equal(result?.sections.reduce((sum, section) => sum + section.count, 0), result?.count);
     assert.equal(result?.sections.find((section) => section.sectionKey === "entrance:dilation")?.count, 3);
-    assert.deepEqual(cleared, [result]);
+    assert.deepEqual(cleared, [{ ...result, canWriteDiagnosis: (result as Partial<EncounterVoidResult>)?.canWriteDiagnosis === true }]);
     assert.equal(fhir.get<ReturnType<typeof administration>>("MedicationAdministration", "ma1").status, "entered-in-error");
     assert.equal(fhir.get<ReturnType<typeof administration>>("MedicationAdministration", "ma2").status, "entered-in-error");
     assert.equal(fhir.get<ReturnType<typeof observation>>("Observation", "dfe").status, "entered-in-error");
@@ -1366,3 +1366,45 @@ test("fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when
     }
   }
 });
+
+for (const scope of ["section", "encounter"] as const) {
+  for (const canWriteDiagnosis of [true, false, undefined]) {
+    for (const hasDiagnosis of [true, false]) {
+      test(`STAFF-DX-GATE ${scope} clear checks diagnosis impact before confirmation: ${canWriteDiagnosis}, diagnosis=${hasDiagnosis}`, async () => {
+        let writes = 0;
+        const fetchImpl: typeof fetch = async (_input, init) => {
+          const preview = JSON.parse(String(init?.body)).preview === true;
+          if (!preview) writes += 1;
+          return Response.json({ canWriteDiagnosis, preview, count: 1, voided: [hasDiagnosis ? "Condition/dx1" : "Observation/o1"], sections: [], entries: [] });
+        };
+        let renderer!: ReactTestRenderer;
+        await act(async () => {
+          renderer = create(<ConfirmDestructiveProvider><EncounterEditContext.Provider value={{ encounterStatus: "in-progress" }}>
+            {scope === "section"
+              ? <ClearSectionButton encounterReference={ENCOUNTER} sectionKey="assessment" label="Assessment" hasRecorded onCleared={() => undefined} fetchImpl={fetchImpl} />
+              : <ClearEncounterButton encounterReference={ENCOUNTER} encounterStatus="in-progress" onCleared={() => undefined} fetchImpl={fetchImpl} />}
+          </EncounterEditContext.Provider></ConfirmDestructiveProvider>);
+        });
+        try {
+          let pending!: Promise<void>;
+          await act(async () => {
+            pending = renderer.root.findByType("button").props.onClick();
+            await flush();
+          });
+          const allowed = !hasDiagnosis || canWriteDiagnosis === true;
+          const dialogs = renderer.root.findAllByProps({ role: "alertdialog" });
+          assert.equal(dialogs.length, allowed ? 1 : 0, "denied diagnosis clears never open a confirmation");
+          if (allowed) {
+            await act(async () => {
+              dialogs[0]!.findAllByType("button").find((button) => textOf(button) !== "Keep")!.props.onClick();
+              await pending;
+            });
+          } else {
+            await pending;
+          }
+          assert.equal(writes, allowed ? 1 : 0);
+        } finally { act(() => renderer.unmount()); }
+      });
+    }
+  }
+}

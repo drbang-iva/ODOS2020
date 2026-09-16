@@ -1,0 +1,24 @@
+{
+  "composeProject": "staff-dx-gate-live",
+  "ports": {
+    "medplum": 28980,
+    "postgres": 28981,
+    "redis": 28982,
+    "odos": 28983,
+    "ui": 28984,
+    "proof": 28985
+  },
+  "image": "medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de",
+  "health": {
+    "ok": true,
+    "version": "5.1.30-9b1bd92",
+    "platform": "linux",
+    "runtime": "v24.18.1",
+    "postgres": true,
+    "redis": true,
+    "redisInstances": {
+      "default": true
+    }
+  },
+  "baseHead": "40c19a9e442015e1d32396958b661394318713d2"
+}

@@ -44,11 +44,21 @@ export type EncounterUndoRequest =
   | { scope: "encounter" }
   | { scope: "section"; sectionKey: string };
 
+export interface EncounterUndoState {
+  ledger: EncounterUndoLedger;
+  canWriteDiagnosis: boolean;
+}
+
 export interface EncounterUndoResult {
+  canWriteDiagnosis?: boolean;
   restored: string[];
   count: number;
   skipped: string[];
   ledger: EncounterUndoLedger;
+}
+
+export function undoSlotRequiresDiagnosisWrite(slot: UndoLedgerSlot): boolean {
+  return slot.voided.some((entry) => entry.ref.startsWith("Condition/") || Boolean(entry.diagnosis));
 }
 
 export function emptyUndoLedger(encounterReferenceOrId: string): EncounterUndoLedger {
@@ -63,9 +73,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isEntry(value: unknown): value is UndoLedgerEntry {
+  return isRecord(value) &&
+    typeof value.ref === "string" && value.ref.length > 0 &&
+    typeof value.priorStatus === "string" && value.priorStatus.length > 0 &&
+    (value.clinicalStatus === undefined || typeof value.clinicalStatus === "string") &&
+    (value.diagnosis === undefined || (isRecord(value.diagnosis) && isRecord(value.diagnosis.condition)));
+}
+
 function isSlot(value: unknown): value is UndoLedgerSlot {
   return isRecord(value) &&
-    Array.isArray(value.voided) &&
+    Array.isArray(value.voided) && value.voided.every(isEntry) &&
     typeof value.label === "string" &&
     typeof value.count === "number" &&
     typeof value.at === "string";
@@ -90,17 +108,19 @@ export function parseUndoLedger(value: unknown, encounterReferenceOrId: string):
 export async function readEncounterUndoLedger(
   encounterReference: string,
   fetchImpl: typeof fetch = fetch,
-): Promise<EncounterUndoLedger> {
+): Promise<EncounterUndoState> {
   const id = encounterId(encounterReference);
+  const unavailable = { ledger: emptyUndoLedger(id), canWriteDiagnosis: false };
   try {
     const response = await fetchImpl(
       `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(id)}/void/ledger`,
       { headers: authHeaders() },
     );
-    if (!response.ok) return emptyUndoLedger(id);
-    return parseUndoLedger(await response.json(), id);
+    if (!response.ok) return unavailable;
+    const body: unknown = await response.json();
+    return { ledger: parseUndoLedger(body, id), canWriteDiagnosis: isRecord(body) && body.canWriteDiagnosis === true };
   } catch {
-    return emptyUndoLedger(id);
+    return unavailable;
   }
 }
 
@@ -123,6 +143,7 @@ export async function undoEncounterVoid(
     throw clinicalGraphResponseError(response, body, `Undo failed (${response.status}).`);
   }
   return {
+    canWriteDiagnosis: body.canWriteDiagnosis === true,
     restored: body.restored ?? [],
     count: body.count ?? 0,
     skipped: body.skipped ?? [],

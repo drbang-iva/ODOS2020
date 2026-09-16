@@ -67,11 +67,14 @@ export function DiagnosisPicker({
   const encounterId = encounterReference.replace(/^Encounter\//, "");
   const observationKey = observationReferences?.join("|") ?? "";
   const loadScopeKey = [encounterReference, findingDefinitionKey, mode, observationKey, refreshKey].join("\u0000");
+  const [diagnosisCapability, setDiagnosisCapability] = useState<{ scopeKey: string; allowed: boolean }>();
+  const canWriteDiagnosis = diagnosisCapability?.scopeKey === loadScopeKey && diagnosisCapability.allowed;
   const currentLoadScopeKey = useRef(loadScopeKey);
   currentLoadScopeKey.current = loadScopeKey;
 
   async function load(signal?: AbortSignal) {
     setDiagnosisDemotionImpact(undefined);
+    setDiagnosisCapability(undefined);
     const requestVersion = ++loadVersion.current;
     try {
       const [candidateFindings, catalogResponse, conditions] = await Promise.all([
@@ -81,7 +84,7 @@ export function DiagnosisPicker({
           ? searchAll<Condition>(fhir, "Condition", { encounter: encounterReference })
           : Promise.resolve([]),
       ]);
-      const catalogBody = await catalogResponse.json() as { diagnoses?: CatalogRow[]; error?: string };
+      const catalogBody = await catalogResponse.json() as { diagnoses?: CatalogRow[]; canWriteDiagnosis?: boolean; error?: string };
       if (!catalogResponse.ok) throw new Error(catalogBody.error ?? `Diagnosis catalog request failed: ${catalogResponse.status}`);
       if (signal?.aborted || requestVersion !== loadVersion.current) return;
       const allowedObservations = new Set(observationReferences ?? []);
@@ -95,6 +98,7 @@ export function DiagnosisPicker({
         (allowedObservations.size === 0 || Boolean(finding.observationReference && allowedObservations.has(finding.observationReference)))
       ));
       setCatalog((catalogBody.diagnoses ?? []).filter((row) => row.active));
+      setDiagnosisCapability({ scopeKey: loadScopeKey, allowed: catalogBody.canWriteDiagnosis === true });
       setProposedConditions(conditions.filter(isProvisional));
       setError(null);
     } catch (err) {
@@ -133,6 +137,7 @@ export function DiagnosisPicker({
   }, [catalog]);
 
   async function pick(finding: CandidateFinding, diagnosisKey: string, action: "possible" | "confirm" | "discard", source: Candidate["source"] | "catalog-search") {
+    if (!canWriteDiagnosis) return;
     const actionLoadScopeKey = loadScopeKey;
     setBusy(`${finding.findingInstanceId}:${diagnosisKey}:${action}`);
     setError(null);
@@ -191,7 +196,7 @@ export function DiagnosisPicker({
                       display={candidate.display}
                       code={catalogCode(candidate)}
                       proposed={proposed}
-                      busy={busy !== null}
+                      busy={!canWriteDiagnosis || busy !== null}
                       onToggle={() => pick(finding, candidate.diagnosisKey, proposed ? "discard" : "possible", candidate.source)}
                     />;
                   })}
@@ -205,6 +210,7 @@ export function DiagnosisPicker({
                 selectedLabel={proposalCatalogSelections[finding.findingInstanceId]?.display}
                 placeholder="Search full diagnosis catalog"
                 search={searchCatalog}
+                disabled={!canWriteDiagnosis || busy !== null}
                 onClear={() => setProposalCatalogSelections((current) => {
                   const next = { ...current };
                   delete next[finding.findingInstanceId];
@@ -223,7 +229,7 @@ export function DiagnosisPicker({
                     display={selected.display}
                     code={catalogCode(selected)}
                     proposed={proposed}
-                    busy={busy !== null}
+                    busy={!canWriteDiagnosis || busy !== null}
                     onToggle={() => pick(finding, selected.stableKey, proposed ? "discard" : "possible", "catalog-search")}
                   />
                 </div>;
@@ -263,7 +269,7 @@ export function DiagnosisPicker({
                   display={candidate.display}
                   code={catalogCode(candidate)}
                   codingStatus={candidate.codingStatus}
-                  busy={busy !== null}
+                  busy={!canWriteDiagnosis || busy !== null}
                   onPossible={() => pick(finding, candidate.diagnosisKey, "possible", candidate.source)}
                   onConfirm={() => pick(finding, candidate.diagnosisKey, "confirm", candidate.source)}
                 />
@@ -291,7 +297,7 @@ export function DiagnosisPicker({
                     display={candidate.display}
                     code={catalogCode(candidate)}
                     codingStatus={candidate.codingStatus}
-                    busy={busy !== null}
+                    busy={!canWriteDiagnosis || busy !== null}
                     onPossible={() => pick(finding, candidate.diagnosisKey, "possible", candidate.source)}
                     onConfirm={() => pick(finding, candidate.diagnosisKey, "confirm", candidate.source)}
                   />
@@ -304,6 +310,7 @@ export function DiagnosisPicker({
                   selectedLabel={catalogSelection?.display}
                   placeholder="Search full diagnosis catalog"
                   search={searchCatalog}
+                  disabled={!canWriteDiagnosis || busy !== null}
                   onClear={() => setCatalogSelection(undefined)}
                   onSelect={(option) => setCatalogSelection(option.item)}
                 />
@@ -313,7 +320,7 @@ export function DiagnosisPicker({
                       display={catalogSelection.display}
                       code={catalogCode(catalogSelection)}
                       codingStatus={catalogSelection.codingStatus}
-                      busy={busy !== null}
+                      busy={!canWriteDiagnosis || busy !== null}
                       onPossible={() => pick(finding, catalogSelection.stableKey, "possible", "catalog-search")}
                       onConfirm={() => pick(finding, catalogSelection.stableKey, "confirm", "catalog-search")}
                     />

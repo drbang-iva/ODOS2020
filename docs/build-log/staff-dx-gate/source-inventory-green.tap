@@ -1,0 +1,176 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/findingDefinitionStore.test.ts ../tests/preflight/fhir-read-grant-check.test.ts
+
+TAP version 13
+# Subtest: FHIR read grant scan collects every literal FHIR receiver and requires the search-contract marker for computed searches
+ok 1 - FHIR read grant scan collects every literal FHIR receiver and requires the search-contract marker for computed searches
+  ---
+  duration_ms: 385.780834
+  type: 'test'
+  ...
+# Subtest: FHIR operation scan maps every write interaction to its required Medplum grant
+ok 2 - FHIR operation scan maps every write interaction to its required Medplum grant
+  ---
+  duration_ms: 1.001958
+  type: 'test'
+  ...
+# Subtest: the PR 397 tally create fails grant comparison when its exact profile fence is absent
+ok 3 - the PR 397 tally create fails grant comparison when its exact profile fence is absent
+  ---
+  duration_ms: 0.996209
+  type: 'test'
+  ...
+# Subtest: the exact write ratchet rejects a stale entry instead of silently forgiving it
+ok 4 - the exact write ratchet rejects a stale entry instead of silently forgiving it
+  ---
+  duration_ms: 0.19675
+  type: 'test'
+  ...
+# Subtest: the service-identity write inventory rejects an exact ui/src relocation
+ok 5 - the service-identity write inventory rejects an exact ui/src relocation
+  ---
+  duration_ms: 0.151208
+  type: 'test'
+  ...
+# Subtest: FHIR read grant comparison reports the exact sorted subset gap
+ok 6 - FHIR read grant comparison reports the exact sorted subset gap
+  ---
+  duration_ms: 0.097333
+  type: 'test'
+  ...
+# Subtest: an explicitly reasoned non-FHIR literal call site does not manufacture a grant demand
+ok 7 - an explicitly reasoned non-FHIR literal call site does not manufacture a grant demand
+  ---
+  duration_ms: 0.329083
+  type: 'test'
+  ...
+# Subtest: live FHIR read grant check covers all four chart resources through compiled role policies
+ok 8 - live FHIR read grant check covers all four chart resources through compiled role policies
+  ---
+  duration_ms: 855.741959
+  type: 'test'
+  ...
+# Subtest: FHIR read grant CLI passes only with full coverage and always prints its limits
+ok 9 - FHIR read grant CLI passes only with full coverage and always prints its limits
+  ---
+  duration_ms: 1320.553333
+  type: 'test'
+  ...
+# Subtest: an ungranted FHIR create in mcp source makes the CLI fail with its interaction and resource type
+ok 10 - an ungranted FHIR create in mcp source makes the CLI fail with its interaction and resource type
+  ---
+  duration_ms: 1294.811458
+  type: 'test'
+  ...
+# Subtest: an ungranted FHIR create in ui tsx makes the CLI fail with its interaction and resource type
+ok 11 - an ungranted FHIR create in ui tsx makes the CLI fail with its interaction and resource type
+  ---
+  duration_ms: 1297.895167
+  type: 'test'
+  ...
+# Subtest: serviceFhir read of an ungranted non-plumbing resource makes the CLI fail with its name
+ok 12 - serviceFhir read of an ungranted non-plumbing resource makes the CLI fail with its name
+  ---
+  duration_ms: 1308.517083
+  type: 'test'
+  ...
+# Subtest: an ungranted FHIR read in ui/src makes the CLI fail with its name
+ok 13 - an ungranted FHIR read in ui/src makes the CLI fail with its name
+  ---
+  duration_ms: 1300.042167
+  type: 'test'
+  ...
+# Subtest: a marked computed search helper carries literal resource types across source files
+ok 14 - a marked computed search helper carries literal resource types across source files
+  ---
+  duration_ms: 0.557375
+  type: 'test'
+  ...
+# Subtest: finding definitions persist as one coded Basic carrying the interface JSON verbatim
+ok 15 - finding definitions persist as one coded Basic carrying the interface JSON verbatim
+  ---
+  duration_ms: 11.938958
+  type: 'test'
+  ...
+# Subtest: E2 seeds ten entrance definitions with canonical Pachymetry and declarative documentation elements
+ok 16 - E2 seeds ten entrance definitions with canonical Pachymetry and declarative documentation elements
+  ---
+  duration_ms: 6.170333
+  type: 'test'
+  ...
+# Subtest: DE-1 seeds seven new definitions and references the one existing TBUT stable key as the eighth workup section
+ok 17 - DE-1 seeds seven new definitions and references the one existing TBUT stable key as the eighth workup section
+  ---
+  duration_ms: 6.368041
+  type: 'test'
+  ...
+# Subtest: stored rows override compiled seeds by stableKey and survive a store restart
+ok 18 - stored rows override compiled seeds by stableKey and survive a store restart
+  ---
+  duration_ms: 6.464334
+  type: 'test'
+  ...
+# Subtest: a persisted practice option drives capture validation through the runtime dependency
+ok 19 - a persisted practice option drives capture validation through the runtime dependency
+  ---
+  duration_ms: 8.144041
+  type: 'test'
+  ...
+# Subtest: saving again updates the same Basic and deactivation materializes active false
+ok 20 - saving again updates the same Basic and deactivation materializes active false
+  ---
+  duration_ms: 5.843709
+  type: 'test'
+  ...
+# Subtest: save re-searches before create and updates a competing row that appeared
+ok 21 - save re-searches before create and updates a competing row that appeared
+  ---
+  duration_ms: 5.983875
+  type: 'test'
+  ...
+# Subtest: bad rows are skipped and duplicates resolve by lastUpdated then id
+ok 22 - bad rows are skipped and duplicates resolve by lastUpdated then id
+  ---
+  duration_ms: 10.603291
+  type: 'test'
+  ...
+# Subtest: a handler still receives working definitions when one stored row is garbage
+ok 23 - a handler still receives working definitions when one stored row is garbage
+  ---
+  duration_ms: 7.424542
+  type: 'test'
+  ...
+# Subtest: every definition-backed clinical-graph HTTP closure receives the persistent dependency
+ok 24 - every definition-backed clinical-graph HTTP closure receives the persistent dependency
+  ---
+  duration_ms: 2.315959
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 1: dilation permits deferral
+ok 25 - DEFER-1 guard 1: dilation permits deferral
+  ---
+  duration_ms: 5.761958
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 2: the complete seed has exactly one deferrable definition
+ok 26 - DEFER-1 guard 2: the complete seed has exactly one deferrable definition
+  ---
+  duration_ms: 5.731583
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 3: stateDefinition factory output does not grant deferral
+ok 27 - DEFER-1 guard 3: stateDefinition factory output does not grant deferral
+  ---
+  duration_ms: 6.396167
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8072.745875

@@ -11,6 +11,7 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import { fhir, type JsonPatchOperation } from "./fhir";
+import { authHeaders, clinicalGraphApiBase, clinicalGraphResponseError, type ClinicalGraphErrorBody } from "./clinical-graph-client";
 import { buildEyeBodyStructure } from "./fhir-ophthalmology/bodyStructure";
 import {
   buildAllergyIntolerance,
@@ -281,25 +282,18 @@ export async function updateEncounterDiagnosisProblemStatus(input: {
   condition: Condition;
   problemStatus: MdmProblemStatus;
 }): Promise<Encounter> {
-  const updated = await fhir.patch<Encounter>(
-    "Encounter",
-    requiredId(input.encounter),
-    encounterDiagnosisProblemStatusPatchOperations(
-      input.encounter,
-      input.condition,
-      input.problemStatus,
-    ),
-    "update_encounter_diagnosis_problem_status",
-    requiredVersion(input.encounter),
+  const response = await fetch(
+    `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(requiredId(input.encounter))}/diagnoses/${encodeURIComponent(requiredId(input.condition))}/problem-status`,
+    {
+      method: "PUT",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ problemStatus: input.problemStatus, expectedEncounterVersion: requiredVersion(input.encounter) }),
+    },
   );
-  await createUiProvenance(
-    "update_encounter_diagnosis_problem_status",
-    [`Encounter/${updated.id}`, `Condition/${requiredId(input.condition)}`],
-    "UPDATE",
-    undefined,
-    requiredPatientReference(input.condition),
-  );
-  return updated;
+  const body = await response.json() as { encounter?: Encounter } & ClinicalGraphErrorBody;
+  if (!response.ok) throw clinicalGraphResponseError(response, body, `Diagnosis problem status update failed: ${response.status}`);
+  if (!body.encounter) throw new Error("Diagnosis problem status update returned no encounter.");
+  return body.encounter;
 }
 
 export async function updateConditionBodySite(input: {

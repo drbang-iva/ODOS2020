@@ -1,0 +1,60 @@
+TAP version 13
+# The above error occurred in the <UndoStrip> component:
+#     at UndoStrip (<worktree>/ui/src/components/charting/UndoStrip.tsx:19:3)
+# Consider adding an error boundary to your tree to customize error handling behavior.
+# Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+# Subtest: undo ledger rejects an entire slot containing an invalid entry before rendering
+not ok 1 - undo ledger rejects an entire slot containing an invalid entry before rendering
+  ---
+  duration_ms: 11.650792
+  type: 'test'
+  location: '<worktree>/ui/tests/encounterUndo.test.tsx:1:2118'
+  failureType: 'testCodeFailure'
+  error: 'React is not defined'
+  code: 'ERR_TEST_FAILURE'
+  name: 'ReferenceError'
+  stack: |-
+    UndoStrip (<worktree>/ui/src/components/charting/UndoStrip.tsx:53:3)
+    renderWithHooks (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5608:18)
+    mountIndeterminateComponent (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9884:13)
+    beginWork (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11351:16)
+    performUnitOfWork (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15850:12)
+    workLoopSync (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15784:5)
+    renderRootSync (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15756:7)
+    performSyncWorkOnRoot (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15461:20)
+    flushSyncCallbacks (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+    flushActQueue (<checkout>/ui/node_modules/react/cjs/react.development.js:2667:24)
+  ...
+# Subtest: Undo ignores a previous encounter's late clear-failure
+ok 2 - Undo ignores a previous encounter's late clear-failure
+  ---
+  duration_ms: 73.476583
+  type: 'test'
+  ...
+# Subtest: Undo ignores a previous encounter's late ledger-response
+ok 3 - Undo ignores a previous encounter's late ledger-response
+  ---
+  duration_ms: 32.754167
+  type: 'test'
+  ...
+# Subtest: Undo ignores a previous encounter's late undo-click
+ok 4 - Undo ignores a previous encounter's late undo-click
+  ---
+  duration_ms: 21.718
+  type: 'test'
+  ...
+# Subtest: Undo ignores a previous encounter's late undo-response
+ok 5 - Undo ignores a previous encounter's late undo-response
+  ---
+  duration_ms: 20.733458
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 4
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 387.871917

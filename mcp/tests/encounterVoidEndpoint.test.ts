@@ -23,6 +23,26 @@ import {
 // Mandate 17 guard 1 — the sign gate
 // ---------------------------------------------------------------------------
 
+test("staff may preview a diagnosis clear but cannot write it, while finding-only clears remain allowed", async () => {
+  const { deps, fhir } = fixture({ role: "staff", diagnoses: ["Condition/c1"] });
+  fhir.add(condition("c1"));
+  fhir.add(observation("pupil", "entrance:pupils", "OD", { status: "preliminary" }));
+  const input = { authHeader: AUTH, params: { encounterId: "e1" }, body: { scope: "encounter", preview: true } };
+  const preview = await handleEncounterVoidRequest(deps, input);
+  assert.equal(preview.status, 200);
+  assert.equal((preview.body as { canWriteDiagnosis: boolean }).canWriteDiagnosis, false);
+  assert.equal(fhir.transactions.length, 0);
+  const refused = await handleEncounterVoidRequest(deps, { ...input, body: { scope: "encounter" } });
+  assert.equal(fhir.transactions.length, 0);
+  assert.equal(refused.status, 403);
+  const allowed = await handleEncounterVoidRequest(deps, {
+    ...input, body: { scope: "section", sectionKey: "entrance:pupils" },
+  });
+  assert.equal(allowed.status, 200);
+  assert.equal(fhir.transactions.length, 1);
+  assert.equal(fhir.get<Observation>("Observation", "pupil").status, "entered-in-error");
+});
+
 test("guard 1: void against a finished encounter returns 409 and writes nothing", async () => {
   const { deps, fhir } = fixture({ encounterStatus: "finished" });
   fhir.add(cvf("o1", "OD"));

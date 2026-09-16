@@ -1,0 +1,120 @@
+{
+  "checkedAt": "2026-09-16T01:10:07.573Z",
+  "removed": false,
+  "containers": [
+    {
+      "name": "staff-dx-gate-live-medplum-1",
+      "Status": "exited",
+      "Running": false,
+      "Paused": false,
+      "Restarting": false,
+      "OOMKilled": false,
+      "Dead": false,
+      "Pid": 0,
+      "ExitCode": 0,
+      "Error": "",
+      "StartedAt": "2026-09-16T01:09:50.921849091Z",
+      "FinishedAt": "2026-09-16T01:10:07.42890884Z"
+    },
+    {
+      "name": "staff-dx-gate-live-postgres-1",
+      "Status": "exited",
+      "Running": false,
+      "Paused": false,
+      "Restarting": false,
+      "OOMKilled": false,
+      "Dead": false,
+      "Pid": 0,
+      "ExitCode": 0,
+      "Error": "",
+      "StartedAt": "2026-09-16T01:09:49.31482908Z",
+      "FinishedAt": "2026-09-16T01:10:07.336505193Z",
+      "Health": {
+        "Status": "unhealthy",
+        "FailingStreak": 0,
+        "Log": [
+          {
+            "Start": "2026-09-15T21:10:02.657011897-04:00",
+            "End": "2026-09-15T21:10:02.67999585-04:00",
+            "ExitCode": 0,
+            "Output": "/var/run/postgresql:5432 - accepting connections\n"
+          },
+          {
+            "Start": "2026-09-15T21:10:03.68140975-04:00",
+            "End": "2026-09-15T21:10:03.700698815-04:00",
+            "ExitCode": 0,
+            "Output": "/var/run/postgresql:5432 - accepting connections\n"
+          },
+          {
+            "Start": "2026-09-15T21:10:04.702838466-04:00",
+            "End": "2026-09-15T21:10:04.721528946-04:00",
+            "ExitCode": 0,
+            "Output": "/var/run/postgresql:5432 - accepting connections\n"
+          },
+          {
+            "Start": "2026-09-15T21:10:05.722324134-04:00",
+            "End": "2026-09-15T21:10:05.74183745-04:00",
+            "ExitCode": 0,
+            "Output": "/var/run/postgresql:5432 - accepting connections\n"
+          },
+          {
+            "Start": "2026-09-15T21:10:06.742868138-04:00",
+            "End": "2026-09-15T21:10:06.760091738-04:00",
+            "ExitCode": 0,
+            "Output": "/var/run/postgresql:5432 - accepting connections\n"
+          }
+        ]
+      }
+    },
+    {
+      "name": "staff-dx-gate-live-redis-1",
+      "Status": "exited",
+      "Running": false,
+      "Paused": false,
+      "Restarting": false,
+      "OOMKilled": false,
+      "Dead": false,
+      "Pid": 0,
+      "ExitCode": 0,
+      "Error": "",
+      "StartedAt": "2026-09-16T01:09:49.314493454Z",
+      "FinishedAt": "2026-09-16T01:10:07.468558891Z",
+      "Health": {
+        "Status": "unhealthy",
+        "FailingStreak": 0,
+        "Log": [
+          {
+            "Start": "2026-09-15T21:10:02.656982105-04:00",
+            "End": "2026-09-15T21:10:02.677112632-04:00",
+            "ExitCode": 0,
+            "Output": "PONG\n"
+          },
+          {
+            "Start": "2026-09-15T21:10:03.681370208-04:00",
+            "End": "2026-09-15T21:10:03.699659353-04:00",
+            "ExitCode": 0,
+            "Output": "PONG\n"
+          },
+          {
+            "Start": "2026-09-15T21:10:04.702734549-04:00",
+            "End": "2026-09-15T21:10:04.721072195-04:00",
+            "ExitCode": 0,
+            "Output": "PONG\n"
+          },
+          {
+            "Start": "2026-09-15T21:10:05.722361884-04:00",
+            "End": "2026-09-15T21:10:05.73828273-04:00",
+            "ExitCode": 0,
+            "Output": "PONG\n"
+          },
+          {
+            "Start": "2026-09-15T21:10:06.73954146-04:00",
+            "End": "2026-09-15T21:10:06.758544233-04:00",
+            "ExitCode": 0,
+            "Output": "PONG\n"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -37,6 +37,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
+import { rateLimit } from "express-rate-limit";
 import { isIP } from "node:net";
 import { z } from "zod";
 import {
@@ -298,7 +299,7 @@ import {
 } from "./clinical-graph/diagnosis-quick-list-endpoint.js";
 import { handleDiagnosisCompletenessRequest } from "./clinical-graph/diagnosis-completeness-endpoint.js";
 import { handleExamOverviewRequest } from "./clinical-graph/exam-overview-endpoint.js";
-import { handleDiagnosisOrderRequest } from "./clinical-graph/diagnosis-order-endpoint.js";
+import { handleDiagnosisOrderRequest, handleDiagnosisProblemStatusRequest } from "./clinical-graph/diagnosis-order-endpoint.js";
 import { handleDiagnosisPickRequest } from "./clinical-graph/diagnosis-pick-endpoint.js";
 import {
   handleDiagnosisVisitStatusListRequest,
@@ -6410,7 +6411,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         fhirBaseUrl: BASE_URL,
         rollbackFhir: fhir,
         authenticate: authenticateStaffRouteForAction("chart.read"),
-        authenticateWrite: authenticateStaffRouteForAction("chart.write"),
+        authenticateWrite: authenticateStaffRouteForAction("chart.diagnosis.write"),
       });
 
       app.put("/clinical-graph/encounters/:encounterId/findings", async (req, res) => {
@@ -6463,12 +6464,20 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }
       });
 
-      app.post("/clinical-graph/encounters/:encounterId/diagnosis-picks", async (req, res) => {
+      const diagnosisWriteLimit = rateLimit({
+        windowMs: 60_000,
+        limit: 120,
+        standardHeaders: "draft-8",
+        legacyHeaders: false,
+        message: { error: "Too many diagnosis requests. Try again shortly." },
+      });
+
+      app.post("/clinical-graph/encounters/:encounterId/diagnosis-picks", diagnosisWriteLimit, async (req, res) => {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisPickRequest(
             {
-              authenticate: authenticateStaffRouteForAction("chart.write"),
+              authenticate: authenticateStaffRouteForAction("chart.diagnosis.write"),
               diagnosisVisitStatusStore,
             },
             { authHeader: req.header("authorization"), params: req.params, body: req.body },
@@ -6480,11 +6489,11 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }
       });
 
-      app.put("/clinical-graph/encounters/:encounterId/diagnosis-order", async (req, res) => {
+      app.put("/clinical-graph/encounters/:encounterId/diagnosis-order", diagnosisWriteLimit, async (req, res) => {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisOrderRequest(
-            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            { authenticate: authenticateStaffRouteForAction("chart.diagnosis.write") },
             { authHeader: req.header("authorization"), params: req.params, body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -6511,12 +6520,26 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }
       });
 
-      app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/status", async (req, res) => {
+      app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/problem-status", diagnosisWriteLimit, async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisProblemStatusRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.diagnosis.write") },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: diagnosis complexity update failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis complexity update failed" });
+        }
+      });
+
+      app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/status", diagnosisWriteLimit, async (req, res) => {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisVisitStatusUpdateRequest(
             {
-              authenticate: authenticateStaffRouteForAction("chart.write"),
+              authenticate: authenticateStaffRouteForAction("chart.diagnosis.write"),
               store: diagnosisVisitStatusStore,
             },
             { authHeader: req.header("authorization"), params: req.params, body: req.body },
@@ -6542,11 +6565,11 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }
       });
 
-      app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/newness", async (req, res) => {
+      app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/newness", diagnosisWriteLimit, async (req, res) => {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisNewnessUpdateRequest(
-            { authenticate: authenticateStaffRouteForAction("chart.write"), store: diagnosisVisitStatusStore },
+            { authenticate: authenticateStaffRouteForAction("chart.diagnosis.write"), store: diagnosisVisitStatusStore },
             { authHeader: req.header("authorization"), params: req.params, body: req.body },
           );
           res.status(result.status).json(result.body);

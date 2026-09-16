@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-09-16T00:45:12.748Z",
+  "originalBase": "40c19a9e442015e1d32396958b661394318713d2",
+  "originMain": "5f0a67922eb2bcf52a2ab60f99a9dbb810fad384",
+  "rebased": true,
+  "rebaseConflicts": false,
+  "implementationCommit": "d7564d14c126f596b338c23cd124fc29a2a03cda",
+  "roleTable": {
+    "tests": 22,
+    "pass": 20,
+    "fail": 0,
+    "skipped": 2,
+    "output": "role-table-rebased.tap"
+  },
+  "pr607": {
+    "headRefOid": "e0cbcbf228b333e220768891cd9bca0f8e696c74",
+    "mergeStateStatus": "UNKNOWN",
+    "mergedAt": "2026-09-16T00:33:31Z",
+    "number": 607,
+    "state": "MERGED"
+  }
+}

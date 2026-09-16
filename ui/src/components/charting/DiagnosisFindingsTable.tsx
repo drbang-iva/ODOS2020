@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  canMutateDiagnosisFinding,
   orderedFindingRows,
   orderedFindingSearchRows,
   type AtomicFindingCatalogRow,
@@ -35,6 +36,11 @@ export function DiagnosisFindingsTable({
       .slice(0, 12);
   }, [payload.catalog, payload.diagnosis?.stableKey, query]);
 
+  function mutate(mutation: DiagnosisFindingMutation) {
+    if (disabled || !canMutateDiagnosisFinding(payload, mutation)) return;
+    return onMutate(mutation);
+  }
+
   return (
     <section className="odos-diagnosis-findings" aria-labelledby="diagnosis-findings-heading">
       <div className="odos-diagnosis-findings-heading">
@@ -63,7 +69,8 @@ export function DiagnosisFindingsTable({
                 patientReference={patientReference}
                 conditionReference={conditionReference}
                 disabled={disabled || !payload.canWrite}
-                onMutate={onMutate}
+                diagnosisDisabled={disabled || !payload.canWrite || payload.canWriteDiagnosis !== true}
+                onMutate={mutate}
               />
             ))}
           </tbody>
@@ -85,8 +92,8 @@ export function DiagnosisFindingsTable({
               <button
                 type="button"
                 key={row.atomicFindingId}
-                disabled={disabled || !payload.canWrite}
-                onClick={() => void onMutate(assertMutation(row, patientReference, conditionReference, "present"))}
+                disabled={disabled || !payload.canWrite || payload.canWriteDiagnosis !== true}
+                onClick={() => void mutate(assertMutation(row, patientReference, conditionReference, "present"))}
               >
                 <span>{row.display}</span>
                 <small>{row.sectionKey}</small>
@@ -104,12 +111,14 @@ function FindingRow({
   patientReference,
   conditionReference,
   disabled,
+  diagnosisDisabled,
   onMutate,
 }: {
   row: EncounterFindingRow;
   patientReference: string;
   conditionReference: string;
   disabled: boolean;
+  diagnosisDisabled: boolean;
   onMutate: FindingsTableProps["onMutate"];
 }) {
   const charted = Boolean(row.observationReference && row.presence);
@@ -137,7 +146,7 @@ function FindingRow({
             className={row.presence === "present" ? "is-selected is-present" : ""}
             aria-label={row.presence === "present" ? `Clear present ${row.display}` : `Record ${row.display} present`}
             aria-pressed={row.presence === "present"}
-            disabled={disabled}
+            disabled={diagnosisDisabled}
             onClick={() => void onMutate(row.presence === "present" && row.observationReference
               ? clearMutation(row.observationReference, patientReference)
               : assertMutation(row, patientReference, conditionReference, "present"))}
@@ -147,7 +156,7 @@ function FindingRow({
             className={row.presence === "absent" ? "is-selected is-absent" : ""}
             aria-label={row.presence === "absent" ? `Clear absent ${row.display}` : `Record ${row.display} absent`}
             aria-pressed={row.presence === "absent"}
-            disabled={disabled}
+            disabled={diagnosisDisabled}
             onClick={() => void onMutate(row.presence === "absent" && row.observationReference
               ? clearMutation(row.observationReference, patientReference)
               : assertMutation(row, patientReference, conditionReference, "absent"))}
@@ -246,7 +255,7 @@ export function UnassignedFindingsTray({
                   className="odos-unassigned-finding-suggestion"
                   disabled={disabled}
                   aria-label={`Add suggested diagnosis ${suggestion.display}`}
-                  onClick={() => onSuggest?.(suggestion, suggestionFinding.findingInstanceId)}
+                  onClick={() => !disabled && onSuggest?.(suggestion, suggestionFinding.findingInstanceId)}
                 >{suggestion.display}</button>
               ))}
             </div>
@@ -258,7 +267,7 @@ export function UnassignedFindingsTray({
                 key={diagnosis.conditionReference}
                 disabled={disabled}
                 aria-label={`Assign ${row.display} to ${diagnosis.display}`}
-                onClick={() => void onMutate({
+                onClick={() => !disabled && void onMutate({
                   action: "assign",
                   patientReference,
                   observationReference: row.observationReference!,
@@ -270,7 +279,7 @@ export function UnassignedFindingsTray({
               type="button"
               disabled={disabled}
               aria-label={`Record ${row.display} standalone`}
-              onClick={() => void onMutate({
+              onClick={() => !disabled && void onMutate({
                 action: "standalone",
                 patientReference,
                 observationReference: row.observationReference!,

@@ -1,0 +1,84 @@
+TAP version 13
+# Subtest: undo ledger rejects an entire slot containing an invalid entry before rendering
+not ok 1 - undo ledger rejects an entire slot containing an invalid entry before rendering
+  ---
+  duration_ms: 10.050042
+  type: 'test'
+  location: '<worktree>/.odos/staff-dx-gate/undo-review-mutation-hpTB2P/ui/tests/encounterUndo.test.tsx:1:2118'
+  failureType: 'testCodeFailure'
+  error: |-
+    null
+    + actual - expected
+    
+    + {
+    +   at: '2026-09-01T15:00:00.000Z',
+    +   count: 6,
+    +   label: 'Pupils',
+    +   scope: 'section',
+    +   sectionKeys: [
+    +     'entrance:pupils'
+    +   ],
+    +   voided: [
+    +     {
+    +       priorStatus: 'final',
+    +       ref: 'Observation/o1'
+    +     },
+    +     null
+    +   ]
+    + }
+    - null
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+    voided:
+      0:
+        ref: 'Observation/o1'
+        priorStatus: 'final'
+      1: ~
+    label: 'Pupils'
+    count: 6
+    at: '2026-09-01T15:00:00.000Z'
+    sectionKeys:
+      0: 'entrance:pupils'
+    scope: 'section'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/.odos/staff-dx-gate/undo-review-mutation-hpTB2P/ui/tests/encounterUndo.test.tsx:71:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: Undo ignores a previous encounter's late clear-failure
+ok 2 - Undo ignores a previous encounter's late clear-failure
+  ---
+  duration_ms: 80.493
+  type: 'test'
+  ...
+# Subtest: Undo ignores a previous encounter's late ledger-response
+ok 3 - Undo ignores a previous encounter's late ledger-response
+  ---
+  duration_ms: 37.014459
+  type: 'test'
+  ...
+# Subtest: Undo ignores a previous encounter's late undo-click
+ok 4 - Undo ignores a previous encounter's late undo-click
+  ---
+  duration_ms: 24.58025
+  type: 'test'
+  ...
+# Subtest: Undo ignores a previous encounter's late undo-response
+ok 5 - Undo ignores a previous encounter's late undo-response
+  ---
+  duration_ms: 23.607708
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 4
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 502.79125

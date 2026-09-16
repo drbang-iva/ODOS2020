@@ -1,0 +1,39 @@
+{
+  "template": "docs/build-log/guarantor-g2b1/live-fixture.mjs",
+  "sha256": "72b9a011e51518e2b41edea6ed50ea3cbdd9b34d9e2f50437170cd6bcb63b11d",
+  "replacements": [
+    [
+      "'g2b1-build-live'",
+      "'staff-dx-gate-live'"
+    ],
+    [
+      "'10.249.60.0/24'",
+      "'10.249.78.0/24'"
+    ],
+    [
+      "28760",
+      "28980"
+    ],
+    [
+      "28761",
+      "28981"
+    ],
+    [
+      "28762",
+      "28982"
+    ],
+    [
+      "28763",
+      "28983"
+    ],
+    [
+      "28764",
+      "28984"
+    ],
+    [
+      "28765",
+      "28985"
+    ]
+  ],
+  "generatedPath": ".odos/staff-dx-gate/fixture/live-fixture.mjs"
+}

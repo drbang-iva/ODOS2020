@@ -1,0 +1,59 @@
+{
+  "base": "40c19a9e442015e1d32396958b661394318713d2",
+  "ui_diff_sha256_before": "9f6d6f0f7f47a4249968f22f5afb33a6b8de27135186665cfb8a268fa80839ad",
+  "ui_diff_sha256_restored": "9f6d6f0f7f47a4249968f22f5afb33a6b8de27135186665cfb8a268fa80839ad",
+  "results": [
+    {
+      "mutation": "workspace",
+      "file": "ui/src/components/charting/DiagnosisWorkspace.tsx",
+      "before": "const canWriteDiagnosis = diagnosisCapability?.encounterId === encounterId && diagnosisCapability.allowed;",
+      "after": "const canWriteDiagnosis = true;",
+      "verified_landed": true,
+      "exit": 1,
+      "summary": [
+        "# tests 3",
+        "# pass 1",
+        "# fail 2"
+      ]
+    },
+    {
+      "mutation": "findings",
+      "file": "ui/src/lib/diagnosis-findings.ts",
+      "before": "return payload.canWrite === true && (\n",
+      "after": "return payload.canWrite === true && (true ||\n",
+      "verified_landed": true,
+      "exit": 1,
+      "summary": [
+        "# tests 3",
+        "# pass 1",
+        "# fail 2"
+      ]
+    },
+    {
+      "mutation": "assessment-freshness",
+      "file": "ui/src/components/charting/AssessmentSection.tsx",
+      "before": "fetchDiagnosisCatalog().catch(() => ({ canWriteDiagnosis: false, diagnoses: cachedDiagnosisCatalog }))",
+      "after": "Promise.resolve({ canWriteDiagnosis: true, diagnoses: cachedDiagnosisCatalog })",
+      "verified_landed": true,
+      "exit": 1,
+      "summary": [
+        "# tests 3",
+        "# pass 0",
+        "# fail 3"
+      ]
+    },
+    {
+      "mutation": "undo-route",
+      "file": "ui/src/scenes/EncounterCharting.tsx",
+      "before": "setUndoDiagnosisCapability(detail.result.canWriteDiagnosis === true);",
+      "after": "setUndoDiagnosisCapability(false);",
+      "verified_landed": true,
+      "exit": 1,
+      "summary": [
+        "# tests 3",
+        "# pass 0",
+        "# fail 3"
+      ]
+    }
+  ]
+}

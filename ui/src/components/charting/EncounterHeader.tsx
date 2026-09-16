@@ -45,6 +45,7 @@ interface Props {
   undoSlot?: UndoLedgerSlot;
   /** True only when this page saw `undoSlot` come back from a successful void; otherwise the strip reads as an upper bound. */
   undoConfirmed?: boolean;
+  canWriteDiagnosis?: boolean;
   onUndo?: () => void | Promise<void>;
   completeness?: ClinicalExamCompleteness;
   unassignedCount?: number;
@@ -69,6 +70,7 @@ export function EncounterHeader({
   onToggleVisitCharges,
   undoSlot,
   undoConfirmed = false,
+  canWriteDiagnosis = false,
   onUndo,
 }: Props) {
   const [encounter, setEncounter] = useState<Encounter | null>(null);
@@ -287,6 +289,7 @@ export function EncounterHeader({
         signLabel={busy === "checking" ? "Checking..." : busy === "finish" ? "Signing..." : "Sign & finish"}
         undoSlot={undoSlot}
         undoConfirmed={undoConfirmed}
+        canWriteDiagnosis={canWriteDiagnosis}
         undoDisabled={migrated || isClosedEncounterStatus(encounter?.status)}
         onUndo={onUndo}
       />
@@ -379,6 +382,7 @@ interface ExamChartBarProps {
   /** Pending visit-level Undo; the `undo` slot renders only while one exists. */
   undoSlot?: UndoLedgerSlot;
   undoConfirmed?: boolean;
+  canWriteDiagnosis?: boolean;
   undoDisabled?: boolean;
   onUndo?: () => void | Promise<void>;
 }
@@ -400,6 +404,7 @@ export function ExamChartBar({
   signLabel,
   undoSlot,
   undoConfirmed = false,
+  canWriteDiagnosis = false,
   undoDisabled = false,
   onUndo,
 }: ExamChartBarProps) {
@@ -423,7 +428,7 @@ export function ExamChartBar({
         // Its own slot beside exam-sections, not the `drafts` slot: that one is reserved for
         // slice-4 drafts and a test pins that reservation.
         <div className="odos-chart-bar-undo" data-chart-bar-slot="undo">
-          <UndoStrip slot={undoSlot} scope="encounter" confirmed={undoConfirmed} closed={undoDisabled} onUndo={() => onUndo?.()} />
+          <UndoStrip slot={undoSlot} canWriteDiagnosis={canWriteDiagnosis} scope="encounter" confirmed={undoConfirmed} closed={undoDisabled} onUndo={() => onUndo?.()} />
         </div>
       )}
       <div

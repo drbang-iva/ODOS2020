@@ -1,0 +1,312 @@
+TAP version 13
+# Subtest: STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: false
+not ok 1 - STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: false
+  ---
+  duration_ms: 26.085791
+  type: 'test'
+  location: '<worktree>-ui/ui/tests/diagnosisCarryForward.test.tsx:1:21239'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisCarryForward.test.tsx:623:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: undefined
+not ok 2 - STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: undefined
+  ---
+  duration_ms: 3.974792
+  type: 'test'
+  location: '<worktree>-ui/ui/tests/diagnosisCarryForward.test.tsx:1:21239'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisCarryForward.test.tsx:623:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE proposal picker requires diagnosis capability: true
+ok 3 - STAFF-DX-GATE proposal picker requires diagnosis capability: true
+  ---
+  duration_ms: 17.555084
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE proposal picker requires diagnosis capability: false
+not ok 4 - STAFF-DX-GATE proposal picker requires diagnosis capability: false
+  ---
+  duration_ms: 3.422417
+  type: 'test'
+  location: '<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:1:9028'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:333:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE proposal picker requires diagnosis capability: undefined
+not ok 5 - STAFF-DX-GATE proposal picker requires diagnosis capability: undefined
+  ---
+  duration_ms: 2.300208
+  type: 'test'
+  location: '<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:1:9028'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:333:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE decision picker requires diagnosis capability: true
+ok 6 - STAFF-DX-GATE decision picker requires diagnosis capability: true
+  ---
+  duration_ms: 1.358833
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE decision picker requires diagnosis capability: false
+not ok 7 - STAFF-DX-GATE decision picker requires diagnosis capability: false
+  ---
+  duration_ms: 2.339917
+  type: 'test'
+  location: '<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:1:9028'
+  failureType: 'testCodeFailure'
+  error: |-
+    Possible
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:339:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE decision picker requires diagnosis capability: undefined
+not ok 8 - STAFF-DX-GATE decision picker requires diagnosis capability: undefined
+  ---
+  duration_ms: 1.242708
+  type: 'test'
+  location: '<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:1:9028'
+  failureType: 'testCodeFailure'
+  error: |-
+    Possible
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:339:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE workspace separates diagnosis writes from pins: true
+ok 9 - STAFF-DX-GATE workspace separates diagnosis writes from pins: true
+  ---
+  duration_ms: 43.438
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE findings retain grade and laterality while gating evidence links: true
+ok 10 - STAFF-DX-GATE findings retain grade and laterality while gating evidence links: true
+  ---
+  duration_ms: 1.521375
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Assessment reads diagnosis permission from the server: true
+ok 11 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: true
+  ---
+  duration_ms: 5.258542
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE workspace separates diagnosis writes from pins: false
+not ok 12 - STAFF-DX-GATE workspace separates diagnosis writes from pins: false
+  ---
+  duration_ms: 8.702334
+  type: 'test'
+  location: '<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:1:77491'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:2038:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE findings retain grade and laterality while gating evidence links: false
+not ok 13 - STAFF-DX-GATE findings retain grade and laterality while gating evidence links: false
+  ---
+  duration_ms: 0.56275
+  type: 'test'
+  location: '<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:1:80025'
+  failureType: 'testCodeFailure'
+  error: |-
+    Record Offered finding present
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:2071:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE Assessment reads diagnosis permission from the server: false
+not ok 14 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: false
+  ---
+  duration_ms: 3.081541
+  type: 'test'
+  location: '<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:1:81435'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:2109:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE workspace separates diagnosis writes from pins: undefined
+not ok 15 - STAFF-DX-GATE workspace separates diagnosis writes from pins: undefined
+  ---
+  duration_ms: 5.14875
+  type: 'test'
+  location: '<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:1:77491'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:2038:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE findings retain grade and laterality while gating evidence links: undefined
+not ok 16 - STAFF-DX-GATE findings retain grade and laterality while gating evidence links: undefined
+  ---
+  duration_ms: 0.391791
+  type: 'test'
+  location: '<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:1:80025'
+  failureType: 'testCodeFailure'
+  error: |-
+    Record Offered finding present
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:2071:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: STAFF-DX-GATE Assessment reads diagnosis permission from the server: undefined
+not ok 17 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: undefined
+  ---
+  duration_ms: 2.364125
+  type: 'test'
+  location: '<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:1:81435'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:2109:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 5
+# fail 12
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 623.38575

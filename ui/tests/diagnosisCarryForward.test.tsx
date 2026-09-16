@@ -151,7 +151,7 @@ test("previous exams loads four encounters automatically, keeps them through pag
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<PreviousExams encounterReference="Encounter/current" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />);
+      renderer = create(<PreviousExams canWriteDiagnosis encounterReference="Encounter/current" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />);
       await flush();
     });
 
@@ -181,7 +181,7 @@ test("previous exams renders the exact plain empty state", async () => {
   let renderer!: ReactTestRenderer;
   await act(async () => {
     renderer = create(
-      <PreviousExams
+      <PreviousExams canWriteDiagnosis
         encounterReference="Encounter/new-patient"
         onSelectDiagnosis={() => undefined}
         fetchImpl={async () => jsonResponse(page([]))}
@@ -221,7 +221,7 @@ test("visible paging sentinel starts one request per cursor and ignores repeated
   try {
     await act(async () => {
       renderer = create(
-        <PreviousExams encounterReference="Encounter/current" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />,
+        <PreviousExams canWriteDiagnosis encounterReference="Encounter/current" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />,
         { createNodeMock: (element) => element.type === "button" ? { nodeType: 1 } : null },
       );
       await flush();
@@ -280,7 +280,7 @@ test("consumed observer cursors cannot replay or restore paging after a terminal
   try {
     await act(async () => {
       renderer = create(
-        <PreviousExams encounterReference="Encounter/current" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />,
+        <PreviousExams canWriteDiagnosis encounterReference="Encounter/current" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />,
         { createNodeMock: (element) => element.type === "button" ? { nodeType: 1 } : null },
       );
       await flush();
@@ -323,10 +323,10 @@ test("encounter changes ignore stale previous-exam responses", async () => {
   }) as typeof fetch;
   let renderer!: ReactTestRenderer;
   await act(async () => {
-    renderer = create(<PreviousExams encounterReference="Encounter/first" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />);
+    renderer = create(<PreviousExams canWriteDiagnosis encounterReference="Encounter/first" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />);
   });
   await act(async () => {
-    renderer.update(<PreviousExams encounterReference="Encounter/second" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />);
+    renderer.update(<PreviousExams canWriteDiagnosis encounterReference="Encounter/second" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />);
     await flush();
   });
   await act(async () => {
@@ -360,7 +360,7 @@ test("checked prior diagnoses select without POST while unchecked pulls are idem
   }) as typeof fetch;
   let renderer!: ReactTestRenderer;
   await act(async () => {
-    renderer = create(<PreviousExams encounterReference="Encounter/current" onSelectDiagnosis={(reference) => selections.push(reference)} fetchImpl={fetchImpl} />);
+    renderer = create(<PreviousExams canWriteDiagnosis encounterReference="Encounter/current" onSelectDiagnosis={(reference) => selections.push(reference)} fetchImpl={fetchImpl} />);
     await flush();
   });
   const row = (reference: string) => renderer.root.findByProps({ "data-source-condition-reference": reference });
@@ -418,7 +418,7 @@ test("a stale pull cannot release the same row lock owned by the next encounter 
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<PreviousExams encounterReference="Encounter/current-one" onSelectDiagnosis={(reference) => selections.push(reference)} fetchImpl={fetchImpl} />);
+      renderer = create(<PreviousExams canWriteDiagnosis encounterReference="Encounter/current-one" onSelectDiagnosis={(reference) => selections.push(reference)} fetchImpl={fetchImpl} />);
       await flush();
     });
     const row = () => renderer.root.findByProps({ "data-source-condition-reference": "Condition/source" });
@@ -429,7 +429,7 @@ test("a stale pull cannot release the same row lock owned by the next encounter 
     assert.equal(pulls.length, 1);
 
     await act(async () => {
-      renderer.update(<PreviousExams encounterReference="Encounter/current-two" onSelectDiagnosis={(reference) => selections.push(reference)} fetchImpl={fetchImpl} />);
+      renderer.update(<PreviousExams canWriteDiagnosis encounterReference="Encounter/current-two" onSelectDiagnosis={(reference) => selections.push(reference)} fetchImpl={fetchImpl} />);
       await flush();
       row().props.onClick();
       await flush();
@@ -470,7 +470,7 @@ test("a deferred pull settling after true unmount schedules no state update warn
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<PreviousExams encounterReference="Encounter/current" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />);
+      renderer = create(<PreviousExams canWriteDiagnosis encounterReference="Encounter/current" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />);
       await flush();
     });
     await act(async () => {
@@ -588,11 +588,44 @@ function carryFindingsPayload(): DiagnosisFindingsPayload {
     { ...base, atomicFindingId: "section::field::reasserted", optionCode: "reasserted", display: "Reasserted absent", source: "atomic" as const, presence: "absent" as const, observationReference: "Observation/reasserted", conditionReference: "Condition/current" },
   ];
   return {
-    canWrite: true,
+    canWrite: true, canWriteDiagnosis: true,
     findings,
     catalog: findings.map(({ laterality: _laterality, lateralitySource: _source, source: _kind, presence: _presence, observationReference: _reference, conditionReference: _condition, carried: _carried, priorPresence: _priorPresence, priorGrade: _priorGrade, priorLaterality: _priorLaterality, ...row }) => row),
     unassigned: [],
     bySection: { lens: findings },
     visitDiagnoses: [],
   };
+}
+
+for (const canWriteDiagnosis of [false, undefined]) {
+  test(`STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: ${canWriteDiagnosis}`, async () => {
+    const selections: string[] = [];
+    let writes = 0;
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      if (init?.method) {
+        writes += 1;
+        return jsonResponse({ conditionReference: "Condition/unexpected", alreadyPresent: false });
+      }
+      return jsonResponse(page([exam("Encounter/recent", "2026-08-03", "Medical", [
+        priorDiagnosis("Condition/checked", "Existing diagnosis", "OU", true, [], "Condition/current"),
+        priorDiagnosis("Condition/unpulled", "Prior diagnosis", "OS", false),
+      ])]));
+    };
+    let renderer!: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(<PreviousExams encounterReference="Encounter/current" canWriteDiagnosis={canWriteDiagnosis} onSelectDiagnosis={(reference) => selections.push(reference)} fetchImpl={fetchImpl} />);
+      await flush();
+    });
+    try {
+      const checked = renderer.root.findByProps({ "data-source-condition-reference": "Condition/checked" });
+      const unpulled = renderer.root.findByProps({ "data-source-condition-reference": "Condition/unpulled" });
+      assert.equal(checked.props.disabled, false);
+      assert.equal(unpulled.props.disabled, true);
+      await act(async () => { await checked.props.onClick(); await unpulled.props.onClick(); });
+      assert.deepEqual(selections, ["Condition/current"]);
+      assert.equal(writes, 0);
+    } finally {
+      act(() => renderer.unmount());
+    }
+  });
 }

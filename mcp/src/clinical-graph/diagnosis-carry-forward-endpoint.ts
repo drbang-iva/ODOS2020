@@ -240,8 +240,8 @@ export async function handleDiagnosisPullRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to pull a diagnosis." } };
-  if (!staffHasBusinessAction(staff, "chart.write")) {
-    return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.diagnosis.write")) {
+    return { status: 403, body: { error: "chart.diagnosis.write role required" } };
   }
   const parsedParams = paramsSchema.safeParse(input.params);
   const parsedBody = pullBodySchema.safeParse(input.body);
@@ -1061,7 +1061,7 @@ function staffMayRead(role: PracticeRoleId): boolean {
 
 function staffMayWrite(role: PracticeRoleId): boolean {
   try {
-    assertBusinessActionAllowed(role, "chart.write");
+    assertBusinessActionAllowed(role, "chart.diagnosis.write");
     return true;
   } catch {
     return false;

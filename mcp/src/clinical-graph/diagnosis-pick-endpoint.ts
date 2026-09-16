@@ -85,7 +85,7 @@ export async function handleDiagnosisPickRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to pick a diagnosis." } };
-  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.diagnosis.write")) return { status: 403, body: { error: "chart.diagnosis.write role required" } };
   const encounterId = readEncounterId(input.params);
   if (!encounterId) return { status: 400, body: { error: "A valid encounter id is required." } };
   const parsed = pickSchema.safeParse(input.body);
@@ -640,7 +640,7 @@ function readEncounterId(value: unknown): string | undefined {
   return typeof id === "string" && /^[A-Za-z0-9.-]+$/.test(id) ? id : undefined;
 }
 
-function staffMay(role: PracticeRoleId, action: "chart.write"): boolean {
+function staffMay(role: PracticeRoleId, action: "chart.diagnosis.write"): boolean {
   try {
     assertBusinessActionAllowed(role, action);
     return true;

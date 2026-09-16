@@ -1,0 +1,152 @@
+TAP version 13
+# Subtest: Vite proxies relative clinical-graph requests to the MCP server
+ok 1 - Vite proxies relative clinical-graph requests to the MCP server
+  ---
+  duration_ms: 0.54525
+  type: 'test'
+  ...
+# Subtest: clinical-graph requests share the literal Vite route and Medplum authorization helpers
+ok 2 - clinical-graph requests share the literal Vite route and Medplum authorization helpers
+  ---
+  duration_ms: 11.614125
+  type: 'test'
+  ...
+# Subtest: clinical-graph concurrent-edit responses use the shared reload-and-reapply message
+ok 3 - clinical-graph concurrent-edit responses use the shared reload-and-reapply message
+  ---
+  duration_ms: 0.101625
+  type: 'test'
+  ...
+# Subtest: authHeaders returns the live Medplum client authorization
+ok 4 - authHeaders returns the live Medplum client authorization
+  ---
+  duration_ms: 0.353541
+  type: 'test'
+  ...
+# Subtest: soft and specialty contact lens definition and save requests use shared authorization
+ok 5 - soft and specialty contact lens definition and save requests use shared authorization
+  ---
+  duration_ms: 0.298042
+  type: 'test'
+  ...
+# Subtest: Auto-Refraction renders centered binocular PD spinners and saves them at request top level
+ok 6 - Auto-Refraction renders centered binocular PD spinners and saves them at request top level
+  ---
+  duration_ms: 20.981208
+  type: 'test'
+  ...
+# Subtest: no UI source references the obsolete odos_access_token key
+ok 7 - no UI source references the obsolete odos_access_token key
+  ---
+  duration_ms: 8.3355
+  type: 'test'
+  ...
+# Subtest: WENO searches use the authenticated shared client boundary
+ok 8 - WENO searches use the authenticated shared client boundary
+  ---
+  duration_ms: 8.466666
+  type: 'test'
+  ...
+# Subtest: P1 wearing: continuous axis typing displays every digit and retains it on blur
+ok 9 - P1 wearing: continuous axis typing displays every digit and retains it on blur
+  ---
+  duration_ms: 2699.885417
+  type: 'test'
+  ...
+# Subtest: P1 auto-refraction: continuous axis typing displays every digit and retains it on blur
+ok 10 - P1 auto-refraction: continuous axis typing displays every digit and retains it on blur
+  ---
+  duration_ms: 777.976583
+  type: 'test'
+  ...
+# Subtest: P1 refraction: Wearing pull displays the supplied 180 axis without keystrokes
+ok 11 - P1 refraction: Wearing pull displays the supplied 180 axis without keystrokes
+  ---
+  duration_ms: 805.836291
+  type: 'test'
+  ...
+# Subtest: P1 IOP: Enter keeps typed 16 even when scrolling puts another option under the pointer
+ok 12 - P1 IOP: Enter keeps typed 16 even when scrolling puts another option under the pointer
+  ---
+  duration_ms: 919.757334
+  type: 'test'
+  ...
+# Subtest: P3 exam-section summary text fits inside its button alongside the chevron
+ok 13 - P3 exam-section summary text fits inside its button alongside the chevron
+  ---
+  duration_ms: 709.588084
+  type: 'test'
+  ...
+# Subtest: P4 both binocular PD pickers offer whole-millimeter steps centered on 63
+ok 14 - P4 both binocular PD pickers offer whole-millimeter steps centered on 63
+  ---
+  duration_ms: 764.342584
+  type: 'test'
+  ...
+# Subtest: P5 Add complaint follows complaint articles and precedes the first History subject section
+ok 15 - P5 Add complaint follows complaint articles and precedes the first History subject section
+  ---
+  duration_ms: 799.277208
+  type: 'test'
+  ...
+# Subtest: close-out ocular: destructive action uses a responsive in-app confirmation
+ok 16 - close-out ocular: destructive action uses a responsive in-app confirmation
+  ---
+  duration_ms: 800.118708
+  type: 'test'
+  ...
+# Subtest: close-out prescription: destructive action uses a responsive in-app confirmation
+ok 17 - close-out prescription: destructive action uses a responsive in-app confirmation
+  ---
+  duration_ms: 817.913458
+  type: 'test'
+  ...
+# Subtest: close-out referral regenerate: edited letter uses a responsive in-app confirmation
+ok 18 - close-out referral regenerate: edited letter uses a responsive in-app confirmation
+  ---
+  duration_ms: 830.965417
+  type: 'test'
+  ...
+# Subtest: close-out referral template: edited letter uses a responsive in-app confirmation
+ok 19 - close-out referral template: edited letter uses a responsive in-app confirmation
+  ---
+  duration_ms: 818.055291
+  type: 'test'
+  ...
+# NUMERIC_READABILITY refraction [{"label":"OD sphere","value":"-20.00","available":54,"textWidth":43.66796875,"margin":10.33203125,"scrollLeft":0},{"label":"OD cylinder","value":"-20.00","available":54,"textWidth":43.66796875,"margin":10.33203125,"scrollLeft":0},{"label":"OD axis","value":"180","available":44,"textWidth":23.802734375,"margin":20.197265625,"scrollLeft":0},{"label":"OD add","value":"-20.00","available":54,"textWidth":43.66796875,"margin":10.33203125,"scrollLeft":0},{"label":"OD prism amount","value":"20.00","available":50,"textWidth":37.21484375,"margin":12.78515625,"scrollLeft":0},{"label":"OS sphere","value":"-20.00","available":54,"textWidth":43.66796875,"margin":10.33203125,"scrollLeft":0},{"label":"OS cylinder","value":"-20.00","available":54,"textWidth":43.66796875,"margin":10.33203125,"scrollLeft":0},{"label":"OS axis","value":"180","available":44,"textWidth":23.802734375,"margin":20.197265625,"scrollLeft":0},{"label":"OS add","value":"-20.00","available":54,"textWidth":43.66796875,"margin":10.33203125,"scrollLeft":0},{"label":"OS prism amount","value":"20.00","available":50,"textWidth":37.21484375,"margin":12.78515625,"scrollLeft":0},{"label":"OD sphere","value":"-20.00","available":54,"textWidth":43.66796875,"margin":10.33203125,"scrollLeft":0},{"label":"OD cylinder","value":"-20.00","available":54,"textWidth":43.66796875,"margin":10.33203125,"scrollLeft":0},{"label":"OD axis","value":"180","available":44,"textWidth":23.802734375,"margin":20.197265625,"scrollLeft":0},{"label":"OD add","value":"-20.00","available":54,"textWidth":43.66796875,"margin":10.33203125,"scrollLeft":0},{"label":"OS sphere","value":"-20.00","available":54,"textWidth":43.66796875,"margin":10.33203125,"scrollLeft":0},{"label":"OS cylinder","value":"-20.00","available":54,"textWidth":43.66796875,"margin":10.33203125,"scrollLeft":0},{"label":"OS axis","value":"180","available":44,"textWidth":23.802734375,"margin":20.197265625,"scrollLeft":0},{"label":"OS add","value":"-20.00","available":54,"textWidth":43.66796875,"margin":10.33203125,"scrollLeft":0}]
+# NUMERIC_READABILITY wearing [{"label":"OD sphere","value":"-16.00","available":54,"textWidth":41.876953125,"margin":12.123046875,"scrollLeft":0},{"label":"OD cylinder","value":"-8.00","available":54,"textWidth":35.560546875,"margin":18.439453125,"scrollLeft":0},{"label":"OD axis","value":"180","available":44,"textWidth":23.802734375,"margin":20.197265625,"scrollLeft":0},{"label":"OD add","value":"5.00","available":54,"textWidth":28.8203125,"margin":25.1796875,"scrollLeft":0},{"label":"OD prism amount","value":"20.00","available":50,"textWidth":37.21484375,"margin":12.78515625,"scrollLeft":0},{"label":"OS sphere","value":"-16.00","available":54,"textWidth":41.876953125,"margin":12.123046875,"scrollLeft":0},{"label":"OS cylinder","value":"-8.00","available":54,"textWidth":35.560546875,"margin":18.439453125,"scrollLeft":0},{"label":"OS axis","value":"180","available":44,"textWidth":23.802734375,"margin":20.197265625,"scrollLeft":0},{"label":"OS add","value":"5.00","available":54,"textWidth":28.8203125,"margin":25.1796875,"scrollLeft":0},{"label":"OS prism amount","value":"20.00","available":50,"textWidth":37.21484375,"margin":12.78515625,"scrollLeft":0}]
+# NUMERIC_READABILITY auto-refraction [{"label":"OD auto-refraction sphere","value":"-16.00","available":110,"textWidth":41.876953125,"margin":68.123046875,"scrollLeft":0},{"label":"OD auto-refraction cylinder","value":"-8.00","available":110,"textWidth":35.560546875,"margin":74.439453125,"scrollLeft":0},{"label":"OD auto-refraction axis","value":"180","available":104,"textWidth":23.802734375,"margin":80.197265625,"scrollLeft":0},{"label":"OS auto-refraction sphere","value":"-16.00","available":110,"textWidth":41.876953125,"margin":68.123046875,"scrollLeft":0},{"label":"OS auto-refraction cylinder","value":"-8.00","available":110,"textWidth":35.560546875,"margin":74.439453125,"scrollLeft":0},{"label":"OS auto-refraction axis","value":"180","available":104,"textWidth":23.802734375,"margin":80.197265625,"scrollLeft":0},{"label":"Binocular PD distance","value":"75","available":197,"textWidth":16.1875,"margin":180.8125,"scrollLeft":0},{"label":"Binocular PD near","value":"75","available":197,"textWidth":16.1875,"margin":180.8125,"scrollLeft":0},{"label":"OD flat K","value":"60.00","available":120,"textWidth":37.6796875,"margin":82.3203125,"scrollLeft":0},{"label":"OD flat axis","value":"180","available":114,"textWidth":23.802734375,"margin":90.197265625,"scrollLeft":0},{"label":"OD steep K","value":"60.00","available":120,"textWidth":37.6796875,"margin":82.3203125,"scrollLeft":0},{"label":"OD steep axis","value":"180","available":114,"textWidth":23.802734375,"margin":90.197265625,"scrollLeft":0},{"label":"OS flat K","value":"60.00","available":120,"textWidth":37.6796875,"margin":82.3203125,"scrollLeft":0},{"label":"OS flat axis","value":"180","available":114,"textWidth":23.802734375,"margin":90.197265625,"scrollLeft":0},{"label":"OS steep K","value":"60.00","available":120,"textWidth":37.6796875,"margin":82.3203125,"scrollLeft":0},{"label":"OS steep axis","value":"180","available":114,"textWidth":23.802734375,"margin":90.197265625,"scrollLeft":0}]
+# NUMERIC_READABILITY iop [{"label":"OD IOP value","value":"80","available":82,"textWidth":17.458984375,"margin":64.541015625,"scrollLeft":0},{"label":"OD corneal hysteresis","value":"15.00","available":82,"textWidth":35.1640625,"margin":46.8359375,"scrollLeft":0},{"label":"OS IOP value","value":"80","available":82,"textWidth":17.458984375,"margin":64.541015625,"scrollLeft":0},{"label":"OS corneal hysteresis","value":"15.00","available":82,"textWidth":35.1640625,"margin":46.8359375,"scrollLeft":0}]
+# Subtest: close-out numeric guard measures every numeric input at its widest legitimate value
+ok 20 - close-out numeric guard measures every numeric input at its widest legitimate value
+  ---
+  duration_ms: 3610.56375
+  type: 'test'
+  ...
+# Subtest: P0 iop: immediate navigation uses a responsive in-app discard confirmation
+ok 21 - P0 iop: immediate navigation uses a responsive in-app discard confirmation
+  ---
+  duration_ms: 964.945459
+  type: 'test'
+  ...
+# Subtest: P0 assessment-search: immediate navigation uses a responsive in-app discard confirmation
+ok 22 - P0 assessment-search: immediate navigation uses a responsive in-app discard confirmation
+  ---
+  duration_ms: 904.862208
+  type: 'test'
+  ...
+# Subtest: P0 assessment-status: immediate navigation uses a responsive in-app discard confirmation
+ok 23 - P0 assessment-status: immediate navigation uses a responsive in-app discard confirmation
+  ---
+  duration_ms: 970.634791
+  type: 'test'
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 18021.850375

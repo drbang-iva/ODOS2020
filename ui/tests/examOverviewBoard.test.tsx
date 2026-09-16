@@ -2392,6 +2392,97 @@ function undoButtonIn(node: ReactTestInstance): ReactTestInstance {
   return strip.findAllByType("button").find((button) => textContent(button) === "Undo")!;
 }
 
+for (const canWriteDiagnosis of [true, false, undefined]) {
+  test(`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`, async () => {
+    const options: RenderEncounterOptions = {
+      canWriteDiagnosis,
+      undoLedger: {
+        ...PENDING_UNDO_LEDGER,
+        encounter: { ...PENDING_UNDO_LEDGER.encounter!, voided: [{ ref: "Condition/dx1", priorStatus: "confirmed" }] },
+      },
+    };
+    const harness = await renderEncounter(PROJECTION, options);
+    const visitUndo = () => undoButtonIn(harness.renderer.root.findByProps({ "data-chart-bar-slot": "undo" }));
+    try {
+      assert.equal(Boolean(visitUndo().props.disabled), canWriteDiagnosis !== true);
+      if (canWriteDiagnosis !== true) {
+        await act(async () => { await visitUndo().props.onClick(); });
+        assert.deepEqual(harness.undoRequests, []);
+      }
+      act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
+      const observationUndo = undoButtonIn(visibleSheet(harness));
+      assert.equal(Boolean(observationUndo.props.disabled), false, "the Observation-only slot stays usable");
+      options.canWriteDiagnosis = false;
+      await act(async () => { await observationUndo.props.onClick(); await flushEffects(); });
+      assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }]);
+      assert.equal(Boolean(visitUndo().props.disabled), true, "the undo response refreshes capability for the remaining diagnosis slot");
+
+      options.canWriteDiagnosis = true;
+      harness.voidNoop.enabled = true;
+      const clear = visibleSheet(harness).findAllByType("button").find((button) => textContent(button) === "Clear chart")!;
+      await confirmClearInDialog(harness, clear);
+      assert.equal(Boolean(visitUndo().props.disabled), false, "even a no-op void response refreshes capability without changing the ledger");
+    } finally { harness.restore(); }
+  });
+}
+
+for (const lateStage of ["clear-failure", "ledger-response", "undo-click", "undo-response"] as const) {
+  test(`Undo ignores a previous encounter's late ${lateStage}`, async () => {
+    const harness = await renderEncounter(PROJECTION, { undoLedger: PENDING_UNDO_LEDGER, canWriteDiagnosis: true });
+    const baseFetch = globalThis.fetch;
+    const currentLedger: EncounterUndoLedger = {
+      encounterId: "exam-2", sections: {},
+      encounter: { ...PENDING_UNDO_LEDGER.encounter!, label: "Current encounter", voided: [{ ref: "Condition/current", priorStatus: "confirmed" }] },
+    };
+    let release!: (response: Response) => void;
+    const delayed = new Promise<Response>((resolve) => { release = resolve; });
+    const undoUrls: string[] = [];
+    globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/exam-2/void/ledger")) return jsonResponse({ ledger: currentLedger, canWriteDiagnosis: true });
+      if (url.endsWith("/exam-2/exam-overview")) return jsonResponse({ ...PROJECTION, encounterReference: "Encounter/exam-2" });
+      if (url.endsWith("/void/undo")) {
+        undoUrls.push(url);
+        if (lateStage === "undo-response") return delayed;
+      }
+      if (lateStage === "clear-failure" && url.endsWith("/exam-1/void") && init?.method === "POST" && !JSON.parse(String(init.body)).preview) return delayed;
+      if (lateStage === "ledger-response" && url.endsWith("/exam-1/void/ledger")) return delayed;
+      return baseFetch(url.replaceAll("/exam-2/", "/exam-1/"), init);
+    };
+    const oldUndo = harness.renderer.root.findByType(EncounterHeader).props.onUndo as () => Promise<void>;
+    let pendingUndo: Promise<void> | undefined;
+    try {
+      if (lateStage === "clear-failure" || lateStage === "ledger-response") {
+        harness.voidFailure.status = 502;
+        act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
+        const clear = visibleSheet(harness).findAllByType("button").find((button) => textContent(button) === "Clear chart")!;
+        await confirmClearInDialog(harness, clear);
+      } else if (lateStage === "undo-response") {
+        act(() => { pendingUndo = oldUndo(); });
+      }
+      await act(async () => {
+        harness.renderer.update(<RoleProvider><EncounterCharting patient={{ resourceType: "Patient", id: "patient-1" }} encounterId="exam-2" /></RoleProvider>);
+        await flushEffects(); await flushEffects();
+      });
+      const currentUndo = () => harness.renderer.root.findByProps({ "data-chart-bar-slot": "undo" });
+      assert.match(textContent(currentUndo()), /Current encounter/);
+      await act(async () => {
+        if (lateStage === "undo-click") await oldUndo();
+        else {
+          release(lateStage === "clear-failure"
+            ? new Response(JSON.stringify({ error: "old clear failed" }), { status: 502 })
+            : jsonResponse({ ledger: PENDING_UNDO_LEDGER, canWriteDiagnosis: false, restored: [], count: 0, skipped: [] }));
+          if (pendingUndo) await pendingUndo;
+        }
+        await flushEffects(); await flushEffects();
+      });
+      assert.equal(undoUrls.length, lateStage === "undo-response" ? 1 : 0, "a stale Undo callback cannot submit a mutation");
+      assert.match(textContent(currentUndo()), /Current encounter/, "the previous encounter cannot replace the current ledger");
+      assert.equal(Boolean(undoButtonIn(currentUndo()).props.disabled), false, "a stale failure cannot reset the current capability");
+    } finally { harness.restore(); }
+  });
+}
+
 test("fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger", async () => {
   const harness = await renderEncounter(PROJECTION, { undoLedger: PENDING_UNDO_LEDGER });
   try {
@@ -3895,6 +3986,7 @@ interface RenderEncounterOptions {
   overviewAfterHpiCapture?: unknown;
   /** Served at GET .../void/ledger when the encounter loads. */
   undoLedger?: EncounterUndoLedger;
+  canWriteDiagnosis?: boolean;
 }
 
 async function renderEncounter(projection: unknown, options: RenderEncounterOptions = {}): Promise<{
@@ -3955,7 +4047,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     const url = String(input);
     if (url.endsWith("/clinical-graph/encounters/exam-1/void/ledger")) {
       ledgerFetches += 1;
-      return jsonResponse({ ledger: undoLedgerState ?? { encounterId: "exam-1", encounter: null, sections: {} } });
+      return jsonResponse({ canWriteDiagnosis: options.canWriteDiagnosis, ledger: undoLedgerState ?? { encounterId: "exam-1", encounter: null, sections: {} } });
     }
     if (url.endsWith("/clinical-graph/encounters/exam-1/void") && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { scope: string; preview?: boolean };
@@ -3965,7 +4057,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
       if (!body.preview && voidNoop.enabled) {
         // Like the endpoint when nothing qualifies any more: HTTP 200, no transaction, count 0,
         // and the CURRENT ledger carried over unchanged.
-        return jsonResponse({ voided: [], count: 0, sections: [], entries: [], preview: false, ledger: undoLedgerState ?? { encounterId: "exam-1", encounter: null, sections: {} } });
+        return jsonResponse({ canWriteDiagnosis: options.canWriteDiagnosis, voided: [], count: 0, sections: [], entries: [], preview: false, ledger: undoLedgerState ?? { encounterId: "exam-1", encounter: null, sections: {} } });
       }
       if (!body.preview && body.scope === "encounter") {
         // Like the server on this non-atomic stack: the visit slot is written from INTENT — every
@@ -3979,7 +4071,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
       if (!body.preview && voidFailure.status) {
         return new Response(JSON.stringify(voidFailure.body ?? { error: "void failed" }), { status: voidFailure.status, headers: { "Content-Type": "application/json" } });
       }
-      return jsonResponse({ voided, count: 3, sections, entries: [], preview: Boolean(body.preview), ...(body.preview ? {} : { ledger: undoLedgerState }) });
+      return jsonResponse({ canWriteDiagnosis: options.canWriteDiagnosis, voided, count: 3, sections, entries: [], preview: Boolean(body.preview), ...(body.preview ? {} : { ledger: undoLedgerState }) });
     }
     if (url.endsWith("/clinical-graph/encounters/exam-1/void/undo") && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { scope: string; sectionKey?: string };
@@ -3992,7 +4084,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
       undoLedgerState = body.scope === "encounter"
         ? { ...current, encounter: null }
         : { ...current, sections: Object.fromEntries(Object.entries(current.sections).filter(([key]) => key !== body.sectionKey)) };
-      return jsonResponse({ restored: ["Observation/o1"], count: 1, skipped: [], ...body, ledger: undoLedgerState });
+      return jsonResponse({ canWriteDiagnosis: options.canWriteDiagnosis, restored: ["Observation/o1"], count: 1, skipped: [], ...body, ledger: undoLedgerState });
     }
     if (url.endsWith("/clinical-graph/encounters/exam-1/exam-overview")) {
       const responses = options.overviewResponses ?? [projection];

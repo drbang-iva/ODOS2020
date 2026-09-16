@@ -32,6 +32,74 @@ import { ODOS_EXTENSION_URLS, lateralityConcept } from "../src/fhir/ophthalmolog
 
 const FORBIDDEN_AUTH = "Bearer forbidden";
 
+test("staff diagnosis-door assertion refuses before creating an Observation or any other write", async (t) => {
+  const fhir = mutationFhir();
+  const create = t.mock.method(fhir, "create");
+  const update = t.mock.method(fhir, "update");
+  const before = structuredClone(fhir.resources);
+  const response = await handleDiagnosisFindingsMutationRequest({
+    ...clinicalDeps(fhir),
+    authenticate: async () => ({ staffReference: "Practitioner/staff", actorRole: "staff", fhir }),
+  }, {
+    authHeader: "Bearer staff",
+    params: { encounterId: "e1" },
+    body: {
+      action: "assert", patientReference: "Patient/p1", conditionReference: "Condition/unique",
+      atomicFindingId: atomicId("offered-only"), presence: "present",
+    },
+  });
+  assert.equal(create.mock.callCount(), 0, "no Observation or Provenance may be created before refusal");
+  assert.equal(update.mock.callCount(), 0, "no existing resource may change before refusal");
+  assert.deepEqual(fhir.resources, before);
+  assert.equal(response.status, 403);
+});
+
+test("staff cannot assign, detach or clear legacy Condition evidence but can edit finding grade and laterality", async (t) => {
+  for (const action of ["assign", "standalone", "clear", "grade", "laterality"] as const) {
+    await t.test(action, async (t) => {
+      const fhir = carryFindingsFhir();
+      const beforeConditions = structuredClone(fhir.resources.filter((row) => row.resourceType === "Condition"));
+      const create = t.mock.method(fhir, "create");
+      const update = t.mock.method(fhir, "update");
+      const response = await handleDiagnosisFindingsMutationRequest({
+        ...clinicalDeps(fhir),
+        authenticate: async () => ({ staffReference: "Practitioner/staff", actorRole: "staff", fhir }),
+      }, {
+        authHeader: "Bearer staff", params: { encounterId: "e1" },
+        body: {
+          action, patientReference: "Patient/p1", observationReference: "Observation/current-unique-present",
+          ...(action === "assign" ? { conditionReference: "Condition/second" } : {}),
+          ...(action === "grade" ? { grade: null } : {}),
+          ...(action === "laterality" ? { laterality: "OS" } : {}),
+        },
+      });
+      const observationOnly = action === "grade" || action === "laterality";
+      assert.equal(response.status, observationOnly ? 200 : 403, JSON.stringify(response.body));
+      assert.deepEqual(fhir.resources.filter((row) => row.resourceType === "Condition"), beforeConditions);
+      if (!observationOnly) {
+        assert.equal(create.mock.callCount(), 0);
+        assert.equal(update.mock.callCount(), 0);
+      } else {
+        assert.equal(update.mock.calls.some((call) => call.arguments[0] === "Observation"), true);
+      }
+    });
+  }
+});
+
+test("findings payload distinguishes finding write access from diagnosis write access", async () => {
+  for (const actorRole of ["provider", "staff", "admin"] as const) {
+    const fhir = mutationFhir();
+    const response = await handleDiagnosisFindingsReadRequest({
+      ...clinicalDeps(fhir),
+      authenticate: async () => ({ staffReference: "Practitioner/synthetic", actorRole, fhir }),
+    }, { authHeader: "Bearer synthetic", params: { encounterId: "e1" }, query: {} });
+    assert.equal(response.status, 200);
+    const body = response.body as { canWrite: boolean; canWriteDiagnosis: boolean };
+    assert.equal(body.canWrite, actorRole !== "admin");
+    assert.equal(body.canWriteDiagnosis, actorRole === "provider");
+  }
+});
+
 test("GET encounter findings returns 401 when unauthenticated", async (t) => {
   const base = await startFindingsRoutes(t, "admin");
 
