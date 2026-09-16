@@ -46,3 +46,13 @@ test('a vulnerability without advisory provenance fails closed', () => {
   const report = finding(); report.vulnerabilities.sharp.via = [];
   assert.equal(run(clean, report, [], 1).status, 1);
 });
+test('registry URLs without a GHSA still follow severity and cannot use an allowance', () => {
+  for (const severity of ['moderate', 'high', 'critical']) {
+    const report = finding(severity);
+    report.vulnerabilities.sharp.via[0].url = 'https://npmjs.com/advisories/1673';
+    const r = run(clean, report, [entry], severity === 'moderate' ? 0 : 1);
+    assert.equal(r.status, severity === 'moderate' ? 0 : 1);
+    assert.match(r.stdout, /https:\/\/npmjs.com\/advisories\/1673/);
+    assert.doesNotMatch(r.stdout, /allowlisted/);
+  }
+});

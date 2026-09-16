@@ -99,7 +99,7 @@ are enumerated below and in proof.json.
 | D2 root csv-parse 7.0.1 | exit 0, moderate GHSA-8cw4-87c7-c6xx reported | exit 0, clean |
 | D3 delete synthetic accepted sharp entry | accepted state exit 0; deletion exit 1 | exit 0, clean |
 | D4 expire entry | exit 1, expired entry named | exit 0, clean |
-| D5 omit MCP | 6 pass / 6 fail, including D5 | 12 pass / 0 fail |
+| D5 omit MCP | 6 pass / 7 fail, including D5 | 13 pass / 0 fail |
 | D6 break native image resize dimensions | 2 pass / 1 fail | 3 pass / 0 fail |
 
 Every restore is byte-identical. No mutation landed in application source. Original
@@ -166,3 +166,11 @@ this slice makes no claim about anonymous reachability of upload routes.
 5,557 tests: **5,505 passed, 0 failed, 52 skipped**. The override is retained.
 The owned synthetic PostgreSQL container was stopped and removed. Final preflight:
 0 warnings / 0 hard blocks; script and MCP typechecks passed.
+
+## Bot review fixback
+
+CodeRabbit identified that non-GHSA registry URLs must still follow severity.
+Confirmed npm source assigns `this.url = source.url`. Added a guard for moderate,
+high and critical with a legacy npm advisory URL: 12 pass / 1 fail before the fix,
+13 pass / 0 fail afterward. Unknown advisory IDs cannot use a GHSA allowance.
+All D1–D6 proofs were rerun and restored byte-identically after this change.

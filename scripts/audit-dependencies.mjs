@@ -41,9 +41,9 @@ try {
           continue;
         }
         const ghsa = typeof advisory?.url === 'string' && advisory.url.match(/^https:\/\/github\.com\/advisories\/(GHSA(?:-[23456789cfghjmpqrvwx]{4}){3})$/)?.[1];
-        if (!ghsa || !severities.includes(advisory.severity) || typeof advisory.name !== 'string') throw new Error(`Invalid audit advisory: ${name}`);
-        const accepted = allowlist.some(entry => entry.ghsa === ghsa && entry.package === advisory.name);
-        console.log(`${manifest}: ${advisory.name} ${advisory.severity} ${ghsa}${accepted ? ' (allowlisted)' : ''}`);
+        if (typeof advisory?.url !== 'string' || !advisory.url.trim() || !severities.includes(advisory.severity) || typeof advisory.name !== 'string') throw new Error(`Invalid audit advisory: ${name}`);
+        const accepted = Boolean(ghsa) && allowlist.some(entry => entry.ghsa === ghsa && entry.package === advisory.name);
+        console.log(`${manifest}: ${advisory.name} ${advisory.severity} ${ghsa || advisory.url}${accepted ? ' (allowlisted)' : ''}`);
         if (['high', 'critical'].includes(advisory.severity) && !accepted) blocked = true;
       }
     }
