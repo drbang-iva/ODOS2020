@@ -1,0 +1,127 @@
+{
+  "scratch": ".odos/staff-dx-gate/mutation-worktree-3",
+  "restoredDiffIdentical": true,
+  "results": [
+    {
+      "name": "mutation-prewrite-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-concurrency=1 --test-name-pattern 'staff diagnosis-door assertion refuses' mcp/tests/diagnosisFindings.test.ts",
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "mutation-role-table-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-concurrency=1 --test-name-pattern 'full role table' mcp/tests/v05a-authz.test.ts",
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "mutation-complexity-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-concurrency=1 --test-name-pattern 'complexity' mcp/tests/diagnosisWriteGate.test.ts mcp/tests/diagnosisOrder.test.ts",
+      "counts": [
+        "# tests 3",
+        "# pass 2",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "mutation-pick-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-concurrency=1 --test-name-pattern 'staff.*pick' mcp/tests/diagnosisLinkL2.test.ts",
+      "counts": [
+        "# tests 4",
+        "# pass 0",
+        "# fail 4",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "mutation-credential-grant-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-concurrency=1 --test-name-pattern 'diagnosis permission cannot' mcp/tests/v05a-authz.test.ts",
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "mutation-void-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-concurrency=1 --test-name-pattern 'staff may preview' mcp/tests/encounterVoidEndpoint.test.ts",
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "mutation-undo-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-concurrency=1 --test-name-pattern 'staff cannot undo' mcp/tests/encounterUndoEndpoint.test.ts",
+      "counts": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "mutation-diagnosis-catalog-payload-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-concurrency=1 --test-name-pattern 'payload' mcp/tests/diagnosisQuickList.test.ts mcp/tests/diagnosisFindings.test.ts",
+      "counts": [
+        "# tests 2",
+        "# pass 1",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "mutation-diagnosis-quick-list-payload-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-concurrency=1 --test-name-pattern 'payload' mcp/tests/diagnosisQuickList.test.ts mcp/tests/diagnosisFindings.test.ts",
+      "counts": [
+        "# tests 2",
+        "# pass 1",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "mutation-diagnosis-findings-payload-red",
+      "exitCode": 1,
+      "command": "node --import tsx --test --test-concurrency=1 --test-name-pattern 'payload' mcp/tests/diagnosisQuickList.test.ts mcp/tests/diagnosisFindings.test.ts",
+      "counts": [
+        "# tests 2",
+        "# pass 1",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "mutations-restored-green",
+      "exitCode": 0,
+      "command": "node --import tsx --test --test-concurrency=1 mcp/tests/v05a-authz.test.ts mcp/tests/diagnosisFindings.test.ts mcp/tests/diagnosisLinkL2.test.ts mcp/tests/diagnosisOrder.test.ts mcp/tests/diagnosisWriteGate.test.ts mcp/tests/diagnosisQuickList.test.ts mcp/tests/encounterVoidEndpoint.test.ts mcp/tests/encounterUndoEndpoint.test.ts",
+      "counts": [
+        "# tests 244",
+        "# pass 242",
+        "# fail 0",
+        "# skipped 2"
+      ]
+    }
+  ]
+}

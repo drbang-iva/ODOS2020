@@ -1,0 +1,575 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/diagnosisQuickList.test.ts tests/encounterVoidEndpoint.test.ts tests/encounterUndoEndpoint.test.ts
+
+TAP version 13
+# Subtest: quick-list and catalog payloads expose diagnosis permission separately from pin and catalog editing
+not ok 1 - quick-list and catalog payloads expose diagnosis permission separately from pin and catalog editing
+  ---
+  duration_ms: 8.670292
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisQuickList.test.ts:1:776'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisQuickList.test.ts:29:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: quick-list pins round-trip without changing per-finding usage counts
+ok 2 - quick-list pins round-trip without changing per-finding usage counts
+  ---
+  duration_ms: 0.612458
+  type: 'test'
+  ...
+# Subtest: quick-list ordering puts manual pins before aggregate usage without clinical inference
+ok 3 - quick-list ordering puts manual pins before aggregate usage without clinical inference
+  ---
+  duration_ms: 0.361042
+  type: 'test'
+  ...
+# Subtest: quick-list excludes an unused unpinned catalog even when it exceeds the Common cap
+ok 4 - quick-list excludes an unused unpinned catalog even when it exceeds the Common cap
+  ---
+  duration_ms: 0.366541
+  type: 'test'
+  ...
+# Subtest: quick-list displays the first 20 doctor pins when stored pins exceed the cap
+ok 5 - quick-list displays the first 20 doctor pins when stored pins exceed the cap
+  ---
+  duration_ms: 0.465583
+  type: 'test'
+  ...
+# Subtest: quick-list fills positive usage in descending order only to 20 total rows
+ok 6 - quick-list fills positive usage in descending order only to 20 total rows
+  ---
+  duration_ms: 0.419625
+  type: 'test'
+  ...
+# Subtest: staged diagnosis members collapse into four family entries in Common and Find dx
+ok 7 - staged diagnosis members collapse into four family entries in Common and Find dx
+  ---
+  duration_ms: 1.284625
+  type: 'test'
+  ...
+# Subtest: member pins migrate idempotently to staged families without dropping unrelated pins
+ok 8 - member pins migrate idempotently to staged families without dropping unrelated pins
+  ---
+  duration_ms: 1.885
+  type: 'test'
+  ...
+# Subtest: fresh writable practitioner receives starter Common diagnoses in operator order
+ok 9 - fresh writable practitioner receives starter Common diagnoses in operator order
+  ---
+  duration_ms: 1.030083
+  type: 'test'
+  ...
+# Subtest: fresh Admin reads an honest empty quick list without attempting the writable seed
+ok 10 - fresh Admin reads an honest empty quick list without attempting the writable seed
+  ---
+  duration_ms: 0.829542
+  type: 'test'
+  ...
+# Subtest: first-read initialization preserves clinician pins that win a conditional-create race
+ok 11 - first-read initialization preserves clinician pins that win a conditional-create race
+  ---
+  duration_ms: 0.968208
+  type: 'test'
+  ...
+# Subtest: first-read initialization rereads clinician pins after a conditional-create 409
+ok 12 - first-read initialization rereads clinician pins after a conditional-create 409
+  ---
+  duration_ms: 0.842417
+  type: 'test'
+  ...
+# Subtest: first-read initialization rereads clinician pins after a conditional-create 412
+ok 13 - first-read initialization rereads clinician pins after a conditional-create 412
+  ---
+  duration_ms: 0.894167
+  type: 'test'
+  ...
+# Subtest: first-read seed reports a configured diagnosis whose stable key is absent
+ok 14 - first-read seed reports a configured diagnosis whose stable key is absent
+  ---
+  duration_ms: 1.499458
+  type: 'test'
+  ...
+# Subtest: unpinning the seeded POAG family survives reload and another seed trigger without crossing practitioners
+ok 15 - unpinning the seeded POAG family survives reload and another seed trigger without crossing practitioners
+  ---
+  duration_ms: 5.291209
+  type: 'test'
+  ...
+# Subtest: quick-list routes isolate practitioner pins and reject unknown diagnoses
+ok 16 - quick-list routes isolate practitioner pins and reject unknown diagnoses
+  ---
+  duration_ms: 1.227209
+  type: 'test'
+  ...
+# Subtest: G1 Common returns 20 eligible usage rows
+ok 17 - G1 Common returns 20 eligible usage rows
+  ---
+  duration_ms: 5.114833
+  type: 'test'
+  ...
+# Subtest: G2 first pick receives all starter pins in order and preserves usage
+ok 18 - G2 first pick receives all starter pins in order and preserves usage
+  ---
+  duration_ms: 1.140458
+  type: 'test'
+  ...
+# Subtest: G3 pre-pin storage receives starter and preserves usage
+ok 19 - G3 pre-pin storage receives starter and preserves usage
+  ---
+  duration_ms: 0.791417
+  type: 'test'
+  ...
+# Subtest: G4 saved empty pins survive repeated reads and later picks
+ok 20 - G4 saved empty pins survive repeated reads and later picks
+  ---
+  duration_ms: 2.075417
+  type: 'test'
+  ...
+# Subtest: G5 doctor pins remain unchanged in doctor order
+ok 21 - G5 doctor pins remain unchanged in doctor order
+  ---
+  duration_ms: 1.142042
+  type: 'test'
+  ...
+# Subtest: G6 chart reader causes no seed write for missing or unset records
+ok 22 - G6 chart reader causes no seed write for missing or unset records
+  ---
+  duration_ms: 1.305125
+  type: 'test'
+  ...
+# Subtest: G7 ambiguous legacy empty pins are preserved across reads and picks
+ok 23 - G7 ambiguous legacy empty pins are preserved across reads and picks
+  ---
+  duration_ms: 0.996292
+  type: 'test'
+  ...
+# Subtest: G8 operator dry run lists every ambiguous tally without writes
+ok 24 - G8 operator dry run lists every ambiguous tally without writes
+  ---
+  duration_ms: 0.892542
+  type: 'test'
+  ...
+# Subtest: G9 operator apply seeds only ambiguous empties and is idempotent
+ok 25 - G9 operator apply seeds only ambiguous empties and is idempotent
+  ---
+  duration_ms: 1.205166
+  type: 'test'
+  ...
+# Subtest: starter retries preserve a concurrent doctor's empty save
+ok 26 - starter retries preserve a concurrent doctor's empty save
+  ---
+  duration_ms: 0.766583
+  type: 'test'
+  ...
+# Subtest: operator refuses a concurrent pin edit instead of overwriting it
+ok 27 - operator refuses a concurrent pin edit instead of overwriting it
+  ---
+  duration_ms: 0.533
+  type: 'test'
+  ...
+# Subtest: invalid persisted pin states are rejected instead of treated as unset
+ok 28 - invalid persisted pin states are rejected instead of treated as unset
+  ---
+  duration_ms: 0.105958
+  type: 'test'
+  ...
+# Subtest: empty save records custom intent when a first pick wins conditional create
+ok 29 - empty save records custom intent when a first pick wins conditional create
+  ---
+  duration_ms: 0.850042
+  type: 'test'
+  ...
+# Subtest: staff cannot undo a diagnosis clear and can still undo a finding-only clear
+not ok 30 - staff cannot undo a diagnosis clear and can still undo a finding-only clear
+  ---
+  duration_ms: 4.435416
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/encounterUndoEndpoint.test.ts:1:920'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/encounterUndoEndpoint.test.ts:57:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: guard 9: a section void writes the ledger slot in the SAME transaction, and a GET of the ledger shows it with its count
+ok 31 - guard 9: a section void writes the ledger slot in the SAME transaction, and a GET of the ledger shows it with its count
+  ---
+  duration_ms: 5.843792
+  type: 'test'
+  ...
+# Subtest: a second void updates the one existing ledger Basic version-guarded instead of creating another
+ok 32 - a second void updates the one existing ledger Basic version-guarded instead of creating another
+  ---
+  duration_ms: 0.989375
+  type: 'test'
+  ...
+# Subtest: preview and empty voids never write a ledger
+ok 33 - preview and empty voids never write a ledger
+  ---
+  duration_ms: 0.313333
+  type: 'test'
+  ...
+# Subtest: rule 1: a second visit clear replaces the first's Undo — the visit slot holds only the latest action
+ok 34 - rule 1: a second visit clear replaces the first's Undo — the visit slot holds only the latest action
+  ---
+  duration_ms: 0.424875
+  type: 'test'
+  ...
+# Subtest: rule 2: sections own independent slots — clearing CVF leaves Pupils' Undo alone, and a tier-1 remove inside Pupils replaces only Pupils'
+ok 35 - rule 2: sections own independent slots — clearing CVF leaves Pupils' Undo alone, and a tier-1 remove inside Pupils replaces only Pupils'
+  ---
+  duration_ms: 0.949291
+  type: 'test'
+  ...
+# Subtest: a tier-1 remove may name the sheet's section keys so a two-definition sheet keeps one slot, replacing any slot under either key
+ok 36 - a tier-1 remove may name the sheet's section keys so a two-definition sheet keeps one slot, replacing any slot under either key
+  ---
+  duration_ms: 1.249125
+  type: 'test'
+  ...
+# Subtest: rule 3: a visit clear absorbs every pending section Undo — only the visit slot remains
+ok 37 - rule 3: a visit clear absorbs every pending section Undo — only the visit slot remains
+  ---
+  duration_ms: 0.277917
+  type: 'test'
+  ...
+# Subtest: guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error
+ok 38 - guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error
+  ---
+  duration_ms: 2.846916
+  type: 'test'
+  ...
+# Subtest: guard 8: undo against a finished encounter returns 409 and restores nothing
+ok 39 - guard 8: undo against a finished encounter returns 409 and restores nothing
+  ---
+  duration_ms: 0.481125
+  type: 'test'
+  ...
+# Subtest: guard 8: cancelled and entered-in-error encounters gate undo the same way
+ok 40 - guard 8: cancelled and entered-in-error encounters gate undo the same way
+  ---
+  duration_ms: 0.304334
+  type: 'test'
+  ...
+# Subtest: guard 10: void a preliminary IOP Observation, undo → it is preliminary again
+ok 41 - guard 10: void a preliminary IOP Observation, undo → it is preliminary again
+  ---
+  duration_ms: 0.964583
+  type: 'test'
+  ...
+# Subtest: guard 10: a final Observation comes back final, and a status-less custom Observation comes back with no status
+ok 42 - guard 10: a final Observation comes back final, and a status-less custom Observation comes back with no status
+  ---
+  duration_ms: 0.366541
+  type: 'test'
+  ...
+# Subtest: undo writes one RESTORE Provenance per resource, in one version-guarded transaction that carries the Encounter and clears the slot
+ok 43 - undo writes one RESTORE Provenance per resource, in one version-guarded transaction that carries the Encounter and clears the slot
+  ---
+  duration_ms: 0.6015
+  type: 'test'
+  ...
+# Subtest: undo of a History clear restores the complaint to active, re-stamps the primary complaint, and restores the History Observation
+ok 44 - undo of a History clear restores the complaint to active, re-stamps the primary complaint, and restores the History Observation
+  ---
+  duration_ms: 0.834667
+  type: 'test'
+  ...
+# Subtest: undo of an Assessment clear restores each Condition's verificationStatus and clinicalStatus and puts it back on Encounter.diagnosis
+ok 45 - undo of an Assessment clear restores each Condition's verificationStatus and clinicalStatus and puts it back on Encounter.diagnosis
+  ---
+  duration_ms: 0.455667
+  type: 'test'
+  ...
+# Subtest: undo of a Dilation clear restores the linked MedicationAdministration to its prior status
+ok 46 - undo of a Dilation clear restores the linked MedicationAdministration to its prior status
+  ---
+  duration_ms: 0.346791
+  type: 'test'
+  ...
+# Subtest: undo is not itself undoable: once a slot is undone there is nothing to undo, and no 'restored' slot is written
+ok 47 - undo is not itself undoable: once a slot is undone there is nothing to undo, and no 'restored' slot is written
+  ---
+  duration_ms: 0.25975
+  type: 'test'
+  ...
+# Subtest: undo with an empty visit slot or an unknown section returns 404 and writes nothing
+ok 48 - undo with an empty visit slot or an unknown section returns 404 and writes nothing
+  ---
+  duration_ms: 0.17525
+  type: 'test'
+  ...
+# Subtest: a concurrent edit during the undo surfaces as a 409 concurrent-edit, not a partial restore
+ok 49 - a concurrent edit during the undo surfaces as a 409 concurrent-edit, not a partial restore
+  ---
+  duration_ms: 0.281333
+  type: 'test'
+  ...
+# Subtest: an entry that cannot be read fails the undo closed — nothing is restored and the reference is named
+ok 50 - an entry that cannot be read fails the undo closed — nothing is restored and the reference is named
+  ---
+  duration_ms: 0.232042
+  type: 'test'
+  ...
+# Subtest: undo requires authentication, chart.write, a valid encounter id, and a known scope
+ok 51 - undo requires authentication, chart.write, a valid encounter id, and a known scope
+  ---
+  duration_ms: 0.279334
+  type: 'test'
+  ...
+# Subtest: the ledger read requires authentication and chart.read, and 404s for an unknown encounter
+ok 52 - the ledger read requires authentication and chart.read, and 404s for an unknown encounter
+  ---
+  duration_ms: 0.066833
+  type: 'test'
+  ...
+# Subtest: partial void: the slot over-names the refused row, but undo restores only the rows that were actually voided and leaves the refused one untouched
+ok 53 - partial void: the slot over-names the refused row, but undo restores only the rows that were actually voided and leaves the refused one untouched
+  ---
+  duration_ms: 0.614833
+  type: 'test'
+  ...
+# Subtest: fixback P2\#2: preview lists every candidate with its section, finding key, and laterality so a reopened sheet can rehydrate its per-item controls
+ok 54 - fixback P2\#2: preview lists every candidate with its section, finding key, and laterality so a reopened sheet can rehydrate its per-item controls
+  ---
+  duration_ms: 0.22825
+  type: 'test'
+  ...
+# Subtest: fixback 56ff8d36 P2\#A: a preview on a signed encounter still resolves its candidates read-only, while the void itself stays 409
+ok 55 - fixback 56ff8d36 P2\#A: a preview on a signed encounter still resolves its candidates read-only, while the void itself stays 409
+  ---
+  duration_ms: 0.171584
+  type: 'test'
+  ...
+# Subtest: staff may preview a diagnosis clear but cannot write it, while finding-only clears remain allowed
+not ok 56 - staff may preview a diagnosis clear but cannot write it, while finding-only clears remain allowed
+  ---
+  duration_ms: 3.707375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/encounterVoidEndpoint.test.ts:1:714'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/encounterVoidEndpoint.test.ts:33:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: guard 1: void against a finished encounter returns 409 and writes nothing
+ok 57 - guard 1: void against a finished encounter returns 409 and writes nothing
+  ---
+  duration_ms: 0.489083
+  type: 'test'
+  ...
+# Subtest: guard 1: cancelled and entered-in-error encounters are gated the same way
+ok 58 - guard 1: cancelled and entered-in-error encounters are gated the same way
+  ---
+  duration_ms: 0.484541
+  type: 'test'
+  ...
+# Subtest: guard 5: encounter scope voids this-encounter Observations and leaves the prior-encounter one alone
+ok 59 - guard 5: encounter scope voids this-encounter Observations and leaves the prior-encounter one alone
+  ---
+  duration_ms: 0.946833
+  type: 'test'
+  ...
+# Subtest: guard 6: finding scope voids every Observation for (findingKey, laterality), not just the latest
+ok 60 - guard 6: finding scope voids every Observation for (findingKey, laterality), not just the latest
+  ---
+  duration_ms: 0.658958
+  type: 'test'
+  ...
+# Subtest: observation scope flips one Observation to entered-in-error and writes a VOID Provenance for it
+ok 61 - observation scope flips one Observation to entered-in-error and writes a VOID Provenance for it
+  ---
+  duration_ms: 0.795167
+  type: 'test'
+  ...
+# Subtest: History complaint finding scope voids that complaint's answer Observations and removes only that complaint
+ok 62 - History complaint finding scope voids that complaint's answer Observations and removes only that complaint
+  ---
+  duration_ms: 1.439459
+  type: 'test'
+  ...
+# Subtest: observation scope refuses an Observation that belongs to a different encounter
+ok 63 - observation scope refuses an Observation that belongs to a different encounter
+  ---
+  duration_ms: 0.253791
+  type: 'test'
+  ...
+# Subtest: already-voided Observations are not re-voided and are not counted
+ok 64 - already-voided Observations are not re-voided and are not counted
+  ---
+  duration_ms: 0.438333
+  type: 'test'
+  ...
+# Subtest: section scope matches the section key exactly or as a prefix, and reports per-section labels
+ok 65 - section scope matches the section key exactly or as a prefix, and reports per-section labels
+  ---
+  duration_ms: 0.57675
+  type: 'test'
+  ...
+# Subtest: section scope accepts several keys at once so a sheet that owns two definitions clears in one call
+ok 66 - section scope accepts several keys at once so a sheet that owns two definitions clears in one call
+  ---
+  duration_ms: 0.674959
+  type: 'test'
+  ...
+# Subtest: clearing the History section voids the History Observation, removes every active complaint, and clears the primary complaint stamp
+ok 67 - clearing the History section voids the History Observation, removes every active complaint, and clears the primary complaint stamp
+  ---
+  duration_ms: 1.264333
+  type: 'test'
+  ...
+# Subtest: clearing the Assessment section marks each visit Condition entered-in-error and retracts it from the Encounter
+ok 68 - clearing the Assessment section marks each visit Condition entered-in-error and retracts it from the Encounter
+  ---
+  duration_ms: 0.427375
+  type: 'test'
+  ...
+# Subtest: encounter scope clears Observations, History, complaints, and Conditions in one transaction and names every section
+ok 69 - encounter scope clears Observations, History, complaints, and Conditions in one transaction and names every section
+  ---
+  duration_ms: 0.43575
+  type: 'test'
+  ...
+# Subtest: Ocular History section clear voids only this encounter's patient answers and review attestation
+ok 70 - Ocular History section clear voids only this encounter's patient answers and review attestation
+  ---
+  duration_ms: 0.297708
+  type: 'test'
+  ...
+# Subtest: Medical and Social History section clears use the shared VOID path with clinical labels
+ok 71 - Medical and Social History section clears use the shared VOID path with clinical labels
+  ---
+  duration_ms: 0.319375
+  type: 'test'
+  ...
+# Subtest: encounter scope on an empty encounter returns 200 with count 0 and writes nothing
+ok 72 - encounter scope on an empty encounter returns 200 with count 0 and writes nothing
+  ---
+  duration_ms: 0.077541
+  type: 'test'
+  ...
+# Subtest: preview reports what a void would touch without writing anything
+ok 73 - preview reports what a void would touch without writing anything
+  ---
+  duration_ms: 0.144542
+  type: 'test'
+  ...
+# Subtest: void requires authentication, chart.write, a valid encounter id, and a known scope
+ok 74 - void requires authentication, chart.write, a valid encounter id, and a known scope
+  ---
+  duration_ms: 0.220791
+  type: 'test'
+  ...
+# Subtest: a whole-request 412 during the void is reported INDETERMINATE — the rollback a concurrent-edit answer would promise was never verified on this stack
+ok 75 - a whole-request 412 during the void is reported INDETERMINATE — the rollback a concurrent-edit answer would promise was never verified on this stack
+  ---
+  duration_ms: 0.343333
+  type: 'test'
+  ...
+# Subtest: observation scope accepts several references so a two-eye refraction block voids in one transaction
+ok 76 - observation scope accepts several references so a two-eye refraction block voids in one transaction
+  ---
+  duration_ms: 0.252375
+  type: 'test'
+  ...
+# Subtest: fixback 1: an Observation-only void carries the Encounter version, so a concurrent sign makes it fail closed
+ok 77 - fixback 1: an Observation-only void carries the Encounter version, so a concurrent sign makes it fail closed
+  ---
+  duration_ms: 0.156458
+  type: 'test'
+  ...
+# Subtest: fixback 1: every successful void transaction includes the Encounter with its If-Match, even when the Encounter body is unchanged
+ok 78 - fixback 1: every successful void transaction includes the Encounter with its If-Match, even when the Encounter body is unchanged
+  ---
+  duration_ms: 0.109708
+  type: 'test'
+  ...
+# Subtest: fixback 2: a multi-reference void is all-or-nothing — one stale, voided, or foreign reference fails the whole request
+ok 79 - fixback 2: a multi-reference void is all-or-nothing — one stale, voided, or foreign reference fails the whole request
+  ---
+  duration_ms: 0.330208
+  type: 'test'
+  ...
+# Subtest: fixback 3: voiding a dilation Observation also retires the MedicationAdministration rows it is partOf
+ok 80 - fixback 3: voiding a dilation Observation also retires the MedicationAdministration rows it is partOf
+  ---
+  duration_ms: 0.25625
+  type: 'test'
+  ...
+# Subtest: fixback 6: a linked administration that cannot be read fails the void closed — nothing is voided, nothing left active behind a hidden Observation
+ok 81 - fixback 6: a linked administration that cannot be read fails the void closed — nothing is voided, nothing left active behind a hidden Observation
+  ---
+  duration_ms: 0.1515
+  type: 'test'
+  ...
+# Subtest: fixback 6: a dangling partOf reference (404) is not an outage — the Observation voids and the missing link is simply absent
+ok 82 - fixback 6: a dangling partOf reference (404) is not an outage — the Observation voids and the missing link is simply absent
+  ---
+  duration_ms: 0.17575
+  type: 'test'
+  ...
+# Subtest: fixback 7: section subtotals include linked administrations, so they always sum to the overall count
+ok 83 - fixback 7: section subtotals include linked administrations, so they always sum to the overall count
+  ---
+  duration_ms: 0.234667
+  type: 'test'
+  ...
+# Subtest: fixback 8: a linked administration that belongs to another encounter or patient rejects the void before any write
+ok 84 - fixback 8: a linked administration that belongs to another encounter or patient rejects the void before any write
+  ---
+  duration_ms: 0.173
+  type: 'test'
+  ...
+# Subtest: fixback 8: a linked administration already entered-in-error is not a boundary violation — nothing active remains, the Observation voids
+ok 85 - fixback 8: a linked administration already entered-in-error is not a boundary violation — nothing active remains, the Observation voids
+  ---
+  duration_ms: 0.117
+  type: 'test'
+  ...
+1..85
+# tests 85
+# suites 0
+# pass 82
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 523.955

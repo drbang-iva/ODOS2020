@@ -1,0 +1,826 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/v05a-authz.test.ts tests/diagnosisFindings.test.ts tests/diagnosisLinkL2.test.ts
+
+TAP version 13
+# Subtest: staff diagnosis-door assertion refuses before creating an Observation or any other write
+ok 1 - staff diagnosis-door assertion refuses before creating an Observation or any other write
+  ---
+  duration_ms: 2.472916
+  type: 'test'
+  ...
+# Subtest: staff cannot assign, detach or clear legacy Condition evidence but can edit finding grade and laterality
+    # Subtest: assign
+    ok 1 - assign
+      ---
+      duration_ms: 0.8065
+      type: 'test'
+      ...
+    # Subtest: standalone
+    ok 2 - standalone
+      ---
+      duration_ms: 0.369375
+      type: 'test'
+      ...
+    # Subtest: clear
+    ok 3 - clear
+      ---
+      duration_ms: 0.490291
+      type: 'test'
+      ...
+    # Subtest: grade
+    ok 4 - grade
+      ---
+      duration_ms: 6.521125
+      type: 'test'
+      ...
+    # Subtest: laterality
+    ok 5 - laterality
+      ---
+      duration_ms: 0.524417
+      type: 'test'
+      ...
+    1..5
+ok 2 - staff cannot assign, detach or clear legacy Condition evidence but can edit finding grade and laterality
+  ---
+  duration_ms: 9.433458
+  type: 'test'
+  ...
+# Subtest: findings payload distinguishes finding write access from diagnosis write access
+ok 3 - findings payload distinguishes finding write access from diagnosis write access
+  ---
+  duration_ms: 1.040792
+  type: 'test'
+  ...
+# Subtest: GET encounter findings returns 401 when unauthenticated
+ok 4 - GET encounter findings returns 401 when unauthenticated
+  ---
+  duration_ms: 23.673
+  type: 'test'
+  ...
+# Subtest: PUT encounter findings returns 401 when unauthenticated
+ok 5 - PUT encounter findings returns 401 when unauthenticated
+  ---
+  duration_ms: 12.4675
+  type: 'test'
+  ...
+# odos-mcp: diagnosis findings dependency failed: Error: Synthetic reassertion failure
+#     at MemoryFhir.create (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:1440:13)
+#     at persistFindingReassertionProvenance (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:1037:14)
+#     at handleDiagnosisFindingsMutationRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:394:13)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:519:18)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition next link is invalid.
+#     at validateLocalFhirSearchNextPath (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:198:11)
+#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:182:18)
+#     at allEncounterResources (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:826:10)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async Promise.all (index 2)
+#     at async handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:203:68)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:625:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition next link is invalid.
+#     at validateLocalFhirSearchNextPath (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:198:11)
+#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:182:18)
+#     at allEncounterResources (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:826:10)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async Promise.all (index 2)
+#     at async handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:203:68)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:625:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition pagination is unavailable or cyclic.
+#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:184:13)
+#     at allEncounterResources (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:826:10)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async Promise.all (index 2)
+#     at async handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:203:68)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:625:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition pagination is unavailable or cyclic.
+#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:184:13)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+# odos-mcp: diagnosis findings dependency failed: Error: Synthetic FHIR 503
+#     at MemoryFhir.searchUrl (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:1401:27)
+#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:187:27)
+#     at allEncounterResources (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:826:10)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async Promise.all (index 2)
+#     at async handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:203:68)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:625:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+#   status: 503
+# }
+# odos-mcp: diagnosis findings dependency failed: Error: Synthetic FHIR 500
+#     at MemoryFhir.read (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:1360:27)
+#     at handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:197:38)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:641:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+#   status: 500
+# }
+# Subtest: PUT encounter findings returns 403 for read-only Admin
+ok 6 - PUT encounter findings returns 403 for read-only Admin
+  ---
+  duration_ms: 2.937833
+  type: 'test'
+  ...
+# Subtest: GET expands offered rows and normalizes only the latest section snapshot
+ok 7 - GET expands offered rows and normalizes only the latest section snapshot
+  ---
+  duration_ms: 1.063833
+  type: 'test'
+  ...
+# Subtest: GET finds the selected encounter Condition on a later safe Bundle page
+ok 8 - GET finds the selected encounter Condition on a later safe Bundle page
+  ---
+  duration_ms: 0.475958
+  type: 'test'
+  ...
+# Subtest: GET projects carried present findings and merges prior absence into the exact offered eye only
+ok 9 - GET projects carried present findings and merges prior absence into the exact offered eye only
+  ---
+  duration_ms: 1.049291
+  type: 'test'
+  ...
+# Subtest: GET keeps a selected carry prior absence offered when the matching current atomic finding belongs only to another diagnosis
+ok 10 - GET keeps a selected carry prior absence offered when the matching current atomic finding belongs only to another diagnosis
+  ---
+  duration_ms: 0.566625
+  type: 'test'
+  ...
+# Subtest: reasserting a prior absent offer creates a fresh current row without a carried tag
+ok 11 - reasserting a prior absent offer creates a fresh current row without a carried tag
+  ---
+  duration_ms: 2.165958
+  type: 'test'
+  ...
+# Subtest: a carried finding remains unreasserted until the discriminated Provenance activity exists
+ok 12 - a carried finding remains unreasserted until the discriminated Provenance activity exists
+  ---
+  duration_ms: 0.925
+  type: 'test'
+  ...
+# Subtest: a reassertion marker older than the current carry does not reassert the carried finding
+ok 13 - a reassertion marker older than the current carry does not reassert the carried finding
+  ---
+  duration_ms: 0.307375
+  type: 'test'
+  ...
+# Subtest: a failed reassertion marker write remains retryable without losing the carry signal
+ok 14 - a failed reassertion marker write remains retryable without losing the carry signal
+  ---
+  duration_ms: 4.498958
+  type: 'test'
+  ...
+# Subtest: asserting absence round-trips and repeated assertions update one logical Observation
+ok 15 - asserting absence round-trips and repeated assertions update one logical Observation
+  ---
+  duration_ms: 0.905125
+  type: 'test'
+  ...
+# Subtest: assertion finds an existing same-eye Observation on page two and never creates a duplicate
+ok 16 - assertion finds an existing same-eye Observation on page two and never creates a duplicate
+  ---
+  duration_ms: 0.331791
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a cross-origin next page
+ok 17 - findings pagination fails closed for a cross-origin next page
+  ---
+  duration_ms: 1.510958
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a off-root next page
+ok 18 - findings pagination fails closed for a off-root next page
+  ---
+  duration_ms: 0.653625
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a unavailable next page
+ok 19 - findings pagination fails closed for a unavailable next page
+  ---
+  duration_ms: 0.479958
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a cycle next page
+ok 20 - findings pagination fails closed for a cycle next page
+  ---
+  duration_ms: 1.104292
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a upstream next page
+ok 21 - findings pagination fails closed for a upstream next page
+  ---
+  duration_ms: 0.350583
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 401 dependency response without a generic route 500
+ok 22 - findings maps a FHIR 401 dependency response without a generic route 500
+  ---
+  duration_ms: 0.109
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 403 dependency response without a generic route 500
+ok 23 - findings maps a FHIR 403 dependency response without a generic route 500
+  ---
+  duration_ms: 0.050125
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 500 dependency response without a generic route 500
+ok 24 - findings maps a FHIR 500 dependency response without a generic route 500
+  ---
+  duration_ms: 0.122209
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 401 dependency response
+ok 25 - GET findings route preserves the named FHIR 401 dependency response
+  ---
+  duration_ms: 7.623292
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 403 dependency response
+ok 26 - GET findings route preserves the named FHIR 403 dependency response
+  ---
+  duration_ms: 2.570833
+  type: 'test'
+  ...
+# odos-mcp: diagnosis findings dependency failed: Error: Synthetic FHIR 500
+#     at MemoryFhir.read (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:1360:27)
+#     at handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:197:38)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:964:20) {
+#   status: 500
+# }
+# Subtest: GET findings route preserves the named FHIR 500 dependency response
+ok 27 - GET findings route preserves the named FHIR 500 dependency response
+  ---
+  duration_ms: 1.658
+  type: 'test'
+  ...
+# Subtest: findings maps Encounter FHIR 404 to a non-leaking 404
+ok 28 - findings maps Encounter FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.095916
+  type: 'test'
+  ...
+# Subtest: findings maps Encounter FHIR 410 to a non-leaking 404
+ok 29 - findings maps Encounter FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.041916
+  type: 'test'
+  ...
+# Subtest: findings maps Condition FHIR 404 to a non-leaking 404
+ok 30 - findings maps Condition FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.134333
+  type: 'test'
+  ...
+# Subtest: findings maps Condition FHIR 410 to a non-leaking 404
+ok 31 - findings maps Condition FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.06275
+  type: 'test'
+  ...
+# Subtest: findings maps Observation FHIR 404 to a non-leaking 404
+ok 32 - findings maps Observation FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.062792
+  type: 'test'
+  ...
+# Subtest: findings maps Observation FHIR 410 to a non-leaking 404
+ok 33 - findings maps Observation FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.056959
+  type: 'test'
+  ...
+# Subtest: findings gives Condition bodySite laterality precedence over a stale catalog identifier
+ok 34 - findings gives Condition bodySite laterality precedence over a stale catalog identifier
+  ---
+  duration_ms: 0.205125
+  type: 'test'
+  ...
+# odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition pagination is unavailable or cyclic.
+#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:184:13)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+# Subtest: GET findings route returns missing lineage as visible state and a cyclic next link as 502
+ok 35 - GET findings route returns missing lineage as visible state and a cyclic next link as 502
+  ---
+  duration_ms: 4.106959
+  type: 'test'
+  ...
+# Subtest: 404 Condition/prior-unique lineage stays a 200 visible integrity state
+ok 36 - 404 Condition/prior-unique lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.253959
+  type: 'test'
+  ...
+# Subtest: 404 Encounter/prior-e1 lineage stays a 200 visible integrity state
+ok 37 - 404 Encounter/prior-e1 lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.178917
+  type: 'test'
+  ...
+# Subtest: 404 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+ok 38 - 404 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.135125
+  type: 'test'
+  ...
+# Subtest: 410 Condition/prior-unique lineage stays a 200 visible integrity state
+ok 39 - 410 Condition/prior-unique lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.105667
+  type: 'test'
+  ...
+# Subtest: 410 Encounter/prior-e1 lineage stays a 200 visible integrity state
+ok 40 - 410 Encounter/prior-e1 lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.112834
+  type: 'test'
+  ...
+# Subtest: 410 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+ok 41 - 410 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.124125
+  type: 'test'
+  ...
+# Subtest: asserting the same finding for another eye preserves the existing eye assertion
+ok 42 - asserting the same finding for another eye preserves the existing eye assertion
+  ---
+  duration_ms: 0.449834
+  type: 'test'
+  ...
+# Subtest: grade and laterality mutations enforce the configured scale and restore inherited laterality
+ok 43 - grade and laterality mutations enforce the configured scale and restore inherited laterality
+  ---
+  duration_ms: 0.852792
+  type: 'test'
+  ...
+# Subtest: clear enters the atomic Observation in error and rejects cross-encounter patient and Condition boundaries
+ok 44 - clear enters the atomic Observation in error and rejects cross-encounter patient and Condition boundaries
+  ---
+  duration_ms: 0.44475
+  type: 'test'
+  ...
+# Subtest: assign rehomes Condition evidence idempotently and standalone removes the only binding home
+ok 45 - assign rehomes Condition evidence idempotently and standalone removes the only binding home
+  ---
+  duration_ms: 0.408875
+  type: 'test'
+  ...
+# Subtest: staff diagnosis pick refuses all actions with zero writes
+    # Subtest: possible
+    ok 1 - possible
+      ---
+      duration_ms: 1.265584
+      type: 'test'
+      ...
+    # Subtest: confirm
+    ok 2 - confirm
+      ---
+      duration_ms: 0.174542
+      type: 'test'
+      ...
+    # Subtest: discard
+    ok 3 - discard
+      ---
+      duration_ms: 0.077292
+      type: 'test'
+      ...
+    1..3
+ok 46 - staff diagnosis pick refuses all actions with zero writes
+  ---
+  duration_ms: 1.864291
+  type: 'test'
+  ...
+# Subtest: condition code resolution returns zero, one, or two codes only when the catalog declaration permits it
+ok 47 - condition code resolution returns zero, one, or two codes only when the catalog declaration permits it
+  ---
+  duration_ms: 4.707375
+  type: 'test'
+  ...
+# Subtest: staged POAG picks persist the chosen member code and keep different per-eye stages separate
+ok 48 - staged POAG picks persist the chosen member code and keep different per-eye stages separate
+  ---
+  duration_ms: 4.443375
+  type: 'test'
+  ...
+# Subtest: Stage later persists a staged family Condition with no ICD-10-CM coding
+ok 49 - Stage later persists a staged family Condition with no ICD-10-CM coding
+  ---
+  duration_ms: 1.183834
+  type: 'test'
+  ...
+# Subtest: Stage later cannot duplicate an existing same-eye staged member Condition
+ok 50 - Stage later cannot duplicate an existing same-eye staged member Condition
+  ---
+  duration_ms: 2.182125
+  type: 'test'
+  ...
+# Subtest: a member pick completes the same-eye pending family Condition instead of creating a duplicate
+ok 51 - a member pick completes the same-eye pending family Condition instead of creating a duplicate
+  ---
+  duration_ms: 3.535417
+  type: 'test'
+  ...
+# Subtest: discarding an absent staged member cannot refute a same-eye pending family Condition
+ok 52 - discarding an absent staged member cannot refute a same-eye pending family Condition
+  ---
+  duration_ms: 1.513459
+  type: 'test'
+  ...
+# Subtest: all three eyelid families write both-lids OD and OS codes and resolve OU without the false 422
+ok 53 - all three eyelid families write both-lids OD and OS codes and resolve OU without the false 422
+  ---
+  duration_ms: 7.2865
+  type: 'test'
+  ...
+# Subtest: allOf mapping triggers require every nested option trigger
+ok 54 - allOf mapping triggers require every nested option trigger
+  ---
+  duration_ms: 1.545541
+  type: 'test'
+  ...
+# Subtest: EOM binocular plus incomitant proposes diplopia and paralytic strabismus without auto-confirming
+ok 55 - EOM binocular plus incomitant proposes diplopia and paralytic strabismus without auto-confirming
+  ---
+  duration_ms: 22.225916
+  type: 'test'
+  ...
+# Subtest: real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated tally ordering, and refuted audit state
+ok 56 - real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated tally ordering, and refuted audit state
+  ---
+  duration_ms: 94.110875
+  type: 'test'
+  ...
+# Subtest: OH-3 multi-select findings propose verified per-eye diagnoses and explicit picks create the right Conditions
+ok 57 - OH-3 multi-select findings propose verified per-eye diagnoses and explicit picks create the right Conditions
+  ---
+  duration_ms: 49.354291
+  type: 'test'
+  ...
+# Subtest: I1 complete ocular qualifiers resolve each selected finding to one diagnosis
+ok 58 - I1 complete ocular qualifiers resolve each selected finding to one diagnosis
+  ---
+  duration_ms: 315.351125
+  type: 'test'
+  ...
+# Subtest: I2 absent or partial ocular qualifiers retain the specified safe fallbacks
+ok 59 - I2 absent or partial ocular qualifiers retain the specified safe fallbacks
+  ---
+  duration_ms: 29.500125
+  type: 'test'
+  ...
+# Subtest: I3 qualifier triggers are scoped to the option that recorded the shared key
+ok 60 - I3 qualifier triggers are scoped to the option that recorded the shared key
+  ---
+  duration_ms: 0.237875
+  type: 'test'
+  ...
+# Subtest: I4 ocular records without findingDetails retain specific candidate lists
+ok 61 - I4 ocular records without findingDetails retain specific candidate lists
+  ---
+  duration_ms: 40.256584
+  type: 'test'
+  ...
+# Subtest: anterior-chamber ruled findings propose only their seeded diagnoses
+ok 62 - anterior-chamber ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 50.257542
+  type: 'test'
+  ...
+# Subtest: iris ruled findings propose only their seeded diagnoses
+ok 63 - iris ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 40.128333
+  type: 'test'
+  ...
+# Subtest: vitreous ruled findings propose only their seeded diagnoses
+ok 64 - vitreous ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 26.306708
+  type: 'test'
+  ...
+# Subtest: vessels ruled findings propose only their seeded diagnoses
+ok 65 - vessels ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 61.12125
+  type: 'test'
+  ...
+# Subtest: palpebral conjunctiva GPC proposes its seeded diagnosis
+ok 66 - palpebral conjunctiva GPC proposes its seeded diagnosis
+  ---
+  duration_ms: 14.104666
+  type: 'test'
+  ...
+# Subtest: vessels A/V ratio codes follow the field::option delimiter convention
+ok 67 - vessels A/V ratio codes follow the field::option delimiter convention
+  ---
+  duration_ms: 6.902916
+  type: 'test'
+  ...
+# Subtest: active ocular-health diagnosis mappings name active options on their declared fields
+ok 68 - active ocular-health diagnosis mappings name active options on their declared fields
+  ---
+  duration_ms: 6.578208
+  type: 'test'
+  ...
+# Subtest: diagnosis reachability reports mapping, rule, and visual-field descriptor channels against separate baselines
+ok 69 - diagnosis reachability reports mapping, rule, and visual-field descriptor channels against separate baselines
+  ---
+  duration_ms: 66.524042
+  type: 'test'
+  ...
+# Subtest: ocular-health ledger diagnoses never become more globally unreachable
+ok 70 - ocular-health ledger diagnoses never become more globally unreachable
+  ---
+  duration_ms: 10.215916
+  type: 'test'
+  ...
+# Subtest: unspecified ocular diagnosis keys never surface with qualifiers unset or set
+ok 71 - unspecified ocular diagnosis keys never surface with qualifiers unset or set
+  ---
+  duration_ms: 152.410458
+  type: 'test'
+  ...
+# Subtest: I5 qualifier components cannot diagnose or suppress without an active parent option
+ok 72 - I5 qualifier components cannot diagnose or suppress without an active parent option
+  ---
+  duration_ms: 28.949166
+  type: 'test'
+  ...
+# Subtest: I6 allOf-wrapped option fallbacks are suppressed like bare option fallbacks
+ok 73 - I6 allOf-wrapped option fallbacks are suppressed like bare option fallbacks
+  ---
+  duration_ms: 14.675708
+  type: 'test'
+  ...
+# Subtest: direct laterality-required picks ask once, then write no fabricated evidence, and evaluators contain no pick call site
+ok 74 - direct laterality-required picks ask once, then write no fabricated evidence, and evaluators contain no pick call site
+  ---
+  duration_ms: 2.491125
+  type: 'test'
+  ...
+# Subtest: visual-field descriptors derive every approved code while preserving the descriptor through reload
+ok 75 - visual-field descriptors derive every approved code while preserving the descriptor through reload
+  ---
+  duration_ms: 188.103333
+  type: 'test'
+  ...
+# Subtest: staged glaucoma visibly suppresses only the visual-field proposal and override never changes glaucoma stage
+ok 76 - staged glaucoma visibly suppresses only the visual-field proposal and override never changes glaucoma stage
+  ---
+  duration_ms: 27.621625
+  type: 'test'
+  ...
+# Subtest: prior-encounter confirmed glaucoma reveals both staged glaucoma families without widening encounter suppression scope
+ok 77 - prior-encounter confirmed glaucoma reveals both staged glaucoma families without widening encounter suppression scope
+  ---
+  duration_ms: 21.50525
+  type: 'test'
+  ...
+# Subtest: posterior plain drusen returns an ordered leaf and staged family while occasional drusen stays descriptive
+ok 78 - posterior plain drusen returns an ordered leaf and staged family while occasional drusen stays descriptive
+  ---
+  duration_ms: 20.222542
+  type: 'test'
+  ...
+# Subtest: homonymous field-side picks never derive field side from eye laterality
+ok 79 - homonymous field-side picks never derive field side from eye laterality
+  ---
+  duration_ms: 1.749375
+  type: 'test'
+  ...
+# Subtest: a concurrent Condition update returns 409 without silently retrying the clinician decision
+ok 80 - a concurrent Condition update returns 409 without silently retrying the clinician decision
+  ---
+  duration_ms: 14.401125
+  type: 'test'
+  ...
+# Subtest: a failed diagnosis pick transaction leaves the Condition and Encounter unchanged
+ok 81 - a failed diagnosis pick transaction leaves the Condition and Encounter unchanged
+  ---
+  duration_ms: 1.651875
+  type: 'test'
+  ...
+# Subtest: possible, confirm, and discard use atomic transactions with per-resource version preconditions
+ok 82 - possible, confirm, and discard use atomic transactions with per-resource version preconditions
+  ---
+  duration_ms: 1.943042
+  type: 'test'
+  ...
+# Subtest: direct confirm and discard each send one atomic Condition-and-Encounter transaction with version guards
+ok 83 - direct confirm and discard each send one atomic Condition-and-Encounter transaction with version guards
+  ---
+  duration_ms: 1.313292
+  type: 'test'
+  ...
+# Subtest: laterality-keyed picks keep both eyes distinct, escalate one eye, and discard only its Condition
+ok 84 - laterality-keyed picks keep both eyes distinct, escalate one eye, and discard only its Condition
+  ---
+  duration_ms: 29.415958
+  type: 'test'
+  ...
+# Subtest: conditional create makes identical same-eye Possible double-submit idempotent
+ok 85 - conditional create makes identical same-eye Possible double-submit idempotent
+  ---
+  duration_ms: 12.854667
+  type: 'test'
+  ...
+# Subtest: confirmed catalog picks join Encounter.diagnosis once and preserve rank gaps
+ok 86 - confirmed catalog picks join Encounter.diagnosis once and preserve rank gaps
+  ---
+  duration_ms: 1.134375
+  type: 'test'
+  ...
+# Subtest: three confirmed diagnoses can discard the middle row and submit the remaining exact reorder
+ok 87 - three confirmed diagnoses can discard the middle row and submit the remaining exact reorder
+  ---
+  duration_ms: 2.242875
+  type: 'test'
+  ...
+# Subtest: discard unlink is idempotent and confirm after discard relinks through the existing path
+ok 88 - discard unlink is idempotent and confirm after discard relinks through the existing path
+  ---
+  duration_ms: 1.978291
+  type: 'test'
+  ...
+# Subtest: discard returns reload-and-retry after the Encounter unlink exhausts conflict retries
+ok 89 - discard returns reload-and-retry after the Encounter unlink exhausts conflict retries
+  ---
+  duration_ms: 1.830917
+  type: 'test'
+  ...
+# Subtest: a signed Encounter refuses discard before changing the Condition or Encounter
+ok 90 - a signed Encounter refuses discard before changing the Condition or Encounter
+  ---
+  duration_ms: 0.834333
+  type: 'test'
+  ...
+# Subtest: diagnosis pick Provenance targets the patient
+ok 91 - diagnosis pick Provenance targets the patient
+  ---
+  duration_ms: 0.487292
+  type: 'test'
+  ...
+# Subtest: a failed tally side effect never fails a successful explicit diagnosis pick
+ok 92 - a failed tally side effect never fails a successful explicit diagnosis pick
+  ---
+  duration_ms: 6.613958
+  type: 'test'
+  ...
+# Subtest: dedup keeps rule evidence and the higher-priority mapping when no rule exists
+ok 93 - dedup keeps rule evidence and the higher-priority mapping when no rule exists
+  ---
+  duration_ms: 0.06475
+  type: 'test'
+  ...
+# Subtest: the practice role registry defines only Provider, Staff, and Admin
+ok 94 - the practice role registry defines only Provider, Staff, and Admin
+  ---
+  duration_ms: 0.676708
+  type: 'test'
+  ...
+# Subtest: full role table keeps diagnosis action equivalent to Condition create and update grants
+ok 95 - full role table keeps diagnosis action equivalent to Condition create and update grants
+  ---
+  duration_ms: 0.245334
+  type: 'test'
+  ...
+# Subtest: diagnosis permission cannot be granted independently of a credentialed role and can be revoked
+ok 96 - diagnosis permission cannot be granted independently of a credentialed role and can be revoked
+  ---
+  duration_ms: 0.251667
+  type: 'test'
+  ...
+# Subtest: AccessPolicy generator emits Medplum interactions, criteria, and writeConstraint without business-action leakage
+ok 97 - AccessPolicy generator emits Medplum interactions, criteria, and writeConstraint without business-action leakage
+  ---
+  duration_ms: 0.458041
+  type: 'test'
+  ...
+# Subtest: protocol authoring is credential-bound to Provider with code-fenced Basic grants
+ok 98 - protocol authoring is credential-bound to Provider with code-fenced Basic grants
+  ---
+  duration_ms: 0.320042
+  type: 'test'
+  ...
+# Subtest: front-desk can create the dispensary order + financial resources at practice scope
+ok 99 - front-desk can create the dispensary order + financial resources at practice scope
+  ---
+  duration_ms: 0.094666
+  type: 'test'
+  ...
+# Subtest: front-desk cannot update or delete PaymentReconciliation outside the guarded Phase 6a handlers
+ok 100 - front-desk cannot update or delete PaymentReconciliation outside the guarded Phase 6a handlers
+  ---
+  duration_ms: 0.109917
+  type: 'test'
+  ...
+# Subtest: every role can read payments while only custody roles can create them
+ok 101 - every role can read payments while only custody roles can create them
+  ---
+  duration_ms: 0.099833
+  type: 'test'
+  ...
+# Subtest: compiled front-desk and practice-admin AccessPolicies grant payer Organization directory operations
+ok 102 - compiled front-desk and practice-admin AccessPolicies grant payer Organization directory operations
+  ---
+  duration_ms: 0.257084
+  type: 'test'
+  ...
+# Subtest: every role's AccessPolicy carries a machine-readable practice-role identifier (resolver anchor)
+ok 103 - every role's AccessPolicy carries a machine-readable practice-role identifier (resolver anchor)
+  ---
+  duration_ms: 0.284167
+  type: 'test'
+  ...
+# Subtest: ProjectMembership access builder emits parameterized provider, patient, and state-license values
+ok 104 - ProjectMembership access builder emits parameterized provider, patient, and state-license values
+  ---
+  duration_ms: 0.121167
+  type: 'test'
+  ...
+# Subtest: aesthetics-provider state scoping rejects out-of-state or out-of-scope procedures
+ok 105 - aesthetics-provider state scoping rejects out-of-state or out-of-scope procedures
+  ---
+  duration_ms: 0.129833
+  type: 'test'
+  ...
+# Subtest: Binary parser plugin requires securityContext and rejects outside patient compartment
+ok 106 - Binary parser plugin requires securityContext and rejects outside patient compartment
+  ---
+  duration_ms: 0.158916
+  type: 'test'
+  ...
+# Subtest: Binary parser plugin accepts valid raw upload header and blocks securityContext rewrite
+ok 107 - Binary parser plugin accepts valid raw upload header and blocks securityContext rewrite
+  ---
+  duration_ms: 0.078083
+  type: 'test'
+  ...
+# Subtest: MCP FHIR client refuses direct Binary create without parser guard header
+ok 108 - MCP FHIR client refuses direct Binary create without parser guard header
+  ---
+  duration_ms: 0.342333
+  type: 'test'
+  ...
+# Subtest: ProjectMembership lifecycle transitions emit audit rows and placeholder AuditEvent
+ok 109 - ProjectMembership lifecycle transitions emit audit rows and placeholder AuditEvent
+  ---
+  duration_ms: 0.690291
+  type: 'test'
+  ...
+# Subtest: ProjectMembership role review preserves state and emits a review audit row
+ok 110 - ProjectMembership role review preserves state and emits a review audit row
+  ---
+  duration_ms: 0.788375
+  type: 'test'
+  ...
+# Subtest: break-glass requires human reason, creates time-limited access, and flags admin review
+ok 111 - break-glass requires human reason, creates time-limited access, and flags admin review
+  ---
+  duration_ms: 0.186208
+  type: 'test'
+  ...
+# Subtest: break-glass rejects agent self-attestation and blank reason
+ok 112 - break-glass rejects agent self-attestation and blank reason
+  ---
+  duration_ms: 0.055875
+  type: 'test'
+  ...
+# Subtest: audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available
+ok 113 - audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum AccessPolicy round-trip.
+  ---
+  duration_ms: 0.360875
+  type: 'test'
+  ...
+# Subtest: v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)
+ok 114 - v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat) # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the v0.5a enforcement fixture. This is the human-provisioned step per Mandate 8 — the agent does not create credentials, only uses what the human dropped into env vars.
+  ---
+  duration_ms: 0.174208
+  type: 'test'
+  ...
+# Subtest: compiled Staff policy fences RelatedPerson claims without changing other demographic grants
+ok 115 - compiled Staff policy fences RelatedPerson claims without changing other demographic grants
+  ---
+  duration_ms: 0.106416
+  type: 'test'
+  ...
+1..115
+# tests 123
+# suites 0
+# pass 121
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 0
+# duration_ms 2449.890125
+⚠️  LIVE STACK NOT CONFIGURED — 2 tests skipped, including live authorization enforcement (v05a-authz). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.
