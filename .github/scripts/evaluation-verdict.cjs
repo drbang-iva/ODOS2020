@@ -87,7 +87,23 @@ function evaluateToolIndependence({ evaluator, prBody, prAuthorType }) {
         if (line.includes("-->")) htmlComment = false;
         continue;
       }
-      line = line.replace(/<!--.*?-->/g, "");
+      let visibleLine = "";
+      let cursor = 0;
+      while (true) {
+        const commentStart = line.indexOf("<!--", cursor);
+        if (commentStart === -1) {
+          visibleLine += line.slice(cursor);
+          break;
+        }
+        visibleLine += line.slice(cursor, commentStart);
+        const commentEnd = line.indexOf("-->", commentStart + 4);
+        if (commentEnd === -1) {
+          visibleLine += line.slice(commentStart);
+          break;
+        }
+        cursor = commentEnd + 3;
+      }
+      line = visibleLine;
       const commentStart = line.indexOf("<!--");
       if (commentStart !== -1) {
         htmlComment = true;

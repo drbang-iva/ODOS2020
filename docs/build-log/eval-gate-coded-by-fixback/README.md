@@ -33,7 +33,8 @@ parser bytes. The seven mutations were:
 2. Remove the complete HTML-comment handling block.
 3. Omit inline span stripping while recognizing only unclosed openers as opening
    multi-line comments. This leaves inline contents in the scanned declaration.
-   Simply deleting the replace line also misclassifies closed comments as unclosed;
+   In the initial regex version, simply deleting the replace line also misclassified
+   closed comments as unclosed;
    that alternate mutation fails G8 and template tests but masks G9 by truncation.
 4. Close active comments only when `line.trim() === "-->"`.
 5. Move comment handling before the existing fence handling.
@@ -56,3 +57,13 @@ No new design decision: decisions/INDEX.md changes are N/A. The original kickoff
 amendment in PerformanceOD remains owned by the Claude session.
 No test stacks were started. Live parser/workflow proof is not required by the kickoff.
 CI and final-head bot results are reported in the PR and sealed handoff, after settling.
+
+## Static analysis follow-up
+
+CodeQL flagged the initial inline-comment regex as HTML sanitization and multiline
+filtering. This code scans declarations, not HTML output, and receives one line at
+a time. The final implementation uses explicit delimiter scanning, preserving the
+same strip-then-check-unclosed semantics without an HTML-filter regex. The focused
+suite and all seven mutation/restore pairs were rerun on this implementation with
+the same counts above. A boundary case also covers a comment opener reconstructed
+by removing a completed span; the subsequent unclosed-comment step still hides it.

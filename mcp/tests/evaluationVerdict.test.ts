@@ -1152,6 +1152,7 @@ test("G4 shared token table recognizes whole words in coder values and signature
 test("F2 strips all inline spans and keeps only text before an unclosed comment", () => {
   for (const prBody of [
     "Coded-by: Codex <!-- Claude --> GPT <!-- Haiku --> Astra",
+    "Coded-by: Codex <!<!-- note -->-- Claude",
     "Coded-by: Codex <!-- unclosed\nCoded-by: Claude",
     "<!--\nnote --> Coded-by: Claude\nCoded-by: Codex",
   ]) {
