@@ -1,0 +1,344 @@
+TAP version 13
+# Diagnosis-definition Basic/basic-1 skipped: Basic resource is not an ODOS diagnosis definition.
+# Subtest: Skin Carotenoid Score creates, captures, reads, renames, and deactivates without changing its stable key
+ok 1 - Skin Carotenoid Score creates, captures, reads, renames, and deactivates without changing its stable key
+  ---
+  duration_ms: 59.996625
+  type: 'test'
+  ...
+# Subtest: per-eye custom sections prefix field components and read OD and OS independently
+ok 2 - per-eye custom sections prefix field components and read OD and OS independently
+  ---
+  duration_ms: 12.681334
+  type: 'test'
+  ...
+# Subtest: per-eye multi-select fields namespace shared option codes, preserve legacy rows, and omit empty selections
+ok 3 - per-eye multi-select fields namespace shared option codes, preserve legacy rows, and omit empty selections
+  ---
+  duration_ms: 13.234083
+  type: 'test'
+  ...
+# Subtest: bare-string ocular-health seeds keep the current definition and presence-only history shape
+ok 4 - bare-string ocular-health seeds keep the current definition and presence-only history shape
+  ---
+  duration_ms: 0.595583
+  type: 'test'
+  ...
+# Subtest: finding qualifiers round-trip all four kinds independently by finding and eye
+ok 5 - finding qualifiers round-trip all four kinds independently by finding and eye
+  ---
+  duration_ms: 1.923167
+  type: 'test'
+  ...
+# Subtest: ocular-health saves round-trip normal and abnormal interpretations and refuse deferred
+ok 6 - ocular-health saves round-trip normal and abnormal interpretations and refuse deferred
+  ---
+  duration_ms: 10.965666
+  type: 'test'
+  ...
+# Subtest: OH-1 seeds nine editable structures, persists findings, and refuses deferred states
+ok 7 - OH-1 seeds nine editable structures, persists findings, and refuses deferred states
+  ---
+  duration_ms: 7.381
+  type: 'test'
+  ...
+# Subtest: OH-1 finding options and normal templates are editable through finding-definition HTTP handlers
+ok 8 - OH-1 finding options and normal templates are editable through finding-definition HTTP handlers
+  ---
+  duration_ms: 36.890833
+  type: 'test'
+  ...
+# Subtest: ocular-health cleanup keeps only clinically scoped chips and qualifiers
+ok 9 - ocular-health cleanup keeps only clinically scoped chips and qualifiers
+  ---
+  duration_ms: 6.440125
+  type: 'test'
+  ...
+# Subtest: corneal findings expose sourced grade axes and arcus extent through live qualifier precedents
+ok 10 - corneal findings expose sourced grade axes and arcus extent through live qualifier precedents
+  ---
+  duration_ms: 5.661292
+  type: 'test'
+  ...
+# Subtest: historical positive SPK grades remain editable after the provisional scale is sourced
+ok 11 - historical positive SPK grades remain editable after the provisional scale is sourced
+  ---
+  duration_ms: 6.381417
+  type: 'test'
+  ...
+# Subtest: historical SPK Grade 0 rehydrates as an ungraded finding and resaves without changing the original Observation
+ok 12 - historical SPK Grade 0 rehydrates as an ungraded finding and resaves without changing the original Observation
+  ---
+  duration_ms: 6.085
+  type: 'test'
+  ...
+# Subtest: a new SPK finding cannot be written with retired Grade 0
+ok 13 - a new SPK finding cannot be written with retired Grade 0
+  ---
+  duration_ms: 5.25525
+  type: 'test'
+  ...
+# Subtest: retired SPK Grade 0 translation does not drop the same value from another corneal finding
+ok 14 - retired SPK Grade 0 translation does not drop the same value from another corneal finding
+  ---
+  duration_ms: 6.24325
+  type: 'test'
+  ...
+# Subtest: lens exposes sourced independent grade and colour axes without a zero rung or selectable brunescent finding
+ok 15 - lens exposes sourced independent grade and colour axes without a zero rung or selectable brunescent finding
+  ---
+  duration_ms: 5.94875
+  type: 'test'
+  ...
+# Subtest: nuclear sclerosis grade and colour round-trip independently by eye
+ok 16 - nuclear sclerosis grade and colour round-trip independently by eye
+  ---
+  duration_ms: 5.956708
+  type: 'test'
+  ...
+# Subtest: historical brunescent alone rehydrates as nuclear colour and resaves while new brunescent is rejected
+ok 17 - historical brunescent alone rehydrates as nuclear colour and resaves while new brunescent is rejected
+  ---
+  duration_ms: 6.336791
+  type: 'test'
+  ...
+# Subtest: historical brunescent merges with a recorded nuclear grade into one deduplicated finding
+ok 18 - historical brunescent merges with a recorded nuclear grade into one deduplicated finding
+  ---
+  duration_ms: 5.452709
+  type: 'test'
+  ...
+# Subtest: retired finding translation stays scoped to lens brunescent
+ok 19 - retired finding translation stays scoped to lens brunescent
+  ---
+  duration_ms: 5.889834
+  type: 'test'
+  ...
+# Subtest: corneal graded qualifiers never offer a zero or none rung
+ok 20 - corneal graded qualifiers never offer a zero or none rung
+  ---
+  duration_ms: 5.961875
+  type: 'test'
+  ...
+# Subtest: every corneal graded qualifier has exactly four options
+ok 21 - every corneal graded qualifier has exactly four options
+  ---
+  duration_ms: 5.013083
+  type: 'test'
+  ...
+# Subtest: anterior chamber cells and flare expose the operator-adapted SUN-derived options through the lens graded-qualifier shape
+ok 22 - anterior chamber cells and flare expose the operator-adapted SUN-derived options through the lens graded-qualifier shape
+  ---
+  duration_ms: 5.423958
+  type: 'test'
+  ...
+# Subtest: anterior chamber cell and flare grades round-trip without setting the sibling axis
+ok 23 - anterior chamber cell and flare grades round-trip without setting the sibling axis
+  ---
+  duration_ms: 5.965041
+  type: 'test'
+  ...
+# EXAM-1B FROZEN: added synthetic seed option is NOT covered; original explicit codes preserved
+# EXAM-1B DERIVED: empty normal has NO negative act; explicit negative has actor and frozen scope
+# EXAM-1B REPLAY: Provenance failure repaired; 1 Observation, 1 Provenance after 3 attempts
+# Subtest: GET diagnosis candidates returns nuclear cataract after ocular-health capture regardless of grade
+ok 24 - GET diagnosis candidates returns nuclear cataract after ocular-health capture regardless of grade
+  ---
+  duration_ms: 41.132083
+  type: 'test'
+  ...
+# Subtest: retinal-detachment macula status remains documentation-only for diagnosis proposals
+ok 25 - retinal-detachment macula status remains documentation-only for diagnosis proposals
+  ---
+  duration_ms: 15.302
+  type: 'test'
+  ...
+# Subtest: Macula splits the hole findings, keeps Gass as an enum, and declares every ruled candidate route
+ok 26 - Macula splits the hole findings, keeps Gass as an enum, and declares every ruled candidate route
+  ---
+  duration_ms: 5.536
+  type: 'test'
+  ...
+# Subtest: each newly wired Macula selection proposes the ruled target through the diagnosis-candidate endpoint
+ok 27 - each newly wired Macula selection proposes the ruled target through the diagnosis-candidate endpoint
+  ---
+  duration_ms: 95.266875
+  type: 'test'
+  ...
+# Subtest: historical ambiguous macular-hole selections rehydrate without an invented stage and resave
+ok 28 - historical ambiguous macular-hole selections rehydrate without an invented stage and resave
+  ---
+  duration_ms: 6.061042
+  type: 'test'
+  ...
+# Subtest: retired macular-hole translation exact-matches both the Macula definition and finding code
+ok 29 - retired macular-hole translation exact-matches both the Macula definition and finding code
+  ---
+  duration_ms: 0.656541
+  type: 'test'
+  ...
+# Subtest: posterior Slice 5 exposes the sourced vitreous hemorrhage scale and categorical retinal subtypes
+ok 30 - posterior Slice 5 exposes the sourced vitreous hemorrhage scale and categorical retinal subtypes
+  ---
+  duration_ms: 6.15875
+  type: 'test'
+  ...
+# Subtest: each folded retinal subtype proposes the same diagnosis as its retired chip
+ok 31 - each folded retinal subtype proposes the same diagnosis as its retired chip
+  ---
+  duration_ms: 52.351625
+  type: 'test'
+  ...
+# Subtest: surviving Periphery diagnosis mappings keep their pre-fold public ids
+ok 32 - surviving Periphery diagnosis mappings keep their pre-fold public ids
+  ---
+  duration_ms: 5.641375
+  type: 'test'
+  ...
+# Subtest: both historical retinal chips rehydrate losslessly, resave, and remain invalid for new writes
+ok 33 - both historical retinal chips rehydrate losslessly, resave, and remain invalid for new writes
+  ---
+  duration_ms: 12.300208
+  type: 'test'
+  ...
+# Subtest: retired periphery translations exact-match both their definition and finding codes
+ok 34 - retired periphery translations exact-match both their definition and finding codes
+  ---
+  duration_ms: 0.690209
+  type: 'test'
+  ...
+# Subtest: persisted retinal subtype qualifiers override conflicting read translations
+ok 35 - persisted retinal subtype qualifiers override conflicting read translations
+  ---
+  duration_ms: 11.580125
+  type: 'test'
+  ...
+# Subtest: posterior drusen seeds preserve plain-drusen mappings while occasional drusen stays non-codeable
+ok 36 - posterior drusen seeds preserve plain-drusen mappings while occasional drusen stays non-codeable
+  ---
+  duration_ms: 5.761917
+  type: 'test'
+  ...
+# Subtest: OH-2 seeds five posterior structures and round-trips their worksheet findings per eye without diagnosis codes
+ok 37 - OH-2 seeds five posterior structures and round-trips their worksheet findings per eye without diagnosis codes
+  ---
+  duration_ms: 6.590292
+  type: 'test'
+  ...
+# Subtest: ocular-health history returns the Observation reference written by the save
+ok 38 - ocular-health history returns the Observation reference written by the save
+  ---
+  duration_ms: 5.932583
+  type: 'test'
+  ...
+# Subtest: OH-2b Vessels seeds and round-trips the per-eye A/V ratio grade on normal and abnormal eyes
+ok 39 - OH-2b Vessels seeds and round-trips the per-eye A/V ratio grade on normal and abnormal eyes
+  ---
+  duration_ms: 6.247459
+  type: 'test'
+  ...
+# Subtest: anterior structure grades exclude retired LOCS III fields and round-trip the remaining fields per eye
+ok 40 - anterior structure grades exclude retired LOCS III fields and round-trip the remaining fields per eye
+  ---
+  duration_ms: 17.837542
+  type: 'test'
+  ...
+# Subtest: E1 entrance state sections emit coded attributes and round-trip normal and abnormal fields
+ok 41 - E1 entrance state sections emit coded attributes and round-trip normal and abnormal fields
+  ---
+  duration_ms: 6.356583
+  type: 'test'
+  ...
+# Subtest: screenshot refinement stores binocular stereopsis once with top-level state
+ok 42 - screenshot refinement stores binocular stereopsis once with top-level state
+  ---
+  duration_ms: 5.578291
+  type: 'test'
+  ...
+# Subtest: CVF persists four-quadrant schematic values through the generic entrance endpoint
+ok 43 - CVF persists four-quadrant schematic values through the generic entrance endpoint
+  ---
+  duration_ms: 6.280084
+  type: 'test'
+  ...
+# Subtest: E1 Pachymetry and Manual K use measurement capture without exam state
+ok 44 - E1 Pachymetry and Manual K use measurement capture without exam state
+  ---
+  duration_ms: 5.605792
+  type: 'test'
+  ...
+# Subtest: dry-eye total score cannot persist without its instrument
+ok 45 - dry-eye total score cannot persist without its instrument
+  ---
+  duration_ms: 5.692458
+  type: 'test'
+  ...
+# Subtest: DE-1 dry-eye sections round-trip detail fields and per-eye anatomy through shared history
+ok 46 - DE-1 dry-eye sections round-trip detail fields and per-eye anatomy through shared history
+  ---
+  duration_ms: 6.818042
+  type: 'test'
+  ...
+# Subtest: DE-1 tear-stability and routine tear-film entry share one stableKey and one history
+ok 47 - DE-1 tear-stability and routine tear-film entry share one stableKey and one history
+  ---
+  duration_ms: 5.914542
+  type: 'test'
+  ...
+# Subtest: DE-1 abnormal mappings return proposal badges and never auto-confirm a diagnosis
+ok 48 - DE-1 abnormal mappings return proposal badges and never auto-confirm a diagnosis
+  ---
+  duration_ms: 12.35025
+  type: 'test'
+  ...
+# Subtest: guard 3: custom-section history hides voided (entered-in-error) rows so a void leaves the sheet, not just the Overview
+ok 49 - guard 3: custom-section history hides voided (entered-in-error) rows so a void leaves the sheet, not just the Overview
+  ---
+  duration_ms: 5.8445
+  type: 'test'
+  ...
+# Subtest: EXAM-1B freezes negative scope against an added seed option and distinguishes derived normal
+ok 50 - EXAM-1B freezes negative scope against an added seed option and distinguishes derived normal
+  ---
+  duration_ms: 0.948541
+  type: 'test'
+  ...
+# Subtest: EXAM-1B identical replay after a Provenance failure creates one assertion and one Provenance
+ok 51 - EXAM-1B identical replay after a Provenance failure creates one assertion and one Provenance
+  ---
+  duration_ms: 7.20925
+  type: 'test'
+  ...
+# Subtest: EXAM-1B refuses invented negative codes, empty scope, wrong eye, and actor injection
+ok 52 - EXAM-1B refuses invented negative codes, empty scope, wrong eye, and actor injection
+  ---
+  duration_ms: 6.017625
+  type: 'test'
+  ...
+# Subtest: EXAM-1B malformed persisted scope fails closed instead of becoming derived normal
+ok 53 - EXAM-1B malformed persisted scope fails closed instead of becoming derived normal
+  ---
+  duration_ms: 6.094834
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 4: deferred Pupils save is refused without writes
+ok 54 - DEFER-1 guard 4: deferred Pupils save is refused without writes
+  ---
+  duration_ms: 5.110708
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 6: runtime grants refuse non-dilation and accept dilation
+ok 55 - DEFER-1 guard 6: runtime grants refuse non-dilation and accept dilation
+  ---
+  duration_ms: 16.711708
+  type: 'test'
+  ...
+1..55
+# tests 55
+# suites 0
+# pass 55
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 864.701834
