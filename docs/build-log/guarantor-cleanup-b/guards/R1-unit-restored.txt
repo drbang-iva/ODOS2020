@@ -1,5 +1,5 @@
 Source: de3079f4e89ce01b00bcb1c2f4e35392f0190467
-Command (from mcp/): node --import tsx --test --test-name-pattern=age-of-majority (create|update) (is|requires) Admin tests/ageOfMajorityConfig.test.ts
+Command (from mcp/): node --import tsx --test --test-name-pattern='age-of-majority (create|update) (is|requires) Admin' tests/ageOfMajorityConfig.test.ts
 TAP version 13
 # Subtest: age-of-majority create is Admin-only on direct grants
 ok 1 - age-of-majority create is Admin-only on direct grants
