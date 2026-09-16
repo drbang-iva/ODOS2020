@@ -313,3 +313,25 @@ test("a definitive reassert audit refusal stops later targets and exposes the kn
   assert.deepEqual(result.outcomes.map(o => o.status), ["refused", "not-attempted"]);
   assert.equal(result.outcomes[0].versionId, "v1"); assert.equal(observationWrites(m).length, 0);
 });
+
+test("lost-response recovery refuses a marker on an owner whose canonical envelope changed", async () => {
+  const m = memoryFhir();
+  m.hooks.afterWrite = (write, stored) => {
+    if (write.resource.resourceType === "Observation") {
+      m.save({ ...stored as Observation, code: { text: "Concurrent noncanonical edit" } });
+      throw new Error("Lost Observation response");
+    }
+  };
+  const result = await run(m, command([factTarget()]));
+  assert.equal(result.outcomes[0].status, "conflict"); assert.equal(audits(m).length, 0);
+});
+
+test("a conditional-create loser includes the winner in its fresh projection", async () => {
+  const m = memoryFhir(); let release!: () => void; let arrivals = 0;
+  const barrier = new Promise<void>(resolve => { release = resolve; });
+  m.hooks.beforeWrite = async w => { if (w.resource.resourceType === "Observation") { if (++arrivals === 2) release(); await barrier; } };
+  const results = await Promise.all([run(m, command([factTarget()])), run(m, command([factTarget(keyFor(), undefined, endState({ presence: "absent" }))]))]);
+  const loser = results.flatMap(r => r.outcomes).find(o => o.status === "conflict")!;
+  assert.ok(loser.fresh && !("incomplete" in loser.fresh));
+  if (loser.fresh && !("incomplete" in loser.fresh)) assert.equal(loser.fresh.currentFacts[0]?.contributors[0]?.reference, `Observation/${observations(m)[0].id}`);
+});

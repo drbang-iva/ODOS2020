@@ -159,7 +159,7 @@ async function executeTarget(deps: FindingCommandDeps, command: FindingCommand, 
           return ensureReplayAudit(deps,id,saved,loser);
         }
         return {status:"conflict",target:id,reason:"Another command owns this finding.",reference:saved.id?`Observation/${saved.id}`:undefined,
-          versionId:saved.meta?.versionId,fresh:projection};
+          versionId:saved.meta?.versionId,fresh:await freshProjection(deps,command)};
       }
     }
   } catch(error) { return recoverFactWrite(deps,command,target,digest,definition,row,error,prior); }
@@ -343,7 +343,10 @@ async function recoverFactWrite(deps:FindingCommandDeps,command:FindingCommand,t
     reason:"Conditional finding write conflicted.",fresh:await freshProjection(deps,command).catch(()=>undefined)};
   if (status===400 || status===401 || status===403) return {status:"refused",target:id,reason:"Finding write was refused."};
   try { const state=await load(deps,command);if(state.incomplete) throw new Error("Reload incomplete.");
-    const owner=state.observations.find(o=>o.identifier?.some(i=>i.system===currentFindingIdentifier(target.key).system && i.value===currentFindingIdentifier(target.key).value));
+    const owners=await findOwners(deps,command,target.key);
+    if(owners.length>1 || owners.some(o=>parseCurrentFindingEnvelope(o).status!=="valid"))
+      return {status:"conflict",target:id,reason:"Recovered owner identity is ambiguous or invalid.",fresh:projectCurrentFindings(state)};
+    const owner=owners[0];
     const marker=owner&&parseFindingOperation(owner);
     if (owner && marker?.commandId===command.commandId && marker.target===id && marker.digest===digest && recordFactDigest(owner,definition,row)===digest)
       return finishMutationAudit(deps,id,owner,marker);
