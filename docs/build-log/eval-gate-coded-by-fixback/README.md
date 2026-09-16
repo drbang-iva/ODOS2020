@@ -28,7 +28,7 @@ The parser file is byte-identical to the evaluated base; its git diff is empty.
 
 ```sh
 node --import ./mcp/node_modules/tsx/dist/loader.mjs --test mcp/tests/evaluationVerdict.test.ts mcp/tests/fixturePhiGuard.test.ts
-git diff 6ca2d69d -- .github/scripts/evaluation-verdict.cjs
+git diff --exit-code 6ca2d69d -- .github/scripts/evaluation-verdict.cjs
 git diff --check
 ```
 
