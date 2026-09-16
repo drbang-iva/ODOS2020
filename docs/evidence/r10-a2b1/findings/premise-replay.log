@@ -1,0 +1,36 @@
+{"probe":1,"name":"nested catalog identity","result":{"option":"demodex::collarettes","naiveSplit":"demodex"}}
+{"probe":2,"name":"pre-rebuild supported pick refuses before any write","result":{"status":409,"body":{"result":"invalid","reason":"pre-rebuild-test-encounter","error":"Test data from before the rebuild is read-only."}}}
+{"probe":3,"name":"definition view with no id","result":{"candidateInstances":0,"overviewFindings":0}}
+{"probe":4,"name":"pre-rebuild clear refuses and preserves current projection","result":{"beforeRows":1,"afterRows":1,"reason":"pre-rebuild-test-encounter"}}
+{"probe":5,"name":"pre-rebuild snapshot mutation refuses","result":{"status":409,"body":{"result":"invalid","error":"pre-rebuild-test-encounter","reason":"pre-rebuild-test-encounter"}}}
+{"probe":6,"name":"canonical OU two targets clear","result":{"resourceEyes":["OD","OS"],"remainingRows":0}}
+{"probe":7,"name":"writer stores independent per-eye facts","result":[{"eye":"OD","presence":"absent"},{"eye":"OS","presence":"present"}]}
+{"probe":8,"name":"real negative capture hides older snapshot today","result":{"identifier":"urn:odos:negative-act","falseCodes":["NEGATIVE_OPTION::nuclear-sclerosis"],"findingsRows":0,"editorHistoryState":"normal"}}
+{"probe":9,"name":"retired option compatibility is component based","result":{"snapshotTranslated":["nuclear-sclerosis"],"translatedDetails":{"nuclear-sclerosis":{"colour":"4+ (dark brown/black; brunescent)"}},"atomicCatalogMatch":false,"atomicHelperValue":null}}
+{"probe":10,"name":"retired qualifier incompatible with universal byte equality","result":{"historyGrade":null,"rawOverviewGrade":"Grade 0","storedGrade":"Grade 0"}}
+{"probe":11,"name":"latest-only read changes existing section consumers","result":{"findingsGetRows":1,"candidateSnapshotGroups":1,"overviewSnapshotRows":2,"oldCandidateStillPresent":false}}
+{"probe":12,"name":"typed qualifiers round trip through real writer and history","result":{"sample":{"amount":3,"kind":"x","extent":{"from":2,"to":5,"clockwise":true}}}}
+{"probe":13,"name":"stored definition replaces complete seed","result":{"effectiveFields":0,"compiledFields":1}}
+{"probe":14,"name":"completeness current raw-existence semantics","result":{"atomicOnlyMissingRows":1,"retiredAtomicPlusEmptyNormalMissingRows":0}}
+{"probe":15,"name":"ocular section void cannot see atomic source","result":{"visibleFindingsRows":1,"sectionPreviewCount":0}}
+{"probe":16,"name":"unscoped legacy remains visible today","result":{"eye":"UNKNOWN"}}
+{"probe":17,"name":"cancelled atomic is excluded from current findings GET","result":{"rows":0}}
+{"summary":{"probes":17,"passed":17,"liveServer":false,"applicationEdits":0}}
+{"a1Probe":"E1","status":"PASS"}
+{"a1Probe":"E2","status":"PASS"}
+{"a1Probe":"E3","status":"PASS"}
+{"a1Probe":"E4","status":"PASS"}
+{"a1Probe":"E5","status":"PASS"}
+{"a1Probe":"E6","status":"PASS"}
+{"a1Probe":"E7","status":"PASS"}
+{"a1Probe":"E8","status":"PASS"}
+{"a1Probe":"E9","status":"PASS"}
+{"a1Probe":"E10","status":"PASS"}
+{"a1Probe":"E11","status":"PASS"}
+{"a1Probe":"E12","status":"PASS"}
+{"a1Probe":"E13","status":"PASS"}
+{"a1Probe":"E14","status":"PASS"}
+{"a1Probe":"E15","status":"PASS"}
+{"a1Probe":"E16","status":"PASS"}
+{"a1Probe":"E17","status":"PASS"}
+{"a1Comparison":{"passed":17,"publicHandlersUnchanged":true}}
