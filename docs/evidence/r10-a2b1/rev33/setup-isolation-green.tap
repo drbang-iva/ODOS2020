@@ -1,0 +1,1075 @@
+TAP version 13
+# Subtest: canonicalization preserves nested values while removing undefined and sorting arrays
+ok 1 - canonicalization preserves nested values while removing undefined and sorting arrays
+  ---
+  duration_ms: 5.15325
+  type: 'test'
+  ...
+# Subtest: admin canonicalization ignores rule, interaction, and object-key ordering
+ok 2 - admin canonicalization ignores rule, interaction, and object-key ordering
+  ---
+  duration_ms: 3.159416
+  type: 'test'
+  ...
+# Subtest: admin canonicalization detects audit, every correction Basic shape, and billing identity drift
+ok 3 - admin canonicalization detects audit, every correction Basic shape, and billing identity drift
+  ---
+  duration_ms: 5.326292
+  type: 'test'
+  ...
+# Subtest: cleanup strips all three canonical roles while preserving one unrelated policy
+ok 4 - cleanup strips all three canonical roles while preserving one unrelated policy
+  ---
+  duration_ms: 0.605875
+  type: 'test'
+  ...
+# Subtest: cleanup dedupes access and migrates the legacy field idempotently
+ok 5 - cleanup dedupes access and migrates the legacy field idempotently
+  ---
+  duration_ms: 0.136417
+  type: 'test'
+  ...
+# Subtest: cleanup preserves a parameterized-only grant without creating an unrestricted binding
+ok 6 - cleanup preserves a parameterized-only grant without creating an unrestricted binding
+  ---
+  duration_ms: 0.057417
+  type: 'test'
+  ...
+# Subtest: cleanup prefers canonical User.email over Practitioner telecom and stale display
+ok 7 - cleanup prefers canonical User.email over Practitioner telecom and stale display
+  ---
+  duration_ms: 0.12325
+  type: 'test'
+  ...
+# Subtest: cleanup uses Practitioner telecom when canonical User.email is absent
+ok 8 - cleanup uses Practitioner telecom when canonical User.email is absent
+  ---
+  duration_ms: 0.094959
+  type: 'test'
+  ...
+# Subtest: cleanup uses membership display only when no Practitioner lookup is available
+ok 9 - cleanup uses membership display only when no Practitioner lookup is available
+  ---
+  duration_ms: 0.049958
+  type: 'test'
+  ...
+# Subtest: stray-policy cleanup dry-run selects exact canonical names and performs zero deletes
+ok 10 - stray-policy cleanup dry-run selects exact canonical names and performs zero deletes
+  ---
+  duration_ms: 0.748709
+  type: 'test'
+  ...
+# Subtest: stray-policy cleanup exact ids remain bounded to the project-scoped policy set
+ok 11 - stray-policy cleanup exact ids remain bounded to the project-scoped policy set
+  ---
+  duration_ms: 0.282416
+  type: 'test'
+  ...
+# Subtest: stray-policy cleanup refuses every delete when any membership references a candidate
+ok 12 - stray-policy cleanup refuses every delete when any membership references a candidate
+  ---
+  duration_ms: 0.331167
+  type: 'test'
+  ...
+# Subtest: stray-policy cleanup apply deletes only the reviewed unreferenced candidates
+ok 13 - stray-policy cleanup apply deletes only the reviewed unreferenced candidates
+  ---
+  duration_ms: 0.082166
+  type: 'test'
+  ...
+# Subtest: fresh Compose startup maps ODOS service credentials into Medplum's super-admin seed settings
+ok 14 - fresh Compose startup maps ODOS service credentials into Medplum's super-admin seed settings
+  ---
+  duration_ms: 0.465666
+  type: 'test'
+  ...
+# Subtest: setup-practice loads the root .env file when present
+ok 15 - setup-practice loads the root .env file when present
+  ---
+  duration_ms: 0.10225
+  type: 'test'
+  ...
+# Subtest: setup replaces the installation manifest atomically
+ok 16 - setup replaces the installation manifest atomically
+  ---
+  duration_ms: 0.836458
+  type: 'test'
+  ...
+# Subtest: setup accepts Medplum 5.1.8's direct Project response from Project/$init
+ok 17 - setup accepts Medplum 5.1.8's direct Project response from Project/$init
+  ---
+  duration_ms: 0.437792
+  type: 'test'
+  ...
+# Subtest: setup service reads retain Medplum project ownership metadata
+ok 18 - setup service reads retain Medplum project ownership metadata
+  ---
+  duration_ms: 8.868583
+  type: 'test'
+  ...
+# Subtest: setup conditional create reports whether this transaction created or resolved the resource
+ok 19 - setup conditional create reports whether this transaction created or resolved the resource
+  ---
+  duration_ms: 0.187334
+  type: 'test'
+  ...
+# Subtest: setup wizard creates canonical role policies and binds one first-admin composite policy
+ok 20 - setup wizard creates canonical role policies and binds one first-admin composite policy
+  ---
+  duration_ms: 9.754209
+  type: 'test'
+  ...
+# Subtest: setup persists the default visit-type catalog and category config
+ok 21 - setup persists the default visit-type catalog and category config
+  ---
+  duration_ms: 6.111542
+  type: 'test'
+  ...
+# Subtest: a setup re-run is a no-op and preserves edited or deactivated visit-type defaults
+ok 22 - a setup re-run is a no-op and preserves edited or deactivated visit-type defaults
+  ---
+  duration_ms: 5.913208
+  type: 'test'
+  ...
+# Subtest: setup reuses a pre-existing canonical Provider policy while creating Staff and Admin
+ok 23 - setup reuses a pre-existing canonical Provider policy while creating Staff and Admin
+  ---
+  duration_ms: 5.867458
+  type: 'test'
+  ...
+# Subtest: a completed legacy setup without the scheduling marker resumes and seeds the missing foundation
+ok 24 - a completed legacy setup without the scheduling marker resumes and seeds the missing foundation
+  ---
+  duration_ms: 3.411416
+  type: 'test'
+  ...
+# Subtest: setup ignores an unrelated payer Organization and provisions stable practice resources once
+ok 25 - setup ignores an unrelated payer Organization and provisions stable practice resources once
+  ---
+  duration_ms: 7.218
+  type: 'test'
+  ...
+# Subtest: scheduling provisioning is not committed until both create audits succeed and retry re-emits them
+ok 26 - scheduling provisioning is not committed until both create audits succeed and retry re-emits them
+  ---
+  duration_ms: 6.463792
+  type: 'test'
+  ...
+# Subtest: setup accepts an explicit scheduling timezone offset instead of the host fallback
+ok 27 - setup accepts an explicit scheduling timezone offset instead of the host fallback
+  ---
+  duration_ms: 5.144583
+  type: 'test'
+  ...
+# Subtest: setup fails before provisioning when the human admin email collides with the service identity
+ok 28 - setup fails before provisioning when the human admin email collides with the service identity
+  ---
+  duration_ms: 0.277917
+  type: 'test'
+  ...
+# Subtest: setup provisions the dedicated operator identity for the exact resulting project
+ok 29 - setup provisions the dedicated operator identity for the exact resulting project
+  ---
+  duration_ms: 0.096167
+  type: 'test'
+  ...
+# Subtest: installation state is canonical and reports visible provenance
+ok 30 - installation state is canonical and reports visible provenance
+  ---
+  duration_ms: 1.244167
+  type: 'test'
+  ...
+# Subtest: MEDPLUM_PROJECT_ID is a fallback only when no installation manifest exists
+ok 31 - MEDPLUM_PROJECT_ID is a fallback only when no installation manifest exists
+  ---
+  duration_ms: 0.217042
+  type: 'test'
+  ...
+# Subtest: an existing installation manifest without projectId fails instead of falling through to env
+ok 32 - an existing installation manifest without projectId fails instead of falling through to env
+  ---
+  duration_ms: 0.506708
+  type: 'test'
+  ...
+# Subtest: configuration resolution can remain unresolved for authenticated-session fallback
+ok 33 - configuration resolution can remain unresolved for authenticated-session fallback
+  ---
+  duration_ms: 0.134459
+  type: 'test'
+  ...
+# Subtest: disagreeing installation and environment project IDs fail closed
+ok 34 - disagreeing installation and environment project IDs fail closed
+  ---
+  duration_ms: 0.384333
+  type: 'test'
+  ...
+# Subtest: an explicit foreign project requires the acknowledgement flag
+ok 35 - an explicit foreign project requires the acknowledgement flag
+  ---
+  duration_ms: 0.369292
+  type: 'test'
+  ...
+# Subtest: foreign-project acknowledgement requires an explicit project
+ok 36 - foreign-project acknowledgement requires an explicit project
+  ---
+  duration_ms: 0.407792
+  type: 'test'
+  ...
+# Subtest: derived operator credentials and migration state must agree with installation state
+ok 37 - derived operator credentials and migration state must agree with installation state
+  ---
+  duration_ms: 2.155167
+  type: 'test'
+  ...
+# Subtest: foreign-project acknowledgement cannot suppress canonical derived-state validation
+ok 38 - foreign-project acknowledgement cannot suppress canonical derived-state validation
+  ---
+  duration_ms: 1.379833
+  type: 'test'
+  ...
+# Subtest: authenticated project mismatch fails before a consumer can mutate
+ok 39 - authenticated project mismatch fails before a consumer can mutate
+  ---
+  duration_ms: 0.361667
+  type: 'test'
+  ...
+# Subtest: planner folds five legacy roles into three new policies and preserves access parameters
+ok 40 - planner folds five legacy roles into three new policies and preserves access parameters
+  ---
+  duration_ms: 1.188666
+  type: 'test'
+  ...
+# Subtest: planner deduplicates only identical canonical role and parameter entries
+ok 41 - planner deduplicates only identical canonical role and parameter entries
+  ---
+  duration_ms: 0.134458
+  type: 'test'
+  ...
+# Subtest: planner treats a compiled multi-role membership as an already migrated no-op
+ok 42 - planner treats a compiled multi-role membership as an already migrated no-op
+  ---
+  duration_ms: 4.181208
+  type: 'test'
+  ...
+# Subtest: planner refuses a drifted compiled policy instead of preserving its authorization
+ok 43 - planner refuses a drifted compiled policy instead of preserving its authorization
+  ---
+  duration_ms: 4.291667
+  type: 'test'
+  ...
+# Subtest: planner stops on ambiguous tags, ownership mismatch, missing version, and unmappable access
+ok 44 - planner stops on ambiguous tags, ownership mismatch, missing version, and unmappable access
+  ---
+  duration_ms: 0.252
+  type: 'test'
+  ...
+# Subtest: planner retains the foreign-membership ownership invariant
+ok 45 - planner retains the foreign-membership ownership invariant
+  ---
+  duration_ms: 0.065375
+  type: 'test'
+  ...
+# Subtest: planner skips a migration-importer membership whose legacy policy has no practice-role tag
+ok 46 - planner skips a migration-importer membership whose legacy policy has no practice-role tag
+  ---
+  duration_ms: 0.112583
+  type: 'test'
+  ...
+# Subtest: planner skips the entire membership when a non-role legacy policy accompanies role access
+ok 47 - planner skips the entire membership when a non-role legacy policy accompanies role access
+  ---
+  duration_ms: 0.047833
+  type: 'test'
+  ...
+# Subtest: planner refuses a legacy accessPolicy that carries a practice-role tag
+ok 48 - planner refuses a legacy accessPolicy that carries a practice-role tag
+  ---
+  duration_ms: 0.228416
+  type: 'test'
+  ...
+# Subtest: planner refuses a legacy accessPolicy unavailable in the target-scoped policy set
+ok 49 - planner refuses a legacy accessPolicy unavailable in the target-scoped policy set
+  ---
+  duration_ms: 0.267
+  type: 'test'
+  ...
+# Subtest: dry-run performs zero writes; apply creates policies, conditionally patches, audits, and converges
+ok 50 - dry-run performs zero writes; apply creates policies, conditionally patches, audits, and converges
+  ---
+  duration_ms: 1.094417
+  type: 'test'
+  ...
+# Subtest: migration credentials preserve access-token auth and prefer it over admin credentials
+ok 51 - migration credentials preserve access-token auth and prefer it over admin credentials
+  ---
+  duration_ms: 0.067708
+  type: 'test'
+  ...
+# Subtest: migration credentials reuse the admin PKCE login when no access token exists
+ok 52 - migration credentials reuse the admin PKCE login when no access token exists
+  ---
+  duration_ms: 0.052917
+  type: 'test'
+  ...
+# Subtest: migration credentials name both supported options when neither is complete
+ok 53 - migration credentials name both supported options when neither is complete
+  ---
+  duration_ms: 0.154917
+  type: 'test'
+  ...
+# Subtest: migration project resolution prefers explicit and environment values before session membership
+ok 54 - migration project resolution prefers explicit and environment values before session membership
+  ---
+  duration_ms: 0.045334
+  type: 'test'
+  ...
+# Subtest: migration project resolution uses exactly one active membership for the authenticated profile
+ok 55 - migration project resolution uses exactly one active membership for the authenticated profile
+  ---
+  duration_ms: 1.439458
+  type: 'test'
+  ...
+# Subtest: migration project resolution refuses ambiguous session memberships and names the explicit override
+ok 56 - migration project resolution refuses ambiguous session memberships and names the explicit override
+  ---
+  duration_ms: 0.229708
+  type: 'test'
+  ...
+# Subtest: the migration CLI accepts an access token, resolves its session membership, and stays dry-run
+ok 57 - the migration CLI accepts an access token, resolves its session membership, and stays dry-run
+  ---
+  duration_ms: 148.413917
+  type: 'test'
+  ...
+# Subtest: the migration CLI scopes both reads to the resolved project and stays dry-run
+ok 58 - the migration CLI scopes both reads to the resolved project and stays dry-run
+  ---
+  duration_ms: 147.608
+  type: 'test'
+  ...
+# Subtest: the migration CLI refuses a mismatched access-token project before any write
+ok 59 - the migration CLI refuses a mismatched access-token project before any write
+  ---
+  duration_ms: 121.288375
+  type: 'test'
+  ...
+# Subtest: the migration CLI accepts only admin email and password through the shared PKCE login
+ok 60 - the migration CLI accepts only admin email and password through the shared PKCE login
+  ---
+  duration_ms: 148.039292
+  type: 'test'
+  ...
+# Subtest: the migration CLI rejects missing credentials and names both supported options
+ok 61 - the migration CLI rejects missing credentials and names both supported options
+  ---
+  duration_ms: 102.526375
+  type: 'test'
+  ...
+# Subtest: operator adapter creates a named client without an access policy and verifies its exact membership
+ok 62 - operator adapter creates a named client without an access policy and verifies its exact membership
+  ---
+  duration_ms: 10.608208
+  type: 'test'
+  ...
+# Subtest: operator adapter resolves ClientApplication existence without treating gone as an error
+ok 63 - operator adapter resolves ClientApplication existence without treating gone as an error
+  ---
+  duration_ms: 0.3635
+  type: 'test'
+  ...
+# Subtest: operator adapter propagates a failed local membership verification
+ok 64 - operator adapter propagates a failed local membership verification
+  ---
+  duration_ms: 0.458625
+  type: 'test'
+  ...
+# Subtest: operator adapter revokes membership and client, then proves the old secret cannot exchange
+ok 65 - operator adapter revokes membership and client, then proves the old secret cannot exchange
+  ---
+  duration_ms: 0.373
+  type: 'test'
+  ...
+# Subtest: operator adapter retries recorded ids after partial ProjectMembership deletion
+ok 66 - operator adapter retries recorded ids after partial ProjectMembership deletion
+  ---
+  duration_ms: 0.318125
+  type: 'test'
+  ...
+# Subtest: operator adapter retries recorded ids after partial ClientApplication deletion
+ok 67 - operator adapter retries recorded ids after partial ClientApplication deletion
+  ---
+  duration_ms: 0.336708
+  type: 'test'
+  ...
+# Subtest: operator setup creates and verifies one policy-free client before persisting active state
+ok 68 - operator setup creates and verifies one policy-free client before persisting active state
+  ---
+  duration_ms: 30.099042
+  type: 'test'
+  ...
+# Subtest: failed initial verification revokes the just-created client and membership without persisting them
+ok 69 - failed initial verification revokes the just-created client and membership without persisting them
+  ---
+  duration_ms: 0.4405
+  type: 'test'
+  ...
+# Subtest: failed verification cleanup persists the exact new identity for the next invocation
+ok 70 - failed verification cleanup persists the exact new identity for the next invocation
+  ---
+  duration_ms: 0.377083
+  type: 'test'
+  ...
+# Subtest: next setup cleans a failed client after crashing before pending cleanup state
+ok 71 - next setup cleans a failed client after crashing before pending cleanup state
+  ---
+  duration_ms: 0.233417
+  type: 'test'
+  ...
+# Subtest: operator setup reuses only a verified exact-project active identity
+ok 72 - operator setup reuses only a verified exact-project active identity
+  ---
+  duration_ms: 0.131916
+  type: 'test'
+  ...
+# Subtest: operator setup fails closed when active state has missing credentials or a constrained membership
+ok 73 - operator setup fails closed when active state has missing credentials or a constrained membership
+  ---
+  duration_ms: 0.207208
+  type: 'test'
+  ...
+# Subtest: project rebuild creates a new identity and records the old client without reusing it
+ok 74 - project rebuild creates a new identity and records the old client without reusing it
+  ---
+  duration_ms: 0.140667
+  type: 'test'
+  ...
+# Subtest: rotation verifies the replacement before revoking the old client
+ok 75 - rotation verifies the replacement before revoking the old client
+  ---
+  duration_ms: 0.208709
+  type: 'test'
+  ...
+# Subtest: next rotation cleans the uncommitted replacement after crashing while saving the old credential
+ok 76 - next rotation cleans the uncommitted replacement after crashing while saving the old credential
+  ---
+  duration_ms: 0.404542
+  type: 'test'
+  ...
+# Subtest: next rotation cleans the uncommitted replacement after crashing while saving pending state
+ok 77 - next rotation cleans the uncommitted replacement after crashing while saving pending state
+  ---
+  duration_ms: 0.366542
+  type: 'test'
+  ...
+# Subtest: next rotation discards a duplicate retry credential after crashing during rollback bookkeeping
+ok 78 - next rotation discards a duplicate retry credential after crashing during rollback bookkeeping
+  ---
+  duration_ms: 0.2535
+  type: 'test'
+  ...
+# Subtest: failed replacement verification removes only the replacement and restores the original active identity
+ok 79 - failed replacement verification removes only the replacement and restores the original active identity
+  ---
+  duration_ms: 0.176625
+  type: 'test'
+  ...
+# Subtest: next rotation cleans a failed replacement after crashing before pending cleanup state
+ok 80 - next rotation cleans a failed replacement after crashing before pending cleanup state
+  ---
+  duration_ms: 0.161833
+  type: 'test'
+  ...
+# Subtest: a failed rotation revocation retains a private retry credential and resumes without creating another client
+ok 81 - a failed rotation revocation retains a private retry credential and resumes without creating another client
+  ---
+  duration_ms: 0.436792
+  type: 'test'
+  ...
+# Subtest: next setup finalizes a direct-rotation crash after the old client and retry credential are gone
+ok 82 - next setup finalizes a direct-rotation crash after the old client and retry credential are gone
+  ---
+  duration_ms: 0.305667
+  type: 'test'
+  ...
+# Subtest: next invocation finalizes a pending-rotation retry crash after its revoke already succeeded
+ok 83 - next invocation finalizes a pending-rotation retry crash after its revoke already succeeded
+  ---
+  duration_ms: 0.166917
+  type: 'test'
+  ...
+# Subtest: next setup finalizes a cleanup-pending crash after revoke succeeded and provisions once
+ok 84 - next setup finalizes a cleanup-pending crash after revoke succeeded and provisions once
+  ---
+  duration_ms: 0.156459
+  type: 'test'
+  ...
+# Subtest: next setup clears an already-revoked client when no membership was ever recorded
+ok 85 - next setup clears an already-revoked client when no membership was ever recorded
+  ---
+  duration_ms: 0.091167
+  type: 'test'
+  ...
+# Subtest: next setup removes a recorded membership left after partial cleanup deleted the client
+ok 86 - next setup removes a recorded membership left after partial cleanup deleted the client
+  ---
+  duration_ms: 0.185458
+  type: 'test'
+  ...
+# Subtest: next rotation restores the original identity after failed-replacement cleanup crashed post-revoke
+ok 87 - next rotation restores the original identity after failed-replacement cleanup crashed post-revoke
+  ---
+  duration_ms: 0.159834
+  type: 'test'
+  ...
+# Subtest: missing cleanup credential refuses a live client with exact ids and an executable recovery command
+ok 88 - missing cleanup credential refuses a live client with exact ids and an executable recovery command
+  ---
+  duration_ms: 0.220083
+  type: 'test'
+  ...
+# Subtest: credential-exposure revocation writes a tombstone and requires explicit replacement
+ok 89 - credential-exposure revocation writes a tombstone and requires explicit replacement
+  ---
+  duration_ms: 0.236583
+  type: 'test'
+  ...
+# Subtest: credential-exposure revocation persists the membership returned by its final verification
+ok 90 - credential-exposure revocation persists the membership returned by its final verification
+  ---
+  duration_ms: 0.091875
+  type: 'test'
+  ...
+# Subtest: next revoke finalizes a crash after remote emergency revocation and before credential cleanup
+ok 91 - next revoke finalizes a crash after remote emergency revocation and before credential cleanup
+  ---
+  duration_ms: 0.105208
+  type: 'test'
+  ...
+# Subtest: credential-exposure revocation retries after client deletion fails second
+ok 92 - credential-exposure revocation retries after client deletion fails second
+  ---
+  duration_ms: 0.2195
+  type: 'test'
+  ...
+# Subtest: credential-exposure revocation retries after membership deletion fails second
+ok 93 - credential-exposure revocation retries after membership deletion fails second
+  ---
+  duration_ms: 0.218375
+  type: 'test'
+  ...
+# Subtest: operator credentials and lifecycle state are stored as owner-only local files
+ok 94 - operator credentials and lifecycle state are stored as owner-only local files
+  ---
+  duration_ms: 2.045125
+  type: 'test'
+  ...
+# Subtest: MRN backfill URL guard accepts bracketed IPv6 loopback and rejects public hosts
+ok 95 - MRN backfill URL guard accepts bracketed IPv6 loopback and rejects public hosts
+  ---
+  duration_ms: 0.596
+  type: 'test'
+  ...
+# Subtest: MRN backfill is idempotent, preserves migrated identifiers, and never invents a minor guarantor
+ok 96 - MRN backfill is idempotent, preserves migrated identifiers, and never invents a minor guarantor
+  ---
+  duration_ms: 6.676875
+  type: 'test'
+  ...
+# Subtest: MRN backfill preserves unrelated fields on an existing Account full-resource update
+ok 97 - MRN backfill preserves unrelated fields on an existing Account full-resource update
+  ---
+  duration_ms: 0.25425
+  type: 'test'
+  ...
+# Subtest: MRN backfill preserves inactive and entered-in-error Account status
+ok 98 - MRN backfill preserves inactive and entered-in-error Account status
+  ---
+  duration_ms: 0.324416
+  type: 'test'
+  ...
+# Subtest: MRN backfill surfaces an indeterminate birth date without creating a self guarantor
+ok 99 - MRN backfill surfaces an indeterminate birth date without creating a self guarantor
+  ---
+  duration_ms: 0.212292
+  type: 'test'
+  ...
+# Subtest: MRN backfill treats a complete Account with reordered identifiers as unchanged
+ok 100 - MRN backfill treats a complete Account with reordered identifiers as unchanged
+  ---
+  duration_ms: 0.156209
+  type: 'test'
+  ...
+# Subtest: MRN backfill fails before writes for ambiguous or inconsistent identity state
+    # Subtest: multiple patient Accounts
+    ok 1 - multiple patient Accounts
+      ---
+      duration_ms: 0.196625
+      type: 'test'
+      ...
+    # Subtest: invalid Patient ODOS MRN
+    ok 2 - invalid Patient ODOS MRN
+      ---
+      duration_ms: 0.306958
+      type: 'test'
+      ...
+    # Subtest: Patient and Account MRN mismatch
+    ok 3 - Patient and Account MRN mismatch
+      ---
+      duration_ms: 0.248125
+      type: 'test'
+      ...
+    # Subtest: existing Account without an ODOS MRN
+    ok 4 - existing Account without an ODOS MRN
+      ---
+      duration_ms: 0.103875
+      type: 'test'
+      ...
+    # Subtest: shared or multi-subject Account
+    ok 5 - shared or multi-subject Account
+      ---
+      duration_ms: 0.707584
+      type: 'test'
+      ...
+    1..5
+ok 101 - MRN backfill fails before writes for ambiguous or inconsistent identity state
+  ---
+  duration_ms: 2.054708
+  type: 'test'
+  ...
+# Subtest: MRN backfill validates every Patient before reserving or writing an earlier valid row
+ok 102 - MRN backfill validates every Patient before reserving or writing an earlier valid row
+  ---
+  duration_ms: 0.156958
+  type: 'test'
+  ...
+# Subtest: MRN backfill rejects an existing-MRN reservation owned by another allocation token
+ok 103 - MRN backfill rejects an existing-MRN reservation owned by another allocation token
+  ---
+  duration_ms: 0.220583
+  type: 'test'
+  ...
+# Subtest: MRN backfill honors Patient and Account ifMatch versions atomically
+    # Subtest: stale Patient
+    ok 1 - stale Patient
+      ---
+      duration_ms: 0.165042
+      type: 'test'
+      ...
+    # Subtest: stale Account
+    ok 2 - stale Account
+      ---
+      duration_ms: 0.101291
+      type: 'test'
+      ...
+    1..2
+ok 104 - MRN backfill honors Patient and Account ifMatch versions atomically
+  ---
+  duration_ms: 0.348125
+  type: 'test'
+  ...
+# Subtest: majority setting21 prevents nineteen-year-old self guarantor in MRN backfill
+ok 105 - majority setting21 prevents nineteen-year-old self guarantor in MRN backfill
+  ---
+  duration_ms: 0.095167
+  type: 'test'
+  ...
+# Subtest: majority missing prevents all MRN backfill writes
+ok 106 - majority missing prevents all MRN backfill writes
+  ---
+  duration_ms: 0.113625
+  type: 'test'
+  ...
+# Subtest: majority CLI lookup is project scoped and refuses duplicate singleton rows
+ok 107 - majority CLI lookup is project scoped and refuses duplicate singleton rows
+  ---
+  duration_ms: 0.263708
+  type: 'test'
+  ...
+# Subtest: client-application probe refuses a session project mismatch before probing the endpoint
+ok 108 - client-application probe refuses a session project mismatch before probing the endpoint
+  ---
+  duration_ms: 9.264417
+  type: 'test'
+  ...
+# Subtest: client-application probe verifies auth/me before probing the configured project
+ok 109 - client-application probe verifies auth/me before probing the configured project
+  ---
+  duration_ms: 0.24425
+  type: 'test'
+  ...
+# Subtest: reconciliation patches stale and missing displays from User.email and is idempotent
+ok 110 - reconciliation patches stale and missing displays from User.email and is idempotent
+  ---
+  duration_ms: 1.038834
+  type: 'test'
+  ...
+# Subtest: reconciliation skips service memberships that reference a non-User principal
+ok 111 - reconciliation skips service memberships that reference a non-User principal
+  ---
+  duration_ms: 0.13525
+  type: 'test'
+  ...
+# Subtest: reconciliation validates every planned correction before making the first write
+ok 112 - reconciliation validates every planned correction before making the first write
+  ---
+  duration_ms: 0.271833
+  type: 'test'
+  ...
+# Subtest: reconciliation refuses to replace a display when canonical User.email is missing
+ok 113 - reconciliation refuses to replace a display when canonical User.email is missing
+  ---
+  duration_ms: 0.084
+  type: 'test'
+  ...
+# Subtest: missing role policies are created before the preserved legacy grant
+ok 114 - missing role policies are created before the preserved legacy grant
+  ---
+  duration_ms: 7.290958
+  type: 'test'
+  ...
+# Subtest: live repair requests Medplum ownership metadata when creating a policy
+ok 115 - live repair requests Medplum ownership metadata when creating a policy
+  ---
+  duration_ms: 0.099541
+  type: 'test'
+  ...
+# Subtest: a second repair is a zero-write idempotent no-op
+ok 116 - a second repair is a zero-write idempotent no-op
+  ---
+  duration_ms: 8.531625
+  type: 'test'
+  ...
+# Subtest: an explicit contract bootstrap repair may grant the configured service identity
+ok 117 - an explicit contract bootstrap repair may grant the configured service identity
+  ---
+  duration_ms: 4.42425
+  type: 'test'
+  ...
+# Subtest: repair reconciles a drifted composite before leaving membership bindings unchanged
+ok 118 - repair reconciles a drifted composite before leaving membership bindings unchanged
+  ---
+  duration_ms: 8.228667
+  type: 'test'
+  ...
+# Subtest: Provider primary override compiles one role policy, preserves unrelated access, and remains idempotent
+ok 119 - Provider primary override compiles one role policy, preserves unrelated access, and remains idempotent
+  ---
+  duration_ms: 7.079167
+  type: 'test'
+  ...
+# Subtest: the primary-role environment value defaults safely and rejects unsupported roles
+ok 120 - the primary-role environment value defaults safely and rejects unsupported roles
+  ---
+  duration_ms: 0.281042
+  type: 'test'
+  ...
+# Subtest: contract bootstrap repair is restricted to the ephemeral GitHub Actions Medplum
+ok 121 - contract bootstrap repair is restricted to the ephemeral GitHub Actions Medplum
+  ---
+  duration_ms: 0.082209
+  type: 'test'
+  ...
+# Subtest: the repair CLI requires an explicit --email target
+ok 122 - the repair CLI requires an explicit --email target
+  ---
+  duration_ms: 0.284416
+  type: 'test'
+  ...
+# Subtest: repair target resolution prefers canonical User.email over Practitioner telecom and stale display
+ok 123 - repair target resolution prefers canonical User.email over Practitioner telecom and stale display
+  ---
+  duration_ms: 0.5875
+  type: 'test'
+  ...
+# Subtest: contract bootstrap target resolution falls back when the account User is project-invisible
+ok 124 - contract bootstrap target resolution falls back when the account User is project-invisible
+  ---
+  duration_ms: 0.249541
+  type: 'test'
+  ...
+# Subtest: one untagged canonical policy is tagged without replacing unrelated metadata
+ok 125 - one untagged canonical policy is tagged without replacing unrelated metadata
+  ---
+  duration_ms: 3.507041
+  type: 'test'
+  ...
+# Subtest: repair ignores an identically named foreign policy and creates a project-owned replacement
+ok 126 - repair ignores an identically named foreign policy and creates a project-owned replacement
+  ---
+  duration_ms: 4.169417
+  type: 'test'
+  ...
+# Subtest: duplicate canonical policies stop repair before membership mutation
+ok 127 - duplicate canonical policies stop repair before membership mutation
+  ---
+  duration_ms: 0.249917
+  type: 'test'
+  ...
+# Subtest: a wrong ODOS role tag stops repair without overwriting it
+ok 128 - a wrong ODOS role tag stops repair without overwriting it
+  ---
+  duration_ms: 0.203667
+  type: 'test'
+  ...
+# Subtest: local repair login refuses a multi-membership response before token exchange
+ok 129 - local repair login refuses a multi-membership response before token exchange
+  ---
+  duration_ms: 17.324792
+  type: 'test'
+  ...
+# Subtest: stale Encounter diagnosis repair is dry-run by default, preserves rank gaps, and is idempotent
+ok 130 - stale Encounter diagnosis repair is dry-run by default, preserves rank gaps, and is idempotent
+  ---
+  duration_ms: 1.069917
+  type: 'test'
+  ...
+# Subtest: untagged policy is tagged without replacing other meta fields and is idempotent
+ok 131 - untagged policy is tagged without replacing other meta fields and is idempotent
+  ---
+  duration_ms: 0.990875
+  type: 'test'
+  ...
+# Subtest: already-correct policy is skipped with zero writes
+ok 132 - already-correct policy is skipped with zero writes
+  ---
+  duration_ms: 0.17425
+  type: 'test'
+  ...
+# Subtest: wrong ODOS role tag is a conflict with no write and a non-zero exit path
+ok 133 - wrong ODOS role tag is a conflict with no write and a non-zero exit path
+  ---
+  duration_ms: 0.165292
+  type: 'test'
+  ...
+# Subtest: unrelated tag is preserved and the practice-role tag is appended
+ok 134 - unrelated tag is preserved and the practice-role tag is appended
+  ---
+  duration_ms: 0.08875
+  type: 'test'
+  ...
+# Subtest: a stale version is reported as a conflict without applying the patch
+ok 135 - a stale version is reported as a conflict without applying the patch
+  ---
+  duration_ms: 0.099333
+  type: 'test'
+  ...
+# Subtest: a missing version is reported as a conflict without attempting a write
+ok 136 - a missing version is reported as a conflict without attempting a write
+  ---
+  duration_ms: 0.058583
+  type: 'test'
+  ...
+# Subtest: the live migration target must be local or private
+ok 137 - the live migration target must be local or private
+  ---
+  duration_ms: 0.304291
+  type: 'test'
+  ...
+# Subtest: reseed credentials use an explicit access token
+ok 138 - reseed credentials use an explicit access token
+  ---
+  duration_ms: 0.059709
+  type: 'test'
+  ...
+# Subtest: reseed credentials fall back to admin email and password
+ok 139 - reseed credentials fall back to admin email and password
+  ---
+  duration_ms: 0.217458
+  type: 'test'
+  ...
+# Subtest: reseed credentials prefer an explicit token over admin credentials
+ok 140 - reseed credentials prefer an explicit token over admin credentials
+  ---
+  duration_ms: 0.247958
+  type: 'test'
+  ...
+# Subtest: reseed credential failure names both accepted shapes and every absent variable
+ok 141 - reseed credential failure names both accepted shapes and every absent variable
+  ---
+  duration_ms: 0.137292
+  type: 'test'
+  ...
+# Subtest: reseed CLI never echoes a present credential value when another credential is absent
+ok 142 - reseed CLI never echoes a present credential value when another credential is absent
+  ---
+  duration_ms: 82.126083
+  type: 'test'
+  ...
+# Subtest: credential-reading npm scripts load the repo env file
+ok 143 - credential-reading npm scripts load the repo env file
+  ---
+  duration_ms: 0.235792
+  type: 'test'
+  ...
+# Target: Project/practice-1 (source: MEDPLUM_PROJECT_ID)
+# Subtest: demo seed creates a synthetic patient, schedule, issued Invoice, unapplied credit, and statement
+ok 144 - demo seed creates a synthetic patient, schedule, issued Invoice, unapplied credit, and statement
+  ---
+  duration_ms: 11.98675
+  type: 'test'
+  ...
+# Subtest: a second demo seed run is idempotent
+ok 145 - a second demo seed run is idempotent
+  ---
+  duration_ms: 0.876375
+  type: 'test'
+  ...
+# Subtest: insured demo seed passes the real insurance-aware statement acceptance assertion
+ok 146 - insured demo seed passes the real insurance-aware statement acceptance assertion
+  ---
+  duration_ms: 0.670458
+  type: 'test'
+  ...
+# Subtest: demo appointment uses the practice date and a real New York UTC offset
+ok 147 - demo appointment uses the practice date and a real New York UTC offset
+  ---
+  duration_ms: 0.127417
+  type: 'test'
+  ...
+# Subtest: demo statement visibility marker uses the shipped completed-run codes
+ok 148 - demo statement visibility marker uses the shipped completed-run codes
+  ---
+  duration_ms: 0.116917
+  type: 'test'
+  ...
+# Subtest: demo seed CLI requires the exact project and loads only the dedicated operator identity
+ok 149 - demo seed CLI requires the exact project and loads only the dedicated operator identity
+  ---
+  duration_ms: 0.704583
+  type: 'test'
+  ...
+# Subtest: SMART registration refuses a session project mismatch before POSTing a client
+ok 150 - SMART registration refuses a session project mismatch before POSTing a client
+  ---
+  duration_ms: 9.503459
+  type: 'test'
+  ...
+# Subtest: SMART registration checks auth/me before creating a client in the configured project
+ok 151 - SMART registration checks auth/me before creating a client in the configured project
+  ---
+  duration_ms: 0.42175
+  type: 'test'
+  ...
+# Subtest: SMART registration resolves its default project from the installation manifest
+ok 152 - SMART registration resolves its default project from the installation manifest
+  ---
+  duration_ms: 1.055583
+  type: 'test'
+  ...
+# Subtest: SMART registration refuses an explicit foreign project without acknowledgement
+ok 153 - SMART registration refuses an explicit foreign project without acknowledgement
+  ---
+  duration_ms: 0.486875
+  type: 'test'
+  ...
+# Subtest: dry-run reports literal missing and unexpected canonicalized rules without writing
+ok 154 - dry-run reports literal missing and unexpected canonicalized rules without writing
+  ---
+  duration_ms: 10.843959
+  type: 'test'
+  ...
+# Subtest: apply patches only resource, preserves all other fields, and converges on rerun
+ok 155 - apply patches only resource, preserves all other fields, and converges on rerun
+  ---
+  duration_ms: 10.458625
+  type: 'test'
+  ...
+# Subtest: sync restores the profile-fenced tally rule without rewriting its built-in parameter
+ok 156 - sync restores the profile-fenced tally rule without rewriting its built-in parameter
+  ---
+  duration_ms: 4.469333
+  type: 'test'
+  ...
+# Subtest: split Provider and Staff bindings compile to one project-owned policy independent of access order
+ok 157 - split Provider and Staff bindings compile to one project-owned policy independent of access order
+  ---
+  duration_ms: 46.4935
+  type: 'test'
+  ...
+# Subtest: sync preserves disjoint Provider and Staff patient panels in the compiled policy
+ok 158 - sync preserves disjoint Provider and Staff patient panels in the compiled policy
+  ---
+  duration_ms: 19.379167
+  type: 'test'
+  ...
+# Subtest: sync folds a legacy accessPolicy binding into access and removes the first-match hazard
+ok 159 - sync folds a legacy accessPolicy binding into access and removes the first-match hazard
+  ---
+  duration_ms: 18.840375
+  type: 'test'
+  ...
+# Subtest: sync refuses missing, duplicate, versionless, or ambiguously tagged policies before writing
+ok 160 - sync refuses missing, duplicate, versionless, or ambiguously tagged policies before writing
+  ---
+  duration_ms: 4.601208
+  type: 'test'
+  ...
+# Subtest: a project mismatch refuses before policy reads or writes
+ok 161 - a project mismatch refuses before policy reads or writes
+  ---
+  duration_ms: 0.254459
+  type: 'test'
+  ...
+# Subtest: a stale version fails cleanly without retry or overwrite
+ok 162 - a stale version fails cleanly without retry or overwrite
+  ---
+  duration_ms: 4.821167
+  type: 'test'
+  ...
+# Subtest: a later stale failure reports earlier successful updates and safe rerun guidance
+ok 163 - a later stale failure reports earlier successful updates and safe rerun guidance
+  ---
+  duration_ms: 5.157792
+  type: 'test'
+  ...
+# Subtest: live adapter sends the deployed version as a weak If-Match header
+ok 164 - live adapter sends the deployed version as a weak If-Match header
+  ---
+  duration_ms: 0.240167
+  type: 'test'
+  ...
+# Subtest: live adapter targets composite creation and membership replacement to the named project
+ok 165 - live adapter targets composite creation and membership replacement to the named project
+  ---
+  duration_ms: 1.530125
+  type: 'test'
+  ...
+# Subtest: project id is required from --project or MEDPLUM_PROJECT_ID
+ok 166 - project id is required from --project or MEDPLUM_PROJECT_ID
+  ---
+  duration_ms: 0.148292
+  type: 'test'
+  ...
+# Subtest: bootstrap credentials use only the configured service login without targeting the practice project
+ok 167 - bootstrap credentials use only the configured service login without targeting the practice project
+  ---
+  duration_ms: 0.159167
+  type: 'test'
+  ...
+# Subtest: bootstrap service identity completes dry-run after the ordinary operator path is denied AccessPolicy read
+ok 168 - bootstrap service identity completes dry-run after the ordinary operator path is denied AccessPolicy read
+  ---
+  duration_ms: 307.147959
+  type: 'test'
+  ...
+# Subtest: bootstrap service identity refuses a foreign-project policy before composing or sending a patch
+ok 169 - bootstrap service identity refuses a foreign-project policy before composing or sending a patch
+  ---
+  duration_ms: 150.110333
+  type: 'test'
+  ...
+# Subtest: bootstrap service identity still refuses a non-local Medplum URL before login
+ok 170 - bootstrap service identity still refuses a non-local Medplum URL before login
+  ---
+  duration_ms: 104.530875
+  type: 'test'
+  ...
+1..170
+# tests 177
+# suites 0
+# pass 177
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3455.660708

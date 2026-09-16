@@ -1,18 +1,18 @@
-# R10 A2b.1 implementation checkpoint — scope blocked
+# R10 A2b.1 sealed author bundle
 
-**NOT EVALUATED. HELD OPEN. No push or PR yet. Never merge this slice.** Codex / GPT-6 Astra, high effort, coder. Claude Opus is the independent evaluator; these are author checks only.
+**NOT EVALUATED. HELD OPEN through A3. Never merge this slice.** Codex / GPT-6 Astra, high effort, coder. Claude Opus is the independent evaluator; these are author checks only.
 
 ## Completed implementation
 
 Rev 3.2 §3.4 reader/writer amendments, digest-independent reassert command witness and W45; findings GET/PUT and audit repair; current-projection candidates and supported Condition-only picks; paged stores; blocking live-authz registration; fixed T1–T22 A3 release gate. No UI or production policy edits.
 
-Task branch `drbang-iva/r10-a2b1`; isolated worktree `.worktrees/r10-a2b1`. Fresh origin/main is `4b3f6d7c25fb40268e216dcd22ad03a866d03643`; `git rebase origin/main` reports up to date. All eleven §2 premise groups were verified at that baseline. Main did not move. Source/inventory implementation through `5ba33bf2`; this checkpoint additionally records corrected live diagnostic resource types and evidence. Earlier implementation commits are preserved in branch history, beginning with the resumed `a8921e9d`.
+Task branch `drbang-iva/r10-a2b1`; isolated worktree `.worktrees/r10-a2b1`. Fresh origin/main is `4b3f6d7c25fb40268e216dcd22ad03a866d03643`; `git rebase origin/main` reports up to date. All eleven §2 premise groups were verified at that baseline. Main did not move. Source/inventory implementation through `5ba33bf2`, diagnostic evidence checkpoint `a84ef6d8`, and rev3.3 capture retirement `20a0a28c`; the final PR head and bot adjudications are recorded in the PR description and handoff. Earlier implementation commits are preserved in branch history, beginning with the resumed `a8921e9d`.
 
-## Scope blocker and concrete proposed change
+## Rev 3.3 scope ruling completed
 
-The unchanged `mcp/tests/fixtures/r10/capture-baseline.mjs:16` tries to instrument `atomicFindingRows` and `sectionFindingRows`. Those private endpoint helpers were replaced by the current reader. The capture-wrapper test fails before it can exercise its remaining named exports. Rev 3.2 §4/§6 names `premise-replay.ts`, but does not authorize this instrumentation fixture. No out-of-scope edit was made.
+Applied exactly the approved one-line removal of the retired findings hook in `capture-baseline.mjs` and one README sentence. No other changes to either file. Captures remain compared through compatRows. Misspelling the still-existing overview hook made the wrapper test fail1/1; restoring it passed full parity170/170. Both immutable hashes below were rechecked. Evidence: `rev33/README.md`, `capture-hook-red.tap`, `parity-green.tap`, `parity-after-rebase.tap` and `immutable-hashes.txt`.
 
-Proposed, **unapplied**, one-line patch: `integration/proposed-capture-instrumentation.patch`. It removes only the obsolete endpoint hook entry. Other capture hooks and the named-export assertions remain. The captured data and five divergences remain byte-identical; all17 replay probes still execute and assert. Operator scope question is pending. After approval, apply the narrow patch, prove its guard, rerun parity/full checks without an inherited `MEDPLUM_PROJECT_ID`, refresh/rebase and rerun affected checks, then push/open the NOT EVALUATED / HELD OPEN PR and finish bot review. No evaluation marker may be posted by the coder.
+Existing assertion bodies in the capture test were unchanged. Mapping: W-c and rev3.3 §4. No missing-hook tolerance was introduced. Full MCP runs with MEDPLUM_PROJECT_ID unset, task-local operator state, and a private installation manifest loaded only by the existing live helper configuration. Audit/SMART isolation passed5/5 and setup-wizard177/177 without assertion changes.
 
 ## Verification counts
 
@@ -27,8 +27,9 @@ Proposed, **unapplied**, one-line patch: `integration/proposed-capture-instrumen
 | A3 checker | 14/14; separate actual scenario file has16 intentional A3 todos |
 | Search contract | 5/5 |
 | Integrated focused set after rebase | 429 tests,429 pass,0 fail/skip/todo |
+| Full parity after rebase | 170/170;0 fail/skip/todo |
 | E1–E17 replay | 17 emitted probes,17 PASS comparisons; unchanged wrapper passes |
-| Full MCP | 5,738 tests:5,711 pass,3 fail,8 skip,16 todo; exit1 |
+| Full MCP, rev3.3 clean configuration | 5,738 tests:5,714 pass,0 fail,8 named environment skips,16 intentional A3 todos; exit0 |
 | UI full | 1,629 tests,1,629 pass,0 fail/skip/todo |
 | Final blocking live-authz lane | 68 tests,68 pass,0 fail/skip/todo |
 | Final diagnosis live suite after diagnostic correction | 3 tests,3 pass,0 fail/skip/todo |
@@ -40,7 +41,7 @@ Proposed, **unapplied**, one-line patch: `integration/proposed-capture-instrumen
 | Preflight | exit0;0 warnings,0 hard blocks |
 | Diff whitespace | exit0 |
 
-Full MCP's three failures are the capture-wrapper scope blocker and two SMART adapter fixtures that deliberately use `practice-target` but inherit the live project's `MEDPLUM_PROJECT_ID`. The unchanged SMART suite passes4/4 in a clean environment. No failed assertion was weakened. The full run is **not green**; it must be rerun after the scope ruling with the live project environment unset (live helpers derive their own session project).
+The clean full run has zero failures. Earlier configuration attempts and their diagnosed errors are historical checkpoint evidence; they are superseded by `rev33/full-mcp-counts.txt`. The original blocked capture-wrapper test now passes. No failed assertion was weakened and no skip was added.
 
 Eight full-suite skips remain explicitly unproven in that run: operator-assisted scoped clinician exam-start; two isolated Consent matrix checks; Credit Bank Postgres migration; diagnosis-newness Postgres migration; isolated scheduled-enrollment Medplum; reference-population Postgres migration; installed WeasyPrint PDF/A output. The16 todos are the intentional A3 scenarios, not passing release evidence. See raw counts and logs under integration/.
 
@@ -50,7 +51,7 @@ The private disposable server uses `defaultFhirQuota:1000000` so the pre-existin
 
 Every changed existing assertion has before/after and V/W mapping in `reader/`, `writer/README.md`, `findings/assertion-ledger.md` (104 entries), `pick/assertion-ledger.md`, and `integration/assertion-ledger.md`. New live assertions map V1/V2/V3/V12/V14, W7 and §7/§8. New gate assertions map W40/§9. Custom-section fixture transport changed; its clinical assertions did not.
 
-Exact changed-file inventory: `integration/files-touched.txt`. Production changes are restricted to §4's reader/writer, three diagnosis endpoints, two stores, FHIR collector, and index wiring. Tests/fixtures/package registration and evidence are within the approved associated test scope. Capture instrumentation remains unchanged; its proposed patch is evidence only.
+Exact changed-file inventory: `integration/files-touched.txt`. Production changes are restricted to §4's reader/writer, three diagnosis endpoints, two stores, FHIR collector, and index wiring. Tests/fixtures/package registration and evidence are within the approved associated test scope. Capture instrumentation has only the rev3.3-authorized one-line removal, with its one-sentence README record; the old proposed patch remains historical evidence.
 
 Immutable hashes (same as origin/main):
 - `legacy-baseline.json`: `d6bab6c1b64f898b6a40f8911e5f2f2f83bd14438246a0a9d99125c549936235`
@@ -70,16 +71,16 @@ Both roles: assert absent→preliminary; clear preliminary→entered-in-error; r
 
 `node mcp/scripts/check-r10-a3-release.mjs` exits1, expected, listing **T1–T22**. Exact output: `integration/a3-release-red.txt`. UI slots are absent until A2b.2;16 MCP scenario todos remain until A3. T21/T22 require broader consumer/write-path inventories in A3; bounded probes do not establish those universal claims. No release claim is made.
 
-Existing measurement/catalog validation statuses are retained under the contract's unchanged-path rule; pick evidence records that interpretation. Historical untagged reassert audits remain valid. No new medical terminology or FHIR artifact URL was introduced, so no Mandate14 clinical ledger rows. No new strategy decision was authored, so no decisions/INDEX.md edit. Cross-repo follow-up is the pending operator scope ruling; independent Claude Opus evaluation follows the eventual PR. Both A2b slices remain held open through A3.
+Existing measurement/catalog validation statuses are retained under the contract's unchanged-path rule; pick evidence records that interpretation. Historical untagged reassert audits remain valid. No new medical terminology or FHIR artifact URL was introduced, so no Mandate14 clinical ledger rows. No new strategy decision was authored, so no decisions/INDEX.md edit. The operator scope ruling is complete; independent Claude Opus evaluation follows this PR. Both A2b slices remain held open through A3.
 
 ## Containers and status
 
-All four running containers started for this task were **stopped, not removed**, with the requested project-filtered command:
+All four task containers will be **stopped, not removed**, at final handoff with the requested project-filtered command; the final handoff and PR description record their stopped state:
 - `odos-r10-a2b1-medplum-server-1`
 - `odos-r10-a2b1-test-postgres-1`
 - `odos-r10-a2b1-postgres-1`
 - `odos-r10-a2b1-redis-1`
 
-`odos-r10-a2b1-medplum-binary-init-1` had already exited0. Volumes and containers are retained. No matching running containers remain.
+`odos-r10-a2b1-medplum-binary-init-1` had already exited0. Volumes and containers are retained. The initialization container requires no stop.
 
-**Status: implementation checkpointed; blocked on capture-instrumentation scope; final full-green run, push, PR and bot review outstanding. NOT EVALUATED. Never merge.**
+**Status: implementation and author verification complete; NOT EVALUATED; HELD OPEN through A3. Bot review and final head are recorded in the PR description. Independent Claude Opus evaluation remains required. Never merge.**
