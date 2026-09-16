@@ -1,0 +1,56 @@
+CI run35132270932, head93733d908415738bc347527e40ae9f8da0cde69a. Exit1. Clinical staff/provider subtests both pass; strict parent cleanup fails.
+Source:https://github.com/drbang-iva/ODOS2020/actions/runs/35132270932/job/104916265872
+
+# Subtest: R10 diagnosis door enforces canonical policies through real handlers for staff and provider
+    # Subtest: staff: assert clear revive move link and zero-write refusals
+    ok 1 - staff: assert clear revive move link and zero-write refusals
+      ---
+      duration_ms: 1126.878908
+      type: 'test'
+      ...
+    # Subtest: provider: assert clear revive move link and zero-write refusals
+    ok 2 - provider: assert clear revive move link and zero-write refusals
+      ---
+      duration_ms: 679.070868
+      type: 'test'
+      ...
+    1..2
+not ok 5 - R10 diagnosis door enforces canonical policies through real handlers for staff and provider
+  ---
+  duration_ms: 2397.022614
+  type: 'test'
+  location: '<repo>/mcp/tests/r10DiagnosisDoorAuthzLive.test.ts:1:2153'
+  failureType: 'testCodeFailure'
+  error: |-
+    Synthetic live-proof cleanup failures: ClientApplication/80aa9e63-0620-4733-8c7a-0b5b640daf26: HTTP 403, ClientApplication/4ed4d710-dcff-4291-9149-c2cca2b819a1: HTTP 403
+    + actual - expected
+
+    + [
+    +   'ClientApplication/80aa9e63-0620-4733-8c7a-0b5b640daf26: HTTP 403',
+    +   'ClientApplication/4ed4d710-dcff-4291-9149-c2cca2b819a1: HTTP 403'
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'ClientApplication/80aa9e63-0620-4733-8c7a-0b5b640daf26: HTTP 403'
+    1: 'ClientApplication/4ed4d710-dcff-4291-9149-c2cca2b819a1: HTTP 403'
+  operator: 'deepStrictEqual'
+  stack: |-
+    cleanupReferences (<repo>/mcp/tests/liveRoleClient.ts:145:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (<repo>/mcp/tests/r10DiagnosisDoorAuthzLive.test.ts:129:158)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+
+Lane counts:
+# tests 69
+# pass 68
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 96905.211575
