@@ -1,4 +1,5 @@
-import type { Basic, Bundle } from "@medplum/fhirtypes";
+import { collectAllFhirSearchPages, type FhirSearchClient } from "../fhir-search.js";
+import type { Basic, Bundle, Resource } from "@medplum/fhirtypes";
 import type { ClinicalGraphProvenance, DiagnosisCatalogRow } from "./glaucoma-suspect.js";
 import { buildDiagnosisCatalogSeeds } from "./diagnosis-catalog-seeds.js";
 export { buildDiagnosisCatalogSeeds } from "./diagnosis-catalog-seeds.js";
@@ -15,6 +16,8 @@ export const DIAGNOSIS_CATALOG_WRITE_HEADERS = {
 } as const;
 
 export interface DiagnosisCatalogFhirClient {
+  readonly baseUrl?: string;
+  searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   search<T extends Basic>(
     resourceType: T["resourceType"],
     params?: Record<string, string>,
@@ -74,12 +77,12 @@ export class FhirDiagnosisCatalogStore {
       code: `${DIAGNOSIS_DEFINITION_CODE_SYSTEM}|${DIAGNOSIS_DEFINITION_CODE}`,
       _count: "200",
     });
-    const rows = (bundle.entry ?? []).flatMap((entry) => {
-      if (!entry.resource) return [];
+    const resources = await collectAllFhirSearchPages<Basic>(this.fhir as FhirSearchClient, "Basic", bundle, this.fhir.baseUrl ?? "");
+    const rows = resources.flatMap((resource) => {
       try {
-        return [{ resource: entry.resource, definition: parseDiagnosisCatalogResource(entry.resource) }];
+        return [{ resource: resource, definition: parseDiagnosisCatalogResource(resource) }];
       } catch (error) {
-        console.error(`Diagnosis-definition Basic/${entry.resource.id ?? "unknown"} skipped: ${errorMessage(error)}`);
+        console.error(`Diagnosis-definition Basic/${resource.id ?? "unknown"} skipped: ${errorMessage(error)}`);
         return [];
       }
     });

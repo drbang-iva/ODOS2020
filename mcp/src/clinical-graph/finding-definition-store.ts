@@ -1,4 +1,5 @@
-import type { Basic, Bundle } from "@medplum/fhirtypes";
+import { collectAllFhirSearchPages, type FhirSearchClient } from "../fhir-search.js";
+import type { Basic, Bundle, Resource } from "@medplum/fhirtypes";
 import {
   buildGlaucomaFindingDefinitionStubs,
   type ClinicalFindingDefinition,
@@ -32,6 +33,8 @@ export const FINDING_DEFINITION_WRITE_HEADERS = {
 } as const;
 
 export interface FindingDefinitionFhirClient {
+  readonly baseUrl?: string;
+  searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   search<T extends Basic>(
     resourceType: T["resourceType"],
     params?: Record<string, string>,
@@ -108,9 +111,8 @@ export class FhirFindingDefinitionStore {
       code: `${FINDING_DEFINITION_CODE_SYSTEM}|${FINDING_DEFINITION_CODE}`,
       _count: "200",
     });
-    const rows = (bundle.entry ?? []).flatMap((entry) => {
-      const resource = entry.resource;
-      if (!resource) return [];
+    const resources = await collectAllFhirSearchPages<Basic>(this.fhir as FhirSearchClient, "Basic", bundle, this.fhir.baseUrl ?? "");
+    const rows = resources.flatMap((resource) => {
       try {
         return [{ resource, definition: parseFindingDefinitionResource(resource) }];
       } catch (error) {
