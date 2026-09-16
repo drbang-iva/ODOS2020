@@ -13,7 +13,6 @@ registerHooks({
     if (!url.includes('/src/clinical-graph/') || !loaded.source) return loaded;
     let source = loaded.source.toString();
     for (const [file, names] of Object.entries({
-      'diagnosis-findings-endpoint': ['atomicFindingRows', 'sectionFindingRows'],
       'exam-overview-projection': ['buildExamOverviewProjection'],
       'diagnosis-candidates-endpoint': ['findingInstancesFromObservation'],
       'diagnosis-completeness-endpoint': ['keyFindingSatisfied'],

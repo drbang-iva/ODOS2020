@@ -24,3 +24,5 @@ The additional identity/reader tests cover canonical owners/clear markers, OU ov
 The completeness captures invoke the real private `keyFindingSatisfied` through a test-only module export, on captured and projected arguments (rehydrating the captured Date). The capture-export test executes both publicly exported wrappers and checks that both captures are emitted.
 
 `R10_RECORD_DIVERGENCES=1` regenerates `parity-divergences.json` in place. Every change to that file requires line-by-line independent review; regeneration alone does not authorize or validate a new difference.
+
+A2b retired `atomicFindingRows` and `sectionFindingRows`; their unchanged captures are still compared through `compatRows`.
