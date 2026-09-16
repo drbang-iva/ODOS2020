@@ -1,0 +1,12 @@
+diff --git a/mcp/src/authz/roles.ts b/mcp/src/authz/roles.ts
+index 63fa5ce5..66feed56 100644
+--- a/mcp/src/authz/roles.ts
++++ b/mcp/src/authz/roles.ts
+@@ -804,6 +804,7 @@ const AGE_OF_MAJORITY_CONFIG_WRITE_RULE: OdosResourceRule = {
+ 
+ const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
+   AGE_OF_MAJORITY_CONFIG_READ_RULE,
++  AGE_OF_MAJORITY_CONFIG_WRITE_RULE,
+   { resourceType: "Appointment", interactions: CREATE_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+   // Phase 4a: the practice scheduling-config singleton (hours/templates/blocked time/offices).
+   // Criteria-fenced so the desk touches exactly one coded Basic — never Basic at large.

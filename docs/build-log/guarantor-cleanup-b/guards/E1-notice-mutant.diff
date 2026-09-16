@@ -1,0 +1,14 @@
+diff --git a/ui/src/components/comms/EngageSheet.tsx b/ui/src/components/comms/EngageSheet.tsx
+index d7f0e01e..8d25198f 100644
+--- a/ui/src/components/comms/EngageSheet.tsx
++++ b/ui/src/components/comms/EngageSheet.tsx
+@@ -256,8 +256,7 @@ export function EngageSheet({
+       const refusal = results.find((result): result is Extract<EducationDispatchResult, { outcome: "refused" }> => result.outcome === "refused");
+       const suppression = results.find((result): result is Extract<EducationDispatchResult, { outcome: "suppressed" }> => result.outcome === "suppressed");
+       const rescheduled = results.find((result): result is Extract<EducationDispatchResult, { outcome: "rescheduled" }> => result.outcome === "rescheduled");
+-      const chartNotices = [...new Set(results.flatMap(result =>
+-        (result.outcome === "sent" || result.outcome === "print") && result.chartUpdateNotice ? [result.chartUpdateNotice] : []))].join(" ");
++      const chartNotices = "";
+       if (printResult) {
+         setPrintUrl(printResult.url);
+         if (chartNotices) setStatus(chartNotices);

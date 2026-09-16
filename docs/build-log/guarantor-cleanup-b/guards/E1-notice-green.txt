@@ -1,0 +1,31 @@
+Command (from ui/): node --import tsx --test --test-name-pattern=E1 notice tests/engageSheet.test.tsx
+TAP version 13
+# Subtest: E1 notice: sms names the guarantor after successful education dispatch
+ok 1 - E1 notice: sms names the guarantor after successful education dispatch
+  ---
+  duration_ms: 22.868542
+  type: 'test'
+  ...
+# Subtest: E1 notice: email names the guarantor after successful education dispatch
+ok 2 - E1 notice: email names the guarantor after successful education dispatch
+  ---
+  duration_ms: 4.67725
+  type: 'test'
+  ...
+# Subtest: E1 notice: print names the guarantor after successful education dispatch
+ok 3 - E1 notice: print names the guarantor after successful education dispatch
+  ---
+  duration_ms: 4.24475
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 201.46525
+
+Exit: 0

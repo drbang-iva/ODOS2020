@@ -1,0 +1,13 @@
+diff --git a/ui/src/lib/communications-client.ts b/ui/src/lib/communications-client.ts
+index dfb6c9cc..136ab46a 100644
+--- a/ui/src/lib/communications-client.ts
++++ b/ui/src/lib/communications-client.ts
+@@ -295,7 +295,7 @@ function isEducationContentItem(value: unknown): value is EducationContentItem {
+ 
+ function isEducationDispatchResult(value: unknown): value is EducationDispatchResult {
+   if (!isRecord(value) || typeof value.outcome !== "string") return false;
+-  if (value.chartUpdateNotice !== undefined && typeof value.chartUpdateNotice !== "string") return false;
++
+   if (value.outcome === "sent") {
+     return typeof value.providerMessageId === "string"
+       && (value.chartUpdate === undefined || value.chartUpdate === "conflict")

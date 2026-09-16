@@ -1,0 +1,102 @@
+Source: de3079f4e89ce01b00bcb1c2f4e35392f0190467
+Command (from mcp/): node --import tsx --test --test-name-pattern=age-of-majority (create|update) (is|requires) Admin tests/ageOfMajorityConfig.test.ts
+TAP version 13
+# Subtest: age-of-majority create is Admin-only on direct grants
+not ok 1 - age-of-majority create is Admin-only on direct grants
+  ---
+  duration_ms: 1.735917
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/ageOfMajorityConfig.test.ts:1:2823'
+  failureType: 'testCodeFailure'
+  error: |-
+    staff create
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/ageOfMajorityConfig.test.ts:53:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: age-of-majority update is Admin-only on direct grants
+not ok 2 - age-of-majority update is Admin-only on direct grants
+  ---
+  duration_ms: 0.259375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/ageOfMajorityConfig.test.ts:1:2823'
+  failureType: 'testCodeFailure'
+  error: |-
+    staff update
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/ageOfMajorityConfig.test.ts:53:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: age-of-majority create requires Admin in composite grants
+not ok 3 - age-of-majority create requires Admin in composite grants
+  ---
+  duration_ms: 1.948292
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/ageOfMajorityConfig.test.ts:1:3751'
+  failureType: 'testCodeFailure'
+  error: |-
+    provider+staff create
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/ageOfMajorityConfig.test.ts:68:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: age-of-majority update requires Admin in composite grants
+not ok 4 - age-of-majority update requires Admin in composite grants
+  ---
+  duration_ms: 1.801875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/ageOfMajorityConfig.test.ts:1:3751'
+  failureType: 'testCodeFailure'
+  error: |-
+    provider+staff update
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-b-mut/mcp/tests/ageOfMajorityConfig.test.ts:68:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 121.036416
+
+Exit: 1

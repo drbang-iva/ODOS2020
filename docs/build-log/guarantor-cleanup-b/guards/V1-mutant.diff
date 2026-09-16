@@ -1,0 +1,12 @@
+diff --git a/mcp/src/clinic/patient-registration-endpoint.ts b/mcp/src/clinic/patient-registration-endpoint.ts
+index 5fd078d1..1ead6417 100644
+--- a/mcp/src/clinic/patient-registration-endpoint.ts
++++ b/mcp/src/clinic/patient-registration-endpoint.ts
+@@ -519,7 +519,6 @@ function validateRegistration(input: PatientRegistrationInput, today: string, ex
+     if (party.financialResponsible && (party.kind === "existing" || [party.address, party.city, party.state, party.postalCode].some((value) => !value.trim()))) errors.push("A guarantor mailing address is required.");
+   }
+   for (const party of relatedParties) {
+-    if (!existingIds.has(party.localId) && (!isR4Date(party.birthDate) || party.birthDate > today)) errors.push("Guarantor date of birth must be a valid YYYY-MM-DD date, not in the future.");
+     if (!existingIds.has(party.localId)) errors.push(...Object.values(validatePatientPhones(party.phones, party.textable)));
+     if (!party.firstName.trim() || !party.lastName.trim()) errors.push("Responsible-party name is required.");
+     if (!isR4Date(party.effectiveDate)) errors.push("A valid responsible-party effective date is required.");

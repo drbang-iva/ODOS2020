@@ -1,0 +1,24 @@
+diff --git a/mcp/src/comms/comms-api.ts b/mcp/src/comms/comms-api.ts
+index bee207f9..c6c49651 100644
+--- a/mcp/src/comms/comms-api.ts
++++ b/mcp/src/comms/comms-api.ts
+@@ -2446,18 +2446,7 @@ async function updateEducationRecipient(
+   body: EducationDispatchBody,
+   staff: EducationDispatchIdentity,
+ ): Promise<string | void> {
+-  if (recipient.resource.resourceType === "RelatedPerson") {
+-    const owners = await searchAll<Person>(fhir, "Person", { link: recipient.reference });
+-    if (owners.length) {
+-      const guarantors = owners.map(person => {
+-        const name = person.name?.find(entry => entry.use === "official") ?? person.name?.[0];
+-        const display = name?.text || [...name?.given ?? [], name?.family].filter(Boolean).join(" ");
+-        return display ? `${display} (Person/${person.id})` : `Person/${person.id}`;
+-      });
+-      return `The chart contact was not updated. Update the guarantor record: ${guarantors.join(", ")}.`;
+-    }
+-  }
+-  const system = body.channel === "sms" ? "phone" : body.channel === "email" ? "email" : undefined;
++  const system = body.channel === "sms" ? "phone" : "email";
+   const value = system === "phone" ? body.recipientOverride?.phone : body.recipientOverride?.email;
+   if (!system || !value) {
+     throw new CommsApiValidationError("alsoUpdateChart requires a phone or email recipient override.");
