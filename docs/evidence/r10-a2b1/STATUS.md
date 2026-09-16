@@ -75,7 +75,7 @@ Existing measurement/catalog validation statuses are retained under the contract
 
 ## Bot and CI fixbacks
 
-CodeRabbit raised13 threads at the first review:11 addressed,2 explicitly deferred as pre-existing behavior outside the approved amendments. Every thread receives a reasoned reply; the final-head bot/check state is recorded in the PR description. PR-Agent initially completed with no actionable inline findings. Exact comment IDs, fixes, assertion mappings and deferral rationale: `bot-fixback/README.md`.
+CodeRabbit raised14 threads across two reviews:12 addressed,2 explicitly deferred as pre-existing behavior outside the approved amendments. Every thread receives a reasoned reply; the final-head bot/check state is recorded in the PR description. PR-Agent initially completed with no actionable inline findings. Exact comment IDs, fixes, assertion mappings and deferral rationale: `bot-fixback/README.md`.
 
 The CI live fixture selected composite policies as well as canonical ones. It now requires exactly one role tag, as existing live suites do; the unchanged deep policy comparison remains. Mutation regression1 failed→1 passed; live69/69. New A3 path-containment guard fails on traversal that reuses MCP tests as UI proof; restored checker/findings60/60. Test response type now matches its unchanged assertion. Public evidence paths are normalized without changing counts or diagnostics.
 

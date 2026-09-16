@@ -3,9 +3,9 @@ import re
 
 
 def sanitize(text):
-    text = re.sub(r'/Users/[^/\s]+/GitHub/ODOS2020(?:/\.worktrees/[^/\s:\'"()]+)?', '<repo>', text)
+    text = re.sub(r'/(?:Users|home)/[^/\s]+/GitHub/ODOS2020(?:/\.worktrees/[^/\s:\'"()]+)?', '<repo>', text)
     text = text.replace('/home/runner/work/ODOS2020/ODOS2020', '<repo>')
-    text = re.sub(r'/Users/[^/\s]+', '<home>', text)
+    text = re.sub(r'/(?:Users|home)/[^/\s]+', '<home>', text)
     return re.sub(r'[ \t]+$', '', text, flags=re.MULTILINE)
 
 

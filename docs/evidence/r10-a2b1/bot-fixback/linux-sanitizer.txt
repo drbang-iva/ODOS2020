@@ -1,0 +1,6 @@
+Evidence formatter only; no clinical/test assertion edits.
+Linux repo: before=False; after=True
+Linux home: before=False; after=True
+macOS repo: before=True; after=True
+CI repo: before=True; after=True
+Before: 2/4 matched. After: 4/4 matched.
