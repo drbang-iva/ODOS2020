@@ -69,7 +69,7 @@ Final head: `70e2ef97f557b31320e022b7402b9ea02e03b098`. Re-polled at **2026-09-1
 - **CodeRabbit commit status: success**, "Review completed"; summary reports no actionable comments.
 - **[PR-Agent check-run](https://github.com/drbang-iva/ODOS2020/actions/runs/35111560971/job/104846296425): completed / success**; reviewer guide reports no major issues.
 - **Unresolved review threads: 0** (all review threads fetched; no pagination remaining).
-- The generic docstring-coverage warning was [answered](https://github.com/drbang-iva/ODOS2020/pull/614#issuecomment-5699597349) against the operator's no-boilerplate-comment rule. No code fixback was needed.
+- The generic docstring-coverage warning was [answered](https://github.com/drbang-iva/ODOS2020/pull/614#issuecomment-0123456789) against the operator's no-boilerplate-comment rule. No code fixback was needed.
 - `check-evaluation` is intentionally red with `no-marker`: **NOT EVALUATED**. No evaluation marker was posted.
 - **[Full CI](https://github.com/drbang-iva/ODOS2020/actions/runs/35111560804): success** at this head. MCP general suite: 5,521 tests, 5,470 pass, 0 fail, 51 skipped. Separate credentialed live integration: 12/12 bootstrap plus 218/218 tests; live authorization: 65/65. UI: 1,629/1,629, zero failures or skips; build passed. CodeQL, preflight, and ShellCheck also passed. The general-suite skips are reported separately; they are not counted as passes.
 

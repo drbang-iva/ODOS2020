@@ -47,8 +47,10 @@ G8's same-line span does not exercise closing an active multi-line comment; its
 companion closes one with `note -->`. Both literal kickoff cases are retained.
 G14 extends the existing S17 script dry-run agreement test with G1/G6/G3.
 
-Fixtures preserve the merged PR template and the actual PR #614 body fetched via
-GitHub CLI. CodeRabbit's summary in that body has same-line HTML boundary comments;
+Fixtures preserve the merged PR template and the PR #614 body fetched via
+GitHub CLI. One incidental ten-digit GitHub issue-comment link ID in the PR body
+is normalized to the existing synthetic value `0123456789` to satisfy the fixture
+privacy guard; declaration and HTML-comment bytes are unchanged. CodeRabbit's summary in that body has same-line HTML boundary comments;
 it is not one continuous multi-line HTML comment. G6/G11 cover the latter explicitly.
 
 The trusted-model allowlist, marker parsing, posting script and workflow are unchanged.
@@ -67,3 +69,7 @@ same strip-then-check-unclosed semantics without an HTML-filter regex. The focus
 suite and all seven mutation/restore pairs were rerun on this implementation with
 the same counts above. A boundary case also covers a comment opener reconstructed
 by removing a completed span; the subsequent unclosed-comment step still hides it.
+
+The final fixture privacy check passes: the initial full CI run exposed the real
+GitHub comment ID as a non-synthetic ten-digit value (5,488 pass / 1 fail / 51 skip).
+Only that incidental link ID was normalized; no privacy guard or allowlist changed.

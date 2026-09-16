@@ -154,5 +154,10 @@
       ],
       "restored": true
     }
-  ]
+  ],
+  "fixture_privacy_guard": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0
+  }
 }
