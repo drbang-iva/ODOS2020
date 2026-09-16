@@ -290,6 +290,7 @@ import {
 import { handleDiagnosisCandidatesRequest } from "./clinical-graph/diagnosis-candidates-endpoint.js";
 import {
   handleDiagnosisFindingsMutationRequest,
+  handleDiagnosisFindingsAuditRepairRequest,
   handleDiagnosisFindingsReadRequest,
 } from "./clinical-graph/diagnosis-findings-endpoint.js";
 import { registerDiagnosisCarryForwardRoutes } from "./clinical-graph/diagnosis-carry-forward-endpoint.js";
@@ -6428,10 +6429,25 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
               body: req.body,
             },
           );
+          if (result.headers) res.set(result.headers);
           res.status(result.status).json(result.body);
         } catch (error) {
           console.error("odos-mcp: encounter findings mutation failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "encounter findings mutation failed" });
+        }
+      });
+
+      app.post("/clinical-graph/encounters/:encounterId/findings/audit-repair", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisFindingsAuditRepairRequest(
+            { fhirBaseUrl: BASE_URL, authenticate: authenticateStaffRouteForAction("chart.write") },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter findings audit repair failed:", error);
+          if (!res.headersSent) res.status(500).json({ result: "unavailable", kind: "upstream", error: "Encounter findings audit repair failed." });
         }
       });
 
