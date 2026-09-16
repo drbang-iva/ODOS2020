@@ -1,3 +1,9 @@
+.github/pull_request_template.md
+.github/scripts/evaluation-verdict.cjs
+AGENTS.md
+CONTRIBUTING.md
+docs/build-log/eval-gate-coded-by-fixback/README.md
+docs/build-log/eval-gate-coded-by-fixback/proof.json
 docs/evidence/r10-a2b1/STATUS.md
 docs/evidence/r10-a2b1/amendments-green.tap
 docs/evidence/r10-a2b1/amendments-rev32-green.tap
@@ -13,6 +19,9 @@ docs/evidence/r10-a2b1/bot-fixback/traversal-red.tap
 docs/evidence/r10-a2b1/build.txt
 docs/evidence/r10-a2b1/ci-fixback/README.md
 docs/evidence/r10-a2b1/ci-fixback/build.txt
+docs/evidence/r10-a2b1/ci-fixback/cleanup-ci-red.txt
+docs/evidence/r10-a2b1/ci-fixback/cleanup-diagnosis-green.tap
+docs/evidence/r10-a2b1/ci-fixback/cleanup-live-green.tap
 docs/evidence/r10-a2b1/ci-fixback/composite-policy-green.tap
 docs/evidence/r10-a2b1/ci-fixback/composite-policy-red.tap
 docs/evidence/r10-a2b1/ci-fixback/live-authz-green.tap
@@ -180,7 +189,10 @@ mcp/tests/diagnosisFindingsCommands.test.ts
 mcp/tests/diagnosisLinkL2.test.ts
 mcp/tests/diagnosisLinkL3.test.ts
 mcp/tests/diagnosisVisitStatus.test.ts
+mcp/tests/evaluationVerdict.test.ts
 mcp/tests/findingDefinitionStore.test.ts
+mcp/tests/fixtures/evaluation-pr-614.md
+mcp/tests/fixtures/evaluation-pr-template-614.md
 mcp/tests/fixtures/r10/README.md
 mcp/tests/fixtures/r10/a3-checker-green/mcp/tests/fixtures/r10/a3-release-scenarios.json
 mcp/tests/fixtures/r10/a3-checker-green/mcp/tests/scenarios.test.mjs
