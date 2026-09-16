@@ -298,5 +298,7 @@ jobs:
         run: node --test .claude/skills/tier0-census/scripts/frontdoor-self-test.mjs
       - name: front-door route parity (blocking)
         run: node .claude/skills/tier0-census/scripts/check-frontdoor-coverage.mjs
+      - name: dependency audit gate (blocking high and critical)
+        run: node scripts/audit-dependencies.mjs
       - name: run preflight
         run: npm run preflight
