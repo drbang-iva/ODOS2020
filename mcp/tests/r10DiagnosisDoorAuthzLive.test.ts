@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
 import type { AccessPolicy, Condition, Encounter, Observation, Patient, Resource } from '@medplum/fhirtypes';
-import { ODOS_PRACTICE_ROLE_SYSTEM, buildMedplumAccessPolicy, getRoleDeclaration } from '../src/authz/roles.js';
+import { ODOS_PRACTICE_ROLE_SYSTEM, buildMedplumAccessPolicy, buildMedplumCompositeAccessPolicy, getRoleDeclaration } from '../src/authz/roles.js';
 import { createMedplumClient } from '../src/fhir-client.js';
 import { buildEncounterDiagnosisCondition } from '../src/fhir/condition.js';
 import { searchAll } from '../src/fhir-search.js';
@@ -14,6 +14,22 @@ import { createLiveAuthorizationClients, requireMedplumAdmin } from './integrati
 import { createRoleClient, cleanupReferences } from './liveRoleClient.js';
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from './fhirAuditTestStub.js';
 import { atomic, definitions, catalog, nuclear } from './fixtures/r10/factories.js';
+
+function canonicalRolePolicies(policies: AccessPolicy[], role: 'staff' | 'provider'): AccessPolicy[] {
+  return policies.filter(policy => {
+    const roleTags = policy.meta?.tag?.filter(tag => tag.system === ODOS_PRACTICE_ROLE_SYSTEM) ?? [];
+    return roleTags.length === 1 && roleTags[0]?.code === role;
+  });
+}
+
+test('W7 live policy selection excludes composite role policies', () => {
+  const staff = buildMedplumAccessPolicy(getRoleDeclaration('staff'));
+  const provider = buildMedplumAccessPolicy(getRoleDeclaration('provider'));
+  const composite = buildMedplumCompositeAccessPolicy(['staff', 'provider']);
+  const policies = [composite, staff, provider];
+  assert.deepEqual(canonicalRolePolicies(policies, 'staff').map(policy => policy.name), [staff.name]);
+  assert.deepEqual(canonicalRolePolicies(policies, 'provider').map(policy => policy.name), [provider.name]);
+});
 
 const baseUrl=process.env.MEDPLUM_BASE_URL?.replace(/\/$/,'')??'http://localhost:8103';
 test('R10 diagnosis door enforces canonical policies through real handlers for staff and provider',async t=>{
@@ -28,7 +44,7 @@ test('R10 diagnosis door enforces canonical policies through real handlers for s
   const policies=await searchAll<AccessPolicy>(callerFhir,'AccessPolicy',{_project:projectId});
   try {
     for(const role of ['staff','provider'] as const) await t.test(`${role}: assert clear revive move link and zero-write refusals`,async()=>{
-      const matches=policies.filter(p=>p.meta?.tag?.some(tag=>tag.system===ODOS_PRACTICE_ROLE_SYSTEM&&tag.code===role));
+      const matches=canonicalRolePolicies(policies,role);
       assert.equal(matches.length,1);const policy=matches[0];assert.ok(policy.id);
       assert.deepEqual(policy.resource,buildMedplumAccessPolicy(getRoleDeclaration(role)).resource,'Stored policy equals CI canonical policy');
       const policyReference=`AccessPolicy/${policy.id}`;

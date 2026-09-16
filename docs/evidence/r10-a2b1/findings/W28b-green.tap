@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W28b retired revive links fresh and W33 offered retains revive baseline and same id
 ok 1 - W28b retired revive links fresh and W33 offered retains revive baseline and same id
   ---
-  duration_ms: 10.744083
+  duration_ms: 9.680125
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W28b retired revive links fresh and W33 offered retains revive baseline a
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 171.426875
+# duration_ms 160.47975

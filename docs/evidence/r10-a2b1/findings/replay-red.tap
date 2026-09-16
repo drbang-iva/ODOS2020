@@ -214,20 +214,20 @@ not ok 36 - W45 reassert fresh-baseline command reuse refuses after version chan
   ---
   duration_ms: 2.544458
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:17124'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:17124'
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","error":"reassert-requires-carried-live-fact","reason":"reassert-requires-carried-live-fact","targetIndex":0}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 400
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:51:257)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:51:257)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -236,22 +236,22 @@ not ok 37 - reassert lookup failure is typed command audit-lookup with no clinic
   ---
   duration_ms: 0.792625
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:17845'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:17845'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'unavailable'
     - 'command'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'command'
   actual: 'unavailable'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:52:383)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:52:383)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

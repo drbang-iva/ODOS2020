@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W26 out-of-domain intended home refuses before any write
 ok 1 - W26 out-of-domain intended home refuses before any write
   ---
-  duration_ms: 4.108334
+  duration_ms: 3.408917
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W26 out-of-domain intended home refuses before any write
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 162.843417
+# duration_ms 152.665958

@@ -1,0 +1,23 @@
+Command: unset MEDPLUM_PROJECT_ID ODOS_SETUP_STATE_PATH; npm --prefix mcp test
+Private synthetic credentials sourced; existing live helpers derive project and load task-only installation manifest.
+Exit:0
+
+1..5053
+# tests 5740
+# suites 0
+# pass 5716
+# fail 0
+# cancelled 0
+# skipped 8
+# todo 16
+# duration_ms 336209.461209
+
+Named environment skips:
+ok 901 - live scoped-clinician exam-start RBAC matrix # SKIP ODOS_TEST_CLINICIAN_TOKEN, ODOS_TEST_OTHER_CLINICIAN_TOKEN, and ODOS_TEST_PATIENT_ID are required for the operator-assisted live RBAC gate.
+ok 1065 - isolated Medplum enforces Consent grants and immutable evidence # SKIP Dedicated synthetic matrix live lane only
+ok 1066 - isolated evidence HTTP route enforces generated staff Consent grant # SKIP Dedicated synthetic matrix live lane only
+ok 1265 - fresh Postgres applies the Credit Bank migration and rejects ledger UPDATE and DELETE # SKIP ODOS_TEST_POSTGRES_URL is required for the destructive local Credit Bank fixture.
+ok 1800 - Postgres migration preserves legacy New and the doctor's override survives independent reload # SKIP
+ok 1990 - isolated synthetic Medplum enforces scheduled enrollment conditional writes # SKIP
+ok 2325 - reference-population migration succeeds on fresh and populated Postgres databases # SKIP ODOS_TEST_POSTGRES_URL is required for the destructive local myopia migration fixture.
+ok 4933 - installed WeasyPrint 69.0 emits a real PDF/A-3u document # SKIP

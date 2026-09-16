@@ -4,21 +4,21 @@ not ok 1 - mixed option definition preserves numeric panel context in current ca
   ---
   duration_ms: 26.636625
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:96750'
+  location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:96750'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'presbyopia'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'presbyopia'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2612:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2612:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

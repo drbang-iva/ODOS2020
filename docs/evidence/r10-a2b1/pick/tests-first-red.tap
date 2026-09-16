@@ -4,20 +4,20 @@ not ok 1 - W10 supported pick is a Condition-only step and retains its full resp
   ---
   duration_ms: 5.078959
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:93321'
+  location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:93321'
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Unrecognized key(s) in object: 'commandId', 'supportingFacts'"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
   actual: 400
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2561:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2561:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -27,23 +27,23 @@ not ok 1 - W10 supported pick is a Condition-only step and retains its full resp
       ---
       duration_ms: 0.522
       type: 'test'
-      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:94685'
+      location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:94685'
       failureType: 'testCodeFailure'
       error: |-
         Expected values to be strictly equal:
         + actual - expected
-        
+
         + undefined
         - 'invalid'
-        
+
       code: 'ERR_ASSERTION'
       name: 'AssertionError'
       expected: 'invalid'
       operator: 'strictEqual'
       stack: |-
-        TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2577:46)
+        TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2577:46)
         async Test.run (node:internal/test_runner/test:1054:7)
-        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2572:62)
+        async TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2572:62)
         async Test.run (node:internal/test_runner/test:1054:7)
         async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
       ...
@@ -52,23 +52,23 @@ not ok 1 - W10 supported pick is a Condition-only step and retains its full resp
       ---
       duration_ms: 0.409708
       type: 'test'
-      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:94685'
+      location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:94685'
       failureType: 'testCodeFailure'
       error: |-
         Expected values to be strictly equal:
         + actual - expected
-        
+
         + undefined
         - 'invalid'
-        
+
       code: 'ERR_ASSERTION'
       name: 'AssertionError'
       expected: 'invalid'
       operator: 'strictEqual'
       stack: |-
-        TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2577:46)
+        TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2577:46)
         async Test.run (node:internal/test_runner/test:1054:7)
-        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2572:62)
+        async TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2572:62)
         async Test.run (node:internal/test_runner/test:1054:7)
         async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
       ...
@@ -77,23 +77,23 @@ not ok 1 - W10 supported pick is a Condition-only step and retains its full resp
       ---
       duration_ms: 0.1965
       type: 'test'
-      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:94685'
+      location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:94685'
       failureType: 'testCodeFailure'
       error: |-
         Expected values to be strictly equal:
         + actual - expected
-        
+
         + undefined
         - 'invalid'
-        
+
       code: 'ERR_ASSERTION'
       name: 'AssertionError'
       expected: 'invalid'
       operator: 'strictEqual'
       stack: |-
-        TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2577:46)
+        TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2577:46)
         async Test.run (node:internal/test_runner/test:1054:7)
-        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2572:62)
+        async TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2572:62)
         async Test.run (node:internal/test_runner/test:1054:7)
         async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
       ...
@@ -102,7 +102,7 @@ not ok 2 - W35 empty stale foreign supports refuse before Condition writes
   ---
   duration_ms: 1.342209
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:94551'
+  location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:94551'
   failureType: 'subtestsFailed'
   error: '3 subtests failed'
   code: 'ERR_TEST_FAILURE'
@@ -112,12 +112,12 @@ not ok 3 - W30 candidates use current projection and omit superseded snapshot su
   ---
   duration_ms: 13.935125
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:95500'
+  location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:95500'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   {
     +     codingStatus: 'verified',
@@ -131,7 +131,7 @@ not ok 3 - W30 candidates use current projection and omit superseded snapshot su
     +   }
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -146,7 +146,7 @@ not ok 3 - W30 candidates use current projection and omit superseded snapshot su
       source: 'mapping'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2589:40)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2589:40)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

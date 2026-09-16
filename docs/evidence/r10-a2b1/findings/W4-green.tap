@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W4 assert under Y preserves X in persisted homes and both selected views
 ok 1 - W4 assert under Y preserves X in persisted homes and both selected views
   ---
-  duration_ms: 16.111125
+  duration_ms: 15.353375
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W4 assert under Y preserves X in persisted homes and both selected views
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 174.548833
+# duration_ms 165.086291

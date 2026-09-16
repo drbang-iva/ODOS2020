@@ -4,21 +4,21 @@ not ok 1 - mixed panel context uses newest projected context and refuses ambiguo
   ---
   duration_ms: 26.070458
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:107130'
+  location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:107130'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2735:165)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2735:165)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

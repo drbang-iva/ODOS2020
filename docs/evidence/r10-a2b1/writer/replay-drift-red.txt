@@ -237,10 +237,10 @@ not ok 39 - W-h replay verifier distinguishes exact, new, reused-content and per
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'reused-with-different-content'
     - 'not-replay'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'not-replay'
@@ -261,10 +261,10 @@ not ok 40 - W-h reassert replay requires its exact audit witness and persisted b
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'reused-with-different-content'
     - 'not-replay'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'not-replay'

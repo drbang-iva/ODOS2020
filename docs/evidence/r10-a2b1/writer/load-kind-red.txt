@@ -285,10 +285,10 @@ not ok 47 - W-h load and refresh preserve typed 403 failure for response selecti
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -308,10 +308,10 @@ not ok 48 - W-h load and refresh preserve typed 404 failure for response selecti
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true

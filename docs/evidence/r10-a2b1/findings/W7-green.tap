@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W7 staff assert uses chart.write, writes preliminary fact and no Condition
 ok 1 - W7 staff assert uses chart.write, writes preliminary fact and no Condition
   ---
-  duration_ms: 5.449
+  duration_ms: 5.049584
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W7 staff assert uses chart.write, writes preliminary fact and no Conditio
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 162.094209
+# duration_ms 154.311458

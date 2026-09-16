@@ -11,22 +11,22 @@ TAP version 13
       ---
       duration_ms: 17.862292
       type: 'test'
-      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:94984'
+      location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:94984'
       failureType: 'testCodeFailure'
       error: |-
         Expected values to be strictly equal:
-        
+
         200 !== 400
-        
+
       code: 'ERR_ASSERTION'
       name: 'AssertionError'
       expected: 400
       actual: 200
       operator: 'strictEqual'
       stack: |-
-        TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2584:12)
+        TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2584:12)
         async Test.run (node:internal/test_runner/test:1054:7)
-        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2579:62)
+        async TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2579:62)
         async Test.run (node:internal/test_runner/test:1054:7)
         async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
       ...
@@ -35,22 +35,22 @@ TAP version 13
       ---
       duration_ms: 8.050375
       type: 'test'
-      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:94984'
+      location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:94984'
       failureType: 'testCodeFailure'
       error: |-
         Expected values to be strictly equal:
-        
+
         200 !== 400
-        
+
       code: 'ERR_ASSERTION'
       name: 'AssertionError'
       expected: 400
       actual: 200
       operator: 'strictEqual'
       stack: |-
-        TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2584:12)
+        TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2584:12)
         async Test.run (node:internal/test_runner/test:1054:7)
-        async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2579:62)
+        async TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2579:62)
         async Test.run (node:internal/test_runner/test:1054:7)
         async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
       ...
@@ -59,7 +59,7 @@ not ok 1 - W35 empty stale foreign supports refuse before Condition writes
   ---
   duration_ms: 28.226291
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:94850'
+  location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:94850'
   failureType: 'subtestsFailed'
   error: '2 subtests failed'
   code: 'ERR_TEST_FAILURE'

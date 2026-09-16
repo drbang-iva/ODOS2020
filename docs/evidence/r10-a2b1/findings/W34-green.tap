@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W34 same command with fresh baseline and changed state refuses reuse
 ok 1 - W34 same command with fresh baseline and changed state refuses reuse
   ---
-  duration_ms: 9.14125
+  duration_ms: 8.704833
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W34 same command with fresh baseline and changed state refuses reuse
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 168.493333
+# duration_ms 159.765542

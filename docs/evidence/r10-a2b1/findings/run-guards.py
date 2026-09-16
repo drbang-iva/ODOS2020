@@ -1,6 +1,9 @@
 from pathlib import Path
 import subprocess
 import re
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from sanitize_evidence import sanitize
 root=Path(__file__).resolve().parents[4]
 endpoint=root/'mcp/src/clinical-graph/diagnosis-findings-endpoint.ts'
 writer=root/'mcp/src/clinical-graph/current-finding-writer.ts'
@@ -43,10 +46,10 @@ for guard,path,before,after,pattern in rules:
  try:
   path.write_text(mutated)
   red=subprocess.run(command,cwd=root,capture_output=True,text=True)
-  (evidence/(guard+'-red.tap')).write_text(red.stdout+red.stderr)
+  (evidence/(guard+'-red.tap')).write_text(sanitize(red.stdout+red.stderr))
  finally:path.write_text(original)
  green=subprocess.run(command,cwd=root,capture_output=True,text=True)
- (evidence/(guard+'-green.tap')).write_text(green.stdout+green.stderr)
+ (evidence/(guard+'-green.tap')).write_text(sanitize(green.stdout+green.stderr))
  summary.append(f'{guard}: red exit={red.returncode}; restored green exit={green.returncode}')
  print(summary[-1],flush=True)
  if red.returncode==0 or green.returncode!=0:raise RuntimeError(guard+' failed guard proof')

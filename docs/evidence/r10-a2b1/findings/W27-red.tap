@@ -2,22 +2,22 @@ TAP version 13
 # Subtest: W27 missing baseline returns 428 and no-store before writes
 not ok 1 - W27 missing baseline returns 428 and no-store before writes
   ---
-  duration_ms: 6.111584
+  duration_ms: 5.56425
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:3014'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:3014'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     422 !== 428
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 428
   actual: 422
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:24:193)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:24:193)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -29,4 +29,4 @@ not ok 1 - W27 missing baseline returns 428 and no-store before writes
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 169.7205
+# duration_ms 181.827167

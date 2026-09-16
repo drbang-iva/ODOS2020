@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W28a clear preserves historical homes
 ok 1 - W28a clear preserves historical homes
   ---
-  duration_ms: 7.684917
+  duration_ms: 6.637708
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W28a clear preserves historical homes
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 168.884792
+# duration_ms 158.036208

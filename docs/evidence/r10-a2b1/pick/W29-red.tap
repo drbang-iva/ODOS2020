@@ -4,13 +4,13 @@ not ok 1 - W29 Cup/Disc measurement pick retains Observation evidence and Proven
   ---
   duration_ms: 12.783792
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2:102736'
+  location: '<repo>/mcp/tests/diagnosisLinkL2.test.ts:2:102736'
   failureType: 'testCodeFailure'
   error: "Cannot read properties of undefined (reading '0')"
   code: 'ERR_TEST_FAILURE'
   name: 'TypeError'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-pick/mcp/tests/diagnosisLinkL2.test.ts:2681:47)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisLinkL2.test.ts:2681:47)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

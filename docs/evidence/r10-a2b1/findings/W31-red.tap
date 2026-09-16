@@ -2,22 +2,22 @@ TAP version 13
 # Subtest: W31 conflict carries command result but strips internal fresh
 not ok 1 - W31 conflict carries command result but strips internal fresh
   ---
-  duration_ms: 7.380959
+  duration_ms: 6.866375
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:7413'
+  location: '<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:1:7413'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
   actual: true
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:44:362)
+    TestContext.<anonymous> (<repo>/mcp/tests/diagnosisFindingsCommands.test.ts:44:362)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -29,4 +29,4 @@ not ok 1 - W31 conflict carries command result but strips internal fresh
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 164.408125
+# duration_ms 182.413208

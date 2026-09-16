@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W42 repair persists frozen audit debt and clears GET debt without a clinical write
 ok 1 - W42 repair persists frozen audit debt and clears GET debt without a clinical write
   ---
-  duration_ms: 17.664833
+  duration_ms: 16.5685
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W42 repair persists frozen audit debt and clears GET debt without a clini
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 178.930875
+# duration_ms 170.223375

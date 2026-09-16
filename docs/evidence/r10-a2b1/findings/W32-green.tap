@@ -2,7 +2,7 @@ TAP version 13
 # Subtest: W32 eye-change onto differing live destination refuses zero writes
 ok 1 - W32 eye-change onto differing live destination refuses zero writes
   ---
-  duration_ms: 5.730584
+  duration_ms: 5.363416
   type: 'test'
   ...
 1..1
@@ -13,4 +13,4 @@ ok 1 - W32 eye-change onto differing live destination refuses zero writes
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 162.689
+# duration_ms 159.43125

@@ -172,22 +172,22 @@ not ok 29 - loader returns sanitized typed incomplete categories
   ---
   duration_ms: 2.013334
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/currentFindingReader.test.ts:1:16477'
+  location: '<repo>/mcp/tests/currentFindingReader.test.ts:1:16477'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'missing'
     - 'upstream'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'upstream'
   actual: 'missing'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/currentFindingReader.test.ts:234:70)
+    TestContext.<anonymous> (<repo>/mcp/tests/currentFindingReader.test.ts:234:70)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -196,22 +196,22 @@ not ok 30 - audit lookup is opt-in and only current marked fact without matching
   ---
   duration_ms: 0.8835
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/currentFindingReader.test.ts:1:18158'
+  location: '<repo>/mcp/tests/currentFindingReader.test.ts:1:18158'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'refused'
     - 'upstream'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'upstream'
   actual: 'refused'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/currentFindingReader.test.ts:251:68)
+    TestContext.<anonymous> (<repo>/mcp/tests/currentFindingReader.test.ts:251:68)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -226,22 +226,22 @@ not ok 32 - typed incomplete maps transport refusal and missing status without u
   ---
   duration_ms: 0.213916
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/currentFindingReader.test.ts:1:21203'
+  location: '<repo>/mcp/tests/currentFindingReader.test.ts:1:21203'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'upstream'
     - 'missing'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'missing'
   actual: 'upstream'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/currentFindingReader.test.ts:280:35)
+    TestContext.<anonymous> (<repo>/mcp/tests/currentFindingReader.test.ts:280:35)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -250,19 +250,19 @@ not ok 33 - review regression: resource search details cannot masquerade as audi
   ---
   duration_ms: 0.396166
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/currentFindingReader.test.ts:1:21815'
+  location: '<repo>/mcp/tests/currentFindingReader.test.ts:1:21815'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         incomplete: true,
     +   kind: 'refused',
     -   kind: 'upstream',
         reason: 'Finding audit state could not be verified.'
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -275,7 +275,7 @@ not ok 33 - review regression: resource search details cannot masquerade as audi
     reason: 'Finding audit state could not be verified.'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/currentFindingReader.test.ts:304:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/currentFindingReader.test.ts:304:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -284,21 +284,21 @@ not ok 34 - preRebuild includes retired legacy, snapshots, unresolved and invali
   ---
   duration_ms: 0.214958
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/currentFindingReader.test.ts:1:23300'
+  location: '<repo>/mcp/tests/currentFindingReader.test.ts:1:23300'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/currentFindingReader.test.ts:311:12)
+    TestContext.<anonymous> (<repo>/mcp/tests/currentFindingReader.test.ts:311:12)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)

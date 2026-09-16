@@ -8,220 +8,220 @@ TAP version 13
         # Subtest: create
         ok 1 - create
           ---
-          duration_ms: 0.202416
+          duration_ms: 0.225083
           type: 'test'
           ...
         # Subtest: update
         ok 2 - update
           ---
-          duration_ms: 0.09025
+          duration_ms: 0.100792
           type: 'test'
           ...
         1..2
     ok 1 - provider
       ---
-      duration_ms: 51.80925
+      duration_ms: 61.860917
       type: 'test'
       ...
     # Subtest: staff
         # Subtest: create
         ok 1 - create
           ---
-          duration_ms: 0.072792
+          duration_ms: 0.088916
           type: 'test'
           ...
         # Subtest: update
         ok 2 - update
           ---
-          duration_ms: 0.074416
+          duration_ms: 0.069834
           type: 'test'
           ...
         1..2
     ok 2 - staff
       ---
-      duration_ms: 45.389333
+      duration_ms: 52.507584
       type: 'test'
       ...
     # Subtest: admin
         # Subtest: create
         ok 1 - create
           ---
-          duration_ms: 0.195083
+          duration_ms: 0.127917
           type: 'test'
           ...
         # Subtest: update
         ok 2 - update
           ---
-          duration_ms: 0.088833
+          duration_ms: 0.157083
           type: 'test'
           ...
         1..2
     ok 3 - admin
       ---
-      duration_ms: 42.563042
+      duration_ms: 47.7785
       type: 'test'
       ...
     1..3
 ok 1 - age-of-majority singleton grants enforce all-role reads and Admin-only writes on live Medplum
   ---
-  duration_ms: 304.896125
+  duration_ms: 316.433875
   type: 'test'
   ...
 # Subtest: synced practice policies enforce all repaired clinical writes on running Medplum
     # Subtest: K1 staff cannot strip, add, or change an existing child claim
     ok 1 - K1 staff cannot strip, add, or change an existing child claim
       ---
-      duration_ms: 27.779542
+      duration_ms: 54.622166
       type: 'test'
       ...
     # Subtest: K2 staff cannot create a claimed child
     ok 2 - K2 staff cannot create a claimed child
       ---
-      duration_ms: 3.279916
+      duration_ms: 5.677916
       type: 'test'
       ...
     # Subtest: K3 staff can create and edit an unclaimed child
     ok 3 - K3 staff can create and edit an unclaimed child
       ---
-      duration_ms: 11.108708
+      duration_ms: 12.097542
       type: 'test'
       ...
     # Subtest: K4 staff can edit name and phone while preserving an inert claim
     ok 4 - K4 staff can edit name and phone while preserving an inert claim
       ---
-      duration_ms: 57.079208
+      duration_ms: 55.527916
       type: 'test'
       ...
     # Subtest: Provider voids a preliminary Observation seeded by Staff
     ok 5 - Provider voids a preliminary Observation seeded by Staff
       ---
-      duration_ms: 5.19575
+      duration_ms: 7.198708
       type: 'test'
       ...
     # Subtest: Staff voids a preliminary Observation seeded by Provider
     ok 6 - Staff voids a preliminary Observation seeded by Provider
       ---
-      duration_ms: 5.486875
+      duration_ms: 6.326084
       type: 'test'
       ...
     # Subtest: Staff cannot finalize a preliminary Observation seeded by Provider
     ok 7 - Staff cannot finalize a preliminary Observation seeded by Provider
       ---
-      duration_ms: 3.192291
+      duration_ms: 3.281834
       type: 'test'
       ...
     # Subtest: Chart sidebar > Allergies — Mark no known allergies
     ok 8 - Chart sidebar > Allergies — Mark no known allergies
       ---
-      duration_ms: 11.904209
+      duration_ms: 12.213584
       type: 'test'
       ...
     # Subtest: Chart sidebar > Allergies — Add allergy
     ok 9 - Chart sidebar > Allergies — Add allergy
       ---
-      duration_ms: 8.025417
+      duration_ms: 9.631375
       type: 'test'
       ...
     # Subtest: Chart sidebar > Care Team — Add team member
     ok 10 - Chart sidebar > Care Team — Add team member
       ---
-      duration_ms: 9.001125
+      duration_ms: 10.353958
       type: 'test'
       ...
     # Subtest: Diagnosis workspace/assessment — diagnosis laterality BodyStructure
     ok 11 - Diagnosis workspace/assessment — diagnosis laterality BodyStructure
       ---
-      duration_ms: 7.926625
+      duration_ms: 8.316292
       type: 'test'
       ...
     # Subtest: IOP Timeline target editor — Save a new target
     ok 12 - IOP Timeline target editor — Save a new target
       ---
-      duration_ms: 9.972334
+      duration_ms: 8.118916
       type: 'test'
       ...
     # Subtest: IOP Timeline target editor — Save an existing target
     ok 13 - IOP Timeline target editor — Save an existing target
       ---
-      duration_ms: 7.305791
+      duration_ms: 7.406875
       type: 'test'
       ...
     # Subtest: Prescriptions — Add prescription
     ok 14 - Prescriptions — Add prescription
       ---
-      duration_ms: 13.384584
+      duration_ms: 10.792917
       type: 'test'
       ...
     # Subtest: Prescriptions — Staff edits repeats before transmission
     ok 15 - Prescriptions — Staff edits repeats before transmission
       ---
-      duration_ms: 7.8135
+      duration_ms: 8.675459
       type: 'test'
       ...
     # Subtest: Prescriptions — Send to pharmacy (reserve WENO message id)
     ok 16 - Prescriptions — Send to pharmacy (reserve WENO message id)
       ---
-      duration_ms: 7.507958
+      duration_ms: 7.6315
       type: 'test'
       ...
     # Subtest: Prescriptions — Send to pharmacy (record indeterminate outcome)
     ok 17 - Prescriptions — Send to pharmacy (record indeterminate outcome)
       ---
-      duration_ms: 9.291833
+      duration_ms: 10.665417
       type: 'test'
       ...
     # Subtest: Prescriptions — Pharmacy verified not received — clear reservation
     ok 18 - Prescriptions — Pharmacy verified not received — clear reservation
       ---
-      duration_ms: 9.19025
+      duration_ms: 8.986375
       type: 'test'
       ...
     # Subtest: Prescriptions — Send to pharmacy (record successful transmission)
     ok 19 - Prescriptions — Send to pharmacy (record successful transmission)
       ---
-      duration_ms: 7.646042
+      duration_ms: 8.5175
       type: 'test'
       ...
     # Subtest: Prescriptions — Send to pharmacy (record WENO error)
     ok 20 - Prescriptions — Send to pharmacy (record WENO error)
       ---
-      duration_ms: 8.83175
+      duration_ms: 8.641917
       type: 'test'
       ...
     # Subtest: Staff transmitted prescription mutation is denied while Provider control succeeds
     ok 21 - Staff transmitted prescription mutation is denied while Provider control succeeds
       ---
-      duration_ms: 8.704208
+      duration_ms: 8.555667
       type: 'test'
       ...
     # Subtest: Staff prescription requester mutation is denied before transmission
     ok 22 - Staff prescription requester mutation is denied before transmission
       ---
-      duration_ms: 3.446292
+      duration_ms: 3.510125
       type: 'test'
       ...
     # Subtest: Dry Eye > Adverse Event — Capture and persist Provenance
     ok 23 - Dry Eye > Adverse Event — Capture and persist Provenance
       ---
-      duration_ms: 21.038875
+      duration_ms: 22.065167
       type: 'test'
       ...
     # Subtest: Ortho-K > Adverse Event — Capture and persist Provenance
     ok 24 - Ortho-K > Adverse Event — Capture and persist Provenance
       ---
-      duration_ms: 17.434125
+      duration_ms: 19.061042
       type: 'test'
       ...
     # Subtest: practice-role clients cannot forge AuditEvent
     ok 25 - practice-role clients cannot forge AuditEvent
       ---
-      duration_ms: 6.71225
+      duration_ms: 7.124083
       type: 'test'
       ...
     1..25
 ok 2 - synced practice policies enforce all repaired clinical writes on running Medplum
   ---
-  duration_ms: 513.671958
+  duration_ms: 579.942208
   type: 'test'
   ...
 # Subtest: a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
@@ -229,19 +229,19 @@ ok 2 - synced practice policies enforce all repaired clinical writes on running 
         # Subtest: provider undoes the clear and reads the restored VA value under the same policy
         ok 1 - provider undoes the clear and reads the restored VA value under the same policy
           ---
-          duration_ms: 38.411167
+          duration_ms: 34.056
           type: 'test'
           ...
         # Subtest: provider cannot undo on a signed encounter and the refusal preserves the value and slot
         ok 2 - provider cannot undo on a signed encounter and the refusal preserves the value and slot
           ---
-          duration_ms: 64.397792
+          duration_ms: 62.536917
           type: 'test'
           ...
         1..2
     ok 1 - provider clears one VA value and the ledger slot persists and reads back
       ---
-      duration_ms: 205.509166
+      duration_ms: 195.650166
       type: 'test'
       ...
     # provider: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
@@ -250,19 +250,19 @@ ok 2 - synced practice policies enforce all repaired clinical writes on running 
         # Subtest: staff undoes the clear and reads the restored VA value under the same policy
         ok 1 - staff undoes the clear and reads the restored VA value under the same policy
           ---
-          duration_ms: 33.657458
+          duration_ms: 36.567209
           type: 'test'
           ...
         # Subtest: staff cannot undo on a signed encounter and the refusal preserves the value and slot
         ok 2 - staff cannot undo on a signed encounter and the refusal preserves the value and slot
           ---
-          duration_ms: 83.424375
+          duration_ms: 82.722
           type: 'test'
           ...
         1..2
     ok 2 - staff clears one VA value and the ledger slot persists and reads back
       ---
-      duration_ms: 191.176083
+      duration_ms: 194.81
       type: 'test'
       ...
     # staff: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
@@ -270,187 +270,193 @@ ok 2 - synced practice policies enforce all repaired clinical writes on running 
     1..2
 ok 3 - a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
   ---
-  duration_ms: 501.855458
+  duration_ms: 497.962625
+  type: 'test'
+  ...
+# Subtest: W7 live policy selection excludes composite role policies
+ok 4 - W7 live policy selection excludes composite role policies
+  ---
+  duration_ms: 2.255167
   type: 'test'
   ...
 # Subtest: R10 diagnosis door enforces canonical policies through real handlers for staff and provider
     # Subtest: staff: assert clear revive move link and zero-write refusals
     ok 1 - staff: assert clear revive move link and zero-write refusals
       ---
-      duration_ms: 531.20425
+      duration_ms: 514.169375
       type: 'test'
       ...
     # Subtest: provider: assert clear revive move link and zero-write refusals
     ok 2 - provider: assert clear revive move link and zero-write refusals
       ---
-      duration_ms: 448.643
+      duration_ms: 478.017875
       type: 'test'
       ...
     1..2
-ok 4 - R10 diagnosis door enforces canonical policies through real handlers for staff and provider
+ok 5 - R10 diagnosis door enforces canonical policies through real handlers for staff and provider
   ---
-  duration_ms: 1265.200959
+  duration_ms: 1319.062416
   type: 'test'
   ...
-# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/9780d600-d8c2-4887-ba08-0730e43c94b7","operation":"assert","before":"absent","after":"preliminary","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
-# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/9780d600-d8c2-4887-ba08-0730e43c94b7","operation":"clear","before":"preliminary","after":"entered-in-error","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
-# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/9780d600-d8c2-4887-ba08-0730e43c94b7","operation":"revive","before":"entered-in-error","after":"preliminary","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
-# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/9780d600-d8c2-4887-ba08-0730e43c94b7","operation":"move","before":"Condition/94628150-3371-4161-8346-51f133ac49a6","after":"Condition/75efc69e-8eaf-4670-ae1b-00753487510c","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
-# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/9780d600-d8c2-4887-ba08-0730e43c94b7","operation":"link","before":"Condition/75efc69e-8eaf-4670-ae1b-00753487510c","after":"Condition/75efc69e-8eaf-4670-ae1b-00753487510c,Condition/94628150-3371-4161-8346-51f133ac49a6","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
-# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Condition","operation":"update/pick","before":"unchanged","after":"403 unchanged","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","blocking":true}
-# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/9780d600-d8c2-4887-ba08-0730e43c94b7","operation":"signed-or-cancelled refusal","before":"final","after":"final","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
-# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/9780d600-d8c2-4887-ba08-0730e43c94b7","operation":"signed-or-cancelled refusal","before":"cancelled","after":"cancelled","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
-# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Encounter/932d2a50-f746-4b3b-9a97-cf9bfb1d2f35","operation":"pre-rebuild refusal","before":"legacy read-only","after":"409 unchanged","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
-# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","operation":"two-tab eye-change","before":"OS differs","after":"409 zero writes","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","blocking":true}
-# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","operation":"lost response then identical Retry","before":"absent","after":"one persisted owner and one clinical write","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","blocking":true}
-# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/c36b07ed-7ee7-4bc1-a3f0-e4028e24e9a2","operation":"assert","before":"absent","after":"preliminary","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
-# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/c36b07ed-7ee7-4bc1-a3f0-e4028e24e9a2","operation":"clear","before":"preliminary","after":"entered-in-error","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
-# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/c36b07ed-7ee7-4bc1-a3f0-e4028e24e9a2","operation":"revive","before":"entered-in-error","after":"preliminary","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
-# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/c36b07ed-7ee7-4bc1-a3f0-e4028e24e9a2","operation":"move","before":"Condition/a21122c0-d251-4f58-99f9-eae48691eedf","after":"Condition/eaedd92e-00cf-4eb7-ac8a-7377cf376b70","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
-# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/c36b07ed-7ee7-4bc1-a3f0-e4028e24e9a2","operation":"link","before":"Condition/eaedd92e-00cf-4eb7-ac8a-7377cf376b70","after":"Condition/eaedd92e-00cf-4eb7-ac8a-7377cf376b70,Condition/a21122c0-d251-4f58-99f9-eae48691eedf","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
-# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/c36b07ed-7ee7-4bc1-a3f0-e4028e24e9a2","operation":"signed-or-cancelled refusal","before":"final","after":"final","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
-# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/c36b07ed-7ee7-4bc1-a3f0-e4028e24e9a2","operation":"signed-or-cancelled refusal","before":"cancelled","after":"cancelled","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
-# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Encounter/3c5761b8-4da8-44a6-9251-cadf35a0d2a1","operation":"pre-rebuild refusal","before":"legacy read-only","after":"409 unchanged","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
-# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","operation":"two-tab eye-change","before":"OS differs","after":"409 zero writes","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","blocking":true}
-# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","operation":"lost response then identical Retry","before":"absent","after":"one persisted owner and one clinical write","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/3ad20b8a-2b5b-4739-99b4-d678e57e11e9","operation":"assert","before":"absent","after":"preliminary","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/3ad20b8a-2b5b-4739-99b4-d678e57e11e9","operation":"clear","before":"preliminary","after":"entered-in-error","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/3ad20b8a-2b5b-4739-99b4-d678e57e11e9","operation":"revive","before":"entered-in-error","after":"preliminary","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/3ad20b8a-2b5b-4739-99b4-d678e57e11e9","operation":"move","before":"Condition/8cf1c54f-902d-4a6c-969a-d3df17fbd6ce","after":"Condition/55bb954a-ebe3-4fa0-9de5-cec2407db752","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/3ad20b8a-2b5b-4739-99b4-d678e57e11e9","operation":"link","before":"Condition/55bb954a-ebe3-4fa0-9de5-cec2407db752","after":"Condition/55bb954a-ebe3-4fa0-9de5-cec2407db752,Condition/8cf1c54f-902d-4a6c-969a-d3df17fbd6ce","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Condition","operation":"update/pick","before":"unchanged","after":"403 unchanged","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/3ad20b8a-2b5b-4739-99b4-d678e57e11e9","operation":"signed-or-cancelled refusal","before":"final","after":"final","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/3ad20b8a-2b5b-4739-99b4-d678e57e11e9","operation":"signed-or-cancelled refusal","before":"cancelled","after":"cancelled","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Encounter","reference":"Encounter/1f71f5c4-c881-41ba-81f7-db518b985604","operation":"pre-rebuild refusal","before":"legacy read-only","after":"409 unchanged","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","operation":"two-tab eye-change","before":"OS differs","after":"409 zero writes","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","operation":"lost response then identical Retry","before":"absent","after":"one persisted owner and one clinical write","policyReference":"AccessPolicy/79ded5d9-e554-4106-8c14-c724dd39ec7e","policyVersion":"90553f39-0755-4c9c-ba4f-75c3d0ccc411","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/cc2b4a28-1820-4cff-8968-cce5d2585fc6","operation":"assert","before":"absent","after":"preliminary","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/cc2b4a28-1820-4cff-8968-cce5d2585fc6","operation":"clear","before":"preliminary","after":"entered-in-error","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/cc2b4a28-1820-4cff-8968-cce5d2585fc6","operation":"revive","before":"entered-in-error","after":"preliminary","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/cc2b4a28-1820-4cff-8968-cce5d2585fc6","operation":"move","before":"Condition/c9b8fb52-7f57-4cf1-a44a-8386d4835209","after":"Condition/8ffca412-99a1-426f-a275-3024e4ee0977","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/cc2b4a28-1820-4cff-8968-cce5d2585fc6","operation":"link","before":"Condition/8ffca412-99a1-426f-a275-3024e4ee0977","after":"Condition/8ffca412-99a1-426f-a275-3024e4ee0977,Condition/c9b8fb52-7f57-4cf1-a44a-8386d4835209","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/cc2b4a28-1820-4cff-8968-cce5d2585fc6","operation":"signed-or-cancelled refusal","before":"final","after":"final","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","reference":"Observation/cc2b4a28-1820-4cff-8968-cce5d2585fc6","operation":"signed-or-cancelled refusal","before":"cancelled","after":"cancelled","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Encounter","reference":"Encounter/f7c539e7-30cf-4bf6-9465-4ec1a6418d88","operation":"pre-rebuild refusal","before":"legacy read-only","after":"409 unchanged","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","operation":"two-tab eye-change","before":"OS differs","after":"409 zero writes","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"ea11fe06-da39-47f4-9e18-d5ed6df92652","resourceType":"Observation","operation":"lost response then identical Retry","before":"absent","after":"one persisted owner and one clinical write","policyReference":"AccessPolicy/d12b563d-f347-4383-b679-492fd80efbea","policyVersion":"c33fe01c-6d11-42f1-b774-a23d49ab5fcd","lane":"test:live-authz","blocking":true}
 # Subtest: the practice role registry defines only Provider, Staff, and Admin
-ok 5 - the practice role registry defines only Provider, Staff, and Admin
+ok 6 - the practice role registry defines only Provider, Staff, and Admin
   ---
-  duration_ms: 0.615917
+  duration_ms: 0.58125
   type: 'test'
   ...
 # Subtest: full role table keeps diagnosis action equivalent to Condition create and update grants
-ok 6 - full role table keeps diagnosis action equivalent to Condition create and update grants
+ok 7 - full role table keeps diagnosis action equivalent to Condition create and update grants
   ---
-  duration_ms: 0.228041
+  duration_ms: 0.2425
   type: 'test'
   ...
 # Subtest: diagnosis permission cannot be granted independently of a credentialed role and can be revoked
-ok 7 - diagnosis permission cannot be granted independently of a credentialed role and can be revoked
+ok 8 - diagnosis permission cannot be granted independently of a credentialed role and can be revoked
   ---
-  duration_ms: 0.208917
+  duration_ms: 0.216334
   type: 'test'
   ...
 # Subtest: AccessPolicy generator emits Medplum interactions, criteria, and writeConstraint without business-action leakage
-ok 8 - AccessPolicy generator emits Medplum interactions, criteria, and writeConstraint without business-action leakage
+ok 9 - AccessPolicy generator emits Medplum interactions, criteria, and writeConstraint without business-action leakage
   ---
-  duration_ms: 0.43
+  duration_ms: 0.460958
   type: 'test'
   ...
 # Subtest: protocol authoring is credential-bound to Provider with code-fenced Basic grants
-ok 9 - protocol authoring is credential-bound to Provider with code-fenced Basic grants
+ok 10 - protocol authoring is credential-bound to Provider with code-fenced Basic grants
   ---
-  duration_ms: 0.307792
+  duration_ms: 0.31575
   type: 'test'
   ...
 # Subtest: front-desk can create the dispensary order + financial resources at practice scope
-ok 10 - front-desk can create the dispensary order + financial resources at practice scope
+ok 11 - front-desk can create the dispensary order + financial resources at practice scope
   ---
-  duration_ms: 0.084916
+  duration_ms: 0.108666
   type: 'test'
   ...
 # Subtest: front-desk cannot update or delete PaymentReconciliation outside the guarded Phase 6a handlers
-ok 11 - front-desk cannot update or delete PaymentReconciliation outside the guarded Phase 6a handlers
+ok 12 - front-desk cannot update or delete PaymentReconciliation outside the guarded Phase 6a handlers
   ---
-  duration_ms: 0.1015
+  duration_ms: 0.131084
   type: 'test'
   ...
 # Subtest: every role can read payments while only custody roles can create them
-ok 12 - every role can read payments while only custody roles can create them
+ok 13 - every role can read payments while only custody roles can create them
   ---
-  duration_ms: 0.1075
+  duration_ms: 0.104583
   type: 'test'
   ...
 # Subtest: compiled front-desk and practice-admin AccessPolicies grant payer Organization directory operations
-ok 13 - compiled front-desk and practice-admin AccessPolicies grant payer Organization directory operations
+ok 14 - compiled front-desk and practice-admin AccessPolicies grant payer Organization directory operations
   ---
-  duration_ms: 0.216167
+  duration_ms: 0.229459
   type: 'test'
   ...
 # Subtest: every role's AccessPolicy carries a machine-readable practice-role identifier (resolver anchor)
-ok 14 - every role's AccessPolicy carries a machine-readable practice-role identifier (resolver anchor)
+ok 15 - every role's AccessPolicy carries a machine-readable practice-role identifier (resolver anchor)
   ---
-  duration_ms: 0.287583
+  duration_ms: 0.2725
   type: 'test'
   ...
 # Subtest: ProjectMembership access builder emits parameterized provider, patient, and state-license values
-ok 15 - ProjectMembership access builder emits parameterized provider, patient, and state-license values
+ok 16 - ProjectMembership access builder emits parameterized provider, patient, and state-license values
   ---
-  duration_ms: 0.081209
+  duration_ms: 0.130708
   type: 'test'
   ...
 # Subtest: aesthetics-provider state scoping rejects out-of-state or out-of-scope procedures
-ok 16 - aesthetics-provider state scoping rejects out-of-state or out-of-scope procedures
+ok 17 - aesthetics-provider state scoping rejects out-of-state or out-of-scope procedures
   ---
-  duration_ms: 0.108875
+  duration_ms: 0.122833
   type: 'test'
   ...
 # Subtest: Binary parser plugin requires securityContext and rejects outside patient compartment
-ok 17 - Binary parser plugin requires securityContext and rejects outside patient compartment
+ok 18 - Binary parser plugin requires securityContext and rejects outside patient compartment
   ---
-  duration_ms: 0.1395
+  duration_ms: 0.154916
   type: 'test'
   ...
 # Subtest: Binary parser plugin accepts valid raw upload header and blocks securityContext rewrite
-ok 18 - Binary parser plugin accepts valid raw upload header and blocks securityContext rewrite
+ok 19 - Binary parser plugin accepts valid raw upload header and blocks securityContext rewrite
   ---
-  duration_ms: 0.076125
+  duration_ms: 0.070041
   type: 'test'
   ...
 # Subtest: MCP FHIR client refuses direct Binary create without parser guard header
-ok 19 - MCP FHIR client refuses direct Binary create without parser guard header
+ok 20 - MCP FHIR client refuses direct Binary create without parser guard header
   ---
-  duration_ms: 0.166917
+  duration_ms: 0.176541
   type: 'test'
   ...
 # Subtest: ProjectMembership lifecycle transitions emit audit rows and placeholder AuditEvent
-ok 20 - ProjectMembership lifecycle transitions emit audit rows and placeholder AuditEvent
+ok 21 - ProjectMembership lifecycle transitions emit audit rows and placeholder AuditEvent
   ---
-  duration_ms: 0.432542
+  duration_ms: 0.463042
   type: 'test'
   ...
 # Subtest: ProjectMembership role review preserves state and emits a review audit row
-ok 21 - ProjectMembership role review preserves state and emits a review audit row
+ok 22 - ProjectMembership role review preserves state and emits a review audit row
   ---
-  duration_ms: 0.865167
+  duration_ms: 0.780292
   type: 'test'
   ...
 # Subtest: break-glass requires human reason, creates time-limited access, and flags admin review
-ok 22 - break-glass requires human reason, creates time-limited access, and flags admin review
+ok 23 - break-glass requires human reason, creates time-limited access, and flags admin review
   ---
-  duration_ms: 0.212417
+  duration_ms: 0.185
   type: 'test'
   ...
 # Subtest: break-glass rejects agent self-attestation and blank reason
-ok 23 - break-glass rejects agent self-attestation and blank reason
+ok 24 - break-glass rejects agent self-attestation and blank reason
   ---
-  duration_ms: 0.0545
+  duration_ms: 0.055875
   type: 'test'
   ...
 # Subtest: audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available
-ok 24 - audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available
+ok 25 - audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available
   ---
-  duration_ms: 21117.723959
+  duration_ms: 100.720667
   type: 'test'
   ...
 # Subtest: v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)
-ok 25 - v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)
+ok 26 - v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)
   ---
-  duration_ms: 120.828208
+  duration_ms: 56838.699
   type: 'test'
   ...
 # Subtest: compiled Staff policy fences RelatedPerson claims without changing other demographic grants
-ok 26 - compiled Staff policy fences RelatedPerson claims without changing other demographic grants
+ok 27 - compiled Staff policy fences RelatedPerson claims without changing other demographic grants
   ---
-  duration_ms: 0.221167
+  duration_ms: 0.219833
   type: 'test'
   ...
-1..26
-# tests 68
+1..27
+# tests 69
 # suites 0
-# pass 68
+# pass 69
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 24851.24825
+# duration_ms 60594.481333
