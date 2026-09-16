@@ -1,0 +1,129 @@
+{
+  "scenarios": [
+    {
+      "id": "T1",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T2",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T3",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T4",
+      "suite": "ui",
+      "file": "ui/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T5",
+      "suite": "ui",
+      "file": "ui/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T6",
+      "suite": "ui",
+      "file": "ui/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T7",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T8",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T9",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T10",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T11",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T12",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T13",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T14",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T15",
+      "suite": "ui",
+      "file": "ui/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T16",
+      "suite": "ui",
+      "file": "ui/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T17",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T17",
+      "suite": "ui",
+      "file": "ui/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T18",
+      "suite": "ui",
+      "file": "ui/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T19",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T20",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T21",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T21",
+      "suite": "ui",
+      "file": "ui/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T22",
+      "suite": "mcp",
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    },
+    {
+      "id": "T22",
+      "suite": "ui",
+      "file": "ui/tests/r10A3ReleaseScenarios.test.ts"
+    }
+  ]
+}

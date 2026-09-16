@@ -1,0 +1,4 @@
+R10 A3 release BLOCKED
+T1: mcp code must declare exactly one named test
+T1: mcp TAP expected exactly once, found 0
+Exit: 1
