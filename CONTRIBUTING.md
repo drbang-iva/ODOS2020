@@ -25,13 +25,15 @@ Fable, Opus, or Codex may pass from any GitHub account, but the gate rejects a P
 signed by the same tool that coded the PR, even from a separate session.
 
 Every human-authored PR body must contain `Coded-by: Codex` or `Coded-by: Claude`
-outside fenced code blocks. Add model and effort after the tool name, for example
-`Coded-by: Codex — GPT-6 Astra (high)`. Only the first word identifies the coder;
+outside fenced code blocks and HTML comments. Add model and effort after the tool name, for example
+`Coded-by: Codex — GPT-6 Astra (high)`. The first word must be Codex or Claude; every tool named
+anywhere in the value counts as a coder. Keep free text to model names and effort
+only. HTML comments and fenced blocks are ignored;
 multiple declarations form the union of their tools. A missing or unrecognized
 declaration fails closed. Bot-authored PRs need no declaration.
 
 The evaluator's whole-word tokens identify its tool: Codex/GPT/Astra/Sol means
-Codex; Claude/Opus/Fable means Claude. A signature naming both tools or neither is
+Codex; Claude/Opus/Fable/Sonnet/Haiku means Claude. A signature naming both tools or neither is
 ambiguous. These checks apply only to an otherwise trusted, current-head PASS;
 existing failures retain their reasons and the operator OVERRIDE path is unchanged
 and needs no Coded-by declaration. Editing the PR body re-runs the gate.

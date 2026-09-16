@@ -1,0 +1,248 @@
+{
+  "revision": "2.1",
+  "evaluated_base": "6ca2d69d2292dcb90c9cdd870866fb4f1f570579",
+  "parser_sha256": "824fd581d4893bd4a3e9f7592f50afd6f35135d723e5d0a68bd6d5e6318d5b27",
+  "parser_unchanged": true,
+  "reproduce_first": {
+    "base": {
+      "passed": false,
+      "reason": "same-tool-evaluator"
+    },
+    "broken": {
+      "passed": true,
+      "reason": "passing-verdict"
+    },
+    "restored": {
+      "passed": false,
+      "reason": "same-tool-evaluator"
+    },
+    "broken_suite": {
+      "tests": 105,
+      "pass": 105,
+      "fail": 0
+    },
+    "byte_identical_restore": true
+  },
+  "github_gfm_render": "\n<p>Coded-by: Codex</p>\n<pre class=\"notranslate\"><code class=\"notranslate\">Coded-by: Claude\n</code></pre>",
+  "final": {
+    "tests": 106,
+    "pass": 106,
+    "fail": 0,
+    "skipped": 0
+  },
+  "fixture_privacy_guard": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0
+  },
+  "mutations": [
+    {
+      "name": "closing-line-fence",
+      "red": [
+        "not ok 106 - G19 GitHub GFM renders Codex visible and Claude inside the code block",
+        "# tests 106",
+        "# pass 105",
+        "# fail 1"
+      ],
+      "green": [
+        "# tests 106",
+        "# pass 106",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "first-word",
+      "red": [
+        "not ok 17 - S17 G14 the posting script and real gate agree on signatures and coder checks in a dry run",
+        "not ok 78 - coder declarations ignore fenced examples and count all named tools",
+        "not ok 83 - G1 coded-by fixback",
+        "not ok 84 - G2 coded-by fixback",
+        "not ok 85 - G5 coded-by fixback",
+        "not ok 92 - G4 Sonnet token companion coded-by fixback",
+        "not ok 101 - G4 shared token table recognizes whole words in coder values and signatures",
+        "# tests 106",
+        "# pass 99",
+        "# fail 7"
+      ],
+      "green": [
+        "# tests 106",
+        "# pass 106",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "no-html-skip",
+      "red": [
+        "not ok 17 - S17 G14 the posting script and real gate agree on signatures and coder checks in a dry run",
+        "not ok 86 - G6 coded-by fixback",
+        "not ok 87 - G7 coded-by fixback",
+        "not ok 88 - G9 coded-by fixback",
+        "not ok 96 - G11 coded-by fixback",
+        "not ok 97 - G11 fence inside active comment coded-by fixback",
+        "not ok 102 - F2 strips all inline spans and keeps only text before an unclosed comment",
+        "not ok 104 - G17 rev 2 comment state",
+        "not ok 106 - G19 GitHub GFM renders Codex visible and Claude inside the code block",
+        "# tests 106",
+        "# pass 97",
+        "# fail 9"
+      ],
+      "green": [
+        "# tests 106",
+        "# pass 106",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "no-inline-strip",
+      "red": [
+        "not ok 88 - G9 coded-by fixback",
+        "not ok 102 - F2 strips all inline spans and keeps only text before an unclosed comment",
+        "# tests 106",
+        "# pass 104",
+        "# fail 2"
+      ],
+      "green": [
+        "# tests 106",
+        "# pass 106",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "standalone-close",
+      "red": [
+        "not ok 79 - the actual PR template fails closed until its coder placeholder is edited",
+        "not ok 94 - G8 closing-line companion coded-by fixback",
+        "not ok 99 - G12 real merged PR template refuses the placeholder",
+        "not ok 102 - F2 strips all inline spans and keeps only text before an unclosed comment",
+        "not ok 105 - G18 rev 2 comment state",
+        "not ok 106 - G19 GitHub GFM renders Codex visible and Claude inside the code block",
+        "# tests 106",
+        "# pass 100",
+        "# fail 6"
+      ],
+      "green": [
+        "# tests 106",
+        "# pass 106",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "comments-before-fences",
+      "red": [
+        "not ok 95 - G10 coded-by fixback",
+        "not ok 102 - F2 strips all inline spans and keeps only text before an unclosed comment",
+        "not ok 104 - G17 rev 2 comment state",
+        "# tests 106",
+        "# pass 103",
+        "# fail 3"
+      ],
+      "green": [
+        "# tests 106",
+        "# pass 106",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "no-sonnet-token",
+      "red": [
+        "not ok 92 - G4 Sonnet token companion coded-by fixback",
+        "not ok 101 - G4 shared token table recognizes whole words in coder values and signatures",
+        "# tests 106",
+        "# pass 104",
+        "# fail 2"
+      ],
+      "green": [
+        "# tests 106",
+        "# pass 106",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "trust-sonnet",
+      "red": [
+        "not ok 16 - the sol exception does not admit Random Model 1 or arbitrary model suffixes",
+        "not ok 17 - S17 G14 the posting script and real gate agree on signatures and coder checks in a dry run",
+        "not ok 18 - an untrusted model still cannot issue the final verdict",
+        "not ok 41 - the evaluated label does not change ordinary evaluation decisions",
+        "not ok 80 - existing failure reasons win even when the coder declaration is missing",
+        "not ok 98 - G15 coded-by fixback",
+        "# tests 106",
+        "# pass 100",
+        "# fail 6"
+      ],
+      "green": [
+        "# tests 106",
+        "# pass 106",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "first-inline-only",
+      "red": [
+        "not ok 103 - G16 rev 2 comment state",
+        "# tests 106",
+        "# pass 105",
+        "# fail 1"
+      ],
+      "green": [
+        "# tests 106",
+        "# pass 106",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "ignore-closing-remainder",
+      "red": [
+        "not ok 104 - G17 rev 2 comment state",
+        "# tests 106",
+        "# pass 105",
+        "# fail 1"
+      ],
+      "green": [
+        "# tests 106",
+        "# pass 106",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "any-closing-opener",
+      "red": [
+        "not ok 105 - G18 rev 2 comment state",
+        "# tests 106",
+        "# pass 105",
+        "# fail 1"
+      ],
+      "green": [
+        "# tests 106",
+        "# pass 106",
+        "# fail 0"
+      ],
+      "restored": true
+    }
+  ],
+  "supplemental": {
+    "name": "closing-line-declaration-guard",
+    "red": [
+      "not ok 102 - F2 strips all inline spans and keeps only text before an unclosed comment",
+      "# tests 106",
+      "# pass 105",
+      "# fail 1"
+    ],
+    "green": [
+      "# tests 106",
+      "# pass 106",
+      "# fail 0"
+    ],
+    "restored": true
+  }
+}

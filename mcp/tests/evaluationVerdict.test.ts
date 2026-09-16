@@ -422,7 +422,7 @@ test("the sol exception does not admit Random Model 1 or arbitrary model suffixe
   }
 });
 
-test("S17 the posting script and real gate agree on signatures and coder checks in a dry run", (t) => {
+test("S17 G14 the posting script and real gate agree on signatures and coder checks in a dry run", (t) => {
   const fixtureDirectory = mkdtempSync(join(tmpdir(), "odos-eval-signatures-"));
   t.after(() => rmSync(fixtureDirectory, { recursive: true, force: true }));
   writeFileSync(join(fixtureDirectory, "gh"), `#!/usr/bin/env bash
@@ -454,6 +454,9 @@ exit 99
     "GPT-5.6 Codex", "Codex (GPT-5.6)", "Codex (gpt-5.6-sol)", "CODEX (GPT-5.6-SOL)",
   ];
   const cases: CoderCase[] = [
+    { evaluator: "Opus 5", prBody: "Coded-by: Codex/Claude", reason: "same-tool-evaluator" },
+    { evaluator: "Codex (GPT-6)", prBody: "<!--\nCoded-by: Claude\n-->", reason: "missing-coded-by" },
+    { evaluator: "Opus 5", prBody: "Coded-by: Codex — GPT-6 Astra (high); helper GPT-5.6 Sol", reason: "passing-verdict" },
     ...trustedSignatures.map((evaluator) => ({
       evaluator,
       prBody: /Fable|Opus/.test(evaluator) ? "Coded-by: Codex" : "Coded-by: Claude",
@@ -1019,9 +1022,13 @@ test("S3 token-only companion classifies every whole-word alias without widening
   assert.equal(evaluate({ comments: [comment(marker("Sol", "PASS"))] }).reason, "untrusted-model");
 });
 
-test("coder declarations ignore fenced examples and use only each declaration's first word", () => {
+test("coder declarations ignore fenced examples and count all named tools", () => {
+  assert.equal(evaluate({
+    prBody: "~~~text\nCoded-by: Claude\n~~~\nCoDeD-bY: cOdEx — helper Opus 5",
+    comments: [comment(marker("Opus 5", "PASS"))],
+  }).reason, "same-tool-evaluator");
   for (const prBody of [
-    "~~~text\nCoded-by: Claude\n~~~\nCoDeD-bY: cOdEx — helper Opus 5",
+
     "````text\nCoded-by: Claude\n```\nCoded-by: Claude\n````\nCoded-by: Codex",
     "   ~~~text\nCoded-by: Claude\n```\nCoded-by: Claude\n   ~~~~\nCoded-by: Codex",
     "Coded-by: Codex\nCoded-by: Codex, GPT-6 Astra",
@@ -1078,4 +1085,100 @@ test("evaluation workflow checks out only the default branch without persisted c
   assert.match(workflow, /ref: \$\{\{ github\.event\.repository\.default_branch \}\}/);
   assert.match(workflow, /persist-credentials: false/);
   assert.doesNotMatch(workflow, /ref:.*(?:head|pull_request)/);
+});
+
+for (const { id, prBody, evaluator, reason } of [
+  { id: "G1", prBody: "Coded-by: Codex/Claude", evaluator: "Opus 5", reason: "same-tool-evaluator" },
+  { id: "G2", prBody: "Coded-by: Codex + Claude", evaluator: "Codex (GPT-6)", reason: "same-tool-evaluator" },
+  { id: "G5", prBody: "Coded-by: Codex — from Claude's contract", evaluator: "Opus 5", reason: "same-tool-evaluator" },
+  { id: "G6", prBody: "<!--\nCoded-by: Claude\n-->", evaluator: "Codex (GPT-6)", reason: "missing-coded-by" },
+  { id: "G7", prBody: "<!--\nCoded-by: Codex", evaluator: "Opus 5", reason: "missing-coded-by" },
+  { id: "G9", prBody: "Coded-by: Codex <!-- Claude -->", evaluator: "Opus 5", reason: "passing-verdict" },
+]) {
+  test(`${id} coded-by fixback`, () => {
+    const decision = evaluate({ prBody, comments: [comment(marker(evaluator, "PASS"))] });
+    assert.equal(decision.reason, reason);
+    assert.equal(decision.passed, reason === "passing-verdict");
+    if (id === "G2") assert.match(decision.message, /both Codex and Claude are declared/);
+  });
+}
+
+for (const { id, prBody, evaluator = "Opus 5", reason = "passing-verdict" } of [
+  { id: "G3", prBody: "Coded-by: Codex — GPT-6 Astra (high); helper GPT-5.6 Sol" },
+  { id: "G4 cross-tool", prBody: "Coded-by: Claude — Sonnet 5", evaluator: "Codex" },
+  { id: "G4 same-tool", prBody: "Coded-by: Claude — Sonnet 5", reason: "same-tool-evaluator" },
+  { id: "G4 Sonnet token companion", prBody: "Coded-by: Codex — Sonnet 5", reason: "same-tool-evaluator" },
+  { id: "G8", prBody: "<!-- note -->\nCoded-by: Codex" },
+  { id: "G8 closing-line companion", prBody: "<!--\nnote -->\nCoded-by: Codex" },
+  { id: "G10", prBody: "```text\n<!--\n```\nCoded-by: Codex" },
+  { id: "G11", prBody: "<!--\nCoded-by: Claude\n-->\nCoded-by: Codex" },
+  { id: "G11 fence inside active comment", prBody: "<!--\n```\n-->\nCoded-by: Codex" },
+  { id: "G15", prBody: "Coded-by: Codex", evaluator: "Sonnet 5", reason: "untrusted-model" },
+]) {
+  test(`${id} coded-by fixback`, () => {
+    const decision = evaluate({ prBody, comments: [comment(marker(evaluator, "PASS"))] });
+    assert.equal(decision.reason, reason);
+    assert.equal(decision.passed, reason === "passing-verdict");
+  });
+}
+
+test("G12 real merged PR template refuses the placeholder", () => {
+  const prBody = readFileSync(new URL("mcp/tests/fixtures/evaluation-pr-template-614.md", repoRoot), "utf8");
+  assert.equal(evaluate({ prBody, comments: [comment(marker("Opus 5", "PASS"))] }).reason, "unrecognized-coded-by");
+});
+
+test("G13 real PR 614 body preserves tool independence", () => {
+  const prBody = readFileSync(new URL("mcp/tests/fixtures/evaluation-pr-614.md", repoRoot), "utf8");
+  for (const [evaluator, reason] of [["Opus 5", "passing-verdict"], ["Codex (GPT-6)", "same-tool-evaluator"]]) {
+    assert.equal(evaluate({ prBody, comments: [comment(marker(evaluator, "PASS"))] }).reason, reason);
+  }
+});
+
+test("G4 shared token table recognizes whole words in coder values and signatures", () => {
+  for (const [tool, tokens, evaluator] of [
+    ["codex", ["Codex", "GPT", "Astra", "Sol"], "Codex"],
+    ["claude", ["Claude", "Opus", "Fable", "Sonnet", "Haiku"], "Opus 5"],
+  ] as const) {
+    for (const token of tokens) {
+      assert.equal(evaluatorTool(token.toLowerCase()), tool);
+      const prBody = `Coded-by: ${tool === "codex" ? "Claude" : "Codex"} — ${token.toLowerCase()}`;
+      assert.equal(evaluate({ prBody, comments: [comment(marker(evaluator, "PASS"))] }).reason, "same-tool-evaluator");
+    }
+  }
+  for (const suffix of ["Astral Solstice", "Opuses Sonneteer Haikus", "ClaudeCode Codexish"]) {
+    assert.equal(evaluate({ prBody: `Coded-by: Codex — ${suffix}`, comments: [comment(marker("Opus 5", "PASS"))] }).reason, "passing-verdict");
+  }
+});
+
+test("F2 strips all inline spans and keeps only text before an unclosed comment", () => {
+  for (const prBody of [
+    "Coded-by: Codex <!-- Claude --> GPT <!-- Haiku --> Astra",
+    "Coded-by: Codex <!<!-- note -->-- Claude",
+    "Coded-by: Codex <!-- unclosed\nCoded-by: Claude",
+    "<!--\nnote --> Coded-by: Claude\nCoded-by: Codex",
+  ]) {
+    assert.equal(evaluate({ prBody, comments: [comment(marker("Opus 5", "PASS"))] }).reason, "passing-verdict");
+  }
+  for (const prBody of ["<!--\n--> Coded-by: Codex", "<!--\n-->Coded-by: Codex"]) {
+    assert.equal(evaluate({ prBody, comments: [comment(marker("Opus 5", "PASS"))] }).reason, "missing-coded-by");
+  }
+});
+
+for (const { id, prBody, evaluator, reason } of [
+  { id: "G16", prBody: "Coded-by: Claude <!-- a --> <!-- b -->\nCoded-by: Codex", evaluator: "Codex (GPT-6)", reason: "same-tool-evaluator" },
+  { id: "G17", prBody: "<!--\n--> <!--\nCoded-by: Claude\n-->", evaluator: "Codex (GPT-6)", reason: "missing-coded-by" },
+  { id: "G18", prBody: "<!--\n--> <!-- x -->\nCoded-by: Codex", evaluator: "Opus 5", reason: "passing-verdict" },
+]) {
+  test(`${id} rev 2 comment state`, () => {
+    const decision = evaluate({ prBody, comments: [comment(marker(evaluator, "PASS"))] });
+    assert.equal(decision.reason, reason);
+    assert.equal(decision.passed, reason === "passing-verdict");
+  });
+}
+
+test("G19 GitHub GFM renders Codex visible and Claude inside the code block", () => {
+  const prBody = "<!--\n```-->\nCoded-by: Codex\n```\nCoded-by: Claude\n```";
+  const decision = evaluate({ prBody, comments: [comment(marker("Codex (GPT-6)", "PASS"))] });
+  assert.equal(decision.reason, "same-tool-evaluator");
+  assert.equal(decision.passed, false);
 });
