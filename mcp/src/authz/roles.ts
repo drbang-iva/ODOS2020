@@ -30,6 +30,7 @@ export const BUSINESS_ACTIONS = [
   "role.review",
   "chart.read",
   "chart.write",
+  "chart.diagnosis.write",
   "patients.register",
   "clinical.sign",
   "scheduling.manage",
@@ -76,6 +77,7 @@ export const BASELINE_BUSINESS_ACTIONS = [
 ] as const satisfies readonly BusinessAction[];
 
 export const CREDENTIAL_BOUND_BUSINESS_ACTIONS = [
+  "chart.diagnosis.write",
   "clinical.sign",
   "aesthetics.procedure.write",
   "break-glass.invoke",
@@ -966,6 +968,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     businessActions: [
       "chart.read",
       "chart.write",
+      "chart.diagnosis.write",
       "patients.register",
       "clinical.sign",
       "guarantor.link",

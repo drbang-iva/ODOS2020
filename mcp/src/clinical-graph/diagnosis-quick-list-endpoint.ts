@@ -117,6 +117,7 @@ export async function handleDiagnosisQuickListRequest(
     diagnoses,
     tally,
     staffHasBusinessAction(staff, "chart.write"),
+    staffHasBusinessAction(staff, "chart.diagnosis.write"),
   );
 }
 
@@ -149,7 +150,7 @@ export async function handleDiagnosisQuickListMutationRequest(
     migrateDiagnosisPins(parsed.data.pinnedDiagnosisKeys),
     deps.now?.() ?? new Date().toISOString(),
   );
-  return quickListResponse(diagnoses, tally, true);
+  return quickListResponse(diagnoses, tally, true, staffHasBusinessAction(staff, "chart.diagnosis.write"));
 }
 
 export function orderDiagnosisQuickList(
@@ -303,11 +304,13 @@ function quickListResponse(
   diagnoses: readonly DiagnosisCatalogRow[],
   tally: DiagnosisPickTallyRow,
   canWrite: boolean,
+  canWriteDiagnosis: boolean,
 ): { status: number; body: unknown } {
   return {
     status: 200,
     body: {
       canWrite,
+      canWriteDiagnosis,
       pinnedDiagnosisKeys: tally.pinnedDiagnosisKeys,
       diagnoses: orderDiagnosisQuickList(diagnoses, tally),
       catalog: diagnosisCatalogRows(diagnoses, tally),

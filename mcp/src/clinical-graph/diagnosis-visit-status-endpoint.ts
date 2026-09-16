@@ -61,7 +61,7 @@ export async function handleDiagnosisVisitStatusUpdateRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to update a diagnosis visit status." } };
-  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.diagnosis.write")) return { status: 403, body: { error: "chart.diagnosis.write role required" } };
   const parsedParams = updateParamsSchema.safeParse(input.params);
   if (!parsedParams.success) return { status: 400, body: { error: "Valid encounter and Condition ids are required." } };
   const parsedBody = updateSchema.safeParse(input.body);
@@ -95,7 +95,7 @@ export async function handleDiagnosisVisitStatusUpdateRequest(
   return { status: 200, body: { status: row } };
 }
 
-function may(role: PracticeRoleId, action: "chart.read" | "chart.write"): boolean {
+function may(role: PracticeRoleId, action: "chart.read" | "chart.diagnosis.write"): boolean {
   try {
     assertBusinessActionAllowed(role, action);
     return true;

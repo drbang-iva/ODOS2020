@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Bundle, ChargeItem, Condition, Coverage, Encounter, Resource } from "@medplum/fhirtypes";
+import type { Bundle, ChargeItem, Condition, Coverage, Encounter, Provenance, Resource } from "@medplum/fhirtypes";
 import {
   handleDiagnosisOrderRequest,
+  handleDiagnosisProblemStatusRequest,
   type DiagnosisOrderFhirClient,
 } from "../src/clinical-graph/diagnosis-order-endpoint.js";
 import {
   FHIR_CONDITION_CATEGORY_CODE_SYSTEM,
   FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM,
+  MDM_PROBLEM_STATUS_EXTENSION_URL,
 } from "../src/fhir/condition.js";
 import { buildClaimDraft } from "../src/claims/claim-draft.js";
 
@@ -15,6 +17,64 @@ const ENCOUNTER_ID = "enc-order";
 const CONFIRMED_A = confirmedCondition("confirmed-a", "DX-A");
 const CONFIRMED_B = confirmedCondition("confirmed-b", "DX-B");
 const PROVISIONAL_C = provisionalCondition("provisional-c", "DX-C");
+
+test("diagnosis complexity requires the diagnosis action before any write and preserves provider behavior", async () => {
+  for (const actorRole of ["staff", "provider"] as const) {
+    const fixture = orderFixture();
+    const provenances: Provenance[] = [];
+    const fhir = { ...fixture.fhir, async create<T extends Provenance>(resource: T): Promise<T> {
+      provenances.push(resource);
+      return { ...resource, id: "complexity-provenance" };
+    } };
+    const result = await handleDiagnosisProblemStatusRequest({
+      authenticate: async () => ({ staffReference: "Practitioner/clinician", actorRole, fhir }),
+    }, {
+      authHeader: "Bearer synthetic", params: { encounterId: ENCOUNTER_ID, conditionId: "confirmed-b" },
+      body: { problemStatus: "stable-chronic", expectedEncounterVersion: "7" },
+    });
+    assert.equal(result.status, actorRole === "provider" ? 200 : 403, JSON.stringify(result.body));
+    assert.equal(fixture.updateCalls.length, actorRole === "provider" ? 1 : 0);
+    assert.equal(provenances.length, actorRole === "provider" ? 1 : 0);
+    if (actorRole === "provider") {
+      assert.equal(fixture.updateCalls[0]?.headers?.["If-Match"], 'W/"7"');
+      assert.equal(fixture.persistedEncounter.diagnosis?.[1]?.extension?.[0]?.url, MDM_PROBLEM_STATUS_EXTENSION_URL);
+      assert.deepEqual(fixture.persistedEncounter.extension, encounter().extension);
+      assert.deepEqual(fixture.persistedEncounter.diagnosis?.map((row) => row.rank), [1, 2, 3]);
+      assert.deepEqual(provenances[0]?.target.map((row) => row.reference), [
+        `Encounter/${ENCOUNTER_ID}`, "Condition/confirmed-b", "Patient/pat-1",
+      ]);
+    }
+  }
+});
+
+test("diagnosis complexity refuses stale, closed and unbound requests without writes", async () => {
+  for (const problem of ["stale", "closed", "unbound", "foreign-patient", "foreign-encounter"] as const) {
+    const fixture = orderFixture();
+    if (problem === "closed") fixture.persistedEncounter.status = "finished";
+    if (problem === "unbound") fixture.persistedEncounter.diagnosis = [];
+    let writes = 0;
+    const fhir = { ...fixture.fhir,
+      async read<T extends Condition | Encounter>(type: T["resourceType"], id: string): Promise<T> {
+        const resource = await fixture.fhir.read<T>(type, id);
+        if (resource.resourceType === "Condition") {
+          if (problem === "foreign-patient") resource.subject = { reference: "Patient/other" };
+          if (problem === "foreign-encounter") resource.encounter = { reference: "Encounter/other" };
+        }
+        return resource;
+      },
+      async create<T extends Provenance>(resource: T): Promise<T> { writes++; return resource; },
+    };
+    const result = await handleDiagnosisProblemStatusRequest({
+      authenticate: async () => ({ staffReference: "Practitioner/clinician", actorRole: "provider", fhir }),
+    }, {
+      authHeader: "Bearer synthetic", params: { encounterId: ENCOUNTER_ID, conditionId: "confirmed-b" },
+      body: { problemStatus: "stable-chronic", expectedEncounterVersion: problem === "stale" ? "6" : "7" },
+    });
+    assert.equal(result.status, 409, problem);
+    assert.equal(fixture.updateCalls.length, 0);
+    assert.equal(writes, 0);
+  }
+});
 
 test("reorder promotes a confirmed secondary with one conditional Encounter update and loses no diagnosis", async () => {
   const fixture = orderFixture();

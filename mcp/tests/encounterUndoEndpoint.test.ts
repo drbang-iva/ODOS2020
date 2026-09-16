@@ -42,6 +42,26 @@ type LedgerBody = { ledger: EncounterUndoLedger; error?: string };
 
 const PARAMS = { encounterId: "e1" };
 
+test("staff cannot undo a diagnosis clear and can still undo a finding-only clear", async () => {
+  for (const withDiagnosis of [true, false]) {
+    const { deps, fhir } = fixture({ diagnoses: withDiagnosis ? ["Condition/c1"] : [] });
+    if (withDiagnosis) fhir.add(condition("c1"));
+    fhir.add(observation("pupil", "entrance:pupils", "OD", { status: "preliminary" }));
+    await voidEntries(deps, { scope: "encounter" });
+    const authenticate = deps.authenticate;
+    deps.authenticate = async (header) => {
+      const staff = await authenticate(header);
+      return staff ? { ...staff, actorRole: "staff" } : null;
+    };
+    const ledger = await handleEncounterUndoLedgerRequest(deps, { authHeader: AUTH, params: PARAMS });
+    assert.equal((ledger.body as { canWriteDiagnosis: boolean }).canWriteDiagnosis, false);
+    const before = fhir.transactions.length;
+    const result = await undo(deps, { scope: "encounter" });
+    assert.equal(fhir.transactions.length, before + (withDiagnosis ? 0 : 1));
+    assert.equal(result.status, withDiagnosis ? 403 : 200);
+  }
+});
+
 async function voidEntries(deps: Parameters<typeof handleEncounterVoidRequest>[0], body: unknown) {
   const result = await handleEncounterVoidRequest(deps, { authHeader: AUTH, params: PARAMS, body });
   assert.equal(result.status, 200, JSON.stringify(result.body));

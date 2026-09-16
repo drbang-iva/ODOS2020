@@ -73,6 +73,7 @@ export interface EncounterFindingRow extends AtomicFindingCatalogRow {
 
 export interface DiagnosisFindingsPayload {
   canWrite: boolean;
+  canWriteDiagnosis: boolean;
   diagnosis?: DiagnosisCatalogRow;
   carryProvenance?: {
     pulledFromDate?: string;
@@ -266,6 +267,7 @@ export async function handleDiagnosisFindingsReadRequest(
   );
   const body: DiagnosisFindingsPayload = {
     canWrite: staffHasBusinessAction(staff, "chart.write"),
+    canWriteDiagnosis: staffHasBusinessAction(staff, "chart.diagnosis.write"),
     ...(selectedDiagnosis ? { diagnosis: selectedDiagnosis } : {}),
     ...(carryState && (carryState.pulledFromDate || carryState.integrityWarning)
       ? { carryProvenance: carrySummary(carryState) }
@@ -309,6 +311,10 @@ export async function handleDiagnosisFindingsMutationRequest(
       status: 400,
       body: { error: parsedBody.success ? "Invalid encounter findings mutation." : parsedBody.error.issues[0]?.message },
     };
+  }
+  if (parsedBody.data.action !== "grade" && parsedBody.data.action !== "laterality" &&
+      !staffHasBusinessAction(staff, "chart.diagnosis.write")) {
+    return { status: 403, body: { error: "chart.diagnosis.write role required to change diagnosis evidence" } };
   }
   try {
   const encounterId = parsedParams.data.encounterId;

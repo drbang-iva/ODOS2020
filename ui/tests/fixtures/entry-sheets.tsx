@@ -324,7 +324,7 @@ window.fetch = async (input, init) => {
       } }],
     });
   }
-  if (url.endsWith("/clinical-graph/diagnosis-catalog")) return Response.json({ diagnoses: [] });
+  if (url.endsWith("/clinical-graph/diagnosis-catalog")) return Response.json({ canWriteDiagnosis: true, diagnoses: [] });
   if (url.includes("/clinical-graph/protocols/")) return Response.json({ applications: [], offers: [] });
   if (url.includes("/clinical-graph/eye-growth/history")) return Response.json({ rows: [] });
   if (url.includes("/clinical-graph/imaging?")) return Response.json({ images: [] });

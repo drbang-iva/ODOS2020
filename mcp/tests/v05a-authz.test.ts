@@ -19,6 +19,7 @@ import {
   assertBusinessActionAllowed,
   buildMedplumAccessPolicy,
   buildProjectMembershipAccess,
+  effectiveBusinessActions,
   getRoleDeclaration,
 } from "../src/authz/roles.js";
 import {
@@ -38,6 +39,32 @@ test("the practice role registry defines only Provider, Staff, and Admin", () =>
   assert.deepEqual(PRACTICE_ROLE_IDS, ["provider", "staff", "admin"]);
   for (const roleId of PRACTICE_ROLE_IDS) {
     assert.equal(getRoleDeclaration(roleId).id, roleId);
+  }
+});
+
+test("full role table keeps diagnosis action equivalent to Condition create and update grants", () => {
+  for (const roleId of PRACTICE_ROLE_IDS) {
+    const role = getRoleDeclaration(roleId);
+    const policy = buildMedplumAccessPolicy(role);
+    for (const interaction of ["create", "update"] as const) {
+      const conditionWrite = policy.resource?.some((rule) =>
+        rule.resourceType === "Condition" && rule.interaction?.includes(interaction)
+      ) ?? false;
+      assert.equal(role.businessActions.includes("chart.diagnosis.write"), conditionWrite,
+        `${roleId}: chart.diagnosis.write must agree with Condition ${interaction}`);
+    }
+  }
+});
+
+test("diagnosis permission cannot be granted independently of a credentialed role and can be revoked", () => {
+  for (const roleId of PRACTICE_ROLE_IDS) {
+    const role = getRoleDeclaration(roleId);
+    const granted = effectiveBusinessActions([roleId], ["chart.diagnosis.write"], []);
+    assert.equal(granted.actions.includes("chart.diagnosis.write"),
+      role.businessActions.includes("chart.diagnosis.write"), roleId);
+    assert.deepEqual(granted.ignoredGranted, ["chart.diagnosis.write"]);
+    const revoked = effectiveBusinessActions([roleId], [], ["chart.diagnosis.write"]);
+    assert.equal(revoked.actions.includes("chart.diagnosis.write"), false, roleId);
   }
 });
 

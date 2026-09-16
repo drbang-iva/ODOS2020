@@ -298,7 +298,7 @@ import {
 } from "./clinical-graph/diagnosis-quick-list-endpoint.js";
 import { handleDiagnosisCompletenessRequest } from "./clinical-graph/diagnosis-completeness-endpoint.js";
 import { handleExamOverviewRequest } from "./clinical-graph/exam-overview-endpoint.js";
-import { handleDiagnosisOrderRequest } from "./clinical-graph/diagnosis-order-endpoint.js";
+import { handleDiagnosisOrderRequest, handleDiagnosisProblemStatusRequest } from "./clinical-graph/diagnosis-order-endpoint.js";
 import { handleDiagnosisPickRequest } from "./clinical-graph/diagnosis-pick-endpoint.js";
 import {
   handleDiagnosisVisitStatusListRequest,
@@ -6410,7 +6410,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         fhirBaseUrl: BASE_URL,
         rollbackFhir: fhir,
         authenticate: authenticateStaffRouteForAction("chart.read"),
-        authenticateWrite: authenticateStaffRouteForAction("chart.write"),
+        authenticateWrite: authenticateStaffRouteForAction("chart.diagnosis.write"),
       });
 
       app.put("/clinical-graph/encounters/:encounterId/findings", async (req, res) => {
@@ -6468,7 +6468,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleDiagnosisPickRequest(
             {
-              authenticate: authenticateStaffRouteForAction("chart.write"),
+              authenticate: authenticateStaffRouteForAction("chart.diagnosis.write"),
               diagnosisVisitStatusStore,
             },
             { authHeader: req.header("authorization"), params: req.params, body: req.body },
@@ -6484,7 +6484,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisOrderRequest(
-            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            { authenticate: authenticateStaffRouteForAction("chart.diagnosis.write") },
             { authHeader: req.header("authorization"), params: req.params, body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -6511,12 +6511,26 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }
       });
 
+      app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/problem-status", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisProblemStatusRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.diagnosis.write") },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: diagnosis complexity update failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis complexity update failed" });
+        }
+      });
+
       app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/status", async (req, res) => {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisVisitStatusUpdateRequest(
             {
-              authenticate: authenticateStaffRouteForAction("chart.write"),
+              authenticate: authenticateStaffRouteForAction("chart.diagnosis.write"),
               store: diagnosisVisitStatusStore,
             },
             { authHeader: req.header("authorization"), params: req.params, body: req.body },
@@ -6546,7 +6560,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisNewnessUpdateRequest(
-            { authenticate: authenticateStaffRouteForAction("chart.write"), store: diagnosisVisitStatusStore },
+            { authenticate: authenticateStaffRouteForAction("chart.diagnosis.write"), store: diagnosisVisitStatusStore },
             { authHeader: req.header("authorization"), params: req.params, body: req.body },
           );
           res.status(result.status).json(result.body);

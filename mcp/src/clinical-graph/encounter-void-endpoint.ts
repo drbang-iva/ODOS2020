@@ -138,6 +138,7 @@ export interface VoidCandidateEntry {
 }
 
 export interface EncounterVoidResponse {
+  canWriteDiagnosis: boolean;
   voided: string[];
   count: number;
   sections: VoidSectionSummary[];
@@ -341,9 +342,13 @@ export async function handleEncounterVoidRequest(
   const ledgerRow = await new FhirEncounterUndoLedgerStore(staff.fhir).readRow(encounterId);
   const currentLedger = ledgerRow?.ledger ?? emptyEncounterUndoLedger(encounterId);
   const preview = request.preview === true;
+  const canWriteDiagnosis = staffHasBusinessAction(staff, "chart.diagnosis.write");
   if (preview || voided.length === 0) {
-    const response: EncounterVoidResponse = { voided, count: voided.length, sections, entries, preview, ledger: currentLedger };
+    const response: EncounterVoidResponse = { canWriteDiagnosis, voided, count: voided.length, sections, entries, preview, ledger: currentLedger };
     return { status: 200, body: response };
+  }
+  if (conditions.length > 0 && !canWriteDiagnosis) {
+    return { status: 403, body: { error: "chart.diagnosis.write role required to clear diagnoses" } };
   }
 
   // --- The Undo ledger slot for this action (§4b.4) -------------------------------------
@@ -405,7 +410,7 @@ export async function handleEncounterVoidRequest(
           [slotKeys[0] ?? OTHER_SECTION_KEY]: slot,
         },
       };
-  const response: EncounterVoidResponse = { voided, count: voided.length, sections, entries, preview, ledger: nextLedger };
+  const response: EncounterVoidResponse = { canWriteDiagnosis, voided, count: voided.length, sections, entries, preview, ledger: nextLedger };
 
   // --- One transaction ------------------------------------------------------------------
   const complaintProvenance: ClinicalGraphProvenance = {
