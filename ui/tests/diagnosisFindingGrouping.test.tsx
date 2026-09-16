@@ -8,14 +8,14 @@ import {
 } from "../src/components/charting/EncounterFindingOverlay";
 import type { DiagnosisFindingsPayload } from "../src/lib/diagnosis-findings";
 
-test("by-structure projection filters one section and preserves both finding origins", () => {
+test("by-structure projection filters one section and preserves independent finding rows", () => {
   const payload = groupingPayload();
 
   assert.deepEqual(
-    findingRowsForSection(payload, "lens").map((row) => [row.display, row.source]),
+    findingRowsForSection(payload, "lens").map((row) => [row.display, row.rowKey]),
     [
-      ["Nuclear sclerosis", "atomic"],
-      ["Cortical change", "section"],
+      ["Nuclear sclerosis", "nuclear:OD"],
+      ["Cortical change", "cortical:OD"],
     ],
   );
   assert.deepEqual(findingRowsForSection(payload, "cornea").map((row) => row.display), [
@@ -46,7 +46,7 @@ test("structure overlay renders sign grade and laterality and refreshes after di
   assert.match(initial, /Nuclear sclerosis/);
   assert.match(initial, /Present · 2\+ · OD/);
   assert.match(initial, /Cortical change/);
-  assert.match(initial, /Charted in section/);
+  assert.match(initial, /Shared finding/);
   assert.doesNotMatch(initial, /Corneal scar/);
 
   payload = {
@@ -82,7 +82,8 @@ function groupingPayload(): DiagnosisFindingsPayload {
     diagnosisKeys: ["cataract"],
     origin: "shipped" as const,
     laterality: "OD" as const,
-    lateralitySource: "inherited" as const,
+    eye: "OD" as const, kind: "fact" as const, status: "live" as const, editable: true,
+    qualifiers: {}, homes: ["Condition/cataract"], homeSources: [], contributors: [],
     presence: "present" as const,
     conditionReference: "Condition/cataract",
   };
@@ -93,16 +94,14 @@ function groupingPayload(): DiagnosisFindingsPayload {
     display: "Nuclear sclerosis",
     gradeScale: ["1+", "2+"],
     grade: "2+",
-    source: "atomic" as const,
-    observationReference: "Observation/nuclear",
+    rowKey: "nuclear:OD",
   };
   const cortical = {
     ...base,
     atomicFindingId: "lens::field::cortical",
     optionCode: "cortical",
     display: "Cortical change",
-    source: "section" as const,
-    observationReference: "Observation/lens-section",
+    rowKey: "cortical:OD",
   };
   const cornea = {
     ...base,
@@ -112,11 +111,10 @@ function groupingPayload(): DiagnosisFindingsPayload {
     optionCode: "scar",
     display: "Corneal scar",
     sectionKey: "cornea",
-    source: "atomic" as const,
-    observationReference: "Observation/scar",
+    rowKey: "scar:OD",
   };
   return {
-    canWrite: true,
+    encounterEditable: true, canWrite: true, canWriteDiagnosis: true, searchIndex: [nuclear, cortical, cornea], auditDebt: [],
     findings: [nuclear],
     catalog: [],
     unassigned: [],

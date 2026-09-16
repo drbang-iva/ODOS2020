@@ -1,0 +1,106 @@
+TAP version 13
+# Subtest: W9 OU click sends one command with two independent canonical baselines
+ok 1 - W9 OU click sends one command with two independent canonical baselines
+  ---
+  duration_ms: 11.314209
+  type: 'test'
+  ...
+# Subtest: W48 pre-rebuild table disables every control and shows the banner
+ok 2 - W48 pre-rebuild table disables every control and shows the banner
+  ---
+  duration_ms: 0.87475
+  type: 'test'
+  ...
+# Subtest: W50 grouped OU to OD retires only OS with explicit from and to
+ok 3 - W50 grouped OU to OD retires only OS with explicit from and to
+  ---
+  duration_ms: 0.94625
+  type: 'test'
+  ...
+# Subtest: grouping refuses differing presence qualifiers or homes
+ok 4 - grouping refuses differing presence qualifiers or homes
+  ---
+  duration_ms: 0.1355
+  type: 'test'
+  ...
+# Subtest: grade preserves all qualifiers and homes and does not require diagnosis write permission
+ok 5 - grade preserves all qualifiers and homes and does not require diagnosis write permission
+  ---
+  duration_ms: 0.747292
+  type: 'test'
+  ...
+# Subtest: offered presence asserts both eyes using absent baselines and selected diagnosis
+ok 6 - offered presence asserts both eyes using absent baselines and selected diagnosis
+  ---
+  duration_ms: 1.161125
+  type: 'test'
+  ...
+# Subtest: search resolves carried current facts and reasserts instead of replacing homes
+ok 7 - search resolves carried current facts and reasserts instead of replacing homes
+  ---
+  duration_ms: 1.537666
+  type: 'test'
+  ...
+# Subtest: tray assigns with move and records standalone with per-eye targets
+ok 8 - tray assigns with move and records standalone with per-eye targets
+  ---
+  duration_ms: 0.495208
+  type: 'test'
+  ...
+# Subtest: row conflict and signed status disable actions with plain-language reasons
+ok 9 - row conflict and signed status disable actions with plain-language reasons
+  ---
+  duration_ms: 1.139375
+  type: 'test'
+  ...
+# Subtest: transport preserves non-2xx result bodies and status; load failures stay unavailable
+ok 10 - transport preserves non-2xx result bodies and status; load failures stay unavailable
+  ---
+  duration_ms: 7.21875
+  type: 'test'
+  ...
+# Subtest: W53 repair calls audit-repair with fresh commandId and patientReference
+ok 11 - W53 repair calls audit-repair with fresh commandId and patientReference
+  ---
+  duration_ms: 0.182084
+  type: 'test'
+  ...
+# Subtest: W46 confirmed partial 409 refreshes and dispatches; unconfirmed 502 retains exact retry
+ok 12 - W46 confirmed partial 409 refreshes and dispatches; unconfirmed 502 retains exact retry
+  ---
+  duration_ms: 0.136791
+  type: 'test'
+  ...
+# Subtest: UNKNOWN offered finding requires explicit eye and resolves canonical search baseline
+ok 13 - UNKNOWN offered finding requires explicit eye and resolves canonical search baseline
+  ---
+  duration_ms: 1.302167
+  type: 'test'
+  ...
+# Subtest: adding an eye revives its retired canonical owner without replacing its identity
+ok 14 - adding an eye revives its retired canonical owner without replacing its identity
+  ---
+  duration_ms: 0.757666
+  type: 'test'
+  ...
+# Subtest: assert retains only current live diagnosis homes and includes selected diagnosis
+ok 15 - assert retains only current live diagnosis homes and includes selected diagnosis
+  ---
+  duration_ms: 0.468167
+  type: 'test'
+  ...
+# Subtest: shared outcomes distinguish complete, audit debt, unavailable, precondition, and refused
+ok 16 - shared outcomes distinguish complete, audit debt, unavailable, precondition, and refused
+  ---
+  duration_ms: 0.101041
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 226.771875

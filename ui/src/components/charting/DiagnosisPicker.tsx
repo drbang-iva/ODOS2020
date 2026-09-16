@@ -46,12 +46,14 @@ export function DiagnosisPicker({
   findingDefinitionKey,
   refreshKey,
   mode = "decision",
+  linkMode = "legacy",
 }: {
   encounterReference: string;
   observationReferences?: string[];
   findingDefinitionKey?: string;
   refreshKey?: number | string;
   mode?: "decision" | "proposal";
+  linkMode?: "legacy" | "facts";
 }) {
   const [findings, setFindings] = useState<CandidateFinding[]>([]);
   const [catalog, setCatalog] = useState<CatalogRow[]>([]);
@@ -66,7 +68,7 @@ export function DiagnosisPicker({
   const loadVersion = useRef(0);
   const encounterId = encounterReference.replace(/^Encounter\//, "");
   const observationKey = observationReferences?.join("|") ?? "";
-  const loadScopeKey = [encounterReference, findingDefinitionKey, mode, observationKey, refreshKey].join("\u0000");
+  const loadScopeKey = [encounterReference, findingDefinitionKey, mode, linkMode, observationKey, refreshKey].join("\u0000");
   const [diagnosisCapability, setDiagnosisCapability] = useState<{ scopeKey: string; allowed: boolean }>();
   const canWriteDiagnosis = diagnosisCapability?.scopeKey === loadScopeKey && diagnosisCapability.allowed;
   const currentLoadScopeKey = useRef(loadScopeKey);
@@ -103,7 +105,7 @@ export function DiagnosisPicker({
       setError(null);
     } catch (err) {
       if (!signal?.aborted && requestVersion === loadVersion.current) {
-        setError(err instanceof Error ? err.message : String(err));
+        setError("Suggestions unavailable");
       }
     }
   }
@@ -121,7 +123,7 @@ export function DiagnosisPicker({
       controller.abort();
       loadVersion.current += 1;
     };
-  }, [encounterId, encounterReference, findingDefinitionKey, mode, observationKey, refreshKey]);
+  }, [encounterId, encounterReference, findingDefinitionKey, mode, linkMode, observationKey, refreshKey]);
 
   const searchCatalog = useMemo(() => async (query: string) => {
     const term = query.trim().toLocaleLowerCase();

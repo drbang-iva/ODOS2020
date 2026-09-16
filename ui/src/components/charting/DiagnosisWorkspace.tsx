@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Condition, Encounter, Observation } from "@medplum/fhirtypes";
+import type { Condition, Encounter } from "@medplum/fhirtypes";
 import {
   DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
   principalDiagnosisOrder,
@@ -20,7 +20,8 @@ import {
   clinicalGraphApiBase,
   procedureChargeApi,
   readDiagnosisCandidates,
-  submitDiagnosisPick,
+  submitDiagnosisPickResult,
+  type SupportingFindingFact,
   updateDiagnosisOrder,
   type AttachedProcedure,
   type DiagnosisCandidateFinding,
@@ -44,7 +45,6 @@ import { OdosChips } from "../inputs/OdosChips";
 import {
   DiagnosisProblemStatusField,
   DiagnosisRankActions,
-  findingProvenanceLine,
 } from "./AssessmentSection";
 import {
   ReorderImpressionsModal,
@@ -56,6 +56,11 @@ import {
 } from "./DiagnosisFindingsTable";
 import {
   canMutateDiagnosisFinding,
+  buildFindingCommand,
+  handleFindingOutcome,
+  repairFindingAudits,
+  findingReadOnlyLabel,
+  type FindingsUnavailable,
   loadDiagnosisFindings,
   mutateDiagnosisFinding,
   type DiagnosisFindingMutation,
@@ -97,6 +102,7 @@ export interface DiagnosisQuickListRow {
   stageDeferred?: boolean;
   findingInstanceId?: string;
   suggestionSource?: "rule" | "mapping";
+  supportingFacts?: SupportingFindingFact[];
 }
 
 interface QuickListPayload {
@@ -134,10 +140,10 @@ export function DiagnosisWorkspace({
   const [pinnedDiagnosisKeys, setPinnedDiagnosisKeys] = useState<string[]>([]);
   const [canWrite, setCanWrite] = useState(false);
   const [diagnosisCapability, setDiagnosisCapability] = useState<{ encounterId: string; allowed: boolean }>();
-  const canWriteDiagnosis = diagnosisCapability?.encounterId === encounterId && diagnosisCapability.allowed;
+  const diagnosisAllowed = diagnosisCapability?.encounterId === encounterId && diagnosisCapability.allowed;
   const [loadedFindings, setLoadedFindings] = useState<{
     key: string;
-    payload: DiagnosisFindingsPayload;
+    payload: DiagnosisFindingsPayload | FindingsUnavailable;
   }>();
   const [pendingDiagnosis, setPendingDiagnosis] = useState<DiagnosisQuickListRow>();
   const [candidateFindings, setCandidateFindings] = useState<DiagnosisCandidateFinding[]>([]);
@@ -152,7 +158,14 @@ export function DiagnosisWorkspace({
   const [reorderOpen, setReorderOpen] = useState(false);
   const loadGeneration = useRef(0);
   const findingsKey = `${encounterId}::${selectedReference ?? ""}`;
-  const findings = loadedFindings?.key === findingsKey ? loadedFindings.payload : undefined;
+  const findingLoad = loadedFindings?.key === findingsKey ? loadedFindings.payload : undefined;
+  const findings = findingLoad && !("result" in findingLoad) ? findingLoad : undefined;
+  const canWriteDiagnosis = diagnosisAllowed && findings?.encounterEditable === true;
+  const [candidateUnavailable, setCandidateUnavailable] = useState(false);
+  const [findingMessage, setFindingMessage] = useState<string>();
+  const [pendingCommand, setPendingCommand] = useState<{ body: DiagnosisFindingMutation; identical: boolean }>();
+  const [pendingLink, setPendingLink] = useState<DiagnosisFindingMutation>();
+  const [pickSteps, setPickSteps] = useState<string>();
 
   const load = useCallback(async () => {
     const requestGeneration = loadGeneration.current + 1;
@@ -169,7 +182,7 @@ export function DiagnosisWorkspace({
         searchAll<Condition>(fhir, "Condition", { encounter: encounterReference }),
         fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-quick-list`, { headers: authHeaders() }),
         loadDiagnosisFindings(encounterReference, selectedReference),
-        readDiagnosisCandidates(encounterId).catch(() => []),
+        readDiagnosisCandidates(encounterId).then(rows => ({ rows, unavailable: false }), () => ({ rows: [], unavailable: true })),
         procedureChargeApi().read(encounterId).then(
           (response) => ({ response, error: undefined }),
           (caught) => ({
@@ -189,24 +202,14 @@ export function DiagnosisWorkspace({
       const quickBody = await quickResponse.json() as QuickListPayload;
       if (!quickResponse.ok) throw new Error(quickBody.error ?? `Common diagnoses failed: ${quickResponse.status}`);
       const nextConditions = orderedEncounterConditions(nextEncounter, searchedConditions);
-      const evidenceReferences = [...new Set(nextConditions.flatMap((condition) =>
-        (condition.evidence ?? []).flatMap((evidence) => (evidence.detail ?? []).flatMap((detail) =>
-          detail.reference?.startsWith("Observation/") ? [detail.reference] : []
-        ))
-      ))];
-      const observationResults = await Promise.allSettled(evidenceReferences.map(async (reference) =>
-        fhir.read<Observation>("Observation", reference.replace(/^Observation\//, ""))
-      ));
-      const observationsByReference = new Map<string, Observation>(observationResults.flatMap((result) =>
-        result.status === "fulfilled" ? [[`Observation/${result.value.id}`, result.value] as const] : []
-      ));
-      const nextProvenanceLines = Object.fromEntries(nextConditions.flatMap((condition) => {
-        if (!condition.id) return [];
-        const lines = (condition.evidence ?? []).flatMap((evidence) => evidence.detail ?? [])
-          .flatMap((detail) => detail.reference ? [observationsByReference.get(detail.reference)] : [])
-          .flatMap((observation) => observation ? [findingProvenanceLine(observation)] : []);
-        return lines.length ? [[condition.id, lines.join(" · ")]] : [];
-      }));
+      const nextProvenanceLines: Record<string, string> = {};
+      if (!("result" in nextFindings)) {
+        const rows = [...nextFindings.searchIndex, ...nextFindings.findings];
+        for (const condition of nextConditions) {
+          const sources = rows.filter(row => row.homeSources.some(home => home.condition === `Condition/${condition.id}`));
+          if (condition.id && sources.length) nextProvenanceLines[condition.id] = [...new Set(sources.map(row => `${row.display} · ${row.eye}`))].join("; ");
+        }
+      }
       if (loadGeneration.current !== requestGeneration) return;
       setEncounter(nextEncounter);
       setVisitStatuses(Object.fromEntries(nextVisitStatuses.rows.map((row) => [row.conditionReference, row.status])));
@@ -223,7 +226,8 @@ export function DiagnosisWorkspace({
       setAttachedProcedures(procedureResult.response?.attachedProcedures ?? []);
       setProcedureAttachmentError(procedureResult.error ? "Attached procedures could not be loaded." : undefined);
       setLoadedFindings({ key: requestFindingsKey, payload: nextFindings });
-      setCandidateFindings(nextCandidateFindings);
+      setCandidateFindings(nextCandidateFindings.rows);
+      setCandidateUnavailable(nextCandidateFindings.unavailable);
     } catch (caught) {
       if (loadGeneration.current !== requestGeneration) return;
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -311,56 +315,120 @@ export function DiagnosisWorkspace({
   }
 
   async function updateFinding(mutation: DiagnosisFindingMutation) {
-    const changed = await run(`finding:${mutation.action}`, async () => {
-      await mutateDiagnosisFinding(encounterReference, mutation);
-    }, findings !== undefined && canMutateDiagnosisFinding(findings, mutation));
-    if (changed && typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("odos:encounter-findings-changed", {
-        detail: { encounterReference },
-      }));
+    if (!findings || !canMutateDiagnosisFinding(findings, mutation)) return;
+    setBusy(`finding:${mutation.operation}`);
+    setFindingMessage(undefined);
+    try {
+      const response = await mutateDiagnosisFinding(encounterReference, mutation);
+      const outcome = await handleFindingOutcome(response, { encounterReference, refresh: load });
+      setFindingMessage(outcome.message);
+      setPendingCommand(outcome.retryIdentical || outcome.reloadChoice ? { body: mutation, identical: outcome.retryIdentical } : undefined);
+      return response;
+    } finally { setBusy(undefined); }
+  }
+
+  async function applyPendingChoice() {
+    if (!pendingCommand || !findings) return;
+    if (pendingCommand.identical) { await updateFinding(pendingCommand.body); return; }
+    const previous = pendingCommand.body;
+    const rows = findings.searchIndex.filter(row => row.key && previous.targets.some(target => JSON.stringify(target.key) === JSON.stringify(row.key)));
+    if (rows.length !== previous.targets.length || rows.some(row => !row.editable)) {
+      setFindingMessage("The selected finding is no longer editable. Choose from the current values."); return;
     }
+    const first = previous.targets.find(target => target.kind === "fact");
+    const next = buildFindingCommand(rows, patientReference, previous.operation, {
+      selectedConditionReference: previous.context?.selectedConditionReference,
+      ...(first?.kind === "fact" ? { presence: first.state.presence, grade: typeof first.state.qualifiers.grade === "string" ? first.state.qualifiers.grade : null } : {}),
+      toEyes: previous.eyes?.to, searchIndex: findings.searchIndex, liveConditionReferences: findings.visitDiagnoses.map(diagnosis => diagnosis.conditionReference),
+    });
+    await updateFinding(next);
+  }
+
+  async function repairAudits() {
+    if (!findings?.encounterEditable || !findings.canWrite) return;
+    setBusy("repair");
+    try {
+      const response = await repairFindingAudits(encounterReference, { commandId: crypto.randomUUID(), patientReference });
+      const outcome = await handleFindingOutcome(response, { encounterReference, refresh: load });
+      setFindingMessage(outcome.message);
+    } finally { setBusy(undefined); }
+  }
+
+  async function linkSupports(commandId: string, supports: SupportingFindingFact[], conditionReference: string) {
+    const current = findings;
+    if (!current) return;
+    const rows = supports.map(support => current.searchIndex.find(row => row.rowKey === support.rowKey));
+    if (rows.some(row => !row || !row.editable)) { setPickSteps("Diagnosis saved; supporting findings need review before linking."); return; }
+    const command = buildFindingCommand(rows.filter((row): row is NonNullable<typeof row> => Boolean(row)), patientReference, "link", { selectedConditionReference: conditionReference, liveConditionReferences: [...current.visitDiagnoses.map(diagnosis => diagnosis.conditionReference), conditionReference] });
+    command.commandId = commandId;
+    command.targets = command.targets.map((target, index) => ({ ...target, baseline: supports[index]!.baseline }));
+    await finishLink(command);
+  }
+
+  async function finishLink(command: DiagnosisFindingMutation) {
+    setBusy("link");
+    try {
+      const response = await mutateDiagnosisFinding(encounterReference, command);
+      const outcome = await handleFindingOutcome(response, { encounterReference, refresh: load });
+      const complete = response.body.result === "command" && response.body.complete;
+      setPendingLink(complete || outcome.reloadChoice ? undefined : command);
+      if (outcome.reloadChoice) {
+        setPendingCommand({ body: command, identical: false });
+        setFindingMessage(outcome.message);
+      }
+      setPickSteps(complete ? "Diagnosis saved · Scope saved · Findings linked" : `Diagnosis saved · Linking incomplete: ${outcome.message ?? "Retry linking"}`);
+    } finally { setBusy(undefined); }
   }
 
   async function addDiagnosis(row: DiagnosisQuickListRow, laterality?: EyeChoice) {
-    if (!canWriteDiagnosis) return;
+    if (!findings?.encounterEditable || !findings.canWrite) return;
     const selectedMember = row.members?.find((member) => member.stableKey === row.selectedMemberKey);
     const resolvedRow = selectedMember ? memberDiagnosisRow(selectedMember) : row;
-    if ((row.members || row.lateralityRequired) && !laterality) {
-      setPendingDiagnosis(row);
-      return;
+    if ((row.members || row.lateralityRequired) && !laterality || row.members && !selectedMember && !row.stageDeferred) { setPendingDiagnosis(row); return; }
+    if (row.supportingFacts?.some(support => !findings?.searchIndex.some(fact => fact.rowKey === support.rowKey && fact.editable))) {
+      setPickSteps("Supporting findings need review before picking a diagnosis."); return;
     }
-    if (row.members && !selectedMember && !row.stageDeferred) {
-      setPendingDiagnosis(row);
-      return;
-    }
-    const existing = visitConditions.find((condition) => conditionMatchesDiagnosisPick(condition, resolvedRow, laterality));
+    const commandId = crypto.randomUUID();
+    const existing = visitConditions.find(condition => conditionMatchesDiagnosisPick(condition, resolvedRow, laterality));
     if (existing) {
       onSelectDiagnosis(`Condition/${existing.id}`);
       setPendingDiagnosis(undefined);
+      if (row.supportingFacts?.length) await linkSupports(commandId, row.supportingFacts, `Condition/${existing.id}`);
       return;
     }
-    await run(`add:${row.stableKey}`, async () => {
-      const result = await submitDiagnosisPick({
-        encounterReference,
-        diagnosisKey: resolvedRow.stableKey,
-        action: "confirm",
+    if (!canWriteDiagnosis) { setPickSteps("A provider must add this diagnosis before linking."); return; }
+    setBusy(`add:${row.stableKey}`);
+    setPickSteps(undefined);
+    setPendingLink(undefined);
+    try {
+      const result = await submitDiagnosisPickResult({
+        encounterReference, commandId, diagnosisKey: resolvedRow.stableKey, action: "confirm",
         source: row.suggestionSource ?? "catalog-search",
         ...(row.findingInstanceId ? { findingInstanceId: row.findingInstanceId } : {}),
-        ...(laterality ? { laterality } : {}),
-        ...(row.stageDeferred ? { stageDeferred: true } : {}),
+        ...(row.supportingFacts ? { supportingFacts: row.supportingFacts } : {}),
+        ...(laterality ? { laterality } : {}), ...(row.stageDeferred ? { stageDeferred: true } : {}),
       });
+      if (result.result !== "pick" || result.conditionStep !== "applied") {
+        setPickSteps(result.result === "pick" && result.conditionStep === "unconfirmed" ? "Diagnosis not confirmed — reload" : result.error);
+        return;
+      }
+      setPendingDiagnosis(undefined);
+      onSelectDiagnosis(`Condition/${result.condition.id}`);
+      await load();
+      window.dispatchEvent(new CustomEvent("odos:encounter-findings-changed", { detail: { encounterReference } }));
       let condition = result.condition;
+      setPickSteps(`Diagnosis saved${result.error ? `: ${result.error}` : ""}`);
       if (laterality) {
-        condition = await updateConditionBodySite({
-          condition,
-          patientReference,
-          laterality,
-          ...(!row.stageDeferred ? { diagnosis: resolvedRow } : {}),
-        });
+        try { condition = await updateConditionBodySite({ condition, patientReference, laterality, ...(!row.stageDeferred ? { diagnosis: resolvedRow } : {}) }); }
+        catch (caught) { setPickSteps(`Diagnosis saved · Scope not saved: ${caught instanceof Error ? caught.message : String(caught)}`); return; }
       }
       onSelectDiagnosis(`Condition/${condition.id}`);
       setPendingDiagnosis(undefined);
-    });
+      if (row.supportingFacts?.length) await linkSupports(commandId, row.supportingFacts, `Condition/${condition.id}`);
+      else setPickSteps("Diagnosis saved · Scope saved");
+    } catch (caught) {
+      setPickSteps(`Diagnosis not confirmed — reload. ${caught instanceof Error ? caught.message : String(caught)}`);
+    } finally { setBusy(undefined); }
   }
 
   async function persistPins(nextPins: string[]) {
@@ -390,9 +458,7 @@ export function DiagnosisWorkspace({
   const carryEditedForDisplay = Boolean(
     findings?.carryProvenance?.edited || findings?.carryProvenance?.integrityWarning,
   );
-  const suggestionsByObservation = Object.fromEntries(candidateFindings.flatMap((finding) =>
-    finding.observationReference ? [[finding.observationReference, finding]] : []
-  ));
+  const suggestionsByFinding = Object.fromEntries(candidateFindings.map(finding => [finding.findingInstanceId, finding]));
   const reorderAvailable = encounter ? canReorderEncounterDiagnoses(encounter, visitConditions) : false;
   const reorderUnavailable = encounter
     ? encounterDiagnosisReorderUnavailable(encounter, visitConditions, conditions)
@@ -406,6 +472,7 @@ export function DiagnosisWorkspace({
       ...row,
       findingInstanceId,
       suggestionSource: suggestion.source,
+      supportingFacts: suggestion.supportingFacts,
     });
   }
 
@@ -505,7 +572,7 @@ export function DiagnosisWorkspace({
                 <div className="odos-diagnosis-pin-actions">
                   <button
                     type="button"
-                    disabled={!canWrite || busy !== undefined}
+                    disabled={!canWrite || !findings?.encounterEditable || busy !== undefined}
                     aria-label={row.pinned ? `Unpin ${row.display}` : `Pin ${row.display}`}
                     onClick={() => void persistPins(row.pinned
                       ? pinnedDiagnosisKeys.filter((key) => key !== row.stableKey)
@@ -573,7 +640,7 @@ export function DiagnosisWorkspace({
                 selected={[]}
                 onChange={(selected) => selected[0] && void addDiagnosis(pendingDiagnosis, selected[0])}
                 ariaLabel={`Scope for ${pendingDiagnosis.display}`}
-                disabled={!canWriteDiagnosis || busy !== undefined || Boolean(pendingDiagnosis.members && !pendingDiagnosis.selectedMemberKey && !pendingDiagnosis.stageDeferred)}
+                disabled={(!canWriteDiagnosis && !pendingDiagnosis.supportingFacts?.length) || !findings?.encounterEditable || busy !== undefined || Boolean(pendingDiagnosis.members && !pendingDiagnosis.selectedMemberKey && !pendingDiagnosis.stageDeferred)}
                 exclusive
               />
               {pendingDiagnosis.members && pendingDiagnosis.stageSelectionSource !== "search" && (
@@ -598,8 +665,9 @@ export function DiagnosisWorkspace({
             rows={findings.unassigned}
             visitDiagnoses={findings.visitDiagnoses}
             patientReference={patientReference}
-            disabled={!findings.canWrite || findings.canWriteDiagnosis !== true || !canWriteDiagnosis || busy !== undefined}
-            suggestionsByObservation={suggestionsByObservation}
+            disabled={!findings.canWrite || !findings.encounterEditable || busy !== undefined}
+            canWriteDiagnosis={canWriteDiagnosis}
+            suggestionsByFinding={suggestionsByFinding}
             onSuggest={chooseSuggestion}
             onMutate={(mutation) => void updateFinding(mutation)}
           />
@@ -607,6 +675,15 @@ export function DiagnosisWorkspace({
       </aside>
 
       <main className="odos-diagnosis-center" aria-label="Selected diagnosis workspace">
+      {findings && !findings.encounterEditable && <p role="status">{findingReadOnlyLabel(findings.readOnlyReason)}</p>}
+      {findingLoad && "result" in findingLoad && <p role="alert">Findings unavailable</p>}
+      {candidateUnavailable && <p role="alert">Suggestions unavailable</p>}
+      {findingMessage && <p role="status">{findingMessage}</p>}
+      {pendingCommand && <button className="rounded border border-[color:var(--odos-line-2)] px-3 py-2" type="button" disabled={busy !== undefined || !findings?.encounterEditable} onClick={() => void applyPendingChoice()}>{pendingCommand.identical ? "Retry" : "Apply kept choice"}</button>}
+      {pickSteps && <p role="status">{pickSteps}</p>}
+      {pendingLink && <button className="rounded border border-[color:var(--odos-line-2)] px-3 py-2" type="button" disabled={busy !== undefined || !findings?.encounterEditable} onClick={() => void finishLink(pendingLink)}>Finish linking</button>}
+      {findings && (findings.auditDebt.length > 0 || findings.searchIndex.some(row => row.auditPending)) && <p role="status">Audit record pending. <button type="button" disabled={busy !== undefined || !findings.encounterEditable || !findings.canWrite} onClick={() => void repairAudits()}>Repair</button></p>}
+
         {error && <div role="alert" className="odos-diagnosis-error">{error}</div>}
         {!selectedCondition || !encounter || !selectedEntry ? (
           <div className="odos-diagnosis-empty">
@@ -749,7 +826,7 @@ export function DiagnosisWorkspace({
                 onMutate={(mutation) => void updateFinding(mutation)}
               />
             ) : (
-              <p className="odos-diagnosis-muted">Loading findings…</p>
+              <p className="odos-diagnosis-muted">{findingLoad && "result" in findingLoad ? "Findings unavailable" : "Loading findings…"}</p>
             )}
           </div>
         )}

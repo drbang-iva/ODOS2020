@@ -1,0 +1,141 @@
+TAP version 13
+# Subtest: T15 Ocular Health picker accepts a canonical view without one observation id
+not ok 1 - T15 Ocular Health picker accepts a canonical view without one observation id # TODO R10 A3
+  ---
+  duration_ms: 0.93825
+  type: 'test'
+  location: '<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:1:339'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health is not connected to fact linking until A3'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:6:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: T16 DiagnosisPicker proposal evidence resolves through finding homes
+not ok 2 - T16 DiagnosisPicker proposal evidence resolves through finding homes # TODO R10 A3
+  ---
+  duration_ms: 0.287
+  type: 'test'
+  location: '<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:1:570'
+  failureType: 'testCodeFailure'
+  error: |-
+    Picker still resolves proposals from Condition.evidence until A3
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:9:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: T17 Ocular Health picks link fact targets
+not ok 3 - T17 Ocular Health picks link fact targets # TODO R10 A3
+  ---
+  duration_ms: 0.116417
+  type: 'test'
+  location: '<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:1:810'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health is not connected to fact linking until A3'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:12:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: T18 Assessment origin uses finding home sources
+not ok 4 - T18 Assessment origin uses finding home sources # TODO R10 A3
+  ---
+  duration_ms: 0.119583
+  type: 'test'
+  location: '<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:1:1006'
+  failureType: 'testCodeFailure'
+  error: 'Assessment has not migrated to home sources until A3'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:15:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Encounter finding overlay unavailable. Error: synthetic unavailable
+#     at loadPayload (<repo>/ui/tests/r10DiagnosisSurfaces.test.tsx:17:29)
+#     at load (<repo>/ui/src/components/charting/EncounterFindingOverlay.tsx:28:24)
+#     at <anonymous> (<repo>/ui/src/components/charting/EncounterFindingOverlay.tsx:45:10)
+#     at commitHookEffectListMount (<repo>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13038:26)
+#     at commitPassiveMountOnFiber (<repo>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14461:11)
+#     at commitPassiveMountEffects_complete (<repo>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14421:9)
+#     at commitPassiveMountEffects_begin (<repo>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14408:7)
+#     at commitPassiveMountEffects (<repo>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14396:3)
+#     at flushPassiveEffectsImpl (<repo>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16287:3)
+#     at flushPassiveEffects (<repo>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16236:14)
+# Subtest: W49 overlay shows Findings unavailable for typed and rejected loads
+ok 5 - W49 overlay shows Findings unavailable for typed and rejected loads
+  ---
+  duration_ms: 7.518
+  type: 'test'
+  ...
+# Subtest: W51 default legacy ocular_health pick omits supportingFacts
+ok 6 - W51 default legacy ocular_health pick omits supportingFacts
+  ---
+  duration_ms: 12.778875
+  type: 'test'
+  ...
+# Subtest: W51 default legacy cup_disc_ratio pick omits supportingFacts
+ok 7 - W51 default legacy cup_disc_ratio pick omits supportingFacts
+  ---
+  duration_ms: 3.1615
+  type: 'test'
+  ...
+# Subtest: W49 candidate load failure shows Suggestions unavailable
+ok 8 - W49 candidate load failure shows Suggestions unavailable
+  ---
+  duration_ms: 0.732458
+  type: 'test'
+  ...
+# Subtest: W49 encounter scene preserves unavailable unassigned count
+ok 9 - W49 encounter scene preserves unavailable unassigned count
+  ---
+  duration_ms: 102.876459
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 4
+# duration_ms 326.423292

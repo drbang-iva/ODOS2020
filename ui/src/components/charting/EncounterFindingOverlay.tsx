@@ -8,7 +8,7 @@ import {
 interface Props {
   encounterReference: string;
   sectionKey: string;
-  loadPayload?: (encounterReference: string) => Promise<DiagnosisFindingsPayload>;
+  loadPayload?: (encounterReference: string) => ReturnType<typeof loadDiagnosisFindings>;
   eventTarget?: EventTarget;
 }
 
@@ -20,18 +20,23 @@ export function EncounterFindingOverlay({
   loadPayload = defaultLoadPayload,
   eventTarget = typeof window === "undefined" ? undefined : window,
 }: Props) {
+  const [unavailable, setUnavailable] = useState(false);
   const [rows, setRows] = useState<EncounterFindingRow[]>([]);
 
   useEffect(() => {
     let active = true;
     const load = () => loadPayload(encounterReference)
       .then((payload) => {
-        if (active) setRows(findingRowsForSection(payload, sectionKey));
+        if (!active) return;
+        if ("result" in payload) { setUnavailable(true); setRows([]); return; }
+        setUnavailable(false);
+        setRows(findingRowsForSection(payload, sectionKey));
       })
       .catch((caught) => {
         if (!active) return;
         console.error("Encounter finding overlay unavailable.", caught);
         setRows([]);
+        setUnavailable(true);
       });
     const refresh = (event: Event) => {
       const detail = (event as CustomEvent<{ encounterReference?: string }>).detail;
@@ -45,6 +50,7 @@ export function EncounterFindingOverlay({
     };
   }, [encounterReference, eventTarget, loadPayload, sectionKey]);
 
+  if (unavailable) return <div role="status">Findings unavailable</div>;
   if (rows.length === 0) return null;
   return (
     <section className="odos-encounter-finding-overlay" aria-labelledby="encounter-finding-overlay-heading">
@@ -54,12 +60,12 @@ export function EncounterFindingOverlay({
       </div>
       <ul>
         {rows.map((row) => (
-          <li key={`${row.atomicFindingId}:${row.laterality}:${row.observationReference ?? row.source}`}>
+          <li key={row.rowKey}>
             <div>
               <strong>{row.display}</strong>
               <span>{findingSummary(row)}</span>
             </div>
-            <small>{row.source === "atomic" ? "Charted by diagnosis" : "Charted in section"}</small>
+            <small>{row.kind === "conflict" ? "Conflicting records" : row.kind === "unresolved" ? "Unresolved finding" : "Shared finding"}</small>
           </li>
         ))}
       </ul>
@@ -76,7 +82,7 @@ export function findingRowsForSection(
 
 function findingSummary(row: EncounterFindingRow): string {
   return [
-    row.presence === "absent" ? "Absent" : "Present",
+    row.presence === "absent" ? "Absent" : row.presence === "present" ? "Present" : undefined,
     row.grade,
     row.laterality,
   ].filter(Boolean).join(" · ");

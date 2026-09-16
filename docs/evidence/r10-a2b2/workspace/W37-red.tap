@@ -1,0 +1,108 @@
+TAP version 13
+# Subtest: W3 Retry resends identical command
+ok 1 - W3 Retry resends identical command
+  ---
+  duration_ms: 47.0655
+  type: 'test'
+  ...
+# Subtest: W46 confirmed write on 409 emits event; W47 kept choice uses new command and baseline
+ok 2 - W46 confirmed write on 409 emits event; W47 kept choice uses new command and baseline
+  ---
+  duration_ms: 24.879792
+  type: 'test'
+  ...
+# Subtest: W37 existing diagnosis suggestion links without pick
+not ok 3 - W37 existing diagnosis suggestion links without pick
+  ---
+  duration_ms: 8.069666
+  type: 'test'
+  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:7498'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:49:251)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W36 Finish linking repeats only link
+ok 4 - W36 Finish linking repeats only link
+  ---
+  duration_ms: 20.810666
+  type: 'test'
+  ...
+# Subtest: unconfirmed pick never automatically repeats
+ok 5 - unconfirmed pick never automatically repeats
+  ---
+  duration_ms: 5.147541
+  type: 'test'
+  ...
+# Subtest: W52 origin comes from homeSources despite obsolete Condition evidence
+ok 6 - W52 origin comes from homeSources despite obsolete Condition evidence
+  ---
+  duration_ms: 3.382916
+  type: 'test'
+  ...
+# Subtest: W53 Repair sends fresh UUID to audit repair
+ok 7 - W53 Repair sends fresh UUID to audit repair
+  ---
+  duration_ms: 9.600416
+  type: 'test'
+  ...
+# Subtest: W49 workspace renders both unavailable states
+ok 8 - W49 workspace renders both unavailable states
+  ---
+  duration_ms: 3.276084
+  type: 'test'
+  ...
+# Subtest: pick then bodySite then link ordering: scope
+ok 9 - pick then bodySite then link ordering: scope
+  ---
+  duration_ms: 21.602584
+  type: 'test'
+  ...
+# Subtest: pick then bodySite then link ordering: scope-fail
+ok 10 - pick then bodySite then link ordering: scope-fail
+  ---
+  duration_ms: 12.960458
+  type: 'test'
+  ...
+# Subtest: staff existing-diagnosis support suggestion links without Condition permission
+not ok 11 - staff existing-diagnosis support suggestion links without Condition permission
+  ---
+  duration_ms: 5.300625
+  type: 'test'
+  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:10607'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:58:207)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 9
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 380.5295
