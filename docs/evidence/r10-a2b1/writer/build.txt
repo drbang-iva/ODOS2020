@@ -1,0 +1,10 @@
+
+> odos-mcp@0.1.0 build
+> tsc
+
+src/clinical-graph/current-finding-writer.ts(54,75): error TS2322: Type '{ clinicalWrite: "none"; cause: "load"; status: "not-attempted"; target: string; fresh: EncounterFindingState; reason: string; }[]' is not assignable to type 'FindingOutcome[]'.
+  Type '{ clinicalWrite: "none"; cause: "load"; status: "not-attempted"; target: string; fresh: EncounterFindingState; reason: string; }' is not assignable to type 'FindingOutcome'.
+    Types of property 'fresh' are incompatible.
+      Type 'EncounterFindingState' is not assignable to type '{ incomplete: true; kind: "missing" | "refused" | "upstream" | "foreign-or-unscoped"; reason: string; } | CurrentFindingProjection | undefined'.
+        Type 'EncounterFindingInput & { incomplete: false; observations: Observation[]; conditions: Condition[]; pendingAudits?: Set<string> | undefined; }' is not assignable to type '{ incomplete: true; kind: "missing" | "refused" | "upstream" | "foreign-or-unscoped"; reason: string; } | CurrentFindingProjection | undefined'.
+          Type 'EncounterFindingInput & { incomplete: false; observations: Observation[]; conditions: Condition[]; pendingAudits?: Set<string> | undefined; }' is missing the following properties from type '{ incomplete: true; kind: "missing" | "refused" | "upstream" | "foreign-or-unscoped"; reason: string; }': kind, reason

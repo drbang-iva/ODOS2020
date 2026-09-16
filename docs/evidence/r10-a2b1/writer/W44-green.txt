@@ -1,0 +1,18 @@
+TAP version 13
+# Subtest: W44 refresh failure belongs to first unexecuted target after a confirmed write
+ok 1 - W44 refresh failure belongs to first unexecuted target after a confirmed write
+  ---
+  duration_ms: 3.689458
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 149.900584
+
+Exit: 0
