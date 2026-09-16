@@ -323,3 +323,9 @@ After:
 - `mcp/tests/diagnosisLinkL2.test.ts:650` (baseline) → `:656` (current): the HTTP `post` helper's asserted expected status changes from 201 to 200 for the applied Cup/Disc pick.
 - `mcp/tests/diagnosisLinkL2.test.ts:665` (baseline) → `:671` (current): the HTTP `post` helper's asserted expected status changes from `index === 0 ? 201 : 200` to 200 for possible/confirm applied picks.
 - The appended mixed-panel-context test's per-candidate `linkable: false` expectation was added after checkpoint153bb322; `linkability-red.tap` demonstrates the old omission, and `linkability-green.tap` demonstrates the individual candidate signal (W-d).
+
+## Custom-section candidate consumer fixture repair — V7 / V8 / W-d
+
+`mcp/tests/customSectionEndpoint.test.ts`: no existing assertions changed or removed. Five candidate consumer cases now seed the exact synthetic Encounter referenced by their capture (lens, retinal-detachment, seven Macula options, four folded retinal subtype iterations, dry-eye markers). The in-memory client now implements read/baseUrl and returns resources of the requested type: searches for Condition/Provenance return no rows because this fixture holds none, rather than incorrectly returning Observations.
+
+Before: full suite 50/55; all five candidate cases failed on unavailable context. After: 55/55. Raw `custom-section-fixture-red.tap` / `custom-section-fixture-green.tap`. Reverting only the resource-type selection to the previous every-non-Basic-is-Observation implementation makes all five candidate cases red (`custom-section-type-mutation-red.tap`), proving the real projection loader enforces the resource-type boundary. No production custom-section file changed. MCP build exits 0.

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import type { Basic, Bundle, Observation, Provenance } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Observation, Provenance, Encounter, Resource } from "@medplum/fhirtypes";
 import express from "express";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import {
@@ -1810,6 +1810,7 @@ test("anterior chamber cell and flare grades round-trip without setting the sibl
 
 test("GET diagnosis candidates returns nuclear cataract after ocular-health capture regardless of grade", async (t) => {
   const fhir = new MemoryFhir();
+  fhir.encounters.push(candidateEncounter("lens-mapping"));
   const definitions = await catalog(fhir);
   const lens = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:lens");
   assert.ok(lens);
@@ -1898,6 +1899,7 @@ test("GET diagnosis candidates returns nuclear cataract after ocular-health capt
 
 test("retinal-detachment macula status remains documentation-only for diagnosis proposals", async () => {
   const fhir = new MemoryFhir();
+  fhir.encounters.push(candidateEncounter("retinal-detachment-mapping"));
   const definitions = await catalog(fhir);
   const periphery = definitions.find((definition) => definition.stableKey === "ocular-health:posterior:periphery");
   assert.ok(periphery);
@@ -2009,6 +2011,7 @@ test("each newly wired Macula selection proposes the ruled target through the di
 
   for (const [option, expectedTargets] of cases) {
     const fhir = new MemoryFhir();
+    fhir.encounters.push(candidateEncounter(`macula-${option}`));
     const definitions = await catalog(fhir);
     const macula = definitions.find((definition) => definition.stableKey === "ocular-health:posterior:macula");
     assert.ok(macula);
@@ -2266,6 +2269,7 @@ test("each folded retinal subtype proposes the same diagnosis as its retired chi
     }>).find((candidate) => candidate.valueType === "multi-select");
     assert.ok(field?.localCode);
     const encounterId = `posterior-fold-diagnosis-${index}`;
+    fhir.encounters.push(candidateEncounter(encounterId));
     const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [periphery]), {
       authHeader: AUTH,
       params: { stableKey: periphery.stableKey },
@@ -3254,6 +3258,7 @@ test("DE-1 tear-stability and routine tear-film entry share one stableKey and on
 
 test("DE-1 abnormal mappings return proposal badges and never auto-confirm a diagnosis", async () => {
   const fhir = new MemoryFhir();
+  fhir.encounters.push(candidateEncounter("dry-eye-mapping"));
   const definitions = await catalog(fhir);
   const markers = definitions.find(
     (definition) => definition.stableKey === "dry-eye:markers",
@@ -3317,18 +3322,30 @@ test("DE-1 abnormal mappings return proposal badges and never auto-confirm a dia
   assert.equal(fhir.captureWrites.filter((write) => write.resourceType === "Condition").length, 0);
 });
 
+function candidateEncounter(id: string): Encounter {
+  return { resourceType: "Encounter", id, status: "in-progress", class: { code: "AMB" }, subject: { reference: `Patient/${id}` } };
+}
+
 class MemoryFhir {
+  readonly baseUrl = "http://localhost:8103/";
+  readonly encounters: Encounter[] = [];
+  async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+    const resource = [...this.encounters, ...this.basics, ...this.observations].find(row => row.resourceType === resourceType && row.id === id);
+    if (!resource) throw Object.assign(new Error(`Missing ${resourceType}/${id}`), { status: 404 });
+    return structuredClone(resource) as T;
+  }
+
   readonly basics: Basic[] = [];
   readonly observations: Observation[] = [];
   readonly captureWrites: Array<{ resourceType: string; header?: string; resource: Basic | Observation | Provenance }> = [];
 
-  async search<T extends Basic | Observation>(
+  async search<T extends Resource>(
     resourceType: T["resourceType"],
     params: Record<string, string> = {},
   ): Promise<Bundle<T>> {
     const resources = resourceType === "Basic"
       ? this.basics
-      : this.observations
+      : resourceType !== "Observation" ? [] : this.observations
         .filter((observation) =>
           !params.subject || observation.subject?.reference === params.subject
         )
