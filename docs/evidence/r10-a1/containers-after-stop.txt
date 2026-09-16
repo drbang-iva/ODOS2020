@@ -1,4 +1,0 @@
-15142aa32c1d odos-r10-a1-test-postgres Exited (0) Less than a second ago postgres:16-alpine
-16332e771c42 odos-r10-a1-medplum-1 Exited (0) About an hour ago 358ab425b293
-1d721efacf0f odos-r10-a1-postgres-1 Exited (0) About an hour ago postgres:16-alpine
-911cda9c3276 odos-r10-a1-redis-1 Exited (0) About an hour ago redis:7-alpine

@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { createHash, generateKeyPairSync, randomBytes, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
-import { dirname, resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { loginForLocalRepair } from '../../scripts/repair-practice-roles.ts';
@@ -29,6 +30,19 @@ function privateJson(name, value) {
   writeFileSync(resolve(privateDir, name), JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
 }
 
+function sanitizePublishedText(text) {
+  return text.replaceAll(root, '<repo-root>').replaceAll(homedir(), '<repo-root>')
+    .replaceAll(basename(homedir()), '<local-account>');
+}
+
+function sanitizeEvidence(directory = evidenceDir) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) sanitizeEvidence(path);
+    else writeFileSync(path, sanitizePublishedText(readFileSync(path, 'utf8')));
+  }
+}
+
 function evidence(name, value) {
   mkdirSync(evidenceDir, { recursive: true });
   let text = JSON.stringify(value, null, 2) + '\n';
@@ -39,7 +53,7 @@ function evidence(name, value) {
       }
     }
   }
-  writeFileSync(resolve(evidenceDir, name), text);
+  writeFileSync(resolve(evidenceDir, name), sanitizePublishedText(text));
 }
 
 function command(program, args) {
@@ -82,6 +96,10 @@ async function ok(role, method, path, body, headers) {
 
 async function refresh() {
   for (const principal of [fixture, ...Object.values(fixture.principals)]) {
+    if (principal.token) {
+      const session = await fetch(new URL('/auth/me', baseUrl), { headers: { Authorization: `Bearer ${principal.token}` }, signal: AbortSignal.timeout(30000) });
+      if (session.ok) continue;
+    }
     principal.token = await loginForLocalRepair({ baseUrl, email: principal.email, password: principal.password });
   }
   privateJson('fixture.json', fixture);
@@ -243,28 +261,52 @@ async function lostResponse(role) {
     events.push({ sequence: events.length + 1, scenario, role: principalRole, seam: 'handleDiagnosisFindingsMutationRequest', status: result.status, response: result.body });
     return result;
   };
-  const initialResult = await mutate(role, 'present');
-  const countWrites = () => events.filter(e => e.scenario === scenario && ['POST', 'PUT', 'PATCH'].includes(e.method) && e.path?.startsWith('/fhir/')).length;
-  const beforeReload = countWrites();
+  const countWrites = () => events.filter(e => e.scenario === scenario && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(e.method) && e.path?.startsWith('/fhir/')).length;
+  const command = { presence: 'present', expectedVersion: undefined };
+  const initialResult = await mutate(role, command.presence);
   const reloaded = await search(role, { encounter: encounterReference, code: row.atomicFindingId });
-  await ok(role, 'GET', `/fhir/R4/Condition/${condition.id}`);
-  assert.equal(initialResult.status, 200, JSON.stringify(initialResult.body));
   assert.equal(reloaded.length, 1); assert.equal(reloaded[0].valueBoolean, true);
   const baseline = reloaded[0];
-  const satisfied = baseline.valueBoolean === true;
-  assert.ok(satisfied, 'Lost-response retry must recognize the desired value already persisted.');
-  assert.equal(countWrites(), beforeReload, 'Reload and re-diff must not issue a second write.');
-  const interveningResult = await mutate(other, 'absent');
-  assert.equal(interveningResult.status, 200, JSON.stringify(interveningResult.body));
+  const staffRefusal = role === 'staff' && events.some(e => e.scenario === scenario && e.method === 'PUT' && e.path === `/fhir/R4/Condition/${condition.id}` && e.status === 403);
+  if (role === 'provider') assert.equal(initialResult.status, 200, JSON.stringify(initialResult.body));
+  else assert.ok(staffRefusal, 'Staff Condition refusal must be observed, not assumed.');
+  // This is the diagnostic client's recovery path, not an A2 application writer.
+  const retry = async (originalCommand) => {
+    const rows = await search(role, { encounter: encounterReference, code: row.atomicFindingId });
+    const home = await ok(role, 'GET', `/fhir/R4/Condition/${condition.id}`);
+    assert.equal(rows.length, 1);
+    const current = rows[0];
+    const linked = home.evidence?.some(e => e.detail?.some(d => d.reference === `Observation/${current.id}`)) === true;
+    if (current.valueBoolean === (originalCommand.presence === 'present')) {
+      return { outcome: linked ? 'already-applied' : 'partial-refused' };
+    }
+    if (current.meta.versionId !== originalCommand.expectedVersion) return { outcome: 'conflict' };
+    return mutate(role, originalCommand.presence);
+  };
+  const beforeRetry = countWrites();
+  const retried = await retry(command);
+  const retryWrites = countWrites() - beforeRetry;
+  assert.equal(retryWrites, 0, 'Executing the lost-response retry must not issue a second FHIR write.');
+  assert.equal(retried.outcome, role === 'provider' ? 'already-applied' : 'partial-refused');
+  assert.deepEqual(await ok(role, 'GET', `/fhir/R4/Observation/${baseline.id}`), baseline);
+  await ok(other, 'PUT', `/fhir/R4/Observation/${baseline.id}`, { ...baseline, valueBoolean: false }, { 'If-Match': `W/"${baseline.meta.versionId}"` });
   const intervening = await ok(role, 'GET', `/fhir/R4/Observation/${baseline.id}`);
   assert.notEqual(intervening.meta.versionId, baseline.meta.versionId); assert.equal(intervening.valueBoolean, false);
+  const beforeConflictRetry = countWrites();
+  const conflicted = await retry(command);
+  const conflictRetryWrites = countWrites() - beforeConflictRetry;
+  assert.equal(conflictRetryWrites, 0, 'Retry after an intervening edit must not overwrite it.');
+  assert.equal(conflicted.outcome, 'conflict');
+  assert.deepEqual(await ok(role, 'GET', `/fhir/R4/Observation/${baseline.id}`), intervening);
   const stale = await request(role, 'PUT', `/fhir/R4/Observation/${baseline.id}`, baseline, { 'If-Match': `W/"${baseline.meta.versionId}"` });
-  const after = await ok(role, 'GET', `/fhir/R4/Observation/${baseline.id}`);
-  assert.equal(stale.status, 412); assert.deepEqual(after, intervening);
+  assert.equal(stale.status, 412);
+  assert.deepEqual(await ok(role, 'GET', `/fhir/R4/Observation/${baseline.id}`), intervening);
   assert.equal((await search(role, { encounter: encounterReference, code: row.atomicFindingId })).length, 1);
-  return { id: baseline.id, lostResponseRecognized: satisfied, retryWrites: 0, baselineVersion: baseline.meta.versionId,
-    interveningRole: other, interveningVersion: intervening.meta.versionId, staleStatus: stale.status,
-    scope: 'Capability witness: real existing endpoint writes and HTTP transport; caller reload/diff followed by stale If-Match refusal. This is not an implemented A2 retry protocol.' };
+  return { id: baseline.id, retryOutcome: retried.outcome, retryWrites, conflictRetryOutcome: conflicted.outcome, conflictRetryWrites,
+    baselineVersion: baseline.meta.versionId, interveningRole: other, interveningVersion: intervening.meta.versionId,
+    staleStatus: stale.status, staffConditionRefusal: staffRefusal,
+    scope: 'Executed diagnostic client retry against real endpoint writes and HTTP reads; not an implemented A2 application retry protocol.' };
+
 }
 
 async function run() {
@@ -411,10 +453,31 @@ async function staffLinkAmendment() {
   process.exitCode = results.at(-1).status === 'PASS' ? 0 : 2;
 }
 
+async function rerunP7() {
+  load();
+  const previous = JSON.parse(readFileSync(resolve(evidenceDir, 'preflight-results.json'), 'utf8'));
+  events.push(...JSON.parse(readFileSync(resolve(evidenceDir, 'preflight-http.json'), 'utf8')).events);
+  results.push(...previous.results.filter(result => result.probe !== 'P7'));
+  await refresh();
+  for (const role of ['provider', 'staff']) {
+    await probe(role, 'P7', () => lostResponse(role));
+    const result = results.at(-1);
+    if (role === 'staff' && result.status === 'PASS') {
+      result.status = 'EXPECTED_UNDER_RULING';
+      result.interpretation = 'Observed Condition 403; executed retry reports partial-refused with zero writes; intervening edit reports conflict with zero writes.';
+    }
+  }
+  evidence('preflight-results.json', { ...previous, amendment: 'P7 re-executed for both roles after F2; P1-P6 evidence unchanged.',
+    supersededP7: previous.results.filter(result => result.probe === 'P7'), results, stop: results.some(result => result.status === 'FAIL') });
+  process.exitCode = results.some(result => result.status === 'FAIL') ? 2 : 0;
+}
+
 const action = process.argv[2];
 if (action === 'up') await up();
 else if (action === 'start') await start();
 else if (action === 'seed') await seed();
 else if (action === 'run') await run();
+else if (action === 'sanitize-evidence') sanitizeEvidence();
+else if (action === 'p7') await rerunP7();
 else if (action === 'staff-link') await staffLinkAmendment();
-else throw new Error('Usage: node --import tsx mcp/scripts/r10-preflight.mjs up|start|seed|run|staff-link');
+else throw new Error('Usage: node --import tsx mcp/scripts/r10-preflight.mjs up|start|seed|run|staff-link|p7|sanitize-evidence');

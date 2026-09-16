@@ -1,10 +1,8 @@
-TAP version 13
-# Subtest: compiled ocular structure field identities and atomic samples are pinned
 not ok 1 - compiled ocular structure field identities and atomic samples are pinned
   ---
   duration_ms: 3.109584
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/currentFindingIdentity.test.ts:1:5885'
+  location: '<repo-root>/.worktrees/r10-a1-guards/mcp/tests/currentFindingIdentity.test.ts:1:5885'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -290,19 +288,3 @@ not ok 1 - compiled ocular structure field identities and atomic samples are pin
         1: 'ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::cobblestone-paving-stone-degeneration'
         2: 'ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::cystoid-degeneration'
   operator: 'deepStrictEqual'
-  stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/currentFindingIdentity.test.ts:82:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.start (node:internal/test_runner/test:944:17)
-    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
-  ...
-1..1
-# tests 1
-# suites 0
-# pass 0
-# fail 1
-# cancelled 0
-# skipped 0
-# todo 0
-# duration_ms 195.39925

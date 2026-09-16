@@ -2,7 +2,7 @@
   "sourceHead": "40c19a9e442015e1d32396958b661394318713d2",
   "revision": "2.1",
   "ruling": "performance-od/decisions/2026-09-15-odos-staff-finding-links-on-the-finding-record.md",
-  "amendment": "Only P6-finding-link executed; original P1–P7 evidence retained.",
+  "amendment": "P7 re-executed for both roles after F2; P1-P6 evidence unchanged.",
   "results": [
     {
       "role": "provider",
@@ -137,23 +137,6 @@
       }
     },
     {
-      "role": "provider",
-      "probe": "P7",
-      "status": "PASS",
-      "firstEvent": 60,
-      "lastEvent": 84,
-      "detail": {
-        "id": "ec8f36c2-b1de-42b7-b68c-a5bf6333282d",
-        "lostResponseRecognized": true,
-        "retryWrites": 0,
-        "baselineVersion": "837d860a-827f-43d6-818a-61bc5cb92035",
-        "interveningRole": "staff",
-        "interveningVersion": "1755ebeb-316b-4e21-8b77-b051933a37f2",
-        "staleStatus": 412,
-        "scope": "Capability witness: real existing endpoint writes and HTTP transport; caller reload/diff followed by stale If-Match refusal. This is not an implemented A2 retry protocol."
-      }
-    },
-    {
       "role": "staff",
       "probe": "P1",
       "status": "PASS",
@@ -268,17 +251,6 @@
     },
     {
       "role": "staff",
-      "probe": "P7",
-      "status": "EXPECTED_UNDER_RULING",
-      "firstEvent": 144,
-      "lastEvent": 156,
-      "error": "{\"error\":\"FHIR diagnosis findings dependency failed.\"}\n\n502 !== 200\n",
-      "previousStatus": "FAIL",
-      "ruling": "performance-od/decisions/2026-09-15-odos-staff-finding-links-on-the-finding-record.md",
-      "interpretation": "Existing writer partial-write refusal retained as evidence; P7 is provider-only under revision 2.1."
-    },
-    {
-      "role": "staff",
       "probe": "P6-finding-link",
       "status": "PASS",
       "firstEvent": 157,
@@ -293,7 +265,78 @@
         "conditionUnchanged": true,
         "count": 1
       }
+    },
+    {
+      "role": "provider",
+      "probe": "P7",
+      "status": "PASS",
+      "firstEvent": 164,
+      "lastEvent": 187,
+      "detail": {
+        "id": "d1bc94d2-efc0-45bd-8ee2-11594daac28a",
+        "retryOutcome": "already-applied",
+        "retryWrites": 0,
+        "conflictRetryOutcome": "conflict",
+        "conflictRetryWrites": 0,
+        "baselineVersion": "e68491d3-019d-4615-99a3-b2f81b4dd512",
+        "interveningRole": "staff",
+        "interveningVersion": "2168f957-fae5-4f22-a577-273d36706436",
+        "staleStatus": 412,
+        "staffConditionRefusal": false,
+        "scope": "Executed diagnostic client retry against real endpoint writes and HTTP reads; not an implemented A2 application retry protocol."
+      }
+    },
+    {
+      "role": "staff",
+      "probe": "P7",
+      "status": "EXPECTED_UNDER_RULING",
+      "firstEvent": 188,
+      "lastEvent": 210,
+      "detail": {
+        "id": "8ba007ec-ddc2-46d8-a482-13cadb207763",
+        "retryOutcome": "partial-refused",
+        "retryWrites": 0,
+        "conflictRetryOutcome": "conflict",
+        "conflictRetryWrites": 0,
+        "baselineVersion": "5dbf4231-37a3-4b0a-a7ef-146199562b8c",
+        "interveningRole": "provider",
+        "interveningVersion": "7311f5bf-eabc-4756-9d88-c3da7971a132",
+        "staleStatus": 412,
+        "staffConditionRefusal": true,
+        "scope": "Executed diagnostic client retry against real endpoint writes and HTTP reads; not an implemented A2 application retry protocol."
+      },
+      "interpretation": "Observed Condition 403; executed retry reports partial-refused with zero writes; intervening edit reports conflict with zero writes."
     }
   ],
-  "stop": false
+  "stop": false,
+  "supersededP7": [
+    {
+      "role": "provider",
+      "probe": "P7",
+      "status": "PASS",
+      "firstEvent": 60,
+      "lastEvent": 84,
+      "detail": {
+        "id": "ec8f36c2-b1de-42b7-b68c-a5bf6333282d",
+        "lostResponseRecognized": true,
+        "retryWrites": 0,
+        "baselineVersion": "837d860a-827f-43d6-818a-61bc5cb92035",
+        "interveningRole": "staff",
+        "interveningVersion": "1755ebeb-316b-4e21-8b77-b051933a37f2",
+        "staleStatus": 412,
+        "scope": "Capability witness: real existing endpoint writes and HTTP transport; caller reload/diff followed by stale If-Match refusal. This is not an implemented A2 retry protocol."
+      }
+    },
+    {
+      "role": "staff",
+      "probe": "P7",
+      "status": "EXPECTED_UNDER_RULING",
+      "firstEvent": 144,
+      "lastEvent": 156,
+      "error": "{\"error\":\"FHIR diagnosis findings dependency failed.\"}\n\n502 !== 200\n",
+      "previousStatus": "FAIL",
+      "ruling": "performance-od/decisions/2026-09-15-odos-staff-finding-links-on-the-finding-record.md",
+      "interpretation": "Existing writer partial-write refusal retained as evidence; P7 is provider-only under revision 2.1."
+    }
+  ]
 }

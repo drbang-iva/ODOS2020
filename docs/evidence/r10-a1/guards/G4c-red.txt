@@ -1,10 +1,8 @@
-TAP version 13
-# Subtest: canonical fact dominates legacy, including its retired clear marker
 not ok 1 - canonical fact dominates legacy, including its retired clear marker
   ---
   duration_ms: 6.323125
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/currentFindingReader.test.ts:1:1101'
+  location: '<repo-root>/.worktrees/r10-a1-guards/mcp/tests/currentFindingReader.test.ts:1:1101'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -16,19 +14,3 @@ not ok 1 - canonical fact dominates legacy, including its retired clear marker
   expected: 'retired'
   actual: 'live'
   operator: 'strictEqual'
-  stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a1/.worktrees/r10-a1-guards/mcp/tests/currentFindingReader.test.ts:16:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.start (node:internal/test_runner/test:944:17)
-    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
-  ...
-1..1
-# tests 1
-# suites 0
-# pass 0
-# fail 1
-# cancelled 0
-# skipped 0
-# todo 0
-# duration_ms 146.139458

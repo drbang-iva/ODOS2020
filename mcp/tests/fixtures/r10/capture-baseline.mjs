@@ -20,10 +20,12 @@ registerHooks({
     })) {
       if (!url.includes(`/${file}.`)) continue;
       for (const name of names) {
-        const pattern = new RegExp(`function ${name}\\(`);
-        if (!pattern.test(source)) throw new Error(`Cannot instrument ${name}`);
+        const pattern = new RegExp(`(export\\s+)?function ${name}\\(`);
+        const declaration = source.match(pattern);
+        if (!declaration) throw new Error(`Cannot instrument ${name}`);
+        const exported = declaration[1] ? "export " : "";
         source = source.replace(pattern, `function __r10_${name}(`);
-        source += `\nfunction ${name}(...args) { const result = __r10_${name}(...args); globalThis.__r10Capture(${JSON.stringify(name)}, args, result); return result; }\n`;
+        source += `\n${exported}function ${name}(...args) { const result = __r10_${name}(...args); globalThis.__r10Capture(${JSON.stringify(name)}, args, result); return result; }\n`;
       }
     }
     if (url.includes('/custom-section-endpoint.')) {

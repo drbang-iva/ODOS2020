@@ -10,6 +10,7 @@ import { buildExamOverviewProjection } from "../src/clinical-graph/exam-overview
 import { findingInstancesFromObservation } from "../src/clinical-graph/diagnosis-candidates-endpoint.js";
 import { classifyFindingObservation, observationLaterality } from "../src/clinical-graph/current-finding-identity.js";
 import { buildFindingReadAliases } from "../src/clinical-graph/finding-read-aliases.js";
+import { keyFindingSatisfied } from "./fixtures/r10/completeness-predicate.mjs";
 const clean=(v:unknown)=>JSON.parse(JSON.stringify(v));
 const captures=baseline.captures;
 const recorded: Record<string, unknown> = {};
@@ -77,7 +78,11 @@ for(const [i,c] of captures.entries()){
       const reasons=divergenceReasons([observation],definitions,p);
       compare(i+1,c,next,c.result,reasons,p);
     }else if(c.kind==="keyFindingSatisfied"){
-      const [entry,definition,current,historical]=c.args;
+      const [entry,definition,current,historical,capturedNow]=c.args;
+      const now = new Date(capturedNow);
+      assert.deepEqual(keyFindingSatisfied(entry,definition,current,historical,now),c.result);
+      const projected = (observations:any[]) => observations.flatMap(o => project([o],[definition]).definitionViews);
+      assert.deepEqual(keyFindingSatisfied(entry,definition,projected(current),projected(historical),now),c.result);
       for(const o of [...current,...historical]){
         const p=project([o],[definition]);
         assert.deepEqual(clean(p.definitionViews.map(({projectionKey,contributors,...r})=>r)),[o]);
@@ -94,4 +99,28 @@ test("E1–E17 reproduce the original writer/read behaviors and assert the A1 pr
   const lines=output.trim().split("\n").map(line=>JSON.parse(line));
   assert.equal(lines.filter(row=>row.probe).length,17);
   assert.equal(lines.filter(row=>row.a1Probe&&row.status==="PASS").length,17);
+});
+
+test("capture instrumentation preserves named exports and executes their wrappers", async () => {
+  const {execFileSync}=await import("node:child_process");
+  const {mkdtempSync,rmSync}=await import("node:fs");
+  const {tmpdir}=await import("node:os");
+  const {join}=await import("node:path");
+  const directory=mkdtempSync(join(tmpdir(),"r10-capture-"));
+  const destination=join(directory,"captures.jsonl");
+  try {
+    execFileSync(process.execPath,["--import","tsx","--import",new URL("./fixtures/r10/capture-baseline.mjs",import.meta.url).pathname,"--input-type=module","-e",`
+      import assert from 'node:assert/strict';
+      import { baseline } from './tests/fixtures/r10/baseline.ts';
+      import { buildExamOverviewProjection } from './src/clinical-graph/exam-overview-projection.ts';
+      import { findingInstancesFromObservation } from './src/clinical-graph/diagnosis-candidates-endpoint.ts';
+      for (const [name,fn] of Object.entries({buildExamOverviewProjection,findingInstancesFromObservation})) {
+        assert.equal(typeof fn,'function');
+        const capture=baseline.captures.find(c=>c.kind===name);
+        assert.deepEqual(JSON.parse(JSON.stringify(fn(...capture.args))),capture.result);
+      }
+    `],{env:{...process.env,R10_BASELINE_OUTPUT:destination},stdio:"pipe"});
+    const captured=readFileSync(destination,"utf8").trim().split("\n").map(line=>JSON.parse(line));
+    assert.deepEqual(captured.map(c=>c.kind).sort(),["buildExamOverviewProjection","findingInstancesFromObservation"].sort());
+  } finally { rmSync(directory,{recursive:true,force:true}); }
 });

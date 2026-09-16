@@ -238,5 +238,46 @@
     "originalSha256": "6f301984a39ddbb4646f3de03175699526a2686eebe9b34730ac7cfe34dea318",
     "mutantSha256": "ef1e7cd28493fab85aeaeb947f99d7e256be2aa96e225c865b6d96ff163fed19",
     "restoredSha256": "6f301984a39ddbb4646f3de03175699526a2686eebe9b34730ac7cfe34dea318"
+  },
+  {
+    "guard": "F1",
+    "file": "mcp/src/clinical-graph/diagnosis-completeness-endpoint.ts",
+    "before": "return observations.some",
+    "mutation": "return !observations.some",
+    "command": "node --import tsx --test --test-name-pattern=keyFindingSatisfied tests/r10-parity.test.ts",
+    "redExit": 1,
+    "greenExit": 0,
+    "result": "10 completeness assertions fail"
+  },
+  {
+    "guard": "F2a",
+    "file": "mcp/scripts/r10-preflight.mjs",
+    "before": "reload/diff retry",
+    "mutation": "return mutate(role, originalCommand.presence) before re-diff",
+    "command": "node --import tsx mcp/scripts/r10-preflight.mjs p7",
+    "redExit": 2,
+    "greenExit": 0,
+    "result": "both roles: 2 FHIR writes != 0; restored both roles: 0 retry writes, 0 conflict retry writes"
+  },
+  {
+    "guard": "F2b",
+    "file": "mcp/scripts/r10-preflight.mjs",
+    "before": "conflict return",
+    "mutation": "return mutate(role, originalCommand.presence) on version conflict",
+    "command": "node --import tsx mcp/scripts/r10-preflight.mjs p7",
+    "redExit": 2,
+    "greenExit": 0,
+    "result": "both roles: 2 FHIR writes != 0; restored both roles: 0 retry writes, 0 conflict retry writes"
+  },
+  {
+    "guard": "registry",
+    "command": "node --import tsx --test tests/preflight/preflight-lint.test.ts",
+    "mutation": "delete supports-diagnosis registry entry",
+    "redExit": 1,
+    "redPass": 17,
+    "redFail": 1,
+    "greenExit": 0,
+    "greenPass": 18,
+    "greenFail": 0
   }
 ]

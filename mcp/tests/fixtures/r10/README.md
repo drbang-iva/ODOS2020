@@ -18,3 +18,7 @@ Nine incidental, randomly generated definition UUIDs contained ten consecutive d
 `premise-replay.ts` replays the original review's E1–E17 with synthetic transport and the actual existing production writers/readers, then checks 17 corresponding A1 outcomes. Its transport does not prove live policy behavior. That evidence is the separate P1–P7 live preflight.
 
 The additional identity/reader tests cover canonical owners/clear markers, OU overlaps, qualifier equality, latest-snapshot omission/ties, UNKNOWN, negative/panel roles, both sources of homes, stale pages, immutability, and multiple option fields. `field-identities.json` pins every compiled ocular structure's fields and three sampled atomic IDs per structure; stored overrides are deliberately separate.
+
+The completeness captures invoke the real private `keyFindingSatisfied` through a test-only module export, on captured and projected arguments (rehydrating the captured Date). The capture-export test executes both publicly exported wrappers and checks that both captures are emitted.
+
+`R10_RECORD_DIVERGENCES=1` regenerates `parity-divergences.json` in place. Every change to that file requires line-by-line independent review; regeneration alone does not authorize or validate a new difference.
