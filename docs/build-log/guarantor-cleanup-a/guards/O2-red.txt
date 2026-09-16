@@ -5,7 +5,7 @@ not ok 1 - O2 real create then discard stays hidden and second discard refuses w
   ---
   duration_ms: 39.106333
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:2931'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:2931'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -40,9 +40,9 @@ not ok 1 - O2 real create then discard stays hidden and second discard refuses w
       lastUpdated: ''
   operator: 'deepStrictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:35:74)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:35:74)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

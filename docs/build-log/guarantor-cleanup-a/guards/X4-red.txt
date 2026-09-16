@@ -5,7 +5,7 @@ not ok 1 - X4 X6 real discard between registration precheck and engine attach pr
   ---
   duration_ms: 38.939667
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorRegistrationAttach.test.ts:1:15932'
+  location: '<repo>/mcp/tests/guarantorRegistrationAttach.test.ts:1:15932'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -20,7 +20,7 @@ not ok 1 - X4 X6 real discard between registration precheck and engine attach pr
   actual: 'pending'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorRegistrationAttach.test.ts:394:44)
+    TestContext.<anonymous> (<repo>/mcp/tests/guarantorRegistrationAttach.test.ts:394:44)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)

@@ -5,7 +5,7 @@ not ok 1 - O1 linked Person cannot be listed or discarded
   ---
   duration_ms: 28.34675
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:2598'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:2598'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -62,9 +62,9 @@ not ok 1 - O1 linked Person cannot be listed or discarded
       lastUpdated: ''
   operator: 'deepStrictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:30:61)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:30:61)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

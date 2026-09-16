@@ -6,7 +6,7 @@ not ok 1 - U1 preview distinguishes only the selected textable number
   ---
   duration_ms: 18.752417
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a-ui/ui/tests/guarantorSearchScreens.test.tsx:1:16361'
+  location: '<repo>/ui/tests/guarantorSearchScreens.test.tsx:1:16361'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -29,8 +29,8 @@ not ok 1 - U1 preview distinguishes only the selected textable number
     1: 'Texting: no textable number selected'
   operator: 'deepStrictEqual'
   stack: |-
-    screen.draft.expected.Person/D (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a-ui/ui/tests/guarantorSearchScreens.test.tsx:76:113)
-    async screen (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a-ui/ui/tests/guarantorSearchScreens.test.tsx:32:152)
+    screen.draft.expected.Person/D (<repo>/ui/tests/guarantorSearchScreens.test.tsx:76:113)
+    async screen (<repo>/ui/tests/guarantorSearchScreens.test.tsx:32:152)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

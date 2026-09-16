@@ -18,13 +18,62 @@ async function harness(fn: (f: ReturnType<typeof fixture>, request: (path: strin
  f.deps.serviceFhir.searchProject = async (...args) => json(await search(...args));
  f.deps.serviceFhir.executeTransactionAsActor = async (bundle,...args) => json(await write(json(bundle),...args));
  for (const [key,value] of f.data) f.data.set(key,json(value));
- const app=express();app.use(express.json());registerGuarantorRoutes(app,{...f.deps,authenticateService:async()=>{},authenticate:async()=>({...staff,businessActions:permitted?staff.businessActions:[]}),serviceFhir:{...f.deps.serviceFhir,getAuthenticatedProfileReference:async()=>f.deps.serviceReference}} as never);
+ const app=express();app.use(express.json());registerGuarantorRoutes(app,{...f.deps,recordAudit:(row:any)=>f.deps.recordAudit(row),authenticateService:async()=>{},authenticate:async()=>({...staff,businessActions:permitted?staff.businessActions:[]}),serviceFhir:{...f.deps.serviceFhir,getAuthenticatedProfileReference:async()=>f.deps.serviceReference}} as never);
  const server=app.listen(0,"127.0.0.1");await new Promise<void>(r=>server.once("listening",r));
  const request=async(path:string,body?:unknown)=>{const r=await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}/guarantors${path}`,body===undefined?{}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});return {status:r.status,body:await r.json().catch(()=>undefined)};};
  try { await fn(f,request); invariant(f); } finally { await new Promise<void>(r=>server.close(()=>r())); }
 }
 async function create(request:any) { const r=await request("",{firstName:"Synthetic",lastName:"Unused",birthDate:"1980-01-01"});assert.equal(r.status,201);return r.body as {personId:string;versionId:string}; }
 const discard=(request:any,p:{personId:string;versionId:string})=>request(`/${p.personId}/discard`,{expectedVersion:p.versionId,reason:"Synthetic unused record"});
+
+for (const kind of ['attach','transfer','consolidate'] as const) for (const terminal of ['completed','undone-completed','undone-before-link','failed'] as const) test(`O15 ${kind} ${terminal}: real terminal writers cannot act on an active zero-link Person`, async()=>harness(async(f,request)=>{
+ const p=await create(request);
+ if(kind==='attach')f.compete('Person/S',r=>({...r,active:false,link:[]}));
+ const input={operationId:randomUUID(),kind,...kind==='attach'?{}:{sourcePersonId:'S'},destinationPersonId:p.personId,relatedPersonIds:['r1'],expected:{...kind==='attach'?{}:{'Person/S':f.get<Person>('Person/S').meta!.versionId},[`Person/${p.personId}`]:p.versionId,'RelatedPerson/r1':'1'},reason:'O15 terminal matrix'};
+ if(terminal==='failed')f.beforeWrite=async w=>{if(w.resource.resourceType==='RelatedPerson'){f.beforeWrite=undefined;f.compete('RelatedPerson/r1',r=>({...r}));}};
+ if(terminal==='undone-before-link')f.beforeWrite=async w=>{if(w.resource.resourceType==='Person'&&w.resource.id===p.personId)throw new Error('O15 stop before attaching');};
+ const original:any=await run(f,'create',input);f.beforeWrite=undefined;
+ assert.equal(original.status,terminal==='failed'||terminal==='undone-before-link'?409:200);
+ if(terminal.startsWith('undone')){const correction:any=await run(f,'correct',{operationId:randomUUID(),reason:'O15 Undo'},original.body.task.id);assert.equal(correction.status,200);assert.equal(correction.body.task.status,'completed');}
+ const tasks=[...f.data.values()].filter((r):r is Task=>r.resourceType==='Task');
+ assert.equal(f.get<Task>(`Task/${original.body.task.id}`).status,terminal==='failed'?'failed':terminal.startsWith('undone')?'cancelled':'completed');
+ assert.ok(tasks.every(t=>t.status!=='in-progress'));
+ const persons=[...new Set(tasks.flatMap(t=>(t.input??[]).filter(i=>['source','destination'].includes(i.type.text??'')).map(i=>i.valueReference!.reference!)))].map(ref=>f.get<Person>(ref));
+ const unused=persons.filter(p=>p.active!==false&&!p.link?.length);
+ for(const person of unused)for(const task of tasks.filter(t=>t.input?.some(i=>['source','destination'].includes(i.type.text??'')&&i.valueReference?.reference===`Person/${person.id}`))){
+  const before=f.writes.length;
+  assert.equal((await run(f,'complete',undefined,task.id)).status,409);
+  assert.ok([409,422].includes((await run(f,'correct',{operationId:randomUUID(),reason:'O15 terminal refusal'},task.id)).status));
+  assert.equal(f.writes.length,before,'terminal Complete/Correct cannot act on an orphan');
+ }
+ console.log(JSON.stringify({guard:'O15',kind,terminal,tasks:tasks.map(t=>({kind:t.input?.find(i=>i.type.text==='kind')?.valueCode,status:t.status})),persons:persons.map(p=>({id:p.id,active:p.active,links:p.link?.length??0})),activeZeroLink:unused.length}));
+ for(const person of unused){
+  const listed=await request('/unused');assert.equal(listed.status,200);assert.ok(listed.body.some((row:any)=>row.personId===person.id),'O11 terminal history does not hide an orphan');
+  assert.equal((await discard(request,{personId:person.id!,versionId:person.meta!.versionId!})).status,200,'O11 terminal orphan is discardable');
+ }
+}));
+
+test('O12 1001 real terminal Tasks do not block discarding a fresh orphan',async()=>harness(async(f,request)=>{
+ const p=await create(request);f.compete('Person/S',r=>({...r,active:false,link:[]}));
+ for(let i=0;i<1001;i++){
+  f.beforeWrite=async w=>{if(w.resource.resourceType==='RelatedPerson'){f.beforeWrite=undefined;f.compete('RelatedPerson/r1',r=>({...r}));}};
+  const result:any=await run(f,'create',{operationId:randomUUID(),kind:'attach',destinationPersonId:p.personId,relatedPersonIds:['r1'],expected:{[`Person/${p.personId}`]:p.versionId,'RelatedPerson/r1':f.get<RelatedPerson>('RelatedPerson/r1').meta!.versionId},reason:'O12 real failed operation'});
+  assert.equal(result.body.task.status,'failed');
+ }
+ assert.equal([...f.data.values()].filter(r=>r.resourceType==='Task').length,1001);
+ const fresh=await create(request);assert.equal((await discard(request,fresh)).status,200);
+}));
+
+test('O14 secondary audit failure returns landed discard and logs it',async()=>harness(async(f,request)=>{
+ const p=await create(request);const logs:unknown[][]=[];const warn=console.warn;
+ f.deps.recordAudit=async()=>{throw new Error('Synthetic secondary audit unavailable');};
+ console.warn=(...args)=>{logs.push(args);};
+ try{
+  const result=await discard(request,p);assert.equal(result.status,200);assert.equal(f.get<Person>(`Person/${p.personId}`).active,false);
+  assert.ok(logs.some(args=>String(args[0]).includes('secondary audit')));
+  assert.match(JSON.stringify(f.writes.at(-1)!.actor),/Synthetic unused record/);
+ }finally{console.warn=warn;}
+}));
 
 test("O1 linked Person cannot be listed or discarded",async()=>harness(async(f,request)=>{
  assert.equal((await request('/unused')).status,200);assert.deepEqual((await request('/unused')).body,[]);
@@ -76,9 +125,12 @@ for (const kind of ['attach','transfer','consolidate'] as const) test(`X1 X3 X6 
  }};
  const discarded=await discard(request,p);assert.equal(discarded.status,200);resume();const started=await attach!;f.afterWrite=undefined;
  assert.equal(started.status,409);assert.equal(started.body.phase,'attach-pending');invariant(f);
- const n=f.writes.length;const completed:any=await run(f,'complete',undefined,started.body.task.id);invariant(f);
+ const n=f.writes.length;const audits=f.audits.length;const completed:any=await run(f,'complete',undefined,started.body.task.id);invariant(f);
  assert.equal(completed.status,409);assert.equal(completed.body.phase,'destination-inactive');assert.equal(completed.body.target,`Person/${p.personId}`);assert.equal(completed.body.error,'The guarantor chosen for this change was discarded. Undo this change, then choose a guarantor.');
- assert.equal(f.writes.length,n,'inactive Complete writes nothing');assert.equal(f.get<Person>(`Person/${p.personId}`).active,false);assert.equal(f.get<Person>(`Person/${p.personId}`).link?.length??0,0);assert.deepEqual(f.owners('r1'),[]);invariant(f);
+ assert.equal(f.get<Task>(`Task/${started.body.task.id}`).businessStatus?.text,'destination-inactive','X1+ stored Task phase');
+ const status:any=await run(f,'status',undefined,started.body.task.id);assert.equal(status.body.phase,'destination-inactive','X1+ status endpoint');
+ assert.equal(f.audits.length,audits+1,'X1+ one pending audit');assert.match(JSON.stringify(f.audits.at(-1)),/guarantor.link.pending/);assert.match(JSON.stringify(f.audits.at(-1)),/phase=destination-inactive/);
+ assert.equal(f.writes.length,n+1,'inactive Complete writes only its Task checkpoint');assert.equal(f.writes.at(-1)!.resource.resourceType,'Task');assert.equal(f.get<Person>(`Person/${p.personId}`).active,false);assert.equal(f.get<Person>(`Person/${p.personId}`).link?.length??0,0);assert.deepEqual(f.owners('r1'),[]);invariant(f);
  const undone:any=await run(f,'correct',{operationId:randomUUID(),reason:'Undo discarded destination'},started.body.task.id);assert.equal(undone.status,200);assert.equal(undone.body.task.status,'completed');
  assert.equal(f.get<RelatedPerson>('RelatedPerson/r1').extension?.filter(e=>e.url.endsWith('/guarantor-link-claim')).length??0,0);
  assert.deepEqual(f.owners('r1'),kind==='attach'?[]:['S']);assert.equal(f.get<Person>(`Person/${p.personId}`).active,false);assert.equal(f.get<Person>(`Person/${p.personId}`).link?.length??0,0);
@@ -88,6 +140,23 @@ test("X2 attaching write wins; discard If-Match refuses with no inactive write",
  const p=await create(request);f.compete('Person/S',r=>({...r,active:false,link:[]}));let attached=false;
  f.beforeWrite=async w=>{if(w.resource.resourceType==='Person'&&(w.resource as Person).active===false){f.beforeWrite=undefined;const started:any=await run(f,'create',{operationId:randomUUID(),kind:'attach',destinationPersonId:p.personId,relatedPersonIds:['r1'],expected:{[`Person/${p.personId}`]:p.versionId,'RelatedPerson/r1':'1'},reason:'Attach wins'});assert.equal(started.status,200);attached=true;}};
  const result=await discard(request,p);assert.equal(attached,true);assert.equal(result.status,409);assert.equal(f.get<Person>(`Person/${p.personId}`).active,true);assert.deepEqual(f.owners('r1'),[p.personId]);assert.equal(f.writes.filter(w=>w.resource.resourceType==='Person'&&(w.resource as Person).active===false&&w.status===200).length,0);
+}));
+
+test('X7 attach rebuild directly refuses a service-level inactivation after fencing',async()=>harness(async(f,request)=>{
+ const p=await create(request);f.compete('Person/S',r=>({...r,active:false,link:[]}));
+ f.beforeWrite=async w=>{if(w.resource.resourceType==='Person'&&w.resource.id===p.personId)throw new Error('Pause initial attaching write');};
+ const started:any=await run(f,'create',{operationId:randomUUID(),kind:'attach',destinationPersonId:p.personId,relatedPersonIds:['r1'],expected:{[`Person/${p.personId}`]:p.versionId,'RelatedPerson/r1':'1'},reason:'X7 rebuild boundary'});
+ assert.equal(started.body.phase,'attach-pending');let fenced=false,inactivated=false;
+ f.afterWrite=async w=>{if(w.resource.resourceType==='Person'&&w.resource.id===p.personId&&w.status===200&&(w.actor as any).actionReason.startsWith('guarantor.link fence-destination '))fenced=true;};
+ f.beforeWrite=async w=>{
+  if(fenced&&w.resource.resourceType==='Person'&&w.resource.id===p.personId&&(w.resource as Person).link?.length){
+   f.beforeWrite=undefined;f.compete(`Person/${p.personId}`,r=>({...r,active:false}),f.deps.serviceReference);inactivated=true;
+  }
+ };
+ const result:any=await run(f,'complete',undefined,started.body.task.id);invariant(f);
+ assert.equal(fenced,true);assert.equal(inactivated,true);assert.equal(result.status,409);assert.equal(result.body.phase,'destination-inactive');
+ assert.equal(f.get<Task>(`Task/${started.body.task.id}`).businessStatus?.text,'destination-inactive');assert.equal(f.get<Person>(`Person/${p.personId}`).link?.length??0,0);
+ assert.deepEqual(f.owners('r1'),[]);
 }));
 for(const kind of ['attach','transfer','consolidate'] as const)for(const action of ['draft','preview','create'])test(`O9 ${action} ${kind} refuses real discarded Person before writes`,async()=>harness(async(f,request)=>{
  const p=await create(request);const discarded=await discard(request,p);assert.equal(discarded.status,200);if(kind==='attach')f.compete('Person/S',r=>({...r,active:false,link:[]}));

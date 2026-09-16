@@ -24,6 +24,7 @@ const events = [], transactions = [], checks = [], cases = [];
 const patients = [];
 let scenario = 'setup', failed = 0, fatal;
 let beforeTransaction, afterTransaction, afterResponse;
+let failSecondaryAudit = false;
 function responseEvidence(value, path) {
   if (path !== '/auth/me') return resourceEvidence(value);
   return { evidenceProjection: 'Authentication identity, membership and Person/Task policy rules only; full response digest retained',
@@ -86,7 +87,7 @@ registerGuarantorRoutes(app, {
   authenticateService: async () => { assert.equal(await serviceFhir.getAuthenticatedProfileReference(), fixture.serviceReference); },
   authenticate: header => authenticateStaffRoute({ baseUrl: fixture.baseUrl, authHeader: header, serviceClient: serviceFhir, audit }),
   serviceFhir: instrumentedFhir,
-  recordAudit: row => audit.record(row, () => undefined),
+  recordAudit: row => { if (failSecondaryAudit) throw new Error('Synthetic secondary audit unavailable'); return audit.record(row, () => undefined); },
 });
 const server = await new Promise((accept, reject) => { const server = app.listen(PORTS.proof, '127.0.0.1', () => accept(server)); server.once('error', reject); })
   .catch(async error => { await audit.close(); globalThis.fetch = originalFetch; throw error; });
@@ -145,7 +146,11 @@ try{
   beforeTransaction=async tx=>{if(tx.runner==='discard'&&tx.target===`Person/${f.destination.personId}`){beforeTransaction=undefined;attachPromise=attach(f,kind);await bounded(recorded.promise);}};
   let discarded,started;try{discarded=await discard(f.destination);check('discard wins200',discarded.status,200);resume.resolve();started=await attachPromise;}finally{resume.resolve();beforeTransaction=afterTransaction=undefined;}
   check('initial attach paused',[started.status,started.body.phase],[409,'attach-pending']);const first=transactions.length;
-  const completed=await route(`/link-operations/${started.body.task.id}/complete`,undefined,'complete');check('Complete refuses',[completed.status,completed.body.phase],[409,'destination-inactive']);check('Complete no transaction writes',transactions.length-first,0);
+  const completed=await route(`/link-operations/${started.body.task.id}/complete`,undefined,'complete');check('Complete refuses',[completed.status,completed.body.phase],[409,'destination-inactive']);check('Complete one Task checkpoint',transactions.length-first,1);
+  check('X1+ stored phase',(await read('Task',started.body.task.id)).businessStatus.text,'destination-inactive');
+  check('X1+ status endpoint',(await route(`/link-operations/${started.body.task.id}`)).body.phase,'destination-inactive');
+  const pending=(await audit.queryRows({from:startedAt,limit:10000})).filter(row=>row.eventType==='guarantor.link.pending'&&row.actionReason.includes(`Task/${started.body.task.id}`)&&row.actionReason.includes('phase=destination-inactive'));
+  check('X1+ exactly one pending audit',pending.length,1);
   const paused=await snapshot(f);check('discarded zero links',[paused.destination.active,paused.destination.link?.length??0],[false,0]);check('paused no owner',paused.owners,[]);
   const corrected=await undo(started.body.task.id);check('existing Undo200',corrected.status,200);const final=await snapshot(f);check('claim released',final.child.extension?.filter(e=>e.url===CLAIM).length??0,0);check('Undo ownership',final.owners,kind==='attach'?[]:[f.source.personId]);return {discarded,started,completed,corrected,paused,final};
  });
@@ -153,6 +158,25 @@ try{
   const f=await family('Attach wins');let attached;
   beforeTransaction=async tx=>{if(tx.runner==='discard'&&tx.target===`Person/${f.destination.personId}`){beforeTransaction=undefined;attached=await attach(f);check('attach200',attached.status,200);}};
   const discarded=await discard(f.destination);beforeTransaction=undefined;check('discard loses409',discarded.status,409);const final=await snapshot(f);check('active owned',[final.destination.active,final.owners],[true,[f.destination.personId]]);return {attached,discarded,final};
+ });
+ await run('O11-attach-undone-before-link',async()=>{
+  const f=await family('Undo before link');
+  beforeTransaction=async tx=>{if(tx.phase==='attaching'&&tx.target===`Person/${f.destination.personId}`)throw new Error('Synthetic failure before linking');};
+  let started;try{started=await attach(f);}finally{beforeTransaction=undefined;}
+  check('attach pending',started.body.phase,'attach-pending');const corrected=await undo(started.body.task.id);check('Undo200',corrected.status,200);
+  const before=await snapshot(f);check('unused active',[before.destination.active,before.destination.link?.length??0],[true,0]);
+  check('listed after Undo',(await route('/unused')).body.some(p=>p.personId===f.destination.personId),true);
+  const discarded=await discard({...f.destination,versionId:before.destination.meta.versionId});check('discard after Undo200',discarded.status,200);const final=await snapshot(f);check('inactive after discard',final.destination.active,false);
+  return {started,corrected,before,discarded,final};
+ });
+ await run('O14-secondary-audit-failure',async()=>{
+  const p=await person('Secondary audit failure');let result;failSecondaryAudit=true;
+  try{result=await discard(p);}finally{failSecondaryAudit=false;}
+  check('landed discard200',result.status,200);const final=await read('Person',p.personId);check('inactive',final.active,false);
+  const rows=await audit.queryRows({from:startedAt,limit:10000});
+  const primary=rows.filter(row=>row.actionReason===`guarantor.link discard Person; Synthetic ${scenario} cleanup`&&row.eventType!=='guarantor.link.completed');
+  check('authoritative write-level audit',primary.length,1);check('authoritative staff actor',primary[0].actorId,fixture.principals.composite.profileReference.split('/')[1]);
+  return {result,final,primary};
  });
 }catch(error){fatal={name:error.name,message:error.message,stack:error.stack};failed++;}
 finally{

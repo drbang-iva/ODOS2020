@@ -353,11 +353,11 @@ class Run {
     await this.checkpointTask("in-progress", this.task.businessStatus?.text ?? intent.phase);
     if (disposition === "landed") await this.audit("pending", `recovered-${intent.phase}`, intent.target, writer);
   }
-  refuseInactiveDestination(destination: Person): void {
-    if (this.plan.kind !== "correct" && destination.active === false) throw new Paused("destination-inactive", reference(destination));
+  async refuseInactiveDestination(destination: Person): Promise<void> {
+    if (this.plan.kind !== "correct" && destination.active === false) await this.pause("destination-inactive", reference(destination));
   }
   async classifyAndFence(): Promise<void> {
-    if (this.loaded.destination) this.refuseInactiveDestination(await this.operation.read<Person>("Person", this.loaded.destination.id!));
+    if (this.loaded.destination) await this.refuseInactiveDestination(await this.operation.read<Person>("Person", this.loaded.destination.id!));
     const unresolved = this.journal.intents.filter(i => !i.disposition);
     for (const intent of unresolved.filter(i => i.target.startsWith("RelatedPerson/"))) {
       const child = await this.operation.read<RelatedPerson>("RelatedPerson", intent.target.slice(14));
@@ -368,7 +368,7 @@ class Run {
     const epoch = randomUUID();
     for (const key of (["source", "destination"] as const).filter(key => this.loaded[key])) {
       const current = await this.operation.read<Person>("Person", this.loaded[key]!.id!);
-      if (key === "destination") this.refuseInactiveDestination(current);
+      if (key === "destination") await this.refuseInactiveDestination(current);
       const candidates = unresolved.filter(i => i.target === reference(current));
       const intent = candidates[candidates.length - 1];
       const fenced = (p: Person) => withExtension(p, GUARANTOR_EPOCH_URL, { url: GUARANTOR_EPOCH_URL, valueString: epoch });
@@ -378,7 +378,7 @@ class Run {
       } catch (error) {
         if (!intent || definiteStatus(error) !== 412) return this.pause("recovery-conflict", reference(current));
         const fresh = await this.operation.read<Person>("Person", current.id!);
-        if (key === "destination") this.refuseInactiveDestination(fresh);
+        if (key === "destination") await this.refuseInactiveDestination(fresh);
         if (!intentMatches(fresh, intent)) return this.pause("interfered", intent.target);
         await this.resolve(intent, "landed", fresh.meta?.author?.reference);
         try { this.loaded[key] = await this.write(`fence-${key}`, fenced(fresh)); }
@@ -516,7 +516,7 @@ class Run {
     }
     if (!this.loaded.destination) return this.verifyUnlinkAndRelease();
     const attach = async (destination: Person): Promise<Person> => {
-      this.refuseInactiveDestination(destination);
+      await this.refuseInactiveDestination(destination);
       for (const id of pendingIds) {
         const owners = await this.operation.owners(id);
         if (owners.some(p => p.id !== destination.id)) return this.pause("interfered", `RelatedPerson/${id}`);

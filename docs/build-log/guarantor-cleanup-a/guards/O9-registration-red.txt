@@ -5,7 +5,7 @@ not ok 1 - O9 registration initially sees a real discarded Person and writes no 
   ---
   duration_ms: 33.754084
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorRegistrationAttach.test.ts:1:17950'
+  location: '<repo>/mcp/tests/guarantorRegistrationAttach.test.ts:1:17950'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -18,7 +18,7 @@ not ok 1 - O9 registration initially sees a real discarded Person and writes no 
   actual: 201
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorRegistrationAttach.test.ts:408:10)
+    TestContext.<anonymous> (<repo>/mcp/tests/guarantorRegistrationAttach.test.ts:408:10)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)

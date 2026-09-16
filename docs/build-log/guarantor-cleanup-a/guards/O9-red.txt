@@ -5,7 +5,7 @@ not ok 1 - O9 draft attach refuses real discarded Person before writes
   ---
   duration_ms: 38.816958
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:10521'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:10521'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -18,9 +18,9 @@ not ok 1 - O9 draft attach refuses real discarded Person before writes
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:95:75)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:95:75)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -29,7 +29,7 @@ not ok 2 - O9 preview attach refuses real discarded Person before writes
   ---
   duration_ms: 7.152125
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:10521'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:10521'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -42,9 +42,9 @@ not ok 2 - O9 preview attach refuses real discarded Person before writes
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:95:75)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:95:75)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -53,7 +53,7 @@ not ok 3 - O9 create attach refuses real discarded Person before writes
   ---
   duration_ms: 11.812792
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:10521'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:10521'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -66,9 +66,9 @@ not ok 3 - O9 create attach refuses real discarded Person before writes
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:95:75)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:95:75)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -77,7 +77,7 @@ not ok 4 - O9 draft transfer refuses real discarded Person before writes
   ---
   duration_ms: 4.879958
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:10521'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:10521'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -90,9 +90,9 @@ not ok 4 - O9 draft transfer refuses real discarded Person before writes
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:95:75)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:95:75)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -101,7 +101,7 @@ not ok 5 - O9 preview transfer refuses real discarded Person before writes
   ---
   duration_ms: 7.529625
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:10521'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:10521'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -114,9 +114,9 @@ not ok 5 - O9 preview transfer refuses real discarded Person before writes
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:95:75)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:95:75)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -125,7 +125,7 @@ not ok 6 - O9 create transfer refuses real discarded Person before writes
   ---
   duration_ms: 4.585291
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:10521'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:10521'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -138,9 +138,9 @@ not ok 6 - O9 create transfer refuses real discarded Person before writes
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:95:75)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:95:75)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -149,7 +149,7 @@ not ok 7 - O9 draft consolidate refuses real discarded Person before writes
   ---
   duration_ms: 3.28275
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:10521'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:10521'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -162,9 +162,9 @@ not ok 7 - O9 draft consolidate refuses real discarded Person before writes
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:95:75)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:95:75)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -173,7 +173,7 @@ not ok 8 - O9 preview consolidate refuses real discarded Person before writes
   ---
   duration_ms: 2.905667
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:10521'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:10521'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -186,9 +186,9 @@ not ok 8 - O9 preview consolidate refuses real discarded Person before writes
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:95:75)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:95:75)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -197,7 +197,7 @@ not ok 9 - O9 create consolidate refuses real discarded Person before writes
   ---
   duration_ms: 4.475625
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:10521'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:10521'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -210,9 +210,9 @@ not ok 9 - O9 create consolidate refuses real discarded Person before writes
   actual: 409
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:95:75)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:95:75)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

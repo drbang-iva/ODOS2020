@@ -6,7 +6,7 @@ not ok 1 - U2 reopening Attach clears last first and phone search keys
   ---
   duration_ms: 10.61825
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a-ui/ui/tests/guarantorSearchScreens.test.tsx:1:15127'
+  location: '<repo>/ui/tests/guarantorSearchScreens.test.tsx:1:15127'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -29,8 +29,8 @@ not ok 1 - U2 reopening Attach clears last first and phone search keys
     1: '8645550102'
   operator: 'deepStrictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a-ui/ui/tests/guarantorSearchScreens.test.tsx:69:89)
-    async screen (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a-ui/ui/tests/guarantorSearchScreens.test.tsx:32:152)
+    <anonymous> (<repo>/ui/tests/guarantorSearchScreens.test.tsx:69:89)
+    async screen (<repo>/ui/tests/guarantorSearchScreens.test.tsx:32:152)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

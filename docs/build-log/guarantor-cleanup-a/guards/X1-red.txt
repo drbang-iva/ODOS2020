@@ -5,7 +5,7 @@ not ok 1 - X1 X3 X6 attach: discard wins after Task recording; Complete refuses;
   ---
   duration_ms: 46.762875
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:7204'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:7204'
   failureType: 'testCodeFailure'
   error: 'X6 G1: Person/6806e31e-c7c0-4472-b256-646c0fb1f2f1 is inactive with links'
   code: 'ERR_ASSERTION'
@@ -14,10 +14,10 @@ not ok 1 - X1 X3 X6 attach: discard wins after Task recording; Complete refuses;
   actual: false
   operator: '=='
   stack: |-
-    invariant (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:13:126)
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:79:101)
+    invariant (<repo>/mcp/tests/guarantorUnused.test.ts:13:126)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:79:101)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -26,7 +26,7 @@ not ok 2 - X1 X3 X6 transfer: discard wins after Task recording; Complete refuse
   ---
   duration_ms: 9.959375
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:7204'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:7204'
   failureType: 'testCodeFailure'
   error: 'X6 G1: Person/0039035d-ffdb-4dd1-924c-e2849881480d is inactive with links'
   code: 'ERR_ASSERTION'
@@ -35,10 +35,10 @@ not ok 2 - X1 X3 X6 transfer: discard wins after Task recording; Complete refuse
   actual: false
   operator: '=='
   stack: |-
-    invariant (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:13:126)
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:79:101)
+    invariant (<repo>/mcp/tests/guarantorUnused.test.ts:13:126)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:79:101)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -47,7 +47,7 @@ not ok 3 - X1 X3 X6 consolidate: discard wins after Task recording; Complete ref
   ---
   duration_ms: 9.1055
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:7204'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:7204'
   failureType: 'testCodeFailure'
   error: 'X6 G1: Person/f5bb12c6-0d30-41e1-8090-4bc68f465d97 is inactive with links'
   code: 'ERR_ASSERTION'
@@ -56,10 +56,10 @@ not ok 3 - X1 X3 X6 consolidate: discard wins after Task recording; Complete ref
   actual: false
   operator: '=='
   stack: |-
-    invariant (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:13:126)
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:79:101)
+    invariant (<repo>/mcp/tests/guarantorUnused.test.ts:13:126)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:79:101)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

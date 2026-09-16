@@ -73,7 +73,7 @@ function unusedPerson(person: Person, project: string, referenced: ReadonlySet<s
 }
 async function operationPersons(deps: GuarantorOperationDeps, project: string): Promise<Set<string>> {
   // The Task scan is a courtesy check, not an atomic reservation. The operation engine enforces G1.
-  const tasks = await searchProjectAll<Task>(deps.serviceFhir, "Task", project, { code: `${GUARANTOR_OPERATION_SYSTEM}|` });
+  const tasks = await searchProjectAll<Task>(deps.serviceFhir, "Task", project, { code: `${GUARANTOR_OPERATION_SYSTEM}|`, status: "in-progress" });
   return new Set(tasks.flatMap(task => {
     if (task.meta?.project?.replace(/^Project\//, "") !== project) throw new Error("Guarantor Task search returned a foreign-practice Task.");
     return (task.input ?? []).filter(input => input.type.text === "source" || input.type.text === "destination")
@@ -89,7 +89,7 @@ export async function listUnusedGuarantors(deps: GuarantorOperationDeps, staff: 
   const project = registrationProjectId(staff.project);
   try {
     const referenced = await operationPersons(deps, project);
-    const persons = await searchProjectAll<Person>(deps.serviceFhir, "Person", project);
+    const persons = await searchProjectAll<Person>(deps.serviceFhir, "Person", project, { "link:missing": "true" });
     return { status: 200, body: persons.filter(person => unusedPerson(person, project, referenced)).map(person => ({
       personId: person.id, versionId: person.meta?.versionId,
       name: person.name?.[0]?.text || [...person.name?.[0]?.given ?? [], person.name?.[0]?.family].filter(Boolean).join(" "),
@@ -118,8 +118,12 @@ export async function discardUnusedGuarantor(deps: GuarantorOperationDeps, staff
       if (/^412(?:\s|$)/.test(status)) throw Object.assign(new Error("Guarantor changed."), { status: 412 });
       if (result.entry?.length !== 1 || !/^2\d\d(?:\s|$)/.test(status)) throw new Error("Guarantor discard could not be confirmed.");
     } });
-    await deps.recordAudit(buildOdosAuditEventRow({ eventType: "guarantor.link.completed", eventTime: deps.now?.(), actorReference: staff.staffReference,
-      actorRole: staff.actorRole, resourceType: "Person", resourceId: personId, actionOutcome: "granted", actionReason }));
+    try {
+      await deps.recordAudit(buildOdosAuditEventRow({ eventType: "guarantor.link.completed", eventTime: deps.now?.(), actorReference: staff.staffReference,
+        actorRole: staff.actorRole, resourceType: "Person", resourceId: personId, actionOutcome: "granted", actionReason }));
+    } catch (error) {
+      console.warn("Guarantor discard secondary audit failed; write-level audit retained.", error);
+    }
     const entry = response.entry![0];
     const versionId = entry.resource?.meta?.versionId ?? entry.response?.location?.match(/\/_history\/([^/]+)/)?.[1];
     if (!versionId) throw new Error("Guarantor discard did not return a version. Reload before continuing.");

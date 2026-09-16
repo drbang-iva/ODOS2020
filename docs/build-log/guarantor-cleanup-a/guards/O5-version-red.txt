@@ -5,7 +5,7 @@ not ok 1 - O5 discard changes only active, uses fresh version, and audits staff 
   ---
   duration_ms: 34.853833
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:1:5565'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:5565'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,9 +17,9 @@ not ok 1 - O5 discard changes only active, uses fresh version, and audits staff 
   expected: '1'
   operator: 'strictEqual'
   stack: |-
-    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:55:117)
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:55:117)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    async harness (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/guarantor-cleanup-a/mcp/tests/guarantorUnused.test.ts:24:8)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
