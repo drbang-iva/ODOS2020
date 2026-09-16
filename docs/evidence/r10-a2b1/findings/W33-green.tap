@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: W28b retired revive links fresh and W33 offered retains revive baseline and same id
+ok 1 - W28b retired revive links fresh and W33 offered retains revive baseline and same id
+  ---
+  duration_ms: 10.255125
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 169.457959

@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: E1–E17 reproduce the original writer/read behaviors and assert the A1 projections
+ok 1 - E1–E17 reproduce the original writer/read behaviors and assert the A1 projections
+  ---
+  duration_ms: 272.652708
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 519.104833
