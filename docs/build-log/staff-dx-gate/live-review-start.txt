@@ -1,0 +1,1 @@
+{"composeProject":"staff-dx-gate-live","baseUrl":"http://127.0.0.1:28980","health":{"ok":true,"version":"5.1.30-9b1bd92","platform":"linux","runtime":"v24.18.1","postgres":true,"redis":true,"redisInstances":{"default":true}}}

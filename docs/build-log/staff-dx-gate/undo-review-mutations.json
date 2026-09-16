@@ -1,0 +1,41 @@
+{
+  "restoredDiffIdentical": true,
+  "results": [
+    {
+      "name": "undo-review-entry-mutation-red",
+      "exitCode": 1,
+      "cwd": "ui",
+      "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"undo ledger rejects|Undo ignores a previous\" tests/encounterUndo.test.tsx tests/examOverviewBoard.test.tsx",
+      "counts": [
+        "# tests 5",
+        "# pass 4",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "undo-review-scope-mutation-red",
+      "exitCode": 1,
+      "cwd": "ui",
+      "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"undo ledger rejects|Undo ignores a previous\" tests/encounterUndo.test.tsx tests/examOverviewBoard.test.tsx",
+      "counts": [
+        "# tests 5",
+        "# pass 1",
+        "# fail 4",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "undo-review-restored-green",
+      "exitCode": 0,
+      "cwd": "ui",
+      "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"undo ledger rejects|Undo ignores a previous\" tests/encounterUndo.test.tsx tests/examOverviewBoard.test.tsx",
+      "counts": [
+        "# tests 5",
+        "# pass 5",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  ]
+}

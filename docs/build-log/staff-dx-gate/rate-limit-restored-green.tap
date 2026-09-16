@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: registered diagnosis write routes share a rate limit before service or staff authentication
+ok 1 - registered diagnosis write routes share a rate limit before service or staff authentication
+  ---
+  duration_ms: 144.115458
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 680.926167

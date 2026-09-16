@@ -12,6 +12,7 @@ Staff diagnosis picks and diagnosis-door finding assertions now refuse before an
 - Original base: `40c19a9e442015e1d32396958b661394318713d2`; rebased main: `5f0a67922eb2bcf52a2ab60f99a9dbb810fad384`.
 - UI commit: `d6dc02d2` (cherry-picked from the task's isolated UI subtask).
 - Integrated implementation commit: `d7564d14c126f596b338c23cd124fc29a2a03cda`.
+- Review fixback implementation: `94ffeed4` (rate limiting, ledger validation and encounter-scoped Undo callbacks).
 - **Rebased: yes.** PR #607 merged during final packaging. The rebase had no conflicts; the full role-table file was rerun afterward, before opening this PR. Full backend/UI suites and live/browser proof were also rerun. The final pre-PR check is in `pre-pr-state.json`.
 - `roles.ts` has exactly three action-list additions: business action registry, credential-bound list, and Provider's actions. No resource rule changed; #607's Basic rules/resource-list insertion are untouched. `roles-only.diff` records this.
 
@@ -37,9 +38,9 @@ Commands ran in this task worktree. Larger raw outputs are gzip-compressed **wit
 
 | Check | Real result | Output |
 |---|---|---|
-| `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test` with `ODOS_POSTGRES_URL` supplied privately from this task's disposable stack | **5127 tests; 5075 pass; 0 fail; 52 skipped** | `mcp-rebased.tap.gz` |
-| `npm --prefix ui test` | **1613 tests; 1613 pass; 0 fail; 0 skipped** | `ui-rebased.tap.gz` |
-| `npm --prefix ui run build` | Exit 0; 331 modules transformed; built in 2.24s | `ui-build-rebased.txt` |
+| `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test` with `ODOS_POSTGRES_URL` supplied privately from this task's disposable stack | **5128 tests; 5076 pass; 0 fail; 52 skipped** | `mcp-review-fix.tap.gz` |
+| `npm --prefix ui test` | **1618 tests; 1618 pass; 0 fail; 0 skipped** | `ui-review-fix.tap.gz` |
+| `npm --prefix ui run build` | Exit 0; 331 modules transformed; built in 2.22s | `ui-build-review-fix.txt` |
 | `./mcp/node_modules/.bin/tsc --project mcp/tsconfig.json --noEmit` | Exit 0 | `mcp-typecheck-rebased.txt` |
 | Full role-table file: `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test -- tests/v05a-authz.test.ts` | **22 tests; 20 pass; 0 fail; 2 live skips** | `role-table-rebased.tap` |
 | Restored backend mutation targets | **244 tests; 242 pass; 0 fail; 2 live skips** | `mutations-restored-green.tap.gz` |
@@ -87,6 +88,22 @@ Browser limit: a proof harness registers the real selected handlers and real car
 - `clinical-graph requests share the literal Vite route and Medplum authorization helpers`: caller count 55→56.
 - `P0 assessment-search: immediate navigation uses a responsive in-app discard confirmation` and `P0 assessment-status: immediate navigation uses a responsive in-app discard confirmation`: shared provider fixture declares `canWriteDiagnosis: true`; assertions unchanged.
 - Exact UI fixture and assertion inventory is in `../staff-dx-gate-ui/README.md`. Client-created complexity Provenance expectations moved to the server test; response-envelope expectations gained the capability. No staff half-write expectation was relaxed.
+
+## PR review fixback
+
+CodeQL reported missing rate limits on the five inline diagnosis write routes (pick, order, complexity, visit status, newness). They now share the existing `express-rate-limit` dependency's 120-request/minute/IP budget, placed before service or staff authentication. No authorization scope or resource rules changed. `scripts/fhir-read-grant-check.ts` retains the same entries, with their exact source line locations refreshed.
+
+The new HTTP regression compiles the actual route registrations from `index.ts`, mounts their real endpoint handlers in Express, exhausts the shared budget across all five routes, and verifies 429 plus `Retry-After` without additional authentication calls. Initial RED: **28 passed, 1 failed** (`rate-limit-red.tap`). Gate/role/route regression GREEN: **62 passed, 0 failed, 2 existing live skips** (`rate-limit-green.tap`). Source-inventory checks: **21/21** (`rate-limit-inventory-green.tap`). MCP typecheck exited 0 (`rate-limit-typecheck.txt`).
+
+Mandate 17: deleting the limiter from each route separately produced **one failure per mutation**, with 401 instead of 429. Restoring the middleware returned **1/1**; the scratch diff was identical before and after. Procedure, commands and results: `rate-limit-mutations.mjs`, `rate-limit-mutations.json`, `rate-limit-mutation-*-red.tap`, `rate-limit-restored-green.tap`.
+
+CodeRabbit's two findings were reproduced and fixed. The Undo parser now rejects an entire slot with any malformed entry. Encounter-scoped callbacks cannot reset capabilities, replace a ledger, or submit an Undo after navigation to another encounter; mismatched ledgers do not expose Undo controls. Five regressions cover malformed entries, delayed clear failure, delayed ledger response, stale Undo invocation and delayed Undo response. Initial RED: **0 passed, 5 failed** (`undo-review-red.tap`); corrected GREEN: **5/5** (`undo-review-green.tap`). An initial green-run invocation used the root TypeScript settings and failed with `React is not defined`; running from `ui/`, as the package command does, resolved the runner mismatch without a production change (`undo-review-runner-error.tap`).
+
+Mandate 17 for these UI fixes: removing entry validation produced **1 failure**; disabling the current-encounter check produced **4 failures**; restoration returned **5/5**, with the scratch diff unchanged (`undo-review-mutations.mjs`, `undo-review-mutations.json`). Full backend rerun after the limiter: **5128 tests; 5076 passed, 0 failed, 52 skipped** (`mcp-review-fix.tap.gz`).
+
+After both review fixes, the full UI suite returned **1618/1618** and its typecheck/production build exited 0. All **13 real Medplum cases** and **three actual-route browser captures** were repeated at implementation commit `94ffeed4a791d80e67ba0aa3d38477330d1e0da3`; refreshed reports and images replace the earlier captures. The three containers were stopped again and retained.
+
+PR-Agent's ticket-compliance warning incorrectly treats the already-merged guarantor settings PR as this slice's specification. That PR is the rebase dependency; its guarantor DOB/age-of-majority implementation is inherited intact from main. No guarantor changes belong in this diagnosis action slice. This adjudication does not replace independent evaluation.
 
 ## Files and limits
 

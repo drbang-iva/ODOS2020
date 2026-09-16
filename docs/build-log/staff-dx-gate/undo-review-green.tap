@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: undo ledger rejects an entire slot containing an invalid entry before rendering
+ok 1 - undo ledger rejects an entire slot containing an invalid entry before rendering
+  ---
+  duration_ms: 12.825
+  type: 'test'
+  ...
+# Subtest: Undo ignores a previous encounter's late clear-failure
+ok 2 - Undo ignores a previous encounter's late clear-failure
+  ---
+  duration_ms: 73.7105
+  type: 'test'
+  ...
+# Subtest: Undo ignores a previous encounter's late ledger-response
+ok 3 - Undo ignores a previous encounter's late ledger-response
+  ---
+  duration_ms: 34.364542
+  type: 'test'
+  ...
+# Subtest: Undo ignores a previous encounter's late undo-click
+ok 4 - Undo ignores a previous encounter's late undo-click
+  ---
+  duration_ms: 23.286375
+  type: 'test'
+  ...
+# Subtest: Undo ignores a previous encounter's late undo-response
+ok 5 - Undo ignores a previous encounter's late undo-response
+  ---
+  duration_ms: 22.74775
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 420.503542

@@ -99,6 +99,28 @@
     ]
   },
   {
+    "path": "docs/build-log/staff-dx-gate/mcp-rebased.tap.gz",
+    "sha256": "831abc2735a8c895bd2a8a3ed1a1ab395fbe1da00d1708eef91f97fbc4a439db",
+    "counts": [
+      "# tests 5127",
+      "# pass 5075",
+      "# fail 0",
+      "# skipped 52",
+      "# duration_ms 79415.656292"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/mcp-review-fix.tap.gz",
+    "sha256": "6eb46ae05a254e6bdbfc81c7b43eeb86c4e121c65a6dddfc297d57f74fe13d21",
+    "counts": [
+      "# tests 5128",
+      "# pass 5076",
+      "# fail 0",
+      "# skipped 52",
+      "# duration_ms 74408.598167"
+    ]
+  },
+  {
     "path": "docs/build-log/staff-dx-gate/mutation-complexity-red.tap",
     "sha256": "0735263f7bf4f7873280176ecd167d49e424f04d05bf6d5ce4e08f8560f8445d",
     "counts": [
@@ -220,6 +242,105 @@
     ]
   },
   {
+    "path": "docs/build-log/staff-dx-gate/rate-limit-green.tap",
+    "sha256": "9c109655f5ec1cd9cf2468d6060023376ce7c3e9b11f500f2eb3196224be40f1",
+    "counts": [
+      "# tests 64",
+      "# pass 62",
+      "# fail 0",
+      "# skipped 2",
+      "# duration_ms 1034.140167"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/rate-limit-inventory-green.tap",
+    "sha256": "01f8a9985a732a681c9ec8207ba65c8cf1e6f3010d0174eb75ff5ac3ef7c7d5b",
+    "counts": [
+      "# tests 21",
+      "# pass 21",
+      "# fail 0",
+      "# skipped 0",
+      "# duration_ms 7982.742209"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/rate-limit-mutation-diagnosis-order-red.tap",
+    "sha256": "33d56f7736948b958c855b821b44511b5f98abb88cce21569170d456186e7b84",
+    "counts": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# skipped 0",
+      "# duration_ms 651.76225"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/rate-limit-mutation-diagnosis-picks-red.tap",
+    "sha256": "4bdf037db9fbdab26d3c5962c22d7b4d7e317fc00568b7dff76b81ed7ad48c94",
+    "counts": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# skipped 0",
+      "# duration_ms 736.674625"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/rate-limit-mutation-newness-red.tap",
+    "sha256": "65e825f02840caded6ab4f44e65d7366813357a189f820b2331ea44d6899fcd6",
+    "counts": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# skipped 0",
+      "# duration_ms 676.018708"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/rate-limit-mutation-problem-status-red.tap",
+    "sha256": "dab8640706d8fc6949934fd5a6798be29901d7101672c542dc541902bdd5bc65",
+    "counts": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# skipped 0",
+      "# duration_ms 676.141792"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/rate-limit-mutation-status-red.tap",
+    "sha256": "a870f22f115556502fb3ff57e347a9d1cd7687f02e6812c4db7b06e050f409df",
+    "counts": [
+      "# tests 1",
+      "# pass 0",
+      "# fail 1",
+      "# skipped 0",
+      "# duration_ms 656.877875"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/rate-limit-red.tap",
+    "sha256": "a01f32c70ec35fd21d18a1495dcfc89f49750d69398103edd7a7bea74e686f9f",
+    "counts": [
+      "# tests 29",
+      "# pass 28",
+      "# fail 1",
+      "# skipped 0",
+      "# duration_ms 732.617959"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/rate-limit-restored-green.tap",
+    "sha256": "a0b1acd28ce2bbcdc8f59ce349187d78b81ee6faf79c3fc8683eb1222643e2e7",
+    "counts": [
+      "# tests 1",
+      "# pass 1",
+      "# fail 0",
+      "# skipped 0",
+      "# duration_ms 680.926167"
+    ]
+  },
+  {
     "path": "docs/build-log/staff-dx-gate/role-table-final.tap",
     "sha256": "5714aab74c70a8ec56e80289152119e0a4796719d680c471bdb5c700e59cac5f",
     "counts": [
@@ -228,6 +349,17 @@
       "# fail 0",
       "# skipped 2",
       "# duration_ms 185.61775"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/role-table-rebased.tap",
+    "sha256": "cc51b5e7deff10ad72b281ca9472311f846576f589f2b9299610cf3e5d739498",
+    "counts": [
+      "# tests 22",
+      "# pass 20",
+      "# fail 0",
+      "# skipped 2",
+      "# duration_ms 286.314083"
     ]
   },
   {
@@ -286,6 +418,28 @@
     ]
   },
   {
+    "path": "docs/build-log/staff-dx-gate/ui-rebased.tap.gz",
+    "sha256": "8f30d4c9cbc6af157301dc74036a2e87721b931e709b8ca7e0da7341f04db483",
+    "counts": [
+      "# tests 1613",
+      "# pass 1613",
+      "# fail 0",
+      "# skipped 0",
+      "# duration_ms 187112.561875"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/ui-review-fix.tap.gz",
+    "sha256": "29d21a977d2e1c63b841b74fe0df3ff4c1771c4e968ea2866499c5b658aca9f3",
+    "counts": [
+      "# tests 1618",
+      "# pass 1618",
+      "# fail 0",
+      "# skipped 0",
+      "# duration_ms 183791.603667"
+    ]
+  },
+  {
     "path": "docs/build-log/staff-dx-gate/ui-routing-walkthrough-green.tap",
     "sha256": "6eb5ab837a5b506f8ef143d7e76ba0ab19d75b4f896ad359e0a3293c3e0249c1",
     "counts": [
@@ -294,6 +448,72 @@
       "# fail 0",
       "# skipped 0",
       "# duration_ms 18021.850375"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/undo-review-entry-mutation-red.tap",
+    "sha256": "c0558d38aef2be5006e2734b269d1fdc8dc193db7b98e4b81a7d6bcf122dd8bd",
+    "counts": [
+      "# tests 5",
+      "# pass 4",
+      "# fail 1",
+      "# skipped 0",
+      "# duration_ms 510.89125"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/undo-review-green.tap",
+    "sha256": "29aa5ee7b3a97779a87aca2eb00090301636ff8ed80caa5e59586fd894cf44d7",
+    "counts": [
+      "# tests 5",
+      "# pass 5",
+      "# fail 0",
+      "# skipped 0",
+      "# duration_ms 420.503542"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/undo-review-red.tap",
+    "sha256": "e1ad5908dbd0893d7e0b3d5bff3ec6454f02ed1bcf3593b2a6df0d15a05432b6",
+    "counts": [
+      "# tests 5",
+      "# pass 0",
+      "# fail 5",
+      "# skipped 0",
+      "# duration_ms 437.615958"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/undo-review-restored-green.tap",
+    "sha256": "f63b0bd8e601dcf7a8d38c7d8be471a1ccd5ea2bb1fc84af41da60d7240e5c40",
+    "counts": [
+      "# tests 5",
+      "# pass 5",
+      "# fail 0",
+      "# skipped 0",
+      "# duration_ms 437.623958"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/undo-review-runner-error.tap",
+    "sha256": "eec420868f48baa54de1f3131e68db595690087e7885c4459a1dbe78342defb9",
+    "counts": [
+      "# tests 5",
+      "# pass 4",
+      "# fail 1",
+      "# skipped 0",
+      "# duration_ms 387.871917"
+    ]
+  },
+  {
+    "path": "docs/build-log/staff-dx-gate/undo-review-scope-mutation-red.tap",
+    "sha256": "035cb1d358d6c3c2ce34b9990a6f7599e015262c2b7aaf9779b62d051655d2ad",
+    "counts": [
+      "# tests 5",
+      "# pass 1",
+      "# fail 4",
+      "# skipped 0",
+      "# duration_ms 454.104"
     ]
   },
   {
@@ -415,28 +635,6 @@
       "# fail 12",
       "# skipped 0",
       "# duration_ms 609.831625"
-    ]
-  },
-  {
-    "path": "docs/build-log/staff-dx-gate/mcp-rebased.tap.gz",
-    "sha256": "831abc2735a8c895bd2a8a3ed1a1ab395fbe1da00d1708eef91f97fbc4a439db",
-    "counts": [
-      "# tests 5127",
-      "# pass 5075",
-      "# fail 0",
-      "# skipped 52",
-      "# duration_ms 79415.656292"
-    ]
-  },
-  {
-    "path": "docs/build-log/staff-dx-gate/ui-rebased.tap.gz",
-    "sha256": "8f30d4c9cbc6af157301dc74036a2e87721b931e709b8ca7e0da7341f04db483",
-    "counts": [
-      "# tests 1613",
-      "# pass 1613",
-      "# fail 0",
-      "# skipped 0",
-      "# duration_ms 187112.561875"
     ]
   }
 ]

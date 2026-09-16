@@ -1,6 +1,6 @@
 {
   "kind": "Author live handler proof with verified caller identities and real Medplum AccessPolicy enforcement",
-  "sourceHead": "c2317a71f6aa13c4850471f4a351c3698d6441e8",
+  "sourceHead": "94ffeed4a791d80e67ba0aa3d38477330d1e0da3",
   "sourceHashes": {
     "mcp/src/authz/roles.ts": "9db544219659ace1a139929ea19c6563140cbf8799003754cb07a843a0bfbd1a",
     "mcp/src/clinical-graph/diagnosis-pick-endpoint.ts": "a5f80b58fdb8e992afb8379b1e0e2303a314bc1c172f459fe083fd31d4a4c25e",
@@ -148,8 +148,8 @@
   ],
   "synthetic": {
     "patientId": "055485a5-7edb-4e73-95d9-5107bf095c0c",
-    "encounterId": "51eaaacd-32dd-40d4-9eca-a080dcf9de4b",
-    "conditionId": "a3fc9d97-7a90-4d98-896b-4e373d95fa45",
+    "encounterId": "14ad8a08-aaba-442e-a733-fb6cbb5904c8",
+    "conditionId": "08aa7b6a-e9b0-4158-a395-7d30d2b60bc9",
     "diagnosisKey": "cataract_anterior_subcapsular",
     "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-subcapsular"
   }
