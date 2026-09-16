@@ -1,0 +1,98 @@
+cwd: .
+$ node --import tsx --test --test-name-pattern=O15  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# {"guard":"O15","kind":"attach","terminal":"completed","tasks":[{"kind":"attach","status":"completed"}],"persons":[{"id":"8d51442d-c3ca-4fad-8323-cc450d9a3480","active":true,"links":1}],"activeZeroLink":0}
+# Subtest: O15 attach completed: real terminal writers cannot act on an active zero-link Person
+ok 1 - O15 attach completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 43.76775
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"attach","terminal":"undone-completed","tasks":[{"kind":"attach","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"3aa38283-4a91-4530-bb32-cdde9e34f14f","active":false,"links":0}],"activeZeroLink":0}
+# Subtest: O15 attach undone-completed: real terminal writers cannot act on an active zero-link Person
+ok 2 - O15 attach undone-completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 8.719458
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"attach","terminal":"undone-before-link","tasks":[{"kind":"attach","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"e1090627-faee-43c5-b83c-8192568cd9d7","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 attach undone-before-link: real terminal writers cannot act on an active zero-link Person
+ok 3 - O15 attach undone-before-link: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 12.784209
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"attach","terminal":"failed","tasks":[{"kind":"attach","status":"failed"}],"persons":[{"id":"19cc0a3f-99c1-4ed3-9c67-a87677ed76fe","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 attach failed: real terminal writers cannot act on an active zero-link Person
+ok 4 - O15 attach failed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 8.671708
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"transfer","terminal":"completed","tasks":[{"kind":"transfer","status":"completed"}],"persons":[{"id":"S","active":false,"links":0},{"id":"4aada414-1e8f-44a6-96ec-d0ba356b744d","active":true,"links":1}],"activeZeroLink":0}
+# Subtest: O15 transfer completed: real terminal writers cannot act on an active zero-link Person
+ok 5 - O15 transfer completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 6.191375
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"transfer","terminal":"undone-completed","tasks":[{"kind":"transfer","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"43fc9ffd-37d8-4ff1-9667-4ca3ff499f45","active":false,"links":0}],"activeZeroLink":0}
+# Subtest: O15 transfer undone-completed: real terminal writers cannot act on an active zero-link Person
+ok 6 - O15 transfer undone-completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 8.162542
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"transfer","terminal":"undone-before-link","tasks":[{"kind":"transfer","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"0921fd77-ab82-483d-bd86-3fc2846906be","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 transfer undone-before-link: real terminal writers cannot act on an active zero-link Person
+ok 7 - O15 transfer undone-before-link: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 9.878
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"transfer","terminal":"failed","tasks":[{"kind":"transfer","status":"failed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"86411c1b-470f-4900-90bd-15b420cb6d5a","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 transfer failed: real terminal writers cannot act on an active zero-link Person
+ok 8 - O15 transfer failed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 6.975416
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"consolidate","terminal":"completed","tasks":[{"kind":"consolidate","status":"completed"}],"persons":[{"id":"S","active":false,"links":0},{"id":"e0c39de2-296b-4e5e-a4e6-e75bd3f4205f","active":true,"links":1}],"activeZeroLink":0}
+# Subtest: O15 consolidate completed: real terminal writers cannot act on an active zero-link Person
+ok 9 - O15 consolidate completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 4.356
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"consolidate","terminal":"undone-completed","tasks":[{"kind":"consolidate","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"0edf1b3d-ef6d-4b73-a19f-79a1f85e4ab9","active":false,"links":0}],"activeZeroLink":0}
+# Subtest: O15 consolidate undone-completed: real terminal writers cannot act on an active zero-link Person
+ok 10 - O15 consolidate undone-completed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 6.524875
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"consolidate","terminal":"undone-before-link","tasks":[{"kind":"consolidate","status":"cancelled"},{"kind":"correct","status":"completed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"382fb6c9-5fd8-424f-a5a3-37824f9d5ec7","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 consolidate undone-before-link: real terminal writers cannot act on an active zero-link Person
+ok 11 - O15 consolidate undone-before-link: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 8.858333
+  type: 'test'
+  ...
+# {"guard":"O15","kind":"consolidate","terminal":"failed","tasks":[{"kind":"consolidate","status":"failed"}],"persons":[{"id":"S","active":true,"links":1},{"id":"42b797e7-3362-4afc-8ef2-d6b018034d86","active":true,"links":0}],"activeZeroLink":1}
+# Subtest: O15 consolidate failed: real terminal writers cannot act on an active zero-link Person
+ok 12 - O15 consolidate failed: real terminal writers cannot act on an active zero-link Person
+  ---
+  duration_ms: 6.01725
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 291.133834
+
+Exit: 0

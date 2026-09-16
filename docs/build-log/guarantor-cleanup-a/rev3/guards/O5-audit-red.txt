@@ -1,0 +1,38 @@
+cwd: .
+$ node --import tsx --test --test-name-pattern=O5  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# Subtest: O5 discard changes only active, uses fresh version, and audits staff and reason
+not ok 1 - O5 discard changes only active, uses fresh version, and audits staff and reason
+  ---
+  duration_ms: 36.241542
+  type: 'test'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:10106'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:106:9)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 242.312166
+
+Exit: 1

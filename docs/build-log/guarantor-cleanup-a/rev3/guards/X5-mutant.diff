@@ -1,0 +1,11 @@
+--- mcp/src/clinic/guarantor-link-operation.ts
++++ mcp/src/clinic/guarantor-link-operation.ts
+@@ -354,7 +354,7 @@
+     if (disposition === "landed") await this.audit("pending", `recovered-${intent.phase}`, intent.target, writer);
+   }
+   async refuseInactiveDestination(destination: Person): Promise<void> {
+-    if (this.plan.kind !== "correct" && destination.active === false) await this.pause("destination-inactive", reference(destination));
++    if (destination.active === false) await this.pause("destination-inactive", reference(destination));
+   }
+   async classifyAndFence(): Promise<void> {
+     if (this.loaded.destination) await this.refuseInactiveDestination(await this.operation.read<Person>("Person", this.loaded.destination.id!));

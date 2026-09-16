@@ -1,0 +1,20 @@
+cwd: .
+$ node --import tsx --test --test-name-pattern=O1  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# Subtest: O1 linked Person cannot be listed or discarded
+ok 1 - O1 linked Person cannot be listed or discarded
+  ---
+  duration_ms: 35.813875
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 207.276292
+
+Exit: 0

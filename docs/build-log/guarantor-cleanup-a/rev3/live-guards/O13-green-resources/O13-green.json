@@ -1,0 +1,105 @@
+{
+  "origin": "http://127.0.0.1:28860",
+  "linkedCount": 1001,
+  "orphan": {
+    "personId": "1338f871-5483-4405-bcc1-0ee2712cbb7b",
+    "versionId": "7668ffbb-19b4-4e78-a577-e849a63a6f5f"
+  },
+  "queries": [
+    {
+      "resourceType": "Task",
+      "params": {
+        "_count": "100",
+        "code": "https://odos2020.com/fhir/CodeSystem/guarantor-link-operation|",
+        "status": "in-progress"
+      },
+      "ids": [
+        "6fef2a41-3ee7-47fc-9a21-79801b71a74d"
+      ]
+    },
+    {
+      "resourceType": "Person",
+      "params": {
+        "_count": "100",
+        "link:missing": "true"
+      },
+      "ids": [
+        "c81df6e0-a059-43a7-aed2-ad4cdc05bdc8",
+        "64d8938c-fd60-486a-a296-f6c14f759982",
+        "970632d7-a743-4d47-bd96-037134a2350f",
+        "b990b9d5-f60c-4008-91ae-ebef29d51f8e",
+        "e77ac4d8-9484-427a-ad2c-ee812595d155",
+        "9d1ac7ea-e372-437f-a40e-0819457a5ae9",
+        "512215c9-71a3-4099-b064-d4321ce87243",
+        "c30914b0-6ab6-4a41-913c-32c2fb37ac60",
+        "db1882ab-e41f-485a-a27f-cbf11e65c984",
+        "beb928ff-2cc2-41b3-acad-cee76dca5cf2",
+        "672120aa-063a-4c92-844c-0b38eaf875a2",
+        "84779de2-ef84-43f6-bfac-7778efe79456",
+        "2f7b186c-a6fd-4655-a35a-116eade9ef10",
+        "893940ee-fef3-40ae-9692-ea41b7ce934a",
+        "74dd2911-0063-4547-98d5-08e7fb07e313",
+        "3a2607f6-bcba-4002-ad0e-e2ff3e1ae760",
+        "a7e858ec-198f-4206-b6da-d673a1b1596b",
+        "4c84cc86-1e68-474c-85c5-22a5417fe76f",
+        "612d4215-b1f8-43ba-a5a7-7e5de6a21c92",
+        "32c6c2ba-4bf1-43dc-a186-11df2adfdab8",
+        "e952112f-9b9b-4604-b7a5-645d8f7b1cad",
+        "34d46e67-5295-4b71-8a38-031eabafea97",
+        "e9cdb857-2974-41b5-aecd-0239e84fdfa9",
+        "1338f871-5483-4405-bcc1-0ee2712cbb7b",
+        "7820147e-3dfa-44fc-99f1-2bc48bcc5df6",
+        "33003a1d-2fd4-4fb4-861a-af8e1c401f41",
+        "7f1e6489-1f56-4351-9258-8b2c940efd94",
+        "1c5beb4f-7eac-4301-98ae-4a6e29851466",
+        "0b601cb0-3b76-4058-8e5c-62adc7a29bfa",
+        "caf5aca8-ac91-4159-a603-507b341946cf"
+      ]
+    }
+  ],
+  "result": {
+    "status": 200,
+    "body": [
+      {
+        "personId": "970632d7-a743-4d47-bd96-037134a2350f",
+        "versionId": "1819438f-00b8-468a-925e-c0bb90328cb9",
+        "name": "Synthetic UnusedCancel",
+        "birthDate": "1980-01-01",
+        "phones": [],
+        "city": "",
+        "postalCode": "",
+        "lastUpdated": "2026-09-16T10:16:35.629Z"
+      },
+      {
+        "personId": "34d46e67-5295-4b71-8a38-031eabafea97",
+        "versionId": "cda5063a-d5d8-4574-832e-dcc6d049bb8a",
+        "name": "omitted CleanupQuery10aedd58d5174068b50ab5c1653f79f3",
+        "birthDate": "",
+        "phones": [],
+        "city": "",
+        "postalCode": "",
+        "lastUpdated": "2026-09-16T11:02:06.256Z"
+      },
+      {
+        "personId": "e9cdb857-2974-41b5-aecd-0239e84fdfa9",
+        "versionId": "2477f3cd-96a1-4289-b933-367ed9187d38",
+        "name": "empty CleanupQuery10aedd58d5174068b50ab5c1653f79f3",
+        "birthDate": "",
+        "phones": [],
+        "city": "",
+        "postalCode": "",
+        "lastUpdated": "2026-09-16T11:02:06.266Z"
+      },
+      {
+        "personId": "1338f871-5483-4405-bcc1-0ee2712cbb7b",
+        "versionId": "7668ffbb-19b4-4e78-a577-e849a63a6f5f",
+        "name": "ScaleOrphan CleanupSynthetic",
+        "birthDate": "1980-01-02",
+        "phones": [],
+        "city": "",
+        "postalCode": "",
+        "lastUpdated": "2026-09-16T11:06:30.344Z"
+      }
+    ]
+  }
+}

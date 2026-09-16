@@ -1,0 +1,14 @@
+{"scenario":"create-list-discard-O2-O10","status":"passed"}
+{"scenario":"retained-real-Move-Undo","status":"passed"}
+{"scenario":"X1-X3-attach","status":"passed"}
+{"scenario":"X1-X3-transfer","status":"passed"}
+{"scenario":"X1-X3-consolidate","status":"passed"}
+{"scenario":"X2-attach-wins","status":"passed"}
+{"scenario":"O11-attach-undone-before-link","status":"passed"}
+Guarantor discard secondary audit failed; write-level audit retained. Error: Synthetic secondary audit unavailable
+    at Object.recordAudit (<repo>/docs/build-log/guarantor-cleanup-a/live/operation-proof.mjs:90:55)
+    at discardUnusedGuarantor (<repo>/mcp/src/clinic/guarantor-search.ts:122:18)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async <anonymous> (<repo>/mcp/src/clinic/guarantor-routes.ts:30:34)
+{"scenario":"O14-secondary-audit-failure","status":"passed"}
+{"cases":8,"checks":98,"failed":0}

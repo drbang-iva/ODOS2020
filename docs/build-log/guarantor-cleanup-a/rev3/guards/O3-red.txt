@@ -1,0 +1,60 @@
+cwd: .
+$ node --import tsx --test --test-name-pattern=O3  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# Subtest: O3 active zero-link destination of real in-progress attach Task is excluded
+not ok 1 - O3 active zero-link destination of real in-progress attach Task is excluded
+  ---
+  duration_ms: 41.82375
+  type: 'test'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:8751'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   {
+    +     birthDate: '1980-01-01',
+    +     city: '',
+    +     lastUpdated: '',
+    +     name: 'Synthetic Unused',
+    +     personId: 'e3bfd663-e066-4119-8666-5f1ab7db4c22',
+    +     phones: [],
+    +     postalCode: '',
+    +     versionId: '1'
+    +   }
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      personId: 'e3bfd663-e066-4119-8666-5f1ab7db4c22'
+      versionId: '1'
+      name: 'Synthetic Unused'
+      birthDate: '1980-01-01'
+      phones:
+      city: ''
+      postalCode: ''
+      lastUpdated: ''
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:96:9)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 248.775875
+
+Exit: 1

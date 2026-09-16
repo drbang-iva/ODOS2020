@@ -1,0 +1,615 @@
+[
+  {
+    "guard": "O1",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O2",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O3",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O4",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O5-fields",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O5-audit",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O5-version",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O6",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O7",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O9",
+    "green": {
+      "exit": 0,
+      "tests": 9,
+      "pass": 9,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 9,
+      "pass": 0,
+      "fail": 9,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 9,
+      "pass": 9,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O9-registration",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "X1",
+    "green": {
+      "exit": 0,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 3,
+      "pass": 0,
+      "fail": 3,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "X1-plus",
+    "green": {
+      "exit": 0,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 3,
+      "pass": 0,
+      "fail": 3,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "X2",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "X4",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "X5",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "X7",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O11",
+    "green": {
+      "exit": 0,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 3,
+      "pass": 0,
+      "fail": 3,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O12",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O14",
+    "green": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O15",
+    "green": {
+      "exit": 0,
+      "tests": 12,
+      "pass": 12,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 12,
+      "pass": 9,
+      "fail": 3,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 12,
+      "pass": 12,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O8",
+    "green": {
+      "exit": 0,
+      "tests": 27,
+      "pass": 27,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 27,
+      "pass": 25,
+      "fail": 2,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 27,
+      "pass": 27,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "U1",
+    "green": {
+      "exit": 0,
+      "tests": 27,
+      "pass": 27,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 27,
+      "pass": 26,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 27,
+      "pass": 27,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "U2",
+    "green": {
+      "exit": 0,
+      "tests": 27,
+      "pass": 27,
+      "fail": 0,
+      "skipped": 0
+    },
+    "red": {
+      "exit": 1,
+      "tests": 27,
+      "pass": 26,
+      "fail": 1,
+      "skipped": 0
+    },
+    "restored": {
+      "exit": 0,
+      "tests": 27,
+      "pass": 27,
+      "fail": 0,
+      "skipped": 0
+    },
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "service-inventory",
+    "green": {
+      "exit": 0
+    },
+    "red": {
+      "exit": 1
+    },
+    "restored": {
+      "exit": 0
+    },
+    "restoredTreeClean": true
+  }
+]

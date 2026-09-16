@@ -1,0 +1,82 @@
+cwd: .
+$ node --import tsx --test --test-name-pattern=O1  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# Subtest: O1 linked Person cannot be listed or discarded
+not ok 1 - O1 linked Person cannot be listed or discarded
+  ---
+  duration_ms: 29.334542
+  type: 'test'
+  location: '<repo>/mcp/tests/guarantorUnused.test.ts:1:7139'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   {
+    +     birthDate: '',
+    +     city: '',
+    +     lastUpdated: '',
+    +     name: 'Source',
+    +     personId: 'S',
+    +     phones: [],
+    +     postalCode: '',
+    +     versionId: '1'
+    +   },
+    +   {
+    +     birthDate: '',
+    +     city: 'Synthetic Town',
+    +     lastUpdated: '',
+    +     name: 'Destination',
+    +     personId: 'D',
+    +     phones: [
+    +       '864-555-0199'
+    +     ],
+    +     postalCode: '',
+    +     versionId: '1'
+    +   }
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      personId: 'S'
+      versionId: '1'
+      name: 'Source'
+      birthDate: ''
+      phones:
+      city: ''
+      postalCode: ''
+      lastUpdated: ''
+    1:
+      personId: 'D'
+      versionId: '1'
+      name: 'Destination'
+      birthDate: ''
+      phones:
+        0: '864-555-0199'
+      city: 'Synthetic Town'
+      postalCode: ''
+      lastUpdated: ''
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (<repo>/mcp/tests/guarantorUnused.test.ts:79:61)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async harness (<repo>/mcp/tests/guarantorUnused.test.ts:24:8)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 236.703333
+
+Exit: 1

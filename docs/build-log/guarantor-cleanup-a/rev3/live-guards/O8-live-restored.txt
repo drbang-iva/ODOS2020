@@ -1,0 +1,4 @@
+$ node --import tsx docs/build-log/guarantor-cleanup-a/browser/live-browser.mjs
+{"checks":2,"passed":2,"browserRequests":13}
+
+Exit: 0

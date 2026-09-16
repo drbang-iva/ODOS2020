@@ -1,0 +1,20 @@
+cwd: .
+$ node --import tsx --test --test-name-pattern=O4  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# Subtest: O4 list then link change refuses discard without write
+ok 1 - O4 list then link change refuses discard without write
+  ---
+  duration_ms: 36.999459
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 216.214542
+
+Exit: 0

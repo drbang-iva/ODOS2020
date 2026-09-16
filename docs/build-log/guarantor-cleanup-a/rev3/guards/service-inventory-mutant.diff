@@ -1,0 +1,10 @@
+--- scripts/fhir-read-grant-check.ts
++++ scripts/fhir-read-grant-check.ts
+@@ -126,7 +126,6 @@
+ ] as const satisfies readonly NonFhirLiteralCallSite[];
+ 
+ export const SERVICE_IDENTITY_FHIR_WRITE_CALL_SITES = [
+-  { path: "mcp/src/clinic/guarantor-search.ts", line: 113, callee: "deps.serviceFhir.executeTransactionAsActor", resourceType: "Person", reason: "Unused guarantor discard is version-conditional and staff-attributed through the service client." },
+   { path: "mcp/src/clinic/guarantor-search.ts", line: 57, callee: "deps.serviceFhir.executeTransactionAsActor", resourceType: "Person", reason: "Guarantor creation uses the explicit service client with staff attribution." },
+   { path: "mcp/src/clinic/guarantor-link-operation.ts", line: 201, callee: "this.deps.serviceFhir.executeTransactionAsActor", resourceType: "Task", reason: "Guarantor operation uses the explicit service client with staff attribution." },
+   { path: "mcp/src/clinic/guarantor-link-operation.ts", line: 201, callee: "this.deps.serviceFhir.executeTransactionAsActor", resourceType: "Person", reason: "Guarantor operation uses the explicit service client with staff attribution." },

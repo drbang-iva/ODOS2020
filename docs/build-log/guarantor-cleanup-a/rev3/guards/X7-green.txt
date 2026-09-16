@@ -1,0 +1,20 @@
+cwd: .
+$ node --import tsx --test --test-name-pattern=X7  mcp/tests/guarantorUnused.test.ts
+TAP version 13
+# Subtest: X7 attach rebuild directly refuses a service-level inactivation after fencing
+ok 1 - X7 attach rebuild directly refuses a service-level inactivation after fencing
+  ---
+  duration_ms: 41.20825
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 196.889166
+
+Exit: 0

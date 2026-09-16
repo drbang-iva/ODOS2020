@@ -1,0 +1,23 @@
+$ node --import tsx docs/build-log/guarantor-cleanup-a/live/rev3-scale.mjs
+{"guard":"O13","linked":1001,"resultStatus":409,"listed":{"error":"The complete guarantor search could not be checked. No records were discarded."},"orphan":"1338f871-5483-4405-bcc1-0ee2712cbb7b"}
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: O13 list succeeds with 1001 linked guarantors
+
+409 !== 200
+
+    at <anonymous> (<repo>/docs/build-log/guarantor-cleanup-a/live/rev3-scale.mjs:38:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 409,
+  expected: 200,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.22.3
+
+Exit: 1

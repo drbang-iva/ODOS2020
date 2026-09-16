@@ -1,0 +1,16 @@
+[
+  {
+    "guard": "O13",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "restoredTreeClean": true
+  },
+  {
+    "guard": "O8-live",
+    "green": 0,
+    "red": 1,
+    "restored": 0,
+    "restoredTreeClean": true
+  }
+]

@@ -1,0 +1,10 @@
+--- mcp/src/clinic/responsible-party-demographics.ts
++++ mcp/src/clinic/responsible-party-demographics.ts
+@@ -28,6 +28,6 @@
+ 
+ export function guarantorPersonIsAttachable(person: Person, projectId: string): boolean {
+   return person.meta?.project?.replace(/^Project\//, "") === projectId
+-    && person.active !== false
++    
+     && (person.link ?? []).every(link => /^RelatedPerson\/[A-Za-z0-9.-]{1,64}$/.test(link.target.reference ?? ""));
+ }

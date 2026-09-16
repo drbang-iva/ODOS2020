@@ -1,0 +1,11 @@
+--- mcp/src/clinic/guarantor-search.ts
++++ mcp/src/clinic/guarantor-search.ts
+@@ -73,7 +73,7 @@
+ }
+ async function operationPersons(deps: GuarantorOperationDeps, project: string): Promise<Set<string>> {
+   // The Task scan is a courtesy check, not an atomic reservation. The operation engine enforces G1.
+-  const tasks = await searchProjectAll<Task>(deps.serviceFhir, "Task", project, { code: `${GUARANTOR_OPERATION_SYSTEM}|`, status: "in-progress" });
++  const tasks = await searchProjectAll<Task>(deps.serviceFhir, "Task", project, { code: `${GUARANTOR_OPERATION_SYSTEM}|` });
+   return new Set(tasks.flatMap(task => {
+     if (task.meta?.project?.replace(/^Project\//, "") !== project) throw new Error("Guarantor Task search returned a foreign-practice Task.");
+     return (task.input ?? []).filter(input => input.type.text === "source" || input.type.text === "destination")

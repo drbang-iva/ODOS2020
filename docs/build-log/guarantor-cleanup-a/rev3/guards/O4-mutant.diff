@@ -1,0 +1,11 @@
+--- mcp/src/clinic/guarantor-search.ts
++++ mcp/src/clinic/guarantor-search.ts
+@@ -107,7 +107,7 @@
+   try {
+     const referenced = await operationPersons(deps, project);
+     const person = await deps.serviceFhir.readExtended<Person>("Person", personId);
+-    if (!unusedPerson(person, project, referenced) || person.meta?.versionId !== parsed.data.expectedVersion) return noLongerUnused;
++    if (person.meta?.versionId !== parsed.data.expectedVersion) return noLongerUnused;
+     const actionReason = `guarantor.link discard Person; ${parsed.data.reason}`;
+     // fhir-service-write: Person
+     const response = await deps.serviceFhir.executeTransactionAsActor({ resourceType: "Bundle", type: "transaction", entry: [{

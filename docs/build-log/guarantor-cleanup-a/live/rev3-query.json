@@ -1,0 +1,128 @@
+{
+  "query": "/fhir/R4/Person?_id=34d46e67-5295-4b71-8a38-031eabafea97%2Ce9cdb857-2974-41b5-aecd-0239e84fdfa9%2C2186054d-e923-4f9d-ae6e-6786d10cd3d2%2C4725efc5-c961-4da4-9db2-ad0d535808cf&link%3Amissing=true&_count=100",
+  "medplum": "http://127.0.0.1:28860",
+  "seeds": [
+    {
+      "label": "omitted",
+      "id": "34d46e67-5295-4b71-8a38-031eabafea97",
+      "links": []
+    },
+    {
+      "label": "empty",
+      "id": "e9cdb857-2974-41b5-aecd-0239e84fdfa9",
+      "links": []
+    },
+    {
+      "label": "related-person",
+      "id": "2186054d-e923-4f9d-ae6e-6786d10cd3d2",
+      "links": [
+        {
+          "target": {
+            "reference": "RelatedPerson/7792874a-5677-40a2-b17f-b4471705cdf5"
+          }
+        }
+      ]
+    },
+    {
+      "label": "patient",
+      "id": "4725efc5-c961-4da4-9db2-ad0d535808cf",
+      "links": [
+        {
+          "target": {
+            "reference": "Patient/50e873a4-5a40-4e43-b24b-1be40634e201"
+          }
+        }
+      ]
+    }
+  ],
+  "expected": [
+    "34d46e67-5295-4b71-8a38-031eabafea97",
+    "e9cdb857-2974-41b5-aecd-0239e84fdfa9"
+  ],
+  "actual": [
+    "34d46e67-5295-4b71-8a38-031eabafea97",
+    "e9cdb857-2974-41b5-aecd-0239e84fdfa9"
+  ],
+  "result": {
+    "resourceType": "Bundle",
+    "type": "searchset",
+    "entry": [
+      {
+        "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/34d46e67-5295-4b71-8a38-031eabafea97",
+        "search": {
+          "mode": "match"
+        },
+        "resource": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "family": "CleanupQuery10aedd58d5174068b50ab5c1653f79f3",
+              "given": [
+                "omitted"
+              ]
+            }
+          ],
+          "meta": {
+            "project": "81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+            "versionId": "cda5063a-d5d8-4574-832e-dcc6d049bb8a",
+            "lastUpdated": "2026-09-16T11:02:06.256Z",
+            "author": {
+              "reference": "Practitioner/42a59963-721b-42fd-84db-df50889b96e4",
+              "display": "Medplum Admin"
+            },
+            "compartment": [
+              {
+                "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71"
+              }
+            ]
+          },
+          "id": "34d46e67-5295-4b71-8a38-031eabafea97"
+        }
+      },
+      {
+        "fullUrl": "http://127.0.0.1:28860/fhir/R4/Person/e9cdb857-2974-41b5-aecd-0239e84fdfa9",
+        "search": {
+          "mode": "match"
+        },
+        "resource": {
+          "resourceType": "Person",
+          "active": true,
+          "name": [
+            {
+              "family": "CleanupQuery10aedd58d5174068b50ab5c1653f79f3",
+              "given": [
+                "empty"
+              ]
+            }
+          ],
+          "meta": {
+            "project": "81bc7f7c-af71-440f-bc73-cb4af8d61b71",
+            "versionId": "2477f3cd-96a1-4289-b933-367ed9187d38",
+            "lastUpdated": "2026-09-16T11:02:06.266Z",
+            "author": {
+              "reference": "Practitioner/42a59963-721b-42fd-84db-df50889b96e4",
+              "display": "Medplum Admin"
+            },
+            "compartment": [
+              {
+                "reference": "Project/81bc7f7c-af71-440f-bc73-cb4af8d61b71"
+              }
+            ]
+          },
+          "id": "e9cdb857-2974-41b5-aecd-0239e84fdfa9"
+        }
+      }
+    ],
+    "link": [
+      {
+        "relation": "self",
+        "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=100&_id=34d46e67-5295-4b71-8a38-031eabafea97%2Ce9cdb857-2974-41b5-aecd-0239e84fdfa9%2C2186054d-e923-4f9d-ae6e-6786d10cd3d2%2C4725efc5-c961-4da4-9db2-ad0d535808cf&link:missing=true"
+      },
+      {
+        "relation": "first",
+        "url": "http://127.0.0.1:28860/fhir/R4/Person?_count=100&_id=34d46e67-5295-4b71-8a38-031eabafea97%2Ce9cdb857-2974-41b5-aecd-0239e84fdfa9%2C2186054d-e923-4f9d-ae6e-6786d10cd3d2%2C4725efc5-c961-4da4-9db2-ad0d535808cf&link:missing=true"
+      }
+    ]
+  }
+}
