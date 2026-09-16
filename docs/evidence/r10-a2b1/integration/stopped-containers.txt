@@ -1,0 +1,4 @@
+odos-r10-a2b1-medplum-server-1
+odos-r10-a2b1-test-postgres-1
+odos-r10-a2b1-postgres-1
+odos-r10-a2b1-redis-1
