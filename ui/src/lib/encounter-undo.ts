@@ -73,9 +73,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isEntry(value: unknown): value is UndoLedgerEntry {
+  return isRecord(value) &&
+    typeof value.ref === "string" && value.ref.length > 0 &&
+    typeof value.priorStatus === "string" && value.priorStatus.length > 0 &&
+    (value.clinicalStatus === undefined || typeof value.clinicalStatus === "string") &&
+    (value.diagnosis === undefined || (isRecord(value.diagnosis) && isRecord(value.diagnosis.condition)));
+}
+
 function isSlot(value: unknown): value is UndoLedgerSlot {
   return isRecord(value) &&
-    Array.isArray(value.voided) &&
+    Array.isArray(value.voided) && value.voided.every(isEntry) &&
     typeof value.label === "string" &&
     typeof value.count === "number" &&
     typeof value.at === "string";

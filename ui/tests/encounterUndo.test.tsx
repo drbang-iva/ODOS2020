@@ -57,6 +57,24 @@ test("readEncounterUndoLedger fetches the ledger, and answers the empty ledger f
   assert.deepEqual((await readEncounterUndoLedger(ENCOUNTER, denied)).ledger, emptyUndoLedger("e1"));
 });
 
+test("undo ledger rejects an entire slot containing an invalid entry before rendering", async () => {
+  const invalidEntries = [null, {}, { ref: 12, priorStatus: "final" }, { ref: "", priorStatus: "final" },
+    { ref: "Condition/dx1" }, { ref: "Condition/dx1", priorStatus: 12 },
+    { ref: "Condition/dx1", priorStatus: "confirmed", clinicalStatus: [] },
+    { ref: "Condition/dx1", priorStatus: "confirmed", diagnosis: null }];
+  for (const entry of invalidEntries) {
+    const malformed = { ...slot(), voided: [...slot().voided, entry] };
+    const fetchImpl: typeof fetch = async () => Response.json({ ledger: {
+      encounterId: "e1", encounter: malformed, sections: { invalid: malformed, valid: slot() },
+    } });
+    const { ledger } = await readEncounterUndoLedger(ENCOUNTER, fetchImpl);
+    assert.equal(ledger.encounter, null, JSON.stringify(entry));
+    assert.deepEqual(Object.keys(ledger.sections), ["valid"]);
+    const renderer = render(<UndoStrip slot={ledger.sections.valid!} closed={false} onUndo={() => undefined} />);
+    act(() => renderer.unmount());
+  }
+});
+
 test("undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error", async () => {
   const calls: Array<{ url: string; body: unknown }> = [];
   const fetchImpl: typeof fetch = async (input, init) => {

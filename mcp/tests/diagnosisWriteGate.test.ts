@@ -1,11 +1,79 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import type { AddressInfo } from "node:net";
 import { test } from "node:test";
+import { runInNewContext } from "node:vm";
+import express from "express";
+import { rateLimit } from "express-rate-limit";
+import ts from "typescript";
 import type { BusinessAction, PracticeRoleId } from "../src/authz/roles.js";
 import { handleDiagnosisPickRequest } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 import { handleDiagnosisOrderRequest, handleDiagnosisProblemStatusRequest } from "../src/clinical-graph/diagnosis-order-endpoint.js";
 import { handleDiagnosisPullRequest } from "../src/clinical-graph/diagnosis-carry-forward-endpoint.js";
 import { handleDiagnosisVisitStatusUpdateRequest } from "../src/clinical-graph/diagnosis-visit-status-endpoint.js";
 import { handleDiagnosisNewnessUpdateRequest } from "../src/clinical-graph/diagnosis-newness-endpoint.js";
+
+test("registered diagnosis write routes share a rate limit before service or staff authentication", async () => {
+  const routes = new Map([
+    ["/clinical-graph/encounters/:encounterId/diagnosis-picks", "POST"],
+    ["/clinical-graph/encounters/:encounterId/diagnosis-order", "PUT"],
+    ["/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/problem-status", "PUT"],
+    ["/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/status", "PUT"],
+    ["/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/newness", "PUT"],
+  ]);
+  const source = ts.createSourceFile("index.ts", readFileSync(new URL("../src/index.ts", import.meta.url), "utf8"), ts.ScriptTarget.Latest, true);
+  const declarations: string[] = [];
+  const registrations: string[] = [];
+  const collect = (node: ts.Node): void => {
+    if (ts.isVariableStatement(node) && node.declarationList.declarations.some((entry) => entry.name.getText(source) === "diagnosisWriteLimit")) {
+      declarations.push(node.getText(source));
+    }
+    if (ts.isExpressionStatement(node) && ts.isCallExpression(node.expression)) {
+      const call = node.expression;
+      const path = call.arguments[0];
+      if (ts.isPropertyAccessExpression(call.expression) && call.expression.expression.getText(source) === "app"
+        && path && ts.isStringLiteral(path) && routes.has(path.text)) {
+        assert.equal(call.expression.name.text.toUpperCase(), routes.get(path.text));
+        registrations.push(node.getText(source));
+      }
+    }
+    ts.forEachChild(node, collect);
+  };
+  collect(source);
+  assert.equal(registrations.length, routes.size);
+  const app = express();
+  let serviceChecks = 0;
+  let staffChecks = 0;
+  runInNewContext(ts.transpileModule([...declarations, ...registrations].join("\n"), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 },
+  }).outputText, {
+    app, rateLimit, console,
+    authenticateWithMedplum: async () => { serviceChecks++; },
+    authenticateStaffRouteForAction: () => async () => { staffChecks++; return null; },
+    diagnosisVisitStatusStore: {},
+    handleDiagnosisPickRequest, handleDiagnosisOrderRequest, handleDiagnosisProblemStatusRequest,
+    handleDiagnosisVisitStatusUpdateRequest, handleDiagnosisNewnessUpdateRequest,
+  });
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  try {
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const requests = [...routes].map(([path, method]) => ({ path: path.replace(/:encounterId|:conditionId/g, "synthetic"), method }));
+    for (let i = 0; i < 120; i++) {
+      const request = requests[i % requests.length];
+      assert.equal((await fetch(`${base}${request.path}`, { method: request.method })).status, 401);
+    }
+    for (const request of requests) {
+      const response = await fetch(`${base}${request.path}`, { method: request.method });
+      assert.equal(response.status, 429, request.path);
+      assert.ok(Number(response.headers.get("retry-after")) > 0);
+      assert.equal(serviceChecks, 120);
+      assert.equal(staffChecks, 120);
+    }
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
 
 for (const identity of [
   { actorRole: "staff" },

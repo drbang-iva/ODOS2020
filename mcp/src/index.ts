@@ -37,6 +37,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
+import { rateLimit } from "express-rate-limit";
 import { isIP } from "node:net";
 import { z } from "zod";
 import {
@@ -6463,7 +6464,15 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }
       });
 
-      app.post("/clinical-graph/encounters/:encounterId/diagnosis-picks", async (req, res) => {
+      const diagnosisWriteLimit = rateLimit({
+        windowMs: 60_000,
+        limit: 120,
+        standardHeaders: "draft-8",
+        legacyHeaders: false,
+        message: { error: "Too many diagnosis requests. Try again shortly." },
+      });
+
+      app.post("/clinical-graph/encounters/:encounterId/diagnosis-picks", diagnosisWriteLimit, async (req, res) => {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisPickRequest(
@@ -6480,7 +6489,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }
       });
 
-      app.put("/clinical-graph/encounters/:encounterId/diagnosis-order", async (req, res) => {
+      app.put("/clinical-graph/encounters/:encounterId/diagnosis-order", diagnosisWriteLimit, async (req, res) => {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisOrderRequest(
@@ -6511,7 +6520,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }
       });
 
-      app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/problem-status", async (req, res) => {
+      app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/problem-status", diagnosisWriteLimit, async (req, res) => {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisProblemStatusRequest(
@@ -6525,7 +6534,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }
       });
 
-      app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/status", async (req, res) => {
+      app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/status", diagnosisWriteLimit, async (req, res) => {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisVisitStatusUpdateRequest(
@@ -6556,7 +6565,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }
       });
 
-      app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/newness", async (req, res) => {
+      app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/newness", diagnosisWriteLimit, async (req, res) => {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisNewnessUpdateRequest(
