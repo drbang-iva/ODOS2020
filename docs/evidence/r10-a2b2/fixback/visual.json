@@ -1,0 +1,12 @@
+[
+  {
+    "state": "before",
+    "text": "Synthetic lens finding\nOffered\nConflicting records\n\tOcular Health\t\nPresent\nAbsent\n\t\nNot graded\n1\n2\n3\n4\n\tOD\nOD\nOS\nOU\n\tChoose presence",
+    "errors": []
+  },
+  {
+    "state": "after",
+    "text": "Synthetic lens finding\nConflicting records\nConflicting records\n\tOcular Health\t\nPresent\nAbsent\n\t\nNot graded\n1\n2\n3\n4\n\tOD\nOD\nOS\nOU\n\tConflicting records",
+    "errors": []
+  }
+]

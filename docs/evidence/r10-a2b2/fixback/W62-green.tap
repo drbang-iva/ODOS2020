@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: W62 tray disables Assign and standalone for signed row
+ok 1 - W62 tray disables Assign and standalone for signed row
+  ---
+  duration_ms: 3.971375
+  type: 'test'
+  ...
+# Subtest: W62 tray disables Assign and standalone for conflict row
+ok 2 - W62 tray disables Assign and standalone for conflict row
+  ---
+  duration_ms: 0.588083
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 201.794875

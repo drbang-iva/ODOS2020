@@ -22,3 +22,20 @@ All temporary production mutations restored. W51 follows the approved rev 3.6 re
 Restored workspace: 11/11; table:16/16; surfaces:5 pass +4 A3 TODO; W54:1/1 and tsc exit0. See W54/README.md for mutation failure and separate typecheck evidence.
 
 Historical surfaces/W49-candidates logs are superseded by rev 3.6. W49 suggestions failure is covered by the workspace mutation above; legacy picker error handling remains unchanged.
+
+## Evaluation fixback W55–W64
+
+Exact evaluator mutations and executable runner: [fixback/README.md](fixback/README.md). All temporary mutations restored.
+
+| Guard | Red | Restored green |
+|---|---|---|
+| W55 | 1 pass / 2 fail | 3 pass / 0 fail |
+| W56 | 0 pass / 1 fail | 1 pass / 0 fail |
+| W57 | 0 pass / 1 fail | 1 pass / 0 fail |
+| W58 | 0 pass / 1 fail | 1 pass / 0 fail |
+| W59 | 0 pass / 1 fail | 1 pass / 0 fail |
+| W60 | 0 pass / 1 fail | 1 pass / 0 fail |
+| W61 | 0 pass / 1 fail | 1 pass / 0 fail |
+| W62 | 0 pass / 2 fail | 2 pass / 0 fail |
+| W63 | 0 pass / 1 fail | 1 pass / 0 fail |
+| W64 | 0 pass / 1 fail | 1 pass / 0 fail |

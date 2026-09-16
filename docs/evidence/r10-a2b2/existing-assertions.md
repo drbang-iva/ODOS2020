@@ -282,3 +282,7 @@ From `ui/`: `node --import tsx --test tests/diagnosisWorkspace.test.tsx tests/di
 ## Overlay grouping suite
 - `ui/tests/diagnosisFindingGrouping.test.tsx:14`: before `[display, source]` expected atomic/section origins; after `[display, rowKey]` expects two distinct canonical per-eye rows. W-c removes source and introduces rowKey; section filtering remains asserted.
 - `ui/tests/diagnosisFindingGrouping.test.tsx:49`: before label “Charted in section”; after “Shared finding”. W-c replaces legacy source classification with current shared finding rows. Presence/grade/laterality and refresh assertions unchanged.
+
+## Fixback after evaluation at 9f58d5fc
+
+No existing assertion was changed, removed, skipped, or weakened in this fixback. Thirteen new test cases were appended to r10DiagnosisWorkspace (eight) and r10DiagnosisTable (five), mapping to W55–W64 from the accepted evaluation record. Existing helper changes only add isolated fixture modes/configuration for these tests; prior modes and assertions are retained. W55: current live eye rows, fresh command/baseline and caught builder failure. W56: confirmed clinical write despite unconfirmed outcome. W57: thrown fetch and identical Retry. W58: carried absent search. W59: pre-rebuild diagnosis controls. W60: additive link homes. W61: replacement move homes. W62: signed/conflict tray refusal. W63: applied-pick event. W64: conflict labels. Thus there are no additional before/after assertion replacements to ledger.
