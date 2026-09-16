@@ -84,7 +84,7 @@ Head-SHA: <40-character current head>
 ```
 
 **Author ≠ evaluator is absolute.** Every human-authored PR body carries `Coded-by: Codex`
-or `Coded-by: Claude` outside fenced code blocks. The gate rejects a PASS signed by the same
+or `Coded-by: Claude` outside fenced code blocks and HTML comments. The gate rejects a PASS signed by the same
 tool that coded the PR, including a separately invoked session. Bot-authored PRs and operator
 OVERRIDEs need no Coded-by declaration. New commits stale a prior marker automatically.
 Who is trusted is decided in
@@ -399,7 +399,7 @@ default home base); independent verification/evaluation → Codex (high). Advice
 is Sonnet. Default down, escalate up; flag mid-session drift plainly.
 
 **Author ≠ evaluator, always** — every human-authored PR body carries `Coded-by: Codex`
-or `Coded-by: Claude` outside fenced code blocks, and the gate rejects a same-tool PASS.
+or `Coded-by: Claude` outside fenced code blocks and HTML comments, and the gate rejects a same-tool PASS.
 A separate session of the coding tool cannot evaluate it. Claude codes → Codex evaluates;
 Codex codes → Fable/Opus evaluates. Bot-authored PRs and operator OVERRIDEs need no Coded-by.
 Scope: this gate fires on a shippable coding slice (PR-worthy diff), not brainstorming or

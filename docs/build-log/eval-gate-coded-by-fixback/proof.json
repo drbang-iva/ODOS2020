@@ -1,0 +1,158 @@
+{
+  "base": "4b3f6d7c25fb40268e216dcd22ad03a866d03643",
+  "parser_sha256": "ff1b1c3dd0cc6eb251ee2d3eb6da4fa627cd110c9d443b9a2282a90eb4a0e477",
+  "baseline": {
+    "tests": 82,
+    "pass": 82,
+    "fail": 0
+  },
+  "red_on_main": {
+    "tests": 88,
+    "pass": 83,
+    "fail": 5,
+    "red": [
+      "G1",
+      "G2",
+      "G5",
+      "G6",
+      "G7"
+    ],
+    "green": [
+      "G9"
+    ]
+  },
+  "final": {
+    "tests": 101,
+    "pass": 101,
+    "fail": 0,
+    "skipped": 0
+  },
+  "mutations": [
+    {
+      "name": "first-word",
+      "red": [
+        "not ok 17 - S17 G14 the posting script and real gate agree on signatures and coder checks in a dry run",
+        "not ok 78 - coder declarations ignore fenced examples and count all named tools",
+        "not ok 83 - G1 coded-by fixback",
+        "not ok 84 - G2 coded-by fixback",
+        "not ok 85 - G5 coded-by fixback",
+        "not ok 92 - G4 Sonnet token companion coded-by fixback",
+        "not ok 100 - G4 shared token table recognizes whole words in coder values and signatures",
+        "# tests 101",
+        "# pass 94",
+        "# fail 7"
+      ],
+      "green": [
+        "# tests 101",
+        "# pass 101",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "no-html-skip",
+      "red": [
+        "not ok 17 - S17 G14 the posting script and real gate agree on signatures and coder checks in a dry run",
+        "not ok 86 - G6 coded-by fixback",
+        "not ok 87 - G7 coded-by fixback",
+        "not ok 88 - G9 coded-by fixback",
+        "not ok 96 - G11 coded-by fixback",
+        "not ok 101 - F2 strips all inline spans and keeps only text before an unclosed comment",
+        "# tests 101",
+        "# pass 95",
+        "# fail 6"
+      ],
+      "green": [
+        "# tests 101",
+        "# pass 101",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "no-inline-strip",
+      "red": [
+        "not ok 88 - G9 coded-by fixback",
+        "not ok 101 - F2 strips all inline spans and keeps only text before an unclosed comment",
+        "# tests 101",
+        "# pass 99",
+        "# fail 2"
+      ],
+      "green": [
+        "# tests 101",
+        "# pass 101",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "standalone-close",
+      "red": [
+        "not ok 79 - the actual PR template fails closed until its coder placeholder is edited",
+        "not ok 94 - G8 closing-line companion coded-by fixback",
+        "not ok 98 - G12 real merged PR template refuses the placeholder",
+        "not ok 101 - F2 strips all inline spans and keeps only text before an unclosed comment",
+        "# tests 101",
+        "# pass 97",
+        "# fail 4"
+      ],
+      "green": [
+        "# tests 101",
+        "# pass 101",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "comments-before-fences",
+      "red": [
+        "not ok 95 - G10 coded-by fixback",
+        "# tests 101",
+        "# pass 100",
+        "# fail 1"
+      ],
+      "green": [
+        "# tests 101",
+        "# pass 101",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "no-sonnet-token",
+      "red": [
+        "not ok 92 - G4 Sonnet token companion coded-by fixback",
+        "not ok 100 - G4 shared token table recognizes whole words in coder values and signatures",
+        "# tests 101",
+        "# pass 99",
+        "# fail 2"
+      ],
+      "green": [
+        "# tests 101",
+        "# pass 101",
+        "# fail 0"
+      ],
+      "restored": true
+    },
+    {
+      "name": "trust-sonnet",
+      "red": [
+        "not ok 16 - the sol exception does not admit Random Model 1 or arbitrary model suffixes",
+        "not ok 17 - S17 G14 the posting script and real gate agree on signatures and coder checks in a dry run",
+        "not ok 18 - an untrusted model still cannot issue the final verdict",
+        "not ok 41 - the evaluated label does not change ordinary evaluation decisions",
+        "not ok 80 - existing failure reasons win even when the coder declaration is missing",
+        "not ok 97 - G15 coded-by fixback",
+        "# tests 101",
+        "# pass 95",
+        "# fail 6"
+      ],
+      "green": [
+        "# tests 101",
+        "# pass 101",
+        "# fail 0"
+      ],
+      "restored": true
+    }
+  ]
+}

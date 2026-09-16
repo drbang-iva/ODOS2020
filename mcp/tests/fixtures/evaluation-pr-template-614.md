@@ -65,7 +65,7 @@ The Head-SHA must match the current PR head, and each field must appear exactly
 once. A newer OVERRIDE deliberately supersedes NEEDS-WORK; older evidence cannot
 rescue a newer negative or malformed marker. The typed name is a record, not
 authentication. Every human-authored PR declares its coding tool above, outside
-fenced code blocks. Declarations inside HTML comments do not count. Replace the placeholder with Codex or Claude; list both on
+fenced code blocks. Replace the placeholder with Codex or Claude; list both on
 separate Coded-by lines if both coded the PR. The gate rejects a PASS signed by
 any declared coding tool, even from a separate session. Bot-authored PRs and
 operator OVERRIDEs do not require Coded-by. With one shared login, this catches

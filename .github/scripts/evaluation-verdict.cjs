@@ -47,11 +47,20 @@ function isTrustedEvaluator(model) {
   return TRUSTED_MODEL_PATTERN.test(model.trim());
 }
 
+const TOOL_TOKENS = {
+  codex: /\b(?:Codex|GPT|Astra|Sol)\b/i,
+  claude: /\b(?:Claude|Opus|Fable|Sonnet|Haiku)\b/i,
+};
+
+function namedTools(value) {
+  return Object.entries(TOOL_TOKENS)
+    .filter(([, pattern]) => pattern.test(value))
+    .map(([tool]) => tool);
+}
+
 function evaluatorTool(signature) {
-  const codex = /\b(?:Codex|GPT|Astra|Sol)\b/i.test(signature);
-  const claude = /\b(?:Claude|Opus|Fable)\b/i.test(signature);
-  if (codex === claude) return undefined;
-  return codex ? "codex" : "claude";
+  const tools = namedTools(signature);
+  return tools.length === 1 ? tools[0] : undefined;
 }
 
 function evaluateToolIndependence({ evaluator, prBody, prAuthorType }) {
@@ -60,7 +69,8 @@ function evaluateToolIndependence({ evaluator, prBody, prAuthorType }) {
     coders.add("bot");
   } else {
     let fence;
-    for (const line of (prBody || "").split(/\r?\n/)) {
+    let htmlComment = false;
+    for (let line of (prBody || "").split(/\r?\n/)) {
       const fenceMatch = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
       if (fence) {
         if (fenceMatch && fenceMatch[1][0] === fence[0]
@@ -73,6 +83,16 @@ function evaluateToolIndependence({ evaluator, prBody, prAuthorType }) {
         fence = fenceMatch[1];
         continue;
       }
+      if (htmlComment) {
+        if (line.includes("-->")) htmlComment = false;
+        continue;
+      }
+      line = line.replace(/<!--.*?-->/g, "");
+      const commentStart = line.indexOf("<!--");
+      if (commentStart !== -1) {
+        htmlComment = true;
+        line = line.slice(0, commentStart);
+      }
       const declaration = /^Coded-by:\s*(.+?)\s*$/i.exec(line);
       if (!declaration) continue;
       const coder = /^(Codex|Claude)\b/i.exec(declaration[1]);
@@ -82,12 +102,12 @@ function evaluateToolIndependence({ evaluator, prBody, prAuthorType }) {
           `CODED-BY UNRECOGNIZED — '${declaration[1]}' must begin with Codex or Claude. Replace the PR body's Coded-by placeholder with the tool that coded the PR.`,
         );
       }
-      coders.add(coder[1].toLowerCase());
+      for (const tool of namedTools(declaration[1])) coders.add(tool);
     }
     if (coders.size === 0) {
       return failure(
         "missing-coded-by",
-        "CODED-BY MISSING — the PR body must declare 'Coded-by: Codex' or 'Coded-by: Claude' outside fenced code blocks.",
+        "CODED-BY MISSING — the PR body must declare 'Coded-by: Codex' or 'Coded-by: Claude' outside fenced code blocks and HTML comments.",
       );
     }
   }
@@ -96,7 +116,7 @@ function evaluateToolIndependence({ evaluator, prBody, prAuthorType }) {
   if (!tool) {
     return failure(
       "ambiguous-evaluator-tool",
-      `EVALUATOR TOOL AMBIGUOUS — signature '${evaluator}' must identify exactly one tool: Codex (Codex/GPT/Astra/Sol) or Claude (Claude/Opus/Fable).`,
+      `EVALUATOR TOOL AMBIGUOUS — signature '${evaluator}' must identify exactly one tool: Codex (Codex/GPT/Astra/Sol) or Claude (Claude/Opus/Fable/Sonnet/Haiku).`,
     );
   }
   if (coders.has(tool)) {
