@@ -1,0 +1,16 @@
+not ok 1 - legacy fixture 38: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 2.384292
+  type: 'test'
+  location: '<repo-root>/.worktrees/r10-a1-fixguards/mcp/tests/r10-parity.test.ts:1:4260'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+
+    true !== false
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'deepStrictEqual'

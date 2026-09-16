@@ -1,0 +1,39 @@
+not ok 22 - legacy fixture 23: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 1.914542
+  type: 'test'
+  location: '<repo-root>/.worktrees/r10-a1-guards/mcp/tests/r10-parity.test.ts:1:4185'
+  failureType: 'testCodeFailure'
+  error: |-
+    Unreviewed divergence at fixture 23
+    + actual - expected
+
+    + {
+    +   actualHash: 'c5704d0cc1ff015bf756da8d2d9331dd8aefed6a5622659826b2326dbe68ab9e',
+    +   afterRows: 1,
+    +   beforeRows: 3,
+    +   conflicts: 0,
+    +   facts: 3,
+    +   kind: 'atomicFindingRows',
+    +   reasons: [
+    +     'latest snapshot replaces historical snapshots'
+    +   ],
+    +   suite: 'diagnosisFindings.test.ts',
+    +   unresolved: 0
+    + }
+    - undefined
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual:
+    suite: 'diagnosisFindings.test.ts'
+    kind: 'atomicFindingRows'
+    reasons:
+      0: 'latest snapshot replaces historical snapshots'
+    beforeRows: 3
+    afterRows: 1
+    actualHash: 'c5704d0cc1ff015bf756da8d2d9331dd8aefed6a5622659826b2326dbe68ab9e'
+    facts: 3
+    conflicts: 0
+    unresolved: 0
+  operator: 'deepStrictEqual'

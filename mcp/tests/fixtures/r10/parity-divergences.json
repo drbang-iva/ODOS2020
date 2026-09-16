@@ -1,0 +1,67 @@
+{
+  "4": {
+    "suite": "examOverviewProjection.test.ts",
+    "kind": "buildExamOverviewProjection",
+    "reasons": [
+      "translated or merged view is not linkable"
+    ],
+    "beforeRows": 2,
+    "afterRows": 0,
+    "actualHash": "1f18c372ef413c5c165248c3bd6bc651f0d90967191e4a8a38f2ddf02a3460e0",
+    "facts": 2,
+    "conflicts": 0,
+    "unresolved": 0
+  },
+  "5": {
+    "suite": "examOverviewProjection.test.ts",
+    "kind": "buildExamOverviewProjection",
+    "reasons": [
+      "translated or merged view is not linkable"
+    ],
+    "beforeRows": 1,
+    "afterRows": 0,
+    "actualHash": "1f18c372ef413c5c165248c3bd6bc651f0d90967191e4a8a38f2ddf02a3460e0",
+    "facts": 1,
+    "conflicts": 0,
+    "unresolved": 0
+  },
+  "6": {
+    "suite": "examOverviewProjection.test.ts",
+    "kind": "buildExamOverviewProjection",
+    "reasons": [
+      "translated or merged view is not linkable"
+    ],
+    "beforeRows": 1,
+    "afterRows": 0,
+    "actualHash": "1f18c372ef413c5c165248c3bd6bc651f0d90967191e4a8a38f2ddf02a3460e0",
+    "facts": 1,
+    "conflicts": 0,
+    "unresolved": 0
+  },
+  "8": {
+    "suite": "examOverviewProjection.test.ts",
+    "kind": "buildExamOverviewProjection",
+    "reasons": [
+      "translated or merged view is not linkable"
+    ],
+    "beforeRows": 1,
+    "afterRows": 0,
+    "actualHash": "1f18c372ef413c5c165248c3bd6bc651f0d90967191e4a8a38f2ddf02a3460e0",
+    "facts": 1,
+    "conflicts": 0,
+    "unresolved": 0
+  },
+  "9": {
+    "suite": "examOverviewProjection.test.ts",
+    "kind": "buildExamOverviewProjection",
+    "reasons": [
+      "translated or merged view is not linkable"
+    ],
+    "beforeRows": 1,
+    "afterRows": 0,
+    "actualHash": "1f18c372ef413c5c165248c3bd6bc651f0d90967191e4a8a38f2ddf02a3460e0",
+    "facts": 1,
+    "conflicts": 0,
+    "unresolved": 0
+  }
+}
