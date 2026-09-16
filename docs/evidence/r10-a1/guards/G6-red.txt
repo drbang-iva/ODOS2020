@@ -1,0 +1,16 @@
+not ok 1 - negative act remains raw and never wins latest snapshot
+  ---
+  duration_ms: 3.394292
+  type: 'test'
+  location: '<repo-root>/.worktrees/r10-a1-guards/mcp/tests/currentFindingReader.test.ts:1:5637'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'

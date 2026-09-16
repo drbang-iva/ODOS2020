@@ -1,0 +1,2 @@
+{"role":"provider","probe":"P7","status":"FAIL","firstEvent":203,"lastEvent":222,"error":"Executing the lost-response retry must not issue a second FHIR write.\n\n2 !== 0\n"}
+{"role":"staff","probe":"P7","status":"FAIL","firstEvent":223,"lastEvent":241,"error":"Executing the lost-response retry must not issue a second FHIR write.\n\n2 !== 0\n"}

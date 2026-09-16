@@ -1,0 +1,51 @@
+not ok 1 - exact catalog resolution retains the whole nested option
+  ---
+  duration_ms: 1.97575
+  type: 'test'
+  location: '<repo-root>/.worktrees/r10-a1-guards/mcp/tests/currentFindingIdentity.test.ts:1:2707'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected "actual" to be reference-equal to "expected":
+    + actual - expected
+
+      {
+    +   atomicFindingId: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::demodex',
+    -   atomicFindingId: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::demodex::collarettes',
+        diagnosisKeys: [],
+    +   display: 'Demodex',
+    -   display: 'Collarettes',
+        fieldCode: 'CUSTOM_ABNORMAL_FINDINGS_02',
+        findingDefinitionId: 'definition-1',
+        findingDefinitionKey: 'ocular-health:anterior:lids-lashes',
+        gradeScale: [],
+    +   optionCode: 'demodex',
+    -   optionCode: 'demodex::collarettes',
+        origin: 'shipped',
+        sectionKey: 'ocular-health:anterior:lids-lashes'
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    atomicFindingId: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::demodex::collarettes'
+    findingDefinitionId: 'definition-1'
+    findingDefinitionKey: 'ocular-health:anterior:lids-lashes'
+    fieldCode: 'CUSTOM_ABNORMAL_FINDINGS_02'
+    optionCode: 'demodex::collarettes'
+    display: 'Collarettes'
+    sectionKey: 'ocular-health:anterior:lids-lashes'
+    gradeScale:
+    diagnosisKeys:
+    origin: 'shipped'
+  actual:
+    atomicFindingId: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::demodex'
+    findingDefinitionId: 'definition-1'
+    findingDefinitionKey: 'ocular-health:anterior:lids-lashes'
+    fieldCode: 'CUSTOM_ABNORMAL_FINDINGS_02'
+    optionCode: 'demodex'
+    display: 'Demodex'
+    sectionKey: 'ocular-health:anterior:lids-lashes'
+    gradeScale:
+    diagnosisKeys:
+    origin: 'shipped'
+  operator: 'strictEqual'

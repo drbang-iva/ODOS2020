@@ -1,0 +1,16 @@
+not ok 1 - canonical fact dominates legacy, including its retired clear marker
+  ---
+  duration_ms: 6.323125
+  type: 'test'
+  location: '<repo-root>/.worktrees/r10-a1-guards/mcp/tests/currentFindingReader.test.ts:1:1101'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    'live' !== 'retired'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'retired'
+  actual: 'live'
+  operator: 'strictEqual'

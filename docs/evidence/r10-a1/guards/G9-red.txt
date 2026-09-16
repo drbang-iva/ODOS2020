@@ -1,0 +1,18 @@
+not ok 7 - history bytes unchanged 7: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.534541
+  type: 'test'
+  location: '<repo-root>/.worktrees/r10-a1-guards/mcp/tests/findingSectionHelpers.test.ts:1:862'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a","finding-b"]}],"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a"]}],"state":"abnormal"}]}}'
+    - '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a","finding-b"]}],"findingDetails":{"finding-a":{"grade":"trace","stability":"stable","size":2.5,"span":{"from":2,"to":5,"clockwise":true}},"finding-b":{"grade":"high"}},"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a"]}],"findingDetails":{"finding-a":{"grade":"marked","stability":"progressive","size":4,"span":{"from":10,"to":1,"clockwise":false}}},"state":"abnormal"}]}}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a","finding-b"]}],"findingDetails":{"finding-a":{"grade":"trace","stability":"stable","size":2.5,"span":{"from":2,"to":5,"clockwise":true}},"finding-b":{"grade":"high"}},"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a"]}],"findingDetails":{"finding-a":{"grade":"marked","stability":"progressive","size":4,"span":{"from":10,"to":1,"clockwise":false}}},"state":"abnormal"}]}}'
+  actual: '{"status":200,"body":{"rows":[{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-od-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OD","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a","finding-b"]}],"state":"abnormal"},{"observationReference":"Observation/finding-ocular-health-synthetic-synthetic-qualified-os-2026-07-10t18-00-00-000z","recordedAt":"2026-07-10T18:00:00.000Z","eye":"OS","values":[{"code":"CUSTOM_ABNORMAL_FINDINGS_01","label":"Abnormal findings","value":["finding-a"]}],"state":"abnormal"}]}}'
+  operator: 'strictEqual'

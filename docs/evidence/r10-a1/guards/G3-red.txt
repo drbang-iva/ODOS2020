@@ -1,0 +1,18 @@
+not ok 1 - raw sources are immutable, a single untranslated view retains bytes and its actual id
+  ---
+  duration_ms: 4.11575
+  type: 'test'
+  location: '<repo-root>/.worktrees/r10-a1-guards/mcp/tests/currentFindingReader.test.ts:1:6724'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '[{"code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis","display":"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"}],"text":"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"},"valueBoolean":true}]'
+    - '[{"code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis","display":"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"}],"text":"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"},"valueBoolean":true}]'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '[{"code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis","display":"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"}],"text":"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"},"valueBoolean":true}]'
+  actual: '[{"code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis","display":"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"}],"text":"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"},"valueBoolean":true}]'
+  operator: 'strictEqual'
