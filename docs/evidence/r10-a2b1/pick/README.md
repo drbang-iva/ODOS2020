@@ -29,3 +29,7 @@ Raw `W*-red.tap` and `W*-green.tap` accompany these results. Additional red/gree
 No clinical codes or FHIR URLs were introduced to production code. Tests reuse existing fixture/catalog constants and already-existing fixture system URLs. No policy/UI edits, containers, PR, push, merge or evaluation performed by this worker.
 
 Status: author checks complete; NOT EVALUATED. Parent must integrate, run full verification/live proof, and obtain independent Claude evaluation. This PR remains HELD OPEN under A3.
+
+## Existing-path validation status interpretation
+
+Sections 3.1 and 3.8 explicitly leave measurement and catalog-search picks unchanged. Their existing validation HTTP statuses therefore remain (for example, missing laterality 422, missing diagnosis/absent discard target 404, and staged-family conflict 409), now with the typed `invalid` discriminator and `invalid-pick` reason. The generic 400 invalid row in section 3.3 governs new support validation; the listed new pre-rebuild/signed support exceptions retain 409/422. This preserves the explicitly unchanged path rather than silently changing its validation status contract. Applied pick responses universally use the newly specified HTTP 200.
