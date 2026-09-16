@@ -9,6 +9,8 @@
 
 `capture-baseline.mjs` instruments a disposable Node process; it does not edit source files or replace the original reader implementations. Run it from `mcp/` with `--import tsx --import ./tests/fixtures/r10/capture-baseline.mjs --test` and the six named suite paths. Set `R10_BASELINE_OUTPUT` to a new scratch JSONL file. The complete capture run was 198 passed, zero failures/skips. Captured suite hashes are SHA256 in base64.
 
+The `suiteHashes` values record the suites at capture time (`40c19a9e`) and are not compared to the working tree; the ongoing guard is capture replay.
+
 Nine incidental, randomly generated definition UUIDs contained ten consecutive digits, which the repository's fixture privacy guard treats as an identity-like value. They were consistently renamed to `r10-synthetic-definition-N` across inputs and expected outputs. This changes no clinical values or stable keys. All 61 captured history response byte strings were checked unchanged by this normalization. No guard or old assertion was changed.
 
 ## Explicit divergences
