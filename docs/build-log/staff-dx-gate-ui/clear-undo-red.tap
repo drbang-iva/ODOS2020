@@ -28,7 +28,7 @@ not ok 5 - STAFF-DX-GATE Undo protects diagnosis slots: false, condition
   ---
   duration_ms: 1.879958
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:1:14958'
+  location: '<worktree>-ui2/ui/tests/encounterUndo.test.tsx:1:14958'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -41,7 +41,7 @@ not ok 5 - STAFF-DX-GATE Undo protects diagnosis slots: false, condition
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:342:16)
+    TestContext.<anonymous> (<worktree>-ui2/ui/tests/encounterUndo.test.tsx:342:16)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)
@@ -54,7 +54,7 @@ not ok 6 - STAFF-DX-GATE Undo protects diagnosis slots: false, diagnosis-row
   ---
   duration_ms: 0.283167
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:1:14958'
+  location: '<worktree>-ui2/ui/tests/encounterUndo.test.tsx:1:14958'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -67,7 +67,7 @@ not ok 6 - STAFF-DX-GATE Undo protects diagnosis slots: false, diagnosis-row
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:342:16)
+    TestContext.<anonymous> (<worktree>-ui2/ui/tests/encounterUndo.test.tsx:342:16)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)
@@ -86,7 +86,7 @@ not ok 8 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, condition
   ---
   duration_ms: 0.267416
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:1:14958'
+  location: '<worktree>-ui2/ui/tests/encounterUndo.test.tsx:1:14958'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -99,7 +99,7 @@ not ok 8 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, condition
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:342:16)
+    TestContext.<anonymous> (<worktree>-ui2/ui/tests/encounterUndo.test.tsx:342:16)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)
@@ -112,7 +112,7 @@ not ok 9 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, diagnosis-row
   ---
   duration_ms: 0.478
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:1:14958'
+  location: '<worktree>-ui2/ui/tests/encounterUndo.test.tsx:1:14958'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -125,7 +125,7 @@ not ok 9 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, diagnosis-row
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:342:16)
+    TestContext.<anonymous> (<worktree>-ui2/ui/tests/encounterUndo.test.tsx:342:16)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)
@@ -138,7 +138,7 @@ not ok 10 - STAFF-DX-GATE ledger and undo capabilities stay outside the persiste
   ---
   duration_ms: 7.542417
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:1:15742'
+  location: '<worktree>-ui2/ui/tests/encounterUndo.test.tsx:1:15742'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -152,7 +152,7 @@ not ok 10 - STAFF-DX-GATE ledger and undo capabilities stay outside the persiste
   expected: true
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterUndo.test.tsx:355:12)
+    TestContext.<anonymous> (<worktree>-ui2/ui/tests/encounterUndo.test.tsx:355:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -173,7 +173,7 @@ not ok 13 - STAFF-DX-GATE section clear checks diagnosis impact before confirmat
   ---
   duration_ms: 8.615584
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:2:5142'
+  location: '<worktree>-ui2/ui/tests/encounterVoid.test.tsx:2:5142'
   failureType: 'testCodeFailure'
   error: |-
     denied diagnosis clears never open a confirmation
@@ -186,7 +186,7 @@ not ok 13 - STAFF-DX-GATE section clear checks diagnosis impact before confirmat
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:1396:18)
+    TestContext.<anonymous> (<worktree>-ui2/ui/tests/encounterVoid.test.tsx:1396:18)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -201,7 +201,7 @@ not ok 15 - STAFF-DX-GATE section clear checks diagnosis impact before confirmat
   ---
   duration_ms: 5.9675
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:2:5142'
+  location: '<worktree>-ui2/ui/tests/encounterVoid.test.tsx:2:5142'
   failureType: 'testCodeFailure'
   error: |-
     denied diagnosis clears never open a confirmation
@@ -214,7 +214,7 @@ not ok 15 - STAFF-DX-GATE section clear checks diagnosis impact before confirmat
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:1396:18)
+    TestContext.<anonymous> (<worktree>-ui2/ui/tests/encounterVoid.test.tsx:1396:18)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -241,7 +241,7 @@ not ok 19 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirm
   ---
   duration_ms: 4.471875
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:2:5142'
+  location: '<worktree>-ui2/ui/tests/encounterVoid.test.tsx:2:5142'
   failureType: 'testCodeFailure'
   error: |-
     denied diagnosis clears never open a confirmation
@@ -254,7 +254,7 @@ not ok 19 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirm
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:1396:18)
+    TestContext.<anonymous> (<worktree>-ui2/ui/tests/encounterVoid.test.tsx:1396:18)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -269,7 +269,7 @@ not ok 21 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirm
   ---
   duration_ms: 5.176875
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:2:5142'
+  location: '<worktree>-ui2/ui/tests/encounterVoid.test.tsx:2:5142'
   failureType: 'testCodeFailure'
   error: |-
     denied diagnosis clears never open a confirmation
@@ -282,7 +282,7 @@ not ok 21 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirm
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/encounterVoid.test.tsx:1396:18)
+    TestContext.<anonymous> (<worktree>-ui2/ui/tests/encounterVoid.test.tsx:1396:18)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

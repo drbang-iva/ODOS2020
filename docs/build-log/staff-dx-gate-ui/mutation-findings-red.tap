@@ -10,7 +10,7 @@ not ok 2 - STAFF-DX-GATE findings retain grade and laterality while gating evide
   ---
   duration_ms: 3.939041
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:1:80669'
+  location: '<worktree>-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:1:80669'
   failureType: 'testCodeFailure'
   error: |-
     denied evidence callbacks do not issue writes
@@ -70,7 +70,7 @@ not ok 2 - STAFF-DX-GATE findings retain grade and laterality while gating evide
       observationReference: 'Observation/absent'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:2075:14)
+    TestContext.<anonymous> (<worktree>-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:2075:14)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)
@@ -80,7 +80,7 @@ not ok 3 - STAFF-DX-GATE findings retain grade and laterality while gating evide
   ---
   duration_ms: 0.897917
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:1:80669'
+  location: '<worktree>-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:1:80669'
   failureType: 'testCodeFailure'
   error: |-
     denied evidence callbacks do not issue writes
@@ -140,7 +140,7 @@ not ok 3 - STAFF-DX-GATE findings retain grade and laterality while gating evide
       observationReference: 'Observation/absent'
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:2075:14)
+    TestContext.<anonymous> (<worktree>-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:2075:14)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)

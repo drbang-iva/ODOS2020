@@ -4,7 +4,7 @@ not ok 1 - STAFF-DX-GATE carry-forward permits existing selection and refuses ne
   ---
   duration_ms: 26.085791
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisCarryForward.test.tsx:1:21239'
+  location: '<worktree>-ui/ui/tests/diagnosisCarryForward.test.tsx:1:21239'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - STAFF-DX-GATE carry-forward permits existing selection and refuses ne
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisCarryForward.test.tsx:623:14)
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisCarryForward.test.tsx:623:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -26,7 +26,7 @@ not ok 2 - STAFF-DX-GATE carry-forward permits existing selection and refuses ne
   ---
   duration_ms: 3.974792
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisCarryForward.test.tsx:1:21239'
+  location: '<worktree>-ui/ui/tests/diagnosisCarryForward.test.tsx:1:21239'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -39,7 +39,7 @@ not ok 2 - STAFF-DX-GATE carry-forward permits existing selection and refuses ne
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisCarryForward.test.tsx:623:14)
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisCarryForward.test.tsx:623:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -54,7 +54,7 @@ not ok 4 - STAFF-DX-GATE proposal picker requires diagnosis capability: false
   ---
   duration_ms: 3.422417
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisDemotionImpact.test.tsx:1:9028'
+  location: '<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:1:9028'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -67,7 +67,7 @@ not ok 4 - STAFF-DX-GATE proposal picker requires diagnosis capability: false
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisDemotionImpact.test.tsx:333:18)
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:333:18)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -76,7 +76,7 @@ not ok 5 - STAFF-DX-GATE proposal picker requires diagnosis capability: undefine
   ---
   duration_ms: 2.300208
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisDemotionImpact.test.tsx:1:9028'
+  location: '<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:1:9028'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -89,7 +89,7 @@ not ok 5 - STAFF-DX-GATE proposal picker requires diagnosis capability: undefine
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisDemotionImpact.test.tsx:333:18)
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:333:18)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -104,7 +104,7 @@ not ok 7 - STAFF-DX-GATE decision picker requires diagnosis capability: false
   ---
   duration_ms: 2.339917
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisDemotionImpact.test.tsx:1:9028'
+  location: '<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:1:9028'
   failureType: 'testCodeFailure'
   error: |-
     Possible
@@ -117,7 +117,7 @@ not ok 7 - STAFF-DX-GATE decision picker requires diagnosis capability: false
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisDemotionImpact.test.tsx:339:20)
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:339:20)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -126,7 +126,7 @@ not ok 8 - STAFF-DX-GATE decision picker requires diagnosis capability: undefine
   ---
   duration_ms: 1.242708
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisDemotionImpact.test.tsx:1:9028'
+  location: '<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:1:9028'
   failureType: 'testCodeFailure'
   error: |-
     Possible
@@ -139,7 +139,7 @@ not ok 8 - STAFF-DX-GATE decision picker requires diagnosis capability: undefine
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisDemotionImpact.test.tsx:339:20)
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisDemotionImpact.test.tsx:339:20)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -166,7 +166,7 @@ not ok 12 - STAFF-DX-GATE workspace separates diagnosis writes from pins: false
   ---
   duration_ms: 8.702334
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisWorkspace.test.tsx:1:77491'
+  location: '<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:1:77491'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -179,7 +179,7 @@ not ok 12 - STAFF-DX-GATE workspace separates diagnosis writes from pins: false
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisWorkspace.test.tsx:2038:14)
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:2038:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -188,7 +188,7 @@ not ok 13 - STAFF-DX-GATE findings retain grade and laterality while gating evid
   ---
   duration_ms: 0.56275
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisWorkspace.test.tsx:1:80025'
+  location: '<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:1:80025'
   failureType: 'testCodeFailure'
   error: |-
     Record Offered finding present
@@ -201,7 +201,7 @@ not ok 13 - STAFF-DX-GATE findings retain grade and laterality while gating evid
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisWorkspace.test.tsx:2071:16)
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:2071:16)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)
@@ -214,7 +214,7 @@ not ok 14 - STAFF-DX-GATE Assessment reads diagnosis permission from the server:
   ---
   duration_ms: 3.081541
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisWorkspace.test.tsx:1:81435'
+  location: '<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:1:81435'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -227,7 +227,7 @@ not ok 14 - STAFF-DX-GATE Assessment reads diagnosis permission from the server:
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisWorkspace.test.tsx:2109:14)
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:2109:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -236,7 +236,7 @@ not ok 15 - STAFF-DX-GATE workspace separates diagnosis writes from pins: undefi
   ---
   duration_ms: 5.14875
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisWorkspace.test.tsx:1:77491'
+  location: '<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:1:77491'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -249,7 +249,7 @@ not ok 15 - STAFF-DX-GATE workspace separates diagnosis writes from pins: undefi
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisWorkspace.test.tsx:2038:14)
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:2038:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -258,7 +258,7 @@ not ok 16 - STAFF-DX-GATE findings retain grade and laterality while gating evid
   ---
   duration_ms: 0.391791
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisWorkspace.test.tsx:1:80025'
+  location: '<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:1:80025'
   failureType: 'testCodeFailure'
   error: |-
     Record Offered finding present
@@ -271,7 +271,7 @@ not ok 16 - STAFF-DX-GATE findings retain grade and laterality while gating evid
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisWorkspace.test.tsx:2071:16)
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:2071:16)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)
@@ -284,7 +284,7 @@ not ok 17 - STAFF-DX-GATE Assessment reads diagnosis permission from the server:
   ---
   duration_ms: 2.364125
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisWorkspace.test.tsx:1:81435'
+  location: '<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:1:81435'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -297,7 +297,7 @@ not ok 17 - STAFF-DX-GATE Assessment reads diagnosis permission from the server:
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui/ui/tests/diagnosisWorkspace.test.tsx:2109:14)
+    TestContext.<anonymous> (<worktree>-ui/ui/tests/diagnosisWorkspace.test.tsx:2109:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

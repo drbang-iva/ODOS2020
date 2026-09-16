@@ -4,7 +4,7 @@ not ok 1 - full role table keeps diagnosis action equivalent to Condition create
   ---
   duration_ms: 1.953375
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/v05a-authz.test.ts:1:1340'
+  location: '<worktree>/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/v05a-authz.test.ts:1:1340'
   failureType: 'testCodeFailure'
   error: |-
     staff: chart.diagnosis.write must agree with Condition create
@@ -17,7 +17,7 @@ not ok 1 - full role table keeps diagnosis action equivalent to Condition create
   actual: true
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/v05a-authz.test.ts:53:14)
+    TestContext.<anonymous> (<worktree>/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/v05a-authz.test.ts:53:14)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.start (node:internal/test_runner/test:944:17)

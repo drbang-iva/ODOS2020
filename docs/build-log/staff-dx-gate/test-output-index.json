@@ -1,7 +1,9 @@
 [
   {
     "path": "docs/build-log/staff-dx-gate/backend-focused.tap.gz",
-    "sha256": "189668c5a930fbebc4b83e1b7ae6e3c6c854586407a685583ca44ed2c87baf54",
+    "sha256": "1b243237dda42849757998a88e8c2190db0ca480da4d02cb6ff39548de73481b",
+    "originalSha256": "189668c5a930fbebc4b83e1b7ae6e3c6c854586407a685583ca44ed2c87baf54",
+    "pathNormalized": true,
     "counts": [
       "# tests 389",
       "# pass 385",
@@ -12,7 +14,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/baseline.tap.gz",
-    "sha256": "6a7fb7d99c5686761206d8bd1f41d7b529846626026e594783d76b09fd5373b7",
+    "sha256": "00ac1ceb221955c6bab25e38f7f3641cecbb93313eaacbb16a69c183bf74a65d",
+    "originalSha256": "6a7fb7d99c5686761206d8bd1f41d7b529846626026e594783d76b09fd5373b7",
+    "pathNormalized": true,
     "counts": [
       "# tests 320",
       "# pass 316",
@@ -24,6 +28,8 @@
   {
     "path": "docs/build-log/staff-dx-gate/complexity-green.tap",
     "sha256": "910f18e3983f048947cd4856a7b63fdb6b3e9f0d5b0f3775c4cfc54fe929f5d3",
+    "originalSha256": "910f18e3983f048947cd4856a7b63fdb6b3e9f0d5b0f3775c4cfc54fe929f5d3",
+    "pathNormalized": false,
     "counts": [
       "# tests 36",
       "# pass 36",
@@ -34,7 +40,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/complexity-red.tap",
-    "sha256": "b0e12b25dcebe005a4aa0ff561cc24e40abcbca47724aec8da236aab3a1e1055",
+    "sha256": "ec19cb49566151bb29d281ad7f8840819982a33bfae5055e814793b6636b2bca",
+    "originalSha256": "b0e12b25dcebe005a4aa0ff561cc24e40abcbca47724aec8da236aab3a1e1055",
+    "pathNormalized": true,
     "counts": [
       "# tests 1",
       "# pass 0",
@@ -45,7 +53,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/first-green.tap",
-    "sha256": "93c20509766c549c6ac35bcf00ad1bb35986410b1905523cb5844ae0448fee1e",
+    "sha256": "01a88c541d3f15e93782e3e9948376198333e911199c2bd8a190739d42321a50",
+    "originalSha256": "93c20509766c549c6ac35bcf00ad1bb35986410b1905523cb5844ae0448fee1e",
+    "pathNormalized": true,
     "counts": [
       "# tests 123",
       "# pass 121",
@@ -56,7 +66,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/initial-red.tap.gz",
-    "sha256": "cc2763e0ec674b222d8e2e3530dfa986b006f65a8f2b9b30a5006a103c2edca3",
+    "sha256": "3f14d0afcdf5b8c3a33394e5ea02985599909f175b865ddfdf75b2ca5dfc14d6",
+    "originalSha256": "cc2763e0ec674b222d8e2e3530dfa986b006f65a8f2b9b30a5006a103c2edca3",
+    "pathNormalized": true,
     "counts": [
       "# tests 123",
       "# pass 109",
@@ -67,7 +79,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mcp-full-final.tap.gz",
-    "sha256": "9bc81c8f7e51629993f51a1dd3363289309a3b6903927511dfd610b32141e4ee",
+    "sha256": "f077f11be52beee674c9625f4598415f9108b316170a3e1878af823480ad651c",
+    "originalSha256": "9bc81c8f7e51629993f51a1dd3363289309a3b6903927511dfd610b32141e4ee",
+    "pathNormalized": true,
     "counts": [
       "# tests 5108",
       "# pass 5057",
@@ -78,7 +92,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mcp-full-isolated-postgres.tap.gz",
-    "sha256": "61ae5c77f3876a2ef8053adaf5e0669fa9cf11624ff44fc8f69293a5e554f534",
+    "sha256": "220b180052e937a31441fb2251e98060307161bcfb104e67467d4313940c9a77",
+    "originalSha256": "61ae5c77f3876a2ef8053adaf5e0669fa9cf11624ff44fc8f69293a5e554f534",
+    "pathNormalized": true,
     "counts": [
       "# tests 5108",
       "# pass 5050",
@@ -89,7 +105,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mcp-full.tap.gz",
-    "sha256": "80cbe4714eddd15598b593291bca5e7865b5e083ceae742f7ebe9b2c48e4cdea",
+    "sha256": "a8bbdeb33896ee2c1559d08303ab71bfbbe10bb2f7d4415ff34d7e605cec6cf3",
+    "originalSha256": "80cbe4714eddd15598b593291bca5e7865b5e083ceae742f7ebe9b2c48e4cdea",
+    "pathNormalized": true,
     "counts": [
       "# tests 5103",
       "# pass 5034",
@@ -100,7 +118,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mcp-rebased.tap.gz",
-    "sha256": "831abc2735a8c895bd2a8a3ed1a1ab395fbe1da00d1708eef91f97fbc4a439db",
+    "sha256": "f1eaa2c45f2e1e94afc7b866a0d8fb9a307b36c298af8a12ea3204e787b04818",
+    "originalSha256": "831abc2735a8c895bd2a8a3ed1a1ab395fbe1da00d1708eef91f97fbc4a439db",
+    "pathNormalized": true,
     "counts": [
       "# tests 5127",
       "# pass 5075",
@@ -111,7 +131,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mcp-review-fix.tap.gz",
-    "sha256": "6eb46ae05a254e6bdbfc81c7b43eeb86c4e121c65a6dddfc297d57f74fe13d21",
+    "sha256": "fbe28ac68dfe5b68e934c01fc07e60c2b82f95105cfc55a6f554c6dc9746e34b",
+    "originalSha256": "6eb46ae05a254e6bdbfc81c7b43eeb86c4e121c65a6dddfc297d57f74fe13d21",
+    "pathNormalized": true,
     "counts": [
       "# tests 5128",
       "# pass 5076",
@@ -122,7 +144,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mutation-complexity-red.tap",
-    "sha256": "0735263f7bf4f7873280176ecd167d49e424f04d05bf6d5ce4e08f8560f8445d",
+    "sha256": "ed83769525ce35d9b969dfb2fd5d19482d1cafc291fb51a6b327da7daa5cd94b",
+    "originalSha256": "0735263f7bf4f7873280176ecd167d49e424f04d05bf6d5ce4e08f8560f8445d",
+    "pathNormalized": true,
     "counts": [
       "# tests 3",
       "# pass 2",
@@ -133,7 +157,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mutation-credential-grant-red.tap",
-    "sha256": "de89477f8fbd88bf13f8887b762eb040e6455fedcb8a2f8bc2eae74d3273c859",
+    "sha256": "c613838cc6a3bf203f8a7bee5b1bcf3f80c551a934ef030ee89481b97eacad50",
+    "originalSha256": "de89477f8fbd88bf13f8887b762eb040e6455fedcb8a2f8bc2eae74d3273c859",
+    "pathNormalized": true,
     "counts": [
       "# tests 1",
       "# pass 0",
@@ -144,7 +170,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mutation-diagnosis-catalog-payload-red.tap",
-    "sha256": "cad51e203891b89ca5d3f3adb44cd1a05d29e2af87eae9fdc1e52e08e28b8baa",
+    "sha256": "e136b44bdf06c03505a0c8b11159faf181b7b3fbd049acf154b2a01cf8cf1cab",
+    "originalSha256": "cad51e203891b89ca5d3f3adb44cd1a05d29e2af87eae9fdc1e52e08e28b8baa",
+    "pathNormalized": true,
     "counts": [
       "# tests 2",
       "# pass 1",
@@ -155,7 +183,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mutation-diagnosis-findings-payload-red.tap",
-    "sha256": "ce66368f5706a1e48a9171a52131857ca78aac7a2683cd6097c5e34e7db4b097",
+    "sha256": "f8f39591f22cf3dd6485d5afaa210af5922a8a68340b8465103596a4556e29df",
+    "originalSha256": "ce66368f5706a1e48a9171a52131857ca78aac7a2683cd6097c5e34e7db4b097",
+    "pathNormalized": true,
     "counts": [
       "# tests 2",
       "# pass 1",
@@ -166,7 +196,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mutation-diagnosis-quick-list-payload-red.tap",
-    "sha256": "a66747f2965604c6ef91e5d2a1ed92fd0ade5c3a9f2414d59a2a2586cbf4d39b",
+    "sha256": "9b79adec30bc4f49d6f490908feacc92c42e569a7a770bb554970cc49dd8e298",
+    "originalSha256": "a66747f2965604c6ef91e5d2a1ed92fd0ade5c3a9f2414d59a2a2586cbf4d39b",
+    "pathNormalized": true,
     "counts": [
       "# tests 2",
       "# pass 1",
@@ -177,7 +209,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mutation-pick-red.tap",
-    "sha256": "8d839f45c410d09b751dfbab78aef918f6fb3c2b5110c09b32d91bb01479e467",
+    "sha256": "ac85ceac93df73cedb3567cb1c9e4ff20ea69eeb3fa3a84060e8c2cb5f0b13dd",
+    "originalSha256": "8d839f45c410d09b751dfbab78aef918f6fb3c2b5110c09b32d91bb01479e467",
+    "pathNormalized": true,
     "counts": [
       "# tests 4",
       "# pass 0",
@@ -188,7 +222,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mutation-prewrite-red.tap",
-    "sha256": "e17870088ca1b4e011f68374e4546430db68a74b878555861cd6206df6f6bacb",
+    "sha256": "a2a9920cc3128e541d649aa48522ef23bb3aad7c086f11976b59001bafd2d8de",
+    "originalSha256": "e17870088ca1b4e011f68374e4546430db68a74b878555861cd6206df6f6bacb",
+    "pathNormalized": true,
     "counts": [
       "# tests 1",
       "# pass 0",
@@ -199,7 +235,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mutation-role-table-red.tap",
-    "sha256": "855cf4ba73d2887c55b64a9df3d3bbc4475574888f2f4ccbac7632f24a0e4697",
+    "sha256": "91a66fc3f0033c3b0e82336f9950bc88bfc80a6f7eb1820f5db521739a3f67e7",
+    "originalSha256": "855cf4ba73d2887c55b64a9df3d3bbc4475574888f2f4ccbac7632f24a0e4697",
+    "pathNormalized": true,
     "counts": [
       "# tests 1",
       "# pass 0",
@@ -210,7 +248,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mutation-undo-red.tap",
-    "sha256": "a7f6d2f6779387b1d813f59f4a96e01fd0a6473242cff62cda2bf54381d98a8b",
+    "sha256": "6b908136bd8c27209adacb1234e00cff1a78cbc6a480639f3e20dfae1cabc072",
+    "originalSha256": "a7f6d2f6779387b1d813f59f4a96e01fd0a6473242cff62cda2bf54381d98a8b",
+    "pathNormalized": true,
     "counts": [
       "# tests 1",
       "# pass 0",
@@ -221,7 +261,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mutation-void-red.tap",
-    "sha256": "0eb9bfcd3d451ee1a91f49b53b673aed44869f55e0ee3ff48ff15d2d2ec3b79b",
+    "sha256": "fea0e183a69f4a8dd3f3965ad1cf05f4b6440016051fb4c454f869bd5d4c67d6",
+    "originalSha256": "0eb9bfcd3d451ee1a91f49b53b673aed44869f55e0ee3ff48ff15d2d2ec3b79b",
+    "pathNormalized": true,
     "counts": [
       "# tests 1",
       "# pass 0",
@@ -232,7 +274,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/mutations-restored-green.tap.gz",
-    "sha256": "38fd766b6ba6fbe1964358747e4aee05053ae46a7439fb3b16996becef95160d",
+    "sha256": "5cf080a9c8244ca0a7c3ab5309836db738ae750d5fc001ab6621f660d4ea3a9a",
+    "originalSha256": "38fd766b6ba6fbe1964358747e4aee05053ae46a7439fb3b16996becef95160d",
+    "pathNormalized": true,
     "counts": [
       "# tests 244",
       "# pass 242",
@@ -244,6 +288,8 @@
   {
     "path": "docs/build-log/staff-dx-gate/rate-limit-green.tap",
     "sha256": "9c109655f5ec1cd9cf2468d6060023376ce7c3e9b11f500f2eb3196224be40f1",
+    "originalSha256": "9c109655f5ec1cd9cf2468d6060023376ce7c3e9b11f500f2eb3196224be40f1",
+    "pathNormalized": false,
     "counts": [
       "# tests 64",
       "# pass 62",
@@ -255,6 +301,8 @@
   {
     "path": "docs/build-log/staff-dx-gate/rate-limit-inventory-green.tap",
     "sha256": "01f8a9985a732a681c9ec8207ba65c8cf1e6f3010d0174eb75ff5ac3ef7c7d5b",
+    "originalSha256": "01f8a9985a732a681c9ec8207ba65c8cf1e6f3010d0174eb75ff5ac3ef7c7d5b",
+    "pathNormalized": false,
     "counts": [
       "# tests 21",
       "# pass 21",
@@ -265,62 +313,74 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/rate-limit-mutation-diagnosis-order-red.tap",
-    "sha256": "33d56f7736948b958c855b821b44511b5f98abb88cce21569170d456186e7b84",
+    "sha256": "72d56f2ebb334a326eeb3be1f64c41c0db82511f51cd4bba97412af424ec73ee",
+    "originalSha256": "9faf1a8a705a5ddbb5ca7044c645fdabc9b9387f5e8b9d59aeee939d8095fee8",
+    "pathNormalized": true,
     "counts": [
       "# tests 1",
       "# pass 0",
       "# fail 1",
       "# skipped 0",
-      "# duration_ms 651.76225"
+      "# duration_ms 634.796417"
     ]
   },
   {
     "path": "docs/build-log/staff-dx-gate/rate-limit-mutation-diagnosis-picks-red.tap",
-    "sha256": "4bdf037db9fbdab26d3c5962c22d7b4d7e317fc00568b7dff76b81ed7ad48c94",
+    "sha256": "a9b933855b254f4647e25b7cf614fd1c7c77109da8ac98a0fc0b0fb7ada9d117",
+    "originalSha256": "3f7899951f3608363d016e3dc64343514f0e9b18509cd713401bd2490dde71ae",
+    "pathNormalized": true,
     "counts": [
       "# tests 1",
       "# pass 0",
       "# fail 1",
       "# skipped 0",
-      "# duration_ms 736.674625"
+      "# duration_ms 712.776667"
     ]
   },
   {
     "path": "docs/build-log/staff-dx-gate/rate-limit-mutation-newness-red.tap",
-    "sha256": "65e825f02840caded6ab4f44e65d7366813357a189f820b2331ea44d6899fcd6",
+    "sha256": "bf80a3e061a89891d80d61154518dadc40b1728435e23ee28f35f515a6ed1372",
+    "originalSha256": "171f5a599cfbe84119579dad911508a59760778e6dece9dd7c69cc51b0b3ae77",
+    "pathNormalized": true,
     "counts": [
       "# tests 1",
       "# pass 0",
       "# fail 1",
       "# skipped 0",
-      "# duration_ms 676.018708"
+      "# duration_ms 644.907083"
     ]
   },
   {
     "path": "docs/build-log/staff-dx-gate/rate-limit-mutation-problem-status-red.tap",
-    "sha256": "dab8640706d8fc6949934fd5a6798be29901d7101672c542dc541902bdd5bc65",
+    "sha256": "55f8ebab7bf25a1357c0bedd24c436fe33ffe8cea196085a14cf62b55bd8ca78",
+    "originalSha256": "29dc0f6b88814f0733058852817e558615a5b3349af2e86bd99c0a2810f55e36",
+    "pathNormalized": true,
     "counts": [
       "# tests 1",
       "# pass 0",
       "# fail 1",
       "# skipped 0",
-      "# duration_ms 676.141792"
+      "# duration_ms 632.362916"
     ]
   },
   {
     "path": "docs/build-log/staff-dx-gate/rate-limit-mutation-status-red.tap",
-    "sha256": "a870f22f115556502fb3ff57e347a9d1cd7687f02e6812c4db7b06e050f409df",
+    "sha256": "e5021b6a111b98cc230bd6ef5fe160ea85518c474082b1705c733dfebe11d747",
+    "originalSha256": "350e284e9df7272eb5fef0018c3788436fff05b4ca19344823d984968d72e08a",
+    "pathNormalized": true,
     "counts": [
       "# tests 1",
       "# pass 0",
       "# fail 1",
       "# skipped 0",
-      "# duration_ms 656.877875"
+      "# duration_ms 631.474666"
     ]
   },
   {
     "path": "docs/build-log/staff-dx-gate/rate-limit-red.tap",
-    "sha256": "a01f32c70ec35fd21d18a1495dcfc89f49750d69398103edd7a7bea74e686f9f",
+    "sha256": "98ab449137ce3d1660fb32216f39077e39b0e263a49d51ac4b733c124c0c5cfd",
+    "originalSha256": "a01f32c70ec35fd21d18a1495dcfc89f49750d69398103edd7a7bea74e686f9f",
+    "pathNormalized": true,
     "counts": [
       "# tests 29",
       "# pass 28",
@@ -331,18 +391,22 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/rate-limit-restored-green.tap",
-    "sha256": "a0b1acd28ce2bbcdc8f59ce349187d78b81ee6faf79c3fc8683eb1222643e2e7",
+    "sha256": "12b5ba6967b92a1126c9d9b256a29eab70d3609feaecc92824328aea4fbff19e",
+    "originalSha256": "12b5ba6967b92a1126c9d9b256a29eab70d3609feaecc92824328aea4fbff19e",
+    "pathNormalized": false,
     "counts": [
       "# tests 1",
       "# pass 1",
       "# fail 0",
       "# skipped 0",
-      "# duration_ms 680.926167"
+      "# duration_ms 637.929917"
     ]
   },
   {
     "path": "docs/build-log/staff-dx-gate/role-table-final.tap",
     "sha256": "5714aab74c70a8ec56e80289152119e0a4796719d680c471bdb5c700e59cac5f",
+    "originalSha256": "5714aab74c70a8ec56e80289152119e0a4796719d680c471bdb5c700e59cac5f",
+    "pathNormalized": false,
     "counts": [
       "# tests 22",
       "# pass 20",
@@ -354,6 +418,8 @@
   {
     "path": "docs/build-log/staff-dx-gate/role-table-rebased.tap",
     "sha256": "cc51b5e7deff10ad72b281ca9472311f846576f589f2b9299610cf3e5d739498",
+    "originalSha256": "cc51b5e7deff10ad72b281ca9472311f846576f589f2b9299610cf3e5d739498",
+    "pathNormalized": false,
     "counts": [
       "# tests 22",
       "# pass 20",
@@ -364,7 +430,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/secondary-green.tap.gz",
-    "sha256": "0ac51b400e358062ab6856146ee9e52d207dae782c2b3af5db3dc9fbb7c9892b",
+    "sha256": "4ea8bb6398aeea8bab1ff2f3286d78cfc524945595fe516e9cace53e7b320de5",
+    "originalSha256": "0ac51b400e358062ab6856146ee9e52d207dae782c2b3af5db3dc9fbb7c9892b",
+    "pathNormalized": true,
     "counts": [
       "# tests 85",
       "# pass 84",
@@ -375,7 +443,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/secondary-red.tap",
-    "sha256": "bbd921ee08ff30f684796c15f00dec7cb04931e46fa3cc445123681c433708b3",
+    "sha256": "26b25d98f5e64de57fcfc074f9bcc2ce0a5a08dc3f45594d1910f5106d1a49d5",
+    "originalSha256": "bbd921ee08ff30f684796c15f00dec7cb04931e46fa3cc445123681c433708b3",
+    "pathNormalized": true,
     "counts": [
       "# tests 85",
       "# pass 82",
@@ -387,6 +457,8 @@
   {
     "path": "docs/build-log/staff-dx-gate/source-inventory-green.tap",
     "sha256": "612f8799d806491c707fc1432b8e85078be0f66ccfc2513d7bcd123249eb1bab",
+    "originalSha256": "612f8799d806491c707fc1432b8e85078be0f66ccfc2513d7bcd123249eb1bab",
+    "pathNormalized": false,
     "counts": [
       "# tests 27",
       "# pass 27",
@@ -397,7 +469,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/ui-full-final.tap.gz",
-    "sha256": "6c82f21e4dda284f7583e79d7003f9be6164c22c9aad5f8777270ee39ebcb9e2",
+    "sha256": "12fc01885aa95b98ca1e48b155116628dc96bf2174fee16b11c725f17faeb9ba",
+    "originalSha256": "6c82f21e4dda284f7583e79d7003f9be6164c22c9aad5f8777270ee39ebcb9e2",
+    "pathNormalized": true,
     "counts": [
       "# tests 1606",
       "# pass 1606",
@@ -408,7 +482,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/ui-full.tap.gz",
-    "sha256": "9a78c50ac17faad7899ffe1c9d02b4be1d6864ffd50562782adf569899e4ae71",
+    "sha256": "0a276527782b975670d1f9f0c9daecd0f46f90f76bf2cf2d9f2a945689234d2f",
+    "originalSha256": "9a78c50ac17faad7899ffe1c9d02b4be1d6864ffd50562782adf569899e4ae71",
+    "pathNormalized": true,
     "counts": [
       "# tests 1606",
       "# pass 1603",
@@ -419,7 +495,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/ui-rebased.tap.gz",
-    "sha256": "8f30d4c9cbc6af157301dc74036a2e87721b931e709b8ca7e0da7341f04db483",
+    "sha256": "84e268fffea94e1536f27418fcf2fed436cc8233cfa0d4b70d3529eae971c698",
+    "originalSha256": "8f30d4c9cbc6af157301dc74036a2e87721b931e709b8ca7e0da7341f04db483",
+    "pathNormalized": true,
     "counts": [
       "# tests 1613",
       "# pass 1613",
@@ -430,7 +508,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/ui-review-fix.tap.gz",
-    "sha256": "29d21a977d2e1c63b841b74fe0df3ff4c1771c4e968ea2866499c5b658aca9f3",
+    "sha256": "8a06b1ee4a41146d85587ee088e568e0521f17a3cd6f70c4bb2d7d49ab0d10b8",
+    "originalSha256": "29d21a977d2e1c63b841b74fe0df3ff4c1771c4e968ea2866499c5b658aca9f3",
+    "pathNormalized": true,
     "counts": [
       "# tests 1618",
       "# pass 1618",
@@ -442,6 +522,8 @@
   {
     "path": "docs/build-log/staff-dx-gate/ui-routing-walkthrough-green.tap",
     "sha256": "6eb5ab837a5b506f8ef143d7e76ba0ab19d75b4f896ad359e0a3293c3e0249c1",
+    "originalSha256": "6eb5ab837a5b506f8ef143d7e76ba0ab19d75b4f896ad359e0a3293c3e0249c1",
+    "pathNormalized": false,
     "counts": [
       "# tests 23",
       "# pass 23",
@@ -452,18 +534,22 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/undo-review-entry-mutation-red.tap",
-    "sha256": "c0558d38aef2be5006e2734b269d1fdc8dc193db7b98e4b81a7d6bcf122dd8bd",
+    "sha256": "a69066fd88888bc57f2e35086cb23458907dddab9b998c73c72a9e60e910d644",
+    "originalSha256": "6addb51778ffe2a0c73ebb53b9a991c57404a5438ee816624a6e40b2ad5c0852",
+    "pathNormalized": true,
     "counts": [
       "# tests 5",
       "# pass 4",
       "# fail 1",
       "# skipped 0",
-      "# duration_ms 510.89125"
+      "# duration_ms 502.79125"
     ]
   },
   {
     "path": "docs/build-log/staff-dx-gate/undo-review-green.tap",
     "sha256": "29aa5ee7b3a97779a87aca2eb00090301636ff8ed80caa5e59586fd894cf44d7",
+    "originalSha256": "29aa5ee7b3a97779a87aca2eb00090301636ff8ed80caa5e59586fd894cf44d7",
+    "pathNormalized": false,
     "counts": [
       "# tests 5",
       "# pass 5",
@@ -474,7 +560,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/undo-review-red.tap",
-    "sha256": "e1ad5908dbd0893d7e0b3d5bff3ec6454f02ed1bcf3593b2a6df0d15a05432b6",
+    "sha256": "3dcb3305a35a62df5df9c08c27ac09fd812f57a90a14312df613c16edb983165",
+    "originalSha256": "e1ad5908dbd0893d7e0b3d5bff3ec6454f02ed1bcf3593b2a6df0d15a05432b6",
+    "pathNormalized": true,
     "counts": [
       "# tests 5",
       "# pass 0",
@@ -485,18 +573,22 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/undo-review-restored-green.tap",
-    "sha256": "f63b0bd8e601dcf7a8d38c7d8be471a1ccd5ea2bb1fc84af41da60d7240e5c40",
+    "sha256": "e7b89b42a548659264c86e904b22e220c3e896f0e42e97f74fa8286497fef648",
+    "originalSha256": "e7b89b42a548659264c86e904b22e220c3e896f0e42e97f74fa8286497fef648",
+    "pathNormalized": false,
     "counts": [
       "# tests 5",
       "# pass 5",
       "# fail 0",
       "# skipped 0",
-      "# duration_ms 437.623958"
+      "# duration_ms 423.756083"
     ]
   },
   {
     "path": "docs/build-log/staff-dx-gate/undo-review-runner-error.tap",
-    "sha256": "eec420868f48baa54de1f3131e68db595690087e7885c4459a1dbe78342defb9",
+    "sha256": "07abe4d5ef85105e7cd317c3ee02e25ad5a87dc9bd169b3e777e272337912025",
+    "originalSha256": "eec420868f48baa54de1f3131e68db595690087e7885c4459a1dbe78342defb9",
+    "pathNormalized": true,
     "counts": [
       "# tests 5",
       "# pass 4",
@@ -507,18 +599,22 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate/undo-review-scope-mutation-red.tap",
-    "sha256": "035cb1d358d6c3c2ce34b9990a6f7599e015262c2b7aaf9779b62d051655d2ad",
+    "sha256": "617f38cf3ec4f984d15c8e44fe932c97ee2b6fdcfec085ccb5800e96b2d297ea",
+    "originalSha256": "31183d4da979d24d33f9e8dfdb4b6147f16e6f95635fb12a013307312abeaef0",
+    "pathNormalized": true,
     "counts": [
       "# tests 5",
       "# pass 1",
       "# fail 4",
       "# skipped 0",
-      "# duration_ms 454.104"
+      "# duration_ms 444.151584"
     ]
   },
   {
     "path": "docs/build-log/staff-dx-gate-ui/baseline.tap",
     "sha256": "f21054d776eec1c9e25ce6c3611fd0fdf78137c4801b93c28c4fd1b5d7d8f89c",
+    "originalSha256": "f21054d776eec1c9e25ce6c3611fd0fdf78137c4801b93c28c4fd1b5d7d8f89c",
+    "pathNormalized": false,
     "counts": [
       "# tests 96",
       "# pass 96",
@@ -529,7 +625,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate-ui/clear-undo-red.tap",
-    "sha256": "56236c2fb0512ae68cf0f2efce89f079739c85f6d36910dc03df5bf260091ee7",
+    "sha256": "d96077c53df2a53b41664308255f0d502d5b241f6ac25658645c5f137edbae89",
+    "originalSha256": "56236c2fb0512ae68cf0f2efce89f079739c85f6d36910dc03df5bf260091ee7",
+    "pathNormalized": true,
     "counts": [
       "# tests 22",
       "# pass 13",
@@ -540,7 +638,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate-ui/focused-green.tap.gz",
-    "sha256": "797aebacdf2672b6cf9c40b272e36a29ab79ea4eae2e6b7ff4f7745ae86e6a45",
+    "sha256": "0d13afa416571eafd7e9cf570042a0bc45f0df60224370c078a9461863b7539c",
+    "originalSha256": "797aebacdf2672b6cf9c40b272e36a29ab79ea4eae2e6b7ff4f7745ae86e6a45",
+    "pathNormalized": true,
     "counts": [
       "# tests 459",
       "# pass 459",
@@ -551,7 +651,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate-ui/mutation-assessment-freshness-red.tap",
-    "sha256": "b51d4bb284fbf41035b1939628b0f6bff5c242aa63b401970d3f96b8a294f6ae",
+    "sha256": "c751f38e91fbf840e60255580947ee1913a9c7c9e866b027033e7257a2df25bb",
+    "originalSha256": "b51d4bb284fbf41035b1939628b0f6bff5c242aa63b401970d3f96b8a294f6ae",
+    "pathNormalized": true,
     "counts": [
       "# tests 3",
       "# pass 0",
@@ -562,7 +664,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate-ui/mutation-findings-red.tap",
-    "sha256": "bb1c04f9bab3d42acdc13bfac888d80ce04fb7859f38dca09a19b539e40dcd7b",
+    "sha256": "e22d866e8c12409df4d512b73b1c6cdd74ee3d641e89f6018fcc1d9dc613f945",
+    "originalSha256": "bb1c04f9bab3d42acdc13bfac888d80ce04fb7859f38dca09a19b539e40dcd7b",
+    "pathNormalized": true,
     "counts": [
       "# tests 3",
       "# pass 1",
@@ -573,7 +677,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate-ui/mutation-undo-route-red.tap",
-    "sha256": "4a39e79a8f3ccb6bcd5111acc65bc4844abce4219b616e827dc68f1370df8c69",
+    "sha256": "5a8fd6ae9584124c06d5ca2f82936a20750a536d918ab2a1ffdcc25f94e9d929",
+    "originalSha256": "4a39e79a8f3ccb6bcd5111acc65bc4844abce4219b616e827dc68f1370df8c69",
+    "pathNormalized": true,
     "counts": [
       "# tests 3",
       "# pass 0",
@@ -584,7 +690,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate-ui/mutation-workspace-red.tap",
-    "sha256": "2658c90bda815bfc7cdfb9c54277ab20aec4f329a8f86ec84131360f3b6d82e1",
+    "sha256": "20df863ebc66db0b9619536a835d8e66d45c3fced03ffe0b2b3b940fa4784ced",
+    "originalSha256": "2658c90bda815bfc7cdfb9c54277ab20aec4f329a8f86ec84131360f3b6d82e1",
+    "pathNormalized": true,
     "counts": [
       "# tests 3",
       "# pass 1",
@@ -596,6 +704,8 @@
   {
     "path": "docs/build-log/staff-dx-gate-ui/mutations-restored.tap",
     "sha256": "42067f4a72546722bc61add7e1ae450272db4e58542868b941e197dba161ff5c",
+    "originalSha256": "42067f4a72546722bc61add7e1ae450272db4e58542868b941e197dba161ff5c",
+    "pathNormalized": false,
     "counts": [
       "# tests 47",
       "# pass 47",
@@ -606,7 +716,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate-ui/problem-status-red.tap",
-    "sha256": "276be7f21ca5b863b5e888cdd81c4de64c214a93876ba07e81fee8e26607a18f",
+    "sha256": "2e67f94c44d0976bd5630c1145b83751f4fdf95d41954548fee1136269b7965b",
+    "originalSha256": "276be7f21ca5b863b5e888cdd81c4de64c214a93876ba07e81fee8e26607a18f",
+    "pathNormalized": true,
     "counts": [
       "# tests 1",
       "# pass 0",
@@ -617,7 +729,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate-ui/red.tap",
-    "sha256": "78952d71209e519f990671222744c70bc952579e029575bc8fbaba2ac49b899c",
+    "sha256": "3a839352b5ed52d494b00a43e61468d73de94378e5dd1a207caea1433bc2badb",
+    "originalSha256": "78952d71209e519f990671222744c70bc952579e029575bc8fbaba2ac49b899c",
+    "pathNormalized": true,
     "counts": [
       "# tests 17",
       "# pass 5",
@@ -628,7 +742,9 @@
   },
   {
     "path": "docs/build-log/staff-dx-gate-ui/resumed-red.tap",
-    "sha256": "8a6bd08c2f579a16bb41babff0640a13379f88c3cff317d0ee0632e6b805c1ac",
+    "sha256": "8169176b436bb5c279475ae4d484058bd4b0a16dc385064817e544306b182c88",
+    "originalSha256": "8a6bd08c2f579a16bb41babff0640a13379f88c3cff317d0ee0632e6b805c1ac",
+    "pathNormalized": true,
     "counts": [
       "# tests 17",
       "# pass 5",

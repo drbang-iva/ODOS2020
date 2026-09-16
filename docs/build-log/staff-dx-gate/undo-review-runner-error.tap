@@ -1,6 +1,6 @@
 TAP version 13
 # The above error occurred in the <UndoStrip> component:
-#     at UndoStrip (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/ui/src/components/charting/UndoStrip.tsx:19:3)
+#     at UndoStrip (<worktree>/ui/src/components/charting/UndoStrip.tsx:19:3)
 # Consider adding an error boundary to your tree to customize error handling behavior.
 # Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
 # Subtest: undo ledger rejects an entire slot containing an invalid entry before rendering
@@ -8,22 +8,22 @@ not ok 1 - undo ledger rejects an entire slot containing an invalid entry before
   ---
   duration_ms: 11.650792
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/ui/tests/encounterUndo.test.tsx:1:2118'
+  location: '<worktree>/ui/tests/encounterUndo.test.tsx:1:2118'
   failureType: 'testCodeFailure'
   error: 'React is not defined'
   code: 'ERR_TEST_FAILURE'
   name: 'ReferenceError'
   stack: |-
-    UndoStrip (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/ui/src/components/charting/UndoStrip.tsx:53:3)
-    renderWithHooks (/Users/ericr.bang/GitHub/ODOS2020/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5608:18)
-    mountIndeterminateComponent (/Users/ericr.bang/GitHub/ODOS2020/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9884:13)
-    beginWork (/Users/ericr.bang/GitHub/ODOS2020/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11351:16)
-    performUnitOfWork (/Users/ericr.bang/GitHub/ODOS2020/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15850:12)
-    workLoopSync (/Users/ericr.bang/GitHub/ODOS2020/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15784:5)
-    renderRootSync (/Users/ericr.bang/GitHub/ODOS2020/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15756:7)
-    performSyncWorkOnRoot (/Users/ericr.bang/GitHub/ODOS2020/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15461:20)
-    flushSyncCallbacks (/Users/ericr.bang/GitHub/ODOS2020/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
-    flushActQueue (/Users/ericr.bang/GitHub/ODOS2020/ui/node_modules/react/cjs/react.development.js:2667:24)
+    UndoStrip (<worktree>/ui/src/components/charting/UndoStrip.tsx:53:3)
+    renderWithHooks (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5608:18)
+    mountIndeterminateComponent (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9884:13)
+    beginWork (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11351:16)
+    performUnitOfWork (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15850:12)
+    workLoopSync (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15784:5)
+    renderRootSync (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15756:7)
+    performSyncWorkOnRoot (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15461:20)
+    flushSyncCallbacks (<checkout>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+    flushActQueue (<checkout>/ui/node_modules/react/cjs/react.development.js:2667:24)
   ...
 # Subtest: Undo ignores a previous encounter's late clear-failure
 ok 2 - Undo ignores a previous encounter's late clear-failure

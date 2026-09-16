@@ -4,7 +4,7 @@ not ok 1 - diagnosis complexity requires the diagnosis action before any write a
   ---
   duration_ms: 3.304542
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/diagnosisOrder.test.ts:1:735'
+  location: '<worktree>/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/diagnosisOrder.test.ts:1:735'
   failureType: 'testCodeFailure'
   error: |-
     {"encounter":{"resourceType":"Encounter","id":"enc-order","meta":{"versionId":"8"},"status":"in-progress","class":{},"subject":{"reference":"Patient/pat-1"},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/intended-coverage","valueReference":{"reference":"Coverage/coverage-1"}}],"diagnosis":[{"condition":{"reference":"Condition/confirmed-a"},"rank":1},{"condition":{"reference":"Condition/confirmed-b"},"rank":2,"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/odos-encounter-diagnosis-problem-status","valueCodeableConcept":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/mdm-problem-status","code":"stable-chronic","display":"Stable chronic illness"}],"text":"Stable chronic illness"}}]},{"condition":{"reference":"Condition/provisional-c"},"rank":3}]}}
@@ -17,7 +17,7 @@ not ok 1 - diagnosis complexity requires the diagnosis action before any write a
   actual: 200
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/diagnosisOrder.test.ts:35:12)
+    TestContext.<anonymous> (<worktree>/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/diagnosisOrder.test.ts:35:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -28,8 +28,8 @@ ok 2 - diagnosis complexity refuses stale, closed and unbound requests without w
   type: 'test'
   ...
 1..0
-# Subtest: /Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/diagnosisWriteGate.test.ts
-ok 2 - /Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/diagnosisWriteGate.test.ts
+# Subtest: <worktree>/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/diagnosisWriteGate.test.ts
+ok 2 - <worktree>/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/diagnosisWriteGate.test.ts
   ---
   duration_ms: 162.635958
   type: 'test'

@@ -4,7 +4,7 @@ not ok 1 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void c
   ---
   duration_ms: 90.455625
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/examOverviewBoard.test.tsx:1:77220'
+  location: '<worktree>-ui2-mut/ui/tests/examOverviewBoard.test.tsx:1:77220'
   failureType: 'testCodeFailure'
   error: |-
     even a no-op void response refreshes capability without changing the ledger
@@ -17,7 +17,7 @@ not ok 1 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void c
   actual: true
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/examOverviewBoard.test.tsx:2424:14)
+    TestContext.<anonymous> (<worktree>-ui2-mut/ui/tests/examOverviewBoard.test.tsx:2424:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -26,7 +26,7 @@ not ok 2 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void c
   ---
   duration_ms: 37.261458
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/examOverviewBoard.test.tsx:1:77220'
+  location: '<worktree>-ui2-mut/ui/tests/examOverviewBoard.test.tsx:1:77220'
   failureType: 'testCodeFailure'
   error: |-
     even a no-op void response refreshes capability without changing the ledger
@@ -39,7 +39,7 @@ not ok 2 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void c
   actual: true
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/examOverviewBoard.test.tsx:2424:14)
+    TestContext.<anonymous> (<worktree>-ui2-mut/ui/tests/examOverviewBoard.test.tsx:2424:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -48,7 +48,7 @@ not ok 3 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void c
   ---
   duration_ms: 32.685167
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/examOverviewBoard.test.tsx:1:77220'
+  location: '<worktree>-ui2-mut/ui/tests/examOverviewBoard.test.tsx:1:77220'
   failureType: 'testCodeFailure'
   error: |-
     even a no-op void response refreshes capability without changing the ledger
@@ -61,7 +61,7 @@ not ok 3 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void c
   actual: true
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/examOverviewBoard.test.tsx:2424:14)
+    TestContext.<anonymous> (<worktree>-ui2-mut/ui/tests/examOverviewBoard.test.tsx:2424:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

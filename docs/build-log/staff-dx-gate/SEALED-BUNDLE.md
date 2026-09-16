@@ -34,7 +34,7 @@ Quick-list GET/PUT, diagnosis catalog, findings GET, void responses, undo ledger
 
 ## Checks and actual output
 
-Commands ran in this task worktree. Larger raw outputs are gzip-compressed **without content changes**. `test-output-index.json` records the original SHA-256 and exact counters; `gzip -dc <file.tap.gz>` reads them.
+Commands ran in this task worktree. Published outputs replace workstation roots with `<worktree>`, `<checkout>` or `<home>`; results and counters are unchanged. Larger outputs are gzip-compressed. `test-output-index.json` records both original and published SHA-256 values plus exact counters; `gzip -dc <file.tap.gz>` reads them. Original bytes remain in the ignored `.odos/staff-dx-gate/raw-evidence/` directory.
 
 | Check | Real result | Output |
 |---|---|---|
@@ -104,6 +104,10 @@ Mandate 17 for these UI fixes: removing entry validation produced **1 failure**;
 After both review fixes, the full UI suite returned **1618/1618** and its typecheck/production build exited 0. All **13 real Medplum cases** and **three actual-route browser captures** were repeated at implementation commit `94ffeed4a791d80e67ba0aa3d38477330d1e0da3`; refreshed reports and images replace the earlier captures. The three containers were stopped again and retained.
 
 PR-Agent's ticket-compliance warning incorrectly treats the already-merged guarantor settings PR as this slice's specification. That PR is the rebase dependency; its guarantor DOB/age-of-majority implementation is inherited intact from main. No guarantor changes belong in this diagnosis action slice. This adjudication does not replace independent evaluation.
+
+The second CodeRabbit pass requested portable evidence paths and rerunnable proof scripts. Published evidence now uses the placeholders above. Both review mutation scripts allocate fresh unique scratch directories; each was run twice consecutively with the same expected RED counts and restored GREEN results. Worktrees are retained for inspection, including failed runs, rather than force-deleting their working changes. The evidence directory is excluded from the source patch copied to the scratch checkout.
+
+The proposed move of the rate limiter after authentication was not adopted. This is a pre-authentication abuse budget protecting service/staff identity lookups, following the existing guarantor-route pattern. Moving the only limiter after those calls removes that protection. It is not a per-practitioner business quota: callers sharing an IP/NAT/proxy share its 120-request/minute budget and can receive 429 together. That availability tradeoff is explicit for independent evaluation; this slice does not add a second authenticated-principal quota or alter proxy trust.
 
 ## Files and limits
 

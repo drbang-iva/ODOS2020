@@ -10,7 +10,7 @@ not ok 2 - STAFF-DX-GATE workspace separates diagnosis writes from pins: false
   ---
   duration_ms: 8.601334
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:1:78135'
+  location: '<worktree>-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:1:78135'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -23,7 +23,7 @@ not ok 2 - STAFF-DX-GATE workspace separates diagnosis writes from pins: false
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:2038:14)
+    TestContext.<anonymous> (<worktree>-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:2038:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -32,7 +32,7 @@ not ok 3 - STAFF-DX-GATE workspace separates diagnosis writes from pins: undefin
   ---
   duration_ms: 4.338042
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:1:78135'
+  location: '<worktree>-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:1:78135'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -45,7 +45,7 @@ not ok 3 - STAFF-DX-GATE workspace separates diagnosis writes from pins: undefin
   actual: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:2038:14)
+    TestContext.<anonymous> (<worktree>-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:2038:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

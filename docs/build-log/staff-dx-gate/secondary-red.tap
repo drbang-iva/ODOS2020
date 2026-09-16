@@ -8,7 +8,7 @@ not ok 1 - quick-list and catalog payloads expose diagnosis permission separatel
   ---
   duration_ms: 8.670292
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisQuickList.test.ts:1:776'
+  location: '<worktree>/mcp/tests/diagnosisQuickList.test.ts:1:776'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -22,7 +22,7 @@ not ok 1 - quick-list and catalog payloads expose diagnosis permission separatel
   expected: true
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisQuickList.test.ts:29:12)
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisQuickList.test.ts:29:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -199,7 +199,7 @@ not ok 30 - staff cannot undo a diagnosis clear and can still undo a finding-onl
   ---
   duration_ms: 4.435416
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/encounterUndoEndpoint.test.ts:1:920'
+  location: '<worktree>/mcp/tests/encounterUndoEndpoint.test.ts:1:920'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -213,7 +213,7 @@ not ok 30 - staff cannot undo a diagnosis clear and can still undo a finding-onl
   expected: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/encounterUndoEndpoint.test.ts:57:12)
+    TestContext.<anonymous> (<worktree>/mcp/tests/encounterUndoEndpoint.test.ts:57:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -372,7 +372,7 @@ not ok 56 - staff may preview a diagnosis clear but cannot write it, while findi
   ---
   duration_ms: 3.707375
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/encounterVoidEndpoint.test.ts:1:714'
+  location: '<worktree>/mcp/tests/encounterVoidEndpoint.test.ts:1:714'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -386,7 +386,7 @@ not ok 56 - staff may preview a diagnosis clear but cannot write it, while findi
   expected: false
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/encounterVoidEndpoint.test.ts:33:10)
+    TestContext.<anonymous> (<worktree>/mcp/tests/encounterVoidEndpoint.test.ts:33:10)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

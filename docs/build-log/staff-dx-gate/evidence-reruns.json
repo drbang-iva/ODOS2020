@@ -1,0 +1,232 @@
+{
+  "runs": [
+    {
+      "kind": "rate-limit",
+      "run": 1,
+      "results": [
+        {
+          "name": "rate-limit-mutation-diagnosis-picks-red",
+          "exitCode": 1,
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+          "counts": [
+            "# tests 1",
+            "# pass 0",
+            "# fail 1",
+            "# skipped 0"
+          ]
+        },
+        {
+          "name": "rate-limit-mutation-diagnosis-order-red",
+          "exitCode": 1,
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+          "counts": [
+            "# tests 1",
+            "# pass 0",
+            "# fail 1",
+            "# skipped 0"
+          ]
+        },
+        {
+          "name": "rate-limit-mutation-problem-status-red",
+          "exitCode": 1,
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+          "counts": [
+            "# tests 1",
+            "# pass 0",
+            "# fail 1",
+            "# skipped 0"
+          ]
+        },
+        {
+          "name": "rate-limit-mutation-status-red",
+          "exitCode": 1,
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+          "counts": [
+            "# tests 1",
+            "# pass 0",
+            "# fail 1",
+            "# skipped 0"
+          ]
+        },
+        {
+          "name": "rate-limit-mutation-newness-red",
+          "exitCode": 1,
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+          "counts": [
+            "# tests 1",
+            "# pass 0",
+            "# fail 1",
+            "# skipped 0"
+          ]
+        },
+        {
+          "name": "rate-limit-restored-green",
+          "exitCode": 0,
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+          "counts": [
+            "# tests 1",
+            "# pass 1",
+            "# fail 0",
+            "# skipped 0"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "rate-limit",
+      "run": 2,
+      "results": [
+        {
+          "name": "rate-limit-mutation-diagnosis-picks-red",
+          "exitCode": 1,
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+          "counts": [
+            "# tests 1",
+            "# pass 0",
+            "# fail 1",
+            "# skipped 0"
+          ]
+        },
+        {
+          "name": "rate-limit-mutation-diagnosis-order-red",
+          "exitCode": 1,
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+          "counts": [
+            "# tests 1",
+            "# pass 0",
+            "# fail 1",
+            "# skipped 0"
+          ]
+        },
+        {
+          "name": "rate-limit-mutation-problem-status-red",
+          "exitCode": 1,
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+          "counts": [
+            "# tests 1",
+            "# pass 0",
+            "# fail 1",
+            "# skipped 0"
+          ]
+        },
+        {
+          "name": "rate-limit-mutation-status-red",
+          "exitCode": 1,
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+          "counts": [
+            "# tests 1",
+            "# pass 0",
+            "# fail 1",
+            "# skipped 0"
+          ]
+        },
+        {
+          "name": "rate-limit-mutation-newness-red",
+          "exitCode": 1,
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+          "counts": [
+            "# tests 1",
+            "# pass 0",
+            "# fail 1",
+            "# skipped 0"
+          ]
+        },
+        {
+          "name": "rate-limit-restored-green",
+          "exitCode": 0,
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"registered diagnosis write routes\" mcp/tests/diagnosisWriteGate.test.ts",
+          "counts": [
+            "# tests 1",
+            "# pass 1",
+            "# fail 0",
+            "# skipped 0"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "undo-review",
+      "run": 1,
+      "results": [
+        {
+          "name": "undo-review-entry-mutation-red",
+          "exitCode": 1,
+          "cwd": "ui",
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"undo ledger rejects|Undo ignores a previous\" tests/encounterUndo.test.tsx tests/examOverviewBoard.test.tsx",
+          "counts": [
+            "# tests 5",
+            "# pass 4",
+            "# fail 1",
+            "# skipped 0"
+          ]
+        },
+        {
+          "name": "undo-review-scope-mutation-red",
+          "exitCode": 1,
+          "cwd": "ui",
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"undo ledger rejects|Undo ignores a previous\" tests/encounterUndo.test.tsx tests/examOverviewBoard.test.tsx",
+          "counts": [
+            "# tests 5",
+            "# pass 1",
+            "# fail 4",
+            "# skipped 0"
+          ]
+        },
+        {
+          "name": "undo-review-restored-green",
+          "exitCode": 0,
+          "cwd": "ui",
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"undo ledger rejects|Undo ignores a previous\" tests/encounterUndo.test.tsx tests/examOverviewBoard.test.tsx",
+          "counts": [
+            "# tests 5",
+            "# pass 5",
+            "# fail 0",
+            "# skipped 0"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "undo-review",
+      "run": 2,
+      "results": [
+        {
+          "name": "undo-review-entry-mutation-red",
+          "exitCode": 1,
+          "cwd": "ui",
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"undo ledger rejects|Undo ignores a previous\" tests/encounterUndo.test.tsx tests/examOverviewBoard.test.tsx",
+          "counts": [
+            "# tests 5",
+            "# pass 4",
+            "# fail 1",
+            "# skipped 0"
+          ]
+        },
+        {
+          "name": "undo-review-scope-mutation-red",
+          "exitCode": 1,
+          "cwd": "ui",
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"undo ledger rejects|Undo ignores a previous\" tests/encounterUndo.test.tsx tests/examOverviewBoard.test.tsx",
+          "counts": [
+            "# tests 5",
+            "# pass 1",
+            "# fail 4",
+            "# skipped 0"
+          ]
+        },
+        {
+          "name": "undo-review-restored-green",
+          "exitCode": 0,
+          "cwd": "ui",
+          "command": "node --import tsx --test --test-reporter=tap --test-name-pattern \"undo ledger rejects|Undo ignores a previous\" tests/encounterUndo.test.tsx tests/examOverviewBoard.test.tsx",
+          "counts": [
+            "# tests 5",
+            "# pass 5",
+            "# fail 0",
+            "# skipped 0"
+          ]
+        }
+      ]
+    }
+  ]
+}

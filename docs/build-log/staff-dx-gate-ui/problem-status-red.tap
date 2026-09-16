@@ -4,7 +4,7 @@ not ok 1 - STAFF-DX-GATE problem status delegates versioned writes and Provenanc
   ---
   duration_ms: 11.860209
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/diagnosisRankSafety.test.tsx:1:4847'
+  location: '<worktree>-ui2/ui/tests/diagnosisRankSafety.test.tsx:1:4847'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly deep-equal:
@@ -90,7 +90,7 @@ not ok 1 - STAFF-DX-GATE problem status delegates versioned writes and Provenanc
           rank: 2
   operator: 'deepStrictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2/ui/tests/diagnosisRankSafety.test.tsx:156:12)
+    TestContext.<anonymous> (<worktree>-ui2/ui/tests/diagnosisRankSafety.test.tsx:156:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

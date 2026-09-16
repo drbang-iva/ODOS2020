@@ -8,7 +8,7 @@ not ok 1 - registered diagnosis write routes share a rate limit before service o
   ---
   duration_ms: 140.436625
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisWriteGate.test.ts:1:876'
+  location: '<worktree>/mcp/tests/diagnosisWriteGate.test.ts:1:876'
   failureType: 'testCodeFailure'
   error: |-
     /clinical-graph/encounters/synthetic/diagnosis-picks
@@ -21,7 +21,7 @@ not ok 1 - registered diagnosis write routes share a rate limit before service o
   actual: 401
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisWriteGate.test.ts:68:14)
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisWriteGate.test.ts:68:14)
     process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)

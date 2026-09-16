@@ -4,7 +4,7 @@ not ok 1 - staff cannot undo a diagnosis clear and can still undo a finding-only
   ---
   duration_ms: 5.264625
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/encounterUndoEndpoint.test.ts:1:920'
+  location: '<worktree>/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/encounterUndoEndpoint.test.ts:1:920'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -17,7 +17,7 @@ not ok 1 - staff cannot undo a diagnosis clear and can still undo a finding-only
   actual: 2
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/encounterUndoEndpoint.test.ts:60:12)
+    TestContext.<anonymous> (<worktree>/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/encounterUndoEndpoint.test.ts:60:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

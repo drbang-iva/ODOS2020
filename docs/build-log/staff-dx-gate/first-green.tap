@@ -65,62 +65,62 @@ ok 5 - PUT encounter findings returns 401 when unauthenticated
   type: 'test'
   ...
 # odos-mcp: diagnosis findings dependency failed: Error: Synthetic reassertion failure
-#     at MemoryFhir.create (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:1440:13)
-#     at persistFindingReassertionProvenance (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:1037:14)
-#     at handleDiagnosisFindingsMutationRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:394:13)
+#     at MemoryFhir.create (<worktree>/mcp/tests/diagnosisFindings.test.ts:1440:13)
+#     at persistFindingReassertionProvenance (<worktree>/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:1037:14)
+#     at handleDiagnosisFindingsMutationRequest (<worktree>/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:394:13)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:519:18)
+#     at async TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisFindings.test.ts:519:18)
 #     at async Test.run (node:internal/test_runner/test:1054:7)
 #     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
 # odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition next link is invalid.
-#     at validateLocalFhirSearchNextPath (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:198:11)
-#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:182:18)
-#     at allEncounterResources (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:826:10)
+#     at validateLocalFhirSearchNextPath (<worktree>/mcp/src/fhir-search.ts:198:11)
+#     at collectAllFhirSearchPages (<worktree>/mcp/src/fhir-search.ts:182:18)
+#     at allEncounterResources (<worktree>/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:826:10)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
 #     at async Promise.all (index 2)
-#     at async handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:203:68)
-#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:625:22)
+#     at async handleDiagnosisFindingsReadRequest (<worktree>/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:203:68)
+#     at async TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisFindings.test.ts:625:22)
 #     at async Test.run (node:internal/test_runner/test:1054:7)
 #     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
 # odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition next link is invalid.
-#     at validateLocalFhirSearchNextPath (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:198:11)
-#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:182:18)
-#     at allEncounterResources (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:826:10)
+#     at validateLocalFhirSearchNextPath (<worktree>/mcp/src/fhir-search.ts:198:11)
+#     at collectAllFhirSearchPages (<worktree>/mcp/src/fhir-search.ts:182:18)
+#     at allEncounterResources (<worktree>/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:826:10)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
 #     at async Promise.all (index 2)
-#     at async handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:203:68)
-#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:625:22)
+#     at async handleDiagnosisFindingsReadRequest (<worktree>/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:203:68)
+#     at async TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisFindings.test.ts:625:22)
 #     at async Test.run (node:internal/test_runner/test:1054:7)
 #     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
 # odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition pagination is unavailable or cyclic.
-#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:184:13)
-#     at allEncounterResources (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:826:10)
+#     at collectAllFhirSearchPages (<worktree>/mcp/src/fhir-search.ts:184:13)
+#     at allEncounterResources (<worktree>/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:826:10)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
 #     at async Promise.all (index 2)
-#     at async handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:203:68)
-#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:625:22)
+#     at async handleDiagnosisFindingsReadRequest (<worktree>/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:203:68)
+#     at async TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisFindings.test.ts:625:22)
 #     at async Test.run (node:internal/test_runner/test:1054:7)
 #     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
 # odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition pagination is unavailable or cyclic.
-#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:184:13)
+#     at collectAllFhirSearchPages (<worktree>/mcp/src/fhir-search.ts:184:13)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
 # odos-mcp: diagnosis findings dependency failed: Error: Synthetic FHIR 503
-#     at MemoryFhir.searchUrl (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:1401:27)
-#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:187:27)
-#     at allEncounterResources (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:826:10)
+#     at MemoryFhir.searchUrl (<worktree>/mcp/tests/diagnosisFindings.test.ts:1401:27)
+#     at collectAllFhirSearchPages (<worktree>/mcp/src/fhir-search.ts:187:27)
+#     at allEncounterResources (<worktree>/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:826:10)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
 #     at async Promise.all (index 2)
-#     at async handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:203:68)
-#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:625:22)
+#     at async handleDiagnosisFindingsReadRequest (<worktree>/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:203:68)
+#     at async TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisFindings.test.ts:625:22)
 #     at async Test.run (node:internal/test_runner/test:1054:7)
 #     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
 #   status: 503
 # }
 # odos-mcp: diagnosis findings dependency failed: Error: Synthetic FHIR 500
-#     at MemoryFhir.read (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:1360:27)
-#     at handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:197:38)
+#     at MemoryFhir.read (<worktree>/mcp/tests/diagnosisFindings.test.ts:1360:27)
+#     at handleDiagnosisFindingsReadRequest (<worktree>/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:197:38)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:641:22)
+#     at async TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisFindings.test.ts:641:22)
 #     at async Test.run (node:internal/test_runner/test:1054:7)
 #     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
 #   status: 500
@@ -252,10 +252,10 @@ ok 26 - GET findings route preserves the named FHIR 403 dependency response
   type: 'test'
   ...
 # odos-mcp: diagnosis findings dependency failed: Error: Synthetic FHIR 500
-#     at MemoryFhir.read (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:1360:27)
-#     at handleDiagnosisFindingsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:197:38)
+#     at MemoryFhir.read (<worktree>/mcp/tests/diagnosisFindings.test.ts:1360:27)
+#     at handleDiagnosisFindingsReadRequest (<worktree>/mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:197:38)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/tests/diagnosisFindings.test.ts:964:20) {
+#     at async <anonymous> (<worktree>/mcp/tests/diagnosisFindings.test.ts:964:20) {
 #   status: 500
 # }
 # Subtest: GET findings route preserves the named FHIR 500 dependency response
@@ -307,7 +307,7 @@ ok 34 - findings gives Condition bodySite laterality precedence over a stale cat
   type: 'test'
   ...
 # odos-mcp: diagnosis findings dependency failed: Error: FHIR Condition pagination is unavailable or cyclic.
-#     at collectAllFhirSearchPages (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/mcp/src/fhir-search.ts:184:13)
+#     at collectAllFhirSearchPages (<worktree>/mcp/src/fhir-search.ts:184:13)
 #     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
 # Subtest: GET findings route returns missing lineage as visible state and a cyclic next link as 502
 ok 35 - GET findings route returns missing lineage as visible state and a cyclic next link as 502

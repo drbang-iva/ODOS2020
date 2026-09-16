@@ -10,7 +10,7 @@ not ok 2 - quick-list and catalog payloads expose diagnosis permission separatel
   ---
   duration_ms: 11.134417
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/diagnosisQuickList.test.ts:1:776'
+  location: '<worktree>/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/diagnosisQuickList.test.ts:1:776'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -23,7 +23,7 @@ not ok 2 - quick-list and catalog payloads expose diagnosis permission separatel
   actual: true
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/diagnosisQuickList.test.ts:29:12)
+    TestContext.<anonymous> (<worktree>/.odos/staff-dx-gate/mutation-worktree-3/mcp/tests/diagnosisQuickList.test.ts:29:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...

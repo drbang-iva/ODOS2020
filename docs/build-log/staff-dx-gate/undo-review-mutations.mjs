@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { writeEvidenceOutput } from './evidence-output.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const scratch = resolve(root, '.odos/staff-dx-gate/undo-review-mutation-worktree');
-assert.equal(existsSync(scratch), false, 'Use a fresh scratch directory');
+const scratchRoot = resolve(root, '.odos/staff-dx-gate');
+mkdirSync(scratchRoot, { recursive: true });
+const scratch = mkdtempSync(resolve(scratchRoot, 'undo-review-mutation-'));
 execFileSync('git', ['worktree', 'add', '--detach', scratch, 'HEAD'], { cwd: root });
-const patch = execFileSync('git', ['diff', '--binary', 'HEAD'], { cwd: root });
+const patch = execFileSync('git', ['diff', '--binary', 'HEAD', '--', '.', ':!docs/build-log'], { cwd: root });
 if (patch.length) execFileSync('git', ['apply', '-'], { cwd: scratch, input: patch });
 for (const directory of ['node_modules', 'mcp/node_modules', 'ui/node_modules']) symlinkSync(resolve(root, directory), resolve(scratch, directory));
 const before = execFileSync('git', ['diff', '--binary', 'HEAD'], { cwd: scratch });
@@ -18,7 +20,7 @@ const run = (name, expectedFailures) => {
     '--test-name-pattern', 'undo ledger rejects|Undo ignores a previous', 'tests/encounterUndo.test.tsx', 'tests/examOverviewBoard.test.tsx'];
   const result = spawnSync(process.execPath, args, { cwd: resolve(scratch, 'ui'), encoding: 'utf8' });
   const output = result.stdout + result.stderr;
-  writeFileSync(resolve(root, `docs/build-log/staff-dx-gate/${name}.tap`), output);
+  writeEvidenceOutput(resolve(root, `docs/build-log/staff-dx-gate/${name}.tap`), output);
   assert.equal(result.status, expectedFailures ? 1 : 0, output);
   assert.match(output, new RegExp(`# fail ${expectedFailures}\\b`));
   results.push({ name, exitCode: result.status, cwd: 'ui',
@@ -39,5 +41,5 @@ for (const [name, path, target, replacement, failures] of [
 }
 assert.deepEqual(execFileSync('git', ['diff', '--binary', 'HEAD'], { cwd: scratch }), before);
 run('undo-review-restored-green', 0);
-writeFileSync(resolve(root, 'docs/build-log/staff-dx-gate/undo-review-mutations.json'), JSON.stringify({ restoredDiffIdentical: true, results }, null, 2) + '\n');
+writeFileSync(resolve(root, 'docs/build-log/staff-dx-gate/undo-review-mutations.json'), JSON.stringify({ scratch: relative(root, scratch), retained: true, restoredDiffIdentical: true, results }, null, 2) + '\n');
 console.log(JSON.stringify(results));

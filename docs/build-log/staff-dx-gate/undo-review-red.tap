@@ -4,7 +4,7 @@ not ok 1 - undo ledger rejects an entire slot containing an invalid entry before
   ---
   duration_ms: 9.312333
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/ui/tests/encounterUndo.test.tsx:1:2118'
+  location: '<worktree>/ui/tests/encounterUndo.test.tsx:1:2118'
   failureType: 'testCodeFailure'
   error: |-
     null
@@ -45,7 +45,7 @@ not ok 1 - undo ledger rejects an entire slot containing an invalid entry before
     scope: 'section'
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/ui/tests/encounterUndo.test.tsx:71:12)
+    TestContext.<anonymous> (<worktree>/ui/tests/encounterUndo.test.tsx:71:12)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -54,7 +54,7 @@ not ok 2 - Undo ignores a previous encounter's late clear-failure
   ---
   duration_ms: 81.89175
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/ui/tests/examOverviewBoard.test.tsx:1:78916'
+  location: '<worktree>/ui/tests/examOverviewBoard.test.tsx:1:78916'
   failureType: 'testCodeFailure'
   error: 'the previous encounter cannot replace the current ledger'
   code: 'ERR_ASSERTION'
@@ -63,7 +63,7 @@ not ok 2 - Undo ignores a previous encounter's late clear-failure
   actual: 'Cleared everything charted · up to 31 valuesUndo'
   operator: 'match'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/ui/tests/examOverviewBoard.test.tsx:2480:14)
+    TestContext.<anonymous> (<worktree>/ui/tests/examOverviewBoard.test.tsx:2480:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -72,7 +72,7 @@ not ok 3 - Undo ignores a previous encounter's late ledger-response
   ---
   duration_ms: 34.836875
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/ui/tests/examOverviewBoard.test.tsx:1:78916'
+  location: '<worktree>/ui/tests/examOverviewBoard.test.tsx:1:78916'
   failureType: 'testCodeFailure'
   error: 'the previous encounter cannot replace the current ledger'
   code: 'ERR_ASSERTION'
@@ -81,7 +81,7 @@ not ok 3 - Undo ignores a previous encounter's late ledger-response
   actual: 'Cleared everything charted · up to 31 valuesUndo'
   operator: 'match'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/ui/tests/examOverviewBoard.test.tsx:2480:14)
+    TestContext.<anonymous> (<worktree>/ui/tests/examOverviewBoard.test.tsx:2480:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -90,7 +90,7 @@ not ok 4 - Undo ignores a previous encounter's late undo-click
   ---
   duration_ms: 27.021708
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/ui/tests/examOverviewBoard.test.tsx:1:78916'
+  location: '<worktree>/ui/tests/examOverviewBoard.test.tsx:1:78916'
   failureType: 'testCodeFailure'
   error: |-
     a stale Undo callback cannot submit a mutation
@@ -103,7 +103,7 @@ not ok 4 - Undo ignores a previous encounter's late undo-click
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/ui/tests/examOverviewBoard.test.tsx:2479:14)
+    TestContext.<anonymous> (<worktree>/ui/tests/examOverviewBoard.test.tsx:2479:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -112,7 +112,7 @@ not ok 5 - Undo ignores a previous encounter's late undo-response
   ---
   duration_ms: 26.812
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/ui/tests/examOverviewBoard.test.tsx:1:78916'
+  location: '<worktree>/ui/tests/examOverviewBoard.test.tsx:1:78916'
   failureType: 'testCodeFailure'
   error: 'the previous encounter cannot replace the current ledger'
   code: 'ERR_ASSERTION'
@@ -121,7 +121,7 @@ not ok 5 - Undo ignores a previous encounter's late undo-response
   actual: 'Cleared everything charted · up to 31 valuesUndo'
   operator: 'match'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate/ui/tests/examOverviewBoard.test.tsx:2480:14)
+    TestContext.<anonymous> (<worktree>/ui/tests/examOverviewBoard.test.tsx:2480:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...

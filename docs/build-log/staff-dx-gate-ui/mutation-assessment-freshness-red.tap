@@ -4,7 +4,7 @@ not ok 1 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: 
   ---
   duration_ms: 29.971916
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:1:82241'
+  location: '<worktree>-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:1:82241'
   failureType: 'testCodeFailure'
   error: |-
     a refresh reads current capability even with catalog rows cached
@@ -17,7 +17,7 @@ not ok 1 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: 
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:2124:16)
+    TestContext.<anonymous> (<worktree>-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:2124:16)
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
@@ -26,7 +26,7 @@ not ok 2 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: 
   ---
   duration_ms: 3.981959
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:1:82241'
+  location: '<worktree>-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:1:82241'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -39,7 +39,7 @@ not ok 2 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: 
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:2113:14)
+    TestContext.<anonymous> (<worktree>-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:2113:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
@@ -48,7 +48,7 @@ not ok 3 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: 
   ---
   duration_ms: 3.043459
   type: 'test'
-  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:1:82241'
+  location: '<worktree>-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:1:82241'
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
@@ -61,7 +61,7 @@ not ok 3 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: 
   actual: 1
   operator: 'strictEqual'
   stack: |-
-    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/staff-dx-gate-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:2113:14)
+    TestContext.<anonymous> (<worktree>-ui2-mut/ui/tests/diagnosisWorkspace.test.tsx:2113:14)
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
