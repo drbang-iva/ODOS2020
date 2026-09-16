@@ -1,0 +1,65 @@
+TAP version 13
+# Subtest: capture instrumentation preserves named exports and executes their wrappers
+not ok 1 - capture instrumentation preserves named exports and executes their wrappers
+  ---
+  duration_ms: 107.605667
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10-parity.test.ts:1:7364'
+  failureType: 'testCodeFailure'
+  error: |-
+    Command failed: /Users/ericr.bang/.hermes/node/bin/node --import tsx --import /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/fixtures/r10/capture-baseline.mjs --input-type=module -e 
+          import assert from 'node:assert/strict';
+          import { baseline } from './tests/fixtures/r10/baseline.ts';
+          import { buildExamOverviewProjection } from './src/clinical-graph/exam-overview-projection.ts';
+          import { findingInstancesFromObservation } from './src/clinical-graph/diagnosis-candidates-endpoint.ts';
+          for (const [name,fn] of Object.entries({buildExamOverviewProjection,findingInstancesFromObservation})) {
+            assert.equal(typeof fn,'function');
+            const capture=baseline.captures.find(c=>c.kind===name);
+            assert.deepEqual(JSON.parse(JSON.stringify(fn(...capture.args))),capture.result);
+          }
+        
+    file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/fixtures/r10/capture-baseline.mjs:24
+            if (!declaration) throw new Error(`Cannot instrument ${name}`);
+                                    ^
+    
+    Error: Cannot instrument buildExamOverviewProjectionMisspelled
+        at load (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/fixtures/r10/capture-baseline.mjs:24:33)
+        at nextStep (node:internal/modules/customization_hooks:189:26)
+        at loadWithHooks (node:internal/modules/customization_hooks:374:18)
+        at #loadSync (node:internal/modules/esm/loader:865:14)
+        at ModuleLoader.load (node:internal/modules/esm/loader:824:28)
+        at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:609:31)
+        at #createModuleJob (node:internal/modules/esm/loader:640:36)
+        at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+        at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+    
+    Node.js v22.22.3
+    
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    load (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/fixtures/r10/capture-baseline.mjs:24:33)
+    nextStep (node:internal/modules/customization_hooks:189:26)
+    loadWithHooks (node:internal/modules/customization_hooks:374:18)
+    #loadSync (node:internal/modules/esm/loader:865:14)
+    ModuleLoader.load (node:internal/modules/esm/loader:824:28)
+    ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:609:31)
+    #createModuleJob (node:internal/modules/esm/loader:640:36)
+    #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+    ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+    genericNodeError (node:internal/errors:983:15)
+    wrappedFn (node:internal/errors:537:14)
+    checkExecSyncError (node:child_process:916:11)
+    execFileSync (node:child_process:952:15)
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1/mcp/tests/r10-parity.test.ts:112:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 400.900042
