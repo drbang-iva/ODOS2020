@@ -17,10 +17,10 @@ node --import tsx --test --test-name-pattern='W54' tests/diagnosisDemotionImpact
 
 | State | Behavioral test | Type check |
 | --- | --- | --- |
-| Original | 1 pass, 0 fail (`baseline-test.log`) | exit 0 (`baseline-tsc.log`) |
-| Nonthrowing mutant | 0 pass, 1 fail (`red-test.log`) | exit 2 (`red-tsc.log`) |
-| Restored | 1 pass, 0 fail (`green-test.log`) | exit 0 (`restored-tsc.log`) |
+| Original | 1 pass, 0 fail (`baseline-test.txt`) | exit 0 (`baseline-tsc.txt`) |
+| Nonthrowing mutant | 0 pass, 1 fail (`red-test.txt`) | exit 2 (`red-tsc.txt`) |
+| Restored | 1 pass, 0 fail (`green-test.txt`) | exit 0 (`restored-tsc.txt`) |
 
 The mutant hides the explicit permission error and displays an unavailable charge-impact notice, so the behavioral guard fails. TypeScript independently rejects the union at `AssessmentSection.tsx:353` and `DiagnosisPicker.tsx:158` because their legacy success-path consumers require a demotion-impact-compatible result.
 
-After restoration, the five existing suites run together: **90 tests, 90 pass, 0 fail, 0 skipped, 0 todo** (`restored-tests-final.log`). An intermediate restored run (`restored-tests.log`) recorded 89/90 while the parent tightened pre-pick validation; the sole failure exposed a transport fixture missing its unassigned fact from `searchIndex`. The fixture was corrected to the actual server contract, with no assertion weakened, before the final run.
+After restoration, the five existing suites run together: **90 tests, 90 pass, 0 fail, 0 skipped, 0 todo** (`restored-tests-final.txt`). An intermediate restored run (`restored-tests.txt`) recorded 89/90 while the parent tightened pre-pick validation; the sole failure exposed a transport fixture missing its unassigned fact from `searchIndex`. The fixture was corrected to the actual server contract, with no assertion weakened, before the final run.

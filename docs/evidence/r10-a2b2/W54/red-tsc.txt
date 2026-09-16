@@ -1,0 +1,4 @@
+src/components/charting/AssessmentSection.tsx(353,102): error TS2345: Argument of type 'DiagnosisPickResult' is not assignable to parameter of type 'SetStateAction<DiagnosisDemotionImpact | undefined>'.
+  Type '{ httpStatus: number; } & { result: "pick"; commandId?: string | undefined; link: "pending" | "not-applicable"; } & { conditionStep: "unconfirmed" | "failed"; error: string; }' is not assignable to type 'SetStateAction<DiagnosisDemotionImpact | undefined>'.
+src/components/charting/DiagnosisPicker.tsx(158,92): error TS2345: Argument of type 'DiagnosisPickResult' is not assignable to parameter of type 'SetStateAction<DiagnosisDemotionImpact | undefined>'.
+  Type '{ httpStatus: number; } & { result: "pick"; commandId?: string | undefined; link: "pending" | "not-applicable"; } & { conditionStep: "unconfirmed" | "failed"; error: string; }' is not assignable to type 'SetStateAction<DiagnosisDemotionImpact | undefined>'.

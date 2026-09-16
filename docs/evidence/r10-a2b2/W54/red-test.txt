@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: W54 legacy DiagnosisPicker preserves a failed pick error without a success event or reload
+not ok 1 - W54 legacy DiagnosisPicker preserves a failed pick error without a success event or reload
+  ---
+  duration_ms: 18.420208
+  type: 'test'
+  location: '<repo>/ui/tests/diagnosisDemotionImpact.test.tsx:1:10914'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Synthetic diagnosis permission refused/. Input:
+    
+    `{"type":"div","props":{"className":"mt-3 space-y-2"},"children":[{"type":"div","props":{"role":"status","aria-live":"polite","className":"rounded border border-[color:var(--odos-alert)] bg-[color:var(--odos-surface-2)] p-3 text-sm text-[color:var(--odos-alert)]"},"children":["Charge impact could not be computed. Review diagnosis links on this encounter's charges."]},{"type":"div","props":{"className":"relative inline-block align-top"},"children":[{"type":"button","props":{"type":"button","className":"rounded-full border border-brand/50 bg-brand/10 px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand/20","aria-expanded":false},"children":["dx ▾ ","1"]}]}]}`
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: `{"type":"div","props":{"className":"mt-3 space-y-2"},"children":[{"type":"div","props":{"role":"status","aria-live":"polite","className":"rounded border border-[color:var(--odos-alert)] bg-[color:var(--odos-surface-2)] p-3 text-sm text-[color:var(--odos-alert)]"},"children":["Charge impact could not be computed. Review diagnosis links on this encounter's charges."]},{"type":"div","props":{"className":"relative inline-block align-top"},"children":[{"type":"button","props":{"type":"button","className":"rounded-full border border-brand/50 bg-brand/10 px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand/20","aria-expanded":false},"children":["dx ▾ ","1"]}]}]}`
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/diagnosisDemotionImpact.test.tsx:389:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 230.809083

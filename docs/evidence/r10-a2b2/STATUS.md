@@ -12,8 +12,8 @@ Rev 3.5 preserves the legacy `submitDiagnosisPick` call in DiagnosisPicker, so c
 ## Verification so far
 
 - Six original door suites baseline: 91 pass, 0 fail.
-- Full UI after fixture migration: 1665 total, 1661 pass, 0 fail, 4 A3 TODO. Subsequent small author-review fixes are covered by affected suites; final rebased verification pending.
-- Full MCP on isolated synthetic PostgreSQL: 5674 total, 5605 pass, 0 fail, 53 environment skips, 16 A3 TODO. `ODOS_ALLOW_UNGATED_MCP=1` explicitly acknowledges missing Medplum credentials; this is not live-authz proof.
+- Final rebased full UI: 1666 total, 1662 pass, 0 fail, 0 skipped, 4 A3 TODO.
+- Final rebased full MCP on isolated synthetic PostgreSQL: 5687 total, 5618 pass, 0 fail, 53 environment skips, 16 A3 TODO. `ODOS_ALLOW_UNGATED_MCP=1` explicitly acknowledges missing Medplum credentials; this is not live-authz proof.
 - UI and MCP builds exit 0. Preflight 0 warnings, 0 hard blocks. A3 gate exits 1; requested UI slots are present and TODO.
 - Mutation evidence is in table/, workspace/, surfaces/, and W54/. W54 is a newly added failure case in the existing demotion suite, because that suite did not previously assert a failed HTTP pick. Legacy API mutation fails the test and tsc at Assessment353; restoration passes.
 - Every changed existing assertion is recorded in existing-assertions.md. No Assessment or structure-section source changes, no MCP delta from the inherited base.
@@ -28,3 +28,9 @@ Rev 3.5 preserves the legacy `submitDiagnosisPick` call in DiagnosisPicker, so c
 - Link prevalidation uses the frozen supporting rows and baselines; conflict recovery offers a new command rather than repeatedly resending a stale one.
 
 Audit authenticity remains the separately scoped release blocker from A2b.1. A3 consumers remain deliberately unimplemented here.
+
+## Rebase and checkpoint
+
+Main moved to `c742b2e4b543e0706b24f66aec6883a82f0d18a3` (#618 dependency audit). Rebase completed without conflict; root/MCP dependencies freshly installed before full reruns. A2b.1 remote remains `6025d836`. UI source delta is exactly seven allowed files; implementation commit has no MCP edits. Counts per affected suite are in checks/affected-counts.json. No PR or push yet because W51 is unresolved.
+
+Docker project prefix: odos-r10-a2b2. Only container started: odos-r10-a2b2-postgres-1, disposable PostgreSQL16 on127.0.0.1:29543. It is stopped at checkpoint, not removed.
