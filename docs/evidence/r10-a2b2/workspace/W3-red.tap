@@ -1,0 +1,152 @@
+TAP version 13
+# Subtest: W3 Retry resends identical command
+not ok 1 - W3 Retry resends identical command
+  ---
+  duration_ms: 51.613833
+  type: 'test'
+  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:6524'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+    +   commandId: '5c7967e3-dce7-421f-860a-bac5b809cedd',
+    -   commandId: 'bbd2f476-caf2-47bf-893c-2a02266c1535',
+        context: {
+          selectedConditionReference: 'Condition/a'
+        },
+        operation: 'assert',
+        patientReference: 'Patient/p1',
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    commandId: 'bbd2f476-caf2-47bf-893c-2a02266c1535'
+    patientReference: 'Patient/p1'
+    operation: 'assert'
+    context:
+      selectedConditionReference: 'Condition/a'
+    targets:
+      0:
+        kind: 'fact'
+        key:
+          v: 1
+          patientId: 'p1'
+          encounterId: 'e1'
+          stableKey: 'synthetic'
+          fieldCode: 'field'
+          optionCode: 'option'
+          eye: 'OD'
+        baseline:
+          kind: 'canonical'
+          reference: 'Observation/fact'
+          versionId: '1'
+        state:
+          status: 'live'
+          presence: 'absent'
+          qualifiers:
+          homes:
+            0: 'Condition/a'
+  actual:
+    commandId: '5c7967e3-dce7-421f-860a-bac5b809cedd'
+    patientReference: 'Patient/p1'
+    operation: 'assert'
+    context:
+      selectedConditionReference: 'Condition/a'
+    targets:
+      0:
+        kind: 'fact'
+        key:
+          v: 1
+          patientId: 'p1'
+          encounterId: 'e1'
+          stableKey: 'synthetic'
+          fieldCode: 'field'
+          optionCode: 'option'
+          eye: 'OD'
+        baseline:
+          kind: 'canonical'
+          reference: 'Observation/fact'
+          versionId: '1'
+        state:
+          status: 'live'
+          presence: 'absent'
+          qualifiers:
+          homes:
+            0: 'Condition/a'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:47:237)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W46 confirmed write on 409 emits event; W47 kept choice uses new command and baseline
+ok 2 - W46 confirmed write on 409 emits event; W47 kept choice uses new command and baseline
+  ---
+  duration_ms: 23.705833
+  type: 'test'
+  ...
+# Subtest: W37 existing diagnosis suggestion links without pick
+ok 3 - W37 existing diagnosis suggestion links without pick
+  ---
+  duration_ms: 12.226083
+  type: 'test'
+  ...
+# Subtest: W36 Finish linking repeats only link
+ok 4 - W36 Finish linking repeats only link
+  ---
+  duration_ms: 21.799959
+  type: 'test'
+  ...
+# Subtest: unconfirmed pick never automatically repeats
+ok 5 - unconfirmed pick never automatically repeats
+  ---
+  duration_ms: 5.39575
+  type: 'test'
+  ...
+# Subtest: W52 origin comes from homeSources despite obsolete Condition evidence
+ok 6 - W52 origin comes from homeSources despite obsolete Condition evidence
+  ---
+  duration_ms: 3.098167
+  type: 'test'
+  ...
+# Subtest: W53 Repair sends fresh UUID to audit repair
+ok 7 - W53 Repair sends fresh UUID to audit repair
+  ---
+  duration_ms: 11.102916
+  type: 'test'
+  ...
+# Subtest: W49 workspace renders both unavailable states
+ok 8 - W49 workspace renders both unavailable states
+  ---
+  duration_ms: 2.532334
+  type: 'test'
+  ...
+# Subtest: pick then bodySite then link ordering: scope
+ok 9 - pick then bodySite then link ordering: scope
+  ---
+  duration_ms: 20.498167
+  type: 'test'
+  ...
+# Subtest: pick then bodySite then link ordering: scope-fail
+ok 10 - pick then bodySite then link ordering: scope-fail
+  ---
+  duration_ms: 14.595208
+  type: 'test'
+  ...
+# Subtest: staff existing-diagnosis support suggestion links without Condition permission
+ok 11 - staff existing-diagnosis support suggestion links without Condition permission
+  ---
+  duration_ms: 10.463208
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 10
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 418.859584

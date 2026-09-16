@@ -579,18 +579,29 @@ function carryFindingsPayload(): DiagnosisFindingsPayload {
     diagnosisKeys: ["selected"],
     origin: "shipped" as const,
     laterality: "OD" as const,
-    lateralitySource: "inherited" as const,
+    eye: "OD" as const,
+    qualifiers: {}, editable: true,
   };
   const findings = [
-    { ...base, atomicFindingId: "section::field::carried", optionCode: "carried", display: "Carried present", source: "atomic" as const, presence: "present" as const, observationReference: "Observation/carried", conditionReference: "Condition/current", carried: true },
-    { ...base, atomicFindingId: "section::field::fresh", optionCode: "fresh", display: "Fresh present", source: "atomic" as const, presence: "present" as const, observationReference: "Observation/fresh", conditionReference: "Condition/current" },
-    { ...base, atomicFindingId: "section::field::prior", optionCode: "prior", display: "Prior absent", source: "offered" as const, priorPresence: "absent" as const, priorGrade: "historical-grade", priorLaterality: "OD" as const },
-    { ...base, atomicFindingId: "section::field::reasserted", optionCode: "reasserted", display: "Reasserted absent", source: "atomic" as const, presence: "absent" as const, observationReference: "Observation/reasserted", conditionReference: "Condition/current" },
-  ];
+    { ...base, atomicFindingId: "section::field::carried", optionCode: "carried", display: "Carried present", kind: "fact" as const, status: "live" as const, presence: "present" as const, conditionReference: "Condition/current", carried: true },
+    { ...base, atomicFindingId: "section::field::fresh", optionCode: "fresh", display: "Fresh present", kind: "fact" as const, status: "live" as const, presence: "present" as const, conditionReference: "Condition/current" },
+    { ...base, atomicFindingId: "section::field::prior", optionCode: "prior", display: "Prior absent", kind: "offered" as const, status: "offered" as const, priorPresence: "absent" as const, priorGrade: "historical-grade", priorLaterality: "OD" as const },
+    { ...base, atomicFindingId: "section::field::reasserted", optionCode: "reasserted", display: "Reasserted absent", kind: "fact" as const, status: "live" as const, presence: "absent" as const, conditionReference: "Condition/current" },
+  ].map((row) => {
+    const key = { v: 1 as const, patientId: "p1", encounterId: "e1", stableKey: "section", fieldCode: "field", optionCode: row.optionCode, eye: row.eye };
+    const reference = `Observation/${row.optionCode}`;
+    return { ...row, rowKey: `${row.optionCode}:OD`, key,
+      homes: row.kind === "fact" ? ["Condition/current"] : [],
+      homeSources: row.kind === "fact" ? [{ condition: "Condition/current", sources: [{ kind: "finding-extension" as const, contributor: { reference, versionId: "1" } }] }] : [],
+      baseline: row.kind === "fact" ? { kind: "canonical" as const, reference, versionId: "1" } : { kind: "absent" as const, key },
+      contributors: row.kind === "fact" ? [{ reference, versionId: "1", kind: "canonical-fact" }] : [],
+    };
+  });
   return {
+    encounterEditable: true, searchIndex: findings, auditDebt: [],
     canWrite: true, canWriteDiagnosis: true,
     findings,
-    catalog: findings.map(({ laterality: _laterality, lateralitySource: _source, source: _kind, presence: _presence, observationReference: _reference, conditionReference: _condition, carried: _carried, priorPresence: _priorPresence, priorGrade: _priorGrade, priorLaterality: _priorLaterality, ...row }) => row),
+    catalog: findings.map(({ atomicFindingId, findingDefinitionId, findingDefinitionKey, fieldCode, optionCode, display, sectionKey, gradeScale, diagnosisKeys, origin }) => ({ atomicFindingId, findingDefinitionId, findingDefinitionKey, fieldCode, optionCode, display, sectionKey, gradeScale, diagnosisKeys, origin })),
     unassigned: [],
     bySection: { lens: findings },
     visitDiagnoses: [],

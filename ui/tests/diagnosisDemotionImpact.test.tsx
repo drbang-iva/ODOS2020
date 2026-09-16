@@ -352,3 +352,48 @@ for (const mode of ["proposal", "decision"] as const) {
     });
   }
 }
+
+test("W54 legacy DiagnosisPicker preserves a failed pick error without a success event or reload", async () => {
+  const originalFetch = globalThis.fetch;
+  const restoreWindow = installWindow();
+  let candidateReads = 0;
+  let pickWrites = 0;
+  let pickedEvents = 0;
+  window.addEventListener("odos:diagnosis-picked", () => { pickedEvents += 1; });
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.includes("diagnosis-candidates")) {
+      candidateReads += 1;
+      return Response.json({ findings: [{
+        findingInstanceId: "measurement-1", observationReference: "Observation/measurement-1",
+        candidates: [{ diagnosisKey: "presbyopia", display: "Presbyopia", codingStatus: "verified", priority: true, source: "rule" }],
+      }] });
+    }
+    if (url.includes("diagnosis-catalog")) return Response.json({ canWrite: true, canWriteDiagnosis: true, diagnoses: [] });
+    if (url.includes("diagnosis-picks") && init?.method === "POST") {
+      pickWrites += 1;
+      return Response.json({ result: "forbidden", error: "Synthetic diagnosis permission refused." }, { status: 403 });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisPicker encounterReference="Encounter/e1" observationReferences={["Observation/measurement-1"]} />);
+      await flushEffects();
+    });
+    const toggle = renderer.root.findAllByType("button").find(button => textContent(button).includes("dx ▾"))!;
+    act(() => toggle.props.onClick());
+    const confirm = renderer.root.findAllByType("button").find(button => textContent(button) === "Confirm")!;
+    await act(async () => { await confirm.props.onClick(); await flushEffects(); });
+    assert.match(JSON.stringify(renderer.toJSON()), /Synthetic diagnosis permission refused/);
+    assert.equal(pickWrites, 1);
+    assert.equal(pickedEvents, 0);
+    assert.equal(candidateReads, 1, "failure must not reload the picker as if the diagnosis were saved");
+    assert.ok(renderer.root.findAllByType("button").some(button => textContent(button) === "Confirm"), "failed pick keeps the clinician's choice open");
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+    restoreWindow();
+  }
+});

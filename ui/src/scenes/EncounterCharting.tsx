@@ -386,7 +386,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
     setUnassignedCount(undefined);
     void loadDiagnosisFindings(encounterReference)
       .then((payload) => {
-        if (!cancelled) setUnassignedCount(payload.unassigned.length);
+        if (!cancelled) setUnassignedCount("result" in payload ? undefined : payload.unassigned.length);
       })
       .catch((caught) => {
         if (!cancelled) {

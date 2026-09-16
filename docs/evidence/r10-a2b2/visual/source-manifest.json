@@ -1,0 +1,33 @@
+{
+  "base": "6025d836643fdf74298834f8290a8fdacabef5b7",
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "sourceHashes": {
+    "ui/src/components/charting/DiagnosisFindingsTable.tsx": {
+      "before": "be80c39dc29491576e75a6d2fc0a22a1da3de485e2ea22b3dcbc3e4502068862",
+      "after": "44b216a4f50c2f2356396a5e5a8b954de57faf8c031e5bda2d3aa187dc82aeff"
+    },
+    "ui/src/components/charting/DiagnosisWorkspace.tsx": {
+      "before": "f0b46a767b3a3675c1556006953f0217675c1a6c08d41041106837544afcec91",
+      "after": "5136573a691c056b57b9128e5109e2cd767e51cdb8d8d42121a59df2d3427e77"
+    },
+    "ui/src/components/charting/EncounterFindingOverlay.tsx": {
+      "before": "f826c1e4c9ab0869b33a3181e4295982a6fa93a5a7c493afbfc7235c39a72437",
+      "after": "e5ff932267c300c019c657b33575babfae258ee188ed147d28f9ee75df6123ed"
+    },
+    "ui/src/lib/diagnosis-findings.ts": {
+      "before": "184ab62c10ded47d5e1bdf455db019536709cedd718fbdd53e0aa13c13ae69c4",
+      "after": "04cdfc06a3bddd8c94d612a994a9ed2e2c44bcfcee205de0276ae89b09275b03"
+    },
+    "ui/src/lib/clinical-graph-client.ts": {
+      "before": "1691784269f85259b9cbba8dbd32c4f648883cf1372223ae0df40909792db9ce",
+      "after": "ca9b9036ba3cb4276f4d6e9b34ace80f17a82087642ccd96b036858877fa9718"
+    },
+    "ui/src/styles/charting.css": {
+      "before": "344a6cd6c880064a1fc4b1de7a13e3f3e9200849522b4d477a55923f56ea64af",
+      "after": "344a6cd6c880064a1fc4b1de7a13e3f3e9200849522b4d477a55923f56ea64af"
+    }
+  }
+}

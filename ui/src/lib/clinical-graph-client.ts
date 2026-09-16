@@ -1,3 +1,4 @@
+import type { CurrentFindingKey, FindingBaseline } from "./diagnosis-findings";
 import type { Condition, Encounter, Money } from "@medplum/fhirtypes";
 import { CONCURRENT_EDIT_MESSAGE, fhir } from "./fhir";
 
@@ -203,7 +204,9 @@ export function procedureChargeApi(fetchImpl: typeof fetch = fetch): ProcedureCh
   };
 }
 
-export type DiagnosisCandidateSuggestion = {
+export interface SupportingFindingFact { rowKey: string; key: CurrentFindingKey; baseline: Extract<FindingBaseline, { kind: "canonical" }>; }
+
+export type DiagnosisCandidateSuggestion = ({
   diagnosisKey: string;
   familyGroup?: never;
   display: string;
@@ -220,12 +223,14 @@ export type DiagnosisCandidateSuggestion = {
   members: Array<{ stableKey: string; stageLabel: string }>;
   priority: boolean;
   source: "rule" | "mapping";
-};
+}) & { supportingFacts?: SupportingFindingFact[]; linkable?: false };
 
 export interface DiagnosisCandidateFinding {
   findingInstanceId: string;
   findingDefinitionKey?: string;
   observationReference?: string;
+  contributors?: Array<{ reference: string; versionId?: string; kind: string }>;
+  linkable?: false;
   candidates: DiagnosisCandidateSuggestion[];
   suppressedCandidates?: DiagnosisCandidateSuggestion[];
   suppression?: { message: string; overridable: boolean };
@@ -310,6 +315,41 @@ export async function submitDiagnosisPick(input: {
   };
 }
 
+export async function submitDiagnosisPickResult(input: {
+  encounterReference: string;
+  diagnosisKey: string;
+  action: "possible" | "confirm" | "discard";
+  findingInstanceId?: string;
+  laterality?: "OD" | "OS" | "OU";
+  source?: "rule" | "mapping" | "catalog-search";
+  status?: DiagnosisVisitStatus;
+  stageDeferred?: boolean;
+  commandId?: string;
+  supportingFacts?: SupportingFindingFact[];
+}): Promise<DiagnosisPickResult> {
+  const encounterId = input.encounterReference.replace(/^Encounter\//, "");
+  const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-picks`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...(input.commandId ? { commandId: input.commandId } : {}),
+      ...(input.supportingFacts ? { supportingFacts: input.supportingFacts.map(({ key, baseline }) => ({ key, baseline })) } : {}),
+      diagnosisKey: input.diagnosisKey,
+      action: input.action,
+      ...(input.findingInstanceId ? { findingInstanceId: input.findingInstanceId } : {}),
+      ...(input.laterality ? { laterality: input.laterality } : {}),
+      ...(input.source ? { source: input.source } : {}),
+      ...(input.status ? { status: input.status } : {}),
+      ...(input.stageDeferred ? { stageDeferred: true } : {}),
+    }),
+  });
+  const body = await response.json() as DiagnosisPickResult;
+  if (body.result === "pick" && body.conditionStep === "applied") {
+    window.dispatchEvent(new CustomEvent("odos:diagnosis-picked", { detail: { encounterReference: input.encounterReference } }));
+  }
+  return { ...body, httpStatus: response.status };
+}
+
 export interface DiagnosisDemotionImpact {
   strandedCharges: Array<{
     reference: string;
@@ -324,6 +364,16 @@ export interface DiagnosisPickResponse extends DiagnosisDemotionImpact {
   condition: Condition;
   encounter?: Encounter;
 }
+
+export type DiagnosisPickResult = { httpStatus: number } & (
+  { result: "pick"; commandId?: string; link: "pending" | "not-applicable" } & (
+    ({ conditionStep: "applied"; condition: Condition; encounter?: Encounter; error?: string; diagnosisVisitStatus?: unknown } & DiagnosisDemotionImpact) |
+    { conditionStep: "unconfirmed" | "failed"; error: string }
+  ) |
+  { result: "unavailable"; kind: "refused" | "missing" | "upstream" | "foreign-or-unscoped"; error: string } |
+  { result: "invalid"; error: string; reason: string; targetIndex?: number } |
+  { result: "unauthenticated" | "forbidden"; error: string }
+);
 
 export async function updateDiagnosisOrder(
   encounterId: string,

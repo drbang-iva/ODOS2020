@@ -1,0 +1,62 @@
+[
+  {
+    "revision": "before",
+    "state": "ou",
+    "body": "SYNTHETIC COMPONENT EVIDENCE · R10 A2b.2\nGrouped bilateral findings\nDOCUMENTATION\nFindings\nFINDING\tEXAM SECTION\tPRESENCE\tGRADE\tLATERALITY\tFINDING ACTIONS\n\nSynthetic lens finding\nCharted\n\tOcular Health\t\nPresent\nAbsent\n\t\nNot graded\n1\n2\n3\n4\n\t\nOD\nOverridden\nUse diagnosis\nOD\nOS\nOU\n\tSaved\n\nSynthetic lens finding\nCharted\n\tOcular Health\t\nPresent\nAbsent\n\t\nNot graded\n1\n2\n3\n4\n\t\nOS\nOverridden\nUse diagnosis\nOD\nOS\nOU\n\tSaved\nFind another finding"
+  },
+  {
+    "revision": "before",
+    "state": "conflict",
+    "body": "SYNTHETIC COMPONENT EVIDENCE · R10 A2b.2\nConflicting records\nDOCUMENTATION\nFindings\nFINDING\tEXAM SECTION\tPRESENCE\tGRADE\tLATERALITY\tFINDING ACTIONS\n\nSynthetic lens finding\nCharted\n\tOcular Health\t\nPresent\nAbsent\n\t\nNot graded\n1\n2\n3\n4\n\t\nOD\nOverridden\nUse diagnosis\nOD\nOS\nOU\n\tSaved\n\nSynthetic lens finding\nCharted\n\tOcular Health\t\nPresent\nAbsent\n\t\nNot graded\n1\n2\n3\n4\n\t\nOS\nOverridden\nUse diagnosis\nOD\nOS\nOU\n\tSaved\nFind another finding"
+  },
+  {
+    "revision": "before",
+    "state": "prebuild",
+    "body": "SYNTHETIC COMPONENT EVIDENCE · R10 A2b.2\nPre-rebuild test data\nDOCUMENTATION\nFindings\nFINDING\tEXAM SECTION\tPRESENCE\tGRADE\tLATERALITY\tFINDING ACTIONS\n\nSynthetic lens finding\nCharted\n\tOcular Health\t\nPresent\nAbsent\n\t\nNot graded\n1\n2\n3\n4\n\t\nOD\nOverridden\nUse diagnosis\nOD\nOS\nOU\n\tSaved\n\nSynthetic lens finding\nCharted\n\tOcular Health\t\nPresent\nAbsent\n\t\nNot graded\n1\n2\n3\n4\n\t\nOS\nOverridden\nUse diagnosis\nOD\nOS\nOU\n\tSaved\nFind another finding"
+  },
+  {
+    "revision": "before",
+    "state": "unavailable",
+    "body": "SYNTHETIC COMPONENT EVIDENCE · R10 A2b.2\nUnavailable finding load"
+  },
+  {
+    "revision": "before",
+    "state": "partial",
+    "body": "SYNTHETIC COMPONENT EVIDENCE · R10 A2b.2\nPartial diagnosis pick\nDiagnoses\nTHIS VISIT\nSynthetic diagnosis\nConfirmed · Rank 1 · Scope not set · Uncoded\nPREVIOUS EXAMS\n\nNo previous exams recorded.\n\nCOMMON\n\nNo Common diagnoses configured.\n\nFIND DX\nFind diagnosis\nUNASSIGNED FINDINGS\nSynthetic lens finding\nPresent · OD\nsuggests:\nSynthetic diagnosis\nAssign to Synthetic diagnosis\nRecord standalone\nSynthetic lens finding\nPresent · OS\nAssign to Synthetic diagnosis\nRecord standalone\nNo diagnosis selected\n\nSelect a diagnosis from This visit, or add one from Common or Find dx."
+  },
+  {
+    "revision": "before",
+    "state": "audit",
+    "body": "SYNTHETIC COMPONENT EVIDENCE · R10 A2b.2\nPending audit record\nDiagnoses\nTHIS VISIT\nSynthetic diagnosis\nConfirmed · Rank 1 · Scope not set · Uncoded\nPREVIOUS EXAMS\n\nNo previous exams recorded.\n\nCOMMON\n\nNo Common diagnoses configured.\n\nFIND DX\nFind diagnosis\nNo diagnosis selected\n\nSelect a diagnosis from This visit, or add one from Common or Find dx."
+  },
+  {
+    "revision": "after",
+    "state": "ou",
+    "body": "SYNTHETIC COMPONENT EVIDENCE · R10 A2b.2\nGrouped bilateral findings\nDOCUMENTATION\nFindings\nFINDING\tEXAM SECTION\tPRESENCE\tGRADE\tLATERALITY\tFINDING ACTIONS\n\nSynthetic lens finding\nCharted\n\tOcular Health\t\nPresent\nAbsent\n\t\nNot graded\n1\n2\n3\n4\n\tOU\nOD\nOS\nOU\n\tSaved\nFind another finding"
+  },
+  {
+    "revision": "after",
+    "state": "conflict",
+    "body": "SYNTHETIC COMPONENT EVIDENCE · R10 A2b.2\nConflicting records\nDOCUMENTATION\nFindings\nFINDING\tEXAM SECTION\tPRESENCE\tGRADE\tLATERALITY\tFINDING ACTIONS\n\nSynthetic lens finding\nOffered\nConflicting records\n\tOcular Health\t\nPresent\nAbsent\n\t\nNot graded\n1\n2\n3\n4\n\tOD\nOD\nOS\nOU\n\tChoose presence\n\nSynthetic lens finding\nCharted\n\tOcular Health\t\nPresent\nAbsent\n\t\nNot graded\n1\n2\n3\n4\n\tOS\nOD\nOS\nOU\n\tSaved\nFind another finding"
+  },
+  {
+    "revision": "after",
+    "state": "prebuild",
+    "body": "SYNTHETIC COMPONENT EVIDENCE · R10 A2b.2\nPre-rebuild test data\nDOCUMENTATION\nFindings\n\nTest data from before the rebuild\n\nFINDING\tEXAM SECTION\tPRESENCE\tGRADE\tLATERALITY\tFINDING ACTIONS\n\nSynthetic lens finding\nCharted\n\tOcular Health\t\nPresent\nAbsent\n\t\nNot graded\n1\n2\n3\n4\n\tOU\nOD\nOS\nOU\n\tSaved\nFind another finding"
+  },
+  {
+    "revision": "after",
+    "state": "unavailable",
+    "body": "SYNTHETIC COMPONENT EVIDENCE · R10 A2b.2\nUnavailable finding load\nFindings unavailable"
+  },
+  {
+    "revision": "after",
+    "state": "partial",
+    "body": "SYNTHETIC COMPONENT EVIDENCE · R10 A2b.2\nPartial diagnosis pick\nDiagnoses\nTHIS VISIT\nSynthetic diagnosis\nConfirmed · Rank 1 · Scope not set · Uncoded\nPREVIOUS EXAMS\n\nNo previous exams recorded.\n\nCOMMON\n\nNo Common diagnoses configured.\n\nFIND DX\nFind diagnosis\nUNASSIGNED FINDINGS\nSynthetic lens finding\nPresent · OU\nsuggests:\nSynthetic diagnosis\nAssign to Synthetic diagnosis\nRecord standalone\n\nDiagnosis saved · Linking incomplete: Not confirmed — Retry\n\nFinish linking\nNo diagnosis selected\n\nSelect a diagnosis from This visit, or add one from Common or Find dx."
+  },
+  {
+    "revision": "after",
+    "state": "audit",
+    "body": "SYNTHETIC COMPONENT EVIDENCE · R10 A2b.2\nPending audit record\nDiagnoses\nTHIS VISIT\nSynthetic diagnosis\nConfirmed · Rank 1 · Scope not set · Uncoded\nPREVIOUS EXAMS\n\nNo previous exams recorded.\n\nCOMMON\n\nNo Common diagnoses configured.\n\nFIND DX\nFind diagnosis\n\nAudit record pending. Repair\n\nNo diagnosis selected\n\nSelect a diagnosis from This visit, or add one from Common or Find dx."
+  }
+]

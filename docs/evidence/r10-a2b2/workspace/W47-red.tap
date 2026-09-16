@@ -1,0 +1,91 @@
+TAP version 13
+# Subtest: W3 Retry resends identical command
+ok 1 - W3 Retry resends identical command
+  ---
+  duration_ms: 43.333
+  type: 'test'
+  ...
+# Subtest: W46 confirmed write on 409 emits event; W47 kept choice uses new command and baseline
+not ok 2 - W46 confirmed write on 409 emits event; W47 kept choice uses new command and baseline
+  ---
+  duration_ms: 24.684
+  type: 'test'
+  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:6824'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected "actual" to be strictly unequal to:
+    
+    'e2567c72-7b07-4e5e-994d-60b69b775a77'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'e2567c72-7b07-4e5e-994d-60b69b775a77'
+  actual: 'e2567c72-7b07-4e5e-994d-60b69b775a77'
+  operator: 'notStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:48:463)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W37 existing diagnosis suggestion links without pick
+ok 3 - W37 existing diagnosis suggestion links without pick
+  ---
+  duration_ms: 11.402875
+  type: 'test'
+  ...
+# Subtest: W36 Finish linking repeats only link
+ok 4 - W36 Finish linking repeats only link
+  ---
+  duration_ms: 20.396875
+  type: 'test'
+  ...
+# Subtest: unconfirmed pick never automatically repeats
+ok 5 - unconfirmed pick never automatically repeats
+  ---
+  duration_ms: 4.822375
+  type: 'test'
+  ...
+# Subtest: W52 origin comes from homeSources despite obsolete Condition evidence
+ok 6 - W52 origin comes from homeSources despite obsolete Condition evidence
+  ---
+  duration_ms: 3.2035
+  type: 'test'
+  ...
+# Subtest: W53 Repair sends fresh UUID to audit repair
+ok 7 - W53 Repair sends fresh UUID to audit repair
+  ---
+  duration_ms: 12.079666
+  type: 'test'
+  ...
+# Subtest: W49 workspace renders both unavailable states
+ok 8 - W49 workspace renders both unavailable states
+  ---
+  duration_ms: 3.154667
+  type: 'test'
+  ...
+# Subtest: pick then bodySite then link ordering: scope
+ok 9 - pick then bodySite then link ordering: scope
+  ---
+  duration_ms: 21.836959
+  type: 'test'
+  ...
+# Subtest: pick then bodySite then link ordering: scope-fail
+ok 10 - pick then bodySite then link ordering: scope-fail
+  ---
+  duration_ms: 16.821875
+  type: 'test'
+  ...
+# Subtest: staff existing-diagnosis support suggestion links without Condition permission
+ok 11 - staff existing-diagnosis support suggestion links without Condition permission
+  ---
+  duration_ms: 11.325416
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 10
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 375.565125

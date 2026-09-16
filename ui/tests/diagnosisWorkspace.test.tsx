@@ -36,6 +36,7 @@ import {
   orderedFindingSearchRows,
   type DiagnosisFindingMutation,
   type DiagnosisFindingsPayload,
+  type EncounterFindingRow,
 } from "../src/lib/diagnosis-findings";
 import { conditionResolvedCodeLabel } from "../src/lib/diagnosis-code-resolution";
 
@@ -207,7 +208,7 @@ test("diagnosis door pages encounter Conditions and renders Possible provenance 
       return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [cataractRow()], catalog: [cataractRow()] });
     }
     if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [] });
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) { const row = canonicalFixtureRow("lens-od", "Lens", "OD", "Condition/possible-od"); return jsonResponse({ encounterEditable: true, canWrite: true, canWriteDiagnosis: true, searchIndex: [row], auditDebt: [], findings: [row], catalog: [], unassigned: [], bySection: { lens: [row] }, visitDiagnoses: [] }); }
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     if (url.includes("/procedure-charges")) return jsonResponse({ options: [], diagnoses: [], proposals: [], attachedProcedures: [] });
@@ -224,7 +225,7 @@ test("diagnosis door pages encounter Conditions and renders Possible provenance 
     assert.equal(conditionPages, 2);
     assert.match(rendered, /Possible/);
     assert.match(rendered, /H25\.11/);
-    assert.equal(renderer.root.findByProps({ className: "odos-diagnosis-provenance" }).children.join(""), "← from Lens OD");
+    assert.equal(renderer.root.findByProps({ className: "odos-diagnosis-provenance" }).children.join(""), "← from Lens · OD");
     assert.match(rendered, /Confirmed rank drift/);
     assert.match(rendered, /Rank missing/);
     assert.doesNotMatch(rendered, /Discarded/);
@@ -259,7 +260,7 @@ test("excluded Encounter diagnosis references expose a disabled reorder explanat
     }
     if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
     if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [] });
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, encounterEditable: true, searchIndex: [], auditDebt: [], findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     if (url.includes("/procedure-charges")) return jsonResponse({ options: [], diagnoses: [], proposals: [], attachedProcedures: [] });
@@ -332,7 +333,7 @@ test("server-cleaned three-minus-one state renders two rows and submits their ex
     }
     if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
     if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [] });
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, encounterEditable: true, searchIndex: [], auditDebt: [], findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     if (url.includes("/procedure-charges")) return jsonResponse({ options: [], diagnoses: [], proposals: [], attachedProcedures: [] });
@@ -520,7 +521,7 @@ test("Find dx searches the eligible catalog beyond bounded Common diagnoses", as
       });
     }
     if (url.includes("/clinical-graph/encounters/e1/findings")) {
-      return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+      return jsonResponse({ canWrite: true, canWriteDiagnosis: true, encounterEditable: true, searchIndex: [], auditDebt: [], findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     }
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) {
       return jsonResponse({ pageSize: 4, encounters: [] });
@@ -672,7 +673,7 @@ test("selected pending family renders warning badges and re-stages from the head
       return jsonResponse({ resourceType: "Provenance", id: "stage-provenance", target: [], recorded: "2026-08-11T12:00:00Z", agent: [] });
     }
     if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [family], catalog: [family] });
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, encounterEditable: true, searchIndex: [], auditDebt: [], findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
@@ -803,7 +804,7 @@ test("bilateral eyelid diagnoses render both resolved codes while legacy unspeci
         }],
       });
     }
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, encounterEditable: true, searchIndex: [], auditDebt: [], findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     throw new Error(`Unexpected request: ${url}`);
@@ -872,7 +873,7 @@ test("eyelid laterality edit fails closed before FHIR writes when its declared c
     if (url.includes("/clinical-graph/diagnosis-quick-list")) {
       return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
     }
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, encounterEditable: true, searchIndex: [], auditDebt: [], findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     if (url.includes("/fhir/R4/BodyStructure?")) {
@@ -937,6 +938,7 @@ test("selected diagnosis fails closed to edited when carry integrity is uncertai
           edited: false,
           integrityWarning: "Diagnosis carry provenance cycle detected.",
         },
+        encounterEditable: true, searchIndex: [], auditDebt: [],
         findings: [],
         catalog: [],
         unassigned: [],
@@ -985,7 +987,7 @@ test("edited diagnosis carry is named distinctly without unchanged aging", async
     if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: condition("selected", "Dry eye syndrome") }] });
     if (url.includes("/fhir/R4/Condition/selected")) return jsonResponse(condition("selected", "Dry eye syndrome"));
     if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
-    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, carryProvenance: { pulledFromDate: "2026-08-01", unchangedSinceDate: "2026-06-15", edited: true }, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, carryProvenance: { pulledFromDate: "2026-08-01", unchangedSinceDate: "2026-06-15", edited: true }, encounterEditable: true, searchIndex: [], auditDebt: [], findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     throw new Error(`Unexpected request: ${url}`);
@@ -1058,7 +1060,7 @@ test("a failed same-diagnosis verification refresh cannot retain stale carry ass
     if (url.includes("/clinical-graph/encounters/e1/findings")) {
       if (init?.method === "PUT") {
         findingWrites += 1;
-        return jsonResponse({});
+        return jsonResponse({ result: "command", commandId: JSON.parse(String(init.body)).commandId, complete: true, executionOrder: [0], outcomes: [{ status: "applied", target: "test-fact", clinicalWrite: "confirmed" }] });
       }
       findingsReads += 1;
       return findingsReads === 1
@@ -1086,7 +1088,7 @@ test("a failed same-diagnosis verification refresh cannot retain stale carry ass
     });
     const failedRefresh = JSON.stringify(renderer.toJSON());
     assert.equal(findingWrites, 1);
-    assert.ok(renderer.root.findAllByProps({ role: "alert" }).some((node) => node.children.join("") === "Finding verification failed."));
+    assert.ok(renderer.root.findAllByProps({ role: "alert" }).some((node) => node.children.join("").includes("Findings unavailable")));
     assert.doesNotMatch(failedRefresh, /Carried finding|is-unedited|carried/);
   } finally {
     act(() => renderer?.unmount());
@@ -1114,7 +1116,7 @@ test("switching diagnoses hides the prior findings payload while the new request
       renderer.update(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/b" onSelectDiagnosis={() => undefined} />);
       await Promise.resolve();
     });
-    const pending = JSON.stringify(renderer.toJSON());
+    const pending = JSON.stringify(renderer.root.findByProps({ "aria-label": "Selected diagnosis workspace" }).findAll(node => typeof node.type === "string").map(node => node.children.filter(child => typeof child === "string")));
     assert.doesNotMatch(pending, /A finding|pulled from Aug 1, 2026/);
     assert.match(pending, /Loading findings/);
 
@@ -1180,7 +1182,7 @@ test("finding rows sort charted before offered and search prioritizes selected-d
   );
 });
 
-test("findings table keeps presence explicit, grade unanswered, laterality source visible, and re-click clears", () => {
+test("findings table keeps presence explicit, grade unanswered, explicit eye choices visible, and re-click clears", () => {
   const mutations: DiagnosisFindingMutation[] = [];
   const renderer = create(
     <DiagnosisFindingsTable
@@ -1196,8 +1198,8 @@ test("findings table keeps presence explicit, grade unanswered, laterality sourc
   assert.match(json, /Present/);
   assert.match(json, /Absent/);
   assert.match(json, /Not graded/);
-  assert.match(json, /is-inherited/);
-  assert.match(json, /is-explicit/);
+  assert.doesNotMatch(json, /Use diagnosis/);
+  assert.deepEqual(renderer.root.findByProps({ "aria-label": "Laterality Charted finding" }).findAllByType("option").map((node) => node.props.value), ["OD", "OS", "OU"]);
   const offeredPresent = renderer.root.findByProps({ "aria-label": "Record Offered finding present" });
   const offeredAbsent = renderer.root.findByProps({ "aria-label": "Record Offered finding absent" });
   const flipAbsentToPresent = renderer.root.findByProps({ "aria-label": "Record Absent finding present" });
@@ -1212,45 +1214,23 @@ test("findings table keeps presence explicit, grade unanswered, laterality sourc
     target: { value: "OS" },
   }));
 
-  assert.deepEqual(mutations, [
-    {
-      action: "assert",
-      patientReference: "Patient/p1",
-      conditionReference: "Condition/selected",
-      atomicFindingId: "section::field::offered",
-      presence: "present",
-    },
-    {
-      action: "assert",
-      patientReference: "Patient/p1",
-      conditionReference: "Condition/selected",
-      atomicFindingId: "section::field::offered",
-      presence: "absent",
-    },
-    {
-      action: "assert",
-      patientReference: "Patient/p1",
-      conditionReference: "Condition/selected",
-      atomicFindingId: "section::field::absent",
-      presence: "present",
-      laterality: "OS",
-    },
-    {
-      action: "clear",
-      patientReference: "Patient/p1",
-      observationReference: "Observation/charted",
-    },
-    {
-      action: "clear",
-      patientReference: "Patient/p1",
-      observationReference: "Observation/absent",
-    },
-    {
-      action: "laterality",
-      patientReference: "Patient/p1",
-      observationReference: "Observation/charted",
-      laterality: "OS",
-    },
+  const payload = findingsPayload();
+  const offered = payload.findings[0]!;
+  const charted = payload.findings[1]!;
+  const absent = payload.findings[2]!;
+  const target = (row: EncounterFindingRow, status: "live" | "retired", presence = row.presence ?? "present", homes = row.homes) => ({ kind: "fact", key: row.key, baseline: row.baseline, state: { status, presence, qualifiers: row.qualifiers, homes } });
+  for (const mutation of mutations) assert.match(mutation.commandId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  assert.equal(new Set(mutations.map((mutation) => mutation.commandId)).size, 6);
+  assert.deepEqual(mutations.map(({ commandId: _id, ...body }) => body), [
+    { operation: "assert", patientReference: "Patient/p1", context: { selectedConditionReference: "Condition/selected" }, targets: [target(offered, "live", "present", ["Condition/selected"])] },
+    { operation: "assert", patientReference: "Patient/p1", context: { selectedConditionReference: "Condition/selected" }, targets: [target(offered, "live", "absent", ["Condition/selected"])] },
+    { operation: "assert", patientReference: "Patient/p1", context: { selectedConditionReference: "Condition/selected" }, targets: [target(absent, "live", "present")] },
+    { operation: "clear", patientReference: "Patient/p1", context: { selectedConditionReference: "Condition/selected" }, targets: [target(charted, "retired")] },
+    { operation: "clear", patientReference: "Patient/p1", context: { selectedConditionReference: "Condition/selected" }, targets: [target(absent, "retired")] },
+    { operation: "eye-change", patientReference: "Patient/p1", context: { selectedConditionReference: "Condition/selected" }, eyes: { from: ["OD"], to: ["OS"] }, targets: [
+      target(charted, "retired"),
+      { kind: "fact", key: { ...charted.key, eye: "OS" }, baseline: { kind: "absent", key: { ...charted.key, eye: "OS" } }, state: { status: "live", presence: "present", qualifiers: {}, homes: ["Condition/selected"] } },
+    ] },
   ]);
 });
 
@@ -1274,18 +1254,12 @@ test("unassigned tray offers current visit assignment and standalone without dia
   assert.doesNotMatch(json, /Create diagnosis/);
   act(() => renderer.root.findByProps({ "aria-label": "Assign Unassigned finding to Selected diagnosis" }).props.onClick());
   act(() => renderer.root.findByProps({ "aria-label": "Record Unassigned finding standalone" }).props.onClick());
-  assert.deepEqual(mutations, [
-    {
-      action: "assign",
-      patientReference: "Patient/p1",
-      observationReference: "Observation/unassigned",
-      conditionReference: "Condition/selected",
-    },
-    {
-      action: "standalone",
-      patientReference: "Patient/p1",
-      observationReference: "Observation/unassigned",
-    },
+  const row = payload.unassigned[0]!;
+  for (const mutation of mutations) assert.match(mutation.commandId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  assert.notEqual(mutations[0]!.commandId, mutations[1]!.commandId);
+  assert.deepEqual(mutations.map(({ commandId: _id, ...body }) => body), [
+    { operation: "move", patientReference: "Patient/p1", context: { selectedConditionReference: "Condition/selected" }, targets: [{ kind: "fact", key: row.key, baseline: row.baseline, state: { status: "live", presence: "present", qualifiers: {}, homes: ["Condition/selected"] } }] },
+    { operation: "standalone", patientReference: "Patient/p1", targets: [{ kind: "fact", key: row.key, baseline: row.baseline, state: { status: "live", presence: "present", qualifiers: {}, homes: [] } }] },
   ]);
 
   const empty = create(
@@ -1323,8 +1297,9 @@ test("unassigned tray renders quiet equal-weight suggestions in endpoint order a
       visitDiagnoses={[]}
       patientReference="Patient/p1"
       disabled={false}
-      suggestionsByObservation={{ "Observation/unassigned": {
-        findingInstanceId: "finding-unassigned",
+      suggestionsByFinding={{ "unassigned:OD": {
+        findingInstanceId: "unassigned:OD",
+        contributors: payload.unassigned[0]!.contributors,
         candidates: suggestions,
       } }}
       onSuggest={(suggestion) => { selected.push(suggestion.diagnosisKey ?? suggestion.familyGroup); }}
@@ -1359,25 +1334,28 @@ test("tray leaf and family suggestions reuse the existing scope and stage prompt
       icd10: { pattern: { right: "H35.3111", left: "H35.3121", bilateral: "H35.3131" } },
     }],
   };
-  const pickBodies: unknown[] = [];
+  const pickBodies: Array<Record<string, unknown>> = [];
+  const supportingFacts = [{ rowKey: payload.unassigned[0]!.rowKey, key: payload.unassigned[0]!.key!, baseline: payload.unassigned[0]!.baseline! }];
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
     if (url.endsWith("/diagnosis-statuses")) return jsonResponse({ statuses: [] });
     if (url.includes("/fhir/R4/Encounter/e1")) return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
     if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
     if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [leaf, family] });
+    if (url.includes("/clinical-graph/encounters/e1/findings") && init?.method === "PUT") return jsonResponse({ result: "command", commandId: JSON.parse(String(init.body)).commandId, complete: true, executionOrder: [0], outcomes: [{ status: "applied", target: "test-fact", clinicalWrite: "confirmed" }] });
     if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ ...payload, canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [{
-      findingInstanceId: "finding-unassigned",
+      findingInstanceId: "unassigned:OD",
       observationReference: "Observation/unassigned",
-      candidates: [{ diagnosisKey: "macular_drusen", display: "Macular drusen", priority: true, source: "mapping" }, {
+      contributors: payload.unassigned[0]!.contributors,
+      candidates: [{ diagnosisKey: "macular_drusen", display: "Macular drusen", priority: true, source: "mapping", supportingFacts }, {
         familyGroup: "nonexudative-amd", clinicalFamily: "nonexudative-amd", display: "Nonexudative AMD", axisLabel: "Stage",
-        members: [{ stableKey: "dry_amd_early", stageLabel: "Early" }], priority: true, source: "mapping",
+        members: [{ stableKey: "dry_amd_early", stageLabel: "Early" }], priority: true, source: "mapping", supportingFacts,
       }],
     }] });
     if (url.includes("/clinical-graph/encounters/e1/diagnosis-picks") && init?.method === "POST") {
       pickBodies.push(JSON.parse(String(init.body)));
-      return jsonResponse({ condition: { resourceType: "Condition", id: "picked", subject: { reference: "Patient/p1" }, code: { text: "Macular drusen" } } });
+      return jsonResponse({ result: "pick", conditionStep: "applied", link: "pending", condition: { resourceType: "Condition", id: "picked", subject: { reference: "Patient/p1" }, code: { text: "Macular drusen" } } });
     }
     if (url.includes("/fhir/R4/BodyStructure?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
     if (url.endsWith("/fhir/R4/BodyStructure") && init?.method === "POST") return jsonResponse({ resourceType: "BodyStructure", id: "eye", patient: { reference: "Patient/p1" } });
@@ -1404,12 +1382,14 @@ test("tray leaf and family suggestions reuse the existing scope and stage prompt
       scope.props.onChange(["OD"]);
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    assert.deepEqual(pickBodies, [{
+    assert.match(String(pickBodies[0]?.commandId), /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    assert.deepEqual(pickBodies.map(({ commandId: _id, ...body }) => body), [{
       diagnosisKey: "macular_drusen",
       action: "confirm",
-      findingInstanceId: "finding-unassigned",
+      findingInstanceId: "unassigned:OD",
       laterality: "OD",
       source: "mapping",
+      supportingFacts: supportingFacts.map(({ key, baseline }) => ({ key, baseline })),
     }]);
   } finally {
     act(() => renderer?.unmount());
@@ -1428,13 +1408,14 @@ test("same-encounter finding refresh reloads diagnosis candidates for newly char
     if (url.includes("/fhir/R4/Encounter/e1")) return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
     if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
     if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [leaf] });
-    if (url.includes("/clinical-graph/encounters/e1/findings") && init?.method === "PUT") return jsonResponse({});
+    if (url.includes("/clinical-graph/encounters/e1/findings") && init?.method === "PUT") return jsonResponse({ result: "command", commandId: JSON.parse(String(init.body)).commandId, complete: true, executionOrder: [0], outcomes: [{ status: "applied", target: "test-fact", clinicalWrite: "confirmed" }] });
     if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ ...payload, canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) {
       candidateReads += 1;
       return jsonResponse({ findings: candidateReads === 1 ? [] : [{
-        findingInstanceId: "finding-unassigned",
+        findingInstanceId: "unassigned:OD",
         observationReference: "Observation/unassigned",
+      contributors: payload.unassigned[0]!.contributors,
         candidates: [{ diagnosisKey: "macular_drusen", display: "Macular drusen", priority: true, source: "mapping" }],
       }] });
     }
@@ -1671,7 +1652,7 @@ function stagedWorkspaceFetch(family: ReturnType<typeof stagedFamilyRow>): typeo
       return jsonResponse({ canWrite: true, canWriteDiagnosis: true, pinnedDiagnosisKeys: [], diagnoses: [family], catalog: [family] });
     }
     if (url.includes("/clinical-graph/encounters/e1/findings")) {
-      return jsonResponse({ canWrite: true, canWriteDiagnosis: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+      return jsonResponse({ canWrite: true, canWriteDiagnosis: true, encounterEditable: true, searchIndex: [], auditDebt: [], findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     }
     if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
@@ -1734,128 +1715,47 @@ function workspaceRaceFetch({
   }) as typeof fetch;
 }
 
-function raceFindingsPayload(
-  conditionReference: string,
-  findingDisplay: string,
-  pulledFromDate: string,
-  unchangedSinceDate?: string,
-): DiagnosisFindingsPayload {
-  const row = {
-    findingDefinitionId: "definition",
-    findingDefinitionKey: "section",
-    fieldCode: "field",
-    sectionKey: "lens",
-    gradeScale: [] as string[],
-    diagnosisKeys: [conditionReference],
-    origin: "shipped" as const,
-    atomicFindingId: `section::field::${conditionReference}`,
-    optionCode: conditionReference,
-    display: findingDisplay,
-    laterality: "OU" as const,
-    lateralitySource: "inherited" as const,
-    source: "atomic" as const,
-    presence: "present" as const,
-    observationReference: `Observation/${conditionReference.replace("Condition/", "")}`,
-    conditionReference,
-  };
+function canonicalFixtureRow(optionCode: string, display: string, eye: "OD" | "OS", conditionReference?: string, offered = false): EncounterFindingRow {
+  const key = { v: 1 as const, patientId: "p1", encounterId: "e1", stableKey: "section", fieldCode: "field", optionCode, eye };
+  const reference = `Observation/${optionCode}`;
   return {
-    canWrite: true, canWriteDiagnosis: true,
+    findingDefinitionId: "definition", findingDefinitionKey: "section", fieldCode: "field", sectionKey: "lens",
+    gradeScale: [], origin: "shipped", atomicFindingId: `section::field::${optionCode}`, optionCode, display,
+    diagnosisKeys: conditionReference ? ["dx-selected"] : [], rowKey: `${optionCode}:${eye}`, kind: offered ? "offered" : "fact",
+    eye, laterality: eye, qualifiers: {}, status: offered ? "offered" : "live", editable: true,
+    homes: conditionReference ? [conditionReference] : [],
+    homeSources: conditionReference ? [{ condition: conditionReference, sources: [{ kind: "finding-extension", contributor: { reference, versionId: "1" } }] }] : [],
+    key, baseline: offered ? { kind: "absent", key } : { kind: "canonical", reference, versionId: "1" },
+    contributors: offered ? [] : [{ reference, versionId: "1", kind: "canonical-fact" }],
+    ...(offered ? {} : { presence: "present" as const, ...(conditionReference ? { conditionReference } : {}) }),
+  };
+}
+
+function raceFindingsPayload(conditionReference: string, findingDisplay: string, pulledFromDate: string, unchangedSinceDate?: string): DiagnosisFindingsPayload {
+  const row = canonicalFixtureRow(conditionReference.replace("Condition/", ""), findingDisplay, "OD", conditionReference);
+  return {
+    encounterEditable: true, canWrite: true, canWriteDiagnosis: true, searchIndex: [row], auditDebt: [],
     carryProvenance: { pulledFromDate, ...(unchangedSinceDate ? { unchangedSinceDate } : {}), edited: false },
-    findings: [row],
-    catalog: [],
-    unassigned: [],
-    bySection: { lens: [row] },
-    visitDiagnoses: [],
+    findings: [row], catalog: [], unassigned: [], bySection: { lens: [row] }, visitDiagnoses: [],
   };
 }
 
 function findingsPayload(): DiagnosisFindingsPayload {
-  const base = {
-    findingDefinitionId: "definition",
-    findingDefinitionKey: "section",
-    fieldCode: "field",
-    sectionKey: "lens",
-    gradeScale: [] as string[],
-    origin: "shipped" as const,
-  };
-  const offered = {
-    ...base,
-    atomicFindingId: "section::field::offered",
-    optionCode: "offered",
-    display: "Offered finding",
-    diagnosisKeys: ["dx-selected"],
-    laterality: "OD" as const,
-    lateralitySource: "inherited" as const,
-    source: "offered" as const,
-  };
-  const charted = {
-    ...base,
-    atomicFindingId: "section::field::charted",
-    optionCode: "charted",
-    display: "Charted finding",
-    gradeScale: ["1+", "2+"],
-    diagnosisKeys: ["dx-selected"],
-    laterality: "OD" as const,
-    lateralitySource: "inherited" as const,
-    source: "atomic" as const,
-    presence: "present" as const,
-    observationReference: "Observation/charted",
-    conditionReference: "Condition/selected",
-  };
-  const absent = {
-    ...base,
-    atomicFindingId: "section::field::absent",
-    optionCode: "absent",
-    display: "Absent finding",
-    diagnosisKeys: [],
-    laterality: "OS" as const,
-    lateralitySource: "explicit" as const,
-    source: "atomic" as const,
-    presence: "absent" as const,
-    observationReference: "Observation/absent",
-    conditionReference: "Condition/selected",
-  };
-  const unassigned = {
-    ...base,
-    atomicFindingId: "section::field::unassigned",
-    optionCode: "unassigned",
-    display: "Unassigned finding",
-    diagnosisKeys: [],
-    laterality: "OU" as const,
-    lateralitySource: "explicit" as const,
-    source: "section" as const,
-    presence: "present" as const,
-    observationReference: "Observation/unassigned",
-  };
+  const offered = canonicalFixtureRow("offered", "Offered finding", "OD", "Condition/selected", true);
+  offered.homes = []; offered.homeSources = [];
+  const charted = canonicalFixtureRow("charted", "Charted finding", "OD", "Condition/selected");
+  charted.gradeScale = ["1+", "2+"];
+  const absent = canonicalFixtureRow("absent", "Absent finding", "OS", "Condition/selected");
+  absent.presence = "absent"; absent.diagnosisKeys = [];
+  const unassigned = canonicalFixtureRow("unassigned", "Unassigned finding", "OD");
+  const general = canonicalFixtureRow("general", "General catalog finding", "OD", undefined, true);
+  const catalog = [offered, charted, absent, general].map(({ atomicFindingId, findingDefinitionId, findingDefinitionKey, fieldCode, optionCode, display, sectionKey, gradeScale, diagnosisKeys, origin }) => ({ atomicFindingId, findingDefinitionId, findingDefinitionKey, fieldCode, optionCode, display, sectionKey, gradeScale, diagnosisKeys, origin }));
   return {
-    canWrite: true, canWriteDiagnosis: true,
-    diagnosis: {
-      id: "diagnosis-dx-selected",
-      stableKey: "dx-selected",
-      display: "Selected diagnosis",
-      applicableFindingDefinitionIds: ["definition"],
-    },
-    findings: [offered, charted, absent],
-    catalog: [
-      { ...offered, source: undefined, laterality: undefined, lateralitySource: undefined },
-      { ...charted, source: undefined, laterality: undefined, lateralitySource: undefined, presence: undefined, observationReference: undefined, conditionReference: undefined },
-      { ...absent, source: undefined, laterality: undefined, lateralitySource: undefined, presence: undefined, observationReference: undefined, conditionReference: undefined },
-      {
-        ...base,
-        atomicFindingId: "section::field::general",
-        optionCode: "general",
-        display: "General catalog finding",
-        diagnosisKeys: [],
-      },
-    ],
-    unassigned: [unassigned],
-    bySection: { lens: [charted, absent, unassigned] },
-    visitDiagnoses: [{
-      conditionReference: "Condition/selected",
-      diagnosisKey: "dx-selected",
-      display: "Selected diagnosis",
-      laterality: "OD",
-    }],
+    encounterEditable: true, canWrite: true, canWriteDiagnosis: true, auditDebt: [],
+    diagnosis: { id: "diagnosis-dx-selected", stableKey: "dx-selected", display: "Selected diagnosis", applicableFindingDefinitionIds: ["definition"] },
+    findings: [offered, charted, absent], catalog, searchIndex: [offered, charted, absent, general, unassigned, ...[offered, charted, absent, general].map(row => canonicalFixtureRow(row.optionCode, row.display, row.eye === "OD" ? "OS" : "OD", undefined, true))],
+    unassigned: [unassigned], bySection: { lens: [charted, absent, unassigned] },
+    visitDiagnoses: [{ conditionReference: "Condition/selected", diagnosisKey: "dx-selected", display: "Selected diagnosis", laterality: "OD" }],
   };
 }
 
@@ -2049,7 +1949,7 @@ for (const canWriteDiagnosis of [true, false, undefined]) {
         assert.equal(button.props.disabled, denied, label);
       }
       const tray = renderer.root.findByType(UnassignedFindingsTray);
-      assert.equal(tray.props.disabled, denied, "assignment and standalone change diagnosis evidence");
+      assert.equal(tray.props.disabled, false, "finding commands retain ordinary chart write capability");
       if (denied) {
         await act(async () => { await common.props.onClick(); });
         assert.equal(writes.length, 0, "a stale add callback cannot issue a diagnosis write");
@@ -2062,25 +1962,25 @@ for (const canWriteDiagnosis of [true, false, undefined]) {
     }
   });
 
-  test(`STAFF-DX-GATE findings retain grade and laterality while gating evidence links: ${canWriteDiagnosis}`, () => {
+  test(`R10 staff finding commands use chart write capability independently of diagnosis permission: ${canWriteDiagnosis}`, () => {
     const payload = { ...findingsPayload(), canWriteDiagnosis };
     const mutations: DiagnosisFindingMutation[] = [];
     const renderer = create(<DiagnosisFindingsTable payload={payload} patientReference="Patient/p1" conditionReference="Condition/selected" disabled={false} onMutate={(mutation) => { mutations.push(mutation); }} />);
     try {
       for (const label of ["Record Offered finding present", "Record Offered finding absent", "Clear present Charted finding", "Clear absent Absent finding"]) {
         const control = renderer.root.findByProps({ "aria-label": label });
-        assert.equal(control.props.disabled, canWriteDiagnosis !== true, label);
-        if (canWriteDiagnosis !== true) act(() => control.props.onClick());
+        assert.equal(control.props.disabled, false, label);
+        act(() => control.props.onClick());
       }
-      assert.deepEqual(mutations, [], "denied evidence callbacks do not issue writes");
+      assert.deepEqual(mutations.map((mutation) => mutation.operation), ["assert", "assert", "clear", "clear"], "Staff can record and clear findings");
       for (const label of ["Grade Charted finding", "Laterality Charted finding"]) {
         assert.equal(renderer.root.findByProps({ "aria-label": label }).props.disabled, false, label);
       }
       act(() => renderer.root.findByProps({ "aria-label": "Grade Charted finding" }).props.onChange({ target: { value: "2+" } }));
       act(() => renderer.root.findByProps({ "aria-label": "Laterality Charted finding" }).props.onChange({ target: { value: "OS" } }));
-      assert.deepEqual(mutations.map((mutation) => mutation.action), ["grade", "laterality"]);
+      assert.deepEqual(mutations.slice(4).map((mutation) => mutation.operation), ["grade", "eye-change"]);
       act(() => renderer.root.findByType("input").props.onChange({ target: { value: "General" } }));
-      assert.equal(renderer.root.findByProps({ className: "odos-diagnosis-finding-search-results" }).findByType("button").props.disabled, canWriteDiagnosis !== true);
+      assert.equal(renderer.root.findByProps({ className: "odos-diagnosis-finding-search-results" }).findByType("button").props.disabled, false);
     } finally {
       act(() => renderer.unmount());
     }

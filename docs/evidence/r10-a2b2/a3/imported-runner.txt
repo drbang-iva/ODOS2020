@@ -1,0 +1,174 @@
+TAP version 13
+# Subtest: T15 Ocular Health picker accepts a canonical view without one observation id
+not ok 1 - T15 Ocular Health picker accepts a canonical view without one observation id # TODO R10 A3
+  ---
+  duration_ms: 18.723708
+  type: 'test'
+  location: '<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:1:6329'
+  failureType: 'testCodeFailure'
+  error: |-
+    The rendered Ocular Health section must offer canonical-view suggestions without an Observation id
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:73:18)
+    async withTransport (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:61:9)
+    async TestContext.<anonymous> (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:71:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: T16 DiagnosisPicker proposal evidence resolves through finding homes
+not ok 2 - T16 DiagnosisPicker proposal evidence resolves through finding homes # TODO R10 A3
+  ---
+  duration_ms: 3.827708
+  type: 'test'
+  location: '<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:1:6746'
+  failureType: 'testCodeFailure'
+  error: |-
+    An unrelated OS fact must remain unproposed despite sharing the diagnosis catalog key
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    withTransport.twoCandidates (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:85:14)
+    async withTransport (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:61:9)
+    async TestContext.<anonymous> (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:79:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: T17 Ocular Health picks link fact targets
+not ok 3 - T17 Ocular Health picks link fact targets # TODO R10 A3
+  ---
+  duration_ms: 7.238209
+  type: 'test'
+  location: '<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:1:7558'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + undefined
+    - [
+    -   {
+    -     baseline: {
+    -       kind: 'canonical',
+    -       reference: 'Observation/fact-OD',
+    -       versionId: '2'
+    -     },
+    -     key: {
+    -       encounterId: 'e1',
+    -       eye: 'OD',
+    -       fieldCode: 'CUSTOM_ABNORMAL',
+    -       optionCode: 'opacity',
+    -       patientId: 'p1',
+    -       stableKey: 'ocular-health:anterior:lens',
+    -       v: 1
+    -     }
+    -   }
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      key:
+        v: 1
+        patientId: 'p1'
+        encounterId: 'e1'
+        stableKey: 'ocular-health:anterior:lens'
+        fieldCode: 'CUSTOM_ABNORMAL'
+        optionCode: 'opacity'
+        eye: 'OD'
+      baseline:
+        kind: 'canonical'
+        reference: 'Observation/fact-OD'
+        versionId: '2'
+  operator: 'deepStrictEqual'
+  stack: |-
+    withTransport.historyReference (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:99:14)
+    async withTransport (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:61:9)
+    async TestContext.<anonymous> (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:91:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: T18 Assessment origin uses finding home sources
+not ok 4 - T18 Assessment origin uses finding home sources # TODO R10 A3
+  ---
+  duration_ms: 5.580167
+  type: 'test'
+  location: '<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:1:8680'
+  failureType: 'testCodeFailure'
+  error: 'Assessment must display canonical origin from finding homeSources even when Condition.evidence is absent'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'AssessmentVisit diagnoses are separate from the longitudinal problem list.ClearSave as Protocol1 visit diagnosesPrincipal▾PrincipalSecondaryOU▾ODOSOUDiagnosis / ICD-10Selected: Myopia, bilateralAdd diagnosisSynthetic diagnosisPossible · active · UncodedConfirmDiscard'
+  operator: 'match'
+  stack: |-
+    withTransport.proposed (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:116:14)
+    async withTransport (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:61:9)
+    async TestContext.<anonymous> (<repo>/ui/tests/r10A3ReleaseScenarios.test.ts:109:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Encounter finding overlay unavailable. Error: synthetic unavailable
+#     at loadPayload (<repo>/ui/tests/r10DiagnosisSurfaces.test.tsx:17:29)
+#     at load (<repo>/ui/src/components/charting/EncounterFindingOverlay.tsx:28:24)
+#     at <anonymous> (<repo>/ui/src/components/charting/EncounterFindingOverlay.tsx:45:10)
+#     at commitHookEffectListMount (<repo>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13038:26)
+#     at commitPassiveMountOnFiber (<repo>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14461:11)
+#     at commitPassiveMountEffects_complete (<repo>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14421:9)
+#     at commitPassiveMountEffects_begin (<repo>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14408:7)
+#     at commitPassiveMountEffects (<repo>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14396:3)
+#     at flushPassiveEffectsImpl (<repo>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16287:3)
+#     at flushPassiveEffects (<repo>/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:16236:14)
+# Subtest: W49 overlay shows Findings unavailable for typed and rejected loads
+ok 5 - W49 overlay shows Findings unavailable for typed and rejected loads
+  ---
+  duration_ms: 2.088208
+  type: 'test'
+  ...
+# Subtest: W51 default legacy ocular_health pick omits supportingFacts
+ok 6 - W51 default legacy ocular_health pick omits supportingFacts
+  ---
+  duration_ms: 2.280875
+  type: 'test'
+  ...
+# Subtest: W51 default legacy cup_disc_ratio pick omits supportingFacts
+ok 7 - W51 default legacy cup_disc_ratio pick omits supportingFacts
+  ---
+  duration_ms: 3.05975
+  type: 'test'
+  ...
+# Subtest: W49 candidate load failure shows Suggestions unavailable
+ok 8 - W49 candidate load failure shows Suggestions unavailable
+  ---
+  duration_ms: 1.739959
+  type: 'test'
+  ...
+# Subtest: W49 encounter scene preserves unavailable unassigned count
+ok 9 - W49 encounter scene preserves unavailable unassigned count
+  ---
+  duration_ms: 96.757
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 4
+# duration_ms 359.825125
