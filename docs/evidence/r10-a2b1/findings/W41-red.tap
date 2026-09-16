@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: W8 unavailable and W41 410 missing retain typed read failures
+not ok 1 - W8 unavailable and W41 410 missing retain typed read failures
+  ---
+  duration_ms: 4.555792
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:7041'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    502 !== 404
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 404
+  actual: 502
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:40:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 163.148166

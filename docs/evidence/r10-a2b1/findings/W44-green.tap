@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: W44 refresh failure selects causal 502 after a confirmed first write
+ok 1 - W44 refresh failure selects causal 502 after a confirmed first write
+  ---
+  duration_ms: 6.103541
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 161.489292

@@ -1,0 +1,266 @@
+TAP version 13
+# Subtest: W7 staff assert uses chart.write, writes preliminary fact and no Condition
+ok 1 - W7 staff assert uses chart.write, writes preliminary fact and no Condition
+  ---
+  duration_ms: 5.623834
+  type: 'test'
+  ...
+# Subtest: W27 missing baseline returns 428 and no-store before writes
+ok 2 - W27 missing baseline returns 428 and no-store before writes
+  ---
+  duration_ms: 0.258709
+  type: 'test'
+  ...
+# Subtest: W43 pre-rebuild GET is read-only and PUT/repair refuse without writes
+ok 3 - W43 pre-rebuild GET is read-only and PUT/repair refuse without writes
+  ---
+  duration_ms: 4.729125
+  type: 'test'
+  ...
+# Subtest: W39 mixed writable and final target refuses entire command at raw status
+ok 4 - W39 mixed writable and final target refuses entire command at raw status
+  ---
+  duration_ms: 1.691458
+  type: 'test'
+  ...
+# Subtest: W26 out-of-domain intended home refuses before any write
+ok 5 - W26 out-of-domain intended home refuses before any write
+  ---
+  duration_ms: 0.78025
+  type: 'test'
+  ...
+# Subtest: W4 assert under Y preserves X in persisted homes and both selected views
+ok 6 - W4 assert under Y preserves X in persisted homes and both selected views
+  ---
+  duration_ms: 8.941333
+  type: 'test'
+  ...
+# Subtest: W28a clear preserves historical homes
+ok 7 - W28a clear preserves historical homes
+  ---
+  duration_ms: 1.165875
+  type: 'test'
+  ...
+# Subtest: W28b retired revive links fresh and W33 offered retains revive baseline and same id
+ok 8 - W28b retired revive links fresh and W33 offered retains revive baseline and same id
+  ---
+  duration_ms: 3.214
+  type: 'test'
+  ...
+# Subtest: W8 unavailable and W41 410 missing retain typed read failures
+ok 9 - W8 unavailable and W41 410 missing retain typed read failures
+  ---
+  duration_ms: 1.019334
+  type: 'test'
+  ...
+# Subtest: W31 conflict carries command result but strips internal fresh
+ok 10 - W31 conflict carries command result but strips internal fresh
+  ---
+  duration_ms: 1.096333
+  type: 'test'
+  ...
+# Subtest: W34 same command with fresh baseline and changed state refuses reuse
+ok 11 - W34 same command with fresh baseline and changed state refuses reuse
+  ---
+  duration_ms: 2.478416
+  type: 'test'
+  ...
+# Subtest: W32 eye-change onto differing live destination refuses zero writes
+ok 12 - W32 eye-change onto differing live destination refuses zero writes
+  ---
+  duration_ms: 1.855792
+  type: 'test'
+  ...
+# Subtest: OD to OS eye-change creates destination and retires source
+ok 13 - OD to OS eye-change creates destination and retires source
+  ---
+  duration_ms: 1.682542
+  type: 'test'
+  ...
+# Subtest: W42 repair persists frozen audit debt and clears GET debt without a clinical write
+ok 14 - W42 repair persists frozen audit debt and clears GET debt without a clinical write
+  ---
+  duration_ms: 6.0395
+  type: 'test'
+  ...
+# Subtest: W44 refresh failure selects causal 502 after a confirmed first write
+ok 15 - W44 refresh failure selects causal 502 after a confirmed first write
+  ---
+  duration_ms: 0.942875
+  type: 'test'
+  ...
+# Subtest: retired fact refuses clear without writes
+ok 16 - retired fact refuses clear without writes
+  ---
+  duration_ms: 0.578625
+  type: 'test'
+  ...
+# Subtest: retired fact refuses grade without writes
+ok 17 - retired fact refuses grade without writes
+  ---
+  duration_ms: 0.517167
+  type: 'test'
+  ...
+# Subtest: retired fact refuses move without writes
+ok 18 - retired fact refuses move without writes
+  ---
+  duration_ms: 0.68925
+  type: 'test'
+  ...
+# Subtest: retired fact refuses standalone without writes
+ok 19 - retired fact refuses standalone without writes
+  ---
+  duration_ms: 0.668584
+  type: 'test'
+  ...
+# Subtest: retired fact refuses link without writes
+ok 20 - retired fact refuses link without writes
+  ---
+  duration_ms: 1.496584
+  type: 'test'
+  ...
+# Subtest: retired fact refuses reassert without writes
+ok 21 - retired fact refuses reassert without writes
+  ---
+  duration_ms: 0.846041
+  type: 'test'
+  ...
+# Subtest: move changes only authorized state and rejects another state change before writing
+ok 22 - move changes only authorized state and rejects another state change before writing
+  ---
+  duration_ms: 1.465291
+  type: 'test'
+  ...
+# Subtest: standalone changes only authorized state and rejects another state change before writing
+ok 23 - standalone changes only authorized state and rejects another state change before writing
+  ---
+  duration_ms: 1.195667
+  type: 'test'
+  ...
+# Subtest: link changes only authorized state and rejects another state change before writing
+ok 24 - link changes only authorized state and rejects another state change before writing
+  ---
+  duration_ms: 1.065667
+  type: 'test'
+  ...
+# Subtest: grade changes only authorized state and rejects another state change before writing
+ok 25 - grade changes only authorized state and rejects another state change before writing
+  ---
+  duration_ms: 1.298542
+  type: 'test'
+  ...
+# Subtest: raw amended owner refuses even behind offered row
+ok 26 - raw amended owner refuses even behind offered row
+  ---
+  duration_ms: 1.6105
+  type: 'test'
+  ...
+# Subtest: raw corrected owner refuses even behind offered row
+ok 27 - raw corrected owner refuses even behind offered row
+  ---
+  duration_ms: 1.47125
+  type: 'test'
+  ...
+# Subtest: raw cancelled owner refuses even behind offered row
+ok 28 - raw cancelled owner refuses even behind offered row
+  ---
+  duration_ms: 2.426792
+  type: 'test'
+  ...
+# Subtest: all target structure validated before first write including qualifier, scope, home domain and duplicates
+ok 29 - all target structure validated before first write including qualifier, scope, home domain and duplicates
+  ---
+  duration_ms: 1.348167
+  type: 'test'
+  ...
+# Subtest: legacy baseline rejected and missing, null and invalid bodies never reach writes
+ok 30 - legacy baseline rejected and missing, null and invalid bodies never reach writes
+  ---
+  duration_ms: 0.346
+  type: 'test'
+  ...
+# Subtest: fact with foreign existing home is read-only and cannot be moved away
+ok 31 - fact with foreign existing home is read-only and cannot be moved away
+  ---
+  duration_ms: 2.318542
+  type: 'test'
+  ...
+# Subtest: OD to OU writes only added eye and OU to OD retires only removed eye
+ok 32 - OD to OU writes only added eye and OU to OD retires only removed eye
+  ---
+  duration_ms: 2.445292
+  type: 'test'
+  ...
+# Subtest: eye change revives retired destination and agreeing live destination needs no write
+ok 33 - eye change revives retired destination and agreeing live destination needs no write
+  ---
+  duration_ms: 2.6995
+  type: 'test'
+  ...
+# Subtest: OU disagreeing source states cannot collapse and retained eyes cannot be targeted
+ok 34 - OU disagreeing source states cannot collapse and retained eyes cannot be targeted
+  ---
+  duration_ms: 1.948709
+  type: 'test'
+  ...
+# Subtest: command causal response maps every cause by execution order and strips fresh
+ok 35 - command causal response maps every cause by execution order and strips fresh
+  ---
+  duration_ms: 0.220458
+  type: 'test'
+  ...
+# Subtest: W45 reassert fresh-baseline command reuse refuses after version change with exactly one reassert audit
+not ok 36 - W45 reassert fresh-baseline command reuse refuses after version change with exactly one reassert audit
+  ---
+  duration_ms: 2.544458
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:17124'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","error":"reassert-requires-carried-live-fact","reason":"reassert-requires-carried-live-fact","targetIndex":0}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:51:257)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: reassert lookup failure is typed command audit-lookup with no clinical write
+not ok 37 - reassert lookup failure is typed command audit-lookup with no clinical write
+  ---
+  duration_ms: 0.792625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:1:17845'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'unavailable'
+    - 'command'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'command'
+  actual: 'unavailable'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/diagnosisFindingsCommands.test.ts:52:383)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 35
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 275.164625

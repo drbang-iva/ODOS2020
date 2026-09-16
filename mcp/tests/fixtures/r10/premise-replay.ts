@@ -1,3 +1,6 @@
+import { randomUUID } from 'node:crypto';
+import { executeFindingCommand } from '../../../src/clinical-graph/current-finding-writer.ts';
+import { projectCurrentFindings as currentProjection } from '../../../src/clinical-graph/current-finding-reader.ts';
 import assert from 'node:assert/strict';
 import { handleEncounterVoidRequest } from '../../../src/clinical-graph/encounter-void-endpoint.ts';
 import { buildFindingDefinitionSeeds, FhirFindingDefinitionStore, buildFindingDefinitionResource } from '../../../src/clinical-graph/finding-definition-store.ts';
@@ -22,13 +25,15 @@ class Transport {
     let rows=this.rows.filter(r=>r.resourceType===type);
     for(const key of ['subject','encounter']) if(q[key]) rows=rows.filter(r=>r[key]?.reference===q[key]);
     if(q.code) {const [system, code]=q.code.split('|');rows=rows.filter(r=>r.code?.coding?.some((c:any)=>code?c.system===system&&c.code===code:c.code===system));}
+    if(q._tag) {const [system,code]=q._tag.split('|');rows=rows.filter(r=>r.meta?.tag?.some((t:any)=>t.system===system&&t.code===code));}
     if(q.identifier) {const [system,value]=q.identifier.split('|');rows=rows.filter(r=>r.identifier?.some((i:any)=>i.system===system&&i.value===value));}
     if(q._sort==='-date')rows.sort((a,b)=>(b.effectiveDateTime??'').localeCompare(a.effectiveDateTime??''));
     return {resourceType:'Bundle',type:'searchset',entry:copy(rows.map(resource=>({resource})))};
   }
   async read(type:string,id:string) {const r=this.rows.find(r=>r.resourceType===type&&r.id===id);if(!r)throw Error('missing synthetic '+type+'/'+id);return copy(r);}
-  async create(r:any) {const row={...copy(r),id:r.id??'synthetic-'+ ++this.n};this.rows.push(row);return copy(row);}
-  async update(type:string,id:string,r:any) {const i=this.rows.findIndex(r=>r.resourceType===type&&r.id===id);assert.ok(i>=0);this.rows[i]=copy(r);return copy(r);}
+  async create(r:any) {const row={...copy(r),id:r.id??'synthetic-'+ ++this.n,meta:{...r.meta,versionId:String(++this.n)}};this.rows.push(row);return copy(row);}
+  async createWithOutcome(r:any,headers:any={}) {const token=headers['If-None-Exist'];if(token){const page=await this.search(r.resourceType,Object.fromEntries(new URLSearchParams(token)));if(page.entry.length)return {resource:page.entry[0].resource,created:false};}return {resource:await this.create(r),created:true};}
+  async update(type:string,id:string,r:any) {const i=this.rows.findIndex(r=>r.resourceType===type&&r.id===id);assert.ok(i>=0);this.rows[i]={...copy(r),meta:{...r.meta,versionId:String(++this.n)}};return copy(this.rows[i]);}
 }
 const defs=buildFindingDefinitionSeeds();
 const catalog=materializeAtomicFindingCatalog(defs);
@@ -50,7 +55,14 @@ async function capture(f:any,d:any,options:string[],extra:any={}) {
 }
 async function history(f:any,d:any,definitions=defs) {const r=await handleCustomSectionHistoryRequest(deps(f,definitions),{authHeader:'synthetic',params:{stableKey:d.stableKey},query:{patient:'Patient/p1',encounter:'Encounter/e1'}});assert.equal(r.status,200);return (r.body as any).rows;}
 async function mutate(f:any,body:any) {return handleDiagnosisFindingsMutationRequest(deps(f),{...request,body:{patientReference:'Patient/p1',...body}});}
-async function atom(f:any,eye='OD',presence='present') {const r=await mutate(f,{action:'assert',conditionReference:'Condition/c1',atomicFindingId:atomicId(lens,lensOption),presence,laterality:eye});assert.equal(r.status,200,JSON.stringify(r.body));return f.read('Observation',(r.body as any).observationReference.split('/')[1]);}
+async function atom(f:any,eye='OD',presence='present') {
+ const projection=currentProjection({incomplete:false,...context,definitions:defs,catalog,observations:f.rows.filter((r:any)=>r.resourceType==='Observation'),conditions:f.rows.filter((r:any)=>r.resourceType==='Condition')});
+ const targets=(eye==='OU'?['OD','OS']:[eye]).map((eye:any)=>{const key={v:1 as const,patientId:'p1',encounterId:'e1',stableKey:lens.stableKey,fieldCode:field(lens).localCode,optionCode:lensOption,eye};const current=projection.currentFacts.find(r=>r.eye===eye&&r.key.optionCode===lensOption);return {kind:'fact' as const,key,baseline:current?.baseline??{kind:'absent' as const,key},state:{status:'live' as const,presence:presence as 'present'|'absent',qualifiers:{},homes:['Condition/c1']}};});
+ const result=await executeFindingCommand({fhir:f,definitions:defs,catalog,staffReference:'Practitioner/synthetic',now:()=>now},{commandId:randomUUID(),...context,surface:'premise-replay-fixture',targets});assert.equal(result.complete,true,JSON.stringify(result));return f.read('Observation',result.outcomes[0].reference!.split('/')[1]);
+}
+const commandBody=(operation:string,targets:any[],extra:any={})=>({commandId:randomUUID(),patientReference:'Patient/p1',operation,targets,...extra});
+function factTargets(f:any,status='live'){return currentProjection({incomplete:false,...context,definitions:defs,catalog,observations:f.rows.filter((r:any)=>r.resourceType==='Observation'),conditions:f.rows.filter((r:any)=>r.resourceType==='Condition')}).currentFacts.map(fact=>({kind:'fact',key:fact.key,baseline:fact.baseline,state:{status,presence:fact.presence,qualifiers:fact.qualifiers,homes:fact.homes}}));}
+
 async function get(f:any) {const r=await handleDiagnosisFindingsReadRequest(deps(f),{...request,query:{}});assert.equal(r.status,200);return (r.body as any).bySection[lens.stableKey]??[];}
 function overview(rows:any[]) {return buildExamOverviewProjection({...context,definitions:defs,currentObservations:rows,priorObservationCandidates:[],assessmentRows:[]});}
 let count=0;function record(name:string,result:any) {count++;console.log(JSON.stringify({probe:count,name,result}));}
@@ -61,27 +73,27 @@ assert.equal(catalog.find(r=>r.atomicFindingId===nested.atomicFindingId)?.option
 record('nested catalog identity',{option:nested.optionCode,naiveSplit:nested.atomicFindingId.split('::')[2]});
 
 const f=env();const s=await capture(f,lens,[lensOption]);const a=await atom(f);
-assert.equal((await get(f)).length,2);
+assert.equal((await get(f)).length,1);
 assert.equal(findingInstancesFromObservation(a,defs).length,0);
-const pick=await handleDiagnosisPickRequest({authenticate:deps(f).authenticate,diagnosisVisitStatusStore:{} as any},{...request,body:{findingInstanceId:a.id,diagnosisKey:dx.stableKey,action:'possible'}});
-assert.equal(pick.status,422);record('atomic suggestion target rejected by current pick',pick);
+const pick=await handleDiagnosisPickRequest({authenticate:deps(f).authenticate,diagnosisVisitStatusStore:{} as any},{...request,body:{commandId:randomUUID(),supportingFacts:factTargets(f).map(({key,baseline}:any)=>({key,baseline})),diagnosisKey:dx.stableKey,action:'possible'}});
+assert.equal(pick.status,409);record('pre-rebuild supported pick refuses before any write',pick);
 
 const view={...copy(s)};delete view.id;
 assert.equal(findingInstancesFromObservation(view,defs).length,0);
 assert.equal(overview([view]).findings.length,0);
 record('definition view with no id',{candidateInstances:0,overviewFindings:0});
 
-const before=(await get(f)).length;const cleared=await mutate(f,{action:'clear',observationReference:`Observation/${a.id}`});assert.equal(cleared.status,200);
-const after=await get(f);assert.equal(after.length,1);assert.equal(after[0].source,'section');
-record('agreeing sources then clear atomic',{beforeRows:before,afterRows:after.length,remainingSource:after[0].source,remainingPresence:after[0].presence});
-const denied=await mutate(f,{action:'grade',observationReference:`Observation/${s.id}`,grade:'2+'});assert.equal(denied.status,400);
-record('snapshot target still rejected by mutation',denied);
+const before=(await get(f)).length;const cleared=await mutate(f,commandBody('clear',factTargets(f,'retired')));assert.equal(cleared.status,409);
+const after=await get(f);assert.equal(after.length,1);assert.equal(after[0].kind,'fact');
+record('pre-rebuild clear refuses and preserves current projection',{beforeRows:before,afterRows:after.length,reason:(cleared.body as any).reason});
+const denied=await mutate(f,commandBody('grade',factTargets(f)));assert.equal(denied.status,409);
+record('pre-rebuild snapshot mutation refuses',denied);
 
-const ou=env();const oa=await atom(ou,'OU');assert.equal((await get(ou))[0].laterality,'OU');
-assert.equal((await mutate(ou,{action:'clear',observationReference:`Observation/${oa.id}`})).status,200);
-assert.equal((await get(ou)).length,0);record('legacy OU one target clear',{resourceEye:'OU',remainingRows:0});
+const ou=env();const oa=await atom(ou,'OU');assert.deepEqual((await get(ou)).map((r:any)=>r.eye),['OD','OS']);
+assert.equal((await mutate(ou,commandBody('clear',factTargets(ou,'retired')))).status,200);
+assert.equal((await get(ou)).length,0);record('canonical OU two targets clear',{resourceEyes:['OD','OS'],remainingRows:0});
 const dupe=env();await atom(dupe,'OU','present');await atom(dupe,'OD','absent');
-assert.equal((await get(dupe)).length,2);record('writer can produce OD-OU contradiction',(await get(dupe)).map((r:any)=>({eye:r.laterality,presence:r.presence})));
+assert.equal((await get(dupe)).length,2);assert.deepEqual((await get(dupe)).map((r:any)=>[r.eye,r.presence]),[['OD','absent'],['OS','present']]);record('writer stores independent per-eye facts',(await get(dupe)).map((r:any)=>({eye:r.laterality,presence:r.presence})));
 
 const neg=env();now='2026-09-15T10:00:00.000Z';await capture(neg,lens,[lensOption]);now='2026-09-15T11:00:00.000Z';
 const act={id:'00000000-0000-4000-8000-000000000001',definitionStableKey:lens.stableKey,eye:'OD',optionCodes:[lensOption],exclusions:[],assertedAt:now};
@@ -104,9 +116,9 @@ record('retired qualifier incompatible with universal byte equality',{historyGra
 
 const stale=env();now='2026-09-15T12:00:00.000Z';const old=await capture(stale,lens,[lensOption]);now='2026-09-15T13:00:00.000Z';await capture(stale,lens,['cortical-cataract']);
 const cr=await handleDiagnosisCandidatesRequest(deps(stale),request);assert.equal(cr.status,200);const cf=(cr.body as any).findings;
-assert.equal(cf.length,2);assert.ok(cf.find((r:any)=>r.findingInstanceId===old.id)?.candidates.some((c:any)=>c.diagnosisKey===dx.stableKey));
+assert.equal(cf.length,1);assert.ok(!cf.some((r:any)=>r.findingInstanceId===old.id));
 assert.equal((await get(stale)).length,1);assert.equal(overview(stale.rows.filter(r=>r.resourceType==='Observation')).findings.length,2);
-record('latest-only read changes existing section consumers',{findingsGetRows:1,candidateSnapshotGroups:cf.length,overviewSnapshotRows:2,oldCandidateStillPresent:true});
+record('latest-only read changes existing section consumers',{findingsGetRows:1,candidateSnapshotGroups:cf.length,overviewSnapshotRows:2,oldCandidateStillPresent:false});
 
 const synthetic=buildOcularHealthDefinitions([{key:'probe',display:'Synthetic probe',priority:[{key:'sample',display:'Sample',qualifiers:[{kind:'numeric',key:'amount',display:'Amount',min:0,max:10,step:1},{kind:'enum',key:'kind',display:'Kind',options:[{code:'x',display:'X'}]},{kind:'extent',key:'extent',display:'Extent'}]}],additional:[],normalTemplate:'Synthetic'}] as any,'ocular-health:anterior:',{source:'manual',recordedAt:now})[0];
 const qf=env();const qdefs=[...defs,synthetic];const details={sample:{amount:3,kind:'x',extent:{from:2,to:5,clockwise:true}}};
@@ -127,8 +139,8 @@ const vf=env();const va=await atom(vf);const vp=await handleEncounterVoidRequest
 record('ocular section void cannot see atomic source',{visibleFindingsRows:(await get(vf)).length,sectionPreviewCount:(vp.body as any).count});
 const unk=env();const ua=await atom(unk);const ur=unk.rows.find(r=>r.id===ua.id);delete ur.extension;delete ur.bodySite;assert.equal((await get(unk))[0].laterality,'UNKNOWN');
 record('unscoped legacy remains visible today',{eye:(await get(unk))[0].laterality});
-const can=env();const canA=await atom(can);can.rows.find(r=>r.id===canA.id).status='cancelled';assert.equal((await get(can)).length,1);
-record('cancelled atomic is not filtered by current findings GET',{rows:1});
+const can=env();const canA=await atom(can);can.rows.find(r=>r.id===canA.id).status='cancelled';assert.equal((await get(can)).length,0);
+record('cancelled atomic is excluded from current findings GET',{rows:0});
 console.log(JSON.stringify({summary:{probes:count,passed:count,liveServer:false,applicationEdits:0}}));
 
 const { projectCurrentFindings } = await import('../../../src/clinical-graph/current-finding-reader.ts');
@@ -137,12 +149,12 @@ const project = (rows:any[], definitions=defs) => projectCurrentFindings({incomp
   observations:rows.filter(r=>r.resourceType==='Observation'),conditions:rows.filter(r=>r.resourceType==='Condition')});
 const checks = [
   ['E1',()=>assert.equal(resolveCatalogRow(catalog,nested.atomicFindingId)?.optionCode,nested.optionCode)],
-  ['E2',()=>assert.equal(pick.status,422)],
+  ['E2',()=>assert.equal(pick.status,409)],
   ['E3',()=>assert.equal(overview(project([s,a]).definitionViews).findings.length,0)],
-  ['E4',()=>assert.equal(project(f.rows).currentFacts[0].contributors[0].kind,'legacy-section-snapshot')],
-  ['E5',()=>assert.equal(denied.status,400)],
+  ['E4',()=>{assert.equal(cleared.status,409);assert.equal(project(f.rows).currentFacts[0].contributors[0].kind,'canonical-fact')}],
+  ['E5',()=>assert.equal(denied.status,409)],
   ['E6',()=>assert.deepEqual(project(ou.rows).currentFacts.map(r=>[r.eye,r.status]),[['OD','retired'],['OS','retired']])],
-  ['E7',()=>assert.deepEqual(project(dupe.rows).conflicts.map(r=>r.eye),['OD'])],
+  ['E7',()=>{assert.deepEqual(project(dupe.rows).conflicts,[]);assert.deepEqual(project(dupe.rows).currentFacts.map(r=>[r.eye,r.presence]),[['OD','absent'],['OS','present']])}],
   ['E8',()=>{const p=project(neg.rows);assert.equal(p.currentFacts.length,0);assert.equal(p.panels[0].negativeActs.length,1)}],
   ['E9',()=>assert.deepEqual(project([retired]).currentFacts[0].qualifiers,tr.findingDetails[lensOption])],
   ['E10',()=>assert.equal(project([csStored]).currentFacts[0].qualifiers.grade,undefined)],

@@ -1,0 +1,17 @@
+W4: red exit=1; restored green exit=0
+W7: red exit=1; restored green exit=0
+W8: red exit=1; restored green exit=0
+W26: red exit=1; restored green exit=0
+W27: red exit=1; restored green exit=0
+W28a: red exit=1; restored green exit=0
+W28b: red exit=1; restored green exit=0
+W31: red exit=1; restored green exit=0
+W32: red exit=1; restored green exit=0
+W33: red exit=1; restored green exit=0
+W34: red exit=1; restored green exit=0
+W39: red exit=1; restored green exit=0
+W41: red exit=1; restored green exit=0
+W42: red exit=1; restored green exit=0
+W43: red exit=1; restored green exit=0
+W44: red exit=1; restored green exit=0
+W45: red exit=1; restored green exit=0

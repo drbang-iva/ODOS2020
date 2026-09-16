@@ -1,0 +1,1749 @@
+TAP version 13
+# Subtest: staff diagnosis-door assertion refuses before creating an Observation or any other write — legacy encounter now refuses read-only (V3)
+ok 1 - staff diagnosis-door assertion refuses before creating an Observation or any other write — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 9.170125
+  type: 'test'
+  ...
+# Subtest: staff cannot assign, detach or clear legacy Condition evidence but can edit finding grade and laterality — legacy encounter now refuses read-only (V3)
+ok 2 - staff cannot assign, detach or clear legacy Condition evidence but can edit finding grade and laterality — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.728334
+  type: 'test'
+  ...
+# Subtest: findings payload distinguishes finding write access from diagnosis write access
+ok 3 - findings payload distinguishes finding write access from diagnosis write access
+  ---
+  duration_ms: 1.7925
+  type: 'test'
+  ...
+# Subtest: GET encounter findings returns 401 when unauthenticated
+ok 4 - GET encounter findings returns 401 when unauthenticated
+  ---
+  duration_ms: 24.0275
+  type: 'test'
+  ...
+# Subtest: PUT encounter findings returns 401 when unauthenticated
+ok 5 - PUT encounter findings returns 401 when unauthenticated
+  ---
+  duration_ms: 9.306166
+  type: 'test'
+  ...
+# Subtest: PUT encounter findings returns 403 for read-only Admin
+ok 6 - PUT encounter findings returns 403 for read-only Admin
+  ---
+  duration_ms: 3.027083
+  type: 'test'
+  ...
+# Subtest: GET expands offered rows and normalizes only the latest section snapshot
+ok 7 - GET expands offered rows and normalizes only the latest section snapshot
+  ---
+  duration_ms: 2.576083
+  type: 'test'
+  ...
+# Subtest: GET finds the selected encounter Condition on a later safe Bundle page
+ok 8 - GET finds the selected encounter Condition on a later safe Bundle page
+  ---
+  duration_ms: 1.610791
+  type: 'test'
+  ...
+# Subtest: GET projects carried present findings and merges prior absence into the exact offered eye only
+ok 9 - GET projects carried present findings and merges prior absence into the exact offered eye only
+  ---
+  duration_ms: 1.276208
+  type: 'test'
+  ...
+# Subtest: GET offers only missing live eyes; a current fact at another diagnosis is search-resolved
+ok 10 - GET offers only missing live eyes; a current fact at another diagnosis is search-resolved
+  ---
+  duration_ms: 0.844209
+  type: 'test'
+  ...
+# Subtest: reasserting a prior absent offer creates a fresh current row without a carried tag — legacy encounter now refuses read-only (V3)
+ok 11 - reasserting a prior absent offer creates a fresh current row without a carried tag — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.435416
+  type: 'test'
+  ...
+# Subtest: a carried finding remains unreasserted until the discriminated Provenance activity exists — legacy encounter now refuses read-only (V3)
+ok 12 - a carried finding remains unreasserted until the discriminated Provenance activity exists — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.521709
+  type: 'test'
+  ...
+# Subtest: a reassertion marker older than the current carry does not reassert the carried finding
+ok 13 - a reassertion marker older than the current carry does not reassert the carried finding
+  ---
+  duration_ms: 0.485709
+  type: 'test'
+  ...
+# Subtest: a failed reassertion marker write remains retryable without losing the carry signal — legacy encounter now refuses read-only (V3)
+ok 14 - a failed reassertion marker write remains retryable without losing the carry signal — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 1.6315
+  type: 'test'
+  ...
+# Subtest: asserting absence round-trips and repeated assertions update one logical Observation — legacy encounter now refuses read-only (V3)
+ok 15 - asserting absence round-trips and repeated assertions update one logical Observation — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.837708
+  type: 'test'
+  ...
+# Subtest: assertion finds an existing same-eye Observation on page two and never creates a duplicate — legacy encounter now refuses read-only (V3)
+ok 16 - assertion finds an existing same-eye Observation on page two and never creates a duplicate — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.404292
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a cross-origin next page
+ok 17 - findings pagination fails closed for a cross-origin next page
+  ---
+  duration_ms: 0.386417
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a off-root next page
+ok 18 - findings pagination fails closed for a off-root next page
+  ---
+  duration_ms: 0.229084
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a unavailable next page
+ok 19 - findings pagination fails closed for a unavailable next page
+  ---
+  duration_ms: 0.244209
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a cycle next page
+ok 20 - findings pagination fails closed for a cycle next page
+  ---
+  duration_ms: 0.172541
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a upstream next page
+ok 21 - findings pagination fails closed for a upstream next page
+  ---
+  duration_ms: 2.218708
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 401 dependency response without a generic route 500
+ok 22 - findings maps a FHIR 401 dependency response without a generic route 500
+  ---
+  duration_ms: 0.15125
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 403 dependency response without a generic route 500
+ok 23 - findings maps a FHIR 403 dependency response without a generic route 500
+  ---
+  duration_ms: 0.089083
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 500 dependency response without a generic route 500
+ok 24 - findings maps a FHIR 500 dependency response without a generic route 500
+  ---
+  duration_ms: 0.103833
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 401 dependency response
+ok 25 - GET findings route preserves the named FHIR 401 dependency response
+  ---
+  duration_ms: 4.12525
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 403 dependency response
+ok 26 - GET findings route preserves the named FHIR 403 dependency response
+  ---
+  duration_ms: 1.854125
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 500 dependency response
+ok 27 - GET findings route preserves the named FHIR 500 dependency response
+  ---
+  duration_ms: 1.298333
+  type: 'test'
+  ...
+# Subtest: findings maps Encounter FHIR 404 to a non-leaking 404
+ok 28 - findings maps Encounter FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.093167
+  type: 'test'
+  ...
+# Subtest: findings maps Encounter FHIR 410 to a non-leaking 404
+ok 29 - findings maps Encounter FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.042709
+  type: 'test'
+  ...
+# Subtest: findings maps Condition FHIR 404 to a non-leaking 404
+ok 30 - findings maps Condition FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.11675
+  type: 'test'
+  ...
+# Subtest: findings maps Condition FHIR 410 to a non-leaking 404
+ok 31 - findings maps Condition FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.075792
+  type: 'test'
+  ...
+# Subtest: findings maps Observation FHIR 404 to a non-leaking 404
+ok 32 - findings maps Observation FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.072375
+  type: 'test'
+  ...
+# Subtest: findings maps Observation FHIR 410 to a non-leaking 404
+ok 33 - findings maps Observation FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.064875
+  type: 'test'
+  ...
+# Subtest: findings gives Condition bodySite laterality precedence over a stale catalog identifier
+ok 34 - findings gives Condition bodySite laterality precedence over a stale catalog identifier
+  ---
+  duration_ms: 0.724084
+  type: 'test'
+  ...
+# Subtest: GET findings route returns missing lineage as visible state and a cyclic next link as 502
+ok 35 - GET findings route returns missing lineage as visible state and a cyclic next link as 502
+  ---
+  duration_ms: 4.859625
+  type: 'test'
+  ...
+# Subtest: 404 Condition/prior-unique lineage stays a 200 visible integrity state
+ok 36 - 404 Condition/prior-unique lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.41725
+  type: 'test'
+  ...
+# Subtest: 404 Encounter/prior-e1 lineage stays a 200 visible integrity state
+ok 37 - 404 Encounter/prior-e1 lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.37225
+  type: 'test'
+  ...
+# Subtest: 404 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+ok 38 - 404 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.262458
+  type: 'test'
+  ...
+# Subtest: 410 Condition/prior-unique lineage stays a 200 visible integrity state
+ok 39 - 410 Condition/prior-unique lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.225958
+  type: 'test'
+  ...
+# Subtest: 410 Encounter/prior-e1 lineage stays a 200 visible integrity state
+ok 40 - 410 Encounter/prior-e1 lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.223459
+  type: 'test'
+  ...
+# Subtest: 410 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+ok 41 - 410 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.261625
+  type: 'test'
+  ...
+# Subtest: asserting the same finding for another eye preserves the existing eye assertion — legacy encounter now refuses read-only (V3)
+ok 42 - asserting the same finding for another eye preserves the existing eye assertion — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.287458
+  type: 'test'
+  ...
+# Subtest: grade and laterality mutations enforce the configured scale and restore inherited laterality — legacy encounter now refuses read-only (V3)
+ok 43 - grade and laterality mutations enforce the configured scale and restore inherited laterality — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.258166
+  type: 'test'
+  ...
+# Subtest: clear enters the atomic Observation in error and rejects cross-encounter patient and Condition boundaries — legacy encounter now refuses read-only (V3)
+ok 44 - clear enters the atomic Observation in error and rejects cross-encounter patient and Condition boundaries — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.246667
+  type: 'test'
+  ...
+# Subtest: assign rehomes Condition evidence idempotently and standalone removes the only binding home — legacy encounter now refuses read-only (V3)
+ok 45 - assign rehomes Condition evidence idempotently and standalone removes the only binding home — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.310375
+  type: 'test'
+  ...
+# Subtest: W7 staff assert uses chart.write, writes preliminary fact and no Condition
+ok 46 - W7 staff assert uses chart.write, writes preliminary fact and no Condition
+  ---
+  duration_ms: 5.013709
+  type: 'test'
+  ...
+# Subtest: W27 missing baseline returns 428 and no-store before writes
+ok 47 - W27 missing baseline returns 428 and no-store before writes
+  ---
+  duration_ms: 0.202083
+  type: 'test'
+  ...
+# Subtest: W43 pre-rebuild GET is read-only and PUT/repair refuse without writes
+ok 48 - W43 pre-rebuild GET is read-only and PUT/repair refuse without writes
+  ---
+  duration_ms: 4.140792
+  type: 'test'
+  ...
+# Subtest: W39 mixed writable and final target refuses entire command at raw status
+ok 49 - W39 mixed writable and final target refuses entire command at raw status
+  ---
+  duration_ms: 2.1655
+  type: 'test'
+  ...
+# Subtest: W26 out-of-domain intended home refuses before any write
+ok 50 - W26 out-of-domain intended home refuses before any write
+  ---
+  duration_ms: 0.831208
+  type: 'test'
+  ...
+# Subtest: W4 assert under Y preserves X in persisted homes and both selected views
+ok 51 - W4 assert under Y preserves X in persisted homes and both selected views
+  ---
+  duration_ms: 9.366875
+  type: 'test'
+  ...
+# Subtest: W28a clear preserves historical homes
+ok 52 - W28a clear preserves historical homes
+  ---
+  duration_ms: 1.485542
+  type: 'test'
+  ...
+# Subtest: W28b retired revive links fresh and W33 offered retains revive baseline and same id
+ok 53 - W28b retired revive links fresh and W33 offered retains revive baseline and same id
+  ---
+  duration_ms: 3.110584
+  type: 'test'
+  ...
+# Subtest: W8 unavailable and W41 410 missing retain typed read failures
+ok 54 - W8 unavailable and W41 410 missing retain typed read failures
+  ---
+  duration_ms: 1.032291
+  type: 'test'
+  ...
+# Subtest: W31 conflict carries command result but strips internal fresh
+ok 55 - W31 conflict carries command result but strips internal fresh
+  ---
+  duration_ms: 1.363458
+  type: 'test'
+  ...
+# Subtest: W34 same command with fresh baseline and changed state refuses reuse
+ok 56 - W34 same command with fresh baseline and changed state refuses reuse
+  ---
+  duration_ms: 2.858458
+  type: 'test'
+  ...
+# Subtest: W32 eye-change onto differing live destination refuses zero writes
+ok 57 - W32 eye-change onto differing live destination refuses zero writes
+  ---
+  duration_ms: 1.207416
+  type: 'test'
+  ...
+# Subtest: OD to OS eye-change creates destination and retires source
+ok 58 - OD to OS eye-change creates destination and retires source
+  ---
+  duration_ms: 1.83475
+  type: 'test'
+  ...
+# Subtest: W42 repair persists frozen audit debt and clears GET debt without a clinical write
+ok 59 - W42 repair persists frozen audit debt and clears GET debt without a clinical write
+  ---
+  duration_ms: 6.979583
+  type: 'test'
+  ...
+# Subtest: W44 refresh failure selects causal 502 after a confirmed first write
+ok 60 - W44 refresh failure selects causal 502 after a confirmed first write
+  ---
+  duration_ms: 1.122709
+  type: 'test'
+  ...
+# Subtest: retired fact refuses clear without writes
+ok 61 - retired fact refuses clear without writes
+  ---
+  duration_ms: 0.82575
+  type: 'test'
+  ...
+# Subtest: retired fact refuses grade without writes
+ok 62 - retired fact refuses grade without writes
+  ---
+  duration_ms: 0.635583
+  type: 'test'
+  ...
+# Subtest: retired fact refuses move without writes
+ok 63 - retired fact refuses move without writes
+  ---
+  duration_ms: 0.574583
+  type: 'test'
+  ...
+# Subtest: retired fact refuses standalone without writes
+ok 64 - retired fact refuses standalone without writes
+  ---
+  duration_ms: 0.606625
+  type: 'test'
+  ...
+# Subtest: retired fact refuses link without writes
+ok 65 - retired fact refuses link without writes
+  ---
+  duration_ms: 0.473167
+  type: 'test'
+  ...
+# Subtest: retired fact refuses reassert without writes
+ok 66 - retired fact refuses reassert without writes
+  ---
+  duration_ms: 0.821833
+  type: 'test'
+  ...
+# Subtest: move changes only authorized state and rejects another state change before writing
+ok 67 - move changes only authorized state and rejects another state change before writing
+  ---
+  duration_ms: 2.521459
+  type: 'test'
+  ...
+# Subtest: standalone changes only authorized state and rejects another state change before writing
+ok 68 - standalone changes only authorized state and rejects another state change before writing
+  ---
+  duration_ms: 1.430417
+  type: 'test'
+  ...
+# Subtest: link changes only authorized state and rejects another state change before writing
+ok 69 - link changes only authorized state and rejects another state change before writing
+  ---
+  duration_ms: 1.164208
+  type: 'test'
+  ...
+# Subtest: grade changes only authorized state and rejects another state change before writing
+ok 70 - grade changes only authorized state and rejects another state change before writing
+  ---
+  duration_ms: 1.371959
+  type: 'test'
+  ...
+# Subtest: raw amended owner refuses even behind offered row
+ok 71 - raw amended owner refuses even behind offered row
+  ---
+  duration_ms: 2.000917
+  type: 'test'
+  ...
+# Subtest: raw corrected owner refuses even behind offered row
+ok 72 - raw corrected owner refuses even behind offered row
+  ---
+  duration_ms: 1.78525
+  type: 'test'
+  ...
+# Subtest: raw cancelled owner refuses even behind offered row
+ok 73 - raw cancelled owner refuses even behind offered row
+  ---
+  duration_ms: 2.009417
+  type: 'test'
+  ...
+# Subtest: all target structure validated before first write including qualifier, scope, home domain and duplicates
+ok 74 - all target structure validated before first write including qualifier, scope, home domain and duplicates
+  ---
+  duration_ms: 2.291375
+  type: 'test'
+  ...
+# Subtest: legacy baseline rejected and missing, null and invalid bodies never reach writes
+ok 75 - legacy baseline rejected and missing, null and invalid bodies never reach writes
+  ---
+  duration_ms: 0.605333
+  type: 'test'
+  ...
+# Subtest: fact with foreign existing home is read-only and cannot be moved away
+ok 76 - fact with foreign existing home is read-only and cannot be moved away
+  ---
+  duration_ms: 2.738375
+  type: 'test'
+  ...
+# Subtest: OD to OU writes only added eye and OU to OD retires only removed eye
+ok 77 - OD to OU writes only added eye and OU to OD retires only removed eye
+  ---
+  duration_ms: 2.1135
+  type: 'test'
+  ...
+# Subtest: eye change revives retired destination and agreeing live destination needs no write
+ok 78 - eye change revives retired destination and agreeing live destination needs no write
+  ---
+  duration_ms: 2.449083
+  type: 'test'
+  ...
+# Subtest: OU disagreeing source states cannot collapse and retained eyes cannot be targeted
+ok 79 - OU disagreeing source states cannot collapse and retained eyes cannot be targeted
+  ---
+  duration_ms: 1.091958
+  type: 'test'
+  ...
+# Subtest: command causal response maps every cause by execution order and strips fresh
+ok 80 - command causal response maps every cause by execution order and strips fresh
+  ---
+  duration_ms: 0.189375
+  type: 'test'
+  ...
+# Subtest: W45 reassert fresh-baseline command reuse refuses after version change with exactly one reassert audit
+ok 81 - W45 reassert fresh-baseline command reuse refuses after version change with exactly one reassert audit
+  ---
+  duration_ms: 2.332834
+  type: 'test'
+  ...
+# Subtest: reassert lookup failure is typed command audit-lookup with no clinical write
+ok 82 - reassert lookup failure is typed command audit-lookup with no clinical write
+  ---
+  duration_ms: 1.090666
+  type: 'test'
+  ...
+# Subtest: registered diagnosis write routes share a rate limit before service or staff authentication
+ok 83 - registered diagnosis write routes share a rate limit before service or staff authentication
+  ---
+  duration_ms: 148.193708
+  type: 'test'
+  ...
+# Subtest: diagnosis entrypoints refuse staff before any dependency call
+    # Subtest: pick
+    ok 1 - pick
+      ---
+      duration_ms: 0.155666
+      type: 'test'
+      ...
+    # Subtest: order
+    ok 2 - order
+      ---
+      duration_ms: 0.050667
+      type: 'test'
+      ...
+    # Subtest: pull
+    ok 3 - pull
+      ---
+      duration_ms: 0.217416
+      type: 'test'
+      ...
+    # Subtest: status
+    ok 4 - status
+      ---
+      duration_ms: 0.094042
+      type: 'test'
+      ...
+    # Subtest: newness
+    ok 5 - newness
+      ---
+      duration_ms: 0.064416
+      type: 'test'
+      ...
+    # Subtest: complexity
+    ok 6 - complexity
+      ---
+      duration_ms: 0.040041
+      type: 'test'
+      ...
+    1..6
+ok 84 - diagnosis entrypoints refuse staff before any dependency call
+  ---
+  duration_ms: 1.059291
+  type: 'test'
+  ...
+# Subtest: diagnosis entrypoints refuse admin before any dependency call
+    # Subtest: pick
+    ok 1 - pick
+      ---
+      duration_ms: 0.154875
+      type: 'test'
+      ...
+    # Subtest: order
+    ok 2 - order
+      ---
+      duration_ms: 0.087709
+      type: 'test'
+      ...
+    # Subtest: pull
+    ok 3 - pull
+      ---
+      duration_ms: 0.066583
+      type: 'test'
+      ...
+    # Subtest: status
+    ok 4 - status
+      ---
+      duration_ms: 0.031042
+      type: 'test'
+      ...
+    # Subtest: newness
+    ok 5 - newness
+      ---
+      duration_ms: 0.023292
+      type: 'test'
+      ...
+    # Subtest: complexity
+    ok 6 - complexity
+      ---
+      duration_ms: 0.021042
+      type: 'test'
+      ...
+    1..6
+ok 85 - diagnosis entrypoints refuse admin before any dependency call
+  ---
+  duration_ms: 0.819959
+  type: 'test'
+  ...
+# Subtest: diagnosis entrypoints refuse provider with diagnosis action revoked before any dependency call
+    # Subtest: pick
+    ok 1 - pick
+      ---
+      duration_ms: 0.031542
+      type: 'test'
+      ...
+    # Subtest: order
+    ok 2 - order
+      ---
+      duration_ms: 0.018917
+      type: 'test'
+      ...
+    # Subtest: pull
+    ok 3 - pull
+      ---
+      duration_ms: 0.021375
+      type: 'test'
+      ...
+    # Subtest: status
+    ok 4 - status
+      ---
+      duration_ms: 0.016834
+      type: 'test'
+      ...
+    # Subtest: newness
+    ok 5 - newness
+      ---
+      duration_ms: 0.018375
+      type: 'test'
+      ...
+    # Subtest: complexity
+    ok 6 - complexity
+      ---
+      duration_ms: 0.023417
+      type: 'test'
+      ...
+    1..6
+ok 86 - diagnosis entrypoints refuse provider with diagnosis action revoked before any dependency call
+  ---
+  duration_ms: 0.281084
+  type: 'test'
+  ...
+# Subtest: diagnosis entrypoints refuse staff with diagnosis action revoked before any dependency call
+    # Subtest: pick
+    ok 1 - pick
+      ---
+      duration_ms: 0.02525
+      type: 'test'
+      ...
+    # Subtest: order
+    ok 2 - order
+      ---
+      duration_ms: 0.018166
+      type: 'test'
+      ...
+    # Subtest: pull
+    ok 3 - pull
+      ---
+      duration_ms: 0.02
+      type: 'test'
+      ...
+    # Subtest: status
+    ok 4 - status
+      ---
+      duration_ms: 0.018458
+      type: 'test'
+      ...
+    # Subtest: newness
+    ok 5 - newness
+      ---
+      duration_ms: 0.017375
+      type: 'test'
+      ...
+    # Subtest: complexity
+    ok 6 - complexity
+      ---
+      duration_ms: 0.017458
+      type: 'test'
+      ...
+    1..6
+ok 87 - diagnosis entrypoints refuse staff with diagnosis action revoked before any dependency call
+  ---
+  duration_ms: 0.198334
+  type: 'test'
+  ...
+# Subtest: legacy fixture 1: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 88 - legacy fixture 1: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 8.63125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 2: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 89 - legacy fixture 2: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.501625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 3: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 90 - legacy fixture 3: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 2.598084
+  type: 'test'
+  ...
+# Subtest: legacy fixture 4: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 91 - legacy fixture 4: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 1.262208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 5: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 92 - legacy fixture 5: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.618375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 6: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 93 - legacy fixture 6: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.362458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 7: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 94 - legacy fixture 7: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.635125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 8: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 95 - legacy fixture 8: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.630333
+  type: 'test'
+  ...
+# Subtest: legacy fixture 9: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 96 - legacy fixture 9: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.753375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 10: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 97 - legacy fixture 10: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.341417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 11: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 98 - legacy fixture 11: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.1945
+  type: 'test'
+  ...
+# Subtest: legacy fixture 12: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 99 - legacy fixture 12: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.437208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 13: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 100 - legacy fixture 13: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 14: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 101 - legacy fixture 14: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.107
+  type: 'test'
+  ...
+# Subtest: legacy fixture 15: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 102 - legacy fixture 15: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.113041
+  type: 'test'
+  ...
+# Subtest: legacy fixture 16: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 103 - legacy fixture 16: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.059291
+  type: 'test'
+  ...
+# Subtest: legacy fixture 17: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 104 - legacy fixture 17: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.039084
+  type: 'test'
+  ...
+# Subtest: legacy fixture 18: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 105 - legacy fixture 18: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.032042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 19: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 106 - legacy fixture 19: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.065542
+  type: 'test'
+  ...
+# Subtest: legacy fixture 20: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 107 - legacy fixture 20: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.247458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 21: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 108 - legacy fixture 21: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.179959
+  type: 'test'
+  ...
+# Subtest: legacy fixture 23: diagnosisFindings.test.ts atomicFindingRows
+ok 109 - legacy fixture 23: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.758
+  type: 'test'
+  ...
+# Subtest: legacy fixture 24: diagnosisFindings.test.ts sectionFindingRows
+ok 110 - legacy fixture 24: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.046791
+  type: 'test'
+  ...
+# Subtest: legacy fixture 25: diagnosisFindings.test.ts atomicFindingRows
+ok 111 - legacy fixture 25: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.398292
+  type: 'test'
+  ...
+# Subtest: legacy fixture 26: diagnosisFindings.test.ts sectionFindingRows
+ok 112 - legacy fixture 26: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.03
+  type: 'test'
+  ...
+# Subtest: legacy fixture 27: diagnosisFindings.test.ts atomicFindingRows
+ok 113 - legacy fixture 27: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.175834
+  type: 'test'
+  ...
+# Subtest: legacy fixture 28: diagnosisFindings.test.ts sectionFindingRows
+ok 114 - legacy fixture 28: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.031167
+  type: 'test'
+  ...
+# Subtest: legacy fixture 29: diagnosisFindings.test.ts atomicFindingRows
+ok 115 - legacy fixture 29: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.23
+  type: 'test'
+  ...
+# Subtest: legacy fixture 30: diagnosisFindings.test.ts sectionFindingRows
+ok 116 - legacy fixture 30: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.034625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 31: diagnosisFindings.test.ts atomicFindingRows
+ok 117 - legacy fixture 31: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.225125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 32: diagnosisFindings.test.ts sectionFindingRows
+ok 118 - legacy fixture 32: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.049291
+  type: 'test'
+  ...
+# Subtest: legacy fixture 34: diagnosisFindings.test.ts atomicFindingRows
+ok 119 - legacy fixture 34: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.102667
+  type: 'test'
+  ...
+# Subtest: legacy fixture 35: diagnosisFindings.test.ts sectionFindingRows
+ok 120 - legacy fixture 35: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.0435
+  type: 'test'
+  ...
+# Subtest: legacy fixture 38: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 121 - legacy fixture 38: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.139708
+  type: 'test'
+  ...
+# Subtest: legacy fixture 39: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 122 - legacy fixture 39: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.205875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 40: diagnosisFindings.test.ts atomicFindingRows
+ok 123 - legacy fixture 40: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.290708
+  type: 'test'
+  ...
+# Subtest: legacy fixture 41: diagnosisFindings.test.ts sectionFindingRows
+ok 124 - legacy fixture 41: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.026334
+  type: 'test'
+  ...
+# Subtest: legacy fixture 42: diagnosisFindings.test.ts atomicFindingRows
+ok 125 - legacy fixture 42: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.096375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 43: diagnosisFindings.test.ts sectionFindingRows
+ok 126 - legacy fixture 43: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.027792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 44: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 127 - legacy fixture 44: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.108792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 45: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 128 - legacy fixture 45: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.179916
+  type: 'test'
+  ...
+# Subtest: legacy fixture 46: diagnosisFindings.test.ts atomicFindingRows
+ok 129 - legacy fixture 46: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.095458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 47: diagnosisFindings.test.ts sectionFindingRows
+ok 130 - legacy fixture 47: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.027625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 48: diagnosisFindings.test.ts atomicFindingRows
+ok 131 - legacy fixture 48: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.093166
+  type: 'test'
+  ...
+# Subtest: legacy fixture 49: diagnosisFindings.test.ts sectionFindingRows
+ok 132 - legacy fixture 49: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.027291
+  type: 'test'
+  ...
+# Subtest: legacy fixture 50: diagnosisFindings.test.ts atomicFindingRows
+ok 133 - legacy fixture 50: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.07975
+  type: 'test'
+  ...
+# Subtest: legacy fixture 51: diagnosisFindings.test.ts sectionFindingRows
+ok 134 - legacy fixture 51: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.040334
+  type: 'test'
+  ...
+# Subtest: legacy fixture 52: diagnosisFindings.test.ts atomicFindingRows
+ok 135 - legacy fixture 52: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.076583
+  type: 'test'
+  ...
+# Subtest: legacy fixture 53: diagnosisFindings.test.ts sectionFindingRows
+ok 136 - legacy fixture 53: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.026667
+  type: 'test'
+  ...
+# Subtest: legacy fixture 54: diagnosisFindings.test.ts atomicFindingRows
+ok 137 - legacy fixture 54: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.073875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 55: diagnosisFindings.test.ts sectionFindingRows
+ok 138 - legacy fixture 55: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.027125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 56: diagnosisFindings.test.ts atomicFindingRows
+ok 139 - legacy fixture 56: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.072583
+  type: 'test'
+  ...
+# Subtest: legacy fixture 57: diagnosisFindings.test.ts sectionFindingRows
+ok 140 - legacy fixture 57: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.042541
+  type: 'test'
+  ...
+# Subtest: legacy fixture 62: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 141 - legacy fixture 62: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.112458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 63: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 142 - legacy fixture 63: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.145459
+  type: 'test'
+  ...
+# Subtest: legacy fixture 64: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 143 - legacy fixture 64: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.109042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 65: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 144 - legacy fixture 65: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.134083
+  type: 'test'
+  ...
+# Subtest: legacy fixture 66: customSectionEndpoint.test.ts buildExamOverviewProjection
+ok 145 - legacy fixture 66: customSectionEndpoint.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 1.902292
+  type: 'test'
+  ...
+# Subtest: legacy fixture 67: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 146 - legacy fixture 67: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.142208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 68: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 147 - legacy fixture 68: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.230042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 70: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 148 - legacy fixture 70: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 2.35875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 71: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 149 - legacy fixture 71: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.093209
+  type: 'test'
+  ...
+# Subtest: legacy fixture 72: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 150 - legacy fixture 72: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.870625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 73: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 151 - legacy fixture 73: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.120292
+  type: 'test'
+  ...
+# Subtest: legacy fixture 74: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 152 - legacy fixture 74: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.124416
+  type: 'test'
+  ...
+# Subtest: legacy fixture 76: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 153 - legacy fixture 76: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.856417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 77: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 154 - legacy fixture 77: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.903916
+  type: 'test'
+  ...
+# Subtest: legacy fixture 86: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 155 - legacy fixture 86: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.150833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 87: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 156 - legacy fixture 87: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.721416
+  type: 'test'
+  ...
+# Subtest: legacy fixture 88: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 157 - legacy fixture 88: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.217208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 89: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 158 - legacy fixture 89: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.076958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 90: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 159 - legacy fixture 90: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.976292
+  type: 'test'
+  ...
+# Subtest: legacy fixture 91: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 160 - legacy fixture 91: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.054709
+  type: 'test'
+  ...
+# Subtest: legacy fixture 92: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 161 - legacy fixture 92: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.929292
+  type: 'test'
+  ...
+# Subtest: legacy fixture 93: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 162 - legacy fixture 93: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.921041
+  type: 'test'
+  ...
+# Subtest: legacy fixture 94: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 163 - legacy fixture 94: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.562958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 95: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 164 - legacy fixture 95: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.028167
+  type: 'test'
+  ...
+# Subtest: legacy fixture 96: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 165 - legacy fixture 96: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.857833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 97: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 166 - legacy fixture 97: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.973625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 98: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 167 - legacy fixture 98: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.917875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 99: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 168 - legacy fixture 99: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.857542
+  type: 'test'
+  ...
+# Subtest: legacy fixture 103: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 169 - legacy fixture 103: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.852542
+  type: 'test'
+  ...
+# Subtest: legacy fixture 104: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 170 - legacy fixture 104: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.723
+  type: 'test'
+  ...
+# Subtest: legacy fixture 105: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 171 - legacy fixture 105: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.483
+  type: 'test'
+  ...
+# Subtest: legacy fixture 106: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 172 - legacy fixture 106: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.027916
+  type: 'test'
+  ...
+# Subtest: legacy fixture 107: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 173 - legacy fixture 107: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.884458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 108: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 174 - legacy fixture 108: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.676
+  type: 'test'
+  ...
+# Subtest: legacy fixture 109: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 175 - legacy fixture 109: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.694875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 117: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 176 - legacy fixture 117: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.900458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 124: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 177 - legacy fixture 124: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.853375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 125: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 178 - legacy fixture 125: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.518834
+  type: 'test'
+  ...
+# Subtest: legacy fixture 126: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 179 - legacy fixture 126: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.908375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 131: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 180 - legacy fixture 131: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.850666
+  type: 'test'
+  ...
+# Subtest: legacy fixture 134: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 181 - legacy fixture 134: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.809916
+  type: 'test'
+  ...
+# Subtest: legacy fixture 136: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 182 - legacy fixture 136: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.849125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 144: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 183 - legacy fixture 144: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.79425
+  type: 'test'
+  ...
+# Subtest: legacy fixture 146: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 184 - legacy fixture 146: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.892334
+  type: 'test'
+  ...
+# Subtest: legacy fixture 147: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 185 - legacy fixture 147: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.088583
+  type: 'test'
+  ...
+# Subtest: legacy fixture 150: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 186 - legacy fixture 150: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.955083
+  type: 'test'
+  ...
+# Subtest: legacy fixture 151: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 187 - legacy fixture 151: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.868541
+  type: 'test'
+  ...
+# Subtest: legacy fixture 152: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 188 - legacy fixture 152: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.844417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 153: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 189 - legacy fixture 153: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.837542
+  type: 'test'
+  ...
+# Subtest: legacy fixture 154: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 190 - legacy fixture 154: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.821917
+  type: 'test'
+  ...
+# Subtest: legacy fixture 155: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 191 - legacy fixture 155: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.865375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 156: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 192 - legacy fixture 156: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.156333
+  type: 'test'
+  ...
+# Subtest: legacy fixture 157: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 193 - legacy fixture 157: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.964417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 158: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 194 - legacy fixture 158: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.807791
+  type: 'test'
+  ...
+# Subtest: legacy fixture 159: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 195 - legacy fixture 159: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.8605
+  type: 'test'
+  ...
+# Subtest: legacy fixture 160: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 196 - legacy fixture 160: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.78725
+  type: 'test'
+  ...
+# Subtest: legacy fixture 161: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 197 - legacy fixture 161: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.775959
+  type: 'test'
+  ...
+# Subtest: legacy fixture 162: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 198 - legacy fixture 162: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.762208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 163: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 199 - legacy fixture 163: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.210459
+  type: 'test'
+  ...
+# Subtest: legacy fixture 164: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 200 - legacy fixture 164: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.115959
+  type: 'test'
+  ...
+# Subtest: legacy fixture 165: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 201 - legacy fixture 165: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.865375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 166: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 202 - legacy fixture 166: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.757042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 167: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 203 - legacy fixture 167: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.782166
+  type: 'test'
+  ...
+# Subtest: legacy fixture 168: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 204 - legacy fixture 168: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.755833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 169: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 205 - legacy fixture 169: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.736458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 170: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 206 - legacy fixture 170: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.704917
+  type: 'test'
+  ...
+# Subtest: legacy fixture 171: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 207 - legacy fixture 171: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.393125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 172: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 208 - legacy fixture 172: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.821375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 173: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 209 - legacy fixture 173: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.814875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 174: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 210 - legacy fixture 174: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.782625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 175: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 211 - legacy fixture 175: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.722666
+  type: 'test'
+  ...
+# Subtest: legacy fixture 176: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 212 - legacy fixture 176: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.6845
+  type: 'test'
+  ...
+# Subtest: legacy fixture 177: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 213 - legacy fixture 177: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.680042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 178: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 214 - legacy fixture 178: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.836459
+  type: 'test'
+  ...
+# Subtest: legacy fixture 179: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 215 - legacy fixture 179: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.007708
+  type: 'test'
+  ...
+# Subtest: legacy fixture 180: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 216 - legacy fixture 180: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.708375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 181: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 217 - legacy fixture 181: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.682375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 182: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 218 - legacy fixture 182: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.696417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 183: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 219 - legacy fixture 183: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.667417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 184: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 220 - legacy fixture 184: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.665
+  type: 'test'
+  ...
+# Subtest: legacy fixture 185: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 221 - legacy fixture 185: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.662416
+  type: 'test'
+  ...
+# Subtest: legacy fixture 186: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 222 - legacy fixture 186: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.104791
+  type: 'test'
+  ...
+# Subtest: legacy fixture 187: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 223 - legacy fixture 187: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.010875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 188: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 224 - legacy fixture 188: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.886417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 189: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 225 - legacy fixture 189: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.811667
+  type: 'test'
+  ...
+# Subtest: legacy fixture 190: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 226 - legacy fixture 190: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.726458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 191: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 227 - legacy fixture 191: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.768125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 192: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 228 - legacy fixture 192: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.750834
+  type: 'test'
+  ...
+# Subtest: legacy fixture 193: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 229 - legacy fixture 193: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.060334
+  type: 'test'
+  ...
+# Subtest: legacy fixture 194: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 230 - legacy fixture 194: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.296916
+  type: 'test'
+  ...
+# Subtest: legacy fixture 195: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 231 - legacy fixture 195: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.857792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 196: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 232 - legacy fixture 196: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.979083
+  type: 'test'
+  ...
+# Subtest: legacy fixture 197: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 233 - legacy fixture 197: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.847792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 198: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 234 - legacy fixture 198: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.710542
+  type: 'test'
+  ...
+# Subtest: legacy fixture 199: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 235 - legacy fixture 199: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.798875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 201: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 236 - legacy fixture 201: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.77475
+  type: 'test'
+  ...
+# Subtest: legacy fixture 203: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 237 - legacy fixture 203: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.033791
+  type: 'test'
+  ...
+# Subtest: legacy fixture 205: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 238 - legacy fixture 205: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.724375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 207: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 239 - legacy fixture 207: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.645708
+  type: 'test'
+  ...
+# Subtest: legacy fixture 209: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 240 - legacy fixture 209: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.781083
+  type: 'test'
+  ...
+# Subtest: legacy fixture 211: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 241 - legacy fixture 211: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.62875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 213: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 242 - legacy fixture 213: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.599042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 215: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 243 - legacy fixture 215: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.598084
+  type: 'test'
+  ...
+# Subtest: legacy fixture 217: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 244 - legacy fixture 217: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.592208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 219: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 245 - legacy fixture 219: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.624875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 220: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 246 - legacy fixture 220: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.110834
+  type: 'test'
+  ...
+# Subtest: legacy fixture 221: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 247 - legacy fixture 221: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.695166
+  type: 'test'
+  ...
+# Subtest: legacy fixture 222: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 248 - legacy fixture 222: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.623584
+  type: 'test'
+  ...
+# Subtest: legacy fixture 223: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 249 - legacy fixture 223: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.660375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 224: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 250 - legacy fixture 224: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.707208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 225: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 251 - legacy fixture 225: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.613833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 226: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 252 - legacy fixture 226: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.599208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 227: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 253 - legacy fixture 227: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.587834
+  type: 'test'
+  ...
+# Subtest: legacy fixture 228: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 254 - legacy fixture 228: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.1075
+  type: 'test'
+  ...
+# Subtest: legacy fixture 229: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 255 - legacy fixture 229: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.774208
+  type: 'test'
+  ...
+# Subtest: E1–E17 reproduce the original writer/read behaviors and assert the A1 projections
+ok 256 - E1–E17 reproduce the original writer/read behaviors and assert the A1 projections
+  ---
+  duration_ms: 413.373375
+  type: 'test'
+  ...
+# Subtest: capture instrumentation preserves named exports and executes their wrappers
+not ok 257 - capture instrumentation preserves named exports and executes their wrappers
+  ---
+  duration_ms: 107.970917
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/r10-parity.test.ts:1:7364'
+  failureType: 'testCodeFailure'
+  error: |-
+    Command failed: /Users/ericr.bang/.hermes/node/bin/node --import tsx --import /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/fixtures/r10/capture-baseline.mjs --input-type=module -e 
+          import assert from 'node:assert/strict';
+          import { baseline } from './tests/fixtures/r10/baseline.ts';
+          import { buildExamOverviewProjection } from './src/clinical-graph/exam-overview-projection.ts';
+          import { findingInstancesFromObservation } from './src/clinical-graph/diagnosis-candidates-endpoint.ts';
+          for (const [name,fn] of Object.entries({buildExamOverviewProjection,findingInstancesFromObservation})) {
+            assert.equal(typeof fn,'function');
+            const capture=baseline.captures.find(c=>c.kind===name);
+            assert.deepEqual(JSON.parse(JSON.stringify(fn(...capture.args))),capture.result);
+          }
+        
+    file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/fixtures/r10/capture-baseline.mjs:25
+            if (!declaration) throw new Error(`Cannot instrument ${name}`);
+                                    ^
+    
+    Error: Cannot instrument atomicFindingRows
+        at load (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/fixtures/r10/capture-baseline.mjs:25:33)
+        at nextStep (node:internal/modules/customization_hooks:189:26)
+        at loadWithHooks (node:internal/modules/customization_hooks:374:18)
+        at #loadSync (node:internal/modules/esm/loader:865:14)
+        at ModuleLoader.load (node:internal/modules/esm/loader:824:28)
+        at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:609:31)
+        at #createModuleJob (node:internal/modules/esm/loader:640:36)
+        at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+        at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+    
+    Node.js v22.22.3
+    
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    load (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/fixtures/r10/capture-baseline.mjs:25:33)
+    nextStep (node:internal/modules/customization_hooks:189:26)
+    loadWithHooks (node:internal/modules/customization_hooks:374:18)
+    #loadSync (node:internal/modules/esm/loader:865:14)
+    ModuleLoader.load (node:internal/modules/esm/loader:824:28)
+    ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:609:31)
+    #createModuleJob (node:internal/modules/esm/loader:640:36)
+    #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+    ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+    genericNodeError (node:internal/errors:983:15)
+    wrappedFn (node:internal/errors:537:14)
+    checkExecSyncError (node:child_process:916:11)
+    execFileSync (node:child_process:952:15)
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a2b1-findings/mcp/tests/r10-parity.test.ts:112:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..257
+# tests 281
+# suites 0
+# pass 280
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1055.541875
