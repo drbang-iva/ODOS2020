@@ -13,11 +13,12 @@ const key = (eye:string, optionCode:string) => ({v:1,patientId:"p",encounterId:"
 const fact = (eye:string, optionCode:string, presence="present", editable=true) => ({rowKey:optionCode,key:key(eye,optionCode),kind:"fact",status:"live",presence,qualifiers:{},homes:[],editable,baseline:{kind:"canonical",reference:`Observation/${eye}-${optionCode}`,versionId:"1"},...(!editable?{readOnlyReason:"signed-or-cancelled"}:{})});
 const history = (facts:any[] = [], reason?:string) => ({encounterReference:"Encounter/e",recordedAt:"2026-09-17",eyes:Object.fromEntries(["OD","OS"].map(eye=>[eye,{encounterEditable:!reason,readOnlyReason:reason,facts:facts.filter(f=>f.key.eye===eye),panel:{deferred:false,values:{},editable:true,baseline:{kind:"absent",key:{v:1,patientId:"p",encounterId:"e",stableKey,eye}}},negativeActs:[]}]))});
 function text(n:ReactTestInstance|string):string { return typeof n==="string"?n:n.children.map(text).join(""); }
-async function mount(current:any, replies:Array<{status:number;body:any}>=[], unscopedCount=0) {
+async function mount(current:any, replies:Array<{status:number;body:any}>=[], unscopedCount=0, waitForPost?: (count: number) => Promise<void>) {
  const posts:string[]=[]; let reads=0; let saved=0; let renderer!:ReactTestRenderer;
  const fetchImpl=(async(input,init)=>{
    if(init?.method==="POST") {
      posts.push(String(init.body));
+     await waitForPost?.(posts.length);
      const r=replies.shift()??{status:200,body:{result:"command",complete:true,executionOrder:[],outcomes:[]}};
      if(r.body.complete) {
        for(const [eye,save] of Object.entries(JSON.parse(String(init.body)).eyes) as Array<[string,any]>) {
@@ -180,4 +181,26 @@ test("W148 replacement notice survives an unconfirmed save and clears after iden
   assert.equal(h.saved(), 1);
   assert.doesNotMatch(text(h.panel()), /All Normal cleared for this eye/);
  } finally { h.close(); }
+});
+
+test("W131/W148 in-flight save locks edits so identical Retry cannot mark unsent edits saved", async () => {
+ let release!: () => void;
+ const gate = new Promise<void>(resolve => { release = resolve; });
+ const h = await mount(history(), [{status:502,body:{result:"command",complete:false,executionOrder:[0],outcomes:[{target:"panel",status:"unconfirmed",clinicalWrite:"unknown"}]}}], 0, async count => { if (count === 1) await gate; });
+ let pending: Promise<void> | undefined;
+ try {
+  await h.remarks("Submitted remark");
+  await act(async () => { pending = h.button("Save Ocular Health").props.onClick(); });
+  assert.equal(h.panel().props.disabled, true);
+  await h.remarks("Unsent edit");
+  assert.equal(h.panel().findByProps({"aria-label":"OD Remarks"}).props.value,"Submitted remark");
+  await act(async () => { release(); await pending; });
+  assert.equal(h.button("Anterior All Normal").props.disabled, true);
+  await act(async () => h.button("Anterior All Normal").props.onClick());
+  assert.equal(h.panel().findAll(node => Boolean(node.props["data-negative-act"])).length,0);
+  await act(async () => h.button("Retry").props.onClick());
+  assert.equal(h.posts[0],h.posts[1]);
+  assert.equal(h.saved(),1);
+  assert.equal(h.panel().findByProps({"aria-label":"OD Remarks"}).props.value,"Submitted remark");
+ } finally { release(); await pending; h.close(); }
 });
