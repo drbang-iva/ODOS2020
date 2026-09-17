@@ -1,0 +1,18 @@
+
+> odos2020@0.0.1 sync-practice-role-policy-rules
+> tsx --env-file-if-exists=.env scripts/sync-practice-role-policy-rules.ts --project c16edbe4-6e68-4f43-be03-52684b747b6d --apply --bootstrap-service-identity
+
+Target: Project/c16edbe4-6e68-4f43-be03-52684b747b6d (source: --project)
+Mode: apply
+provider: MATCH AccessPolicy/f4ed4218-12b6-4944-936c-9c307a79d20e "ODOS Provider"
+staff: MATCH AccessPolicy/19e737b0-659c-4d15-ad3b-24789d458de0 "ODOS Staff"
+admin: MATCH AccessPolicy/34b17947-fecb-4523-bede-14812f513796 "ODOS Admin / Manager"
+provider+staff+admin: MATCH AccessPolicy/b0a47714-bad8-4bd9-8251-de011ba76e94 "ODOS Composite Provider + Staff + Admin / Manager"
+Composite policies required: 0
+Composite policies created: 0
+Policies updated: 0
+Memberships requiring compilation: 0
+Memberships updated: 0
+.env not found. Continuing without it.
+.env not found. Continuing without it.
+BREAK-GLASS: BOOTSTRAP SERVICE IDENTITY ACTIVE. Target is restricted to AccessPolicy and ProjectMembership resources in --project c16edbe4-6e68-4f43-be03-52684b747b6d.

@@ -6,6 +6,7 @@ import { handleCustomSectionCaptureRequest as capture, handleCustomSectionHistor
 import { canonicalFact, memoryFhir, writerContext, command, factTarget, keyFor, factBaseline, endState } from './fixtures/r10/writer-harness.js';
 import { lens, lensField, snapshot } from './fixtures/r10/factories.js';
 import { executeFindingCommand, repairPendingAudits } from '../src/clinical-graph/current-finding-writer.js';
+import { buildSmokingStatusObservation, SMOKING_STATUS_CODES } from '../src/fhir/smokingStatus.js';
 import { observationLaterality } from '../src/clinical-graph/current-finding-identity.js';
 import { buildFindingDefinitionSeeds, buildFindingDefinitionResource, FhirFindingDefinitionStore } from '../src/clinical-graph/finding-definition-store.js';
 import { customFieldEntries } from '../src/clinical-graph/custom-fields.js';
@@ -127,4 +128,20 @@ test('V18 historical aliases are scoped and explicit qualifiers take precedence'
  const defs=buildFindingDefinitionSeeds();const definition=defs.find(d=>d.stableKey.endsWith(':periphery'))!,field=customFieldEntries(definition).find(f=>f.valueType==='multi-select')!;
  const old={...snapshot('legacy'),code:{coding:[{code:definition.stableKey}]},component:[{code:{coding:[{code:`OD_${field.localCode}::operculated-hole`}]},valueBoolean:true},{code:{coding:[{code:`OD_${field.localCode}::retinal-hole::subtype`}]},valueCodeableConcept:{coding:[{code:'non-operculated'}]}}]};const f=fixture([old]);const r:any=await read(f,definition.stableKey);assert.equal(r.body.rows[0].findingDetails['retinal-hole'].subtype,'non-operculated');
  const other=structuredClone(defs.find(d=>d.stableKey.endsWith(':cornea'))!);const of=customFieldEntries(other).find(f=>f.valueType==='multi-select')!;(other.valueSchema.fields as any)[of.localCode].options.push({code:'operculated-hole',display:'Synthetic same name',active:true});const foreign={...old,id:'foreign-name',code:{coding:[{code:other.stableKey}]},component:[{code:{coding:[{code:`OD_${of.localCode}::operculated-hole`}]},valueBoolean:true}]};const f2=fixture([foreign],defs.map(d=>d.stableKey===other.stableKey?other:d));const r2:any=await read(f2,other.stableKey);assert.deepEqual(r2.body.rows[0].values.find((v:any)=>v.code===of.localCode).value,['operculated-hole']);assert.equal(r2.body.rows[0].findingDetails,undefined);
+});
+
+test('V21 F1 patient-wide priors ignore encounter-less smoking status and retain canonical facts',async()=>{
+ const smoking={...buildSmokingStatusObservation({patientReference:'Patient/p1',statusCode:SMOKING_STATUS_CODES[0],effectiveDateTime:NOW}),id:'smoking'};
+ const f=fixture([canonicalFact(),smoking]);const result:any=await read(f,lens.stableKey,null);
+ assert.equal(result.status,200);assert.equal(result.body.encounters.length,1);
+ assert.equal(result.body.encounters[0].eyes.OD.facts.filter((row:any)=>row.status==='live').length,1);
+ assert.equal(f.m.writes.length,0);
+});
+for(const scope of ['foreign','unscoped'] as const)test(`V21 F1 patient-wide contributing ${scope} record is refused`,async()=>{
+ const bad=canonicalFact('bad');if(scope==='foreign')bad.subject={reference:'Patient/other'};else delete bad.encounter;
+ const f=fixture([canonicalFact()]);const search=f.deps.authenticate;
+ f.deps.authenticate=async()=>{const staff=await search();const original=staff.fhir.search.bind(staff.fhir);return {...staff,fhir:{...staff.fhir,search:async(type:any,params:any)=>{
+  const result=await original(type,params);if(type==='Observation'&&params.subject&&!params.encounter)result.entry=[...(result.entry??[]),{resource:bad}];return result;
+ }}} as any;};
+ const result:any=await read(f,lens.stableKey,null);assert.equal(result.status,409);assert.equal(result.body.reason,'foreign-or-unscoped');assert.equal(f.m.writes.length,0);
 });

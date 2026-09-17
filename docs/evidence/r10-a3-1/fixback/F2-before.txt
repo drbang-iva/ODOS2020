@@ -1,0 +1,564 @@
+TAP version 13
+# Subtest: W116 create_observation refuses canonical before associated writes through MCP dispatch
+ok 1 - W116 create_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 75.361375
+  type: 'test'
+  ...
+# Subtest: W116 create_observation refuses panel before associated writes through MCP dispatch
+ok 2 - W116 create_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 33.854583
+  type: 'test'
+  ...
+# Subtest: W116 create_observation refuses negative before associated writes through MCP dispatch
+ok 3 - W116 create_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 21.431375
+  type: 'test'
+  ...
+# Subtest: W116 create_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 4 - W116 create_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 18.6685
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation refuses canonical before associated writes through MCP dispatch
+ok 5 - W116 scribe_write_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 18.169292
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation refuses panel before associated writes through MCP dispatch
+ok 6 - W116 scribe_write_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 20.396542
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation refuses negative before associated writes through MCP dispatch
+ok 7 - W116 scribe_write_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 17.308917
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 8 - W116 scribe_write_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 17.226208
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations refuses canonical before associated writes through MCP dispatch
+ok 9 - W116 save_section_observations refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 20.459417
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations refuses panel before associated writes through MCP dispatch
+ok 10 - W116 save_section_observations refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.815667
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations refuses negative before associated writes through MCP dispatch
+ok 11 - W116 save_section_observations refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.137584
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations refuses legacy-shared before associated writes through MCP dispatch
+ok 12 - W116 save_section_observations refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.507042
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation refuses canonical before associated writes through MCP dispatch
+ok 13 - W116 create_smoking_status_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.020791
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation refuses panel before associated writes through MCP dispatch
+ok 14 - W116 create_smoking_status_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.1735
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation refuses negative before associated writes through MCP dispatch
+ok 15 - W116 create_smoking_status_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.611916
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 16 - W116 create_smoking_status_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.864958
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response refuses canonical before associated writes through MCP dispatch
+ok 17 - W116 create_dry_eye_questionnaire_response refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.233791
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response refuses panel before associated writes through MCP dispatch
+ok 18 - W116 create_dry_eye_questionnaire_response refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.741666
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response refuses negative before associated writes through MCP dispatch
+ok 19 - W116 create_dry_eye_questionnaire_response refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 13.816542
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response refuses legacy-shared before associated writes through MCP dispatch
+ok 20 - W116 create_dry_eye_questionnaire_response refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.684709
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation refuses canonical before associated writes through MCP dispatch
+ok 21 - W116 create_meibography_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.343334
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation refuses panel before associated writes through MCP dispatch
+ok 22 - W116 create_meibography_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.551334
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation refuses negative before associated writes through MCP dispatch
+ok 23 - W116 create_meibography_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.760959
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 24 - W116 create_meibography_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 13.793375
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation refuses canonical before associated writes through MCP dispatch
+ok 25 - W116 record_ortho_k_fit_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.50525
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation refuses panel before associated writes through MCP dispatch
+ok 26 - W116 record_ortho_k_fit_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.644333
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation refuses negative before associated writes through MCP dispatch
+ok 27 - W116 record_ortho_k_fit_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.167125
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 28 - W116 record_ortho_k_fit_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.170625
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement refuses canonical before associated writes through MCP dispatch
+ok 29 - W116 record_eye_growth_axial_length_measurement refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.426917
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement refuses panel before associated writes through MCP dispatch
+ok 30 - W116 record_eye_growth_axial_length_measurement refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.993625
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement refuses negative before associated writes through MCP dispatch
+ok 31 - W116 record_eye_growth_axial_length_measurement refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.011458
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement refuses legacy-shared before associated writes through MCP dispatch
+ok 32 - W116 record_eye_growth_axial_length_measurement refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.585292
+  type: 'test'
+  ...
+# Subtest: W116 append guards target through MCP dispatch
+ok 33 - W116 append guards target through MCP dispatch
+  ---
+  duration_ms: 14.567792
+  type: 'test'
+  ...
+# Subtest: W116 append guards result through MCP dispatch
+ok 34 - W116 append guards result through MCP dispatch
+  ---
+  duration_ms: 15.073083
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation allows closed fact, preserves identities and refuses pre-rebuild
+ok 35 - W115 clinician_attest_observation allows closed fact, preserves identities and refuses pre-rebuild
+  ---
+  duration_ms: 34.719875
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation allows closed panel, preserves identities and refuses pre-rebuild
+ok 36 - W115 clinician_attest_observation allows closed panel, preserves identities and refuses pre-rebuild
+  ---
+  duration_ms: 32.767166
+  type: 'test'
+  ...
+# Subtest: W115 amend_observation allows closed fact, preserves identities and refuses pre-rebuild
+ok 37 - W115 amend_observation allows closed fact, preserves identities and refuses pre-rebuild
+  ---
+  duration_ms: 31.239042
+  type: 'test'
+  ...
+# Subtest: W115 amend_observation allows closed panel, preserves identities and refuses pre-rebuild
+ok 38 - W115 amend_observation allows closed panel, preserves identities and refuses pre-rebuild
+  ---
+  duration_ms: 33.345666
+  type: 'test'
+  ...
+# Subtest: W115 mismatching session practitioner refuses before audit repair or lifecycle writes
+ok 39 - W115 mismatching session practitioner refuses before audit repair or lifecycle writes
+  ---
+  duration_ms: 18.990917
+  type: 'test'
+  ...
+# Subtest: W116 create_observation retains unrelated Observation writes
+ok 40 - W116 create_observation retains unrelated Observation writes
+  ---
+  duration_ms: 14.797167
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation retains unrelated Observation writes
+ok 41 - W116 scribe_write_observation retains unrelated Observation writes
+  ---
+  duration_ms: 14.697334
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations retains unrelated Observation writes
+ok 42 - W116 save_section_observations retains unrelated Observation writes
+  ---
+  duration_ms: 14.686542
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation retains unrelated Observation writes
+ok 43 - W116 create_smoking_status_observation retains unrelated Observation writes
+  ---
+  duration_ms: 14.885167
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response retains unrelated Observation writes
+ok 44 - W116 create_dry_eye_questionnaire_response retains unrelated Observation writes
+  ---
+  duration_ms: 13.2315
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation retains unrelated Observation writes
+ok 45 - W116 create_meibography_observation retains unrelated Observation writes
+  ---
+  duration_ms: 15.168667
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation retains unrelated Observation writes
+ok 46 - W116 record_ortho_k_fit_observation retains unrelated Observation writes
+  ---
+  duration_ms: 15.440417
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement retains unrelated Observation writes
+ok 47 - W116 record_eye_growth_axial_length_measurement retains unrelated Observation writes
+  ---
+  duration_ms: 15.252708
+  type: 'test'
+  ...
+# Subtest: W116 eye growth validates optional corneal Observation before axial writes
+ok 48 - W116 eye growth validates optional corneal Observation before axial writes
+  ---
+  duration_ms: 15.103709
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation rejects legacy targets even without other findings
+ok 49 - W115 clinician_attest_observation rejects legacy targets even without other findings
+  ---
+  duration_ms: 14.07475
+  type: 'test'
+  ...
+# Subtest: W115 amend_observation rejects legacy targets even without other findings
+ok 50 - W115 amend_observation rejects legacy targets even without other findings
+  ---
+  duration_ms: 14.711375
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation repairs only selected debt before lifecycle
+ok 51 - W115 clinician_attest_observation repairs only selected debt before lifecycle
+  ---
+  duration_ms: 18.360166
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation refuses mismatched audit
+not ok 52 - W115 clinician_attest_observation refuses mismatched audit
+  ---
+  duration_ms: 18.269958
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:1:13238'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:132:248)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W115 amend_observation repairs only selected debt before lifecycle
+ok 53 - W115 amend_observation repairs only selected debt before lifecycle
+  ---
+  duration_ms: 16.726916
+  type: 'test'
+  ...
+# Subtest: W115 amend_observation refuses mismatched audit
+not ok 54 - W115 amend_observation refuses mismatched audit
+  ---
+  duration_ms: 17.032083
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:1:13238'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:132:248)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W115 W116 F2 clinician_attest_observation session refusal is audited once
+not ok 55 - W115 W116 F2 clinician_attest_observation session refusal is audited once
+  ---
+  duration_ms: 15.290667
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:1:15517'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /match/i. Input:
+
+    `{"content":[{"type":"text","text":"Error: [\\n  {\\n    \\"code\\": \\"unrecognized_keys\\",\\n    \\"keys\\": [\\n      \\"target_status\\",\\n      \\"amendment_text\\",\\n      \\"source_observation_id\\",\\n      \\"patient_id\\",\\n      \\"encounter_id\\",\\n      \\"intended_observation_type\\",\\n      \\"text\\"\\n    ],\\n    \\"path\\": [],\\n    \\"message\\": \\"Unrecognized key(s) in object: 'target_status', 'amendment_text', 'source_observation_id', 'patient_id', 'encounter_id', 'intended_observation_type', 'text'\\"\\n  }\\n]"}],"isError":true}`
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: `{"content":[{"type":"text","text":"Error: [\\n  {\\n    \\"code\\": \\"unrecognized_keys\\",\\n    \\"keys\\": [\\n      \\"target_status\\",\\n      \\"amendment_text\\",\\n      \\"source_observation_id\\",\\n      \\"patient_id\\",\\n      \\"encounter_id\\",\\n      \\"intended_observation_type\\",\\n      \\"text\\"\\n    ],\\n    \\"path\\": [],\\n    \\"message\\": \\"Unrecognized key(s) in object: 'target_status', 'amendment_text', 'source_observation_id', 'patient_id', 'encounter_id', 'intended_observation_type', 'text'\\"\\n  }\\n]"}],"isError":true}`
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:141:43)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W115 W116 F2 amend_observation session refusal is audited once
+not ok 56 - W115 W116 F2 amend_observation session refusal is audited once
+  ---
+  duration_ms: 13.622042
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:1:15517'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /match/i. Input:
+
+    `{"content":[{"type":"text","text":"Error: [\\n  {\\n    \\"code\\": \\"unrecognized_keys\\",\\n    \\"keys\\": [\\n      \\"source_observation_id\\",\\n      \\"patient_id\\",\\n      \\"encounter_id\\",\\n      \\"intended_observation_type\\",\\n      \\"text\\"\\n    ],\\n    \\"path\\": [],\\n    \\"message\\": \\"Unrecognized key(s) in object: 'source_observation_id', 'patient_id', 'encounter_id', 'intended_observation_type', 'text'\\"\\n  }\\n]"}],"isError":true}`
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: `{"content":[{"type":"text","text":"Error: [\\n  {\\n    \\"code\\": \\"unrecognized_keys\\",\\n    \\"keys\\": [\\n      \\"source_observation_id\\",\\n      \\"patient_id\\",\\n      \\"encounter_id\\",\\n      \\"intended_observation_type\\",\\n      \\"text\\"\\n    ],\\n    \\"path\\": [],\\n    \\"message\\": \\"Unrecognized key(s) in object: 'source_observation_id', 'patient_id', 'encounter_id', 'intended_observation_type', 'text'\\"\\n  }\\n]"}],"isError":true}`
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:141:43)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W115 W116 F2 append_observation_context session refusal is audited once
+not ok 57 - W115 W116 F2 append_observation_context session refusal is audited once
+  ---
+  duration_ms: 15.211125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:1:15517'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /match/i. Input:
+
+    `{"content":[{"type":"text","text":"Error: [\\n  {\\n    \\"code\\": \\"unrecognized_keys\\",\\n    \\"keys\\": [\\n      \\"observation_id\\",\\n      \\"target_status\\",\\n      \\"amendment_text\\"\\n    ],\\n    \\"path\\": [],\\n    \\"message\\": \\"Unrecognized key(s) in object: 'observation_id', 'target_status', 'amendment_text'\\"\\n  }\\n]"}],"isError":true}`
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: `{"content":[{"type":"text","text":"Error: [\\n  {\\n    \\"code\\": \\"unrecognized_keys\\",\\n    \\"keys\\": [\\n      \\"observation_id\\",\\n      \\"target_status\\",\\n      \\"amendment_text\\"\\n    ],\\n    \\"path\\": [],\\n    \\"message\\": \\"Unrecognized key(s) in object: 'observation_id', 'target_status', 'amendment_text'\\"\\n  }\\n]"}],"isError":true}`
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:141:43)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W115 F2 clinician_attest_observation pre-rebuild refusal is audited once
+not ok 58 - W115 F2 clinician_attest_observation pre-rebuild refusal is audited once
+  ---
+  duration_ms: 14.526458
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:1:16306'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /pre-rebuild/. Input:
+
+    `{"content":[{"type":"text","text":"Error: [\\n  {\\n    \\"code\\": \\"unrecognized_keys\\",\\n    \\"keys\\": [\\n      \\"target_status\\",\\n      \\"amendment_text\\"\\n    ],\\n    \\"path\\": [],\\n    \\"message\\": \\"Unrecognized key(s) in object: 'target_status', 'amendment_text'\\"\\n  }\\n]"}],"isError":true}`
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: `{"content":[{"type":"text","text":"Error: [\\n  {\\n    \\"code\\": \\"unrecognized_keys\\",\\n    \\"keys\\": [\\n      \\"target_status\\",\\n      \\"amendment_text\\"\\n    ],\\n    \\"path\\": [],\\n    \\"message\\": \\"Unrecognized key(s) in object: 'target_status', 'amendment_text'\\"\\n  }\\n]"}],"isError":true}`
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:147:141)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W115 F2 clinician_attest_observation legacy refusal is audited once
+not ok 59 - W115 F2 clinician_attest_observation legacy refusal is audited once
+  ---
+  duration_ms: 14.415708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:1:16306'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /legacy targets/. Input:
+
+    `{"content":[{"type":"text","text":"Error: [\\n  {\\n    \\"code\\": \\"unrecognized_keys\\",\\n    \\"keys\\": [\\n      \\"target_status\\",\\n      \\"amendment_text\\"\\n    ],\\n    \\"path\\": [],\\n    \\"message\\": \\"Unrecognized key(s) in object: 'target_status', 'amendment_text'\\"\\n  }\\n]"}],"isError":true}`
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: `{"content":[{"type":"text","text":"Error: [\\n  {\\n    \\"code\\": \\"unrecognized_keys\\",\\n    \\"keys\\": [\\n      \\"target_status\\",\\n      \\"amendment_text\\"\\n    ],\\n    \\"path\\": [],\\n    \\"message\\": \\"Unrecognized key(s) in object: 'target_status', 'amendment_text'\\"\\n  }\\n]"}],"isError":true}`
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:147:141)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W115 F2 amend_observation pre-rebuild refusal is audited once
+not ok 60 - W115 F2 amend_observation pre-rebuild refusal is audited once
+  ---
+  duration_ms: 13.250959
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:1:16306'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:147:259)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W115 F2 amend_observation legacy refusal is audited once
+not ok 61 - W115 F2 amend_observation legacy refusal is audited once
+  ---
+  duration_ms: 14.448583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:1:16306'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:147:259)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W116 F2 append target shared refusal is audited once
+not ok 62 - W116 F2 append target shared refusal is audited once
+  ---
+  duration_ms: 14.981041
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:1:16976'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:154:117)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W116 F2 append result shared refusal is audited once
+not ok 63 - W116 F2 append result shared refusal is audited once
+  ---
+  duration_ms: 14.492208
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:1:16976'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3McpGuards.test.ts:154:117)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..63
+# tests 63
+# suites 0
+# pass 52
+# fail 11
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1873.100416

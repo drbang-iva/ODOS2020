@@ -1,0 +1,24 @@
+[
+  {
+    "id": "fixback-F4-lane-admin",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      ".odos/r10-a3-1/fixback/run-ci-lane.mjs",
+      "ocular",
+      "F4-admin-mutation"
+    ]
+  },
+  {
+    "id": "fixback-F4-zero-policy",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      ".odos/r10-a3-1/fixback/run-ci-lane.mjs",
+      "ocular",
+      "F4-policy-mutation"
+    ]
+  }
+]

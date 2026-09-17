@@ -1,11 +1,10 @@
 import { protocolFixture } from "./fixtures/r10/protocol-harness.js";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
-import { FINDING_WRITE_PATH_IDS, checkFindingWriteRegistry } from "../scripts/check-r10-a3-release.mjs";
+import { FINDING_WRITE_PATH_IDS, checkFindingWriteRegistry, examPdfConsumerCensus } from "../scripts/check-r10-a3-release.mjs";
 import type { Condition, Encounter, Observation, Provenance, Resource } from "@medplum/fhirtypes";
 import { fixture, AUTH } from "./encounterVoidFixture.js";
 import { canonicalFact, command, factTarget, keyFor, memoryFhir, writerContext } from "./fixtures/r10/writer-harness.js";
@@ -181,9 +180,8 @@ test("T19 protocol capture reads current canonical facts instead of raw exact-co
 });
 test("T20 source census identifies any exam PDF consumer for canonical migration",()=>{
   const root=new URL("../../",import.meta.url).pathname;
-  const census=spawnSync("rg",["-n","-i","exam.{0,30}pdf|pdf.{0,30}exam","mcp/src","ui/src","src"],{cwd:root,encoding:"utf8"});
-  assert.ok(census.status===0||census.status===1,census.stderr);
-  assert.equal(census.stdout.trim(),"",`Exam PDF consumer requires an executable canonical-data scenario: ${census.stdout}`);
+  const census=examPdfConsumerCensus(root);
+  assert.deepEqual(census,[],`Exam PDF consumer requires an executable canonical-data scenario: ${census.join("\n")}`);
 });
 test("T21 pre-rebuild Ocular Health history and capture remain read-only",async()=>{
   const c=context();c.fhir.add(atomic());const deps={authenticate:async()=>({...await c.authenticate(),fhir:{...c.clinical,createWithOutcome:c.fhir.createWithOutcome.bind(c.fhir),update:c.fhir.update.bind(c.fhir)}}),findingDefinitions:()=>definitions};

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import type { AccessPolicy, Bundle, Condition, Encounter, Observation, Patient, Practitioner, ProjectMembership, Provenance, Resource } from "@medplum/fhirtypes";
+import type { AccessPolicy, Bundle, ClientApplication, Condition, Encounter, Observation, Patient, Practitioner, ProjectMembership, Provenance, Resource } from "@medplum/fhirtypes";
 import { ODOS_PRACTICE_ROLE_SYSTEM, buildMedplumAccessPolicy, getRoleDeclaration } from "../src/authz/roles.js";
 import { authenticateMedplumService, createMedplumClient, type MedplumClient } from "../src/fhir-client.js";
 import { createMcpServiceAuthentication } from "../src/service-auth-options.js";
@@ -24,7 +24,7 @@ import { buildEncounterDiagnosisCondition } from "../src/fhir/condition.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 import { odosConcept, ODOS_EXTENSION_URLS, lateralityConcept } from "../src/fhir/ophthalmology/extensions.js";
 import { createLiveAuthorizationClients, requireMedplumAdmin } from "./integration-helpers.js";
-import { createRoleClient, cleanupReferences } from "./liveRoleClient.js";
+import { createRoleClient, cleanupReferences, clientCredentialsToken } from "./liveRoleClient.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 
 type Claim = { key: Record<string, unknown>; baseline: unknown; presence: "present"; qualifiers: Record<string, unknown>; homes: string[] };
@@ -201,23 +201,54 @@ test("R10 A3 Ocular Health saves and lifecycle enforce stored role policies and 
 
     assert.ok(providerProof,"Provider setup completed");
     await t.test("MCP service identity: closed canonical amendment, real session binding and zero-write refusals",async serviceTest=>{
-      const serviceEnv={MEDPLUM_ADMIN_EMAIL:credentials.email,MEDPLUM_ADMIN_PASSWORD:credentials.password};
-      const sessionResponse=await fetch(`${baseUrl}/auth/me`,{headers:{Authorization:`Bearer ${callerAccessToken}`}});
+      const provisioningPrincipal=await callerFhir.getAuthenticatedProfileReference();
+      const provisionResponse=await fetch(`${baseUrl}/admin/projects/${projectId}/client`,{method:"POST",headers:{Authorization:`Bearer ${callerAccessToken}`,"Content-Type":"application/json"},body:JSON.stringify({name:`r10-a3-service-${randomUUID()}`,description:"Disposable synthetic A3 lifecycle service"})});
+      assert.equal(provisionResponse.status,201,"Lane admin provisions disposable service identity");
+      const application=await provisionResponse.json() as ClientApplication;
+      assert.ok(application.id && application.secret);
+      const initialToken=await clientCredentialsToken(baseUrl,application.id,application.secret,"admin");
+      const initialSessionResponse=await fetch(`${baseUrl}/auth/me`,{headers:{Authorization:`Bearer ${initialToken}`}});
+      assert.equal(initialSessionResponse.status,200);
+      const initialSession=await initialSessionResponse.json();
+      assert.ok(initialSession.membership?.id);
+      const membershipUrl=`${baseUrl}/admin/projects/${projectId}/members/${initialSession.membership.id}`;
+      const membershipResponse=await fetch(membershipUrl,{headers:{Authorization:`Bearer ${callerAccessToken}`}});
+      assert.equal(membershipResponse.status,200);
+      const initialMembership=await membershipResponse.json() as ProjectMembership;
+      const {accessPolicy:_legacyPolicy,...membershipWithoutPolicy}=initialMembership;
+      try {
+      const configureResponse=await fetch(membershipUrl,{method:"POST",headers:{Authorization:`Bearer ${callerAccessToken}`,"Content-Type":"application/fhir+json"},body:JSON.stringify({...membershipWithoutPolicy,admin:true,access:[]})});
+      assert.equal(configureResponse.status,200,"Configure only the new service membership");
+      const serviceToken=await clientCredentialsToken(baseUrl,application.id,application.secret,"admin");
+      const serviceEnv={MEDPLUM_CLIENT_ID:application.id,MEDPLUM_CLIENT_SECRET:application.secret};
+      const sessionResponse=await fetch(`${baseUrl}/auth/me`,{headers:{Authorization:`Bearer ${serviceToken}`}});
       assert.equal(sessionResponse.status,200);
       const session=await sessionResponse.json();
-      assert.ok(session.user?.id,"Service session exposes its user identity");
-      assert.notEqual(session.user.superAdmin,true,"Never use a super admin for this lifecycle proof");
+      assert.equal(session.profile?.resourceType,"ClientApplication");
+      assert.equal(session.profile?.id,application.id);
+      assert.equal(session.user,undefined,"Client service has no super-admin User identity");
+      assert.notEqual(session.profile?.superAdmin,true,"Never use a super admin for this lifecycle proof");
       assert.equal(session.project?.id,projectId);
       const service=createMedplumClient({baseUrl,audit:TEST_FHIR_AUDIT_RECORDER,auditContext:TEST_FHIR_AUDIT_CONTEXT});
-      const mode=await createMcpServiceAuthentication(serviceEnv,projectId,authenticateMedplumService).authenticate(service);assert.equal(await service.getActiveProjectId(),projectId);
+      const mode=await createMcpServiceAuthentication(serviceEnv,projectId,authenticateMedplumService).authenticate(service);assert.equal(mode,"client-credentials");assert.equal(await service.getActiveProjectId(),projectId);
       const serviceActor=await service.getAuthenticatedProfileReference();
-      const memberships=(await searchAll<ProjectMembership>(callerFhir,"ProjectMembership",{_project:projectId})).filter(row=>row.profile?.reference===serviceActor);
+      const memberships=(await searchAll<ProjectMembership>(service,"ProjectMembership",{_project:projectId})).filter(row=>row.profile?.reference===serviceActor);
       assert.equal(memberships.length,1,"Service identity has one membership in the disposable project");
       const servicePolicyReferences=[...new Set([...(memberships[0].access??[]).flatMap(access=>access.policy?.reference?[access.policy.reference]:[]),...(memberships[0].accessPolicy?.reference?[memberships[0].accessPolicy.reference]:[])])];
       assert.equal(memberships[0].admin,true,"Project-scoped service admin membership");
-      assert.equal(serviceActor,await callerFhir.getAuthenticatedProfileReference());
+      const assertPolicyFree=(membership:ProjectMembership)=>{
+        assert.deepEqual(membership.access??[],[],"Service membership has no policy access entries");
+        assert.equal(membership.accessPolicy,undefined,"Service membership has no legacy policy");
+      };
+      assert.throws(()=>assertPolicyFree({...memberships[0],access:[{policy:{reference:providerProof!.policyReference}}]}),/no policy access entries/);
+      assert.throws(()=>assertPolicyFree({...memberships[0],accessPolicy:{reference:providerProof!.policyReference}}),/no legacy policy/);
+      assertPolicyFree(memberships[0]);
+      assert.deepEqual(servicePolicyReferences,[]);
+      assert.notEqual(serviceActor,provisioningPrincipal,"Service principal differs from lane admin");
+      assert.equal(memberships[0].project.reference,`Project/${projectId}`);
+      assert.equal(serviceActor,`ClientApplication/${application.id}`);
       const awaitedProject=await service.getActiveProjectId();
-      const evidence=(operation:string,before:unknown,after:unknown,extra={})=>serviceTest.diagnostic(JSON.stringify({actorRole:"MCP service identity",serviceAuthentication:mode,sessionPractitioner:practitionerReference,project:projectId,activeProject:awaitedProject,superAdmin:false,resource:resourceRef(providerProof!.fact),operation,before,after,serviceActor,policyReferences:servicePolicyReferences,serviceAdminMembership:memberships[0].admin===true,clinicianPolicyReference:providerProof!.policyReference,lane:"test:live-authz",blocking:true,...extra}));
+      const evidence=(operation:string,before:unknown,after:unknown,extra={})=>serviceTest.diagnostic(JSON.stringify({actorRole:"MCP service identity",serviceAuthentication:mode,sessionPractitioner:practitionerReference,project:projectId,activeProject:awaitedProject,superAdmin:false,resource:resourceRef(providerProof!.fact),operation,before,after,serviceActor,policyReferences:servicePolicyReferences,serviceAdminMembership:memberships[0].admin===true,provisioningLogin:credentials.email,provisioningPrincipal,clinicianPolicyReference:providerProof!.policyReference,lane:"test:live-authz",blocking:true,...extra}));
       const processHandle=await connectServiceProcess(baseUrl,projectId,practitioner.id!,serviceEnv);
       try {
         const before=await service.read<Observation>("Observation",providerProof!.fact.id!);
@@ -247,6 +278,12 @@ test("R10 A3 Ocular Health saves and lifecycle enforce stored role policies and 
       const mismatch=await connectServiceProcess(baseUrl,projectId,randomUUID(),serviceEnv);
       try {const before=await service.read<Observation>("Observation",providerProof!.fact.id!);const auditsBefore=await searchAll<Provenance>(service,"Provenance",{target:resourceRef(before)});const response=await mismatch.client.callTool({name:"amend_observation",arguments:{observation_id:before.id,clinician_id:practitioner.id,target_status:"corrected",amendment_text:"Synthetic mismatch",signature_data_base64:Buffer.from("synthetic signature").toString("base64")}});assert.equal(response.isError,true);assert.match(JSON.stringify(response),/match.*session/);assert.equal(mismatch.writes.length,0);assert.deepEqual(await service.read("Observation",before.id!),before);assert.deepEqual((await searchAll<Provenance>(service,"Provenance",{target:resourceRef(before)})).map(resourceState),auditsBefore.map(resourceState));evidence("mismatching session practitioner",resourceState(before),"refused; zero attempted/persisted FHIR writes",{actualSessionPractitioner:"different synthetic practitioner"});}finally{await mismatch.close();}
       const effective=await new FhirFindingDefinitionStore(service).list();const catalog=materializeAtomicFindingCatalog(effective);const final=await service.read<Observation>("Observation",providerProof!.fact.id!);assert.equal(classifyFindingObservation(final,effective,catalog,buildFindingReadAliases(effective,catalog)).kind,"canonical-fact");
+      } finally {
+        for(const reference of [`ProjectMembership/${initialMembership.id}`,resourceRef(application)]) {
+          const response=await fetch(`${baseUrl}/fhir/R4/${reference}`,{method:"DELETE",headers:{Authorization:`Bearer ${callerAccessToken}`}});
+          serviceTest.diagnostic(JSON.stringify({operation:"disposable service identity cleanup",reference,status:response.status,removed:[200,204,404,410].includes(response.status),provisioningLogin:credentials.email}));
+        }
+      }
     });
   } finally {
     const errors:unknown[]=[];

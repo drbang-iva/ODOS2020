@@ -1,0 +1,36 @@
+[
+  {
+    "id": "fixback-F4-lane-admin",
+    "edits": [
+      {
+        "file": "mcp/tests/r10OcularHealthDoorAuthzLive.test.ts",
+        "before": "const processHandle=await connectServiceProcess(baseUrl,projectId,practitioner.id!,serviceEnv);",
+        "after": "const processHandle=await connectServiceProcess(baseUrl,projectId,practitioner.id!,{MEDPLUM_ADMIN_EMAIL:credentials.email,MEDPLUM_ADMIN_PASSWORD:credentials.password});"
+      }
+    ],
+    "command": [
+      "node",
+      ".odos/r10-a3-1/fixback/run-ci-lane.mjs",
+      "ocular",
+      "F4-admin-mutation"
+    ],
+    "failurePattern": "Observation PATCH entry is 200"
+  },
+  {
+    "id": "fixback-F4-zero-policy",
+    "edits": [
+      {
+        "file": "mcp/tests/r10OcularHealthDoorAuthzLive.test.ts",
+        "before": "      const assertPolicyFree=(membership:ProjectMembership)=>{\n        assert.deepEqual(membership.access??[],[],\"Service membership has no policy access entries\");\n        assert.equal(membership.accessPolicy,undefined,\"Service membership has no legacy policy\");\n      };\n",
+        "after": "      const assertPolicyFree=(_membership:ProjectMembership)=>{};\n"
+      }
+    ],
+    "command": [
+      "node",
+      ".odos/r10-a3-1/fixback/run-ci-lane.mjs",
+      "ocular",
+      "F4-policy-mutation"
+    ],
+    "failurePattern": "Missing expected exception"
+  }
+]

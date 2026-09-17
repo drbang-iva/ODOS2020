@@ -1,0 +1,26 @@
+[
+  {
+    "id": "fixback-F1-refusal",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "fixback-F1-wide",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  }
+]

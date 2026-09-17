@@ -3002,15 +3002,15 @@ function createServer(): Server {
             "Observation",
             stripReference(input.observation_id, "Observation"),
           );
-          assertClinicianSessionMatches({
-            clinicianId: input.clinician_id,
-            sessionPractitionerId: sessionPractitionerId(),
-          });
-          await prepareSharedFindingLifecycle(observation, {
-            fhir, definitions: await findingDefinitionStore.list(),
-            staffReference: `Practitioner/${stripReference(input.clinician_id, "Practitioner")}`,
-          });
           try {
+            assertClinicianSessionMatches({
+              clinicianId: input.clinician_id,
+              sessionPractitionerId: sessionPractitionerId(),
+            });
+            await prepareSharedFindingLifecycle(observation, {
+              fhir, definitions: await findingDefinitionStore.list(),
+              staffReference: `Practitioner/${stripReference(input.clinician_id, "Practitioner")}`,
+            });
             const transaction = buildAttestationTransaction({
               observation,
               clinicianId: input.clinician_id,
@@ -3059,15 +3059,15 @@ function createServer(): Server {
             "Observation",
             stripReference(input.observation_id, "Observation"),
           );
-          assertClinicianSessionMatches({
-            clinicianId: input.clinician_id,
-            sessionPractitionerId: sessionPractitionerId(),
-          });
-          await prepareSharedFindingLifecycle(observation, {
-            fhir, definitions: await findingDefinitionStore.list(),
-            staffReference: `Practitioner/${stripReference(input.clinician_id, "Practitioner")}`,
-          });
           try {
+            assertClinicianSessionMatches({
+              clinicianId: input.clinician_id,
+              sessionPractitionerId: sessionPractitionerId(),
+            });
+            await prepareSharedFindingLifecycle(observation, {
+              fhir, definitions: await findingDefinitionStore.list(),
+              staffReference: `Practitioner/${stripReference(input.clinician_id, "Practitioner")}`,
+            });
             const transaction = buildAmendmentTransaction({
               observation,
               clinicianId: input.clinician_id,
@@ -3119,18 +3119,18 @@ function createServer(): Server {
             "Observation",
             stripReference(input.source_observation_id, "Observation"),
           );
-          const definitions = await findingDefinitionStore.list();
-          assertNotSharedFindingWrite(sourceObservation, definitions);
-          assertClinicianSessionMatches({
-            clinicianId: input.clinician_id,
-            sessionPractitionerId: sessionPractitionerId(),
-          });
-          const transaction = buildAppendObservationTransaction({
-            sourceObservation,
-            appendInput: input,
-          });
-          assertNotSharedFindingWrite(transaction.observation, definitions);
           try {
+            const definitions = await findingDefinitionStore.list();
+            assertNotSharedFindingWrite(sourceObservation, definitions);
+            assertClinicianSessionMatches({
+              clinicianId: input.clinician_id,
+              sessionPractitionerId: sessionPractitionerId(),
+            });
+            const transaction = buildAppendObservationTransaction({
+              sourceObservation,
+              appendInput: input,
+            });
+            assertNotSharedFindingWrite(transaction.observation, definitions);
             const auditRow = buildClinicalWriteAuditRow({
               eventType: "update",
               actorId: input.clinician_id,

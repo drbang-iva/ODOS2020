@@ -1,0 +1,73 @@
+{
+  "model": "GPT-6 Astra",
+  "effort": "high",
+  "base": "1706d7c8417b04791471d4332b4ecd712883bf11",
+  "previousHead": "3c14565e6e9b42241f413bb3af89fce69867bd7c",
+  "stack": {
+    "project": "odos-r10-a3-1-ruling",
+    "medplum": "5.1.30-9b1bd92",
+    "baseUrl": "http://localhost:18103",
+    "postgres": "PostgreSQL16-alpine loopback29142 fresh volume",
+    "subnet": "10.249.145.0/24",
+    "syntheticProject": "a9c5235a-ca2f-403a-b73a-8da510760f02"
+  },
+  "nonLiveEnvironment": "Allowlisted OS env + ODOS_POSTGRES_URL + ODOS_REAL_WEASYPRINT_TEST=1; no MEDPLUM or operator variables",
+  "f4Mutations": [
+    "lane admin dispatch red / service dispatch green",
+    "zero-policy assertion removal red / restored green"
+  ],
+  "f5": "exact path_filters exclusion only; deleted red / restored green",
+  "provisioningLogin": "r10-a3-ci-admin@example.invalid",
+  "laneAdminPolicy": "AccessPolicy/e306ea6b-0019-436a-a315-df1f2200e963",
+  "checks": {
+    "liveIntegration": {
+      "bootstrap": {
+        "tests": 12,
+        "pass": 12
+      },
+      "suite": {
+        "tests": 218,
+        "pass": 218
+      }
+    },
+    "ui": {
+      "tests": 1685,
+      "pass": 1673,
+      "fail": 8,
+      "skip": 0,
+      "todo": 4
+    },
+    "mcpBuild": 0,
+    "uiBuild": 0,
+    "preflight": 0,
+    "releaseChecker": {
+      "exit": 1,
+      "mcpGreen": 16,
+      "uiOpen": 9
+    },
+    "liveAuthz": {
+      "tests": 73,
+      "pass": 73,
+      "fail": 0,
+      "skip": 0,
+      "todo": 0
+    },
+    "mcp": {
+      "tests": 5992,
+      "pass": 5938,
+      "fail": 1,
+      "skip": 53,
+      "todo": 0,
+      "soleFailure": "WeasyPrint ENOENT",
+      "log": "ruling-mcp-test-confirm.txt"
+    },
+    "baseMcp": {
+      "tests": 5687,
+      "pass": 5618,
+      "fail": 1,
+      "skip": 52,
+      "todo": 16,
+      "soleFailure": "WeasyPrint ENOENT"
+    }
+  }
+}

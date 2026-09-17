@@ -780,8 +780,9 @@ async function readOcularHealth(deps: CustomSectionEndpointDeps, staff: OcularSt
   if (!query.encounter) {
     const first = await fhir.search<Observation>("Observation", { subject: query.patient, _count: "200" });
     const observations = await collectAllFhirSearchPages(fhir, "Observation", first, fhir.baseUrl);
-    if (observations.some(o => o.subject?.reference !== query.patient || !o.encounter?.reference?.match(/^Encounter\/[A-Za-z0-9.-]+$/))) return ocularError(409, "foreign-or-unscoped");
-    references = [...new Set(observations.map(o => o.encounter!.reference!))];
+    const contributing = observations.filter(o => o.code.coding?.some(c => c.code === definition.stableKey || c.code?.startsWith(`${definition.stableKey}::`)));
+    if (contributing.some(o => o.subject?.reference !== query.patient || !o.encounter?.reference?.match(/^Encounter\/[A-Za-z0-9.-]+$/))) return ocularError(409, "foreign-or-unscoped");
+    references = [...new Set(contributing.map(o => o.encounter!.reference!))];
   }
   const encounters = [];
   const rows: ReturnType<typeof snapshotHistoryRows> = [];

@@ -1,0 +1,8 @@
+
+> odos2020@0.0.1 operator-identity
+> tsx --env-file-if-exists=.env scripts/operator-identity.ts --project a9c5235a-ca2f-403a-b73a-8da510760f02
+
+Target: Project/a9c5235a-ca2f-403a-b73a-8da510760f02 (source: --project)
+Operator identity ensure: project=a9c5235a-ca2f-403a-b73a-8da510760f02 client=a40cb944-5ba2-43de-896b-d2e07d0b24da status=active
+.env not found. Continuing without it.
+.env not found. Continuing without it.

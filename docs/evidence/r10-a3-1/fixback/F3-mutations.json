@@ -1,0 +1,15 @@
+[
+  {
+    "id": "fixback-F3-census",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=F3",
+      "mcp/tests/r10A3ReleaseChecker.test.ts"
+    ]
+  }
+]
