@@ -91,6 +91,19 @@ test("PIN exchange refuses a malformed success and never includes the PIN in err
   });
 });
 
+for (const field of ["jwt_key", "jwt_secret"] as const) {
+  for (const [label, value] of [["empty", ""], ["whitespace-only", " \t\r\n"]]) {
+    test(`PIN exchange rejects ${label} ${field} with the other credential valid`, async () => {
+      const body = await vendorResponse().json();
+      body.message.lab[field] = value;
+      await assert.rejects(requestOcucoGatekeeperPinCredentials({
+        baseUrl: BASE_URL, webrxLabId: LAB_ID, pinCode: PIN,
+        fetchImpl: async () => new Response(JSON.stringify(body), { status: 200 }),
+      }), /response is missing jwt_key or jwt_secret/);
+    });
+  }
+}
+
 test("bootstrap stores the JWT pair in a private env file without PIN or unrelated vendor secrets", async () => {
   const directory = mkdtempSync(join(tmpdir(), "odos-ocuco-pin-"));
   const envPath = join(directory, ".env");
