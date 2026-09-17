@@ -231,3 +231,20 @@ test("W148 retrying an older All Normal request retains a later replacement noti
   assert.match(text(h.panel()), /All Normal cleared for this eye/);
  } finally { release(); await pending; h.close(); }
 });
+
+test("W130/W137 inactive recorded-absent fact stays visible, unchecked and locked", async () => {
+ const option = definition.customFields[0]!.options![0]!;
+ const active = option.active; option.active = false;
+ let h: Awaited<ReturnType<typeof mount>> | undefined;
+ try {
+  h = await mount(history([fact("OD","scar","absent",false)]));
+  const chip = h.button("Scar · Recorded absent","OD");
+  assert.ok(chip,"inactive recorded-absent history must remain visible");
+  assert.equal(chip.props["aria-pressed"],false);
+  assert.equal(chip.props.disabled,true);
+  await h.remarks("Historical absence reviewed");await h.save();
+  const eye = JSON.parse(h.posts[0]!).eyes.OD;
+  assert.deepEqual(eye.loaded,[]);
+  assert.deepEqual(eye.selected,[]);
+ } finally { h?.close(); option.active = active; }
+});

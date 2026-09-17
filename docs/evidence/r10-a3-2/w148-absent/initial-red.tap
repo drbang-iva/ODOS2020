@@ -1,0 +1,27 @@
+TAP version 13
+# Subtest: W130/W137 inactive recorded-absent fact stays visible, unchecked and locked
+not ok 1 - W130/W137 inactive recorded-absent fact stays visible, unchecked and locked
+  ---
+  duration_ms: 20.088167
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:19573'
+  failureType: 'testCodeFailure'
+  error: 'inactive recorded-absent history must remain visible'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:242:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 281.918334

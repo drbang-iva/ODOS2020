@@ -1,0 +1,16 @@
+{
+  "name": "inactive-absent",
+  "file": "ui/src/components/charting/OcularHealthSection.tsx",
+  "anchor": "  const options = (field?.options ?? []).filter((option) => option.active || facts?.some(fact => fact.key?.optionCode === option.code && fact.status === \"live\"));",
+  "replacement": "  const options = (field?.options ?? []).filter((option) => option.active || facts?.some(fact => fact.key?.optionCode === option.code && fact.status === \"live\" && fact.presence === \"present\"));",
+  "cwd": "ui",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-name-pattern=inactive recorded-absent|W148|pending All Normal|in-flight edit remains",
+    "tests/r10A3OcularEditor.test.tsx",
+    "tests/customSections.test.tsx"
+  ]
+}
