@@ -54,7 +54,7 @@ async function undoActualSection(page,destinationPath) {
  await screenshot(page,'g-undo-control');
  const response=page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname===destinationPath+'/void/undo',{timeout:30000});
  const [reply]=await Promise.all([response,(async()=>{await strip.getByRole('button',{name:'Undo',exact:true}).focus();await strip.getByRole('button',{name:'Undo',exact:true}).press('Enter');const confirm=page.getByRole('button',{name:'Continue',exact:true});const needsConfirmation=await Promise.race([response.then(()=>false),confirm.waitFor({state:'visible'}).then(()=>true)]);if(needsConfirmation)await confirm.click();})()]);
- assert.equal(reply.status(),200);result.undoActivation={method:'keyboard focus and Enter on actual enabled section Undo button',pointerLimitation:'Existing Add section group absolute-positioned control intercepts pointer clicks; g-undo-control.png retains the obstruction. No layout change or force click.'};const body=await reply.json();result.lastUndoResponse=body;writeFileSync(join(evidence,`${mode}-result.json`),JSON.stringify(result,null,2));return body;
+ assert.equal(reply.status(),200);result.undoActivation={method:'keyboard focus and Enter on actual enabled section Undo button',pointerLimitation:'Existing Add section group absolute-positioned control intercepts pointer clicks; g-undo-control.png retains the obstruction. No layout change or force click.'};const body=await reply.json();result.lastUndoRequest=JSON.parse(reply.request().postData());result.lastUndoResponse=body;writeFileSync(join(evidence,`${mode}-result.json`),JSON.stringify(result,null,2));return body;
 }
 async function screenshot(page,name) {
  assert.equal(await page.locator('input[type=password]').count(),0,'Never screenshot credentials');
@@ -168,14 +168,14 @@ try {
   result.carryProgress={identicalCarryRequest:true,carry,carriedFacts,overview:overviewBefore.body,completeness:completeBefore.body};writeFileSync(join(evidence,`${mode}-result.json`),JSON.stringify(result,null,2));
   await openOcular(page);await screenshot(page,'g-carried-OU');
   await page.getByRole('button',{name:'Clear Ocular Health',exact:true}).click();
-  [reply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname===destinationPath+'/void'&&!response.url().includes('preview')),page.getByRole('alertdialog').getByRole('button',{name:'Clear Ocular Health',exact:true}).click()]);const voidResponse=await reply;assert.equal(voidResponse.status(),200);const voided=await voidResponse.json();
+  [reply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname===destinationPath+'/void'&&JSON.parse(response.request().postData()).preview!==true),page.getByRole('alertdialog').getByRole('button',{name:'Clear Ocular Health',exact:true}).click()]);const voidResponse=await reply;assert.equal(voidResponse.status(),200);const voided=await voidResponse.json();assert.equal(voided.preview,false);assert.equal(voided.count,2);assert.ok(voided.voidActionId);
   await page.getByRole('button',{name:'Undo',exact:true}).first().waitFor();
   const afterVoid=await api(page,destinationPath+'/findings');assert.equal(afterVoid.body.searchIndex.filter(row=>row.key?.optionCode==='nuclear-sclerosis'&&row.presence==='present'&&row.status==='live').length,0);
   const overviewVoid=await api(page,destinationPath+'/exam-overview'),completeVoid=await api(page,destinationPath+'/diagnosis-completeness');
   const carriedOverview=body=>body.findings.filter(row=>row.findingKey==='ocular-health:anterior:lens'&&row.provenance.state==='carried-unreasserted');
   assert.equal(carriedOverview(overviewBefore.body).length,2);assert.ok(carriedOverview(overviewBefore.body).every(row=>row.creditsCompleteness===false));assert.equal(carriedOverview(overviewVoid.body).length,0);assert.deepEqual(completeVoid.body.diagnoses,[]);assert.deepEqual(completeBefore.body.diagnoses,[]);
   await screenshot(page,'g-section-void');
-  const undoResult=await undoActualSection(page,destinationPath);
+  const undoResult=await undoActualSection(page,destinationPath);assert.equal(result.lastUndoRequest.voidActionId,voided.voidActionId);
   const restored=await api(page,destinationPath+'/findings');const restoredFacts=restored.body.searchIndex.filter(row=>row.key?.optionCode==='nuclear-sclerosis'&&row.presence==='present'&&row.status==='live');assert.equal(restoredFacts.length,2);assert.deepEqual(restoredFacts.map(row=>row.baseline.reference).sort(),carriedFacts.map(row=>row.baseline.reference).sort());
   const overviewUndo=await api(page,destinationPath+'/exam-overview'),completeUndo=await api(page,destinationPath+'/diagnosis-completeness');
   const restoredOverview=overviewUndo.body.findings.filter(row=>row.findingKey==='ocular-health:anterior:lens'&&row.provenance.state==='current');assert.equal(restoredOverview.length,2);assert.ok(restoredOverview.every(row=>row.creditsCompleteness===false));assert.deepEqual(completeUndo.body.diagnoses,[]);
