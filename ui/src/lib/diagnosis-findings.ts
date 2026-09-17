@@ -49,6 +49,7 @@ export type DiagnosisFindingResult =
 export interface FindingHttpResult { status: number; body: DiagnosisFindingResult }
 export const canMutateDiagnosisFinding = (payload: DiagnosisFindingsPayload, _mutation?: DiagnosisFindingMutation): boolean => payload.canWrite === true && payload.encounterEditable === true;
 export const findingReadOnlyLabel = (reason?: string): string => ({
+  "encounter-closed": "Signed or closed visit",
   "pre-rebuild-test-encounter": "Test data from before the rebuild", "signed-or-cancelled": "Signed — read only",
   conflict: "Conflicting records", "home-outside-encounter": "Linked to a diagnosis outside this visit",
 }[reason ?? ""] ?? "Read only");
