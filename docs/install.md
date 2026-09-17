@@ -239,6 +239,30 @@ Google Workspace communications setup and the documented manual-send verificatio
 AWS End User Messaging SMS setup, including the manual SNS-to-SQS subscription and phone-number
 two-way configuration, is in [`docs/aws-sms-comms.md`](aws-sms-comms.md).
 
+### Ocuco Gatekeeper PIN bootstrap
+
+After Ocuco issues a one-time PIN and integer `webrx_lab_id`, set
+`OCUCO_GATEKEEPER_BASE_URL` in the root `.env` to the HTTPS Gatekeeper environment
+that issued the PIN. Run this from the installation checkout whose `.env` the
+MCP service loads, replacing `1231` with the issued lab ID (zsh):
+
+```zsh
+read -rs "OCUCO_GATEKEEPER_PIN?Ocuco PIN: "; echo
+export OCUCO_GATEKEEPER_PIN
+npm run bootstrap:ocuco-gatekeeper -- --lab-id 1231
+unset OCUCO_GATEKEEPER_PIN
+```
+
+The command makes the unauthenticated `lab_access_with_pin` request once and stores
+only the returned `jwt_key` and `jwt_secret` as `OCUCO_GATEKEEPER_JWT_KEY` and
+`OCUCO_GATEKEEPER_JWT_SECRET` in the ignored root `.env` with mode `0600`. It refuses
+an existing credential pair before calling Ocuco. It does not save or print the PIN,
+the JWT pair, or the other fields in Ocuco's response. Load the updated `.env` into
+the MCP service environment when restarting that service. Keep
+`ODOS_LAB_ORDER_VENDOR_DEFAULT=manual` until the separate live transport gates are
+cleared. If a failure after the exchange reports a private recovery file, recover
+the returned credentials from that file before trying the one-time PIN again.
+
 Twilio Voice is all-or-nothing: the five Voice variables above must be present together. The
 adapter does not automatically record calls. Batch Transcription v3 was removed from the adapter;
 when explicitly enabled, Real-Time Transcription delivers utterances through the same signed
